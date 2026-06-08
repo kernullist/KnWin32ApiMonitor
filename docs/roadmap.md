@@ -124,7 +124,7 @@ Current implementation notes:
 2. The agent sends `agent_hello`, `hook_installed`, `hook_install_failed`, `api_call`, `dropped_events`, and `agent_shutdown` messages.
 3. Hook install failure is reported as a precise capture failure.
 4. The x64 agent tracks patched IAT slots and restores original entries during shutdown/self-disable where possible.
-5. Healthy shutdown reports `installedHooks=5`, `restoredHooks=5`, and `failedHooks=0`.
+5. Healthy shutdown reports `installedHooks=6`, `restoredHooks=6`, and `failedHooks=0`.
 6. x86 remains a documented skeleton.
 7. Arbitrary already-running process detach remains future work.
 
@@ -140,31 +140,33 @@ Deliverables:
 
 1. `CreateFileW`
 2. `CreateFileA`
-3. `ReadFile`
-4. `WriteFile`
-5. `CloseHandle`
-6. Pre-call and post-call argument snapshots.
-7. Return/error decode.
-8. Bounded buffer snapshots.
-9. Dropped event accounting.
-10. `NtCreateFile` remains deferred until Win32 hook capture is reviewed.
+3. `NtCreateFile`
+4. `ReadFile`
+5. `WriteFile`
+6. `CloseHandle`
+7. Pre-call and post-call argument snapshots.
+8. Return/error decode.
+9. Bounded buffer snapshots.
+10. Dropped event accounting.
+11. `NtCreateFile` uses explicit controlled `ntdll.dll` IAT capture with NTSTATUS return evidence.
 
 Current verified behavior:
 
 1. `capture-sample` captures real `api_call` events from `knmon-sample-fileio.exe`.
-2. Healthy smoke coverage includes `CreateFileW`, `CreateFileA`, `ReadFile`, `WriteFile`, and `CloseHandle`.
+2. Healthy smoke coverage includes `CreateFileW`, `CreateFileA`, `NtCreateFile`, `ReadFile`, `WriteFile`, and `CloseHandle`.
 3. HELLO arrives before hook status and API call events.
 4. `ReadFile` and `WriteFile` include bounded buffer previews.
 5. Dropped event accounting is present and currently reports zero on the healthy path.
 6. `agent_shutdown` is required for healthy bounded capture success.
 7. Repeated capture smoke covers five consecutive runs and hook restore counts.
+8. `NtCreateFile` smoke verifies `ntdll.dll`, NTSTATUS format, bounded `ObjectAttributes` object-name decoding, and restored hook counts.
 
 Next implementation focus:
 
-1. Decide whether `NtCreateFile` should be captured through a separate native hook phase or decoded from higher-level Win32 events first.
-2. Start x86 agent parity only after the x64 session path remains stable.
-3. Begin high-volume table and replay indexing work after lifecycle evidence remains stable.
-4. Move the collector from synthetic intake to shared-memory transport only after a separate review.
+1. Start x86 agent parity only after the x64 session path remains stable.
+2. Begin high-volume table and replay indexing work after lifecycle evidence remains stable.
+3. Move the collector from synthetic intake to shared-memory transport only after a separate review.
+4. Expand File I/O decode metadata only after the native trace contract remains stable.
 
 ## Phase 7: Definition System V1
 

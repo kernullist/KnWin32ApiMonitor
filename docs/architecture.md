@@ -6,7 +6,7 @@
 
 This document describes the current Phase 0/Phase 1 foundation and the first controlled native-capture path for `KN Win32 API Monitor`.
 
-The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded x64 File I/O capture for the repository sample target, deterministic x64 hook lifecycle telemetry, and helper-written session replay. It does not inject into arbitrary already-running processes.
+The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded x64 File I/O capture for the repository sample target, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic x64 hook lifecycle telemetry, and helper-written session replay. It does not inject into arbitrary already-running processes.
 
 ## Layers
 
@@ -189,25 +189,26 @@ Current x64 hook coverage:
 
 1. `CreateFileW`
 2. `CreateFileA`
-3. `ReadFile`
-4. `WriteFile`
-5. `CloseHandle`
+3. `NtCreateFile`
+4. `ReadFile`
+5. `WriteFile`
+6. `CloseHandle`
+
+`NtCreateFile` is captured as an explicit `ntdll.dll` event. Its `returnValue` is the NTSTATUS hex string, while `lastErrorCode` remains a mapped Win32 error code for failure display compatibility. The current controlled sample success path returns `0x00000000` and includes bounded `OBJECT_ATTRIBUTES.ObjectName` evidence.
 
 Current x64 agent limitations:
 
 1. Hooks are installed only in the repository-controlled sample target flow.
 2. Hook method is IAT patching of the main module, not inline trampoline or EAT patching.
-3. `NtCreateFile` is still definition-only for live capture.
-4. Event transport is a bounded named-pipe path, not shared memory.
-5. Shutdown cleanup is scoped to the controlled sample target lifecycle; arbitrary detach from already-running processes remains unsupported.
+3. Event transport is a bounded named-pipe path, not shared memory.
+4. Shutdown cleanup is scoped to the controlled sample target lifecycle; arbitrary detach from already-running processes remains unsupported.
 
 Future agent responsibilities:
 
 1. Support x86 with the same protocol.
 2. Capture richer call stack metadata.
 3. Move high-volume events to collector shared memory.
-4. Add `NtCreateFile` after Win32 hooks stay stable.
-5. Add arbitrary attach/detach only after a separate review.
+4. Add arbitrary attach/detach only after a separate review.
 
 `Launch Sample` still produces an `agent_loaded` row only. `Capture File I/O` produces real `api_call` rows from the controlled sample target.
 

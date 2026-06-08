@@ -1,8 +1,27 @@
 #include <Windows.h>
+#include <winternl.h>
 
 #include <array>
+#include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <string>
+
+#ifndef NT_SUCCESS
+#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
+#endif
+
+#ifndef FILE_OPEN
+#define FILE_OPEN 0x00000001
+#endif
+
+#ifndef FILE_NON_DIRECTORY_FILE
+#define FILE_NON_DIRECTORY_FILE 0x00000040
+#endif
+
+#ifndef OBJ_CASE_INSENSITIVE
+#define OBJ_CASE_INSENSITIVE 0x00000040L
+#endif
 
 namespace
 {
@@ -28,6 +47,22 @@ std::wstring BuildSamplePath()
     return result;
 }
 
+std::wstring BuildNtPath(const std::wstring& dosPath)
+{
+    return L"\\??\\" + dosPath;
+}
+
+std::string HexNtStatus(NTSTATUS status)
+{
+    std::ostringstream stream;
+    stream << "0x"
+           << std::hex
+           << std::setfill('0')
+           << std::setw(8)
+           << static_cast<unsigned long>(status);
+    return stream.str();
+}
+
 bool HasSlowOption(int argc, wchar_t** argv)
 {
     bool slow = false;
@@ -47,6 +82,57 @@ bool HasSlowOption(int argc, wchar_t** argv)
 void LogLastError(const char* operation)
 {
     std::cout << operation << " failed with " << GetLastError() << "\n";
+}
+
+bool RunNtCreateFileProbe(const std::wstring& path)
+{
+    bool success = false;
+    HANDLE ntHandle = nullptr;
+    IO_STATUS_BLOCK ioStatus = {};
+    const std::wstring ntPath = BuildNtPath(path);
+    UNICODE_STRING objectName = {};
+    OBJECT_ATTRIBUTES objectAttributes = {};
+
+    do
+    {
+        objectName.Buffer = const_cast<PWSTR>(ntPath.c_str());
+        objectName.Length = static_cast<USHORT>(ntPath.size() * sizeof(wchar_t));
+        objectName.MaximumLength = objectName.Length + sizeof(wchar_t);
+
+        objectAttributes.Length = sizeof(objectAttributes);
+        objectAttributes.ObjectName = &objectName;
+        objectAttributes.Attributes = OBJ_CASE_INSENSITIVE;
+
+        const NTSTATUS status = NtCreateFile(
+            &ntHandle,
+            GENERIC_READ,
+            &objectAttributes,
+            &ioStatus,
+            nullptr,
+            FILE_ATTRIBUTE_NORMAL,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            FILE_OPEN,
+            FILE_NON_DIRECTORY_FILE,
+            nullptr,
+            0);
+
+        std::cout << "ntcreatefile status=" << HexNtStatus(status) << "\n";
+
+        if (!NT_SUCCESS(status))
+        {
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    if (ntHandle != nullptr)
+    {
+        CloseHandle(ntHandle);
+    }
+
+    return success;
 }
 
 int RunFileIo(bool slow)
@@ -105,6 +191,11 @@ int RunFileIo(bool slow)
 
         CloseHandle(fileHandle);
         fileHandle = INVALID_HANDLE_VALUE;
+
+        if (!RunNtCreateFileProbe(path))
+        {
+            break;
+        }
 
         HANDLE missingHandle = CreateFileW(
             L"C:\\Windows\\System32\\drivers\\etc\\knmon-missing-file-do-not-create.dat",

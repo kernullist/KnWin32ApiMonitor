@@ -9,7 +9,8 @@ Current verification gates include:
 3. Session fixture validation through `npm run sessions:validate`.
 4. Native helper smoke runs for `capture-sample`, `validate-session`, and `replay-session`.
 5. Repeated native lifecycle smoke through `tools\native-smoke\repeat-capture-sample.ps1`.
-6. Collector fixture and native smoke validation through `npm run collector:validate`.
+6. `NtCreateFile` native capture smoke through `tools\native-smoke\ntcreatefile-capture-smoke.ps1`.
+7. Collector fixture and native smoke validation through `npm run collector:validate`.
 
 Run repeated lifecycle smoke:
 
@@ -18,6 +19,14 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\repeat-capture-sampl
 ```
 
 The script verifies five consecutive controlled sample captures, the stable File I/O API set, zero dropped events, exactly one `agent_shutdown` event per run, and restored hook counts.
+
+Run `NtCreateFile` capture smoke:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\ntcreatefile-capture-smoke.ps1
+```
+
+The `NtCreateFile` smoke verifies the controlled `ntdll.dll` event, NTSTATUS return format, decoded sample object path evidence, zero dropped events, and six restored hooks.
 
 Run collector backpressure smoke:
 

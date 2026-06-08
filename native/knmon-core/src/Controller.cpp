@@ -14,6 +14,8 @@ namespace knmon
 {
 namespace
 {
+constexpr std::uint64_t ExpectedFileIoHookCount = 6;
+
 std::string WideToUtf8(const wchar_t* value)
 {
     std::string result;
@@ -1242,7 +1244,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
             break;
         }
 
-        if (hookInstalledCount >= 5)
+        if (hookInstalledCount >= ExpectedFileIoHookCount)
         {
             AddAudit(result, "hook_install_complete", "agent_event_read", "All selected File I/O hooks reported installed.");
         }
@@ -1262,6 +1264,13 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         if (hookInstallFailed)
         {
             SetResultError(result, ERROR_HOOK_NOT_INSTALLED, "knmon-core", "hook_install_required", "One or more selected File I/O hooks could not be installed.");
+            fatalError = true;
+            break;
+        }
+
+        if (hookInstalledCount < ExpectedFileIoHookCount)
+        {
+            SetResultError(result, ERROR_HOOK_NOT_INSTALLED, "knmon-core", "hook_install_count_required", "Not all selected File I/O hooks reported installed.");
             fatalError = true;
             break;
         }

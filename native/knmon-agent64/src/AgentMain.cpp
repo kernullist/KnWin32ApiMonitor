@@ -1,4 +1,5 @@
 #include <Windows.h>
+#include <winternl.h>
 
 #include <array>
 #include <cstdint>
@@ -6,17 +7,36 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <vector>
+
+#ifndef NT_SUCCESS
+#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
+#endif
 
 namespace
 {
 constexpr const wchar_t* AgentVersion = L"0.2.0";
 constexpr std::size_t MaxBufferPreviewBytes = 16;
+constexpr std::size_t MaxNtObjectNameBytes = 512;
 
 using CreateFileWFn = HANDLE(WINAPI*)(LPCWSTR, DWORD, DWORD, LPSECURITY_ATTRIBUTES, DWORD, DWORD, HANDLE);
 using CreateFileAFn = HANDLE(WINAPI*)(LPCSTR, DWORD, DWORD, LPSECURITY_ATTRIBUTES, DWORD, DWORD, HANDLE);
 using ReadFileFn = BOOL(WINAPI*)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
 using WriteFileFn = BOOL(WINAPI*)(HANDLE, LPCVOID, DWORD, LPDWORD, LPOVERLAPPED);
 using CloseHandleFn = BOOL(WINAPI*)(HANDLE);
+using NtCreateFileFn = NTSTATUS(NTAPI*)(
+    PHANDLE,
+    ACCESS_MASK,
+    POBJECT_ATTRIBUTES,
+    PIO_STATUS_BLOCK,
+    PLARGE_INTEGER,
+    ULONG,
+    ULONG,
+    ULONG,
+    ULONG,
+    PVOID,
+    ULONG);
+using RtlNtStatusToDosErrorFn = ULONG(WINAPI*)(NTSTATUS);
 
 HANDLE g_pipeHandle = INVALID_HANDLE_VALUE;
 SRWLOCK g_pipeLock = SRWLOCK_INIT;
@@ -29,6 +49,7 @@ CreateFileAFn g_originalCreateFileA = nullptr;
 ReadFileFn g_originalReadFile = nullptr;
 WriteFileFn g_originalWriteFile = nullptr;
 CloseHandleFn g_originalCloseHandle = nullptr;
+NtCreateFileFn g_originalNtCreateFile = nullptr;
 std::wstring g_operationId;
 
 enum class AgentLifecycleState : LONG
@@ -43,7 +64,7 @@ enum class AgentLifecycleState : LONG
 struct HookRecord
 {
     const char* ApiName = "";
-    const char* ModuleName = "kernel32.dll";
+    const char* ModuleName = "";
     ULONG_PTR* ThunkAddress = nullptr;
     void* OriginalFunction = nullptr;
     void* ReplacementFunction = nullptr;
@@ -299,6 +320,28 @@ std::string HexDword(DWORD value)
     return stream.str();
 }
 
+std::string HexNtStatus(NTSTATUS status)
+{
+    std::ostringstream stream;
+    stream << "0x"
+           << std::hex
+           << std::setfill('0')
+           << std::setw(8)
+           << static_cast<std::uint32_t>(status);
+    return stream.str();
+}
+
+std::string HexUlongPtr(ULONG_PTR value)
+{
+    std::ostringstream stream;
+    stream << "0x"
+           << std::hex
+           << std::setfill('0')
+           << std::setw(static_cast<int>(sizeof(void*) * 2))
+           << static_cast<std::uintptr_t>(value);
+    return stream.str();
+}
+
 std::string BufferPreview(const void* buffer, DWORD length)
 {
     std::ostringstream stream;
@@ -329,6 +372,203 @@ std::string BufferPreview(const void* buffer, DWORD length)
     while (false);
 
     return stream.str();
+}
+
+struct DecodeResult
+{
+    std::string Value;
+    const char* Status = "decoded";
+};
+
+template <typename T>
+bool ReadCurrentProcessValue(const T* address, T* value)
+{
+    bool read = false;
+
+    do
+    {
+        if (address == nullptr || value == nullptr)
+        {
+            break;
+        }
+
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), address, value, sizeof(T), &bytesRead))
+        {
+            break;
+        }
+
+        read = bytesRead == sizeof(T);
+    }
+    while (false);
+
+    return read;
+}
+
+DecodeResult DecodeUnicodeString(const UNICODE_STRING* value)
+{
+    DecodeResult result;
+
+    do
+    {
+        if (value == nullptr)
+        {
+            result.Status = "invalid_pointer";
+            break;
+        }
+
+        UNICODE_STRING local = {};
+        if (!ReadCurrentProcessValue(value, &local))
+        {
+            result.Status = "unreadable_memory";
+            break;
+        }
+
+        if (local.Buffer == nullptr || local.Length == 0)
+        {
+            break;
+        }
+
+        std::size_t capturedBytes = local.Length;
+        if (capturedBytes > MaxNtObjectNameBytes)
+        {
+            capturedBytes = MaxNtObjectNameBytes;
+            result.Status = "truncated";
+        }
+
+        capturedBytes -= capturedBytes % sizeof(wchar_t);
+        if (capturedBytes == 0)
+        {
+            result.Status = "unreadable_memory";
+            break;
+        }
+
+        std::vector<wchar_t> buffer(capturedBytes / sizeof(wchar_t) + 1);
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), local.Buffer, buffer.data(), capturedBytes, &bytesRead) || bytesRead == 0)
+        {
+            result.Value = HexPointer(local.Buffer);
+            result.Status = "unreadable_memory";
+            break;
+        }
+
+        bytesRead -= bytesRead % sizeof(wchar_t);
+        buffer[bytesRead / sizeof(wchar_t)] = L'\0';
+        result.Value = WideToUtf8(buffer.data());
+    }
+    while (false);
+
+    return result;
+}
+
+DecodeResult DecodeObjectAttributesObjectName(const OBJECT_ATTRIBUTES* objectAttributes)
+{
+    DecodeResult result;
+
+    do
+    {
+        if (objectAttributes == nullptr)
+        {
+            result.Value = "";
+            result.Status = "invalid_pointer";
+            break;
+        }
+
+        OBJECT_ATTRIBUTES local = {};
+        if (!ReadCurrentProcessValue(objectAttributes, &local))
+        {
+            result.Value = HexPointer(objectAttributes);
+            result.Status = "unreadable_memory";
+            break;
+        }
+
+        DecodeResult objectName = DecodeUnicodeString(local.ObjectName);
+        result.Value = objectName.Value.empty() ? HexPointer(local.ObjectName) : objectName.Value;
+        result.Status = objectName.Status;
+    }
+    while (false);
+
+    return result;
+}
+
+DecodeResult DecodeIoStatusBlock(const IO_STATUS_BLOCK* ioStatusBlock)
+{
+    DecodeResult result;
+
+    do
+    {
+        if (ioStatusBlock == nullptr)
+        {
+            result.Status = "invalid_pointer";
+            break;
+        }
+
+        IO_STATUS_BLOCK local = {};
+        if (!ReadCurrentProcessValue(ioStatusBlock, &local))
+        {
+            result.Value = HexPointer(ioStatusBlock);
+            result.Status = "unreadable_memory";
+            break;
+        }
+
+        std::ostringstream stream;
+        stream << "Status=" << HexNtStatus(local.Status) << ",Information=" << HexUlongPtr(local.Information);
+        result.Value = stream.str();
+    }
+    while (false);
+
+    return result;
+}
+
+std::string ReadHandlePointer(PHANDLE handlePointer)
+{
+    std::string result = HexPointer(handlePointer);
+
+    do
+    {
+        HANDLE value = nullptr;
+        if (!ReadCurrentProcessValue(handlePointer, &value))
+        {
+            break;
+        }
+
+        result = HexPointer(value);
+    }
+    while (false);
+
+    return result;
+}
+
+DWORD NtStatusToDosError(NTSTATUS status)
+{
+    DWORD result = 0;
+
+    do
+    {
+        if (NT_SUCCESS(status))
+        {
+            break;
+        }
+
+        HMODULE module = GetModuleHandleW(L"ntdll.dll");
+        if (module == nullptr)
+        {
+            result = ERROR_MR_MID_NOT_FOUND;
+            break;
+        }
+
+        auto rtlNtStatusToDosError = reinterpret_cast<RtlNtStatusToDosErrorFn>(GetProcAddress(module, "RtlNtStatusToDosError"));
+        if (rtlNtStatusToDosError == nullptr)
+        {
+            result = ERROR_MR_MID_NOT_FOUND;
+            break;
+        }
+
+        result = rtlNtStatusToDosError(status);
+    }
+    while (false);
+
+    return result;
 }
 
 std::uint64_t DurationUs(const LARGE_INTEGER& start, const LARGE_INTEGER& end)
@@ -406,13 +646,13 @@ void SendHello()
     SendJson(stream.str());
 }
 
-void SendHookStatus(const char* apiName, bool installed, const std::string& message)
+void SendHookStatus(const char* moduleName, const char* apiName, bool installed, const std::string& message)
 {
     const LONG64 sequence = NextSequence();
     std::ostringstream stream;
     stream << MessagePrefix(installed ? "hook_installed" : "hook_install_failed", sequence) << ",";
     stream << "\"api\":" << Q(apiName) << ",";
-    stream << "\"module\":\"kernel32.dll\",";
+    stream << "\"module\":" << Q(moduleName) << ",";
     stream << "\"hookMethod\":\"iat\",";
     stream << "\"message\":" << Q(message);
     stream << "}";
@@ -475,6 +715,16 @@ void SendAgentShutdown(const char* reason, const HookLifecycleCounts& counts)
     SendJson(stream.str());
 }
 
+std::string ArgumentJsonWithStatus(
+    int index,
+    const char* type,
+    const char* name,
+    const char* direction,
+    const std::string& preCallValue,
+    const std::string& postCallValue,
+    const std::string& decodedValue,
+    const char* decodeStatus);
+
 std::string ArgumentJson(
     int index,
     const char* type,
@@ -483,6 +733,19 @@ std::string ArgumentJson(
     const std::string& preCallValue,
     const std::string& postCallValue,
     const std::string& decodedValue)
+{
+    return ArgumentJsonWithStatus(index, type, name, direction, preCallValue, postCallValue, decodedValue, "decoded");
+}
+
+std::string ArgumentJsonWithStatus(
+    int index,
+    const char* type,
+    const char* name,
+    const char* direction,
+    const std::string& preCallValue,
+    const std::string& postCallValue,
+    const std::string& decodedValue,
+    const char* decodeStatus)
 {
     std::ostringstream stream;
     stream << "{";
@@ -494,12 +757,13 @@ std::string ArgumentJson(
     stream << "\"preCallValue\":" << Q(preCallValue) << ",";
     stream << "\"postCallValue\":" << Q(postCallValue) << ",";
     stream << "\"decodedValue\":" << Q(decodedValue) << ",";
-    stream << "\"decodeStatus\":\"decoded\"";
+    stream << "\"decodeStatus\":" << Q(decodeStatus == nullptr ? "decoded" : decodeStatus);
     stream << "}";
     return stream.str();
 }
 
 void SendApiCall(
+    const char* moduleName,
     const char* apiName,
     const std::string& returnValue,
     DWORD errorCode,
@@ -511,7 +775,7 @@ void SendApiCall(
     std::ostringstream stream;
     stream << MessagePrefix("api_call", sequence) << ",";
     stream << "\"api\":" << Q(apiName) << ",";
-    stream << "\"module\":\"kernel32.dll\",";
+    stream << "\"module\":" << Q(moduleName) << ",";
     stream << "\"process\":\"knmon-sample-fileio.exe\",";
     stream << "\"returnValue\":" << Q(returnValue) << ",";
     stream << "\"lastErrorCode\":" << errorCode << ",";
@@ -519,19 +783,19 @@ void SendApiCall(
     stream << "\"durationUs\":" << durationUs << ",";
     stream << "\"arguments\":[" << argumentsJson << "],";
     stream << "\"tags\":[\"native-capture\",\"file\",\"hook\"],";
-    stream << "\"stack\":[\"knmon-agent64.dll!IatHook\",\"kernel32.dll!" << JsonEscape(apiName) << "\"],";
+    stream << "\"stack\":[\"knmon-agent64.dll!IatHook\"," << Q(std::string(moduleName) + "!" + apiName) << "],";
     stream << "\"bufferPreview\":" << Q(bufferPreview);
     stream << "}";
     SendJson(stream.str());
 }
 
-void* ResolveKernel32Export(const char* name)
+void* ResolveExport(const char* moduleName, const char* name)
 {
     void* result = nullptr;
 
     do
     {
-        HMODULE module = GetModuleHandleW(L"kernel32.dll");
+        HMODULE module = GetModuleHandleA(moduleName);
         if (module == nullptr)
         {
             break;
@@ -544,7 +808,12 @@ void* ResolveKernel32Export(const char* name)
     return result;
 }
 
-bool AppendHookRecordNoLock(const char* apiName, ULONG_PTR* thunkAddress, void* originalFunction, void* replacementFunction)
+bool AppendHookRecordNoLock(
+    const char* moduleName,
+    const char* apiName,
+    ULONG_PTR* thunkAddress,
+    void* originalFunction,
+    void* replacementFunction)
 {
     bool appended = false;
 
@@ -557,7 +826,7 @@ bool AppendHookRecordNoLock(const char* apiName, ULONG_PTR* thunkAddress, void* 
 
         HookRecord& record = g_hookRecords[g_hookRecordCount];
         record.ApiName = apiName;
-        record.ModuleName = "kernel32.dll";
+        record.ModuleName = moduleName;
         record.ThunkAddress = thunkAddress;
         record.OriginalFunction = originalFunction;
         record.ReplacementFunction = replacementFunction;
@@ -572,7 +841,7 @@ bool AppendHookRecordNoLock(const char* apiName, ULONG_PTR* thunkAddress, void* 
     return appended;
 }
 
-bool PatchImport(const char* functionName, void* replacement, void** original)
+bool PatchImport(const char* moduleName, const char* functionName, void* replacement, void** original)
 {
     bool patched = false;
 
@@ -606,6 +875,12 @@ bool PatchImport(const char* functionName, void* replacement, void** original)
         auto* importDescriptor = reinterpret_cast<IMAGE_IMPORT_DESCRIPTOR*>(base + importDirectory.VirtualAddress);
         for (; importDescriptor->Name != 0; ++importDescriptor)
         {
+            const char* importedModuleName = reinterpret_cast<const char*>(base + importDescriptor->Name);
+            if (_stricmp(importedModuleName, moduleName) != 0)
+            {
+                continue;
+            }
+
             auto* originalThunk = reinterpret_cast<IMAGE_THUNK_DATA*>(base + importDescriptor->OriginalFirstThunk);
             auto* firstThunk = reinterpret_cast<IMAGE_THUNK_DATA*>(base + importDescriptor->FirstThunk);
 
@@ -644,7 +919,7 @@ bool PatchImport(const char* functionName, void* replacement, void** original)
 
                 DWORD ignored = 0;
                 VirtualProtect(&firstThunk->u1.Function, sizeof(void*), oldProtect, &ignored);
-                if (AppendHookRecordNoLock(functionName, &firstThunk->u1.Function, originalFunction, replacement))
+                if (AppendHookRecordNoLock(moduleName, functionName, &firstThunk->u1.Function, originalFunction, replacement))
                 {
                     patched = true;
                 }
@@ -764,7 +1039,7 @@ HANDLE WINAPI HookedCreateFileW(
     args << ArgumentJson(3, "DWORD", "dwCreationDisposition", "in", HexDword(creationDisposition), HexDword(creationDisposition), HexDword(creationDisposition));
     if (HooksEnabled())
     {
-        SendApiCall("CreateFileW", HexPointer(result), eventError, DurationUs(start, end), args.str(), "");
+        SendApiCall("kernel32.dll", "CreateFileW", HexPointer(result), eventError, DurationUs(start, end), args.str(), "");
     }
 
     SetLastError(lastError);
@@ -809,7 +1084,7 @@ HANDLE WINAPI HookedCreateFileA(
     args << ArgumentJson(3, "DWORD", "dwCreationDisposition", "in", HexDword(creationDisposition), HexDword(creationDisposition), HexDword(creationDisposition));
     if (HooksEnabled())
     {
-        SendApiCall("CreateFileA", HexPointer(result), eventError, DurationUs(start, end), args.str(), "");
+        SendApiCall("kernel32.dll", "CreateFileA", HexPointer(result), eventError, DurationUs(start, end), args.str(), "");
     }
 
     SetLastError(lastError);
@@ -846,7 +1121,7 @@ BOOL WINAPI HookedReadFile(HANDLE file, LPVOID buffer, DWORD bytesToRead, LPDWOR
     args << ArgumentJson(3, "LPDWORD", "lpNumberOfBytesRead", "out", HexPointer(bytesRead), std::to_string(actualBytes), std::to_string(actualBytes));
     if (HooksEnabled())
     {
-        SendApiCall("ReadFile", result ? "TRUE" : "FALSE", eventError, DurationUs(start, end), args.str(), result ? BufferPreview(buffer, actualBytes) : "");
+        SendApiCall("kernel32.dll", "ReadFile", result ? "TRUE" : "FALSE", eventError, DurationUs(start, end), args.str(), result ? BufferPreview(buffer, actualBytes) : "");
     }
 
     SetLastError(lastError);
@@ -884,7 +1159,7 @@ BOOL WINAPI HookedWriteFile(HANDLE file, LPCVOID buffer, DWORD bytesToWrite, LPD
     args << ArgumentJson(3, "LPDWORD", "lpNumberOfBytesWritten", "out", HexPointer(bytesWritten), std::to_string(actualBytes), std::to_string(actualBytes));
     if (HooksEnabled())
     {
-        SendApiCall("WriteFile", result ? "TRUE" : "FALSE", eventError, DurationUs(start, end), args.str(), preview);
+        SendApiCall("kernel32.dll", "WriteFile", result ? "TRUE" : "FALSE", eventError, DurationUs(start, end), args.str(), preview);
     }
 
     SetLastError(lastError);
@@ -917,14 +1192,95 @@ BOOL WINAPI HookedCloseHandle(HANDLE handle)
     args << ArgumentJson(0, "HANDLE", "hObject", "in", HexPointer(handle), HexPointer(handle), HexPointer(handle));
     if (HooksEnabled())
     {
-        SendApiCall("CloseHandle", result ? "TRUE" : "FALSE", eventError, DurationUs(start, end), args.str(), "");
+        SendApiCall("kernel32.dll", "CloseHandle", result ? "TRUE" : "FALSE", eventError, DurationUs(start, end), args.str(), "");
     }
 
     SetLastError(lastError);
     return result;
 }
 
-bool InstallHook(const char* apiName, void* replacement, void** original)
+NTSTATUS NTAPI HookedNtCreateFile(
+    PHANDLE fileHandle,
+    ACCESS_MASK desiredAccess,
+    POBJECT_ATTRIBUTES objectAttributes,
+    PIO_STATUS_BLOCK ioStatusBlock,
+    PLARGE_INTEGER allocationSize,
+    ULONG fileAttributes,
+    ULONG shareAccess,
+    ULONG createDisposition,
+    ULONG createOptions,
+    PVOID eaBuffer,
+    ULONG eaLength)
+{
+    if (g_inHook || !HooksEnabled() || g_originalNtCreateFile == nullptr)
+    {
+        if (g_originalNtCreateFile == nullptr)
+        {
+            return static_cast<NTSTATUS>(0xC000007AL);
+        }
+
+        return g_originalNtCreateFile(
+            fileHandle,
+            desiredAccess,
+            objectAttributes,
+            ioStatusBlock,
+            allocationSize,
+            fileAttributes,
+            shareAccess,
+            createDisposition,
+            createOptions,
+            eaBuffer,
+            eaLength);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    NTSTATUS status = g_originalNtCreateFile(
+        fileHandle,
+        desiredAccess,
+        objectAttributes,
+        ioStatusBlock,
+        allocationSize,
+        fileAttributes,
+        shareAccess,
+        createDisposition,
+        createOptions,
+        eaBuffer,
+        eaLength);
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = NtStatusToDosError(status);
+    const DecodeResult objectName = DecodeObjectAttributesObjectName(objectAttributes);
+    const DecodeResult ioStatus = DecodeIoStatusBlock(ioStatusBlock);
+    const std::string fileHandlePointer = HexPointer(fileHandle);
+    const std::string fileHandleValue = NT_SUCCESS(status) ? ReadHandlePointer(fileHandle) : fileHandlePointer;
+    const std::string objectDecoded = objectName.Value.empty() ? HexPointer(objectAttributes) : objectName.Value;
+    const std::string ioStatusDecoded = ioStatus.Value.empty() ? HexPointer(ioStatusBlock) : ioStatus.Value;
+
+    std::ostringstream args;
+    args << ArgumentJson(0, "PHANDLE", "FileHandle", "out", fileHandlePointer, fileHandleValue, fileHandleValue) << ",";
+    args << ArgumentJson(1, "ACCESS_MASK", "DesiredAccess", "in", HexDword(desiredAccess), HexDword(desiredAccess), HexDword(desiredAccess)) << ",";
+    args << ArgumentJsonWithStatus(2, "POBJECT_ATTRIBUTES", "ObjectAttributes", "in", HexPointer(objectAttributes), HexPointer(objectAttributes), objectDecoded, objectName.Status) << ",";
+    args << ArgumentJsonWithStatus(3, "PIO_STATUS_BLOCK", "IoStatusBlock", "out", HexPointer(ioStatusBlock), ioStatusDecoded, ioStatusDecoded, ioStatus.Status) << ",";
+    args << ArgumentJson(4, "PLARGE_INTEGER", "AllocationSize", "in", HexPointer(allocationSize), HexPointer(allocationSize), HexPointer(allocationSize)) << ",";
+    args << ArgumentJson(5, "ULONG", "FileAttributes", "in", HexDword(fileAttributes), HexDword(fileAttributes), HexDword(fileAttributes)) << ",";
+    args << ArgumentJson(6, "ULONG", "ShareAccess", "in", HexDword(shareAccess), HexDword(shareAccess), HexDword(shareAccess)) << ",";
+    args << ArgumentJson(7, "ULONG", "CreateDisposition", "in", HexDword(createDisposition), HexDword(createDisposition), HexDword(createDisposition)) << ",";
+    args << ArgumentJson(8, "ULONG", "CreateOptions", "in", HexDword(createOptions), HexDword(createOptions), HexDword(createOptions)) << ",";
+    args << ArgumentJson(9, "PVOID", "EaBuffer", "in", HexPointer(eaBuffer), HexPointer(eaBuffer), HexPointer(eaBuffer)) << ",";
+    args << ArgumentJson(10, "ULONG", "EaLength", "in", std::to_string(eaLength), std::to_string(eaLength), std::to_string(eaLength));
+
+    if (HooksEnabled())
+    {
+        SendApiCall("ntdll.dll", "NtCreateFile", HexNtStatus(status), eventError, DurationUs(start, end), args.str(), "");
+    }
+
+    return status;
+}
+
+bool InstallHook(const char* moduleName, const char* apiName, void* replacement, void** original)
 {
     bool installed = false;
 
@@ -932,11 +1288,11 @@ bool InstallHook(const char* apiName, void* replacement, void** original)
     {
         if (original != nullptr && *original == nullptr)
         {
-            *original = ResolveKernel32Export(apiName);
+            *original = ResolveExport(moduleName, apiName);
         }
 
         AcquireSRWLockExclusive(&g_hookLock);
-        installed = PatchImport(apiName, replacement, original);
+        installed = PatchImport(moduleName, apiName, replacement, original);
         ReleaseSRWLockExclusive(&g_hookLock);
     }
     while (false);
@@ -946,7 +1302,7 @@ bool InstallHook(const char* apiName, void* replacement, void** original)
         InterlockedIncrement(&g_failedHooks);
     }
 
-    SendHookStatus(apiName, installed, installed ? "IAT hook installed in controlled sample target." : "IAT entry was not found in controlled sample target.");
+    SendHookStatus(moduleName, apiName, installed, installed ? "IAT hook installed in controlled sample target." : "IAT entry was not found in controlled sample target.");
     return installed;
 }
 
@@ -954,11 +1310,12 @@ bool InstallHooks()
 {
     bool allInstalled = true;
 
-    allInstalled = InstallHook("CreateFileW", reinterpret_cast<void*>(HookedCreateFileW), reinterpret_cast<void**>(&g_originalCreateFileW)) && allInstalled;
-    allInstalled = InstallHook("CreateFileA", reinterpret_cast<void*>(HookedCreateFileA), reinterpret_cast<void**>(&g_originalCreateFileA)) && allInstalled;
-    allInstalled = InstallHook("ReadFile", reinterpret_cast<void*>(HookedReadFile), reinterpret_cast<void**>(&g_originalReadFile)) && allInstalled;
-    allInstalled = InstallHook("WriteFile", reinterpret_cast<void*>(HookedWriteFile), reinterpret_cast<void**>(&g_originalWriteFile)) && allInstalled;
-    allInstalled = InstallHook("CloseHandle", reinterpret_cast<void*>(HookedCloseHandle), reinterpret_cast<void**>(&g_originalCloseHandle)) && allInstalled;
+    allInstalled = InstallHook("kernel32.dll", "CreateFileW", reinterpret_cast<void*>(HookedCreateFileW), reinterpret_cast<void**>(&g_originalCreateFileW)) && allInstalled;
+    allInstalled = InstallHook("kernel32.dll", "CreateFileA", reinterpret_cast<void*>(HookedCreateFileA), reinterpret_cast<void**>(&g_originalCreateFileA)) && allInstalled;
+    allInstalled = InstallHook("kernel32.dll", "ReadFile", reinterpret_cast<void*>(HookedReadFile), reinterpret_cast<void**>(&g_originalReadFile)) && allInstalled;
+    allInstalled = InstallHook("kernel32.dll", "WriteFile", reinterpret_cast<void*>(HookedWriteFile), reinterpret_cast<void**>(&g_originalWriteFile)) && allInstalled;
+    allInstalled = InstallHook("kernel32.dll", "CloseHandle", reinterpret_cast<void*>(HookedCloseHandle), reinterpret_cast<void**>(&g_originalCloseHandle)) && allInstalled;
+    allInstalled = InstallHook("ntdll.dll", "NtCreateFile", reinterpret_cast<void*>(HookedNtCreateFile), reinterpret_cast<void**>(&g_originalNtCreateFile)) && allInstalled;
 
     if (allInstalled)
     {

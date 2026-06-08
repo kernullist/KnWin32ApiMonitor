@@ -12,6 +12,7 @@ This repository is bootstrapping a new API Monitor inspired by Rohitab API Monit
 - JSONL export for early session artifacts.
 - Controlled launch-time early-bird APC agent load foundation for the repository sample target.
 - Bounded controlled File I/O capture from the repository sample target through x64 agent IAT hooks.
+- Explicit controlled `NtCreateFile` capture from `ntdll.dll` with NTSTATUS return evidence.
 - Deterministic x64 agent lifecycle telemetry with hook restore evidence on shutdown.
 - Durable helper-written sample sessions with manifest, audit, agent-event, and trace-event JSONL files.
 - Session validation and replay without relaunching or reinjecting the sample target.
@@ -36,13 +37,14 @@ Implemented now:
 11. x64 agent DLL that sends a HELLO handshake after controlled early-bird APC load.
 12. Sample File I/O target executable.
 13. Bounded `capture-sample` helper command that collects real `api_call` events from the sample target.
-14. x64 agent IAT hooks for `CreateFileW`, `CreateFileA`, `ReadFile`, `WriteFile`, and `CloseHandle`.
+14. x64 agent IAT hooks for `CreateFileW`, `CreateFileA`, `NtCreateFile`, `ReadFile`, `WriteFile`, and `CloseHandle`.
 15. UI action that maps captured native File I/O events into the trace table.
 16. `capture-sample --write-session <dir>` session writer.
 17. `validate-session --session <dir>` and `replay-session --session <dir>` helper commands.
 18. UI actions for `Capture And Save` and `Replay Last`.
 19. x64 agent hook lifecycle states, idempotent IAT restore, and structured `agent_shutdown` evidence.
 20. `knmon-collector.exe smoke-backpressure` for deterministic collector queue/drop accounting.
+21. Controlled `NtCreateFile` capture with bounded `OBJECT_ATTRIBUTES` object-name decoding.
 
 Not implemented yet:
 
@@ -53,8 +55,7 @@ Not implemented yet:
 5. COM monitoring.
 6. Kernel-mode helper.
 7. x86 agent build.
-8. `NtCreateFile` live hook capture.
-9. Compressed `.knapm` container chunks and replay indexes.
+8. Compressed `.knapm` container chunks and replay indexes.
 
 ## Current Native Capture Snapshot
 
@@ -73,13 +74,14 @@ Verified live hook coverage:
 
 1. `CreateFileW`
 2. `CreateFileA`
-3. `ReadFile`
-4. `WriteFile`
-5. `CloseHandle`
+3. `NtCreateFile`
+4. `ReadFile`
+5. `WriteFile`
+6. `CloseHandle`
 
-The current smoke path captures real sample-target File I/O events and reports `droppedEvents=0` on the healthy path. `ReadFile` and `WriteFile` include bounded 16-byte buffer previews.
+The current smoke path captures real sample-target File I/O events and reports `droppedEvents=0` on the healthy path. `ReadFile` and `WriteFile` include bounded 16-byte buffer previews. `NtCreateFile` is captured as an explicit `ntdll.dll` event with `returnValue` carrying the NTSTATUS hex value and a bounded `ObjectAttributes` object-name decode.
 
-Healthy lifecycle evidence currently reports `installedHooks=5`, `restoredHooks=5`, `failedHooks=0`, and `reason=process_detach` through `agent_shutdown`.
+Healthy lifecycle evidence currently reports `installedHooks=6`, `restoredHooks=6`, `failedHooks=0`, and `reason=process_detach` through `agent_shutdown`.
 
 ## Safety Boundary
 
@@ -139,6 +141,7 @@ build\native\Debug\knmon-native-helper.exe capture-sample --write-session captur
 build\native\Debug\knmon-native-helper.exe validate-session --session captures\latest-sample-fileio
 build\native\Debug\knmon-native-helper.exe replay-session --session captures\latest-sample-fileio
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\repeat-capture-sample.ps1 -Count 5
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\ntcreatefile-capture-smoke.ps1
 build\native\Debug\knmon-collector.exe smoke-backpressure --capacity 4 --events 10
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\collector-backpressure-smoke.ps1
 ```
@@ -147,7 +150,7 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\collector-backpressu
 
 `capture-sample` uses the same controlled launch path, keeps the event pipe open until the sample target exits, installs x64 IAT hooks for the stable File I/O set, and returns schema-versioned `api_call` events plus dropped-event accounting.
 
-The repeated smoke script verifies five consecutive controlled captures, the stable File I/O API set, zero dropped events, and hook restore counts.
+The repeated smoke script verifies five consecutive controlled captures, the stable File I/O API set, zero dropped events, and hook restore counts. The `NtCreateFile` smoke verifies the `ntdll.dll` module, NTSTATUS return format, decoded sample object path, and six restored hooks.
 
 `capture-sample --write-session` persists the bounded capture into a replayable session directory. Replay returns the trace rows from disk and does not relaunch the target.
 

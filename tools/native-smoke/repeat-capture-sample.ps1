@@ -8,10 +8,13 @@ $ErrorActionPreference = "Stop"
 $requiredApis = @(
     "CreateFileW",
     "CreateFileA",
+    "NtCreateFile",
     "ReadFile",
     "WriteFile",
     "CloseHandle"
 )
+
+$expectedHookCount = 6
 
 if ($Count -lt 1)
 {
@@ -57,7 +60,7 @@ for ($index = 1; $index -le $Count; ++$index)
         throw "Run $index did not receive exactly one agent_shutdown event."
     }
 
-    if ($shutdown[0].installedHooks -ne 5)
+    if ($shutdown[0].installedHooks -ne $expectedHookCount)
     {
         throw "Run $index unexpected installedHooks: $($shutdown[0].installedHooks)"
     }

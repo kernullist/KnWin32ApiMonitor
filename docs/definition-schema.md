@@ -75,11 +75,24 @@ Current live x64 sample capture covers:
 
 1. `CreateFileW`
 2. `CreateFileA`
-3. `ReadFile`
-4. `WriteFile`
-5. `CloseHandle`
+3. `NtCreateFile`
+4. `ReadFile`
+5. `WriteFile`
+6. `CloseHandle`
 
-`NtCreateFile` remains definition-only until the Win32 hook path is reviewed.
+`NtCreateFile` is captured as a controlled `ntdll.dll` IAT hook in the repository sample target. The native event keeps `returnValue` as the NTSTATUS hex string. For compatibility with the existing trace error model, `lastErrorCode` remains `0` on NT success and a mapped Win32 error on NT failure.
+
+The `NtCreateFile` event includes bounded snapshots for:
+
+1. `FileHandle`
+2. `DesiredAccess`
+3. `ObjectAttributes`
+4. `IoStatusBlock`
+5. `ShareAccess`
+6. `CreateDisposition`
+7. `CreateOptions`
+
+`ObjectAttributes` decoding copies at most the bounded `UNICODE_STRING` length used by the agent and falls back to pointer evidence with `invalid_pointer`, `unreadable_memory`, or `truncated` status when needed.
 
 ## Agent Event Contracts
 

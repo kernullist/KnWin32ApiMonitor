@@ -14,7 +14,9 @@
     "captureMode": "bounded-native-capture",
     "hookMethod": "iat",
     "controlledSampleOnly": true,
-    "hookedApis": ["CreateFileW", "CreateFileA", "ReadFile", "WriteFile", "CloseHandle"],
+    "hookedApis": ["CreateFileW", "CreateFileA", "NtCreateFile", "ReadFile", "WriteFile", "CloseHandle"],
+    "hookedModules": ["kernel32.dll", "ntdll.dll"],
+    "expectedHookCount": 6,
     "messageTypes": ["agent_hello", "hook_installed", "hook_install_failed", "api_call", "dropped_events", "agent_shutdown"],
     "lifecycleStates": ["starting", "running", "stopping", "disabled", "failed"],
     "shutdownFields": ["reason", "lifecycleState", "installedHooks", "restoredHooks", "failedHooks", "droppedCount"]
