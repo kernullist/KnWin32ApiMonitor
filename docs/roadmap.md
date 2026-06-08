@@ -237,7 +237,11 @@ Deliverables:
 6. Failure taxonomy:
    - unsupported_architecture
    - unsupported_protected_process
+   - missing_target
+   - missing_agent
    - access_denied
+   - target_open_failed
+   - agent_open_failed
    - helper_agent_mismatch
    - loader_failed
    - handshake_timeout
@@ -262,7 +266,7 @@ Current verified behavior:
 4. Controller preflight checks target and agent PE architecture before `CreateProcessW`.
 5. Missing target, missing agent, and available architecture mismatch failures report `preflight_failed` without remote mutation.
 6. x86 capture smoke covers the same six File I/O hooks as x64 and verifies `installedHooks=6`, `restoredHooks=6`, and `failedHooks=0`.
-7. x86 session write, validation, and replay preserve the captured `NtCreateFile` trace evidence.
+7. x86 session write, validation, and replay preserve HELLO architecture/version evidence plus captured `NtCreateFile` trace evidence.
 
 Next implementation focus:
 

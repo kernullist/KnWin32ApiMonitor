@@ -29,6 +29,8 @@
     "tid": { "type": "integer", "minimum": 0 },
     "timestampUtc": { "type": "string" },
     "sequence": { "type": "integer", "minimum": 0 },
+    "architecture": { "enum": ["x86", "x64", "unknown"] },
+    "agentVersion": { "type": "string" },
     "api": { "type": "string" },
     "module": { "type": "string" },
     "hookMethod": { "enum": ["iat"] },
@@ -57,5 +59,16 @@
     "restoredHooks": { "type": "integer", "minimum": 0 },
     "failedHooks": { "type": "integer", "minimum": 0 },
     "message": { "type": "string" }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "messageType": { "const": "agent_hello" } },
+        "required": ["messageType"]
+      },
+      "then": {
+        "required": ["architecture", "agentVersion", "message"]
+      }
+    }
+  ]
 }

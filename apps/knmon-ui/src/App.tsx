@@ -98,6 +98,11 @@ function makeAuditEvent(eventType: string, operation: string, message: string, w
   };
 }
 
+function fileNameFromPath(value: string): string {
+  const parts = value.split(/[\\/]/u);
+  return parts[parts.length - 1] || value;
+}
+
 function createAgentLoadedEvent(result: LaunchResult, eventId: number): TraceEvent {
   return {
     schemaVersion: result.schemaVersion,
@@ -106,7 +111,7 @@ function createAgentLoadedEvent(result: LaunchResult, eventId: number): TraceEve
     pid: result.targetProcessId,
     tid: result.targetThreadId,
     process: "knmon-sample-fileio.exe",
-    module: "knmon-agent64.dll",
+    module: fileNameFromPath(result.agentPath),
     api: result.handshake.received ? "agent_loaded" : "capture_backend_status",
     arguments: [
       {
@@ -533,9 +538,9 @@ function App() {
                   <label>Sample target</label>
                   <span>knmon-sample-fileio.exe</span>
                   <label>Agent</label>
-                  <span>knmon-agent64.dll</span>
+                  <span>{fileNameFromPath(captureResult?.agentPath ?? launchResult?.agentPath ?? "knmon-agent64.dll")}</span>
                   <label>Architecture</label>
-                  <span>x64 exact match</span>
+                  <span>{captureResult?.architecture ?? launchResult?.architecture ?? "x64"} exact match</span>
                   <label>Injection</label>
                   <span>early-bird APC</span>
                   <label>Handshake</label>

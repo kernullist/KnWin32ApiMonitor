@@ -32,7 +32,7 @@
         "path": { "type": "string" },
         "pid": { "type": "integer", "minimum": 0 },
         "tid": { "type": "integer", "minimum": 0 },
-        "architecture": { "enum": ["x64"] }
+        "architecture": { "enum": ["x86", "x64"] }
       }
     },
     "agent": {
@@ -40,7 +40,7 @@
       "required": ["path", "architecture", "version"],
       "properties": {
         "path": { "type": "string" },
-        "architecture": { "enum": ["x64"] },
+        "architecture": { "enum": ["x86", "x64"] },
         "version": { "type": "string" }
       }
     },

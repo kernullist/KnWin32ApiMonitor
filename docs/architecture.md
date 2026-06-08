@@ -129,6 +129,8 @@ Current preflight behavior:
 6. Confirm agent DLL architecture matches requested architecture.
 7. Fail before `CreateProcessW` when these checks fail.
 
+Current binary-open diagnostics distinguish missing paths, true access-denied failures, and other target/agent open errors so preflight does not mislabel every non-missing failure as a permission problem.
+
 Current bounded capture behavior:
 
 1. Use the same controlled early-bird launch path.
@@ -236,7 +238,7 @@ Current helper session format:
 
 `capture-sample --write-session <dir>` writes the current bounded sample capture to disk. The writer stores raw audit events, raw agent messages, and trace-compatible rows separately so replay can be deterministic and avoid launching or injecting a target.
 
-`validate-session --session <dir>` checks the manifest, required files, HELLO event, dropped-event accounting event, shutdown lifecycle event, clean hook restore counts, and non-empty trace rows. `replay-session --session <dir>` validates first, then returns a `session-replay` result with the trace rows loaded from disk.
+`validate-session --session <dir>` checks the manifest, required files, HELLO architecture/version evidence, dropped-event accounting event, shutdown lifecycle event, clean hook restore counts, and non-empty trace rows. `replay-session --session <dir>` validates first, then returns a `session-replay` result with the trace rows loaded from disk.
 
 The default UI session path is `captures/latest-sample-fileio`. Generated session directories remain ignored by git; test fixtures live under `tests/fixtures/session`.
 

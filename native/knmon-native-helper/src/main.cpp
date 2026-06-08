@@ -368,6 +368,11 @@ bool PayloadContains(const std::string& payload, const std::string& marker)
     return payload.find(marker) != std::string::npos;
 }
 
+bool IsSupportedArchitecture(const std::string& value)
+{
+    return value == "x86" || value == "x64";
+}
+
 std::string ExtractJsonString(const std::string& payload, const std::string& key)
 {
     std::string result;
@@ -489,6 +494,85 @@ std::uint64_t ExtractJsonUInt64(const std::string& payload, const std::string& k
         if (sawDigit)
         {
             result = value;
+        }
+    }
+    while (false);
+
+    return result;
+}
+
+std::string ExtractJsonObject(const std::string& payload, const std::string& key)
+{
+    std::string result;
+
+    do
+    {
+        const std::string quotedKey = "\"" + key + "\"";
+        std::size_t position = payload.find(quotedKey);
+        if (position == std::string::npos)
+        {
+            break;
+        }
+
+        position = payload.find(':', position + quotedKey.size());
+        if (position == std::string::npos)
+        {
+            break;
+        }
+
+        position = payload.find('{', position + 1);
+        if (position == std::string::npos)
+        {
+            break;
+        }
+
+        const std::size_t start = position;
+        int depth = 0;
+        bool inString = false;
+        bool escaped = false;
+        for (; position < payload.size(); ++position)
+        {
+            const char ch = payload[position];
+            if (inString)
+            {
+                if (escaped)
+                {
+                    escaped = false;
+                    continue;
+                }
+
+                if (ch == '\\')
+                {
+                    escaped = true;
+                    continue;
+                }
+
+                if (ch == '"')
+                {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (ch == '"')
+            {
+                inString = true;
+                continue;
+            }
+
+            if (ch == '{')
+            {
+                ++depth;
+            }
+            else if (ch == '}')
+            {
+                --depth;
+                if (depth == 0)
+                {
+                    result = payload.substr(start, position - start + 1);
+                    break;
+                }
+            }
         }
     }
     while (false);
@@ -1020,6 +1104,12 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
         session.SessionId = ExtractJsonString(manifest, "sessionId");
         session.CreatedUtc = ExtractJsonString(manifest, "createdUtc");
         session.DroppedEvents = ExtractJsonUInt64(manifest, "droppedEvents");
+        const std::string manifestOperationId = ExtractJsonString(manifest, "operationId");
+        const std::string targetManifest = ExtractJsonObject(manifest, "target");
+        const std::string agentManifest = ExtractJsonObject(manifest, "agent");
+        const std::string manifestTargetArchitecture = ExtractJsonString(targetManifest, "architecture");
+        const std::string manifestAgentArchitecture = ExtractJsonString(agentManifest, "architecture");
+        const std::string manifestAgentVersion = ExtractJsonString(agentManifest, "version");
 
         if (!PayloadContains(manifest, "\"schemaVersion\":\"0.1.0\""))
         {
@@ -1034,6 +1124,29 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
         if (!PayloadContains(manifest, "\"files\""))
         {
             session.ValidationErrors.push_back("manifest files block is missing.");
+        }
+
+        if (!IsSupportedArchitecture(manifestTargetArchitecture))
+        {
+            session.ValidationErrors.push_back("manifest target architecture is missing or unsupported.");
+        }
+
+        if (!IsSupportedArchitecture(manifestAgentArchitecture))
+        {
+            session.ValidationErrors.push_back("manifest agent architecture is missing or unsupported.");
+        }
+
+        if (
+            IsSupportedArchitecture(manifestTargetArchitecture) &&
+            IsSupportedArchitecture(manifestAgentArchitecture) &&
+            manifestTargetArchitecture != manifestAgentArchitecture)
+        {
+            session.ValidationErrors.push_back("manifest target and agent architecture must match.");
+        }
+
+        if (manifestAgentVersion.empty())
+        {
+            session.ValidationErrors.push_back("manifest agent version is missing.");
         }
 
         std::string auditText;
@@ -1055,7 +1168,7 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
         {
             const auto lines = SplitJsonl(agentText);
             session.AgentEventCount = lines.size();
-            bool hasHello = false;
+            std::uint64_t helloCount = 0;
             bool hasDropped = false;
             bool hasShutdown = false;
             for (const auto& line : lines)
@@ -1066,7 +1179,39 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
                     break;
                 }
 
-                hasHello = hasHello || PayloadContains(line, "\"messageType\":\"agent_hello\"");
+                if (!manifestOperationId.empty() && ExtractJsonString(line, "operationId") != manifestOperationId)
+                {
+                    session.ValidationErrors.push_back("agent-events.jsonl contains an event with mismatched operationId.");
+                    break;
+                }
+
+                if (PayloadContains(line, "\"messageType\":\"agent_hello\""))
+                {
+                    ++helloCount;
+                    const std::string helloArchitecture = ExtractJsonString(line, "architecture");
+                    const std::string helloVersion = ExtractJsonString(line, "agentVersion");
+
+                    if (!IsSupportedArchitecture(helloArchitecture))
+                    {
+                        session.ValidationErrors.push_back("agent_hello architecture is missing or unsupported.");
+                    }
+
+                    if (helloVersion.empty())
+                    {
+                        session.ValidationErrors.push_back("agent_hello agentVersion is missing.");
+                    }
+
+                    if (IsSupportedArchitecture(manifestAgentArchitecture) && helloArchitecture != manifestAgentArchitecture)
+                    {
+                        session.ValidationErrors.push_back("agent_hello architecture does not match manifest agent architecture.");
+                    }
+
+                    if (!manifestAgentVersion.empty() && helloVersion != manifestAgentVersion)
+                    {
+                        session.ValidationErrors.push_back("agent_hello agentVersion does not match manifest agent version.");
+                    }
+                }
+
                 hasDropped = hasDropped || PayloadContains(line, "\"messageType\":\"dropped_events\"");
                 if (PayloadContains(line, "\"messageType\":\"agent_shutdown\""))
                 {
@@ -1091,9 +1236,14 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
                 }
             }
 
-            if (!hasHello)
+            if (helloCount == 0)
             {
                 session.ValidationErrors.push_back("agent-events.jsonl does not contain agent_hello.");
+            }
+
+            if (helloCount > 1)
+            {
+                session.ValidationErrors.push_back("agent-events.jsonl contains more than one agent_hello.");
             }
 
             if (!hasDropped)

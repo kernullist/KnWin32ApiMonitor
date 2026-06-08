@@ -37,7 +37,7 @@
     "agentPath": { "type": "string" },
     "targetProcessId": { "type": "integer", "minimum": 0 },
     "targetThreadId": { "type": "integer", "minimum": 0 },
-    "architecture": { "enum": ["x64"] },
+    "architecture": { "enum": ["x86", "x64"] },
     "win32ErrorCode": { "type": "integer", "minimum": 0 },
     "ntStatus": { "type": "string" },
     "subsystem": { "type": "string" },

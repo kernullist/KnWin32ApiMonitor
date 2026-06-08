@@ -11,6 +11,8 @@ const expectedFiles = {
   traceEvents: "trace-events.jsonl"
 };
 
+const supportedArchitectures = new Set(["x86", "x64"]);
+
 function readJson(filePath, errors) {
   try {
     return JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -56,6 +58,12 @@ function requireNumber(value, fieldName, label, errors) {
   }
 }
 
+function requireArchitecture(value, fieldName, label, errors) {
+  if (!supportedArchitectures.has(value)) {
+    errors.push(`${label}: ${fieldName} must be x86 or x64`);
+  }
+}
+
 function validateManifest(sessionPath, errors) {
   const label = path.relative(repoRoot, path.join(sessionPath, "manifest.json"));
   const manifest = readJson(path.join(sessionPath, "manifest.json"), errors);
@@ -97,13 +105,23 @@ function validateManifest(sessionPath, errors) {
     requireString(manifest.target.path, "target.path", label, errors);
     requireNumber(manifest.target.pid, "target.pid", label, errors);
     requireNumber(manifest.target.tid, "target.tid", label, errors);
+    requireArchitecture(manifest.target.architecture, "target.architecture", label, errors);
   }
 
   if (!manifest.agent || typeof manifest.agent !== "object") {
     errors.push(`${label}: agent block is missing`);
   } else {
     requireString(manifest.agent.path, "agent.path", label, errors);
+    requireArchitecture(manifest.agent.architecture, "agent.architecture", label, errors);
     requireString(manifest.agent.version, "agent.version", label, errors);
+  }
+
+  if (
+    supportedArchitectures.has(manifest.target?.architecture) &&
+    supportedArchitectures.has(manifest.agent?.architecture) &&
+    manifest.target.architecture !== manifest.agent.architecture
+  ) {
+    errors.push(`${label}: target.architecture and agent.architecture must match`);
   }
 
   if (!manifest.eventCounts || typeof manifest.eventCounts !== "object") {
@@ -118,9 +136,9 @@ function validateManifest(sessionPath, errors) {
   return manifest;
 }
 
-function validateAgentEvents(sessionPath, errors) {
+function validateAgentEvents(sessionPath, errors, manifest) {
   const rows = readJsonl(path.join(sessionPath, expectedFiles.agentEvents), errors);
-  let hasHello = false;
+  let helloCount = 0;
   let hasDropped = false;
   let hasShutdown = false;
 
@@ -133,7 +151,25 @@ function validateAgentEvents(sessionPath, errors) {
     requireNumber(row.tid, "tid", label, errors);
     requireNumber(row.sequence, "sequence", label, errors);
 
-    hasHello = hasHello || row.messageType === "agent_hello";
+    if (manifest?.operationId && row.operationId !== manifest.operationId) {
+      errors.push(`${label}: operationId must match manifest operationId`);
+    }
+
+    if (row.messageType === "agent_hello") {
+      helloCount += 1;
+      requireArchitecture(row.architecture, "architecture", label, errors);
+      requireString(row.agentVersion, "agentVersion", label, errors);
+      requireString(row.message, "message", label, errors);
+
+      if (supportedArchitectures.has(manifest?.agent?.architecture) && row.architecture !== manifest.agent.architecture) {
+        errors.push(`${label}: HELLO architecture must match manifest agent.architecture`);
+      }
+
+      if (typeof manifest?.agent?.version === "string" && manifest.agent.version.length > 0 && row.agentVersion !== manifest.agent.version) {
+        errors.push(`${label}: HELLO agentVersion must match manifest agent.version`);
+      }
+    }
+
     hasDropped = hasDropped || row.messageType === "dropped_events";
     hasShutdown = hasShutdown || row.messageType === "agent_shutdown";
 
@@ -155,8 +191,12 @@ function validateAgentEvents(sessionPath, errors) {
     }
   }
 
-  if (!hasHello) {
+  if (helloCount === 0) {
     errors.push(`${expectedFiles.agentEvents}: agent_hello is missing`);
+  }
+
+  if (helloCount > 1) {
+    errors.push(`${expectedFiles.agentEvents}: exactly one agent_hello is expected`);
   }
 
   if (!hasDropped) {
@@ -208,7 +248,7 @@ function validateSessionFixture(name, expectedSuccess) {
   const errors = [];
   const manifest = validateManifest(sessionPath, errors);
   const auditRows = readJsonl(path.join(sessionPath, expectedFiles.audit), errors);
-  const agentRows = validateAgentEvents(sessionPath, errors);
+  const agentRows = validateAgentEvents(sessionPath, errors, manifest);
   const traceRows = validateTraceEvents(sessionPath, errors);
 
   if (manifest?.eventCounts) {

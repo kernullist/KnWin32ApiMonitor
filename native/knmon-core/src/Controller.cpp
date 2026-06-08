@@ -275,6 +275,31 @@ struct BinaryArchitectureResult
     std::string Message;
 };
 
+bool IsMissingFileError(DWORD errorCode)
+{
+    return errorCode == ERROR_FILE_NOT_FOUND || errorCode == ERROR_PATH_NOT_FOUND;
+}
+
+std::string BinaryOpenFailureOperation(DWORD errorCode, const std::string& label)
+{
+    std::string operation;
+
+    if (IsMissingFileError(errorCode))
+    {
+        operation = "missing_" + label;
+    }
+    else if (errorCode == ERROR_ACCESS_DENIED)
+    {
+        operation = "access_denied";
+    }
+    else
+    {
+        operation = label + "_open_failed";
+    }
+
+    return operation;
+}
+
 BinaryArchitectureResult QueryBinaryArchitecture(const std::string& path, const std::string& label)
 {
     BinaryArchitectureResult result;
@@ -303,7 +328,7 @@ BinaryArchitectureResult QueryBinaryArchitecture(const std::string& path, const 
         if (fileHandle == INVALID_HANDLE_VALUE)
         {
             result.ErrorCode = GetLastError();
-            result.Operation = result.ErrorCode == ERROR_FILE_NOT_FOUND ? "missing_" + label : "access_denied";
+            result.Operation = BinaryOpenFailureOperation(result.ErrorCode, label);
             result.Message = "Failed to open " + label + " binary for architecture preflight: " + FormatWindowsError(result.ErrorCode);
             break;
         }
