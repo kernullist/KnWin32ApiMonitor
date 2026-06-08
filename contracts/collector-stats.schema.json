@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/collector-stats.schema.json",
+  "title": "KnMonCollectorStats",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "success",
+    "operation",
+    "policy",
+    "capacity",
+    "eventsRequested",
+    "acceptedEvents",
+    "drainedEvents",
+    "droppedEvents",
+    "queueDepth",
+    "highWaterMark",
+    "backpressureActivations",
+    "firstSequence",
+    "lastSequence",
+    "retainedSequences",
+    "message"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "success": { "type": "boolean" },
+    "operation": { "enum": ["smoke-backpressure"] },
+    "policy": { "enum": ["drop-newest"] },
+    "capacity": { "type": "integer", "minimum": 0 },
+    "eventsRequested": { "type": "integer", "minimum": 0 },
+    "acceptedEvents": { "type": "integer", "minimum": 0 },
+    "drainedEvents": { "type": "integer", "minimum": 0 },
+    "droppedEvents": { "type": "integer", "minimum": 0 },
+    "queueDepth": { "type": "integer", "minimum": 0 },
+    "highWaterMark": { "type": "integer", "minimum": 0 },
+    "backpressureActivations": { "type": "integer", "minimum": 0 },
+    "firstSequence": { "type": "integer", "minimum": 0 },
+    "lastSequence": { "type": "integer", "minimum": 0 },
+    "retainedSequences": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 0 }
+    },
+    "message": { "type": "string" }
+  }
+}

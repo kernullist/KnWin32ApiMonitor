@@ -26,5 +26,12 @@
     "files": ["manifest.json", "audit.jsonl", "agent-events.jsonl", "trace-events.jsonl"],
     "replayCaptureMode": "session-replay",
     "controlledSampleOnly": true
+  },
+  "collectorBackpressure": {
+    "smokeCommand": "knmon-collector.exe smoke-backpressure --capacity 4 --events 10",
+    "overflowPolicies": ["drop-newest"],
+    "defaultSmokeCapacity": 4,
+    "defaultSmokeEvents": 10,
+    "statsFields": ["acceptedEvents", "drainedEvents", "droppedEvents", "queueDepth", "highWaterMark", "backpressureActivations"]
   }
 }

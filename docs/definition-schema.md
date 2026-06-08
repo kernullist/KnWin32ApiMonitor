@@ -19,6 +19,7 @@ contracts/
   agent-event.schema.json
   hook-status.schema.json
   capture-result.schema.json
+  collector-stats.schema.json
   session-info.schema.json
   session-manifest.schema.json
   session-replay-result.schema.json
@@ -133,6 +134,29 @@ Required files:
 
 Session validation requires `agent_shutdown` in `agent-events.jsonl` so hook restore evidence survives persistence and replay workflows.
 
+## Collector Contracts
+
+`collector-stats.schema.json` describes the current native collector backpressure smoke result.
+
+The first collector policy is `drop-newest`. With bounded capacity, the collector keeps FIFO order for retained events and rejects new events after the queue is full.
+
+Required smoke stats:
+
+1. `acceptedEvents`
+2. `drainedEvents`
+3. `droppedEvents`
+4. `queueDepth`
+5. `highWaterMark`
+6. `backpressureActivations`
+7. `retainedSequences`
+
+The committed fixture under `tests/fixtures/collector/` proves capacity 4 with 10 synthetic events:
+
+1. retained sequence `1,2,3,4`
+2. dropped events `6`
+3. high-water mark `4`
+4. backpressure activations `6`
+
 ## Example
 
 ```json
@@ -171,7 +195,13 @@ Validate session fixtures:
 npm run sessions:validate
 ```
 
-`npm run verify` runs the UI build, definition validator, and session fixture validator.
+Validate collector fixtures and smoke output:
+
+```powershell
+npm run collector:validate
+```
+
+`npm run verify` runs the UI build, definition validator, session fixture validator, and collector validator.
 
 Future validation should add:
 

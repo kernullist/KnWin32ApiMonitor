@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "0.1.0",
+  "success": true,
+  "operation": "smoke-backpressure",
+  "policy": "drop-newest",
+  "capacity": 4,
+  "eventsRequested": 10,
+  "acceptedEvents": 4,
+  "drainedEvents": 4,
+  "droppedEvents": 6,
+  "queueDepth": 0,
+  "highWaterMark": 4,
+  "backpressureActivations": 6,
+  "firstSequence": 1,
+  "lastSequence": 4,
+  "retainedSequences": [1, 2, 3, 4],
+  "message": "Collector backpressure smoke passed."
+}

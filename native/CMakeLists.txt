@@ -23,10 +23,18 @@ target_compile_definitions(knmon-core PRIVATE
     NOMINMAX
 )
 
+add_library(knmon-collector-core STATIC
+    knmon-collector/src/Collector.cpp
+)
+target_include_directories(knmon-collector-core PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/knmon-collector/include
+)
+target_link_libraries(knmon-collector-core PUBLIC knmon-common)
+
 add_executable(knmon-collector
     knmon-collector/src/main.cpp
 )
-target_link_libraries(knmon-collector PRIVATE knmon-core)
+target_link_libraries(knmon-collector PRIVATE knmon-core knmon-collector-core)
 target_compile_definitions(knmon-collector PRIVATE
     WIN32_LEAN_AND_MEAN
     NOMINMAX

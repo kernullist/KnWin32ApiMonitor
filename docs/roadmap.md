@@ -78,7 +78,7 @@ Deliverables:
 
 ## Phase 4: Collector And Session Writer
 
-Status: implemented foundation through bounded helper session output and replay.
+Status: implemented foundation through bounded helper session output, replay, and synthetic collector backpressure validation.
 
 Goal:
 
@@ -99,7 +99,8 @@ Current implementation notes:
 3. `validate-session --session <dir>` checks the required manifest fields, event files, HELLO, dropped-event accounting, and trace rows.
 4. `replay-session --session <dir>` returns trace-compatible events without launching a target or loading an agent.
 5. The UI exposes `Capture And Save` and `Replay Last` for the default `captures/latest-sample-fileio` session.
-6. Durable `.knapm` session chunks, replay indexing, and crash-tolerant high-volume writers remain future work.
+6. `knmon-collector.exe smoke-backpressure --capacity 4 --events 10` proves bounded synthetic collector intake, FIFO retention, drop-newest overflow, and dropped-event accounting.
+7. Durable `.knapm` session chunks, replay indexing, and crash-tolerant high-volume writers remain future work.
 
 ## Phase 5: Safe Agent Harness
 
@@ -160,10 +161,10 @@ Current verified behavior:
 
 Next implementation focus:
 
-1. Add collector backpressure tests beyond the bounded helper path.
-2. Decide whether `NtCreateFile` should be captured through a separate native hook phase or decoded from higher-level Win32 events first.
-3. Start x86 agent parity only after the x64 session path remains stable.
-4. Begin high-volume table and replay indexing work after lifecycle evidence remains stable.
+1. Decide whether `NtCreateFile` should be captured through a separate native hook phase or decoded from higher-level Win32 events first.
+2. Start x86 agent parity only after the x64 session path remains stable.
+3. Begin high-volume table and replay indexing work after lifecycle evidence remains stable.
+4. Move the collector from synthetic intake to shared-memory transport only after a separate review.
 
 ## Phase 7: Definition System V1
 

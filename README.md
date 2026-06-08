@@ -15,6 +15,7 @@ This repository is bootstrapping a new API Monitor inspired by Rohitab API Monit
 - Deterministic x64 agent lifecycle telemetry with hook restore evidence on shutdown.
 - Durable helper-written sample sessions with manifest, audit, agent-event, and trace-event JSONL files.
 - Session validation and replay without relaunching or reinjecting the sample target.
+- Synthetic collector intake with deterministic bounded queue backpressure validation.
 
 ## Current Status
 
@@ -41,6 +42,7 @@ Implemented now:
 17. `validate-session --session <dir>` and `replay-session --session <dir>` helper commands.
 18. UI actions for `Capture And Save` and `Replay Last`.
 19. x64 agent hook lifecycle states, idempotent IAT restore, and structured `agent_shutdown` evidence.
+20. `knmon-collector.exe smoke-backpressure` for deterministic collector queue/drop accounting.
 
 Not implemented yet:
 
@@ -137,6 +139,8 @@ build\native\Debug\knmon-native-helper.exe capture-sample --write-session captur
 build\native\Debug\knmon-native-helper.exe validate-session --session captures\latest-sample-fileio
 build\native\Debug\knmon-native-helper.exe replay-session --session captures\latest-sample-fileio
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\repeat-capture-sample.ps1 -Count 5
+build\native\Debug\knmon-collector.exe smoke-backpressure --capacity 4 --events 10
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\collector-backpressure-smoke.ps1
 ```
 
 `launch-sample` creates `knmon-sample-fileio.exe` suspended, queues an early-bird APC to load `knmon-agent64.dll`, resumes the primary thread, and waits for an agent HELLO handshake.
@@ -146,6 +150,8 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\repeat-capture-sampl
 The repeated smoke script verifies five consecutive controlled captures, the stable File I/O API set, zero dropped events, and hook restore counts.
 
 `capture-sample --write-session` persists the bounded capture into a replayable session directory. Replay returns the trace rows from disk and does not relaunch the target.
+
+`knmon-collector.exe smoke-backpressure` exercises the synthetic collector intake path without injection. The current policy is `drop-newest`; with capacity 4 and 10 events, the expected retained FIFO sequence is `1,2,3,4` and `droppedEvents=6`.
 
 Validate API definitions:
 
@@ -157,6 +163,12 @@ Validate session fixtures:
 
 ```powershell
 npm run sessions:validate
+```
+
+Validate collector fixtures and native smoke output:
+
+```powershell
+npm run collector:validate
 ```
 
 Run available verification:

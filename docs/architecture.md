@@ -16,7 +16,7 @@ flowchart LR
     TAURI["src-tauri<br/>Tauri commands"]
     RUST["crates/knmon-tauri<br/>Rust command contract"]
     CORE["native/knmon-core<br/>C++20 controller"]
-    COL["native/knmon-collector<br/>C++20 collector skeleton"]
+    COL["native/knmon-collector<br/>bounded queue + smoke"]
     HELPER["knmon-native-helper<br/>JSON helper CLI"]
     SAMPLE["knmon-sample-fileio<br/>controlled target"]
     AGENT["knmon-agent64<br/>HELLO + IAT hooks + shutdown"]
@@ -134,16 +134,26 @@ Current behavior:
 
 1. Starts as a small console executable.
 2. Prints protocol version.
-3. Exercises native target enumeration.
-4. States that capture is mock-only.
+3. Exercises native target enumeration in no-argument mode.
+4. Provides a deterministic synthetic backpressure smoke path.
+5. Enforces a bounded queue with explicit `drop-newest` overflow policy.
+6. Tracks accepted, drained, dropped, queue depth, high-water mark, and backpressure activation counts.
+
+Current smoke command:
+
+```powershell
+build\native\Debug\knmon-collector.exe smoke-backpressure --capacity 4 --events 10
+```
+
+This command does not launch, inject, attach, or consume process handles. It pushes synthetic normalized events into the collector, drains retained events, and emits machine-readable JSON. With capacity 4 and 10 events, retained sequences must stay FIFO as `1,2,3,4`, `droppedEvents` must be `6`, and `highWaterMark` must be `4`.
 
 Future behavior:
 
 1. Consume shared-memory ring buffer events.
 2. Normalize event records.
-3. Track dropped events and backpressure.
-4. Write `.knapm` session chunks.
-5. Stream events to Tauri/UI.
+3. Write `.knapm` session chunks.
+4. Stream events to Tauri/UI.
+5. Add high-volume multi-threaded transport after the bounded policy stays stable.
 
 ## Agents
 
@@ -238,6 +248,7 @@ Current contract artifacts:
 14. `session-info.schema.json`
 15. `session-manifest.schema.json`
 16. `session-replay-result.schema.json`
+17. `collector-stats.schema.json`
 
 The TypeScript event model and C++ `Protocol.h` are aligned around these Phase 1 fields.
 
