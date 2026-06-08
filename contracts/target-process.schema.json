@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/target-process.schema.json",
+  "title": "KnMonTargetProcess",
+  "type": "object",
+  "required": ["pid", "imageName", "architecture", "status"],
+  "properties": {
+    "pid": { "type": "integer", "minimum": 0 },
+    "parentPid": {
+      "oneOf": [
+        { "type": "integer", "minimum": 0 },
+        { "type": "null" }
+      ]
+    },
+    "imageName": { "type": "string" },
+    "imagePath": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "null" }
+      ]
+    },
+    "architecture": { "type": "string" },
+    "status": { "type": "string" }
+  }
+}

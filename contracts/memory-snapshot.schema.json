@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/memory-snapshot.schema.json",
+  "title": "KnMonMemorySnapshot",
+  "type": "object",
+  "required": [
+    "snapshotId",
+    "processId",
+    "address",
+    "requestedSize",
+    "capturedSize",
+    "regionBase",
+    "regionSize",
+    "protection",
+    "state",
+    "type"
+  ],
+  "properties": {
+    "snapshotId": { "type": "integer", "minimum": 0 },
+    "processId": { "type": "integer", "minimum": 0 },
+    "address": { "type": "integer", "minimum": 0 },
+    "requestedSize": { "type": "integer", "minimum": 0 },
+    "capturedSize": { "type": "integer", "minimum": 0 },
+    "regionBase": { "type": "integer", "minimum": 0 },
+    "regionSize": { "type": "integer", "minimum": 0 },
+    "protection": { "type": "string" },
+    "state": { "type": "string" },
+    "type": { "type": "string" },
+    "bytes": { "type": "string" },
+    "encodingHint": { "type": "string" },
+    "truncationReason": { "type": "string" }
+  }
+}

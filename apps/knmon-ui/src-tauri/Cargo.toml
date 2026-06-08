@@ -1,0 +1,15 @@
+[package]
+name = "knmon-ui"
+version = "0.1.0"
+description = "KN Win32 API Monitor desktop shell"
+authors = ["kernullist <gloryo@naver.com>"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+knmon-tauri = { path = "../../../crates/knmon-tauri" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }

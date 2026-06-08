@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/launch-request.schema.json",
+  "title": "KnMonLaunchRequest",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "operationId",
+    "targetPath",
+    "agentPath",
+    "architecture",
+    "injectionMethod",
+    "timeoutMs"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "operationId": { "type": "string" },
+    "targetPath": { "type": "string" },
+    "agentPath": { "type": "string" },
+    "workingDirectory": { "type": "string" },
+    "architecture": { "enum": ["x86", "x64"] },
+    "injectionMethod": { "enum": ["early-bird APC"] },
+    "timeoutMs": { "type": "integer", "minimum": 1 }
+  }
+}

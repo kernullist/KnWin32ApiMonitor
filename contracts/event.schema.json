@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/event.schema.json",
+  "title": "KnMonEvent",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "eventId",
+    "relativeTimeMs",
+    "pid",
+    "tid",
+    "process",
+    "module",
+    "api",
+    "arguments",
+    "returnValue",
+    "durationUs",
+    "tags",
+    "stack"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "eventId": { "type": "integer", "minimum": 0 },
+    "relativeTimeMs": { "type": "number", "minimum": 0 },
+    "pid": { "type": "integer", "minimum": 0 },
+    "tid": { "type": "integer", "minimum": 0 },
+    "process": { "type": "string" },
+    "module": { "type": "string" },
+    "api": { "type": "string" },
+    "arguments": {
+      "type": "array",
+      "items": { "$ref": "argument.schema.json" }
+    },
+    "returnValue": { "type": "string" },
+    "error": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["kind", "code", "message"],
+          "properties": {
+            "kind": { "enum": ["win32", "ntstatus", "hresult"] },
+            "code": { "type": "string" },
+            "message": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "durationUs": { "type": "integer", "minimum": 0 },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "stack": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "bufferPreview": { "type": "string" }
+  }
+}

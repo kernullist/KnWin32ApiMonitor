@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default desktop permissions for the KN Win32 API Monitor shell.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "KnMonProtocolVersion",
+  "major": 0,
+  "minor": 1,
+  "patch": 0,
+  "schemaVersion": "0.1.0",
+  "nativeCaptureFoundation": {
+    "backendModes": ["mock", "native-enum", "native-capture"],
+    "injectionMethods": ["early-bird APC"],
+    "agentArchitectures": ["x64"],
+    "controlledLaunchOnly": true
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/launch-result.schema.json",
+  "title": "KnMonLaunchResult",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "operationId",
+    "success",
+    "backendMode",
+    "injectionMethod",
+    "targetPath",
+    "agentPath",
+    "targetProcessId",
+    "targetThreadId",
+    "architecture",
+    "win32ErrorCode",
+    "ntStatus",
+    "subsystem",
+    "operation",
+    "message",
+    "handshake",
+    "auditEvents"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "operationId": { "type": "string" },
+    "success": { "type": "boolean" },
+    "backendMode": { "enum": ["native-capture"] },
+    "injectionMethod": { "enum": ["early-bird APC"] },
+    "targetPath": { "type": "string" },
+    "agentPath": { "type": "string" },
+    "targetProcessId": { "type": "integer", "minimum": 0 },
+    "targetThreadId": { "type": "integer", "minimum": 0 },
+    "architecture": { "enum": ["x86", "x64", "unknown"] },
+    "win32ErrorCode": { "type": "integer", "minimum": 0 },
+    "ntStatus": { "type": "string" },
+    "subsystem": { "type": "string" },
+    "operation": { "type": "string" },
+    "message": { "type": "string" },
+    "handshake": { "$ref": "agent-handshake.schema.json" },
+    "auditEvents": {
+      "type": "array",
+      "items": { "$ref": "audit-event.schema.json" }
+    }
+  }
+}

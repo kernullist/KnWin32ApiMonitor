@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/agent-handshake.schema.json",
+  "title": "KnMonAgentHandshake",
+  "type": "object",
+  "required": [
+    "received",
+    "schemaVersion",
+    "operationId",
+    "processId",
+    "threadId",
+    "architecture",
+    "agentVersion",
+    "message",
+    "rawPayload"
+  ],
+  "properties": {
+    "received": { "type": "boolean" },
+    "schemaVersion": { "type": "string" },
+    "operationId": { "type": "string" },
+    "processId": { "type": "integer", "minimum": 0 },
+    "threadId": { "type": "integer", "minimum": 0 },
+    "architecture": { "enum": ["x86", "x64", "unknown"] },
+    "agentVersion": { "type": "string" },
+    "message": { "type": "string" },
+    "rawPayload": { "type": "string" }
+  }
+}

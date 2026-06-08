@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/argument.schema.json",
+  "title": "KnMonArgument",
+  "type": "object",
+  "required": [
+    "index",
+    "name",
+    "type",
+    "direction",
+    "rawValue",
+    "preCallValue",
+    "postCallValue",
+    "decodedValue",
+    "decodeStatus"
+  ],
+  "properties": {
+    "index": { "type": "integer", "minimum": 0 },
+    "name": { "type": "string" },
+    "type": { "type": "string" },
+    "direction": { "enum": ["in", "out", "inout", "return"] },
+    "rawValue": { "type": "string" },
+    "preCallValue": { "type": "string" },
+    "postCallValue": { "type": "string" },
+    "decodedValue": { "type": "string" },
+    "pointerAddress": { "type": "integer", "minimum": 0 },
+    "decodeStatus": {
+      "enum": [
+        "decoded",
+        "partial",
+        "invalid_pointer",
+        "unreadable_memory",
+        "definition_missing",
+        "truncated"
+      ]
+    }
+  }
+}

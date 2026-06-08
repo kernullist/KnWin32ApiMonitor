@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "file-io",
+  "apis": [
+    {
+      "module": "KERNEL32.dll",
+      "name": "CreateFileW",
+      "callingConvention": "stdcall",
+      "returnType": "HANDLE",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "INVALID_HANDLE_VALUE" },
+      "failure": { "returnEqual": "INVALID_HANDLE_VALUE" },
+      "parameters": [
+        { "name": "lpFileName", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string" },
+        { "name": "dwDesiredAccess", "type": "DWORD", "direction": "in", "decode": "file_access_mask" },
+        { "name": "dwShareMode", "type": "DWORD", "direction": "in", "decode": "file_share_mask" },
+        { "name": "lpSecurityAttributes", "type": "LPSECURITY_ATTRIBUTES", "direction": "in", "decode": "security_attributes" },
+        { "name": "dwCreationDisposition", "type": "DWORD", "direction": "in", "decode": "file_creation_disposition" },
+        { "name": "dwFlagsAndAttributes", "type": "DWORD", "direction": "in", "decode": "file_flags_attributes" },
+        { "name": "hTemplateFile", "type": "HANDLE", "direction": "in", "decode": "handle" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "CreateFileA",
+      "callingConvention": "stdcall",
+      "returnType": "HANDLE",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "INVALID_HANDLE_VALUE" },
+      "failure": { "returnEqual": "INVALID_HANDLE_VALUE" },
+      "parameters": [
+        { "name": "lpFileName", "type": "LPCSTR", "direction": "in", "decode": "ansi_string" },
+        { "name": "dwDesiredAccess", "type": "DWORD", "direction": "in", "decode": "file_access_mask" },
+        { "name": "dwShareMode", "type": "DWORD", "direction": "in", "decode": "file_share_mask" },
+        { "name": "lpSecurityAttributes", "type": "LPSECURITY_ATTRIBUTES", "direction": "in", "decode": "security_attributes" },
+        { "name": "dwCreationDisposition", "type": "DWORD", "direction": "in", "decode": "file_creation_disposition" },
+        { "name": "dwFlagsAndAttributes", "type": "DWORD", "direction": "in", "decode": "file_flags_attributes" },
+        { "name": "hTemplateFile", "type": "HANDLE", "direction": "in", "decode": "handle" }
+      ]
+    },
+    {
+      "module": "NTDLL.dll",
+      "name": "NtCreateFile",
+      "callingConvention": "ntapi",
+      "returnType": "NTSTATUS",
+      "errorSource": "return_ntstatus",
+      "success": { "ntSuccess": true },
+      "failure": { "ntSuccess": false },
+      "parameters": [
+        { "name": "FileHandle", "type": "PHANDLE", "direction": "out", "decode": "handle_pointer" },
+        { "name": "DesiredAccess", "type": "ACCESS_MASK", "direction": "in", "decode": "file_access_mask" },
+        { "name": "ObjectAttributes", "type": "POBJECT_ATTRIBUTES", "direction": "in", "decode": "object_attributes" },
+        { "name": "IoStatusBlock", "type": "PIO_STATUS_BLOCK", "direction": "out", "decode": "io_status_block" },
+        { "name": "AllocationSize", "type": "PLARGE_INTEGER", "direction": "in", "decode": "large_integer_optional" },
+        { "name": "FileAttributes", "type": "ULONG", "direction": "in", "decode": "file_flags_attributes" },
+        { "name": "ShareAccess", "type": "ULONG", "direction": "in", "decode": "file_share_mask" },
+        { "name": "CreateDisposition", "type": "ULONG", "direction": "in", "decode": "nt_file_disposition" },
+        { "name": "CreateOptions", "type": "ULONG", "direction": "in", "decode": "nt_create_options" },
+        { "name": "EaBuffer", "type": "PVOID", "direction": "in", "decode": "buffer_optional" },
+        { "name": "EaLength", "type": "ULONG", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "ReadFile",
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "FALSE" },
+      "failure": { "returnEqual": "FALSE" },
+      "parameters": [
+        { "name": "hFile", "type": "HANDLE", "direction": "in", "decode": "handle" },
+        { "name": "lpBuffer", "type": "LPVOID", "direction": "out", "decode": "buffer", "lengthFrom": "nNumberOfBytesToRead" },
+        { "name": "nNumberOfBytesToRead", "type": "DWORD", "direction": "in", "decode": "byte_count" },
+        { "name": "lpNumberOfBytesRead", "type": "LPDWORD", "direction": "out", "decode": "dword_pointer" },
+        { "name": "lpOverlapped", "type": "LPOVERLAPPED", "direction": "in", "decode": "overlapped_optional" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "WriteFile",
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "FALSE" },
+      "failure": { "returnEqual": "FALSE" },
+      "parameters": [
+        { "name": "hFile", "type": "HANDLE", "direction": "in", "decode": "handle" },
+        { "name": "lpBuffer", "type": "LPCVOID", "direction": "in", "decode": "buffer", "lengthFrom": "nNumberOfBytesToWrite" },
+        { "name": "nNumberOfBytesToWrite", "type": "DWORD", "direction": "in", "decode": "byte_count" },
+        { "name": "lpNumberOfBytesWritten", "type": "LPDWORD", "direction": "out", "decode": "dword_pointer" },
+        { "name": "lpOverlapped", "type": "LPOVERLAPPED", "direction": "in", "decode": "overlapped_optional" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "CloseHandle",
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "FALSE" },
+      "failure": { "returnEqual": "FALSE" },
+      "parameters": [
+        { "name": "hObject", "type": "HANDLE", "direction": "in", "decode": "handle" }
+      ]
+    }
+  ]
+}

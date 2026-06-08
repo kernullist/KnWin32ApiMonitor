@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/audit-event.schema.json",
+  "title": "KnMonAuditEvent",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "operationId",
+    "eventType",
+    "timestampUtc",
+    "subsystem",
+    "operation",
+    "win32ErrorCode",
+    "ntStatus",
+    "message"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "operationId": { "type": "string" },
+    "eventType": { "type": "string" },
+    "timestampUtc": { "type": "string" },
+    "subsystem": { "type": "string" },
+    "operation": { "type": "string" },
+    "win32ErrorCode": { "type": "integer", "minimum": 0 },
+    "ntStatus": { "type": "string" },
+    "message": { "type": "string" }
+  }
+}

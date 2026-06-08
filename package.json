@@ -1,0 +1,23 @@
+{
+  "name": "kn-win32apimon",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Modern Win32 API monitor workstation foundation.",
+  "workspaces": [
+    "apps/knmon-ui"
+  ],
+  "scripts": {
+    "dev": "npm --workspace apps/knmon-ui run dev",
+    "build": "npm --workspace apps/knmon-ui run build",
+    "preview": "npm --workspace apps/knmon-ui run preview",
+    "tauri:dev": "npm --workspace apps/knmon-ui run tauri:dev",
+    "tauri:build": "npm --workspace apps/knmon-ui run tauri:build",
+    "native:configure": "cmake -S native -B build/native",
+    "native:build": "cmake --build build/native --config Debug",
+    "defs:validate": "node tools/def-validator/validate-definitions.mjs",
+    "verify": "npm run build && npm run defs:validate"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

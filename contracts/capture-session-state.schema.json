@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/capture-session-state.schema.json",
+  "title": "KnMonCaptureSessionState",
+  "type": "object",
+  "required": ["state", "backendMode", "eventCount", "droppedEvents"],
+  "properties": {
+    "state": { "enum": ["stopped", "starting", "running", "stopping", "failed"] },
+    "backendMode": { "enum": ["mock", "native-enum", "native-capture"] },
+    "eventCount": { "type": "integer", "minimum": 0 },
+    "droppedEvents": { "type": "integer", "minimum": 0 },
+    "startedAt": { "type": "string" },
+    "stoppedAt": { "type": "string" }
+  }
+}

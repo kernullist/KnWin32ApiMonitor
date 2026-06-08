@@ -1,0 +1,75 @@
+# Local agent instructions
+AGENTS.md
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# Windows and editor noise
+Thumbs.db
+Desktop.ini
+.DS_Store
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio and native build outputs
+.vs/
+/Debug/
+/Release/
+/RelWithDebInfo/
+/MinSizeRel/
+/x64/
+/x86/
+/Win32/
+build/
+out/
+bin/
+obj/
+*.ilk
+*.pdb
+*.ipdb
+*.iobj
+*.tlog
+*.lastbuildstate
+*.log
+CMakeFiles/
+CMakeCache.txt
+cmake-build-*/
+CMakeUserPresets.json
+
+# Rust and Tauri
+target/
+src-tauri/target/
+src-tauri/gen/
+apps/*/src-tauri/target/
+apps/*/src-tauri/gen/
+
+# Node and frontend build outputs
+node_modules/
+dist/
+dist-electron/
+.vite/
+.turbo/
+.parcel-cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local capture/session artifacts
+captures/
+exports/
+*.knapm
+*.etl
+*.jsonl
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.orig
