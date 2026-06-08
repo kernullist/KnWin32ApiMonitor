@@ -6,7 +6,7 @@
 
 This document describes the current Phase 0/Phase 1 foundation and the first controlled native-capture path for `KN Win32 API Monitor`.
 
-The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, and bounded x64 File I/O capture for the repository sample target. It does not inject into arbitrary already-running processes.
+The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded x64 File I/O capture for the repository sample target, and helper-written session replay. It does not inject into arbitrary already-running processes.
 
 ## Layers
 
@@ -20,6 +20,7 @@ flowchart LR
     HELPER["knmon-native-helper<br/>JSON helper CLI"]
     SAMPLE["knmon-sample-fileio<br/>controlled target"]
     AGENT["knmon-agent64<br/>HELLO + IAT hooks"]
+    SESSION["captures/<br/>manifest + JSONL"]
     DEF["definitions<br/>API decode metadata"]
     CONTRACT["contracts<br/>JSON schemas"]
 
@@ -31,6 +32,8 @@ flowchart LR
     CORE --> AGENT
     AGENT --> CORE
     CORE --> COL
+    HELPER --> SESSION
+    SESSION --> HELPER
     DEF --> UI
     CONTRACT --> UI
     CONTRACT --> CORE
@@ -53,7 +56,7 @@ Current backend modes:
 
 - `mock`: Browser/Vite mode and mock Tauri target list.
 - `native-enum`: Tauri command calls `knmon-native-helper.exe list-targets`.
-- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof or `capture-sample` for bounded controlled File I/O capture.
+- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof, `capture-sample` for bounded controlled File I/O capture, `capture-sample --write-session` for persisted sessions, or `replay-session` for disk replay.
 
 ## Rust/Tauri Command Layer
 
@@ -71,6 +74,8 @@ Current commands:
 5. `list_native_target_processes`
 6. `launch_sample_early_bird_capture`
 7. `capture_sample_fileio_events`
+8. `capture_sample_fileio_session_events`
+9. `replay_last_sample_session`
 
 These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, and bounded sample File I/O capture without pretending that arbitrary attach exists.
 
@@ -118,7 +123,8 @@ Current bounded capture behavior:
 2. Keep the named pipe open for line/message-style agent events.
 3. Collect `agent_hello`, `hook_installed`, `api_call`, and `dropped_events` messages until the sample exits or a bounded timeout fires.
 4. Return a structured `capture-result` JSON object to Rust/Tauri.
-5. Map `api_call` events into the existing UI trace table.
+5. Optionally write a session directory containing manifest, audit, raw agent event, and trace event files.
+6. Map `api_call` events into the existing UI trace table.
 
 ## Collector
 
@@ -175,6 +181,21 @@ Future agent responsibilities:
 
 `Launch Sample` still produces an `agent_loaded` row only. `Capture File I/O` produces real `api_call` rows from the controlled sample target.
 
+## Session Writer And Replay
+
+Current helper session format:
+
+1. `manifest.json`
+2. `audit.jsonl`
+3. `agent-events.jsonl`
+4. `trace-events.jsonl`
+
+`capture-sample --write-session <dir>` writes the current bounded sample capture to disk. The writer stores raw audit events, raw agent messages, and trace-compatible rows separately so replay can be deterministic and avoid launching or injecting a target.
+
+`validate-session --session <dir>` checks the manifest, required files, HELLO event, dropped-event accounting event, and non-empty trace rows. `replay-session --session <dir>` validates first, then returns a `session-replay` result with the trace rows loaded from disk.
+
+The default UI session path is `captures/latest-sample-fileio`. Generated session directories remain ignored by git; test fixtures live under `tests/fixtures/session`.
+
 ## Protocol Contracts
 
 Location: `contracts`
@@ -194,6 +215,9 @@ Current contract artifacts:
 11. `agent-event.schema.json`
 12. `hook-status.schema.json`
 13. `capture-result.schema.json`
+14. `session-info.schema.json`
+15. `session-manifest.schema.json`
+16. `session-replay-result.schema.json`
 
 The TypeScript event model and C++ `Protocol.h` are aligned around these Phase 1 fields.
 
@@ -204,13 +228,15 @@ Current export:
 - UI exports mock events to JSONL.
 - UI also exports captured native trace rows after bounded sample capture because they use the same trace model.
 - Each row includes `schemaVersion`.
+- The helper writes replayable sample sessions as manifest + JSONL files.
+- The UI can replay the last helper-written sample session into the trace table.
 
 Future session format:
 
 - `.knapm`
 - manifest + metadata database + zstd event chunks.
 - crash-tolerant append-only writer.
-- replay and export tools.
+- indexed replay and export tools.
 
 ## Safety Rules
 

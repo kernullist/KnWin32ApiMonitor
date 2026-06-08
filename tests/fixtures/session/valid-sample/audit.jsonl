@@ -1,0 +1,1 @@
+{"schemaVersion":"0.1.0","operationId":"fixture-valid-sample","eventType":"capture_completed","timestampUtc":"2026-06-08T00:00:00Z","subsystem":"knmon-native-helper","operation":"capture-sample","win32ErrorCode":0,"ntStatus":"0x00000000","message":"Fixture capture completed."}

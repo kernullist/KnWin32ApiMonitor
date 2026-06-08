@@ -3,12 +3,15 @@
 use knmon_tauri::{
     backend_status,
     capture_sample_fileio,
+    capture_sample_fileio_session,
     launch_sample_early_bird,
     mock_target_processes,
     native_target_processes,
+    replay_last_session,
     CaptureSessionState,
     CaptureResult,
     LaunchResult,
+    SessionReplayResult,
     TargetProcess,
 };
 
@@ -37,6 +40,18 @@ fn capture_sample_fileio_events() -> Result<CaptureResult, String>
 }
 
 #[tauri::command]
+fn capture_sample_fileio_session_events() -> Result<CaptureResult, String>
+{
+    capture_sample_fileio_session()
+}
+
+#[tauri::command]
+fn replay_last_sample_session() -> Result<SessionReplayResult, String>
+{
+    replay_last_session()
+}
+
+#[tauri::command]
 fn get_backend_status() -> Result<String, String>
 {
     Ok(backend_status().to_string())
@@ -62,6 +77,8 @@ fn main()
             list_native_target_processes,
             launch_sample_early_bird_capture,
             capture_sample_fileio_events,
+            capture_sample_fileio_session_events,
+            replay_last_sample_session,
             get_backend_status,
             start_mock_capture_session,
             stop_mock_capture_session

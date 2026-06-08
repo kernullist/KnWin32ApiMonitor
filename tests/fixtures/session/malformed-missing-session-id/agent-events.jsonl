@@ -1,0 +1,2 @@
+{"schemaVersion":"0.1.0","messageType":"agent_hello","operationId":"fixture-missing-session-id","pid":4200,"tid":4201,"timestampUtc":"2026-06-08T00:00:00Z","sequence":0,"message":"HELLO received."}
+{"schemaVersion":"0.1.0","messageType":"dropped_events","operationId":"fixture-missing-session-id","pid":4200,"tid":4201,"timestampUtc":"2026-06-08T00:00:00Z","sequence":1,"droppedCount":0,"message":"No dropped events."}

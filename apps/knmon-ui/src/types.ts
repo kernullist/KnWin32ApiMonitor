@@ -124,6 +124,22 @@ export interface CaptureResult {
   auditEvents: AuditEvent[];
   agentMessages: unknown[];
   capturedEvents: AgentApiCallEvent[];
+  session?: SessionInfo | null;
+}
+
+export interface SessionInfo {
+  schemaVersion: string;
+  success: boolean;
+  sessionId: string;
+  sessionPath: string;
+  createdUtc: string;
+  traceEventCount: number;
+  agentEventCount: number;
+  auditEventCount: number;
+  droppedEvents: number;
+  win32ErrorCode: number;
+  message: string;
+  validationErrors: string[];
 }
 
 export interface KnMonArgument {
@@ -160,6 +176,16 @@ export interface TraceEvent {
   tags: string[];
   stack: string[];
   bufferPreview?: string;
+}
+
+export interface SessionReplayResult {
+  schemaVersion: string;
+  success: boolean;
+  backendMode: BackendMode;
+  captureMode: "session-replay";
+  session: SessionInfo;
+  message: string;
+  traceEvents: TraceEvent[];
 }
 
 export interface ApiNode {

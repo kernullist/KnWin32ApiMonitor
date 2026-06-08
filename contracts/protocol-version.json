@@ -16,5 +16,13 @@
     "controlledSampleOnly": true,
     "hookedApis": ["CreateFileW", "CreateFileA", "ReadFile", "WriteFile", "CloseHandle"],
     "messageTypes": ["agent_hello", "hook_installed", "hook_install_failed", "api_call", "dropped_events", "agent_shutdown"]
+  },
+  "sessionWriter": {
+    "captureCommand": "capture-sample --write-session <dir>",
+    "validationCommand": "validate-session --session <dir>",
+    "replayCommand": "replay-session --session <dir>",
+    "files": ["manifest.json", "audit.jsonl", "agent-events.jsonl", "trace-events.jsonl"],
+    "replayCaptureMode": "session-replay",
+    "controlledSampleOnly": true
   }
 }

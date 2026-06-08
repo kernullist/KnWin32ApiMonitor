@@ -67,6 +67,7 @@ exports/
 *.knapm
 *.etl
 *.jsonl
+!tests/fixtures/**/*.jsonl
 
 # Temporary files
 *.tmp

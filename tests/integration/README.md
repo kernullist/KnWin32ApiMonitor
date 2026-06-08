@@ -2,5 +2,9 @@
 
 Future integration tests for Tauri commands, native helpers, collector sessions, and UI workflows.
 
-The Phase 1 foundation uses build checks and the definition validator as the first verification gates.
+Current verification gates include:
 
+1. UI build through `npm run build`.
+2. Definition validation through `npm run defs:validate`.
+3. Session fixture validation through `npm run sessions:validate`.
+4. Native helper smoke runs for `capture-sample`, `validate-session`, and `replay-session`.

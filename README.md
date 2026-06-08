@@ -12,6 +12,8 @@ This repository is bootstrapping a new API Monitor inspired by Rohitab API Monit
 - JSONL export for early session artifacts.
 - Controlled launch-time early-bird APC agent load foundation for the repository sample target.
 - Bounded controlled File I/O capture from the repository sample target through x64 agent IAT hooks.
+- Durable helper-written sample sessions with manifest, audit, agent-event, and trace-event JSONL files.
+- Session validation and replay without relaunching or reinjecting the sample target.
 
 ## Current Status
 
@@ -34,6 +36,9 @@ Implemented now:
 13. Bounded `capture-sample` helper command that collects real `api_call` events from the sample target.
 14. x64 agent IAT hooks for `CreateFileW`, `CreateFileA`, `ReadFile`, `WriteFile`, and `CloseHandle`.
 15. UI action that maps captured native File I/O events into the trace table.
+16. `capture-sample --write-session <dir>` session writer.
+17. `validate-session --session <dir>` and `replay-session --session <dir>` helper commands.
+18. UI actions for `Capture And Save` and `Replay Last`.
 
 Not implemented yet:
 
@@ -45,6 +50,7 @@ Not implemented yet:
 6. Kernel-mode helper.
 7. x86 agent build.
 8. `NtCreateFile` live hook capture.
+9. Compressed `.knapm` container chunks and replay indexes.
 
 ## Current Native Capture Snapshot
 
@@ -54,7 +60,9 @@ Current native capture is a bounded, controlled sample-target flow:
 2. The controller queues an early-bird APC to load `knmon-agent64.dll`.
 3. The x64 agent sends `agent_hello`, installs main-module IAT hooks, and emits schema-versioned `api_call` events.
 4. The helper returns one structured `capture-result` JSON object with audit events, raw agent messages, captured events, and dropped-event accounting.
-5. The Tauri command `capture_sample_fileio_events` maps those captured events into the React trace table.
+5. `capture-sample --write-session <dir>` writes `manifest.json`, `audit.jsonl`, `agent-events.jsonl`, and `trace-events.jsonl`.
+6. `replay-session --session <dir>` returns trace-compatible events without launching a target or loading an agent.
+7. The Tauri commands map captured or replayed File I/O events into the React trace table.
 
 Verified live hook coverage:
 
@@ -120,16 +128,27 @@ Run native helper smoke tests:
 build\native\Debug\knmon-native-helper.exe list-targets
 build\native\Debug\knmon-native-helper.exe launch-sample
 build\native\Debug\knmon-native-helper.exe capture-sample
+build\native\Debug\knmon-native-helper.exe capture-sample --write-session captures\latest-sample-fileio
+build\native\Debug\knmon-native-helper.exe validate-session --session captures\latest-sample-fileio
+build\native\Debug\knmon-native-helper.exe replay-session --session captures\latest-sample-fileio
 ```
 
 `launch-sample` creates `knmon-sample-fileio.exe` suspended, queues an early-bird APC to load `knmon-agent64.dll`, resumes the primary thread, and waits for an agent HELLO handshake.
 
 `capture-sample` uses the same controlled launch path, keeps the event pipe open until the sample target exits, installs x64 IAT hooks for the stable File I/O set, and returns schema-versioned `api_call` events plus dropped-event accounting.
 
+`capture-sample --write-session` persists the bounded capture into a replayable session directory. Replay returns the trace rows from disk and does not relaunch the target.
+
 Validate API definitions:
 
 ```powershell
 npm run defs:validate
+```
+
+Validate session fixtures:
+
+```powershell
+npm run sessions:validate
 ```
 
 Run available verification:
@@ -162,7 +181,7 @@ tests/                  Future integration and definition tests
 6. Select a row and inspect parameters, buffer preview, call stack, and return/error detail.
 7. Press Export JSONL to save a session artifact.
 
-For native enumeration and controlled capture, run the Tauri desktop app after `npm run native:build`, switch Target Source to Native, then use Controlled Launch. `Launch Sample` proves early-bird load and HELLO; `Capture File I/O` runs bounded native sample capture and inserts real hook events into the trace table.
+For native enumeration and controlled capture, run the Tauri desktop app after `npm run native:build`, switch Target Source to Native, then use Controlled Launch. `Launch Sample` proves early-bird load and HELLO; `Capture File I/O` runs bounded native sample capture and inserts real hook events into the trace table. `Capture And Save` writes `captures/latest-sample-fileio`; `Replay Last` loads that session back into the trace table without launching or injecting.
 
 ## Design Docs
 

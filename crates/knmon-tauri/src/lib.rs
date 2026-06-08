@@ -161,6 +161,70 @@ pub struct CaptureResult
     pub audit_events: Vec<AuditEvent>,
     pub agent_messages: Vec<serde_json::Value>,
     pub captured_events: Vec<AgentApiCallEvent>,
+    #[serde(default)]
+    pub session: Option<SessionInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionInfo
+{
+    pub schema_version: String,
+    pub success: bool,
+    pub session_id: String,
+    pub session_path: String,
+    pub created_utc: String,
+    pub trace_event_count: u64,
+    pub agent_event_count: u64,
+    pub audit_event_count: u64,
+    pub dropped_events: u64,
+    pub win32_error_code: u32,
+    pub message: String,
+    pub validation_errors: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TraceError
+{
+    pub kind: String,
+    pub code: String,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TraceEvent
+{
+    pub schema_version: String,
+    pub event_id: u64,
+    pub relative_time_ms: f64,
+    pub pid: u32,
+    pub tid: u32,
+    pub process: String,
+    pub module: String,
+    pub api: String,
+    pub arguments: Vec<AgentApiArgument>,
+    pub return_value: String,
+    pub error: Option<TraceError>,
+    pub duration_us: u64,
+    pub tags: Vec<String>,
+    pub stack: Vec<String>,
+    #[serde(default)]
+    pub buffer_preview: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionReplayResult
+{
+    pub schema_version: String,
+    pub success: bool,
+    pub backend_mode: String,
+    pub capture_mode: String,
+    pub session: SessionInfo,
+    pub message: String,
+    pub trace_events: Vec<TraceEvent>,
 }
 
 impl CaptureSessionState
@@ -268,7 +332,39 @@ pub fn capture_sample_fileio() -> Result<CaptureResult, String>
         .map_err(|error| format!("failed to parse capture result: {error}; stdout={helper_output}"))
 }
 
+pub fn capture_sample_fileio_session() -> Result<CaptureResult, String>
+{
+    let session_path = default_session_path();
+    let helper_output = run_helper_args(&[
+        "capture-sample".to_string(),
+        "--write-session".to_string(),
+        session_path.to_string_lossy().to_string(),
+    ])?;
+
+    serde_json::from_str(&helper_output)
+        .map_err(|error| format!("failed to parse capture session result: {error}; stdout={helper_output}"))
+}
+
+pub fn replay_last_session() -> Result<SessionReplayResult, String>
+{
+    let session_path = default_session_path();
+    let helper_output = run_helper_args(&[
+        "replay-session".to_string(),
+        "--session".to_string(),
+        session_path.to_string_lossy().to_string(),
+    ])?;
+
+    serde_json::from_str(&helper_output)
+        .map_err(|error| format!("failed to parse session replay result: {error}; stdout={helper_output}"))
+}
+
 fn run_helper<const N: usize>(args: [&str; N]) -> Result<String, String>
+{
+    let owned_args: Vec<String> = args.iter().map(|value| value.to_string()).collect();
+    run_helper_args(&owned_args)
+}
+
+fn run_helper_args(args: &[String]) -> Result<String, String>
 {
     let helper_path = find_helper_path()
         .ok_or_else(|| "knmon-native-helper.exe was not found. Run `npm run native:build` first.".to_string())?;
@@ -300,10 +396,20 @@ fn run_helper<const N: usize>(args: [&str; N]) -> Result<String, String>
     Ok(stdout)
 }
 
-fn find_helper_path() -> Option<PathBuf>
+fn repo_root_path() -> PathBuf
 {
     let manifest_root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let repo_root = manifest_root.join("..").join("..").join("..");
+    manifest_root.join("..").join("..")
+}
+
+fn default_session_path() -> PathBuf
+{
+    repo_root_path().join("captures").join("latest-sample-fileio")
+}
+
+fn find_helper_path() -> Option<PathBuf>
+{
+    let repo_root = repo_root_path();
     let current_dir = std::env::current_dir().ok();
 
     let mut candidates = vec![

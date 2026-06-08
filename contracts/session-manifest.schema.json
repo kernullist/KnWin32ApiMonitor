@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/session-manifest.schema.json",
+  "title": "KnMonSessionManifest",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "sessionId",
+    "createdUtc",
+    "source",
+    "backendMode",
+    "captureMode",
+    "operationId",
+    "target",
+    "agent",
+    "eventCounts",
+    "droppedEvents",
+    "files"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "sessionId": { "type": "string", "minLength": 1 },
+    "createdUtc": { "type": "string" },
+    "source": { "enum": ["knmon-native-helper capture-sample"] },
+    "backendMode": { "enum": ["native-capture"] },
+    "captureMode": { "enum": ["bounded-native-capture"] },
+    "operationId": { "type": "string" },
+    "target": {
+      "type": "object",
+      "required": ["path", "pid", "tid", "architecture"],
+      "properties": {
+        "path": { "type": "string" },
+        "pid": { "type": "integer", "minimum": 0 },
+        "tid": { "type": "integer", "minimum": 0 },
+        "architecture": { "enum": ["x64"] }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "required": ["path", "architecture", "version"],
+      "properties": {
+        "path": { "type": "string" },
+        "architecture": { "enum": ["x64"] },
+        "version": { "type": "string" }
+      }
+    },
+    "eventCounts": {
+      "type": "object",
+      "required": ["audit", "agentEvents", "traceEvents", "capturedEvents"],
+      "properties": {
+        "audit": { "type": "integer", "minimum": 0 },
+        "agentEvents": { "type": "integer", "minimum": 0 },
+        "traceEvents": { "type": "integer", "minimum": 0 },
+        "capturedEvents": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "droppedEvents": { "type": "integer", "minimum": 0 },
+    "files": {
+      "type": "object",
+      "required": ["audit", "agentEvents", "traceEvents"],
+      "properties": {
+        "audit": { "const": "audit.jsonl" },
+        "agentEvents": { "const": "agent-events.jsonl" },
+        "traceEvents": { "const": "trace-events.jsonl" }
+      }
+    }
+  }
+}

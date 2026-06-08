@@ -19,6 +19,9 @@ contracts/
   agent-event.schema.json
   hook-status.schema.json
   capture-result.schema.json
+  session-info.schema.json
+  session-manifest.schema.json
+  session-replay-result.schema.json
 ```
 
 ## Current Required Fields
@@ -100,6 +103,23 @@ The current message types are:
 
 `capture-result.schema.json` wraps the bounded helper result, audit events, raw agent messages, captured `api_call` events, and dropped-event accounting.
 
+## Session Contracts
+
+The current helper session format is a directory, not the future `.knapm` container.
+
+Required files:
+
+1. `manifest.json`
+2. `audit.jsonl`
+3. `agent-events.jsonl`
+4. `trace-events.jsonl`
+
+`session-manifest.schema.json` describes the durable session metadata: source command, backend mode, capture mode, operation id, target, agent, event counts, dropped-event accounting, and file names.
+
+`session-info.schema.json` describes validation and writer status returned to the UI.
+
+`session-replay-result.schema.json` wraps validated session metadata and replayed trace-compatible events. Replay must not launch the sample target or load an agent.
+
 ## Example
 
 ```json
@@ -131,6 +151,14 @@ npm run defs:validate
 ```
 
 The validator currently performs structural checks and confirms the required File I/O API set is present.
+
+Validate session fixtures:
+
+```powershell
+npm run sessions:validate
+```
+
+`npm run verify` runs the UI build, definition validator, and session fixture validator.
 
 Future validation should add:
 

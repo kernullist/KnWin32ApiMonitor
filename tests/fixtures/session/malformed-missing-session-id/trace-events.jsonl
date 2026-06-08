@@ -1,0 +1,1 @@
+{"schemaVersion":"0.1.0","eventId":1,"relativeTimeMs":10,"pid":4200,"tid":4201,"process":"knmon-sample-fileio.exe","module":"kernel32.dll","api":"CreateFileW","arguments":[],"returnValue":"0x0000000000000040","error":null,"durationUs":42,"tags":["file-io","native-capture"],"stack":["knmon-sample-fileio.exe!main"],"bufferPreview":""}

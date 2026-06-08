@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { mockTargets } from "./mockData";
-import type { CaptureResult, CaptureSessionState, LaunchResult, TargetProcess } from "./types";
+import type { CaptureResult, CaptureSessionState, LaunchResult, SessionReplayResult, TargetProcess } from "./types";
 
 function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -55,6 +55,22 @@ export async function captureSampleFileIoEvents(): Promise<CaptureResult> {
   }
 
   return invoke<CaptureResult>("capture_sample_fileio_events");
+}
+
+export async function captureSampleFileIoSession(): Promise<CaptureResult> {
+  if (!isTauriRuntime()) {
+    throw new Error("Capture And Save requires the Tauri desktop runtime and build/native/Debug/knmon-native-helper.exe.");
+  }
+
+  return invoke<CaptureResult>("capture_sample_fileio_session_events");
+}
+
+export async function replayLastSampleSession(): Promise<SessionReplayResult> {
+  if (!isTauriRuntime()) {
+    throw new Error("Replay Last Session requires the Tauri desktop runtime and a saved captures/latest-sample-fileio session.");
+  }
+
+  return invoke<SessionReplayResult>("replay_last_sample_session");
 }
 
 export async function startBackendSession(): Promise<CaptureSessionState> {

@@ -23,15 +23,17 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   captureSampleFileIoEvents,
+  captureSampleFileIoSession,
   launchSampleEarlyBirdCapture,
   listNativeTargetProcesses,
   listTargetProcesses,
+  replayLastSampleSession,
   startBackendSession,
   stopBackendSession
 } from "./backend";
 import { apiTree, captureProfiles, createMockFileIoEvent, initialTraceEvents } from "./mockData";
 import { downloadJsonl, estimateSessionBytes } from "./session";
-import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, TargetProcess, TraceEvent } from "./types";
+import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
 
 type LeftTab = "targets" | "apis" | "profiles";
 type TraceMode = "flat" | "call-tree";
@@ -201,6 +203,7 @@ function App() {
   const [nativeBusy, setNativeBusy] = useState(false);
   const [launchResult, setLaunchResult] = useState<LaunchResult | null>(null);
   const [captureResult, setCaptureResult] = useState<CaptureResult | null>(null);
+  const [lastSession, setLastSession] = useState<SessionInfo | null>(null);
   const [outputEvents, setOutputEvents] = useState<AuditEvent[]>([
     makeAuditEvent("backend_ready", "mock_init", "Mock File I/O backend initialized.")
   ]);
@@ -246,6 +249,7 @@ function App() {
       const message = error instanceof Error ? error.message : String(error);
       setBackendMode("mock");
       appendOutput([makeAuditEvent("native_enum_blocked", "list_native_target_processes", message)]);
+      setInspectorTab("output");
     } finally {
       setNativeBusy(false);
     }
@@ -328,6 +332,7 @@ function App() {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       appendOutput([makeAuditEvent("launch_blocked", "launch_sample_early_bird_capture", message)]);
+      setInspectorTab("output");
     } finally {
       setNativeBusy(false);
     }
@@ -355,6 +360,82 @@ function App() {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       appendOutput([makeAuditEvent("capture_blocked", "capture_sample_fileio_events", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
+  async function handleCaptureAndSaveSession() {
+    setNativeBusy(true);
+
+    try {
+      appendOutput([makeAuditEvent("session_capture_requested", "capture_sample_fileio_session_events", "Controlled native capture and session write requested from UI.")]);
+      const result = await captureSampleFileIoSession();
+      setCaptureResult(result);
+      setBackendMode(result.success ? "native-capture" : "native-enum");
+      setDroppedCount(result.droppedEvents);
+
+      if (result.session) {
+        setLastSession(result.session);
+        appendOutput([
+          makeAuditEvent(
+            result.session.success ? "session_written" : "session_write_failed",
+            "capture_sample_fileio_session_events",
+            `${result.session.sessionPath}; traceEvents=${result.session.traceEventCount}; dropped=${result.session.droppedEvents}`,
+            result.session.win32ErrorCode
+          )
+        ]);
+      }
+
+      appendOutput(result.auditEvents.length > 0 ? result.auditEvents : [makeAuditEvent("capture_result", result.operation, result.message, result.win32ErrorCode)]);
+
+      if (result.capturedEvents.length > 0) {
+        const traceEvents = result.capturedEvents.map((event, index) => createTraceEventFromAgentApiCall(event, nextEventId.current + index));
+        nextEventId.current += traceEvents.length;
+        setEvents((current) => [...current, ...traceEvents].slice(-400));
+        setSelectedEventId(traceEvents[traceEvents.length - 1].eventId);
+      }
+
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("session_capture_blocked", "capture_sample_fileio_session_events", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
+  async function handleReplayLastSession() {
+    setNativeBusy(true);
+
+    try {
+      appendOutput([makeAuditEvent("session_replay_requested", "replay_last_sample_session", "Replay last saved sample session requested from UI.")]);
+      const result = await replayLastSampleSession();
+      setBackendMode(result.backendMode);
+      setLastSession(result.session);
+      setDroppedCount(result.session.droppedEvents);
+      appendOutput([
+        makeAuditEvent(
+          result.success ? "session_replayed" : "session_replay_failed",
+          "replay_last_sample_session",
+          `${result.message}; path=${result.session.sessionPath}; traceEvents=${result.traceEvents.length}; dropped=${result.session.droppedEvents}`,
+          result.session.win32ErrorCode
+        )
+      ]);
+
+      if (result.traceEvents.length > 0) {
+        setEvents(result.traceEvents);
+        nextEventId.current = result.traceEvents.length + 1;
+        setSelectedEventId(result.traceEvents[result.traceEvents.length - 1].eventId);
+      }
+
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("session_replay_blocked", "replay_last_sample_session", message)]);
+      setInspectorTab("output");
     } finally {
       setNativeBusy(false);
     }
@@ -463,6 +544,8 @@ function App() {
                   <span>{captureResult ? captureResult.capturedEvents.length : 0}</span>
                   <label>Dropped</label>
                   <span>{captureResult ? captureResult.droppedEvents : droppedCount}</span>
+                  <label>Session</label>
+                  <span>{lastSession ? lastSession.sessionId || "latest-sample-fileio" : "not saved"}</span>
                 </div>
                 <div className="launch-actions">
                   <button type="button" className="tool-button primary" onClick={handleLaunchSample} disabled={nativeBusy}>
@@ -472,6 +555,14 @@ function App() {
                   <button type="button" className="tool-button primary" onClick={handleCaptureSampleFileIo} disabled={nativeBusy}>
                     <Activity size={14} />
                     <span>Capture File I/O</span>
+                  </button>
+                  <button type="button" className="tool-button" onClick={handleCaptureAndSaveSession} disabled={nativeBusy}>
+                    <Database size={14} />
+                    <span>Capture And Save</span>
+                  </button>
+                  <button type="button" className="tool-button" onClick={handleReplayLastSession} disabled={nativeBusy}>
+                    <FolderOpen size={14} />
+                    <span>Replay Last</span>
                   </button>
                   <button type="button" className="tool-button" disabled title="Bounded sample capture owns target lifetime for this milestone; persistent terminate control is not implemented yet.">
                     <Square size={13} />
@@ -486,6 +577,11 @@ function App() {
                 {captureResult ? (
                   <div className={captureResult.success ? "launch-result success" : "launch-result failure"}>
                     PID {captureResult.targetProcessId} / {captureResult.captureMode} / events={captureResult.capturedEvents.length} / {captureResult.message}
+                  </div>
+                ) : null}
+                {lastSession ? (
+                  <div className={lastSession.success ? "launch-result success" : "launch-result failure"}>
+                    session {lastSession.sessionId || "latest-sample-fileio"} / events={lastSession.traceEventCount} / {lastSession.message}
                   </div>
                 ) : null}
               </div>

@@ -78,7 +78,7 @@ Deliverables:
 
 ## Phase 4: Collector And Session Writer
 
-Status: partially implemented through bounded helper capture output.
+Status: implemented foundation through bounded helper session output and replay.
 
 Goal:
 
@@ -95,8 +95,11 @@ Deliverables:
 Current implementation notes:
 
 1. `capture-sample` returns a structured bounded `capture-result` object.
-2. Captured native events can be exported from the UI through the existing JSONL trace export because they map into the same trace model.
-3. Durable `.knapm` session chunks, replay indexing, and crash-tolerant writers remain future work.
+2. `capture-sample --write-session <dir>` writes `manifest.json`, `audit.jsonl`, `agent-events.jsonl`, and `trace-events.jsonl`.
+3. `validate-session --session <dir>` checks the required manifest fields, event files, HELLO, dropped-event accounting, and trace rows.
+4. `replay-session --session <dir>` returns trace-compatible events without launching a target or loading an agent.
+5. The UI exposes `Capture And Save` and `Replay Last` for the default `captures/latest-sample-fileio` session.
+6. Durable `.knapm` session chunks, replay indexing, and crash-tolerant high-volume writers remain future work.
 
 ## Phase 5: Safe Agent Harness
 
@@ -153,10 +156,10 @@ Current verified behavior:
 
 Next implementation focus:
 
-1. Promote bounded helper output into a durable session writer.
-2. Add replay tests and schema validation for captured agent events.
-3. Harden hook lifecycle and unload/self-disable behavior.
-4. Decide whether `NtCreateFile` should be captured through a separate native hook phase or decoded from higher-level Win32 events first.
+1. Harden hook lifecycle and unload/self-disable behavior.
+2. Add collector backpressure tests beyond the bounded helper path.
+3. Decide whether `NtCreateFile` should be captured through a separate native hook phase or decoded from higher-level Win32 events first.
+4. Start x86 agent parity only after the x64 session path remains stable.
 
 ## Phase 7: Definition System V1
 
@@ -182,7 +185,7 @@ Improve high-volume analysis workflows.
 Deliverables:
 
 1. Virtualized trace table at high event counts.
-2. Session replay.
+2. Multi-session replay picker and indexed replay.
 3. Query builder.
 4. Error view.
 5. Thread view.

@@ -15,7 +15,8 @@
     "native:configure": "cmake -S native -B build/native",
     "native:build": "cmake --build build/native --config Debug",
     "defs:validate": "node tools/def-validator/validate-definitions.mjs",
-    "verify": "npm run build && npm run defs:validate"
+    "sessions:validate": "node tools/session-validator/validate-session-fixtures.mjs",
+    "verify": "npm run build && npm run defs:validate && npm run sessions:validate"
   },
   "engines": {
     "node": ">=20"

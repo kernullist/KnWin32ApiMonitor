@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/session-replay-result.schema.json",
+  "title": "KnMonSessionReplayResult",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "success",
+    "backendMode",
+    "captureMode",
+    "session",
+    "message",
+    "traceEvents"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "success": { "type": "boolean" },
+    "backendMode": { "enum": ["native-capture"] },
+    "captureMode": { "enum": ["session-replay"] },
+    "session": { "$ref": "session-info.schema.json" },
+    "message": { "type": "string" },
+    "traceEvents": {
+      "type": "array",
+      "items": { "$ref": "event.schema.json" }
+    }
+  }
+}
