@@ -31,6 +31,99 @@ WriteFileFn g_originalWriteFile = nullptr;
 CloseHandleFn g_originalCloseHandle = nullptr;
 std::wstring g_operationId;
 
+enum class AgentLifecycleState : LONG
+{
+    Starting = 0,
+    Running = 1,
+    Stopping = 2,
+    Disabled = 3,
+    Failed = 4,
+};
+
+struct HookRecord
+{
+    const char* ApiName = "";
+    const char* ModuleName = "kernel32.dll";
+    ULONG_PTR* ThunkAddress = nullptr;
+    void* OriginalFunction = nullptr;
+    void* ReplacementFunction = nullptr;
+    bool Installed = false;
+    bool Restored = false;
+    bool Failed = false;
+};
+
+struct HookLifecycleCounts
+{
+    int InstalledHooks = 0;
+    int RestoredHooks = 0;
+    int FailedHooks = 0;
+};
+
+constexpr std::size_t MaxHookRecords = 16;
+std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
+std::size_t g_hookRecordCount = 0;
+SRWLOCK g_hookLock = SRWLOCK_INIT;
+volatile LONG g_lifecycleState = static_cast<LONG>(AgentLifecycleState::Starting);
+volatile LONG g_hooksEnabled = 0;
+volatile LONG g_failedHooks = 0;
+
+void SetLifecycleState(AgentLifecycleState state)
+{
+    InterlockedExchange(&g_lifecycleState, static_cast<LONG>(state));
+}
+
+AgentLifecycleState GetLifecycleState()
+{
+    return static_cast<AgentLifecycleState>(InterlockedCompareExchange(&g_lifecycleState, 0, 0));
+}
+
+bool HooksEnabled()
+{
+    return InterlockedCompareExchange(&g_hooksEnabled, 0, 0) != 0 && GetLifecycleState() == AgentLifecycleState::Running;
+}
+
+const char* LifecycleStateName(AgentLifecycleState state)
+{
+    const char* name = "unknown";
+
+    switch (state)
+    {
+    case AgentLifecycleState::Starting:
+        name = "starting";
+        break;
+    case AgentLifecycleState::Running:
+        name = "running";
+        break;
+    case AgentLifecycleState::Stopping:
+        name = "stopping";
+        break;
+    case AgentLifecycleState::Disabled:
+        name = "disabled";
+        break;
+    case AgentLifecycleState::Failed:
+        name = "failed";
+        break;
+    default:
+        break;
+    }
+
+    return name;
+}
+
+class HookReentryGuard
+{
+public:
+    HookReentryGuard()
+    {
+        g_inHook = true;
+    }
+
+    ~HookReentryGuard()
+    {
+        g_inHook = false;
+    }
+};
+
 std::string WideToUtf8(const wchar_t* value)
 {
     std::string result;
@@ -337,6 +430,51 @@ void SendDroppedEvents()
     SendJson(stream.str());
 }
 
+HookLifecycleCounts SnapshotHookCounts()
+{
+    HookLifecycleCounts counts;
+
+    AcquireSRWLockShared(&g_hookLock);
+    for (std::size_t index = 0; index < g_hookRecordCount; ++index)
+    {
+        const HookRecord& record = g_hookRecords[index];
+        if (record.Installed)
+        {
+            ++counts.InstalledHooks;
+        }
+
+        if (record.Restored)
+        {
+            ++counts.RestoredHooks;
+        }
+
+        if (record.Failed)
+        {
+            ++counts.FailedHooks;
+        }
+    }
+    ReleaseSRWLockShared(&g_hookLock);
+
+    counts.FailedHooks += static_cast<int>(InterlockedCompareExchange(&g_failedHooks, 0, 0));
+    return counts;
+}
+
+void SendAgentShutdown(const char* reason, const HookLifecycleCounts& counts)
+{
+    const LONG64 sequence = NextSequence();
+    std::ostringstream stream;
+    stream << MessagePrefix("agent_shutdown", sequence) << ",";
+    stream << "\"reason\":" << Q(reason == nullptr ? "unknown" : reason) << ",";
+    stream << "\"lifecycleState\":" << Q(LifecycleStateName(GetLifecycleState())) << ",";
+    stream << "\"installedHooks\":" << counts.InstalledHooks << ",";
+    stream << "\"restoredHooks\":" << counts.RestoredHooks << ",";
+    stream << "\"failedHooks\":" << counts.FailedHooks << ",";
+    stream << "\"droppedCount\":" << static_cast<LONG64>(g_droppedEvents) << ",";
+    stream << "\"message\":\"Agent lifecycle shutdown completed.\"";
+    stream << "}";
+    SendJson(stream.str());
+}
+
 std::string ArgumentJson(
     int index,
     const char* type,
@@ -406,6 +544,34 @@ void* ResolveKernel32Export(const char* name)
     return result;
 }
 
+bool AppendHookRecordNoLock(const char* apiName, ULONG_PTR* thunkAddress, void* originalFunction, void* replacementFunction)
+{
+    bool appended = false;
+
+    do
+    {
+        if (g_hookRecordCount >= g_hookRecords.size())
+        {
+            break;
+        }
+
+        HookRecord& record = g_hookRecords[g_hookRecordCount];
+        record.ApiName = apiName;
+        record.ModuleName = "kernel32.dll";
+        record.ThunkAddress = thunkAddress;
+        record.OriginalFunction = originalFunction;
+        record.ReplacementFunction = replacementFunction;
+        record.Installed = true;
+        record.Restored = false;
+        record.Failed = false;
+        ++g_hookRecordCount;
+        appended = true;
+    }
+    while (false);
+
+    return appended;
+}
+
 bool PatchImport(const char* functionName, void* replacement, void** original)
 {
     bool patched = false;
@@ -472,18 +638,92 @@ bool PatchImport(const char* functionName, void* replacement, void** original)
                     *original = reinterpret_cast<void*>(firstThunk->u1.Function);
                 }
 
+                void* originalFunction = reinterpret_cast<void*>(firstThunk->u1.Function);
                 firstThunk->u1.Function = reinterpret_cast<ULONG_PTR>(replacement);
                 FlushInstructionCache(GetCurrentProcess(), &firstThunk->u1.Function, sizeof(void*));
 
                 DWORD ignored = 0;
                 VirtualProtect(&firstThunk->u1.Function, sizeof(void*), oldProtect, &ignored);
-                patched = true;
+                if (AppendHookRecordNoLock(functionName, &firstThunk->u1.Function, originalFunction, replacement))
+                {
+                    patched = true;
+                }
+                else
+                {
+                    firstThunk->u1.Function = reinterpret_cast<ULONG_PTR>(originalFunction);
+                    FlushInstructionCache(GetCurrentProcess(), &firstThunk->u1.Function, sizeof(void*));
+                    InterlockedIncrement(&g_failedHooks);
+                }
             }
         }
     }
     while (false);
 
     return patched;
+}
+
+HookLifecycleCounts UninstallHooks()
+{
+    HookLifecycleCounts counts;
+
+    InterlockedExchange(&g_hooksEnabled, 0);
+    AcquireSRWLockExclusive(&g_hookLock);
+    for (std::size_t index = 0; index < g_hookRecordCount; ++index)
+    {
+        HookRecord& record = g_hookRecords[index];
+        if (!record.Installed || record.Restored || record.ThunkAddress == nullptr || record.OriginalFunction == nullptr)
+        {
+            if (record.Installed)
+            {
+                ++counts.InstalledHooks;
+            }
+
+            if (record.Restored)
+            {
+                ++counts.RestoredHooks;
+            }
+
+            if (record.Failed)
+            {
+                ++counts.FailedHooks;
+            }
+            continue;
+        }
+
+        ++counts.InstalledHooks;
+
+        DWORD oldProtect = 0;
+        if (!VirtualProtect(record.ThunkAddress, sizeof(void*), PAGE_READWRITE, &oldProtect))
+        {
+            record.Failed = true;
+            ++counts.FailedHooks;
+            continue;
+        }
+
+        if (*record.ThunkAddress == reinterpret_cast<ULONG_PTR>(record.ReplacementFunction))
+        {
+            *record.ThunkAddress = reinterpret_cast<ULONG_PTR>(record.OriginalFunction);
+            FlushInstructionCache(GetCurrentProcess(), record.ThunkAddress, sizeof(void*));
+            record.Restored = true;
+            ++counts.RestoredHooks;
+        }
+        else
+        {
+            record.Restored = true;
+            ++counts.RestoredHooks;
+        }
+
+        DWORD ignored = 0;
+        if (!VirtualProtect(record.ThunkAddress, sizeof(void*), oldProtect, &ignored))
+        {
+            record.Failed = true;
+            ++counts.FailedHooks;
+        }
+    }
+    ReleaseSRWLockExclusive(&g_hookLock);
+
+    counts.FailedHooks += static_cast<int>(InterlockedCompareExchange(&g_failedHooks, 0, 0));
+    return counts;
 }
 
 HANDLE WINAPI HookedCreateFileW(
@@ -495,12 +735,18 @@ HANDLE WINAPI HookedCreateFileW(
     DWORD flagsAndAttributes,
     HANDLE templateFile)
 {
-    if (g_inHook || g_originalCreateFileW == nullptr)
+    if (g_inHook || !HooksEnabled() || g_originalCreateFileW == nullptr)
     {
+        if (g_originalCreateFileW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return INVALID_HANDLE_VALUE;
+        }
+
         return g_originalCreateFileW(fileName, desiredAccess, shareMode, securityAttributes, creationDisposition, flagsAndAttributes, templateFile);
     }
 
-    g_inHook = true;
+    HookReentryGuard guard;
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
@@ -516,10 +762,12 @@ HANDLE WINAPI HookedCreateFileW(
     args << ArgumentJson(1, "DWORD", "dwDesiredAccess", "in", HexDword(desiredAccess), HexDword(desiredAccess), HexDword(desiredAccess)) << ",";
     args << ArgumentJson(2, "DWORD", "dwShareMode", "in", HexDword(shareMode), HexDword(shareMode), HexDword(shareMode)) << ",";
     args << ArgumentJson(3, "DWORD", "dwCreationDisposition", "in", HexDword(creationDisposition), HexDword(creationDisposition), HexDword(creationDisposition));
-    SendApiCall("CreateFileW", HexPointer(result), eventError, DurationUs(start, end), args.str(), "");
+    if (HooksEnabled())
+    {
+        SendApiCall("CreateFileW", HexPointer(result), eventError, DurationUs(start, end), args.str(), "");
+    }
 
     SetLastError(lastError);
-    g_inHook = false;
     return result;
 }
 
@@ -532,12 +780,18 @@ HANDLE WINAPI HookedCreateFileA(
     DWORD flagsAndAttributes,
     HANDLE templateFile)
 {
-    if (g_inHook || g_originalCreateFileA == nullptr)
+    if (g_inHook || !HooksEnabled() || g_originalCreateFileA == nullptr)
     {
+        if (g_originalCreateFileA == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return INVALID_HANDLE_VALUE;
+        }
+
         return g_originalCreateFileA(fileName, desiredAccess, shareMode, securityAttributes, creationDisposition, flagsAndAttributes, templateFile);
     }
 
-    g_inHook = true;
+    HookReentryGuard guard;
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
@@ -553,21 +807,29 @@ HANDLE WINAPI HookedCreateFileA(
     args << ArgumentJson(1, "DWORD", "dwDesiredAccess", "in", HexDword(desiredAccess), HexDword(desiredAccess), HexDword(desiredAccess)) << ",";
     args << ArgumentJson(2, "DWORD", "dwShareMode", "in", HexDword(shareMode), HexDword(shareMode), HexDword(shareMode)) << ",";
     args << ArgumentJson(3, "DWORD", "dwCreationDisposition", "in", HexDword(creationDisposition), HexDword(creationDisposition), HexDword(creationDisposition));
-    SendApiCall("CreateFileA", HexPointer(result), eventError, DurationUs(start, end), args.str(), "");
+    if (HooksEnabled())
+    {
+        SendApiCall("CreateFileA", HexPointer(result), eventError, DurationUs(start, end), args.str(), "");
+    }
 
     SetLastError(lastError);
-    g_inHook = false;
     return result;
 }
 
 BOOL WINAPI HookedReadFile(HANDLE file, LPVOID buffer, DWORD bytesToRead, LPDWORD bytesRead, LPOVERLAPPED overlapped)
 {
-    if (g_inHook || g_originalReadFile == nullptr)
+    if (g_inHook || !HooksEnabled() || g_originalReadFile == nullptr)
     {
+        if (g_originalReadFile == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
         return g_originalReadFile(file, buffer, bytesToRead, bytesRead, overlapped);
     }
 
-    g_inHook = true;
+    HookReentryGuard guard;
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
@@ -582,21 +844,29 @@ BOOL WINAPI HookedReadFile(HANDLE file, LPVOID buffer, DWORD bytesToRead, LPDWOR
     args << ArgumentJson(1, "LPVOID", "lpBuffer", "out", HexPointer(buffer), HexPointer(buffer), HexPointer(buffer)) << ",";
     args << ArgumentJson(2, "DWORD", "nNumberOfBytesToRead", "in", std::to_string(bytesToRead), std::to_string(bytesToRead), std::to_string(bytesToRead)) << ",";
     args << ArgumentJson(3, "LPDWORD", "lpNumberOfBytesRead", "out", HexPointer(bytesRead), std::to_string(actualBytes), std::to_string(actualBytes));
-    SendApiCall("ReadFile", result ? "TRUE" : "FALSE", eventError, DurationUs(start, end), args.str(), result ? BufferPreview(buffer, actualBytes) : "");
+    if (HooksEnabled())
+    {
+        SendApiCall("ReadFile", result ? "TRUE" : "FALSE", eventError, DurationUs(start, end), args.str(), result ? BufferPreview(buffer, actualBytes) : "");
+    }
 
     SetLastError(lastError);
-    g_inHook = false;
     return result;
 }
 
 BOOL WINAPI HookedWriteFile(HANDLE file, LPCVOID buffer, DWORD bytesToWrite, LPDWORD bytesWritten, LPOVERLAPPED overlapped)
 {
-    if (g_inHook || g_originalWriteFile == nullptr)
+    if (g_inHook || !HooksEnabled() || g_originalWriteFile == nullptr)
     {
+        if (g_originalWriteFile == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
         return g_originalWriteFile(file, buffer, bytesToWrite, bytesWritten, overlapped);
     }
 
-    g_inHook = true;
+    HookReentryGuard guard;
     const std::string preview = BufferPreview(buffer, bytesToWrite);
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
@@ -612,21 +882,29 @@ BOOL WINAPI HookedWriteFile(HANDLE file, LPCVOID buffer, DWORD bytesToWrite, LPD
     args << ArgumentJson(1, "LPCVOID", "lpBuffer", "in", HexPointer(buffer), HexPointer(buffer), preview) << ",";
     args << ArgumentJson(2, "DWORD", "nNumberOfBytesToWrite", "in", std::to_string(bytesToWrite), std::to_string(bytesToWrite), std::to_string(bytesToWrite)) << ",";
     args << ArgumentJson(3, "LPDWORD", "lpNumberOfBytesWritten", "out", HexPointer(bytesWritten), std::to_string(actualBytes), std::to_string(actualBytes));
-    SendApiCall("WriteFile", result ? "TRUE" : "FALSE", eventError, DurationUs(start, end), args.str(), preview);
+    if (HooksEnabled())
+    {
+        SendApiCall("WriteFile", result ? "TRUE" : "FALSE", eventError, DurationUs(start, end), args.str(), preview);
+    }
 
     SetLastError(lastError);
-    g_inHook = false;
     return result;
 }
 
 BOOL WINAPI HookedCloseHandle(HANDLE handle)
 {
-    if (g_inHook || g_originalCloseHandle == nullptr)
+    if (g_inHook || !HooksEnabled() || g_originalCloseHandle == nullptr)
     {
+        if (g_originalCloseHandle == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
         return g_originalCloseHandle(handle);
     }
 
-    g_inHook = true;
+    HookReentryGuard guard;
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
@@ -637,10 +915,12 @@ BOOL WINAPI HookedCloseHandle(HANDLE handle)
     const DWORD eventError = result ? 0 : lastError;
     std::ostringstream args;
     args << ArgumentJson(0, "HANDLE", "hObject", "in", HexPointer(handle), HexPointer(handle), HexPointer(handle));
-    SendApiCall("CloseHandle", result ? "TRUE" : "FALSE", eventError, DurationUs(start, end), args.str(), "");
+    if (HooksEnabled())
+    {
+        SendApiCall("CloseHandle", result ? "TRUE" : "FALSE", eventError, DurationUs(start, end), args.str(), "");
+    }
 
     SetLastError(lastError);
-    g_inHook = false;
     return result;
 }
 
@@ -655,9 +935,16 @@ bool InstallHook(const char* apiName, void* replacement, void** original)
             *original = ResolveKernel32Export(apiName);
         }
 
+        AcquireSRWLockExclusive(&g_hookLock);
         installed = PatchImport(apiName, replacement, original);
+        ReleaseSRWLockExclusive(&g_hookLock);
     }
     while (false);
+
+    if (!installed)
+    {
+        InterlockedIncrement(&g_failedHooks);
+    }
 
     SendHookStatus(apiName, installed, installed ? "IAT hook installed in controlled sample target." : "IAT entry was not found in controlled sample target.");
     return installed;
@@ -673,7 +960,39 @@ bool InstallHooks()
     allInstalled = InstallHook("WriteFile", reinterpret_cast<void*>(HookedWriteFile), reinterpret_cast<void**>(&g_originalWriteFile)) && allInstalled;
     allInstalled = InstallHook("CloseHandle", reinterpret_cast<void*>(HookedCloseHandle), reinterpret_cast<void**>(&g_originalCloseHandle)) && allInstalled;
 
+    if (allInstalled)
+    {
+        SetLifecycleState(AgentLifecycleState::Running);
+        InterlockedExchange(&g_hooksEnabled, 1);
+    }
+
     return allInstalled;
+}
+
+void CloseAgentPipe()
+{
+    AcquireSRWLockExclusive(&g_pipeLock);
+    if (g_pipeHandle != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(g_pipeHandle);
+        g_pipeHandle = INVALID_HANDLE_VALUE;
+    }
+    ReleaseSRWLockExclusive(&g_pipeLock);
+}
+
+void ShutdownAgent(const char* reason, AgentLifecycleState finalState)
+{
+    const AgentLifecycleState previousState = GetLifecycleState();
+    if (previousState == AgentLifecycleState::Stopping || previousState == AgentLifecycleState::Disabled || previousState == AgentLifecycleState::Failed)
+    {
+        return;
+    }
+
+    SetLifecycleState(AgentLifecycleState::Stopping);
+    HookLifecycleCounts counts = UninstallHooks();
+    SetLifecycleState(finalState);
+    SendAgentShutdown(reason, counts);
+    CloseAgentPipe();
 }
 
 DWORD WINAPI AgentWorker(void*)
@@ -729,6 +1048,7 @@ DWORD WINAPI AgentWorker(void*)
         if (!InstallHooks())
         {
             SendDroppedEvents();
+            ShutdownAgent("hook_install_failed", AgentLifecycleState::Failed);
             break;
         }
 
@@ -760,13 +1080,7 @@ BOOL APIENTRY DllMain(HMODULE moduleHandle, DWORD reason, LPVOID reserved)
     }
     else if (reason == DLL_PROCESS_DETACH)
     {
-        AcquireSRWLockExclusive(&g_pipeLock);
-        if (g_pipeHandle != INVALID_HANDLE_VALUE)
-        {
-            CloseHandle(g_pipeHandle);
-            g_pipeHandle = INVALID_HANDLE_VALUE;
-        }
-        ReleaseSRWLockExclusive(&g_pipeLock);
+        ShutdownAgent("process_detach", AgentLifecycleState::Disabled);
     }
 
     return TRUE;

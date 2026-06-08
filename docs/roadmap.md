@@ -103,7 +103,7 @@ Current implementation notes:
 
 ## Phase 5: Safe Agent Harness
 
-Status: implemented foundation for x64 controlled sample target.
+Status: implemented foundation for x64 controlled sample target with lifecycle hardening.
 
 Goal:
 
@@ -120,10 +120,12 @@ Deliverables:
 Current implementation notes:
 
 1. x64 early-bird APC load is implemented for controller-owned sample launches.
-2. The agent sends `agent_hello`, `hook_installed`, `hook_install_failed`, `api_call`, and `dropped_events` messages.
+2. The agent sends `agent_hello`, `hook_installed`, `hook_install_failed`, `api_call`, `dropped_events`, and `agent_shutdown` messages.
 3. Hook install failure is reported as a precise capture failure.
-4. x86 remains a documented skeleton.
-5. Persistent detach/unload supervision remains future work.
+4. The x64 agent tracks patched IAT slots and restores original entries during shutdown/self-disable where possible.
+5. Healthy shutdown reports `installedHooks=5`, `restoredHooks=5`, and `failedHooks=0`.
+6. x86 remains a documented skeleton.
+7. Arbitrary already-running process detach remains future work.
 
 ## Phase 6: File I/O Live Capture
 
@@ -153,13 +155,15 @@ Current verified behavior:
 3. HELLO arrives before hook status and API call events.
 4. `ReadFile` and `WriteFile` include bounded buffer previews.
 5. Dropped event accounting is present and currently reports zero on the healthy path.
+6. `agent_shutdown` is required for healthy bounded capture success.
+7. Repeated capture smoke covers five consecutive runs and hook restore counts.
 
 Next implementation focus:
 
-1. Harden hook lifecycle and unload/self-disable behavior.
-2. Add collector backpressure tests beyond the bounded helper path.
-3. Decide whether `NtCreateFile` should be captured through a separate native hook phase or decoded from higher-level Win32 events first.
-4. Start x86 agent parity only after the x64 session path remains stable.
+1. Add collector backpressure tests beyond the bounded helper path.
+2. Decide whether `NtCreateFile` should be captured through a separate native hook phase or decoded from higher-level Win32 events first.
+3. Start x86 agent parity only after the x64 session path remains stable.
+4. Begin high-volume table and replay indexing work after lifecycle evidence remains stable.
 
 ## Phase 7: Definition System V1
 

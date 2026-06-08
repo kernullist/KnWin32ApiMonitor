@@ -103,6 +103,17 @@ The current message types are:
 
 `capture-result.schema.json` wraps the bounded helper result, audit events, raw agent messages, captured `api_call` events, and dropped-event accounting.
 
+`agent_shutdown` is the lifecycle closeout event for the controlled x64 sample agent. Healthy shutdown requires:
+
+1. `reason`
+2. `lifecycleState`
+3. `installedHooks`
+4. `restoredHooks`
+5. `failedHooks`
+6. `droppedCount`
+
+For the current healthy x64 sample path, `restoredHooks` must be greater than or equal to `installedHooks`, and `failedHooks` must be `0`.
+
 ## Session Contracts
 
 The current helper session format is a directory, not the future `.knapm` container.
@@ -119,6 +130,8 @@ Required files:
 `session-info.schema.json` describes validation and writer status returned to the UI.
 
 `session-replay-result.schema.json` wraps validated session metadata and replayed trace-compatible events. Replay must not launch the sample target or load an agent.
+
+Session validation requires `agent_shutdown` in `agent-events.jsonl` so hook restore evidence survives persistence and replay workflows.
 
 ## Example
 

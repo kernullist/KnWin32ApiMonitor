@@ -122,6 +122,7 @@ function validateAgentEvents(sessionPath, errors) {
   const rows = readJsonl(path.join(sessionPath, expectedFiles.agentEvents), errors);
   let hasHello = false;
   let hasDropped = false;
+  let hasShutdown = false;
 
   for (const [index, row] of rows.entries()) {
     const label = `${path.relative(repoRoot, path.join(sessionPath, expectedFiles.agentEvents))}:${index + 1}`;
@@ -134,6 +135,24 @@ function validateAgentEvents(sessionPath, errors) {
 
     hasHello = hasHello || row.messageType === "agent_hello";
     hasDropped = hasDropped || row.messageType === "dropped_events";
+    hasShutdown = hasShutdown || row.messageType === "agent_shutdown";
+
+    if (row.messageType === "agent_shutdown") {
+      requireString(row.reason, "reason", label, errors);
+      requireString(row.lifecycleState, "lifecycleState", label, errors);
+      requireNumber(row.installedHooks, "installedHooks", label, errors);
+      requireNumber(row.restoredHooks, "restoredHooks", label, errors);
+      requireNumber(row.failedHooks, "failedHooks", label, errors);
+      requireNumber(row.droppedCount, "droppedCount", label, errors);
+
+      if (Number.isInteger(row.installedHooks) && Number.isInteger(row.restoredHooks) && row.restoredHooks < row.installedHooks) {
+        errors.push(`${label}: restoredHooks must be greater than or equal to installedHooks`);
+      }
+
+      if (row.failedHooks !== 0) {
+        errors.push(`${label}: failedHooks must be 0 for committed healthy fixtures`);
+      }
+    }
   }
 
   if (!hasHello) {
@@ -142,6 +161,10 @@ function validateAgentEvents(sessionPath, errors) {
 
   if (!hasDropped) {
     errors.push(`${expectedFiles.agentEvents}: dropped_events is missing`);
+  }
+
+  if (!hasShutdown) {
+    errors.push(`${expectedFiles.agentEvents}: agent_shutdown is missing`);
   }
 
   return rows;

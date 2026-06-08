@@ -6,7 +6,7 @@
 
 This document describes the current Phase 0/Phase 1 foundation and the first controlled native-capture path for `KN Win32 API Monitor`.
 
-The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded x64 File I/O capture for the repository sample target, and helper-written session replay. It does not inject into arbitrary already-running processes.
+The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded x64 File I/O capture for the repository sample target, deterministic x64 hook lifecycle telemetry, and helper-written session replay. It does not inject into arbitrary already-running processes.
 
 ## Layers
 
@@ -19,7 +19,7 @@ flowchart LR
     COL["native/knmon-collector<br/>C++20 collector skeleton"]
     HELPER["knmon-native-helper<br/>JSON helper CLI"]
     SAMPLE["knmon-sample-fileio<br/>controlled target"]
-    AGENT["knmon-agent64<br/>HELLO + IAT hooks"]
+    AGENT["knmon-agent64<br/>HELLO + IAT hooks + shutdown"]
     SESSION["captures/<br/>manifest + JSONL"]
     DEF["definitions<br/>API decode metadata"]
     CONTRACT["contracts<br/>JSON schemas"]
@@ -121,7 +121,7 @@ Current bounded capture behavior:
 
 1. Use the same controlled early-bird launch path.
 2. Keep the named pipe open for line/message-style agent events.
-3. Collect `agent_hello`, `hook_installed`, `api_call`, and `dropped_events` messages until the sample exits or a bounded timeout fires.
+3. Collect `agent_hello`, `hook_installed`, `api_call`, `dropped_events`, and `agent_shutdown` messages until the sample exits or a bounded timeout fires.
 4. Return a structured `capture-result` JSON object to Rust/Tauri.
 5. Optionally write a session directory containing manifest, audit, raw agent event, and trace event files.
 6. Map `api_call` events into the existing UI trace table.
@@ -154,6 +154,25 @@ Locations:
 
 `knmon-agent64` starts a worker thread from `DllMain`, reads `KNMON_AGENT_PIPE` and `KNMON_OPERATION_ID`, writes a versioned JSON HELLO payload, installs controlled sample-target IAT hooks, and emits `api_call` events for the stable File I/O set.
 
+Current lifecycle states:
+
+1. `starting`
+2. `running`
+3. `stopping`
+4. `disabled`
+5. `failed`
+
+The x64 agent tracks every patched IAT slot with API name, module, thunk address, original function, replacement function, and install/restore state. During shutdown or self-disable it turns off new hook events, restores original IAT values where possible, and emits `agent_shutdown`.
+
+Current `agent_shutdown` fields:
+
+1. `reason`
+2. `lifecycleState`
+3. `installedHooks`
+4. `restoredHooks`
+5. `failedHooks`
+6. `droppedCount`
+
 `knmon-agent32` remains a skeleton for a later Win32 generator/toolchain pass.
 
 Current x64 hook coverage:
@@ -170,14 +189,15 @@ Current x64 agent limitations:
 2. Hook method is IAT patching of the main module, not inline trampoline or EAT patching.
 3. `NtCreateFile` is still definition-only for live capture.
 4. Event transport is a bounded named-pipe path, not shared memory.
+5. Shutdown cleanup is scoped to the controlled sample target lifecycle; arbitrary detach from already-running processes remains unsupported.
 
 Future agent responsibilities:
 
-1. Add robust detach/self-disable behavior.
-2. Support x86 with the same protocol.
-3. Capture richer call stack metadata.
-4. Move high-volume events to collector shared memory.
-5. Add `NtCreateFile` after Win32 hooks stay stable.
+1. Support x86 with the same protocol.
+2. Capture richer call stack metadata.
+3. Move high-volume events to collector shared memory.
+4. Add `NtCreateFile` after Win32 hooks stay stable.
+5. Add arbitrary attach/detach only after a separate review.
 
 `Launch Sample` still produces an `agent_loaded` row only. `Capture File I/O` produces real `api_call` rows from the controlled sample target.
 
@@ -192,7 +212,7 @@ Current helper session format:
 
 `capture-sample --write-session <dir>` writes the current bounded sample capture to disk. The writer stores raw audit events, raw agent messages, and trace-compatible rows separately so replay can be deterministic and avoid launching or injecting a target.
 
-`validate-session --session <dir>` checks the manifest, required files, HELLO event, dropped-event accounting event, and non-empty trace rows. `replay-session --session <dir>` validates first, then returns a `session-replay` result with the trace rows loaded from disk.
+`validate-session --session <dir>` checks the manifest, required files, HELLO event, dropped-event accounting event, shutdown lifecycle event, clean hook restore counts, and non-empty trace rows. `replay-session --session <dir>` validates first, then returns a `session-replay` result with the trace rows loaded from disk.
 
 The default UI session path is `captures/latest-sample-fileio`. Generated session directories remain ignored by git; test fixtures live under `tests/fixtures/session`.
 

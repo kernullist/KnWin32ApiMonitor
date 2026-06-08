@@ -15,7 +15,9 @@
     "hookMethod": "iat",
     "controlledSampleOnly": true,
     "hookedApis": ["CreateFileW", "CreateFileA", "ReadFile", "WriteFile", "CloseHandle"],
-    "messageTypes": ["agent_hello", "hook_installed", "hook_install_failed", "api_call", "dropped_events", "agent_shutdown"]
+    "messageTypes": ["agent_hello", "hook_installed", "hook_install_failed", "api_call", "dropped_events", "agent_shutdown"],
+    "lifecycleStates": ["starting", "running", "stopping", "disabled", "failed"],
+    "shutdownFields": ["reason", "lifecycleState", "installedHooks", "restoredHooks", "failedHooks", "droppedCount"]
   },
   "sessionWriter": {
     "captureCommand": "capture-sample --write-session <dir>",

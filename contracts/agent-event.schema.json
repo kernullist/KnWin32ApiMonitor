@@ -31,6 +31,7 @@
     "sequence": { "type": "integer", "minimum": 0 },
     "api": { "type": "string" },
     "module": { "type": "string" },
+    "hookMethod": { "enum": ["iat"] },
     "process": { "type": "string" },
     "returnValue": { "type": "string" },
     "lastErrorCode": { "type": "integer", "minimum": 0 },
@@ -50,6 +51,11 @@
     },
     "bufferPreview": { "type": "string" },
     "droppedCount": { "type": "integer", "minimum": 0 },
+    "reason": { "type": "string" },
+    "lifecycleState": { "enum": ["starting", "running", "stopping", "disabled", "failed"] },
+    "installedHooks": { "type": "integer", "minimum": 0 },
+    "restoredHooks": { "type": "integer", "minimum": 0 },
+    "failedHooks": { "type": "integer", "minimum": 0 },
     "message": { "type": "string" }
   }
 }

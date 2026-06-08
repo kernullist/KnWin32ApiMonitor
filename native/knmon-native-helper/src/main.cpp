@@ -1039,6 +1039,7 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
             session.AgentEventCount = lines.size();
             bool hasHello = false;
             bool hasDropped = false;
+            bool hasShutdown = false;
             for (const auto& line : lines)
             {
                 if (!PayloadContains(line, "\"schemaVersion\":\"0.1.0\""))
@@ -1049,6 +1050,27 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
 
                 hasHello = hasHello || PayloadContains(line, "\"messageType\":\"agent_hello\"");
                 hasDropped = hasDropped || PayloadContains(line, "\"messageType\":\"dropped_events\"");
+                if (PayloadContains(line, "\"messageType\":\"agent_shutdown\""))
+                {
+                    hasShutdown = true;
+                    if (ExtractJsonString(line, "reason").empty())
+                    {
+                        session.ValidationErrors.push_back("agent_shutdown reason is missing.");
+                    }
+
+                    if (!PayloadContains(line, "\"installedHooks\"") || !PayloadContains(line, "\"restoredHooks\"") || !PayloadContains(line, "\"failedHooks\""))
+                    {
+                        session.ValidationErrors.push_back("agent_shutdown hook lifecycle counts are missing.");
+                    }
+
+                    const std::uint64_t installedHooks = ExtractJsonUInt64(line, "installedHooks");
+                    const std::uint64_t restoredHooks = ExtractJsonUInt64(line, "restoredHooks");
+                    const std::uint64_t failedHooks = ExtractJsonUInt64(line, "failedHooks");
+                    if (restoredHooks < installedHooks || failedHooks != 0)
+                    {
+                        session.ValidationErrors.push_back("agent_shutdown reports unrestored or failed hooks.");
+                    }
+                }
             }
 
             if (!hasHello)
@@ -1059,6 +1081,11 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
             if (!hasDropped)
             {
                 session.ValidationErrors.push_back("agent-events.jsonl does not contain dropped_events.");
+            }
+
+            if (!hasShutdown)
+            {
+                session.ValidationErrors.push_back("agent-events.jsonl does not contain agent_shutdown.");
             }
         }
 

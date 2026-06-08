@@ -12,6 +12,7 @@ This repository is bootstrapping a new API Monitor inspired by Rohitab API Monit
 - JSONL export for early session artifacts.
 - Controlled launch-time early-bird APC agent load foundation for the repository sample target.
 - Bounded controlled File I/O capture from the repository sample target through x64 agent IAT hooks.
+- Deterministic x64 agent lifecycle telemetry with hook restore evidence on shutdown.
 - Durable helper-written sample sessions with manifest, audit, agent-event, and trace-event JSONL files.
 - Session validation and replay without relaunching or reinjecting the sample target.
 
@@ -39,6 +40,7 @@ Implemented now:
 16. `capture-sample --write-session <dir>` session writer.
 17. `validate-session --session <dir>` and `replay-session --session <dir>` helper commands.
 18. UI actions for `Capture And Save` and `Replay Last`.
+19. x64 agent hook lifecycle states, idempotent IAT restore, and structured `agent_shutdown` evidence.
 
 Not implemented yet:
 
@@ -59,10 +61,11 @@ Current native capture is a bounded, controlled sample-target flow:
 1. `knmon-native-helper.exe capture-sample` launches `knmon-sample-fileio.exe` suspended.
 2. The controller queues an early-bird APC to load `knmon-agent64.dll`.
 3. The x64 agent sends `agent_hello`, installs main-module IAT hooks, and emits schema-versioned `api_call` events.
-4. The helper returns one structured `capture-result` JSON object with audit events, raw agent messages, captured events, and dropped-event accounting.
-5. `capture-sample --write-session <dir>` writes `manifest.json`, `audit.jsonl`, `agent-events.jsonl`, and `trace-events.jsonl`.
-6. `replay-session --session <dir>` returns trace-compatible events without launching a target or loading an agent.
-7. The Tauri commands map captured or replayed File I/O events into the React trace table.
+4. On target shutdown, the agent disables new hook events, restores patched IAT slots where possible, and emits `agent_shutdown` with `reason`, lifecycle state, hook counts, and dropped-event count.
+5. The helper returns one structured `capture-result` JSON object with audit events, raw agent messages, captured events, lifecycle evidence, and dropped-event accounting.
+6. `capture-sample --write-session <dir>` writes `manifest.json`, `audit.jsonl`, `agent-events.jsonl`, and `trace-events.jsonl`.
+7. `replay-session --session <dir>` returns trace-compatible events without launching a target or loading an agent.
+8. The Tauri commands map captured or replayed File I/O events into the React trace table.
 
 Verified live hook coverage:
 
@@ -73,6 +76,8 @@ Verified live hook coverage:
 5. `CloseHandle`
 
 The current smoke path captures real sample-target File I/O events and reports `droppedEvents=0` on the healthy path. `ReadFile` and `WriteFile` include bounded 16-byte buffer previews.
+
+Healthy lifecycle evidence currently reports `installedHooks=5`, `restoredHooks=5`, `failedHooks=0`, and `reason=process_detach` through `agent_shutdown`.
 
 ## Safety Boundary
 
@@ -131,11 +136,14 @@ build\native\Debug\knmon-native-helper.exe capture-sample
 build\native\Debug\knmon-native-helper.exe capture-sample --write-session captures\latest-sample-fileio
 build\native\Debug\knmon-native-helper.exe validate-session --session captures\latest-sample-fileio
 build\native\Debug\knmon-native-helper.exe replay-session --session captures\latest-sample-fileio
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\repeat-capture-sample.ps1 -Count 5
 ```
 
 `launch-sample` creates `knmon-sample-fileio.exe` suspended, queues an early-bird APC to load `knmon-agent64.dll`, resumes the primary thread, and waits for an agent HELLO handshake.
 
 `capture-sample` uses the same controlled launch path, keeps the event pipe open until the sample target exits, installs x64 IAT hooks for the stable File I/O set, and returns schema-versioned `api_call` events plus dropped-event accounting.
+
+The repeated smoke script verifies five consecutive controlled captures, the stable File I/O API set, zero dropped events, and hook restore counts.
 
 `capture-sample --write-session` persists the bounded capture into a replayable session directory. Replay returns the trace rows from disk and does not relaunch the target.
 

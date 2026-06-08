@@ -1137,6 +1137,12 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         const ULONGLONG captureDeadline = GetTickCount64() + static_cast<ULONGLONG>(request.TimeoutMs) + 8000ULL;
         bool captureEnded = false;
         bool hookInstallFailed = false;
+        bool agentShutdownReceived = false;
+        std::uint64_t hookInstalledCount = 0;
+        std::uint64_t shutdownInstalledHooks = 0;
+        std::uint64_t shutdownRestoredHooks = 0;
+        std::uint64_t shutdownFailedHooks = 0;
+        std::string shutdownReason;
 
         while (!captureEnded)
         {
@@ -1155,6 +1161,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                 }
                 else if (message.MessageType == "hook_installed")
                 {
+                    ++hookInstalledCount;
                     AddAudit(result, "hook_installed", "agent_event_read", payload);
                 }
                 else if (message.MessageType == "hook_install_failed")
@@ -1174,7 +1181,21 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                 }
                 else if (message.MessageType == "agent_shutdown")
                 {
+                    agentShutdownReceived = true;
+                    shutdownReason = ExtractJsonString(payload, "reason");
+                    shutdownInstalledHooks = ExtractJsonUInt64(payload, "installedHooks");
+                    shutdownRestoredHooks = ExtractJsonUInt64(payload, "restoredHooks");
+                    shutdownFailedHooks = ExtractJsonUInt64(payload, "failedHooks");
+                    result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
                     AddAudit(result, "agent_shutdown", "agent_event_read", payload);
+                    if (shutdownReason == "process_detach" && shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0)
+                    {
+                        AddAudit(result, "hook_uninstall_complete", "agent_shutdown", "Installed hooks were restored during process detach.");
+                    }
+                    else
+                    {
+                        AddAudit(result, "agent_self_disabled", "agent_shutdown", payload, shutdownFailedHooks == 0 ? 0 : ERROR_HOOK_NOT_INSTALLED);
+                    }
                     captureEnded = true;
                 }
                 else
@@ -1187,6 +1208,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
 
             if (pipeError == ERROR_BROKEN_PIPE || pipeError == ERROR_HANDLE_EOF || pipeError == ERROR_NO_DATA)
             {
+                AddAudit(result, agentShutdownReceived ? "pipe_closed_after_shutdown" : "pipe_closed_without_shutdown", "agent_event_read", "Agent event pipe closed.", pipeError, "win32");
                 captureEnded = true;
                 break;
             }
@@ -1220,6 +1242,16 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
             break;
         }
 
+        if (hookInstalledCount >= 5)
+        {
+            AddAudit(result, "hook_install_complete", "agent_event_read", "All selected File I/O hooks reported installed.");
+        }
+
+        if (agentShutdownReceived)
+        {
+            AddAudit(result, "pipe_closed_after_shutdown", "agent_shutdown", "Agent shutdown was received; controller pipe cleanup follows.");
+        }
+
         if (!result.Handshake.Received)
         {
             SetResultError(result, WAIT_TIMEOUT, "knmon-core", "agent_hello_required", "Agent HELLO was not received before capture completed.");
@@ -1237,6 +1269,20 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         if (result.CapturedEvents.empty())
         {
             SetResultError(result, ERROR_NO_DATA, "knmon-core", "api_call_required", "No real File I/O api_call events were captured from the sample target.");
+            fatalError = true;
+            break;
+        }
+
+        if (!agentShutdownReceived)
+        {
+            SetResultError(result, ERROR_NO_DATA, "knmon-core", "agent_shutdown_required", "Agent shutdown lifecycle event was not received before capture completed.");
+            fatalError = true;
+            break;
+        }
+
+        if (shutdownRestoredHooks < shutdownInstalledHooks || shutdownFailedHooks != 0)
+        {
+            SetResultError(result, ERROR_HOOK_NOT_INSTALLED, "knmon-core", "hook_uninstall_required", "One or more installed hooks were not restored cleanly.");
             fatalError = true;
             break;
         }
