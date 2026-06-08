@@ -249,8 +249,43 @@ void AddAudit(
     result.AuditEvents.push_back(event);
 }
 
+void AddAudit(
+    KnMonCaptureResult& result,
+    const std::string& eventType,
+    const std::string& operation,
+    const std::string& message,
+    DWORD errorCode = 0,
+    const std::string& subsystem = "knmon-core")
+{
+    KnMonAuditEvent event;
+    event.OperationId = result.OperationId;
+    event.EventType = eventType;
+    event.TimestampUtc = NowUtc();
+    event.Subsystem = subsystem;
+    event.Operation = operation;
+    event.Win32ErrorCode = errorCode;
+    event.NtStatus = "0x00000000";
+    event.Message = message;
+    result.AuditEvents.push_back(event);
+}
+
 void SetResultError(
     KnMonLaunchResult& result,
+    DWORD errorCode,
+    const std::string& subsystem,
+    const std::string& operation,
+    const std::string& message)
+{
+    result.Success = false;
+    result.Win32ErrorCode = errorCode;
+    result.Subsystem = subsystem;
+    result.Operation = operation;
+    result.Message = message;
+    AddAudit(result, operation, operation, message, errorCode, subsystem);
+}
+
+void SetResultError(
+    KnMonCaptureResult& result,
     DWORD errorCode,
     const std::string& subsystem,
     const std::string& operation,
@@ -384,7 +419,7 @@ bool ReadPipeMessage(HANDLE pipeHandle, DWORD timeoutMs, std::string* payload, D
     bool received = false;
     OVERLAPPED overlapped = {};
     overlapped.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
-    std::array<char, 4096> buffer = {};
+    std::array<char, 16384> buffer = {};
 
     do
     {
@@ -466,6 +501,178 @@ KnMonAgentHandshake BuildHandshake(const KnMonLaunchResult& result, const std::s
     handshake.Message = "Agent HELLO received.";
     handshake.RawPayload = rawPayload;
     return handshake;
+}
+
+KnMonAgentHandshake BuildHandshake(const KnMonCaptureResult& result, const std::string& rawPayload)
+{
+    KnMonAgentHandshake handshake;
+    handshake.Received = true;
+    handshake.SchemaVersion = "0.1.0";
+    handshake.OperationId = result.OperationId;
+    handshake.ProcessId = result.TargetProcessId;
+    handshake.ThreadId = result.TargetThreadId;
+    handshake.Architecture = result.Architecture;
+    handshake.AgentVersion = "0.1.0";
+    handshake.Message = "Agent HELLO received.";
+    handshake.RawPayload = rawPayload;
+    return handshake;
+}
+
+bool PayloadContains(const std::string& payload, const std::string& marker)
+{
+    return payload.find(marker) != std::string::npos;
+}
+
+std::string ExtractJsonString(const std::string& payload, const std::string& key)
+{
+    std::string result;
+
+    do
+    {
+        const std::string quotedKey = "\"" + key + "\"";
+        std::size_t position = payload.find(quotedKey);
+        if (position == std::string::npos)
+        {
+            break;
+        }
+
+        position = payload.find(':', position + quotedKey.size());
+        if (position == std::string::npos)
+        {
+            break;
+        }
+
+        position = payload.find('"', position + 1);
+        if (position == std::string::npos)
+        {
+            break;
+        }
+
+        ++position;
+        std::ostringstream stream;
+        bool escaped = false;
+        for (; position < payload.size(); ++position)
+        {
+            const char ch = payload[position];
+            if (escaped)
+            {
+                switch (ch)
+                {
+                case '"':
+                    stream << '"';
+                    break;
+                case '\\':
+                    stream << '\\';
+                    break;
+                case 'n':
+                    stream << '\n';
+                    break;
+                case 'r':
+                    stream << '\r';
+                    break;
+                case 't':
+                    stream << '\t';
+                    break;
+                default:
+                    stream << ch;
+                    break;
+                }
+                escaped = false;
+                continue;
+            }
+
+            if (ch == '\\')
+            {
+                escaped = true;
+                continue;
+            }
+
+            if (ch == '"')
+            {
+                break;
+            }
+
+            stream << ch;
+        }
+
+        result = stream.str();
+    }
+    while (false);
+
+    return result;
+}
+
+std::uint64_t ExtractJsonUInt64(const std::string& payload, const std::string& key)
+{
+    std::uint64_t result = 0;
+
+    do
+    {
+        const std::string quotedKey = "\"" + key + "\"";
+        std::size_t position = payload.find(quotedKey);
+        if (position == std::string::npos)
+        {
+            break;
+        }
+
+        position = payload.find(':', position + quotedKey.size());
+        if (position == std::string::npos)
+        {
+            break;
+        }
+
+        ++position;
+        while (position < payload.size() && payload[position] == ' ')
+        {
+            ++position;
+        }
+
+        std::uint64_t value = 0;
+        bool sawDigit = false;
+        for (; position < payload.size(); ++position)
+        {
+            const char ch = payload[position];
+            if (ch < '0' || ch > '9')
+            {
+                break;
+            }
+
+            sawDigit = true;
+            value = (value * 10) + static_cast<std::uint64_t>(ch - '0');
+        }
+
+        if (sawDigit)
+        {
+            result = value;
+        }
+    }
+    while (false);
+
+    return result;
+}
+
+KnMonAgentMessage BuildAgentMessage(const KnMonCaptureResult& result, const std::string& rawPayload)
+{
+    KnMonAgentMessage message;
+    message.SchemaVersion = ExtractJsonString(rawPayload, "schemaVersion");
+    if (message.SchemaVersion.empty())
+    {
+        message.SchemaVersion = "0.1.0";
+    }
+
+    message.MessageType = ExtractJsonString(rawPayload, "messageType");
+    message.OperationId = ExtractJsonString(rawPayload, "operationId");
+    if (message.OperationId.empty())
+    {
+        message.OperationId = result.OperationId;
+    }
+
+    message.ProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(rawPayload, "pid"));
+    message.ThreadId = static_cast<std::uint32_t>(ExtractJsonUInt64(rawPayload, "tid"));
+    message.TimestampUtc = ExtractJsonString(rawPayload, "timestampUtc");
+    message.Sequence = ExtractJsonUInt64(rawPayload, "sequence");
+    message.RawPayload = rawPayload;
+    return message;
 }
 
 KnMonError NotImplementedError(const std::string& operation)
@@ -734,6 +941,336 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
     {
         TerminateProcess(processInfo.hProcess, 1);
         AddAudit(result, "cleanup_completed", "TerminateProcess", "Suspended target was terminated because launch failed before resume.");
+    }
+    else
+    {
+        AddAudit(result, "cleanup_completed", "handle_cleanup", "Controller handle cleanup completed.");
+    }
+
+    if (pipeHandle != INVALID_HANDLE_VALUE)
+    {
+        DisconnectNamedPipe(pipeHandle);
+        CloseHandle(pipeHandle);
+    }
+
+    if (processInfo.hThread != nullptr)
+    {
+        CloseHandle(processInfo.hThread);
+    }
+
+    if (processInfo.hProcess != nullptr)
+    {
+        CloseHandle(processInfo.hProcess);
+    }
+
+    return result;
+}
+
+KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& request) const
+{
+    KnMonCaptureResult result;
+    result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
+    result.TargetPath = request.TargetPath;
+    result.AgentPath = request.AgentPath;
+    result.Architecture = "x64";
+    result.InjectionMethod = "early-bird APC";
+
+    PROCESS_INFORMATION processInfo = {};
+    STARTUPINFOW startupInfo = {};
+    startupInfo.cb = sizeof(startupInfo);
+    HANDLE pipeHandle = INVALID_HANDLE_VALUE;
+    void* remoteDllPath = nullptr;
+    bool processCreated = false;
+    bool processResumed = false;
+    bool fatalError = false;
+
+    do
+    {
+#if !defined(_WIN64)
+        SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "architecture_check", "The first live capture path requires an x64 helper build.");
+        fatalError = true;
+        break;
+#endif
+
+        if (request.InjectionMethod != KnMonInjectionMethod::EarlyBirdApc)
+        {
+            SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "injection_method_check", "Only early-bird APC injection is supported in this goal.");
+            fatalError = true;
+            break;
+        }
+
+        if (!FileExists(request.TargetPath))
+        {
+            SetResultError(result, ERROR_FILE_NOT_FOUND, "knmon-core", "target_path_check", "Target executable does not exist.");
+            fatalError = true;
+            break;
+        }
+
+        if (!FileExists(request.AgentPath))
+        {
+            SetResultError(result, ERROR_FILE_NOT_FOUND, "knmon-core", "agent_path_check", "Agent DLL does not exist.");
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "capture_requested", "capture_requested", "Controlled File I/O capture requested.");
+
+        const std::wstring pipeName = L"\\\\.\\pipe\\knmon_agent_" + Utf8ToWide(result.OperationId);
+        pipeHandle = CreateNamedPipeW(
+            pipeName.c_str(),
+            PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
+            PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+            1,
+            65536,
+            65536,
+            request.TimeoutMs,
+            nullptr);
+
+        if (pipeHandle == INVALID_HANDLE_VALUE)
+        {
+            SetResultError(result, GetLastError(), "win32", "CreateNamedPipeW", "Failed to create agent event pipe.");
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "event_pipe_created", "CreateNamedPipeW", WideToUtf8(pipeName.c_str()));
+
+        const std::wstring targetPath = Utf8ToWide(request.TargetPath);
+        const std::wstring agentPath = Utf8ToWide(request.AgentPath);
+        const std::wstring workingDirectory = request.WorkingDirectory.empty() ? std::filesystem::path(targetPath).parent_path().wstring() : Utf8ToWide(request.WorkingDirectory);
+        std::wstring commandLine = QuoteArgument(targetPath);
+        commandLine += L" --slow";
+        std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
+        mutableCommandLine.push_back(L'\0');
+
+        EnvironmentOverride pipeEnv(L"KNMON_AGENT_PIPE", pipeName);
+        EnvironmentOverride operationEnv(L"KNMON_OPERATION_ID", Utf8ToWide(result.OperationId));
+        EnvironmentOverride modeEnv(L"KNMON_CAPTURE_MODE", L"fileio");
+
+        if (!CreateProcessW(
+            targetPath.c_str(),
+            mutableCommandLine.data(),
+            nullptr,
+            nullptr,
+            FALSE,
+            CREATE_SUSPENDED | CREATE_NO_WINDOW,
+            nullptr,
+            workingDirectory.empty() ? nullptr : workingDirectory.c_str(),
+            &startupInfo,
+            &processInfo))
+        {
+            SetResultError(result, GetLastError(), "win32", "CreateProcessW", "Failed to create controlled target process suspended.");
+            fatalError = true;
+            break;
+        }
+
+        processCreated = true;
+        result.TargetProcessId = processInfo.dwProcessId;
+        result.TargetThreadId = processInfo.dwThreadId;
+        AddAudit(result, "process_created_suspended", "CreateProcessW", "Controlled target process created suspended.");
+
+        const std::uint64_t remoteSize = static_cast<std::uint64_t>((agentPath.size() + 1) * sizeof(wchar_t));
+        remoteDllPath = VirtualAllocEx(processInfo.hProcess, nullptr, static_cast<SIZE_T>(remoteSize), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+        if (remoteDllPath == nullptr)
+        {
+            SetResultError(result, GetLastError(), "win32", "VirtualAllocEx", "Failed to allocate remote agent path buffer.");
+            fatalError = true;
+            break;
+        }
+
+        SIZE_T bytesWritten = 0;
+        if (!WriteProcessMemory(processInfo.hProcess, remoteDllPath, agentPath.c_str(), static_cast<SIZE_T>(remoteSize), &bytesWritten))
+        {
+            SetResultError(result, GetLastError(), "win32", "WriteProcessMemory", "Failed to write agent path into target process.");
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "agent_path_written", "WriteProcessMemory", "Agent DLL path written into target process.");
+
+        HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
+        if (kernel32 == nullptr)
+        {
+            SetResultError(result, GetLastError(), "win32", "GetModuleHandleW", "Failed to resolve kernel32.dll.");
+            fatalError = true;
+            break;
+        }
+
+        FARPROC loadLibrary = GetProcAddress(kernel32, "LoadLibraryW");
+        if (loadLibrary == nullptr)
+        {
+            SetResultError(result, GetLastError(), "win32", "GetProcAddress", "Failed to resolve LoadLibraryW.");
+            fatalError = true;
+            break;
+        }
+
+        if (QueueUserAPC(reinterpret_cast<PAPCFUNC>(loadLibrary), processInfo.hThread, reinterpret_cast<ULONG_PTR>(remoteDllPath)) == 0)
+        {
+            SetResultError(result, GetLastError(), "win32", "QueueUserAPC", "Failed to queue early-bird APC.");
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "early_bird_apc_queued", "QueueUserAPC", "Early-bird LoadLibraryW APC queued on the suspended primary thread.");
+
+        if (ResumeThread(processInfo.hThread) == static_cast<DWORD>(-1))
+        {
+            SetResultError(result, GetLastError(), "win32", "ResumeThread", "Failed to resume target primary thread.");
+            fatalError = true;
+            break;
+        }
+
+        processResumed = true;
+        AddAudit(result, "primary_thread_resumed", "ResumeThread", "Target primary thread resumed.");
+
+        DWORD pipeError = 0;
+        if (!WaitForPipeConnection(pipeHandle, request.TimeoutMs, &pipeError))
+        {
+            SetResultError(result, pipeError, "win32", "agent_pipe_connect", "Agent event pipe connection timed out or failed.");
+            AddAudit(result, "handshake_timeout", "agent_pipe_connect", "No agent connection was received before timeout.", pipeError, "win32");
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "agent_pipe_connected", "agent_pipe_connect", "Agent event pipe connected.");
+
+        const ULONGLONG captureDeadline = GetTickCount64() + static_cast<ULONGLONG>(request.TimeoutMs) + 8000ULL;
+        bool captureEnded = false;
+        bool hookInstallFailed = false;
+
+        while (!captureEnded)
+        {
+            std::string payload;
+            pipeError = 0;
+
+            if (ReadPipeMessage(pipeHandle, 2500, &payload, &pipeError))
+            {
+                KnMonAgentMessage message = BuildAgentMessage(result, payload);
+                result.AgentMessages.push_back(message);
+
+                if (message.MessageType == "agent_hello" || PayloadContains(payload, "\"eventType\":\"agent_hello_received\""))
+                {
+                    result.Handshake = BuildHandshake(result, payload);
+                    AddAudit(result, "agent_hello_received", "agent_event_read", payload);
+                }
+                else if (message.MessageType == "hook_installed")
+                {
+                    AddAudit(result, "hook_installed", "agent_event_read", payload);
+                }
+                else if (message.MessageType == "hook_install_failed")
+                {
+                    hookInstallFailed = true;
+                    AddAudit(result, "hook_install_failed", "agent_event_read", payload, ERROR_HOOK_NOT_INSTALLED);
+                }
+                else if (message.MessageType == "api_call")
+                {
+                    result.CapturedEvents.push_back(message);
+                    AddAudit(result, "api_call_received", "agent_event_read", message.RawPayload);
+                }
+                else if (message.MessageType == "dropped_events")
+                {
+                    result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
+                    AddAudit(result, "dropped_events_reported", "agent_event_read", payload);
+                }
+                else if (message.MessageType == "agent_shutdown")
+                {
+                    AddAudit(result, "agent_shutdown", "agent_event_read", payload);
+                    captureEnded = true;
+                }
+                else
+                {
+                    AddAudit(result, "agent_message_received", "agent_event_read", payload);
+                }
+
+                continue;
+            }
+
+            if (pipeError == ERROR_BROKEN_PIPE || pipeError == ERROR_HANDLE_EOF || pipeError == ERROR_NO_DATA)
+            {
+                captureEnded = true;
+                break;
+            }
+
+            if (pipeError == WAIT_TIMEOUT)
+            {
+                const DWORD processWait = WaitForSingleObject(processInfo.hProcess, 0);
+                if (processWait == WAIT_OBJECT_0)
+                {
+                    captureEnded = true;
+                    break;
+                }
+
+                if (GetTickCount64() >= captureDeadline)
+                {
+                    SetResultError(result, WAIT_TIMEOUT, "win32", "agent_event_idle_timeout", "Agent event stream did not finish before the bounded capture timeout.");
+                    fatalError = true;
+                    break;
+                }
+
+                continue;
+            }
+
+            SetResultError(result, pipeError, "win32", "agent_event_read", "Agent event stream read failed.");
+            fatalError = true;
+            break;
+        }
+
+        if (fatalError)
+        {
+            break;
+        }
+
+        if (!result.Handshake.Received)
+        {
+            SetResultError(result, WAIT_TIMEOUT, "knmon-core", "agent_hello_required", "Agent HELLO was not received before capture completed.");
+            fatalError = true;
+            break;
+        }
+
+        if (hookInstallFailed)
+        {
+            SetResultError(result, ERROR_HOOK_NOT_INSTALLED, "knmon-core", "hook_install_required", "One or more selected File I/O hooks could not be installed.");
+            fatalError = true;
+            break;
+        }
+
+        if (result.CapturedEvents.empty())
+        {
+            SetResultError(result, ERROR_NO_DATA, "knmon-core", "api_call_required", "No real File I/O api_call events were captured from the sample target.");
+            fatalError = true;
+            break;
+        }
+
+        result.Success = true;
+        result.Win32ErrorCode = 0;
+        result.Subsystem = "knmon-core";
+        result.Operation = "capture_sample_fileio";
+        result.Message = "Controlled File I/O capture completed with real agent api_call events.";
+        AddAudit(result, "capture_completed", "capture_sample_fileio", "Bounded controlled File I/O capture completed.");
+    }
+    while (false);
+
+    if (remoteDllPath != nullptr && processInfo.hProcess != nullptr)
+    {
+        if (VirtualFreeEx(processInfo.hProcess, remoteDllPath, 0, MEM_RELEASE))
+        {
+            AddAudit(result, "remote_buffer_released", "VirtualFreeEx", "Remote agent path buffer released.");
+        }
+        else
+        {
+            AddAudit(result, "cleanup_partial_failure", "VirtualFreeEx", "Remote agent path buffer cleanup failed.", GetLastError(), "win32");
+        }
+    }
+
+    if (processCreated && !processResumed && processInfo.hProcess != nullptr)
+    {
+        TerminateProcess(processInfo.hProcess, 1);
+        AddAudit(result, "cleanup_completed", "TerminateProcess", "Suspended target was terminated because capture failed before resume.");
+    }
+    else if (processCreated && fatalError && processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_TIMEOUT)
+    {
+        TerminateProcess(processInfo.hProcess, 1);
+        AddAudit(result, "cleanup_completed", "TerminateProcess", "Controlled target was terminated after capture failure.");
     }
     else
     {

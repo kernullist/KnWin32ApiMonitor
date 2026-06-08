@@ -2,10 +2,12 @@
 
 use knmon_tauri::{
     backend_status,
+    capture_sample_fileio,
     launch_sample_early_bird,
     mock_target_processes,
     native_target_processes,
     CaptureSessionState,
+    CaptureResult,
     LaunchResult,
     TargetProcess,
 };
@@ -26,6 +28,12 @@ fn list_native_target_processes() -> Result<Vec<TargetProcess>, String>
 fn launch_sample_early_bird_capture() -> Result<LaunchResult, String>
 {
     launch_sample_early_bird()
+}
+
+#[tauri::command]
+fn capture_sample_fileio_events() -> Result<CaptureResult, String>
+{
+    capture_sample_fileio()
 }
 
 #[tauri::command]
@@ -53,6 +61,7 @@ fn main()
             list_target_processes,
             list_native_target_processes,
             launch_sample_early_bird_capture,
+            capture_sample_fileio_events,
             get_backend_status,
             start_mock_capture_session,
             stop_mock_capture_session

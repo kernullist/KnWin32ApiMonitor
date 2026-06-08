@@ -124,6 +124,24 @@ int RunFileIo(bool slow)
             CloseHandle(missingHandle);
         }
 
+        HANDLE missingAnsiHandle = CreateFileA(
+            "C:\\Windows\\System32\\drivers\\etc\\knmon-missing-file-do-not-create-a.dat",
+            GENERIC_READ,
+            FILE_SHARE_READ,
+            nullptr,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr);
+
+        if (missingAnsiHandle == INVALID_HANDLE_VALUE)
+        {
+            std::cout << "expected missing ansi file error=" << GetLastError() << "\n";
+        }
+        else
+        {
+            CloseHandle(missingAnsiHandle);
+        }
+
         if (slow)
         {
             Sleep(1500);

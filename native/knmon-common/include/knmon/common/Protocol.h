@@ -49,6 +49,17 @@ enum class KnMonInjectionMethod : std::uint32_t
     EarlyBirdApc = 1,
 };
 
+enum class KnMonAgentMessageType : std::uint32_t
+{
+    Unknown = 0,
+    AgentHello = 1,
+    HookInstalled = 2,
+    HookInstallFailed = 3,
+    ApiCall = 4,
+    DroppedEvents = 5,
+    AgentShutdown = 6,
+};
+
 struct KnMonProtocolVersion
 {
     std::uint16_t Major = KnMonProtocolMajor;
@@ -183,5 +194,42 @@ struct KnMonLaunchResult
     std::string Message;
     KnMonAgentHandshake Handshake;
     std::vector<KnMonAuditEvent> AuditEvents;
+};
+
+struct KnMonAgentMessage
+{
+    std::string SchemaVersion = "0.1.0";
+    std::string MessageType;
+    std::string OperationId;
+    std::uint32_t ProcessId = 0;
+    std::uint32_t ThreadId = 0;
+    std::string TimestampUtc;
+    std::uint64_t Sequence = 0;
+    std::string RawPayload;
+};
+
+struct KnMonCaptureResult
+{
+    std::string SchemaVersion = "0.1.0";
+    std::string OperationId;
+    bool Success = false;
+    std::string BackendMode = "native-capture";
+    std::string CaptureMode = "bounded-native-capture";
+    std::string InjectionMethod = "early-bird APC";
+    std::string TargetPath;
+    std::string AgentPath;
+    std::uint32_t TargetProcessId = 0;
+    std::uint32_t TargetThreadId = 0;
+    std::string Architecture;
+    std::uint32_t Win32ErrorCode = 0;
+    std::string NtStatus;
+    std::string Subsystem;
+    std::string Operation;
+    std::string Message;
+    std::uint64_t DroppedEvents = 0;
+    KnMonAgentHandshake Handshake;
+    std::vector<KnMonAuditEvent> AuditEvents;
+    std::vector<KnMonAgentMessage> AgentMessages;
+    std::vector<KnMonAgentMessage> CapturedEvents;
 };
 }

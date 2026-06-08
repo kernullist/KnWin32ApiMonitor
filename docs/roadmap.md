@@ -78,6 +78,8 @@ Deliverables:
 
 ## Phase 4: Collector And Session Writer
 
+Status: partially implemented through bounded helper capture output.
+
 Goal:
 
 Implement the event collector and a durable session writer without injecting yet.
@@ -90,7 +92,15 @@ Deliverables:
 4. Backpressure policy.
 5. Replay from saved mock/native test events.
 
+Current implementation notes:
+
+1. `capture-sample` returns a structured bounded `capture-result` object.
+2. Captured native events can be exported from the UI through the existing JSONL trace export because they map into the same trace model.
+3. Durable `.knapm` session chunks, replay indexing, and crash-tolerant writers remain future work.
+
 ## Phase 5: Safe Agent Harness
+
+Status: implemented foundation for x64 controlled sample target.
 
 Goal:
 
@@ -104,7 +114,17 @@ Deliverables:
 4. Protocol version handshake.
 5. Emergency detach/self-disable behavior.
 
+Current implementation notes:
+
+1. x64 early-bird APC load is implemented for controller-owned sample launches.
+2. The agent sends `agent_hello`, `hook_installed`, `hook_install_failed`, `api_call`, and `dropped_events` messages.
+3. Hook install failure is reported as a precise capture failure.
+4. x86 remains a documented skeleton.
+5. Persistent detach/unload supervision remains future work.
+
 ## Phase 6: File I/O Live Capture
+
+Status: implemented foundation for bounded x64 sample-target capture.
 
 Goal:
 
@@ -114,13 +134,29 @@ Deliverables:
 
 1. `CreateFileW`
 2. `CreateFileA`
-3. `NtCreateFile`
-4. `ReadFile`
-5. `WriteFile`
-6. `CloseHandle`
-7. Pre-call and post-call argument snapshots.
-8. Return/error decode.
-9. Bounded buffer snapshots.
+3. `ReadFile`
+4. `WriteFile`
+5. `CloseHandle`
+6. Pre-call and post-call argument snapshots.
+7. Return/error decode.
+8. Bounded buffer snapshots.
+9. Dropped event accounting.
+10. `NtCreateFile` remains deferred until Win32 hook capture is reviewed.
+
+Current verified behavior:
+
+1. `capture-sample` captures real `api_call` events from `knmon-sample-fileio.exe`.
+2. Healthy smoke coverage includes `CreateFileW`, `CreateFileA`, `ReadFile`, `WriteFile`, and `CloseHandle`.
+3. HELLO arrives before hook status and API call events.
+4. `ReadFile` and `WriteFile` include bounded buffer previews.
+5. Dropped event accounting is present and currently reports zero on the healthy path.
+
+Next implementation focus:
+
+1. Promote bounded helper output into a durable session writer.
+2. Add replay tests and schema validation for captured agent events.
+3. Harden hook lifecycle and unload/self-disable behavior.
+4. Decide whether `NtCreateFile` should be captured through a separate native hook phase or decoded from higher-level Win32 events first.
 
 ## Phase 7: Definition System V1
 

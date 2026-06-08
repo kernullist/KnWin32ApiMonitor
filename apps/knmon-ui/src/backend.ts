@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { mockTargets } from "./mockData";
-import type { CaptureSessionState, LaunchResult, TargetProcess } from "./types";
+import type { CaptureResult, CaptureSessionState, LaunchResult, TargetProcess } from "./types";
 
 function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -47,6 +47,14 @@ export async function launchSampleEarlyBirdCapture(): Promise<LaunchResult> {
   }
 
   return invoke<LaunchResult>("launch_sample_early_bird_capture");
+}
+
+export async function captureSampleFileIoEvents(): Promise<CaptureResult> {
+  if (!isTauriRuntime()) {
+    throw new Error("Controlled File I/O capture requires the Tauri desktop runtime and build/native/Debug/knmon-native-helper.exe.");
+  }
+
+  return invoke<CaptureResult>("capture_sample_fileio_events");
 }
 
 export async function startBackendSession(): Promise<CaptureSessionState> {

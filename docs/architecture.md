@@ -4,9 +4,9 @@
 
 ## Scope
 
-This document describes the current Phase 0/Phase 1 foundation for `KN Win32 API Monitor`.
+This document describes the current Phase 0/Phase 1 foundation and the first controlled native-capture path for `KN Win32 API Monitor`.
 
-The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, and a controlled launch-time early-bird APC agent load path for the repository sample target. It does not inject into arbitrary already-running processes.
+The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, and bounded x64 File I/O capture for the repository sample target. It does not inject into arbitrary already-running processes.
 
 ## Layers
 
@@ -19,7 +19,7 @@ flowchart LR
     COL["native/knmon-collector<br/>C++20 collector skeleton"]
     HELPER["knmon-native-helper<br/>JSON helper CLI"]
     SAMPLE["knmon-sample-fileio<br/>controlled target"]
-    AGENT["knmon-agent64<br/>HELLO agent"]
+    AGENT["knmon-agent64<br/>HELLO + IAT hooks"]
     DEF["definitions<br/>API decode metadata"]
     CONTRACT["contracts<br/>JSON schemas"]
 
@@ -53,7 +53,7 @@ Current backend modes:
 
 - `mock`: Browser/Vite mode and mock Tauri target list.
 - `native-enum`: Tauri command calls `knmon-native-helper.exe list-targets`.
-- `native-capture`: Tauri command calls `knmon-native-helper.exe launch-sample` for controlled early-bird agent load.
+- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof or `capture-sample` for bounded controlled File I/O capture.
 
 ## Rust/Tauri Command Layer
 
@@ -70,8 +70,9 @@ Current commands:
 4. `stop_mock_capture_session`
 5. `list_native_target_processes`
 6. `launch_sample_early_bird_capture`
+7. `capture_sample_fileio_events`
 
-These commands are deliberately scoped. They prove native enumeration and controlled sample-agent load without pretending that arbitrary attach or API hooks exist.
+These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, and bounded sample File I/O capture without pretending that arbitrary attach exists.
 
 Future work:
 
@@ -88,9 +89,10 @@ Current responsibilities:
 1. Define the controller interface.
 2. Provide C++20 process enumeration through Toolhelp.
 3. Implement controlled launch-time early-bird APC agent load for the sample target.
+4. Implement bounded controlled File I/O capture for the sample target.
 4. Define arbitrary attach/detach/start/stop capture boundaries as not-implemented operations.
 
-The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration and controlled launch-time early-bird agent loading.
+The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, and bounded sample File I/O capture.
 
 Future responsibilities:
 
@@ -109,6 +111,14 @@ Current controlled launch behavior:
 5. Queue `LoadLibraryW` through an early-bird APC on the suspended primary thread.
 6. Resume the primary thread.
 7. Wait for a versioned HELLO payload from the x64 agent.
+
+Current bounded capture behavior:
+
+1. Use the same controlled early-bird launch path.
+2. Keep the named pipe open for line/message-style agent events.
+3. Collect `agent_hello`, `hook_installed`, `api_call`, and `dropped_events` messages until the sample exits or a bounded timeout fires.
+4. Return a structured `capture-result` JSON object to Rust/Tauri.
+5. Map `api_call` events into the existing UI trace table.
 
 ## Collector
 
@@ -136,20 +146,34 @@ Locations:
 - `native/knmon-agent32`
 - `native/knmon-agent64`
 
-`knmon-agent64` is implemented as a minimal HELLO agent. It starts a worker thread from `DllMain`, reads `KNMON_AGENT_PIPE` and `KNMON_OPERATION_ID`, and writes a versioned JSON HELLO payload to the controller pipe.
+`knmon-agent64` starts a worker thread from `DllMain`, reads `KNMON_AGENT_PIPE` and `KNMON_OPERATION_ID`, writes a versioned JSON HELLO payload, installs controlled sample-target IAT hooks, and emits `api_call` events for the stable File I/O set.
 
 `knmon-agent32` remains a skeleton for a later Win32 generator/toolchain pass.
 
+Current x64 hook coverage:
+
+1. `CreateFileW`
+2. `CreateFileA`
+3. `ReadFile`
+4. `WriteFile`
+5. `CloseHandle`
+
+Current x64 agent limitations:
+
+1. Hooks are installed only in the repository-controlled sample target flow.
+2. Hook method is IAT patching of the main module, not inline trampoline or EAT patching.
+3. `NtCreateFile` is still definition-only for live capture.
+4. Event transport is a bounded named-pipe path, not shared memory.
+
 Future agent responsibilities:
 
-1. Install selected API hooks.
-2. Snapshot pre-call parameters.
-3. Snapshot post-call return values and error state.
-4. Capture bounded memory buffers safely.
-5. Capture call stack metadata.
-6. Write compact records to collector IPC.
+1. Add robust detach/self-disable behavior.
+2. Support x86 with the same protocol.
+3. Capture richer call stack metadata.
+4. Move high-volume events to collector shared memory.
+5. Add `NtCreateFile` after Win32 hooks stay stable.
 
-The current agent does not install hooks yet. A successful `agent_loaded` row means load and handshake only.
+`Launch Sample` still produces an `agent_loaded` row only. `Capture File I/O` produces real `api_call` rows from the controlled sample target.
 
 ## Protocol Contracts
 
@@ -167,6 +191,9 @@ Current contract artifacts:
 8. `launch-result.schema.json`
 9. `agent-handshake.schema.json`
 10. `audit-event.schema.json`
+11. `agent-event.schema.json`
+12. `hook-status.schema.json`
+13. `capture-result.schema.json`
 
 The TypeScript event model and C++ `Protocol.h` are aligned around these Phase 1 fields.
 
@@ -175,6 +202,7 @@ The TypeScript event model and C++ `Protocol.h` are aligned around these Phase 1
 Current export:
 
 - UI exports mock events to JSONL.
+- UI also exports captured native trace rows after bounded sample capture because they use the same trace model.
 - Each row includes `schemaVersion`.
 
 Future session format:

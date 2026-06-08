@@ -95,6 +95,74 @@ pub struct LaunchResult
     pub audit_events: Vec<AuditEvent>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentApiArgument
+{
+    pub index: u32,
+    #[serde(rename = "type")]
+    pub argument_type: String,
+    pub name: String,
+    pub direction: String,
+    pub raw_value: String,
+    pub pre_call_value: String,
+    pub post_call_value: String,
+    pub decoded_value: String,
+    pub decode_status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentApiCallEvent
+{
+    pub schema_version: String,
+    pub message_type: String,
+    pub operation_id: String,
+    pub pid: u32,
+    pub tid: u32,
+    pub timestamp_utc: String,
+    pub sequence: u64,
+    pub api: String,
+    pub module: String,
+    pub process: String,
+    pub return_value: String,
+    pub last_error_code: u32,
+    pub last_error_message: String,
+    pub duration_us: u64,
+    pub arguments: Vec<AgentApiArgument>,
+    pub tags: Vec<String>,
+    pub stack: Vec<String>,
+    #[serde(default)]
+    pub buffer_preview: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CaptureResult
+{
+    pub schema_version: String,
+    pub operation_id: String,
+    pub success: bool,
+    pub backend_mode: String,
+    pub capture_mode: String,
+    pub injection_method: String,
+    pub target_path: String,
+    pub agent_path: String,
+    pub target_process_id: u32,
+    pub target_thread_id: u32,
+    pub architecture: String,
+    pub win32_error_code: u32,
+    pub nt_status: String,
+    pub subsystem: String,
+    pub operation: String,
+    pub message: String,
+    pub dropped_events: u64,
+    pub handshake: AgentHandshake,
+    pub audit_events: Vec<AuditEvent>,
+    pub agent_messages: Vec<serde_json::Value>,
+    pub captured_events: Vec<AgentApiCallEvent>,
+}
+
 impl CaptureSessionState
 {
     pub fn running_mock() -> Self
@@ -191,6 +259,13 @@ pub fn launch_sample_early_bird() -> Result<LaunchResult, String>
     let helper_output = run_helper(["launch-sample"])?;
     serde_json::from_str(&helper_output)
         .map_err(|error| format!("failed to parse launch result: {error}; stdout={helper_output}"))
+}
+
+pub fn capture_sample_fileio() -> Result<CaptureResult, String>
+{
+    let helper_output = run_helper(["capture-sample"])?;
+    serde_json::from_str(&helper_output)
+        .map_err(|error| format!("failed to parse capture result: {error}; stdout={helper_output}"))
 }
 
 fn run_helper<const N: usize>(args: [&str; N]) -> Result<String, String>

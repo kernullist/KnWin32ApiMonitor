@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/agent-event.schema.json",
+  "title": "KnMonAgentEvent",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "messageType",
+    "operationId",
+    "pid",
+    "tid",
+    "timestampUtc",
+    "sequence"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "messageType": {
+      "enum": [
+        "agent_hello",
+        "hook_installed",
+        "hook_install_failed",
+        "api_call",
+        "dropped_events",
+        "agent_shutdown"
+      ]
+    },
+    "operationId": { "type": "string" },
+    "pid": { "type": "integer", "minimum": 0 },
+    "tid": { "type": "integer", "minimum": 0 },
+    "timestampUtc": { "type": "string" },
+    "sequence": { "type": "integer", "minimum": 0 },
+    "api": { "type": "string" },
+    "module": { "type": "string" },
+    "process": { "type": "string" },
+    "returnValue": { "type": "string" },
+    "lastErrorCode": { "type": "integer", "minimum": 0 },
+    "lastErrorMessage": { "type": "string" },
+    "durationUs": { "type": "integer", "minimum": 0 },
+    "arguments": {
+      "type": "array",
+      "items": { "$ref": "argument.schema.json" }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "stack": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "bufferPreview": { "type": "string" },
+    "droppedCount": { "type": "integer", "minimum": 0 },
+    "message": { "type": "string" }
+  }
+}

@@ -69,6 +69,63 @@ export interface LaunchResult {
   auditEvents: AuditEvent[];
 }
 
+export interface AgentApiArgument {
+  index: number;
+  type: string;
+  name: string;
+  direction: "in" | "out" | "inout" | "return";
+  rawValue: string;
+  preCallValue: string;
+  postCallValue: string;
+  decodedValue: string;
+  decodeStatus: "decoded" | "partial" | "invalid_pointer" | "unreadable_memory" | "definition_missing" | "truncated";
+}
+
+export interface AgentApiCallEvent {
+  schemaVersion: string;
+  messageType: "api_call";
+  operationId: string;
+  pid: number;
+  tid: number;
+  timestampUtc: string;
+  sequence: number;
+  api: string;
+  module: string;
+  process: string;
+  returnValue: string;
+  lastErrorCode: number;
+  lastErrorMessage: string;
+  durationUs: number;
+  arguments: AgentApiArgument[];
+  tags: string[];
+  stack: string[];
+  bufferPreview: string;
+}
+
+export interface CaptureResult {
+  schemaVersion: string;
+  operationId: string;
+  success: boolean;
+  backendMode: BackendMode;
+  captureMode: string;
+  injectionMethod: string;
+  targetPath: string;
+  agentPath: string;
+  targetProcessId: number;
+  targetThreadId: number;
+  architecture: string;
+  win32ErrorCode: number;
+  ntStatus: string;
+  subsystem: string;
+  operation: string;
+  message: string;
+  droppedEvents: number;
+  handshake: AgentHandshake;
+  auditEvents: AuditEvent[];
+  agentMessages: unknown[];
+  capturedEvents: AgentApiCallEvent[];
+}
+
 export interface KnMonArgument {
   index: number;
   type: string;

@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  captureSampleFileIoEvents,
   launchSampleEarlyBirdCapture,
   listNativeTargetProcesses,
   listTargetProcesses,
@@ -30,7 +31,7 @@ import {
 } from "./backend";
 import { apiTree, captureProfiles, createMockFileIoEvent, initialTraceEvents } from "./mockData";
 import { downloadJsonl, estimateSessionBytes } from "./session";
-import type { ApiNode, AuditEvent, BackendMode, InspectorTab, LaunchResult, TargetProcess, TraceEvent } from "./types";
+import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, TargetProcess, TraceEvent } from "./types";
 
 type LeftTab = "targets" | "apis" | "profiles";
 type TraceMode = "flat" | "call-tree";
@@ -159,6 +160,32 @@ function createAgentLoadedEvent(result: LaunchResult, eventId: number): TraceEve
   };
 }
 
+function createTraceEventFromAgentApiCall(event: AgentApiCallEvent, eventId: number): TraceEvent {
+  return {
+    schemaVersion: event.schemaVersion,
+    eventId,
+    relativeTimeMs: event.sequence * 10,
+    pid: event.pid,
+    tid: event.tid,
+    process: event.process,
+    module: event.module,
+    api: event.api,
+    arguments: event.arguments,
+    returnValue: event.returnValue,
+    error: event.lastErrorCode === 0
+      ? null
+      : {
+          kind: "win32",
+          code: `0x${event.lastErrorCode.toString(16).padStart(8, "0")}`,
+          message: event.lastErrorMessage
+        },
+    durationUs: event.durationUs,
+    tags: event.tags,
+    stack: event.stack,
+    bufferPreview: event.bufferPreview || undefined
+  };
+}
+
 function App() {
   const [leftTab, setLeftTab] = useState<LeftTab>("targets");
   const [targetSource, setTargetSource] = useState<TargetSource>("mock");
@@ -168,11 +195,12 @@ function App() {
   const [selectedEventId, setSelectedEventId] = useState<number>(initialTraceEvents[0]?.eventId ?? 0);
   const [filter, setFilter] = useState("");
   const [running, setRunning] = useState(false);
-  const [droppedCount] = useState(0);
+  const [droppedCount, setDroppedCount] = useState(0);
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("parameters");
   const [traceMode, setTraceMode] = useState<TraceMode>("flat");
   const [nativeBusy, setNativeBusy] = useState(false);
   const [launchResult, setLaunchResult] = useState<LaunchResult | null>(null);
+  const [captureResult, setCaptureResult] = useState<CaptureResult | null>(null);
   const [outputEvents, setOutputEvents] = useState<AuditEvent[]>([
     makeAuditEvent("backend_ready", "mock_init", "Mock File I/O backend initialized.")
   ]);
@@ -305,6 +333,33 @@ function App() {
     }
   }
 
+  async function handleCaptureSampleFileIo() {
+    setNativeBusy(true);
+
+    try {
+      appendOutput([makeAuditEvent("capture_requested", "capture_sample_fileio_events", "Controlled native File I/O capture requested from UI.")]);
+      const result = await captureSampleFileIoEvents();
+      setCaptureResult(result);
+      setBackendMode(result.success ? "native-capture" : "native-enum");
+      setDroppedCount(result.droppedEvents);
+      appendOutput(result.auditEvents.length > 0 ? result.auditEvents : [makeAuditEvent("capture_result", result.operation, result.message, result.win32ErrorCode)]);
+
+      if (result.capturedEvents.length > 0) {
+        const traceEvents = result.capturedEvents.map((event, index) => createTraceEventFromAgentApiCall(event, nextEventId.current + index));
+        nextEventId.current += traceEvents.length;
+        setEvents((current) => [...current, ...traceEvents].slice(-400));
+        setSelectedEventId(traceEvents[traceEvents.length - 1].eventId);
+      }
+
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("capture_blocked", "capture_sample_fileio_events", message)]);
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -403,14 +458,22 @@ function App() {
                   <label>Injection</label>
                   <span>early-bird APC</span>
                   <label>Handshake</label>
-                  <span>{launchResult ? (launchResult.handshake.received ? "HELLO received" : "not received") : "not launched"}</span>
+                  <span>{captureResult ? (captureResult.handshake.received ? "HELLO received" : "not received") : launchResult ? (launchResult.handshake.received ? "HELLO received" : "not received") : "not launched"}</span>
+                  <label>Captured rows</label>
+                  <span>{captureResult ? captureResult.capturedEvents.length : 0}</span>
+                  <label>Dropped</label>
+                  <span>{captureResult ? captureResult.droppedEvents : droppedCount}</span>
                 </div>
                 <div className="launch-actions">
                   <button type="button" className="tool-button primary" onClick={handleLaunchSample} disabled={nativeBusy}>
                     <Play size={14} />
                     <span>Launch Sample</span>
                   </button>
-                  <button type="button" className="tool-button" disabled title="The helper exits after handoff; persistent target ownership is not implemented yet.">
+                  <button type="button" className="tool-button primary" onClick={handleCaptureSampleFileIo} disabled={nativeBusy}>
+                    <Activity size={14} />
+                    <span>Capture File I/O</span>
+                  </button>
+                  <button type="button" className="tool-button" disabled title="Bounded sample capture owns target lifetime for this milestone; persistent terminate control is not implemented yet.">
                     <Square size={13} />
                     <span>Terminate</span>
                   </button>
@@ -418,6 +481,11 @@ function App() {
                 {launchResult ? (
                   <div className={launchResult.success ? "launch-result success" : "launch-result failure"}>
                     PID {launchResult.targetProcessId} / {launchResult.injectionMethod} / {launchResult.message}
+                  </div>
+                ) : null}
+                {captureResult ? (
+                  <div className={captureResult.success ? "launch-result success" : "launch-result failure"}>
+                    PID {captureResult.targetProcessId} / {captureResult.captureMode} / events={captureResult.capturedEvents.length} / {captureResult.message}
                   </div>
                 ) : null}
               </div>
@@ -571,7 +639,7 @@ function App() {
                     <div className="buffer-view">
                       <div className="buffer-toolbar">
                         <HardDrive size={14} />
-                        <span>{selectedEvent.bufferPreview ? "Hex Buffer 16 bytes (mock)" : "No buffer snapshot for this call"}</span>
+                        <span>{selectedEvent.bufferPreview ? "Hex Buffer 16 bytes" : "No buffer snapshot for this call"}</span>
                       </div>
                       <pre>{selectedEvent.bufferPreview ?? "buffer snapshot unavailable"}</pre>
                     </div>

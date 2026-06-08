@@ -11,6 +11,7 @@ class Controller
 public:
     std::vector<KnMonTargetProcess> EnumerateTargets(KnMonError* error) const;
     KnMonLaunchResult LaunchWithEarlyBirdApc(const KnMonLaunchRequest& request) const;
+    KnMonCaptureResult CaptureSampleFileIo(const KnMonLaunchRequest& request) const;
 
     KnMonError LaunchTarget(const std::string& imagePath) const;
     KnMonError AttachToTarget(std::uint32_t processId) const;

@@ -15,6 +15,10 @@ Current definitions live under:
 ```text
 definitions/
   win32/file-io.json
+contracts/
+  agent-event.schema.json
+  hook-status.schema.json
+  capture-result.schema.json
 ```
 
 ## Current Required Fields
@@ -62,6 +66,39 @@ The first validator requires definitions for:
 4. `ReadFile`
 5. `WriteFile`
 6. `CloseHandle`
+
+Current live x64 sample capture covers:
+
+1. `CreateFileW`
+2. `CreateFileA`
+3. `ReadFile`
+4. `WriteFile`
+5. `CloseHandle`
+
+`NtCreateFile` remains definition-only until the Win32 hook path is reviewed.
+
+## Agent Event Contracts
+
+Bounded native capture uses schema-versioned agent messages. Every agent message carries:
+
+1. `schemaVersion`
+2. `messageType`
+3. `operationId`
+4. `pid`
+5. `tid`
+6. `timestampUtc`
+7. `sequence`
+
+The current message types are:
+
+1. `agent_hello`
+2. `hook_installed`
+3. `hook_install_failed`
+4. `api_call`
+5. `dropped_events`
+6. `agent_shutdown`
+
+`capture-result.schema.json` wraps the bounded helper result, audit events, raw agent messages, captured `api_call` events, and dropped-event accounting.
 
 ## Example
 
@@ -120,4 +157,3 @@ Examples:
 - `io_status_block`
 - `buffer`
 - `handle`
-

@@ -221,6 +221,82 @@ std::string ToJson(const knmon::KnMonLaunchResult& result)
     return stream.str();
 }
 
+std::string ToJson(const knmon::KnMonAgentMessage& message)
+{
+    if (!message.RawPayload.empty())
+    {
+        return message.RawPayload;
+    }
+
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":" << Q(message.SchemaVersion) << ",";
+    stream << "\"messageType\":" << Q(message.MessageType) << ",";
+    stream << "\"operationId\":" << Q(message.OperationId) << ",";
+    stream << "\"pid\":" << message.ProcessId << ",";
+    stream << "\"tid\":" << message.ThreadId << ",";
+    stream << "\"timestampUtc\":" << Q(message.TimestampUtc) << ",";
+    stream << "\"sequence\":" << message.Sequence;
+    stream << "}";
+    return stream.str();
+}
+
+std::string ToJson(const knmon::KnMonCaptureResult& result)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":" << Q(result.SchemaVersion) << ",";
+    stream << "\"operationId\":" << Q(result.OperationId) << ",";
+    stream << "\"success\":" << (result.Success ? "true" : "false") << ",";
+    stream << "\"backendMode\":" << Q(result.BackendMode) << ",";
+    stream << "\"captureMode\":" << Q(result.CaptureMode) << ",";
+    stream << "\"injectionMethod\":" << Q(result.InjectionMethod) << ",";
+    stream << "\"targetPath\":" << Q(result.TargetPath) << ",";
+    stream << "\"agentPath\":" << Q(result.AgentPath) << ",";
+    stream << "\"targetProcessId\":" << result.TargetProcessId << ",";
+    stream << "\"targetThreadId\":" << result.TargetThreadId << ",";
+    stream << "\"architecture\":" << Q(result.Architecture) << ",";
+    stream << "\"win32ErrorCode\":" << result.Win32ErrorCode << ",";
+    stream << "\"ntStatus\":" << Q(result.NtStatus) << ",";
+    stream << "\"subsystem\":" << Q(result.Subsystem) << ",";
+    stream << "\"operation\":" << Q(result.Operation) << ",";
+    stream << "\"message\":" << Q(result.Message) << ",";
+    stream << "\"droppedEvents\":" << result.DroppedEvents << ",";
+    stream << "\"handshake\":" << ToJson(result.Handshake) << ",";
+    stream << "\"auditEvents\":[";
+    for (std::size_t index = 0; index < result.AuditEvents.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << ToJson(result.AuditEvents[index]);
+    }
+    stream << "],";
+    stream << "\"agentMessages\":[";
+    for (std::size_t index = 0; index < result.AgentMessages.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << ToJson(result.AgentMessages[index]);
+    }
+    stream << "],";
+    stream << "\"capturedEvents\":[";
+    for (std::size_t index = 0; index < result.CapturedEvents.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << ToJson(result.CapturedEvents[index]);
+    }
+    stream << "]";
+    stream << "}";
+    return stream.str();
+}
+
 std::string ListTargetsJson()
 {
     knmon::Controller controller;
@@ -294,12 +370,41 @@ std::string LaunchSampleJson(const std::vector<std::string>& args)
     return ToJson(controller.LaunchWithEarlyBirdApc(request));
 }
 
+std::string CaptureSampleJson(const std::vector<std::string>& args)
+{
+    const auto helperDir = HelperDirectory();
+    const std::string defaultTarget = WideToUtf8((helperDir / L"knmon-sample-fileio.exe").wstring().c_str());
+    const std::string defaultAgent = WideToUtf8((helperDir / L"knmon-agent64.dll").wstring().c_str());
+
+    knmon::KnMonLaunchRequest request;
+    request.OperationId = NewOperationId();
+    request.TargetPath = GetOption(args, "--target");
+    request.AgentPath = GetOption(args, "--agent");
+    request.WorkingDirectory = GetOption(args, "--cwd");
+    request.TimeoutMs = 9000;
+    request.Architecture = knmon::KnMonAgentArchitecture::X64;
+    request.InjectionMethod = knmon::KnMonInjectionMethod::EarlyBirdApc;
+
+    if (request.TargetPath.empty())
+    {
+        request.TargetPath = defaultTarget;
+    }
+
+    if (request.AgentPath.empty())
+    {
+        request.AgentPath = defaultAgent;
+    }
+
+    knmon::Controller controller;
+    return ToJson(controller.CaptureSampleFileIo(request));
+}
+
 void PrintUsage()
 {
     std::cout << "{";
     std::cout << "\"schemaVersion\":\"0.1.0\",";
     std::cout << "\"success\":false,";
-    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path]\"";
+    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path]\"";
     std::cout << "}\n";
 }
 }
@@ -327,6 +432,12 @@ int wmain(int argc, wchar_t** argv)
     if (args[0] == "launch-sample")
     {
         std::cout << LaunchSampleJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "capture-sample")
+    {
+        std::cout << CaptureSampleJson(args) << "\n";
         return 0;
     }
 

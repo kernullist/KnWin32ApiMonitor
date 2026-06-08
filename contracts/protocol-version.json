@@ -9,5 +9,12 @@
     "injectionMethods": ["early-bird APC"],
     "agentArchitectures": ["x64"],
     "controlledLaunchOnly": true
+  },
+  "liveFileIoCapture": {
+    "captureMode": "bounded-native-capture",
+    "hookMethod": "iat",
+    "controlledSampleOnly": true,
+    "hookedApis": ["CreateFileW", "CreateFileA", "ReadFile", "WriteFile", "CloseHandle"],
+    "messageTypes": ["agent_hello", "hook_installed", "hook_install_failed", "api_call", "dropped_events", "agent_shutdown"]
   }
 }
