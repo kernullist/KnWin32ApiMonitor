@@ -1,6 +1,30 @@
 # Roadmap
 
 작성일: 2026-06-08
+갱신일: 2026-06-09
+
+## Product-Critical Priorities
+
+The remaining roadmap is now ordered around three product-critical constraints:
+
+1. Injection reliability:
+   - The monitor must avoid preventable injection failures.
+   - Unsupported targets must fail before mutation with precise diagnostics.
+   - Same-bitness helper/target/agent paths come before cross-bitness or protected-process work.
+2. Broad system DLL API coverage:
+   - The monitor must scale beyond the current File I/O slice.
+   - Dynamic loading must be covered through loader-aware module tracking, import re-patching, and resolver monitoring.
+   - IAT hooks alone are not enough for APIs resolved through `GetProcAddress` or `LdrGetProcedureAddress`; those paths require separate design and validation.
+3. Low target-process overhead:
+   - Hook fast paths must avoid JSON serialization, blocking pipe writes, expensive decoding, and unnecessary memory copies.
+   - High-volume capture must move to a binary shared-memory transport before broad API coverage is enabled.
+   - Expensive decode, symbolization, indexing, and UI shaping should run outside the target process.
+
+Operational interpretation:
+
+1. "Injection without failure" means no silent or avoidable failure for supported targets, plus explicit unsupported states for PPL, architecture mismatch, missing privileges, mitigation-policy conflicts, or unavailable helper/agent binaries.
+2. "Almost all system DLL APIs" means staged, definition-driven coverage for common Windows user-mode DLLs, dynamic DLL loads, delay-loaded imports, and resolver-returned function pointers where a reviewed hook method exists.
+3. "Minimum performance delay" means target hooks do the smallest possible amount of work and hand events to the collector through bounded non-blocking transport.
 
 ## Phase 0: Bootstrap
 
@@ -163,16 +187,174 @@ Current verified behavior:
 
 Next implementation focus:
 
-1. Start x86 agent parity only after the x64 session path remains stable.
-2. Begin high-volume table and replay indexing work after lifecycle evidence remains stable.
-3. Move the collector from synthetic intake to shared-memory transport only after a separate review.
-4. Expand File I/O decode metadata only after the native trace contract remains stable.
+1. Build the injection reliability foundation:
+   - x86 same-bitness parity
+   - helper/target/agent architecture preflight
+   - precise unsupported-target diagnostics
+   - stable launch and handshake evidence
+2. Move target-process event emission from JSON/named-pipe fast paths toward shared-memory binary transport before enabling broad API coverage.
+3. Add loader-aware system DLL coverage:
+   - all-loaded-module IAT sweep
+   - re-hook on DLL load
+   - `LoadLibrary*`, `LdrLoadDll`, `GetProcAddress`, and `LdrGetProcedureAddress` monitoring
+4. Start controlled attach and child-process supervision only after same-bitness launch reliability and transport backpressure remain stable.
+5. Expand File I/O and system DLL decode metadata after the native trace contract remains stable.
 
-## Phase 7: Definition System V1
+## Phase 7: Injection Reliability Foundation
 
 Goal:
 
-Move from structural definition files to validated and tested decode metadata.
+Make supported same-bitness injection paths predictable, diagnosable, and repeatable before broad process support is added.
+
+Deliverables:
+
+1. x86 agent parity for the controlled sample path:
+   - x86 helper
+   - x86 sample target
+   - `knmon-agent32.dll`
+   - same six File I/O hooks as x64
+2. Helper/target/agent architecture preflight:
+   - x86 helper -> x86 target -> x86 agent
+   - x64 helper -> x64 target -> x64 agent
+   - mismatch is a hard fail before remote mutation
+3. Target eligibility checks:
+   - process architecture
+   - session/elevation boundary
+   - protected/PPL state where detectable
+   - file existence and DLL loadability
+   - mitigation-policy or access-denied hints where available
+4. Injection attempt audit model:
+   - preflight result
+   - selected method
+   - remote allocation/write evidence
+   - APC queue evidence
+   - resume evidence
+   - HELLO timeout/failure reason
+5. Handshake hardening:
+   - version compatibility
+   - architecture confirmation
+   - operation id confirmation
+   - bounded retry or clean failure policy
+6. Failure taxonomy:
+   - unsupported_architecture
+   - unsupported_protected_process
+   - access_denied
+   - helper_agent_mismatch
+   - loader_failed
+   - handshake_timeout
+   - target_exited_early
+7. Smoke matrix:
+   - x64 controlled launch/capture still green
+   - x86 controlled launch/capture green when Win32 toolchain is available
+   - negative tests for missing agent and architecture mismatch
+
+Exit criteria:
+
+1. Supported same-bitness controlled launches produce HELLO reliably across repeated runs.
+2. Unsupported targets fail before remote mutation whenever detectable.
+3. x64 regressions remain green.
+4. Docs clearly distinguish supported failure-free paths from unsupported Windows security boundaries.
+
+## Phase 8: Low-Overhead Event Transport
+
+Goal:
+
+Remove high-cost work from the target hook path before expanding API coverage.
+
+Deliverables:
+
+1. Shared-memory event transport:
+   - fixed-size ring or segmented ring buffer
+   - per-process session header
+   - producer sequence counters
+   - dropped-event counters
+   - non-blocking writes from hooks
+2. Binary event ABI:
+   - compact event header
+   - API id/module id/thread id/timestamp
+   - bounded argument snapshots
+   - deferred string/blob payload blocks
+3. Collector reader:
+   - drains shared memory
+   - normalizes to protocol events outside the target
+   - writes session chunks
+   - streams UI updates
+4. Fast-path constraints:
+   - no JSON serialization in hooks
+   - no blocking pipe writes in hooks
+   - no heap allocation on common hook paths where practical
+   - no call stack capture unless explicitly enabled
+5. Runtime filters:
+   - API allowlist/denylist
+   - module filters
+   - thread/process filters
+   - buffer preview limits
+6. Performance smoke:
+   - synthetic high-rate producer
+   - real sample burst capture
+   - p50/p95/p99 hook overhead estimates
+   - dropped-event accounting under pressure
+
+Exit criteria:
+
+1. Hook path remains bounded and non-blocking under collector backpressure.
+2. Broad API coverage can be enabled without using named-pipe JSON as the hot path.
+3. Session writer can consume high-volume events without losing manifest/replay integrity.
+
+## Phase 9: Loader-Aware System DLL API Coverage
+
+Goal:
+
+Expand from the current File I/O slice to broad, loader-aware monitoring across system DLLs and dynamic loading.
+
+Deliverables:
+
+1. Module inventory:
+   - initial PEB loader list snapshot
+   - loaded module metadata
+   - system/user module classification
+   - module id registry for compact event transport
+2. All-loaded-module IAT hook sweep:
+   - patch imports in every eligible loaded module
+   - skip self/agent/unsupported modules
+   - restore all patched slots on detach/shutdown
+3. Loader monitoring:
+   - `LdrLoadDll`
+   - `LoadLibraryW`
+   - `LoadLibraryA`
+   - `LoadLibraryExW`
+   - `LoadLibraryExA`
+   - DLL unload signals where feasible
+4. Re-hook policy:
+   - hook newly loaded modules
+   - re-run import scan after dynamic load
+   - avoid duplicate patches
+   - handle unload races conservatively
+5. Resolver monitoring:
+   - `GetProcAddress`
+   - `LdrGetProcedureAddress`
+   - optional returned-pointer instrumentation design for dynamically resolved APIs
+6. System DLL coverage waves:
+   - Wave 1: `ntdll.dll`, `kernelbase.dll`, `kernel32.dll`
+   - Wave 2: `advapi32.dll`, `bcrypt.dll`, `crypt32.dll`, `rpcrt4.dll`, `ws2_32.dll`, `wininet.dll`, `winhttp.dll`
+   - Wave 3: `user32.dll`, `gdi32.dll`, `shell32.dll`, `ole32.dll`, `combase.dll`
+   - Wave 4: generated definitions for the remaining common Windows user-mode DLLs
+7. Hook safety policy:
+   - no inline detours by default
+   - inline/hotpatch detours require separate risk review, ABI tests, and performance proof
+   - dynamic function-pointer coverage must be explicitly labeled when not complete
+
+Exit criteria:
+
+1. APIs imported by dynamically loaded modules are captured after load.
+2. Resolver calls are visible and correlated with later API coverage where possible.
+3. Event volume remains within the Phase 8 transport budget.
+
+## Phase 10: Definition System V1
+
+Goal:
+
+Move from structural definition files to validated, generated, and performance-aware decode metadata.
 
 Deliverables:
 
@@ -181,13 +363,37 @@ Deliverables:
 3. Decode alias registry.
 4. Enum/flag support.
 5. Buffer length expressions.
-6. Rohitab XML importer prototype.
+6. Module/API id generation for compact transport.
+7. Rohitab XML importer prototype.
+8. Coverage reports by DLL, API family, argument decode quality, and risk level.
 
-## Phase 8: Advanced UX
+## Phase 11: Controlled Attach And Process Tree Supervision
 
 Goal:
 
-Improve high-volume analysis workflows.
+Move from repository-owned controlled launch to selected target monitoring without pretending protected-process bypass exists.
+
+Deliverables:
+
+1. Attach preflight for already-running processes.
+2. Same-bitness attach method selection.
+3. Explicit failure states for access-denied, PPL/protected, architecture mismatch, and target instability.
+4. Detach and self-disable protocol.
+5. Child process auto-attach policy.
+6. Process tree session model.
+7. UI controls for attach/detach/child policy with audit output.
+
+Exit criteria:
+
+1. Supported user-mode targets can be attached and detached repeatedly without stale hooks.
+2. Unsupported targets fail cleanly before risky mutation where detectable.
+3. Child process monitoring does not break target startup latency budgets.
+
+## Phase 12: Advanced UX
+
+Goal:
+
+Improve high-volume analysis workflows after the transport and coverage foundations exist.
 
 Deliverables:
 
@@ -208,4 +414,6 @@ Deliverables:
 5. Live arbitrary process memory editing.
 6. COM monitoring.
 7. Full symbol server integration.
-8. Arbitrary already-running process injection.
+8. Cross-bitness injection.
+9. Stealth/manual-map injection.
+10. Inline detours for broad API coverage without a separate ABI, stability, and performance review.
