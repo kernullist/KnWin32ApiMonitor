@@ -13,6 +13,18 @@
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 #endif
 
+#ifndef KNMON_AGENT_ARCHITECTURE
+#define KNMON_AGENT_ARCHITECTURE "unknown"
+#endif
+
+#ifndef KNMON_AGENT_DLL_NAME
+#define KNMON_AGENT_DLL_NAME "knmon-agent.dll"
+#endif
+
+#ifndef KNMON_AGENT_HELLO_MESSAGE
+#define KNMON_AGENT_HELLO_MESSAGE "KNMon agent loaded by controlled early-bird APC"
+#endif
+
 namespace
 {
 constexpr const wchar_t* AgentVersion = L"0.2.0";
@@ -639,9 +651,9 @@ void SendHello()
     const LONG64 sequence = NextSequence();
     std::ostringstream stream;
     stream << MessagePrefix("agent_hello", sequence) << ",";
-    stream << "\"architecture\":\"x64\",";
+    stream << "\"architecture\":" << Q(KNMON_AGENT_ARCHITECTURE) << ",";
     stream << "\"agentVersion\":" << Q(WideToUtf8(AgentVersion)) << ",";
-    stream << "\"message\":\"KNMon x64 agent loaded by controlled early-bird APC\"";
+    stream << "\"message\":" << Q(KNMON_AGENT_HELLO_MESSAGE);
     stream << "}";
     SendJson(stream.str());
 }
@@ -783,7 +795,7 @@ void SendApiCall(
     stream << "\"durationUs\":" << durationUs << ",";
     stream << "\"arguments\":[" << argumentsJson << "],";
     stream << "\"tags\":[\"native-capture\",\"file\",\"hook\"],";
-    stream << "\"stack\":[\"knmon-agent64.dll!IatHook\"," << Q(std::string(moduleName) + "!" + apiName) << "],";
+    stream << "\"stack\":[" << Q(std::string(KNMON_AGENT_DLL_NAME) + "!IatHook") << "," << Q(std::string(moduleName) + "!" + apiName) << "],";
     stream << "\"bufferPreview\":" << Q(bufferPreview);
     stream << "}";
     SendJson(stream.str());

@@ -49,13 +49,35 @@ target_compile_definitions(knmon-native-helper PRIVATE
     NOMINMAX
 )
 
-add_library(knmon-agent64 SHARED
+set(KNMON_AGENT_SOURCE
     knmon-agent64/src/AgentMain.cpp
 )
-target_compile_definitions(knmon-agent64 PRIVATE
-    WIN32_LEAN_AND_MEAN
-    NOMINMAX
-)
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    add_library(knmon-agent64 SHARED
+        ${KNMON_AGENT_SOURCE}
+    )
+    target_compile_definitions(knmon-agent64 PRIVATE
+        WIN32_LEAN_AND_MEAN
+        NOMINMAX
+        KNMON_AGENT_ARCHITECTURE="x64"
+        KNMON_AGENT_DLL_NAME="knmon-agent64.dll"
+        KNMON_AGENT_HELLO_MESSAGE="KNMon x64 agent loaded by controlled early-bird APC"
+    )
+elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    add_library(knmon-agent32 SHARED
+        ${KNMON_AGENT_SOURCE}
+    )
+    target_compile_definitions(knmon-agent32 PRIVATE
+        WIN32_LEAN_AND_MEAN
+        NOMINMAX
+        KNMON_AGENT_ARCHITECTURE="x86"
+        KNMON_AGENT_DLL_NAME="knmon-agent32.dll"
+        KNMON_AGENT_HELLO_MESSAGE="KNMon x86 agent loaded by controlled early-bird APC"
+    )
+else()
+    message(FATAL_ERROR "Unsupported pointer size for KNMon agent build.")
+endif()
 
 add_executable(knmon-sample-fileio
     ../samples/targets/fileio-sample/src/main.cpp

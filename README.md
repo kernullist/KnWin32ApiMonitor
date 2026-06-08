@@ -11,9 +11,10 @@ This repository is bootstrapping a new API Monitor inspired by Rohitab API Monit
 - Mock capture stream that exercises the same event shape intended for the future native collector.
 - JSONL export for early session artifacts.
 - Controlled launch-time early-bird APC agent load foundation for the repository sample target.
-- Bounded controlled File I/O capture from the repository sample target through x64 agent IAT hooks.
+- Bounded controlled File I/O capture from the repository sample target through same-bitness x64/x86 agent IAT hooks.
 - Explicit controlled `NtCreateFile` capture from `ntdll.dll` with NTSTATUS return evidence.
-- Deterministic x64 agent lifecycle telemetry with hook restore evidence on shutdown.
+- Deterministic x64/x86 agent lifecycle telemetry with hook restore evidence on shutdown.
+- Same-bitness injection preflight for target/agent architecture and missing binary failures.
 - Durable helper-written sample sessions with manifest, audit, agent-event, and trace-event JSONL files.
 - Session validation and replay without relaunching or reinjecting the sample target.
 - Synthetic collector intake with deterministic bounded queue backpressure validation.
@@ -34,17 +35,18 @@ Implemented now:
 8. JSON contracts and File I/O API definitions.
 9. Definition validator.
 10. Native helper CLI for process enumeration and controlled sample launch.
-11. x64 agent DLL that sends a HELLO handshake after controlled early-bird APC load.
+11. x64/x86 agent DLLs that send a HELLO handshake after controlled early-bird APC load.
 12. Sample File I/O target executable.
 13. Bounded `capture-sample` helper command that collects real `api_call` events from the sample target.
-14. x64 agent IAT hooks for `CreateFileW`, `CreateFileA`, `NtCreateFile`, `ReadFile`, `WriteFile`, and `CloseHandle`.
+14. x64/x86 agent IAT hooks for `CreateFileW`, `CreateFileA`, `NtCreateFile`, `ReadFile`, `WriteFile`, and `CloseHandle`.
 15. UI action that maps captured native File I/O events into the trace table.
 16. `capture-sample --write-session <dir>` session writer.
 17. `validate-session --session <dir>` and `replay-session --session <dir>` helper commands.
 18. UI actions for `Capture And Save` and `Replay Last`.
-19. x64 agent hook lifecycle states, idempotent IAT restore, and structured `agent_shutdown` evidence.
+19. x64/x86 agent hook lifecycle states, idempotent IAT restore, and structured `agent_shutdown` evidence.
 20. `knmon-collector.exe smoke-backpressure` for deterministic collector queue/drop accounting.
 21. Controlled `NtCreateFile` capture with bounded `OBJECT_ATTRIBUTES` object-name decoding.
+22. Same-bitness x64/x86 controlled injection preflight with missing binary and architecture mismatch diagnostics.
 
 Not implemented yet:
 
@@ -54,21 +56,21 @@ Not implemented yet:
 4. Breakpoint mutation.
 5. COM monitoring.
 6. Kernel-mode helper.
-7. x86 agent build.
-8. Compressed `.knapm` container chunks and replay indexes.
+7. Compressed `.knapm` container chunks and replay indexes.
 
 ## Current Native Capture Snapshot
 
 Current native capture is a bounded, controlled sample-target flow:
 
 1. `knmon-native-helper.exe capture-sample` launches `knmon-sample-fileio.exe` suspended.
-2. The controller queues an early-bird APC to load `knmon-agent64.dll`.
-3. The x64 agent sends `agent_hello`, installs main-module IAT hooks, and emits schema-versioned `api_call` events.
-4. On target shutdown, the agent disables new hook events, restores patched IAT slots where possible, and emits `agent_shutdown` with `reason`, lifecycle state, hook counts, and dropped-event count.
-5. The helper returns one structured `capture-result` JSON object with audit events, raw agent messages, captured events, lifecycle evidence, and dropped-event accounting.
-6. `capture-sample --write-session <dir>` writes `manifest.json`, `audit.jsonl`, `agent-events.jsonl`, and `trace-events.jsonl`.
-7. `replay-session --session <dir>` returns trace-compatible events without launching a target or loading an agent.
-8. The Tauri commands map captured or replayed File I/O events into the React trace table.
+2. The controller runs same-bitness preflight for target and agent binaries before remote mutation.
+3. The controller queues an early-bird APC to load `knmon-agent64.dll` in x64 builds or `knmon-agent32.dll` in Win32 builds.
+4. The agent sends `agent_hello`, installs main-module IAT hooks, and emits schema-versioned `api_call` events.
+5. On target shutdown, the agent disables new hook events, restores patched IAT slots where possible, and emits `agent_shutdown` with `reason`, lifecycle state, hook counts, and dropped-event count.
+6. The helper returns one structured `capture-result` JSON object with audit events, raw agent messages, captured events, lifecycle evidence, and dropped-event accounting.
+7. `capture-sample --write-session <dir>` writes `manifest.json`, `audit.jsonl`, `agent-events.jsonl`, and `trace-events.jsonl`.
+8. `replay-session --session <dir>` returns trace-compatible events without launching a target or loading an agent.
+9. The Tauri commands map captured or replayed File I/O events into the React trace table.
 
 Verified live hook coverage:
 
@@ -81,11 +83,13 @@ Verified live hook coverage:
 
 The current smoke path captures real sample-target File I/O events and reports `droppedEvents=0` on the healthy path. `ReadFile` and `WriteFile` include bounded 16-byte buffer previews. `NtCreateFile` is captured as an explicit `ntdll.dll` event with `returnValue` carrying the NTSTATUS hex value and a bounded `ObjectAttributes` object-name decode.
 
-Healthy lifecycle evidence currently reports `installedHooks=6`, `restoredHooks=6`, `failedHooks=0`, and `reason=process_detach` through `agent_shutdown`.
+Healthy same-bitness x64 and x86 lifecycle evidence currently reports `installedHooks=6`, `restoredHooks=6`, `failedHooks=0`, and `reason=process_detach` through `agent_shutdown`.
 
 ## Safety Boundary
 
-The first MVP intentionally does not inject into arbitrary already-running processes. The native-capture foundation only supports controlled launch-time early-bird APC loading into the repository sample target or an explicit launch target owned by the controller. Current live File I/O capture is bounded to the repository sample target and x64 agent.
+The first MVP intentionally does not attach to arbitrary already-running processes. The native-capture foundation supports controlled launch-time early-bird APC loading into the repository sample target or an explicit launch target owned by the controller. Current live File I/O capture is bounded to same-bitness helper/target/agent paths: x64 helper to x64 target with `knmon-agent64.dll`, or Win32 helper to x86 target with `knmon-agent32.dll`.
+
+Cross-bitness injection, protected-process bypass, manual mapping, stealth loading, and broad inline detours remain out of scope until separately reviewed.
 
 Future dangerous operations such as arbitrary attach, skip-call, forced return values, or memory editing must be explicit, audited, and isolated behind versioned controller commands.
 
@@ -131,6 +135,13 @@ npm run native:configure
 npm run native:build
 ```
 
+Configure and build the optional Win32/x86 native tree:
+
+```powershell
+cmake -S native -B build/native-win32 -A Win32
+cmake --build build/native-win32 --config Debug
+```
+
 Run native helper smoke tests:
 
 ```powershell
@@ -142,15 +153,24 @@ build\native\Debug\knmon-native-helper.exe validate-session --session captures\l
 build\native\Debug\knmon-native-helper.exe replay-session --session captures\latest-sample-fileio
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\repeat-capture-sample.ps1 -Count 5
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\ntcreatefile-capture-smoke.ps1
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\injection-preflight-negative-smoke.ps1
 build\native\Debug\knmon-collector.exe smoke-backpressure --capacity 4 --events 10
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\collector-backpressure-smoke.ps1
 ```
 
-`launch-sample` creates `knmon-sample-fileio.exe` suspended, queues an early-bird APC to load `knmon-agent64.dll`, resumes the primary thread, and waits for an agent HELLO handshake.
+Run optional Win32/x86 smoke after building `build/native-win32`:
 
-`capture-sample` uses the same controlled launch path, keeps the event pipe open until the sample target exits, installs x64 IAT hooks for the stable File I/O set, and returns schema-versioned `api_call` events plus dropped-event accounting.
+```powershell
+build\native-win32\Debug\knmon-native-helper.exe launch-sample
+build\native-win32\Debug\knmon-native-helper.exe capture-sample
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-smoke.ps1
+```
 
-The repeated smoke script verifies five consecutive controlled captures, the stable File I/O API set, zero dropped events, and hook restore counts. The `NtCreateFile` smoke verifies the `ntdll.dll` module, NTSTATUS return format, decoded sample object path, and six restored hooks.
+`launch-sample` creates `knmon-sample-fileio.exe` suspended, queues an early-bird APC to load the same-bitness agent DLL, resumes the primary thread, and waits for an agent HELLO handshake.
+
+`capture-sample` uses the same controlled launch path, keeps the event pipe open until the sample target exits, installs same-bitness IAT hooks for the stable File I/O set, and returns schema-versioned `api_call` events plus dropped-event accounting.
+
+The repeated smoke script verifies five consecutive controlled x64 captures, the stable File I/O API set, zero dropped events, and hook restore counts. The `NtCreateFile` smoke verifies the `ntdll.dll` module, NTSTATUS return format, decoded sample object path, and six restored hooks. The x86 smoke verifies the same API set and hook lifecycle from a Win32 helper/target/agent build. The preflight negative smoke verifies missing target, missing agent, and available architecture mismatch failures before remote mutation.
 
 `capture-sample --write-session` persists the bounded capture into a replayable session directory. Replay returns the trace rows from disk and does not relaunch the target.
 

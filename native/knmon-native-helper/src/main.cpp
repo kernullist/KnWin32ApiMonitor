@@ -168,6 +168,24 @@ std::filesystem::path HelperDirectory()
     return result;
 }
 
+knmon::KnMonAgentArchitecture NativeHelperArchitecture()
+{
+#if defined(_WIN64)
+    return knmon::KnMonAgentArchitecture::X64;
+#else
+    return knmon::KnMonAgentArchitecture::X86;
+#endif
+}
+
+const wchar_t* DefaultAgentFileName()
+{
+#if defined(_WIN64)
+    return L"knmon-agent64.dll";
+#else
+    return L"knmon-agent32.dll";
+#endif
+}
+
 std::string NewOperationId()
 {
     std::ostringstream stream;
@@ -1206,7 +1224,7 @@ std::string LaunchSampleJson(const std::vector<std::string>& args)
 {
     const auto helperDir = HelperDirectory();
     const std::string defaultTarget = WideToUtf8((helperDir / L"knmon-sample-fileio.exe").wstring().c_str());
-    const std::string defaultAgent = WideToUtf8((helperDir / L"knmon-agent64.dll").wstring().c_str());
+    const std::string defaultAgent = WideToUtf8((helperDir / DefaultAgentFileName()).wstring().c_str());
 
     knmon::KnMonLaunchRequest request;
     request.OperationId = NewOperationId();
@@ -1214,7 +1232,7 @@ std::string LaunchSampleJson(const std::vector<std::string>& args)
     request.AgentPath = GetOption(args, "--agent");
     request.WorkingDirectory = GetOption(args, "--cwd");
     request.TimeoutMs = 7000;
-    request.Architecture = knmon::KnMonAgentArchitecture::X64;
+    request.Architecture = NativeHelperArchitecture();
     request.InjectionMethod = knmon::KnMonInjectionMethod::EarlyBirdApc;
 
     if (request.TargetPath.empty())
@@ -1235,7 +1253,7 @@ std::string CaptureSampleJson(const std::vector<std::string>& args)
 {
     const auto helperDir = HelperDirectory();
     const std::string defaultTarget = WideToUtf8((helperDir / L"knmon-sample-fileio.exe").wstring().c_str());
-    const std::string defaultAgent = WideToUtf8((helperDir / L"knmon-agent64.dll").wstring().c_str());
+    const std::string defaultAgent = WideToUtf8((helperDir / DefaultAgentFileName()).wstring().c_str());
 
     knmon::KnMonLaunchRequest request;
     request.OperationId = NewOperationId();
@@ -1243,7 +1261,7 @@ std::string CaptureSampleJson(const std::vector<std::string>& args)
     request.AgentPath = GetOption(args, "--agent");
     request.WorkingDirectory = GetOption(args, "--cwd");
     request.TimeoutMs = 9000;
-    request.Architecture = knmon::KnMonAgentArchitecture::X64;
+    request.Architecture = NativeHelperArchitecture();
     request.InjectionMethod = knmon::KnMonInjectionMethod::EarlyBirdApc;
 
     if (request.TargetPath.empty())

@@ -7,8 +7,10 @@
   "nativeCaptureFoundation": {
     "backendModes": ["mock", "native-enum", "native-capture"],
     "injectionMethods": ["early-bird APC"],
-    "agentArchitectures": ["x64"],
-    "controlledLaunchOnly": true
+    "agentArchitectures": ["x64", "x86"],
+    "controlledLaunchOnly": true,
+    "sameBitnessOnly": true,
+    "preflightChecks": ["target_binary", "agent_binary", "helper_architecture", "target_architecture", "agent_architecture"]
   },
   "liveFileIoCapture": {
     "captureMode": "bounded-native-capture",

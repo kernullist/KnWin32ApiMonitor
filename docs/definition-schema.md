@@ -71,7 +71,7 @@ The first validator requires definitions for:
 5. `WriteFile`
 6. `CloseHandle`
 
-Current live x64 sample capture covers:
+Current live same-bitness x64/x86 sample capture covers:
 
 1. `CreateFileW`
 2. `CreateFileA`
@@ -117,7 +117,7 @@ The current message types are:
 
 `capture-result.schema.json` wraps the bounded helper result, audit events, raw agent messages, captured `api_call` events, and dropped-event accounting.
 
-`agent_shutdown` is the lifecycle closeout event for the controlled x64 sample agent. Healthy shutdown requires:
+`agent_shutdown` is the lifecycle closeout event for the controlled same-bitness sample agent. Healthy shutdown requires:
 
 1. `reason`
 2. `lifecycleState`
@@ -126,7 +126,9 @@ The current message types are:
 5. `failedHooks`
 6. `droppedCount`
 
-For the current healthy x64 sample path, `restoredHooks` must be greater than or equal to `installedHooks`, and `failedHooks` must be `0`.
+For the current healthy x64 and x86 sample paths, `restoredHooks` must be greater than or equal to `installedHooks`, and `failedHooks` must be `0`.
+
+The helper result and session manifest preserve architecture evidence from the selected same-bitness path. The current supported live architectures are `x64` and `x86`; cross-bitness injection is rejected before remote mutation.
 
 ## Session Contracts
 

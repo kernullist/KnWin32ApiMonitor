@@ -10,7 +10,9 @@ Current verification gates include:
 4. Native helper smoke runs for `capture-sample`, `validate-session`, and `replay-session`.
 5. Repeated native lifecycle smoke through `tools\native-smoke\repeat-capture-sample.ps1`.
 6. `NtCreateFile` native capture smoke through `tools\native-smoke\ntcreatefile-capture-smoke.ps1`.
-7. Collector fixture and native smoke validation through `npm run collector:validate`.
+7. Injection preflight negative smoke through `tools\native-smoke\injection-preflight-negative-smoke.ps1`.
+8. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
+9. Collector fixture and native smoke validation through `npm run collector:validate`.
 
 Run repeated lifecycle smoke:
 
@@ -27,6 +29,24 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\ntcreatefile-capture
 ```
 
 The `NtCreateFile` smoke verifies the controlled `ntdll.dll` event, NTSTATUS return format, decoded sample object path evidence, zero dropped events, and six restored hooks.
+
+Run injection preflight negative smoke:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\injection-preflight-negative-smoke.ps1
+```
+
+The preflight smoke verifies that missing target, missing agent, and available architecture mismatch cases fail before remote mutation and include `preflight_failed` audit evidence.
+
+Run optional Win32/x86 capture smoke:
+
+```powershell
+cmake -S native -B build/native-win32 -A Win32
+cmake --build build/native-win32 --config Debug
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-smoke.ps1
+```
+
+The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, the six File I/O APIs, `NtCreateFile` NTSTATUS evidence, zero dropped events, and six restored hooks.
 
 Run collector backpressure smoke:
 

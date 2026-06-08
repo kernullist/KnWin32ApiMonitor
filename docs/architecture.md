@@ -6,7 +6,7 @@
 
 This document describes the current Phase 0/Phase 1 foundation and the first controlled native-capture path for `KN Win32 API Monitor`.
 
-The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded x64 File I/O capture for the repository sample target, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic x64 hook lifecycle telemetry, and helper-written session replay. It does not inject into arbitrary already-running processes.
+The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not attach to arbitrary already-running processes.
 
 ## Layers
 
@@ -19,7 +19,7 @@ flowchart LR
     COL["native/knmon-collector<br/>bounded queue + smoke"]
     HELPER["knmon-native-helper<br/>JSON helper CLI"]
     SAMPLE["knmon-sample-fileio<br/>controlled target"]
-    AGENT["knmon-agent64<br/>HELLO + IAT hooks + shutdown"]
+    AGENT["knmon-agent32/64<br/>HELLO + IAT hooks + shutdown"]
     SESSION["captures/<br/>manifest + JSONL"]
     DEF["definitions<br/>API decode metadata"]
     CONTRACT["contracts<br/>JSON schemas"]
@@ -95,7 +95,9 @@ Current responsibilities:
 2. Provide C++20 process enumeration through Toolhelp.
 3. Implement controlled launch-time early-bird APC agent load for the sample target.
 4. Implement bounded controlled File I/O capture for the sample target.
-4. Define arbitrary attach/detach/start/stop capture boundaries as not-implemented operations.
+5. Select the same-bitness x86/x64 agent DLL for controlled launch.
+6. Run target/agent architecture preflight before remote mutation.
+7. Define arbitrary attach/detach/start/stop capture boundaries as not-implemented operations.
 
 The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, and bounded sample File I/O capture.
 
@@ -103,19 +105,29 @@ Future responsibilities:
 
 1. Launch suspended targets.
 2. Attach/detach to selected targets.
-3. Select x86/x64 agent DLLs.
-4. Supervise agent lifecycle.
-5. Manage child process auto-attach policy.
+3. Supervise long-running agent lifecycle.
+4. Manage child process auto-attach policy.
+5. Move high-volume events to collector shared memory.
 
 Current controlled launch behavior:
 
-1. Validate sample target and agent paths.
+1. Validate sample target and agent paths plus same-bitness architecture.
 2. Create the target process suspended.
 3. Create a named pipe for the agent HELLO handshake.
 4. Write the absolute agent DLL path into the target process.
 5. Queue `LoadLibraryW` through an early-bird APC on the suspended primary thread.
 6. Resume the primary thread.
-7. Wait for a versioned HELLO payload from the x64 agent.
+7. Wait for a versioned HELLO payload from the same-bitness agent.
+
+Current preflight behavior:
+
+1. Confirm target binary exists and is a supported PE image.
+2. Confirm agent binary exists and is a supported PE image.
+3. Confirm helper architecture is known.
+4. Confirm requested architecture matches helper architecture.
+5. Confirm target binary architecture matches requested architecture.
+6. Confirm agent DLL architecture matches requested architecture.
+7. Fail before `CreateProcessW` when these checks fail.
 
 Current bounded capture behavior:
 
@@ -162,7 +174,7 @@ Locations:
 - `native/knmon-agent32`
 - `native/knmon-agent64`
 
-`knmon-agent64` starts a worker thread from `DllMain`, reads `KNMON_AGENT_PIPE` and `KNMON_OPERATION_ID`, writes a versioned JSON HELLO payload, installs controlled sample-target IAT hooks, and emits `api_call` events for the stable File I/O set.
+`knmon-agent64` and `knmon-agent32` share one agent implementation source. Each starts a worker thread from `DllMain`, reads `KNMON_AGENT_PIPE` and `KNMON_OPERATION_ID`, writes a versioned JSON HELLO payload with its actual architecture, installs controlled sample-target IAT hooks, and emits `api_call` events for the stable File I/O set.
 
 Current lifecycle states:
 
@@ -172,7 +184,7 @@ Current lifecycle states:
 4. `disabled`
 5. `failed`
 
-The x64 agent tracks every patched IAT slot with API name, module, thunk address, original function, replacement function, and install/restore state. During shutdown or self-disable it turns off new hook events, restores original IAT values where possible, and emits `agent_shutdown`.
+The agent tracks every patched IAT slot with API name, module, thunk address, original function, replacement function, and install/restore state. During shutdown or self-disable it turns off new hook events, restores original IAT values where possible, and emits `agent_shutdown`.
 
 Current `agent_shutdown` fields:
 
@@ -183,9 +195,9 @@ Current `agent_shutdown` fields:
 5. `failedHooks`
 6. `droppedCount`
 
-`knmon-agent32` remains a skeleton for a later Win32 generator/toolchain pass.
+`knmon-agent32` is built from the shared agent source in Win32 CMake builds and is limited to same-bitness controlled sample launches.
 
-Current x64 hook coverage:
+Current same-bitness x64/x86 hook coverage:
 
 1. `CreateFileW`
 2. `CreateFileA`
@@ -196,18 +208,19 @@ Current x64 hook coverage:
 
 `NtCreateFile` is captured as an explicit `ntdll.dll` event. Its `returnValue` is the NTSTATUS hex string, while `lastErrorCode` remains a mapped Win32 error code for failure display compatibility. The current controlled sample success path returns `0x00000000` and includes bounded `OBJECT_ATTRIBUTES.ObjectName` evidence.
 
-Current x64 agent limitations:
+Current agent limitations:
 
 1. Hooks are installed only in the repository-controlled sample target flow.
 2. Hook method is IAT patching of the main module, not inline trampoline or EAT patching.
 3. Event transport is a bounded named-pipe path, not shared memory.
 4. Shutdown cleanup is scoped to the controlled sample target lifecycle; arbitrary detach from already-running processes remains unsupported.
+5. Cross-bitness injection is rejected during preflight.
 
 Future agent responsibilities:
 
-1. Support x86 with the same protocol.
-2. Capture richer call stack metadata.
-3. Move high-volume events to collector shared memory.
+1. Capture richer call stack metadata.
+2. Move high-volume events to collector shared memory.
+3. Add loader-aware system DLL coverage.
 4. Add arbitrary attach/detach only after a separate review.
 
 `Launch Sample` still produces an `agent_loaded` row only. `Capture File I/O` produces real `api_call` rows from the controlled sample target.

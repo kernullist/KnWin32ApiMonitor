@@ -207,28 +207,177 @@ std::string QueryProcessArchitecture(DWORD processId)
     return result;
 }
 
-bool FileExists(const std::string& path)
+KnMonAgentArchitecture NativeHelperArchitecture()
 {
-    bool exists = false;
+#if defined(_WIN64)
+    return KnMonAgentArchitecture::X64;
+#else
+    return KnMonAgentArchitecture::X86;
+#endif
+}
+
+std::string ArchitectureName(KnMonAgentArchitecture architecture)
+{
+    std::string name = "unknown";
+
+    switch (architecture)
+    {
+    case KnMonAgentArchitecture::X86:
+        name = "x86";
+        break;
+    case KnMonAgentArchitecture::X64:
+        name = "x64";
+        break;
+    default:
+        break;
+    }
+
+    return name;
+}
+
+KnMonAgentArchitecture RequestedArchitectureOrNative(KnMonAgentArchitecture requested)
+{
+    KnMonAgentArchitecture architecture = requested;
+
+    if (architecture == KnMonAgentArchitecture::Unknown)
+    {
+        architecture = NativeHelperArchitecture();
+    }
+
+    return architecture;
+}
+
+KnMonAgentArchitecture ArchitectureFromMachine(WORD machine)
+{
+    KnMonAgentArchitecture architecture = KnMonAgentArchitecture::Unknown;
+
+    switch (machine)
+    {
+    case IMAGE_FILE_MACHINE_I386:
+        architecture = KnMonAgentArchitecture::X86;
+        break;
+    case IMAGE_FILE_MACHINE_AMD64:
+        architecture = KnMonAgentArchitecture::X64;
+        break;
+    default:
+        break;
+    }
+
+    return architecture;
+}
+
+struct BinaryArchitectureResult
+{
+    bool Success = false;
+    KnMonAgentArchitecture Architecture = KnMonAgentArchitecture::Unknown;
+    DWORD ErrorCode = 0;
+    std::string Operation;
+    std::string Message;
+};
+
+BinaryArchitectureResult QueryBinaryArchitecture(const std::string& path, const std::string& label)
+{
+    BinaryArchitectureResult result;
+    HANDLE fileHandle = INVALID_HANDLE_VALUE;
 
     do
     {
         if (path.empty())
         {
+            result.ErrorCode = ERROR_FILE_NOT_FOUND;
+            result.Operation = "missing_" + label;
+            result.Message = label + " path is empty.";
             break;
         }
 
-        const auto attributes = GetFileAttributesW(Utf8ToWide(path).c_str());
-        if (attributes == INVALID_FILE_ATTRIBUTES)
+        const std::wstring widePath = Utf8ToWide(path);
+        fileHandle = CreateFileW(
+            widePath.c_str(),
+            GENERIC_READ,
+            FILE_SHARE_READ | FILE_SHARE_DELETE,
+            nullptr,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr);
+
+        if (fileHandle == INVALID_HANDLE_VALUE)
         {
+            result.ErrorCode = GetLastError();
+            result.Operation = result.ErrorCode == ERROR_FILE_NOT_FOUND ? "missing_" + label : "access_denied";
+            result.Message = "Failed to open " + label + " binary for architecture preflight: " + FormatWindowsError(result.ErrorCode);
             break;
         }
 
-        exists = (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
+        IMAGE_DOS_HEADER dosHeader = {};
+        DWORD bytesRead = 0;
+        if (!ReadFile(fileHandle, &dosHeader, sizeof(dosHeader), &bytesRead, nullptr) || bytesRead != sizeof(dosHeader))
+        {
+            result.ErrorCode = ERROR_BAD_EXE_FORMAT;
+            result.Operation = "unsupported_architecture";
+            result.Message = "Failed to read " + label + " DOS header for architecture preflight.";
+            break;
+        }
+
+        if (dosHeader.e_magic != IMAGE_DOS_SIGNATURE)
+        {
+            result.ErrorCode = ERROR_BAD_EXE_FORMAT;
+            result.Operation = "unsupported_architecture";
+            result.Message = label + " is not a PE image.";
+            break;
+        }
+
+        LARGE_INTEGER offset = {};
+        offset.QuadPart = dosHeader.e_lfanew;
+        if (!SetFilePointerEx(fileHandle, offset, nullptr, FILE_BEGIN))
+        {
+            result.ErrorCode = GetLastError();
+            result.Operation = "unsupported_architecture";
+            result.Message = "Failed to seek to " + label + " NT headers for architecture preflight.";
+            break;
+        }
+
+        DWORD signature = 0;
+        if (!ReadFile(fileHandle, &signature, sizeof(signature), &bytesRead, nullptr) || bytesRead != sizeof(signature) || signature != IMAGE_NT_SIGNATURE)
+        {
+            result.ErrorCode = ERROR_BAD_EXE_FORMAT;
+            result.Operation = "unsupported_architecture";
+            result.Message = label + " NT header signature is invalid.";
+            break;
+        }
+
+        IMAGE_FILE_HEADER fileHeader = {};
+        if (!ReadFile(fileHandle, &fileHeader, sizeof(fileHeader), &bytesRead, nullptr) || bytesRead != sizeof(fileHeader))
+        {
+            result.ErrorCode = ERROR_BAD_EXE_FORMAT;
+            result.Operation = "unsupported_architecture";
+            result.Message = "Failed to read " + label + " file header for architecture preflight.";
+            break;
+        }
+
+        result.Architecture = ArchitectureFromMachine(fileHeader.Machine);
+        if (result.Architecture == KnMonAgentArchitecture::Unknown)
+        {
+            std::ostringstream stream;
+            stream << label << " uses unsupported PE machine 0x" << std::hex << std::setw(4) << std::setfill('0') << fileHeader.Machine << ".";
+            result.ErrorCode = ERROR_NOT_SUPPORTED;
+            result.Operation = "unsupported_architecture";
+            result.Message = stream.str();
+            break;
+        }
+
+        result.Success = true;
+        result.ErrorCode = 0;
+        result.Operation = "architecture_detected";
+        result.Message = label + " architecture is " + ArchitectureName(result.Architecture) + ".";
     }
     while (false);
 
-    return exists;
+    if (fileHandle != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(fileHandle);
+    }
+
+    return result;
 }
 
 void AddAudit(
@@ -299,6 +448,166 @@ void SetResultError(
     result.Operation = operation;
     result.Message = message;
     AddAudit(result, operation, operation, message, errorCode, subsystem);
+}
+
+void SetPreflightError(
+    KnMonLaunchResult& result,
+    DWORD errorCode,
+    const std::string& operation,
+    const std::string& message)
+{
+    SetResultError(result, errorCode, "knmon-core", operation, message);
+    AddAudit(result, "preflight_failed", operation, message, errorCode, "knmon-core");
+}
+
+void SetPreflightError(
+    KnMonCaptureResult& result,
+    DWORD errorCode,
+    const std::string& operation,
+    const std::string& message)
+{
+    SetResultError(result, errorCode, "knmon-core", operation, message);
+    AddAudit(result, "preflight_failed", operation, message, errorCode, "knmon-core");
+}
+
+template <typename TResult>
+bool RunSameBitnessPreflight(
+    TResult& result,
+    KnMonAgentArchitecture requestedArchitecture,
+    const std::string& targetPath,
+    const std::string& agentPath)
+{
+    bool passed = false;
+
+    do
+    {
+        const KnMonAgentArchitecture helperArchitecture = NativeHelperArchitecture();
+        if (requestedArchitecture == KnMonAgentArchitecture::Unknown)
+        {
+            SetPreflightError(result, ERROR_NOT_SUPPORTED, "unsupported_architecture", "Requested architecture is unknown.");
+            break;
+        }
+
+        if (helperArchitecture == KnMonAgentArchitecture::Unknown)
+        {
+            SetPreflightError(result, ERROR_NOT_SUPPORTED, "unsupported_architecture", "Helper build architecture is unknown.");
+            break;
+        }
+
+        if (requestedArchitecture != helperArchitecture)
+        {
+            const std::string message = "Requested architecture " + ArchitectureName(requestedArchitecture) + " does not match helper architecture " + ArchitectureName(helperArchitecture) + ". Cross-bitness injection is not supported.";
+            SetPreflightError(result, ERROR_NOT_SUPPORTED, "unsupported_architecture", message);
+            break;
+        }
+
+        BinaryArchitectureResult targetArchitecture = QueryBinaryArchitecture(targetPath, "target");
+        if (!targetArchitecture.Success)
+        {
+            SetPreflightError(result, targetArchitecture.ErrorCode, targetArchitecture.Operation, targetArchitecture.Message);
+            break;
+        }
+
+        BinaryArchitectureResult agentArchitecture = QueryBinaryArchitecture(agentPath, "agent");
+        if (!agentArchitecture.Success)
+        {
+            SetPreflightError(result, agentArchitecture.ErrorCode, agentArchitecture.Operation, agentArchitecture.Message);
+            break;
+        }
+
+        if (targetArchitecture.Architecture != requestedArchitecture)
+        {
+            const std::string message = "Target architecture " + ArchitectureName(targetArchitecture.Architecture) + " does not match requested same-bitness architecture " + ArchitectureName(requestedArchitecture) + ".";
+            SetPreflightError(result, ERROR_NOT_SUPPORTED, "unsupported_architecture", message);
+            break;
+        }
+
+        if (agentArchitecture.Architecture != requestedArchitecture)
+        {
+            const std::string message = "Agent architecture " + ArchitectureName(agentArchitecture.Architecture) + " does not match requested same-bitness architecture " + ArchitectureName(requestedArchitecture) + ".";
+            SetPreflightError(result, ERROR_NOT_SUPPORTED, "helper_agent_mismatch", message);
+            break;
+        }
+
+        const std::string message = "Same-bitness preflight passed: helper=" + ArchitectureName(helperArchitecture) + " target=" + ArchitectureName(targetArchitecture.Architecture) + " agent=" + ArchitectureName(agentArchitecture.Architecture) + ".";
+        AddAudit(result, "preflight_passed", "same_bitness_preflight", message);
+        passed = true;
+    }
+    while (false);
+
+    return passed;
+}
+
+bool ValidateHandshakeEvidence(
+    KnMonLaunchResult& result,
+    KnMonAgentArchitecture expectedArchitecture)
+{
+    bool valid = false;
+
+    do
+    {
+        if (result.Handshake.OperationId != result.OperationId)
+        {
+            const std::string message = "Agent HELLO operation id mismatch: expected " + result.OperationId + " but received " + result.Handshake.OperationId + ".";
+            SetResultError(result, ERROR_INVALID_DATA, "knmon-core", "handshake_operation_mismatch", message);
+            break;
+        }
+
+        if (result.Handshake.Architecture != ArchitectureName(expectedArchitecture))
+        {
+            const std::string message = "Agent HELLO architecture mismatch: expected " + ArchitectureName(expectedArchitecture) + " but received " + result.Handshake.Architecture + ".";
+            SetResultError(result, ERROR_INVALID_DATA, "knmon-core", "handshake_architecture_mismatch", message);
+            break;
+        }
+
+        if (result.Handshake.SchemaVersion.empty())
+        {
+            SetResultError(result, ERROR_INVALID_DATA, "knmon-core", "handshake_schema_missing", "Agent HELLO schemaVersion is missing.");
+            break;
+        }
+
+        AddAudit(result, "handshake_validated", "agent_handshake_read", "Agent HELLO operation id, schema, and architecture were validated.");
+        valid = true;
+    }
+    while (false);
+
+    return valid;
+}
+
+bool ValidateHandshakeEvidence(
+    KnMonCaptureResult& result,
+    KnMonAgentArchitecture expectedArchitecture)
+{
+    bool valid = false;
+
+    do
+    {
+        if (result.Handshake.OperationId != result.OperationId)
+        {
+            const std::string message = "Agent HELLO operation id mismatch: expected " + result.OperationId + " but received " + result.Handshake.OperationId + ".";
+            SetResultError(result, ERROR_INVALID_DATA, "knmon-core", "handshake_operation_mismatch", message);
+            break;
+        }
+
+        if (result.Handshake.Architecture != ArchitectureName(expectedArchitecture))
+        {
+            const std::string message = "Agent HELLO architecture mismatch: expected " + ArchitectureName(expectedArchitecture) + " but received " + result.Handshake.Architecture + ".";
+            SetResultError(result, ERROR_INVALID_DATA, "knmon-core", "handshake_architecture_mismatch", message);
+            break;
+        }
+
+        if (result.Handshake.SchemaVersion.empty())
+        {
+            SetResultError(result, ERROR_INVALID_DATA, "knmon-core", "handshake_schema_missing", "Agent HELLO schemaVersion is missing.");
+            break;
+        }
+
+        AddAudit(result, "handshake_validated", "agent_event_read", "Agent HELLO operation id, schema, and architecture were validated.");
+        valid = true;
+    }
+    while (false);
+
+    return valid;
 }
 
 std::wstring QuoteArgument(const std::wstring& value)
@@ -490,16 +799,49 @@ bool ReadPipeMessage(HANDLE pipeHandle, DWORD timeoutMs, std::string* payload, D
     return received;
 }
 
+std::string ExtractJsonString(const std::string& payload, const std::string& key);
+std::uint64_t ExtractJsonUInt64(const std::string& payload, const std::string& key);
+
 KnMonAgentHandshake BuildHandshake(const KnMonLaunchResult& result, const std::string& rawPayload)
 {
     KnMonAgentHandshake handshake;
     handshake.Received = true;
-    handshake.SchemaVersion = "0.1.0";
-    handshake.OperationId = result.OperationId;
-    handshake.ProcessId = result.TargetProcessId;
-    handshake.ThreadId = result.TargetThreadId;
-    handshake.Architecture = result.Architecture;
-    handshake.AgentVersion = "0.1.0";
+    handshake.SchemaVersion = ExtractJsonString(rawPayload, "schemaVersion");
+    if (handshake.SchemaVersion.empty())
+    {
+        handshake.SchemaVersion = "0.1.0";
+    }
+
+    handshake.OperationId = ExtractJsonString(rawPayload, "operationId");
+    if (handshake.OperationId.empty())
+    {
+        handshake.OperationId = result.OperationId;
+    }
+
+    handshake.ProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(rawPayload, "pid"));
+    if (handshake.ProcessId == 0)
+    {
+        handshake.ProcessId = result.TargetProcessId;
+    }
+
+    handshake.ThreadId = static_cast<std::uint32_t>(ExtractJsonUInt64(rawPayload, "tid"));
+    if (handshake.ThreadId == 0)
+    {
+        handshake.ThreadId = result.TargetThreadId;
+    }
+
+    handshake.Architecture = ExtractJsonString(rawPayload, "architecture");
+    if (handshake.Architecture.empty())
+    {
+        handshake.Architecture = result.Architecture;
+    }
+
+    handshake.AgentVersion = ExtractJsonString(rawPayload, "agentVersion");
+    if (handshake.AgentVersion.empty())
+    {
+        handshake.AgentVersion = "0.1.0";
+    }
+
     handshake.Message = "Agent HELLO received.";
     handshake.RawPayload = rawPayload;
     return handshake;
@@ -509,12 +851,42 @@ KnMonAgentHandshake BuildHandshake(const KnMonCaptureResult& result, const std::
 {
     KnMonAgentHandshake handshake;
     handshake.Received = true;
-    handshake.SchemaVersion = "0.1.0";
-    handshake.OperationId = result.OperationId;
-    handshake.ProcessId = result.TargetProcessId;
-    handshake.ThreadId = result.TargetThreadId;
-    handshake.Architecture = result.Architecture;
-    handshake.AgentVersion = "0.1.0";
+    handshake.SchemaVersion = ExtractJsonString(rawPayload, "schemaVersion");
+    if (handshake.SchemaVersion.empty())
+    {
+        handshake.SchemaVersion = "0.1.0";
+    }
+
+    handshake.OperationId = ExtractJsonString(rawPayload, "operationId");
+    if (handshake.OperationId.empty())
+    {
+        handshake.OperationId = result.OperationId;
+    }
+
+    handshake.ProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(rawPayload, "pid"));
+    if (handshake.ProcessId == 0)
+    {
+        handshake.ProcessId = result.TargetProcessId;
+    }
+
+    handshake.ThreadId = static_cast<std::uint32_t>(ExtractJsonUInt64(rawPayload, "tid"));
+    if (handshake.ThreadId == 0)
+    {
+        handshake.ThreadId = result.TargetThreadId;
+    }
+
+    handshake.Architecture = ExtractJsonString(rawPayload, "architecture");
+    if (handshake.Architecture.empty())
+    {
+        handshake.Architecture = result.Architecture;
+    }
+
+    handshake.AgentVersion = ExtractJsonString(rawPayload, "agentVersion");
+    if (handshake.AgentVersion.empty())
+    {
+        handshake.AgentVersion = "0.1.0";
+    }
+
     handshake.Message = "Agent HELLO received.";
     handshake.RawPayload = rawPayload;
     return handshake;
@@ -761,10 +1133,11 @@ std::vector<KnMonTargetProcess> Controller::EnumerateTargets(KnMonError* error) 
 KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& request) const
 {
     KnMonLaunchResult result;
+    const KnMonAgentArchitecture requestedArchitecture = RequestedArchitectureOrNative(request.Architecture);
     result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
     result.TargetPath = request.TargetPath;
     result.AgentPath = request.AgentPath;
-    result.Architecture = "x64";
+    result.Architecture = ArchitectureName(requestedArchitecture);
     result.InjectionMethod = "early-bird APC";
 
     PROCESS_INFORMATION processInfo = {};
@@ -777,26 +1150,14 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
 
     do
     {
-#if !defined(_WIN64)
-        SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "architecture_check", "The first early-bird path requires an x64 helper build.");
-        break;
-#endif
-
         if (request.InjectionMethod != KnMonInjectionMethod::EarlyBirdApc)
         {
             SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "injection_method_check", "Only early-bird APC injection is supported in this goal.");
             break;
         }
 
-        if (!FileExists(request.TargetPath))
+        if (!RunSameBitnessPreflight(result, requestedArchitecture, request.TargetPath, request.AgentPath))
         {
-            SetResultError(result, ERROR_FILE_NOT_FOUND, "knmon-core", "target_path_check", "Target executable does not exist.");
-            break;
-        }
-
-        if (!FileExists(request.AgentPath))
-        {
-            SetResultError(result, ERROR_FILE_NOT_FOUND, "knmon-core", "agent_path_check", "Agent DLL does not exist.");
             break;
         }
 
@@ -873,14 +1234,14 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
         HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
         if (kernel32 == nullptr)
         {
-            SetResultError(result, GetLastError(), "win32", "GetModuleHandleW", "Failed to resolve kernel32.dll.");
+            SetResultError(result, GetLastError(), "win32", "loader_failed", "Failed to resolve kernel32.dll before queuing LoadLibraryW.");
             break;
         }
 
         FARPROC loadLibrary = GetProcAddress(kernel32, "LoadLibraryW");
         if (loadLibrary == nullptr)
         {
-            SetResultError(result, GetLastError(), "win32", "GetProcAddress", "Failed to resolve LoadLibraryW.");
+            SetResultError(result, GetLastError(), "win32", "loader_failed", "Failed to resolve LoadLibraryW before queuing early-bird APC.");
             break;
         }
 
@@ -904,20 +1265,38 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
         DWORD pipeError = 0;
         if (!WaitForPipeConnection(pipeHandle, request.TimeoutMs, &pipeError))
         {
-            SetResultError(result, pipeError, "win32", "agent_handshake_connect", "Agent handshake pipe connection timed out or failed.");
-            AddAudit(result, "handshake_timeout", "agent_handshake_connect", "No agent connection was received before timeout.", pipeError, "win32");
+            if (processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
+            {
+                DWORD exitCode = 0;
+                GetExitCodeProcess(processInfo.hProcess, &exitCode);
+                const DWORD errorCode = exitCode == 0 ? ERROR_PROCESS_ABORTED : exitCode;
+                std::ostringstream stream;
+                stream << "Target exited before agent HELLO connection. exitCode=" << exitCode;
+                SetResultError(result, errorCode, "win32", "target_exited_early", stream.str());
+                AddAudit(result, "target_exited_early", "agent_handshake_connect", stream.str(), errorCode, "win32");
+            }
+            else
+            {
+                SetResultError(result, pipeError, "win32", "handshake_timeout", "Agent handshake pipe connection timed out or failed.");
+                AddAudit(result, "handshake_timeout", "agent_handshake_connect", "No agent connection was received before timeout.", pipeError, "win32");
+            }
             break;
         }
 
         std::string payload;
         if (!ReadPipeMessage(pipeHandle, request.TimeoutMs, &payload, &pipeError))
         {
-            SetResultError(result, pipeError, "win32", "agent_handshake_read", "Agent handshake payload timed out or failed.");
+            SetResultError(result, pipeError, "win32", "handshake_timeout", "Agent handshake payload timed out or failed.");
             AddAudit(result, "handshake_timeout", "agent_handshake_read", "No agent HELLO payload was received before timeout.", pipeError, "win32");
             break;
         }
 
         result.Handshake = BuildHandshake(result, payload);
+        if (!ValidateHandshakeEvidence(result, requestedArchitecture))
+        {
+            break;
+        }
+
         result.Success = true;
         result.Win32ErrorCode = 0;
         result.Subsystem = "knmon-core";
@@ -971,10 +1350,11 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
 KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& request) const
 {
     KnMonCaptureResult result;
+    const KnMonAgentArchitecture requestedArchitecture = RequestedArchitectureOrNative(request.Architecture);
     result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
     result.TargetPath = request.TargetPath;
     result.AgentPath = request.AgentPath;
-    result.Architecture = "x64";
+    result.Architecture = ArchitectureName(requestedArchitecture);
     result.InjectionMethod = "early-bird APC";
 
     PROCESS_INFORMATION processInfo = {};
@@ -988,12 +1368,6 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
 
     do
     {
-#if !defined(_WIN64)
-        SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "architecture_check", "The first live capture path requires an x64 helper build.");
-        fatalError = true;
-        break;
-#endif
-
         if (request.InjectionMethod != KnMonInjectionMethod::EarlyBirdApc)
         {
             SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "injection_method_check", "Only early-bird APC injection is supported in this goal.");
@@ -1001,16 +1375,8 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
             break;
         }
 
-        if (!FileExists(request.TargetPath))
+        if (!RunSameBitnessPreflight(result, requestedArchitecture, request.TargetPath, request.AgentPath))
         {
-            SetResultError(result, ERROR_FILE_NOT_FOUND, "knmon-core", "target_path_check", "Target executable does not exist.");
-            fatalError = true;
-            break;
-        }
-
-        if (!FileExists(request.AgentPath))
-        {
-            SetResultError(result, ERROR_FILE_NOT_FOUND, "knmon-core", "agent_path_check", "Agent DLL does not exist.");
             fatalError = true;
             break;
         }
@@ -1093,7 +1459,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
         if (kernel32 == nullptr)
         {
-            SetResultError(result, GetLastError(), "win32", "GetModuleHandleW", "Failed to resolve kernel32.dll.");
+            SetResultError(result, GetLastError(), "win32", "loader_failed", "Failed to resolve kernel32.dll before queuing LoadLibraryW.");
             fatalError = true;
             break;
         }
@@ -1101,7 +1467,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         FARPROC loadLibrary = GetProcAddress(kernel32, "LoadLibraryW");
         if (loadLibrary == nullptr)
         {
-            SetResultError(result, GetLastError(), "win32", "GetProcAddress", "Failed to resolve LoadLibraryW.");
+            SetResultError(result, GetLastError(), "win32", "loader_failed", "Failed to resolve LoadLibraryW before queuing early-bird APC.");
             fatalError = true;
             break;
         }
@@ -1128,8 +1494,21 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         DWORD pipeError = 0;
         if (!WaitForPipeConnection(pipeHandle, request.TimeoutMs, &pipeError))
         {
-            SetResultError(result, pipeError, "win32", "agent_pipe_connect", "Agent event pipe connection timed out or failed.");
-            AddAudit(result, "handshake_timeout", "agent_pipe_connect", "No agent connection was received before timeout.", pipeError, "win32");
+            if (processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
+            {
+                DWORD exitCode = 0;
+                GetExitCodeProcess(processInfo.hProcess, &exitCode);
+                const DWORD errorCode = exitCode == 0 ? ERROR_PROCESS_ABORTED : exitCode;
+                std::ostringstream stream;
+                stream << "Target exited before agent event pipe connection. exitCode=" << exitCode;
+                SetResultError(result, errorCode, "win32", "target_exited_early", stream.str());
+                AddAudit(result, "target_exited_early", "agent_pipe_connect", stream.str(), errorCode, "win32");
+            }
+            else
+            {
+                SetResultError(result, pipeError, "win32", "handshake_timeout", "Agent event pipe connection timed out or failed.");
+                AddAudit(result, "handshake_timeout", "agent_pipe_connect", "No agent connection was received before timeout.", pipeError, "win32");
+            }
             fatalError = true;
             break;
         }
@@ -1257,6 +1636,12 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         if (!result.Handshake.Received)
         {
             SetResultError(result, WAIT_TIMEOUT, "knmon-core", "agent_hello_required", "Agent HELLO was not received before capture completed.");
+            fatalError = true;
+            break;
+        }
+
+        if (!ValidateHandshakeEvidence(result, requestedArchitecture))
+        {
             fatalError = true;
             break;
         }

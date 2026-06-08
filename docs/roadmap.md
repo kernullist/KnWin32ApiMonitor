@@ -144,13 +144,14 @@ Deliverables:
 
 Current implementation notes:
 
-1. x64 early-bird APC load is implemented for controller-owned sample launches.
+1. x64 and x86 same-bitness early-bird APC load is implemented for controller-owned sample launches.
 2. The agent sends `agent_hello`, `hook_installed`, `hook_install_failed`, `api_call`, `dropped_events`, and `agent_shutdown` messages.
 3. Hook install failure is reported as a precise capture failure.
-4. The x64 agent tracks patched IAT slots and restores original entries during shutdown/self-disable where possible.
+4. The shared agent tracks patched IAT slots and restores original entries during shutdown/self-disable where possible.
 5. Healthy shutdown reports `installedHooks=6`, `restoredHooks=6`, and `failedHooks=0`.
-6. x86 remains a documented skeleton.
-7. Arbitrary already-running process detach remains future work.
+6. x86 uses `knmon-agent32.dll` from a Win32 helper/target/agent build.
+7. Same-bitness preflight rejects missing binaries and available architecture mismatches before remote mutation.
+8. Arbitrary already-running process detach remains future work.
 
 ## Phase 6: File I/O Live Capture
 
@@ -187,13 +188,9 @@ Current verified behavior:
 
 Next implementation focus:
 
-1. Build the injection reliability foundation:
-   - x86 same-bitness parity
-   - helper/target/agent architecture preflight
-   - precise unsupported-target diagnostics
-   - stable launch and handshake evidence
-2. Move target-process event emission from JSON/named-pipe fast paths toward shared-memory binary transport before enabling broad API coverage.
-3. Add loader-aware system DLL coverage:
+1. Move target-process event emission from JSON/named-pipe fast paths toward shared-memory binary transport before enabling broad API coverage.
+2. Add hook overhead measurement and transport backpressure evidence before increasing hook count.
+3. Add loader-aware system DLL coverage only after the low-overhead transport is in place:
    - all-loaded-module IAT sweep
    - re-hook on DLL load
    - `LoadLibrary*`, `LdrLoadDll`, `GetProcAddress`, and `LdrGetProcedureAddress` monitoring
@@ -201,6 +198,8 @@ Next implementation focus:
 5. Expand File I/O and system DLL decode metadata after the native trace contract remains stable.
 
 ## Phase 7: Injection Reliability Foundation
+
+Status: implemented foundation for same-bitness controlled sample launch/capture.
 
 Goal:
 
@@ -254,6 +253,22 @@ Exit criteria:
 2. Unsupported targets fail before remote mutation whenever detectable.
 3. x64 regressions remain green.
 4. Docs clearly distinguish supported failure-free paths from unsupported Windows security boundaries.
+
+Current verified behavior:
+
+1. x64 helper defaults to `knmon-agent64.dll`; Win32 helper defaults to `knmon-agent32.dll`.
+2. x64 and x86 agents share one implementation source with compile-time architecture and DLL labels.
+3. HELLO evidence reports the actual agent architecture and version.
+4. Controller preflight checks target and agent PE architecture before `CreateProcessW`.
+5. Missing target, missing agent, and available architecture mismatch failures report `preflight_failed` without remote mutation.
+6. x86 capture smoke covers the same six File I/O hooks as x64 and verifies `installedHooks=6`, `restoredHooks=6`, and `failedHooks=0`.
+7. x86 session write, validation, and replay preserve the captured `NtCreateFile` trace evidence.
+
+Next implementation focus:
+
+1. Move target-process event emission from named-pipe JSON to a low-overhead shared-memory binary transport.
+2. Add hook overhead measurement before broad system DLL coverage.
+3. Keep same-bitness preflight as the gate for future attach and child-process monitoring.
 
 ## Phase 8: Low-Overhead Event Transport
 
