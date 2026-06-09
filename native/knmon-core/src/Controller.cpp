@@ -795,6 +795,12 @@ std::string TransportApiName(std::uint16_t apiId)
     case KnMonTransportApiId::LdrLoadDll:
         result = "LdrLoadDll";
         break;
+    case KnMonTransportApiId::GetProcAddress:
+        result = "GetProcAddress";
+        break;
+    case KnMonTransportApiId::LdrGetProcedureAddress:
+        result = "LdrGetProcedureAddress";
+        break;
     default:
         break;
     }
@@ -886,7 +892,8 @@ std::string ApiCallPayload(
     const std::string& returnValue,
     const std::string& argumentsJson,
     const std::string& bufferPreview,
-    const std::string& categoryTag = "file")
+    const std::string& categoryTag = "file",
+    const std::string& detailTag = "")
 {
     const std::string apiName = TransportApiName(record.ApiId);
     const std::string moduleName = TransportModuleName(record.ModuleId);
@@ -908,7 +915,12 @@ std::string ApiCallPayload(
     stream << "\"lastErrorMessage\":" << Q(record.LastErrorCode == 0 ? "success" : FormatWindowsError(record.LastErrorCode)) << ",";
     stream << "\"durationUs\":" << record.DurationUs << ",";
     stream << "\"arguments\":[" << argumentsJson << "],";
-    stream << "\"tags\":[\"native-capture\"," << Q(categoryTag) << ",\"hook\",\"shared-memory\"],";
+    stream << "\"tags\":[\"native-capture\"," << Q(categoryTag);
+    if (!detailTag.empty())
+    {
+        stream << "," << Q(detailTag);
+    }
+    stream << ",\"hook\",\"shared-memory\"],";
     stream << "\"stack\":[" << Q(agentName + "!IatHook") << "," << Q(moduleName + "!" + apiName) << "],";
     stream << "\"bufferPreview\":" << Q(bufferPreview);
     stream << "}";
@@ -996,6 +1008,23 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJson(2, "PUNICODE_STRING", "ModuleFileName", "in", text1, text1, text1, DecodeStatusName(record.Values32[1])) << ",";
         args << ArgumentJson(3, "PHANDLE", "ModuleHandle", "out", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture));
         payload = ApiCallPayload(result, record, HexNtStatusValue(record.ReturnCode), args.str(), "", "loader");
+        break;
+    case KnMonTransportApiId::GetProcAddress:
+    {
+        const bool procByOrdinal = record.Values32[0] != 0;
+        const std::string procRaw = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string procDecoded = procByOrdinal ? ("ordinal:" + std::to_string(record.Values32[1])) : text0;
+        args << ArgumentJson(0, "HMODULE", "hModule", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture)) << ",";
+        args << ArgumentJson(1, "LPCSTR", "lpProcName", "in", procRaw, procRaw, procDecoded, DecodeStatusName(record.Values32[2]));
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "", "resolver", "dynamic_symbol_lookup");
+        break;
+    }
+    case KnMonTransportApiId::LdrGetProcedureAddress:
+        args << ArgumentJson(0, "HMODULE", "ModuleHandle", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture)) << ",";
+        args << ArgumentJson(1, "PANSI_STRING", "FunctionName", "in", HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture), text0, DecodeStatusName(record.Values32[1])) << ",";
+        args << ArgumentJson(2, "WORD", "Ordinal", "in", std::to_string(record.Values32[0]), std::to_string(record.Values32[0]), std::to_string(record.Values32[0])) << ",";
+        args << ArgumentJson(3, "PVOID*", "FunctionAddress", "out", HexPointerValue(record.Values64[2], result.Architecture), HexPointerValue(record.Values64[3], result.Architecture), HexPointerValue(record.Values64[3], result.Architecture));
+        payload = ApiCallPayload(result, record, HexNtStatusValue(record.ReturnCode), args.str(), "", "resolver", "dynamic_symbol_lookup_nt");
         break;
     default:
         break;

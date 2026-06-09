@@ -11,7 +11,9 @@ $requiredApis = @(
     "NtCreateFile",
     "ReadFile",
     "WriteFile",
-    "CloseHandle"
+    "CloseHandle",
+    "GetProcAddress",
+    "LdrGetProcedureAddress"
 )
 
 if (-not (Test-Path -LiteralPath $helperPath))
@@ -72,6 +74,36 @@ if ($loaderEvents.Count -lt 1)
     throw "x86 capture did not include LoadLibraryW dynamic-load evidence."
 }
 
+$resolverEvents = @($result.capturedEvents | Where-Object { $_.api -in @("GetProcAddress", "LdrGetProcedureAddress") })
+if ($resolverEvents.Count -lt 2)
+{
+    throw "x86 capture did not include both resolver API events."
+}
+
+$getProc = @($resolverEvents | Where-Object { $_.api -eq "GetProcAddress" } | Select-Object -First 1)
+if ($getProc.Count -ne 1 -or $getProc[0].tags -notcontains "resolver" -or $getProc[0].tags -notcontains "dynamic_symbol_lookup")
+{
+    throw "x86 GetProcAddress resolver event is missing resolver tags."
+}
+
+$getProcArgs = ($getProc[0].arguments | ConvertTo-Json -Depth 8)
+if ($getProcArgs -notmatch "KnMonDynamicProbe")
+{
+    throw "x86 GetProcAddress arguments did not include dynamic probe evidence: $getProcArgs"
+}
+
+$ldr = @($resolverEvents | Where-Object { $_.api -eq "LdrGetProcedureAddress" } | Select-Object -First 1)
+if ($ldr.Count -ne 1 -or $ldr[0].tags -notcontains "resolver" -or $ldr[0].tags -notcontains "dynamic_symbol_lookup_nt")
+{
+    throw "x86 LdrGetProcedureAddress resolver event is missing resolver tags."
+}
+
+$ldrArgs = ($ldr[0].arguments | ConvertTo-Json -Depth 8)
+if ($ldrArgs -notmatch "KnMonDynamicProbe")
+{
+    throw "x86 LdrGetProcedureAddress arguments did not include dynamic probe evidence: $ldrArgs"
+}
+
 $dynamicSweep = @($result.agentMessages | Where-Object { $_.messageType -eq "iat_sweep" -and $_.reason -eq "dynamic_load" } | Select-Object -Last 1)
 if ($dynamicSweep.Count -ne 1)
 {
@@ -121,4 +153,4 @@ if ($shutdown[0].failedHooks -ne 0)
     throw "x86 capture reported failedHooks: $($shutdown[0].failedHooks)"
 }
 
-Write-Host "x86 capture smoke passed: apis=$($apis -join ',') ntStatus=$($ntEvent.returnValue) restoredHooks=$($shutdown[0].restoredHooks)"
+Write-Host "x86 capture smoke passed: apis=$($apis -join ',') ntStatus=$($ntEvent.returnValue) resolverEvents=$($resolverEvents.Count) restoredHooks=$($shutdown[0].restoredHooks)"

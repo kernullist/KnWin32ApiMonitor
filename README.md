@@ -88,8 +88,10 @@ Verified live hook coverage:
 5. `WriteFile`
 6. `CloseHandle`
 7. `LoadLibraryW`
+8. `GetProcAddress`
+9. `LdrGetProcedureAddress`
 
-The current smoke path captures real sample-target File I/O events plus a deterministic `LoadLibraryW("knmon-dynamic-probe.dll")` loader event through `transportMode=shared-memory` and reports `droppedEvents=0` on the healthy path. `ReadFile` and `WriteFile` include bounded 16-byte buffer previews. `NtCreateFile` is captured as an explicit `ntdll.dll` event with `returnValue` carrying the NTSTATUS hex value and a bounded `ObjectAttributes` object-name decode. Backpressure can be forced with `KNMON_TRANSPORT_CAPACITY`; the current bounded ring uses drop-newest accounting and reports transport produced/consumed/dropped records plus min/average/max hook overhead estimates.
+The current smoke path captures real sample-target File I/O events, a deterministic `LoadLibraryW("knmon-dynamic-probe.dll")` loader event, and resolver calls for `GetProcAddress` and `LdrGetProcedureAddress` through `transportMode=shared-memory`, with `droppedEvents=0` on the healthy path. `ReadFile` and `WriteFile` include bounded 16-byte buffer previews. `NtCreateFile` is captured as an explicit `ntdll.dll` event with `returnValue` carrying the NTSTATUS hex value and a bounded `ObjectAttributes` object-name decode. Resolver events include bounded function-name evidence and return/status values, but calls made through resolver-returned function pointers are not automatically instrumented. Backpressure can be forced with `KNMON_TRANSPORT_CAPACITY`; the current bounded ring uses drop-newest accounting and reports transport produced/consumed/dropped records plus min/average/max hook overhead estimates.
 
 Healthy same-bitness x64 and x86 lifecycle evidence currently reports at least the six required File I/O hooks, `restoredHooks=installedHooks`, `failedHooks=0`, and `reason=process_detach` through `agent_shutdown`.
 
@@ -165,6 +167,7 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\shared-memory-transp
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\shared-memory-backpressure-smoke.ps1
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\loader-aware-iat-sweep-smoke.ps1
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\dynamic-load-rehook-smoke.ps1
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\resolver-monitoring-smoke.ps1
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\injection-preflight-negative-smoke.ps1
 build\native\Debug\knmon-collector.exe smoke-backpressure --capacity 4 --events 10
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\collector-backpressure-smoke.ps1
@@ -180,9 +183,9 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-s
 
 `launch-sample` creates `knmon-sample-fileio.exe` suspended, queues an early-bird APC to load the same-bitness agent DLL, resumes the primary thread, and waits for an agent HELLO handshake.
 
-`capture-sample` uses the same controlled launch path, keeps the named pipe open for low-volume control/lifecycle messages, inventories loaded modules, installs same-bitness IAT hooks for the stable File I/O and loader-aware Wave 1 set, drains API calls from shared memory, and returns schema-versioned `api_call` events plus dropped-event accounting.
+`capture-sample` uses the same controlled launch path, keeps the named pipe open for low-volume control/lifecycle messages, inventories loaded modules, installs same-bitness IAT hooks for the stable File I/O, loader-aware Wave 1, and resolver call set, drains API calls from shared memory, and returns schema-versioned `api_call` events plus dropped-event accounting.
 
-The repeated smoke script verifies five consecutive controlled x64 captures, the stable File I/O API set, zero dropped events, and hook restore counts. The `NtCreateFile` smoke verifies the `ntdll.dll` module, NTSTATUS return format, decoded sample object path, shared-memory transport mode, and clean hook restore. The shared-memory transport smoke verifies healthy x64 transport metrics and hook overhead. The shared-memory backpressure smoke forces a tiny ring capacity and verifies non-blocking dropped-event accounting. The loader-aware smokes verify PEB module inventory, eligible-module IAT sweep evidence, `LoadLibraryW` capture, dynamic-load re-hooking, and post-load `knmon-dynamic-probe.dll` API evidence. The x86 smoke verifies the same API set, loader evidence, shared-memory transport, and hook lifecycle from a Win32 helper/target/agent build. The preflight negative smoke verifies missing target, missing agent, and available architecture mismatch failures before remote mutation.
+The repeated smoke script verifies five consecutive controlled x64 captures, the stable File I/O API set, zero dropped events, and hook restore counts. The `NtCreateFile` smoke verifies the `ntdll.dll` module, NTSTATUS return format, decoded sample object path, shared-memory transport mode, and clean hook restore. The shared-memory transport smoke verifies healthy x64 transport metrics and hook overhead. The shared-memory backpressure smoke forces a tiny ring capacity and verifies non-blocking dropped-event accounting. The loader-aware smokes verify PEB module inventory, eligible-module IAT sweep evidence, `LoadLibraryW` capture, dynamic-load re-hooking, and post-load `knmon-dynamic-probe.dll` API evidence. The resolver monitoring smoke verifies `GetProcAddress` and `LdrGetProcedureAddress` call visibility, resolver tags, bounded `KnMonDynamicProbe` argument evidence, and clean hook restore. The x86 smoke verifies the same File I/O API set, loader evidence, resolver evidence, shared-memory transport, and hook lifecycle from a Win32 helper/target/agent build. The preflight negative smoke verifies missing target, missing agent, and available architecture mismatch failures before remote mutation.
 
 `capture-sample --write-session` persists the bounded capture into a replayable session directory. Session validation checks manifest architecture, HELLO architecture/version evidence, dropped-event accounting, shutdown hook restore counts, and trace rows before replay returns data from disk without relaunching the target.
 

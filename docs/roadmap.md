@@ -402,13 +402,15 @@ Current verified behavior:
 6. `LoadLibraryW` is captured as a loader-tagged shared-memory `api_call`.
 7. Successful dynamic load triggers a `dynamic_load` IAT re-sweep.
 8. Post-load File I/O from `knmon-dynamic-probe.dll` is captured after the re-sweep.
-9. Unloaded owner-module restoration races are handled without stale writes and healthy shutdown reports `restoredHooks=installedHooks`.
+9. `GetProcAddress` and `LdrGetProcedureAddress` resolver calls for `KnMonDynamicProbe` are captured as resolver-tagged shared-memory `api_call` events.
+10. Resolver records include bounded function-name evidence and return/status values without claiming returned-pointer instrumentation.
+11. Unloaded owner-module restoration races are handled without stale writes and healthy shutdown reports `restoredHooks=installedHooks`.
 
 Next implementation focus:
 
-1. Add explicit resolver monitoring for `GetProcAddress` and `LdrGetProcedureAddress`.
-2. Broaden Wave 2 system DLL API definitions only after generated IDs, definition validation, transport, and hook-overhead gates remain green.
-3. Keep generated ID artifacts as the gate before any new transport ABI expansion.
+1. Broaden Wave 2 system DLL API definitions only after generated IDs, definition validation, transport, and hook-overhead gates remain green.
+2. Keep generated ID artifacts as the gate before any new transport ABI expansion.
+3. Keep returned-pointer instrumentation as a separate reviewed design item.
 
 ## Phase 10: Definition System V1
 
@@ -447,9 +449,9 @@ Current verified behavior:
 
 Next implementation focus:
 
-1. Design and implement resolver monitoring for the existing definition-only `GetProcAddress` and `LdrGetProcedureAddress` metadata.
-2. Add Wave 2 definition-only metadata before any Wave 2 hook enablement.
-3. Start generated decoder tables for controller-side argument rendering after coverage reports remain stable.
+1. Add Wave 2 definition-only metadata before any Wave 2 hook enablement.
+2. Start generated decoder tables for controller-side argument rendering after coverage reports remain stable.
+3. Design returned-pointer instrumentation only after the IAT resolver monitoring path remains stable under transport and hook-overhead gates.
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 

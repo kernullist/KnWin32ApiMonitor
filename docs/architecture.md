@@ -187,7 +187,7 @@ Locations:
 - `native/knmon-agent32`
 - `native/knmon-agent64`
 
-`knmon-agent64` and `knmon-agent32` share one agent implementation source. Each starts a worker thread from `DllMain`, reads `KNMON_AGENT_PIPE`, `KNMON_OPERATION_ID`, and the optional required shared-memory transport mapping name, writes a versioned JSON HELLO payload with its actual architecture, inventories loaded modules from the PEB loader list, sweeps eligible non-agent non-system module IATs, and writes File I/O plus loader API records into shared memory.
+`knmon-agent64` and `knmon-agent32` share one agent implementation source. Each starts a worker thread from `DllMain`, reads `KNMON_AGENT_PIPE`, `KNMON_OPERATION_ID`, and the optional required shared-memory transport mapping name, writes a versioned JSON HELLO payload with its actual architecture, inventories loaded modules from the PEB loader list, sweeps eligible non-agent non-system module IATs, and writes File I/O, loader, and resolver API records into shared memory.
 
 Current lifecycle states:
 
@@ -219,6 +219,8 @@ Current same-bitness x64/x86 hook coverage:
 5. `WriteFile`
 6. `CloseHandle`
 7. `LoadLibraryW`
+8. `GetProcAddress`
+9. `LdrGetProcedureAddress`
 
 `NtCreateFile` is captured as an explicit `ntdll.dll` event. Its `returnValue` is the NTSTATUS hex string, while `lastErrorCode` remains a mapped Win32 error code for failure display compatibility. The current controlled sample success path returns `0x00000000` and includes bounded `OBJECT_ATTRIBUTES.ObjectName` evidence.
 
@@ -230,6 +232,7 @@ Current loader-aware behavior:
 4. The sample target loads `knmon-dynamic-probe.dll`; `LoadLibraryW` is captured as a loader `api_call`.
 5. A successful dynamic load triggers a re-sweep with `reason=dynamic_load`.
 6. The dynamic probe DLL performs File I/O after load, proving post-load IAT coverage.
+7. The sample resolves `KnMonDynamicProbe` through `GetProcAddress` and `LdrGetProcedureAddress`, proving resolver API call visibility without claiming returned-pointer instrumentation.
 
 Current agent limitations:
 
@@ -238,6 +241,7 @@ Current agent limitations:
 3. API event transport is shared memory for the controlled sample path; named pipe remains for low-volume control and lifecycle messages.
 4. Shutdown cleanup is scoped to the controlled sample target lifecycle; arbitrary detach from already-running processes remains unsupported.
 5. Cross-bitness injection is rejected during preflight.
+6. Calls made through resolver-returned function pointers are not automatically instrumented unless the later call path is also covered by an eligible IAT hook.
 
 Future agent responsibilities:
 

@@ -74,6 +74,7 @@ using LoadLibraryWFn = HMODULE(WINAPI*)(LPCWSTR);
 using LoadLibraryAFn = HMODULE(WINAPI*)(LPCSTR);
 using LoadLibraryExWFn = HMODULE(WINAPI*)(LPCWSTR, HANDLE, DWORD);
 using LoadLibraryExAFn = HMODULE(WINAPI*)(LPCSTR, HANDLE, DWORD);
+using GetProcAddressFn = FARPROC(WINAPI*)(HMODULE, LPCSTR);
 using NtCreateFileFn = NTSTATUS(NTAPI*)(
     PHANDLE,
     ACCESS_MASK,
@@ -87,6 +88,7 @@ using NtCreateFileFn = NTSTATUS(NTAPI*)(
     PVOID,
     ULONG);
 using LdrLoadDllFn = NTSTATUS(NTAPI*)(PWSTR, ULONG, PUNICODE_STRING, PHANDLE);
+using LdrGetProcedureAddressFn = NTSTATUS(NTAPI*)(HMODULE, PANSI_STRING, ULONG, PVOID*);
 using RtlNtStatusToDosErrorFn = ULONG(WINAPI*)(NTSTATUS);
 
 HMODULE g_agentModule = nullptr;
@@ -109,8 +111,10 @@ LoadLibraryWFn g_originalLoadLibraryW = nullptr;
 LoadLibraryAFn g_originalLoadLibraryA = nullptr;
 LoadLibraryExWFn g_originalLoadLibraryExW = nullptr;
 LoadLibraryExAFn g_originalLoadLibraryExA = nullptr;
+GetProcAddressFn g_originalGetProcAddress = nullptr;
 NtCreateFileFn g_originalNtCreateFile = nullptr;
 LdrLoadDllFn g_originalLdrLoadDll = nullptr;
+LdrGetProcedureAddressFn g_originalLdrGetProcedureAddress = nullptr;
 std::wstring g_operationId;
 
 enum class AgentLifecycleState : LONG
@@ -180,6 +184,8 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
+constexpr std::size_t HookDefinitionCount = 13;
+constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
 SRWLOCK g_hookLock = SRWLOCK_INIT;
@@ -603,10 +609,156 @@ void CopyBufferPreviewText(char* destination, std::uint32_t* length, std::size_t
     }
 }
 
+bool IsOrdinalProcName(LPCSTR procName)
+{
+    const std::uintptr_t value = reinterpret_cast<std::uintptr_t>(procName);
+    return value != 0 && (value >> 16) == 0;
+}
+
+std::uint32_t CopyAnsiPointerText(char* destination, std::uint32_t* length, std::size_t capacity, const char* source)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+    bool terminated = false;
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        while (copied + 1 < capacity)
+        {
+            char ch = '\0';
+            SIZE_T bytesRead = 0;
+            if (!ReadProcessMemory(GetCurrentProcess(), source + copied, &ch, sizeof(ch), &bytesRead) || bytesRead != sizeof(ch))
+            {
+                status = copied == 0 ?
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory) :
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+                break;
+            }
+
+            if (ch == '\0')
+            {
+                terminated = true;
+                break;
+            }
+
+            destination[copied] = ch;
+            ++copied;
+        }
+
+        destination[copied] = '\0';
+        if (!terminated && status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+        }
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+
+    return status;
+}
+
 template <typename T>
 bool ReadCurrentProcessValue(const T* address, T* value);
 
 std::uint64_t DurationUs(const LARGE_INTEGER& start, const LARGE_INTEGER& end);
+
+std::uint32_t CopyAnsiStringText(char* destination, std::uint32_t* length, std::size_t capacity, const ANSI_STRING* value)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (value == nullptr)
+        {
+            break;
+        }
+
+        ANSI_STRING local = {};
+        if (!ReadCurrentProcessValue(value, &local))
+        {
+            CopyHexPointerText(destination, length, capacity, value);
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        if (local.Buffer == nullptr || local.Length == 0)
+        {
+            break;
+        }
+
+        std::size_t capturedBytes = local.Length;
+        if (capturedBytes > MaxResolverNameBytes)
+        {
+            capturedBytes = MaxResolverNameBytes;
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+        }
+
+        if (capturedBytes + 1 > capacity)
+        {
+            capturedBytes = capacity - 1;
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+        }
+
+        if (capturedBytes == 0)
+        {
+            break;
+        }
+
+        std::array<char, MaxResolverNameBytes + 1> localBuffer = {};
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), local.Buffer, localBuffer.data(), capturedBytes, &bytesRead) || bytesRead == 0)
+        {
+            CopyHexPointerText(destination, length, capacity, local.Buffer);
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        copied = static_cast<std::uint32_t>(bytesRead < capturedBytes ? bytesRead : capturedBytes);
+        for (std::uint32_t index = 0; index < copied; ++index)
+        {
+            destination[index] = localBuffer[index];
+        }
+        destination[copied] = '\0';
+
+        if (bytesRead < local.Length && status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+    }
+    while (false);
+
+    if (length != nullptr && status != static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory))
+    {
+        *length = copied;
+    }
+
+    return status;
+}
 
 std::uint32_t CopyUnicodeStringText(char* destination, std::uint32_t* length, std::size_t capacity, const UNICODE_STRING* value)
 {
@@ -1467,6 +1619,76 @@ void EmitLdrLoadDllEvent(
     }
 }
 
+void EmitGetProcAddressEvent(
+    FARPROC result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HMODULE module,
+    LPCSTR procName)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetProcAddress, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(module));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(procName));
+
+        const bool ordinal = IsOrdinalProcName(procName);
+        record->Values32[0] = ordinal ? 1 : 0;
+        if (ordinal)
+        {
+            record->Values32[1] = static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(procName) & 0xffffu);
+            char ordinalText[32] = {};
+            std::snprintf(ordinalText, sizeof(ordinalText), "ordinal:%lu", static_cast<unsigned long>(record->Values32[1]));
+            CopyAsciiText(record->Text0, &record->Text0Length, sizeof(record->Text0), ordinalText);
+            record->Values32[2] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+        }
+        else
+        {
+            record->Values32[2] = CopyAnsiPointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), procName);
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitLdrGetProcedureAddressEvent(
+    NTSTATUS status,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HMODULE module,
+    PANSI_STRING functionName,
+    ULONG ordinal,
+    PVOID* functionAddress)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::LdrGetProcedureAddress, "ntdll.dll", start, end, errorCode);
+        record->ReturnCode = static_cast<std::uint32_t>(status);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(module));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(functionName));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(functionAddress));
+        record->Values32[0] = ordinal;
+        record->Values32[1] = CopyAnsiStringText(record->Text0, &record->Text0Length, sizeof(record->Text0), functionName);
+
+        PVOID resolvedAddress = nullptr;
+        if (NT_SUCCESS(status) && ReadCurrentProcessValue(functionAddress, &resolvedAddress))
+        {
+            record->Values64[3] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(resolvedAddress));
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void* ResolveExport(const char* moduleName, const char* name)
 {
     void* result = nullptr;
@@ -1754,10 +1976,12 @@ HMODULE WINAPI HookedLoadLibraryW(LPCWSTR fileName);
 HMODULE WINAPI HookedLoadLibraryA(LPCSTR fileName);
 HMODULE WINAPI HookedLoadLibraryExW(LPCWSTR fileName, HANDLE file, DWORD flags);
 HMODULE WINAPI HookedLoadLibraryExA(LPCSTR fileName, HANDLE file, DWORD flags);
+FARPROC WINAPI HookedGetProcAddress(HMODULE module, LPCSTR procName);
 NTSTATUS NTAPI HookedNtCreateFile(PHANDLE fileHandle, ACCESS_MASK desiredAccess, POBJECT_ATTRIBUTES objectAttributes, PIO_STATUS_BLOCK ioStatusBlock, PLARGE_INTEGER allocationSize, ULONG fileAttributes, ULONG shareAccess, ULONG createDisposition, ULONG createOptions, PVOID eaBuffer, ULONG eaLength);
 NTSTATUS NTAPI HookedLdrLoadDll(PWSTR pathToFile, ULONG flags, PUNICODE_STRING moduleFileName, PHANDLE moduleHandle);
+NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functionName, ULONG ordinal, PVOID* functionAddress);
 
-std::array<HookDefinition, 11> BuildHookDefinitions()
+std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
 {
     return {
         HookDefinition { "kernel32.dll", "CreateFileW", reinterpret_cast<void*>(HookedCreateFileW), reinterpret_cast<void**>(&g_originalCreateFileW), true, true, false, 0 },
@@ -1771,6 +1995,8 @@ std::array<HookDefinition, 11> BuildHookDefinitions()
         HookDefinition { "kernel32.dll", "LoadLibraryExW", reinterpret_cast<void*>(HookedLoadLibraryExW), reinterpret_cast<void**>(&g_originalLoadLibraryExW), false, true, true, 0 },
         HookDefinition { "kernel32.dll", "LoadLibraryExA", reinterpret_cast<void*>(HookedLoadLibraryExA), reinterpret_cast<void**>(&g_originalLoadLibraryExA), false, true, true, 0 },
         HookDefinition { "ntdll.dll", "LdrLoadDll", reinterpret_cast<void*>(HookedLdrLoadDll), reinterpret_cast<void**>(&g_originalLdrLoadDll), false, true, true, 0 },
+        HookDefinition { "kernel32.dll", "GetProcAddress", reinterpret_cast<void*>(HookedGetProcAddress), reinterpret_cast<void**>(&g_originalGetProcAddress), false, true, false, 0 },
+        HookDefinition { "ntdll.dll", "LdrGetProcedureAddress", reinterpret_cast<void*>(HookedLdrGetProcedureAddress), reinterpret_cast<void**>(&g_originalLdrGetProcedureAddress), false, true, false, 0 },
     };
 }
 
@@ -1920,7 +2146,7 @@ void PatchImportInModule(ModuleInfo& module, HookDefinition& definition, SweepSt
     while (false);
 }
 
-void ResolveHookDefinitions(std::array<HookDefinition, 11>& definitions)
+void ResolveHookDefinitions(std::array<HookDefinition, HookDefinitionCount>& definitions)
 {
     for (HookDefinition& definition : definitions)
     {
@@ -1952,7 +2178,7 @@ bool SweepLoadedModules(const char* reason, bool reportHookStatus, SweepStats* o
     bool requiredCoverage = true;
     SweepStats stats = {};
     std::array<ModuleInfo, MaxModuleRecords> modules = {};
-    std::array<HookDefinition, 11> definitions = BuildHookDefinitions();
+    std::array<HookDefinition, HookDefinitionCount> definitions = BuildHookDefinitions();
     ResolveHookDefinitions(definitions);
     const std::size_t moduleCount = CaptureModuleSnapshot(modules, &stats);
 
@@ -2403,6 +2629,37 @@ HMODULE WINAPI HookedLoadLibraryExA(LPCSTR fileName, HANDLE file, DWORD flags)
     return result;
 }
 
+FARPROC WINAPI HookedGetProcAddress(HMODULE module, LPCSTR procName)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetProcAddress == nullptr)
+    {
+        if (g_originalGetProcAddress == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalGetProcAddress(module, procName);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    FARPROC result = g_originalGetProcAddress(module, procName);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitGetProcAddressEvent(result, eventError, start, end, module, procName);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
 NTSTATUS NTAPI HookedNtCreateFile(
     PHANDLE fileHandle,
     ACCESS_MASK desiredAccess,
@@ -2506,6 +2763,34 @@ NTSTATUS NTAPI HookedLdrLoadDll(PWSTR pathToFile, ULONG flags, PUNICODE_STRING m
         {
             SweepLoadedModules("dynamic_load", false, nullptr);
         }
+    }
+
+    return status;
+}
+
+NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functionName, ULONG ordinal, PVOID* functionAddress)
+{
+    if (g_inHook || !HooksEnabled() || g_originalLdrGetProcedureAddress == nullptr)
+    {
+        if (g_originalLdrGetProcedureAddress == nullptr)
+        {
+            return static_cast<NTSTATUS>(0xC000007AL);
+        }
+
+        return g_originalLdrGetProcedureAddress(module, functionName, ordinal, functionAddress);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    NTSTATUS status = g_originalLdrGetProcedureAddress(module, functionName, ordinal, functionAddress);
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = NtStatusToDosError(status);
+    if (HooksEnabled())
+    {
+        EmitLdrGetProcedureAddressEvent(status, eventError, start, end, module, functionName, ordinal, functionAddress);
     }
 
     return status;

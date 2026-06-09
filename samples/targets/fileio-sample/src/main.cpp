@@ -2,6 +2,7 @@
 #include <winternl.h>
 
 #include <array>
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -22,6 +23,12 @@
 #ifndef OBJ_CASE_INSENSITIVE
 #define OBJ_CASE_INSENSITIVE 0x00000040L
 #endif
+
+extern "C" NTSYSAPI NTSTATUS NTAPI LdrGetProcedureAddress(
+    HMODULE ModuleHandle,
+    PANSI_STRING FunctionName,
+    ULONG Ordinal,
+    PVOID* FunctionAddress);
 
 namespace
 {
@@ -154,6 +161,19 @@ bool RunDynamicLoadProbe()
         if (probe == nullptr)
         {
             LogLastError("GetProcAddress(KnMonDynamicProbe)");
+            break;
+        }
+
+        const char ldrProbeName[] = "KnMonDynamicProbe";
+        ANSI_STRING ldrName = {};
+        ldrName.Buffer = const_cast<PSTR>(ldrProbeName);
+        ldrName.Length = static_cast<USHORT>(std::strlen(ldrProbeName));
+        ldrName.MaximumLength = static_cast<USHORT>(ldrName.Length + 1);
+        PVOID ldrProbe = nullptr;
+        const NTSTATUS ldrStatus = LdrGetProcedureAddress(module, &ldrName, 0, &ldrProbe);
+        std::cout << "ldrgetprocedureaddress status=" << HexNtStatus(ldrStatus) << "\n";
+        if (!NT_SUCCESS(ldrStatus) || ldrProbe == nullptr)
+        {
             break;
         }
 

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "module": "resolver",
-  "description": "Resolver APIs tracked as definition-only metadata until returned-pointer instrumentation is separately designed and verified.",
+  "description": "Resolver API calls monitored through eligible-module IAT hooks. Calls through returned function pointers remain separate future work.",
   "apis": [
     {
       "module": "KERNEL32.dll",
@@ -9,8 +9,8 @@
       "family": "resolver",
       "category": "dynamic_symbol_lookup",
       "risk": "high",
-      "hookPolicy": "deferred",
-      "coverageStatus": "definition_only",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
       "architectures": ["x86", "x64"],
       "callingConvention": "stdcall",
       "returnType": "FARPROC",
@@ -28,8 +28,8 @@
       "family": "resolver",
       "category": "dynamic_symbol_lookup_nt",
       "risk": "high",
-      "hookPolicy": "deferred",
-      "coverageStatus": "definition_only",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
       "architectures": ["x86", "x64"],
       "callingConvention": "ntapi",
       "returnType": "NTSTATUS",
