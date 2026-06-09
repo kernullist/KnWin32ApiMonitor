@@ -5,6 +5,7 @@
 #include <rpc.h>
 #include <wincrypt.h>
 #include <winhttp.h>
+#include <wininet.h>
 #include <winternl.h>
 
 #include <array>
@@ -591,6 +592,50 @@ bool RunWinHttpProbe()
     return success;
 }
 
+bool RunWinInetProbe()
+{
+    bool success = false;
+    HINTERNET session = nullptr;
+
+    do
+    {
+        session = InternetOpenW(
+            L"KNMonWinInetSample/1.0",
+            INTERNET_OPEN_TYPE_DIRECT,
+            nullptr,
+            nullptr,
+            0);
+
+        if (session == nullptr)
+        {
+            LogLastError("InternetOpenW");
+            break;
+        }
+
+        if (!InternetCloseHandle(session))
+        {
+            LogLastError("InternetCloseHandle");
+            break;
+        }
+
+        session = nullptr;
+        std::cout << "wininet session roundtrip access_type=" << INTERNET_OPEN_TYPE_DIRECT << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (session != nullptr)
+    {
+        if (!InternetCloseHandle(session))
+        {
+            LogLastError("InternetCloseHandle(cleanup)");
+            success = false;
+        }
+    }
+
+    return success;
+}
+
 bool RunWinsockProbe()
 {
     bool success = false;
@@ -752,6 +797,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunWinHttpProbe())
+        {
+            break;
+        }
+
+        if (!RunWinInetProbe())
         {
             break;
         }

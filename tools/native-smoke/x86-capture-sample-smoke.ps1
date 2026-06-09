@@ -28,6 +28,8 @@ $requiredApis = @(
     "CertCloseStore",
     "CryptMsgOpenToDecode",
     "CryptMsgClose",
+    "InternetOpenW",
+    "InternetCloseHandle",
     "WinHttpOpen",
     "WinHttpCloseHandle",
     "RpcStringBindingComposeW",
@@ -297,6 +299,45 @@ $winHttpArgs = @($result.capturedEvents | Where-Object { $_.module -eq "winhttp.
 if ($winHttpArgs -cmatch "https?://|Authorization|Cookie|Set-Cookie|POST|GET /|BEGIN CERTIFICATE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 WinHTTP events appear to expose URL/header/body/credential or byte-preview evidence: $winHttpArgs"
+}
+
+$internetEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "internet" })
+if ($internetEvents.Count -lt 2)
+{
+    throw "x86 capture did not include the selected WinINet session API family slice."
+}
+
+$winInetOpen = @($internetEvents | Where-Object { $_.api -eq "InternetOpenW" } | Select-Object -First 1)
+if ($winInetOpen.Count -ne 1 -or $winInetOpen[0].module -ne "wininet.dll" -or $winInetOpen[0].hookPolicy -ne "iat" -or $winInetOpen[0].coverageStatus -ne "smoke_verified")
+{
+    throw "x86 InternetOpenW metadata mismatch."
+}
+
+$winInetOpenArgs = ($winInetOpen[0].arguments | ConvertTo-Json -Depth 8)
+if ($winInetOpenArgs -notmatch "KNMonWinInetSample/1.0" -or $winInetOpenArgs -notmatch "0x00000001")
+{
+    throw "x86 InternetOpenW arguments did not include sample direct-access evidence: $winInetOpenArgs"
+}
+
+foreach ($argName in @("lpszProxy", "lpszProxyBypass"))
+{
+    $argument = @($winInetOpen[0].arguments | Where-Object { $_.name -eq $argName } | Select-Object -First 1)
+    if ($argument.Count -ne 1 -or $argument[0].rawValue -notmatch "^0x0+$")
+    {
+        throw "x86 InternetOpenW $argName was not null: $($argument[0] | ConvertTo-Json -Depth 8)"
+    }
+}
+
+$winInetClose = @($internetEvents | Where-Object { $_.api -eq "InternetCloseHandle" } | Select-Object -First 1)
+if ($winInetClose.Count -ne 1)
+{
+    throw "x86 capture did not include InternetCloseHandle."
+}
+
+$winInetArgs = @($result.capturedEvents | Where-Object { $_.module -eq "wininet.dll" } | ForEach-Object { $_.arguments } | ConvertTo-Json -Depth 8)
+if ($winInetArgs -cmatch "https?://|Authorization|Cookie|Set-Cookie|POST|GET /|BEGIN CERTIFICATE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 WinINet events appear to expose URL/header/body/credential or byte-preview evidence: $winInetArgs"
 }
 
 $rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })

@@ -1679,14 +1679,14 @@
     {
       "callingConvention": "stdcall",
       "category": "wininet_session_open",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "GetLastError",
       "failure": {
         "returnEqual": "NULL"
       },
       "family": "internet",
       "firstParameterIndex": 288,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 71,
       "module": "wininet.dll",
       "moduleId": 9,
@@ -1703,14 +1703,14 @@
     {
       "callingConvention": "stdcall",
       "category": "wininet_handle_close",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "GetLastError",
       "failure": {
         "returnEqual": "FALSE"
       },
       "family": "internet",
       "firstParameterIndex": 293,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 72,
       "module": "wininet.dll",
       "moduleId": 9,

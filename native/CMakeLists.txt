@@ -90,6 +90,7 @@ target_link_libraries(knmon-sample-fileio PRIVATE rpcrt4)
 target_link_libraries(knmon-sample-fileio PRIVATE bcrypt)
 target_link_libraries(knmon-sample-fileio PRIVATE crypt32)
 target_link_libraries(knmon-sample-fileio PRIVATE winhttp)
+target_link_libraries(knmon-sample-fileio PRIVATE wininet)
 target_compile_definitions(knmon-sample-fileio PRIVATE
     WIN32_LEAN_AND_MEAN
     NOMINMAX

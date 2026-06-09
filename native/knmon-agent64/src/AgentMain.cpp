@@ -7,6 +7,7 @@
 #include <rpc.h>
 #include <wincrypt.h>
 #include <winhttp.h>
+#include <wininet.h>
 #include <winternl.h>
 
 #include <array>
@@ -105,6 +106,8 @@ using CertOpenStoreFn = HCERTSTORE(WINAPI*)(LPCSTR, DWORD, HCRYPTPROV_LEGACY, DW
 using CertCloseStoreFn = BOOL(WINAPI*)(HCERTSTORE, DWORD);
 using CryptMsgOpenToDecodeFn = HCRYPTMSG(WINAPI*)(DWORD, DWORD, DWORD, HCRYPTPROV_LEGACY, PCERT_INFO, PCMSG_STREAM_INFO);
 using CryptMsgCloseFn = BOOL(WINAPI*)(HCRYPTMSG);
+using InternetOpenWFn = HINTERNET(WINAPI*)(LPCWSTR, DWORD, LPCWSTR, LPCWSTR, DWORD);
+using InternetCloseHandleFn = BOOL(WINAPI*)(HINTERNET);
 using WinHttpOpenFn = HINTERNET(WINAPI*)(LPCWSTR, DWORD, LPCWSTR, LPCWSTR, DWORD);
 using WinHttpCloseHandleFn = BOOL(WINAPI*)(HINTERNET);
 using RpcStringBindingComposeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR*);
@@ -169,6 +172,8 @@ CertOpenStoreFn g_originalCertOpenStore = nullptr;
 CertCloseStoreFn g_originalCertCloseStore = nullptr;
 CryptMsgOpenToDecodeFn g_originalCryptMsgOpenToDecode = nullptr;
 CryptMsgCloseFn g_originalCryptMsgClose = nullptr;
+InternetOpenWFn g_originalInternetOpenW = nullptr;
+InternetCloseHandleFn g_originalInternetCloseHandle = nullptr;
 WinHttpOpenFn g_originalWinHttpOpen = nullptr;
 WinHttpCloseHandleFn g_originalWinHttpCloseHandle = nullptr;
 RpcStringBindingComposeWFn g_originalRpcStringBindingComposeW = nullptr;
@@ -255,7 +260,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 40;
+constexpr std::size_t HookDefinitionCount = 42;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1354,6 +1359,10 @@ std::uint16_t ModuleId(const char* moduleName)
     else if (_stricmp(moduleName, "rpcrt4.dll") == 0)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Rpcrt4);
+    }
+    else if (_stricmp(moduleName, "wininet.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Wininet);
     }
     else if (_stricmp(moduleName, "winhttp.dll") == 0)
     {
@@ -2459,6 +2468,55 @@ void EmitCryptMsgCloseEvent(
     }
 }
 
+void EmitInternetOpenWEvent(
+    HINTERNET result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPCWSTR agent,
+    DWORD accessType,
+    LPCWSTR proxy,
+    LPCWSTR proxyBypass,
+    DWORD flags)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::InternetOpenW, "wininet.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(agent));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(proxy));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(proxyBypass));
+        record->Values32[0] = accessType;
+        record->Values32[1] = flags;
+        record->Values32[2] = CopyWidePointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), agent);
+        record->Values32[3] = CopyWidePointerText(record->Text1, &record->Text1Length, sizeof(record->Text1), proxy);
+        record->Values32[4] = CopyWidePointerText(record->Text2, &record->Text2Length, sizeof(record->Text2), proxyBypass);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitInternetCloseHandleEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HINTERNET internet)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::InternetCloseHandle, "wininet.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(internet));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void EmitWinHttpOpenEvent(
     HINTERNET result,
     DWORD errorCode,
@@ -3087,6 +3145,8 @@ HCERTSTORE WINAPI HookedCertOpenStore(LPCSTR provider, DWORD encodingType, HCRYP
 BOOL WINAPI HookedCertCloseStore(HCERTSTORE store, DWORD flags);
 HCRYPTMSG WINAPI HookedCryptMsgOpenToDecode(DWORD encodingType, DWORD flags, DWORD messageType, HCRYPTPROV_LEGACY cryptProvider, PCERT_INFO recipientInfo, PCMSG_STREAM_INFO streamInfo);
 BOOL WINAPI HookedCryptMsgClose(HCRYPTMSG message);
+HINTERNET WINAPI HookedInternetOpenW(LPCWSTR agent, DWORD accessType, LPCWSTR proxy, LPCWSTR proxyBypass, DWORD flags);
+BOOL WINAPI HookedInternetCloseHandle(HINTERNET internet);
 HINTERNET WINAPI HookedWinHttpOpen(LPCWSTR agent, DWORD accessType, LPCWSTR proxy, LPCWSTR proxyBypass, DWORD flags);
 BOOL WINAPI HookedWinHttpCloseHandle(HINTERNET internet);
 RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR protSeq, RPC_WSTR networkAddr, RPC_WSTR endpoint, RPC_WSTR options, RPC_WSTR* stringBinding);
@@ -3134,6 +3194,8 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "crypt32.dll", "CertCloseStore", reinterpret_cast<void*>(HookedCertCloseStore), reinterpret_cast<void**>(&g_originalCertCloseStore), false, true, false, 0, 0 },
         HookDefinition { "crypt32.dll", "CryptMsgOpenToDecode", reinterpret_cast<void*>(HookedCryptMsgOpenToDecode), reinterpret_cast<void**>(&g_originalCryptMsgOpenToDecode), false, true, false, 0, 0 },
         HookDefinition { "crypt32.dll", "CryptMsgClose", reinterpret_cast<void*>(HookedCryptMsgClose), reinterpret_cast<void**>(&g_originalCryptMsgClose), false, true, false, 0, 0 },
+        HookDefinition { "wininet.dll", "InternetOpenW", reinterpret_cast<void*>(HookedInternetOpenW), reinterpret_cast<void**>(&g_originalInternetOpenW), false, true, false, 0, 0 },
+        HookDefinition { "wininet.dll", "InternetCloseHandle", reinterpret_cast<void*>(HookedInternetCloseHandle), reinterpret_cast<void**>(&g_originalInternetCloseHandle), false, true, false, 0, 0 },
         HookDefinition { "winhttp.dll", "WinHttpOpen", reinterpret_cast<void*>(HookedWinHttpOpen), reinterpret_cast<void**>(&g_originalWinHttpOpen), false, true, false, 0, 0 },
         HookDefinition { "winhttp.dll", "WinHttpCloseHandle", reinterpret_cast<void*>(HookedWinHttpCloseHandle), reinterpret_cast<void**>(&g_originalWinHttpCloseHandle), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringBindingComposeW", reinterpret_cast<void*>(HookedRpcStringBindingComposeW), reinterpret_cast<void**>(&g_originalRpcStringBindingComposeW), false, true, false, 0, 0 },
@@ -4357,6 +4419,68 @@ BOOL WINAPI HookedCryptMsgClose(HCRYPTMSG message)
     if (HooksEnabled())
     {
         EmitCryptMsgCloseEvent(result, eventError, start, end, message);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HINTERNET WINAPI HookedInternetOpenW(LPCWSTR agent, DWORD accessType, LPCWSTR proxy, LPCWSTR proxyBypass, DWORD flags)
+{
+    if (g_inHook || !HooksEnabled() || g_originalInternetOpenW == nullptr)
+    {
+        if (g_originalInternetOpenW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalInternetOpenW(agent, accessType, proxy, proxyBypass, flags);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HINTERNET result = g_originalInternetOpenW(agent, accessType, proxy, proxyBypass, flags);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitInternetOpenWEvent(result, eventError, start, end, agent, accessType, proxy, proxyBypass, flags);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedInternetCloseHandle(HINTERNET internet)
+{
+    if (g_inHook || !HooksEnabled() || g_originalInternetCloseHandle == nullptr)
+    {
+        if (g_originalInternetCloseHandle == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalInternetCloseHandle(internet);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalInternetCloseHandle(internet);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FALSE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitInternetCloseHandleEvent(result, eventError, start, end, internet);
     }
 
     SetLastError(lastError);
