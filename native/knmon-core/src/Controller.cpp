@@ -727,6 +727,25 @@ std::string HexNtStatusValue(std::uint32_t value)
     return HexFixed(value, 8);
 }
 
+std::string SignedIntValue(std::uint64_t value)
+{
+    return std::to_string(static_cast<std::int32_t>(static_cast<std::uint32_t>(value)));
+}
+
+std::string SignedIntValue32(std::uint32_t value)
+{
+    return std::to_string(static_cast<std::int32_t>(value));
+}
+
+std::string AddrInfoHintText(std::uint32_t family, std::uint32_t sockType, std::uint32_t protocol)
+{
+    std::ostringstream stream;
+    stream << "family=" << SignedIntValue32(family)
+           << ",type=" << SignedIntValue32(sockType)
+           << ",protocol=" << SignedIntValue32(protocol);
+    return stream.str();
+}
+
 std::string DecodeStatusName(std::uint32_t value)
 {
     std::string result = "decoded";
@@ -1040,6 +1059,46 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 2, "WORD", "Ordinal", "in", std::to_string(record.Values32[0]), std::to_string(record.Values32[0]), std::to_string(record.Values32[0])) << ",";
         args << ArgumentJsonFromMetadata(record.ApiId, 3, "PVOID*", "FunctionAddress", "out", HexPointerValue(record.Values64[2], result.Architecture), HexPointerValue(record.Values64[3], result.Architecture), HexPointerValue(record.Values64[3], result.Architecture));
         payload = ApiCallPayload(result, record, HexNtStatusValue(record.ReturnCode), args.str(), "");
+        break;
+    case KnMonTransportApiId::WSAStartup:
+    {
+        const std::string dataPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string dataDecoded = text0.empty() ? dataPointer : (text1.empty() ? text0 : (text0 + " | " + text1));
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "WORD", "wVersionRequested", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPWSADATA", "lpWSAData", "out", dataPointer, dataPointer, dataDecoded);
+        payload = ApiCallPayload(result, record, SignedIntValue(record.ReturnValue), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::WSACleanup:
+        payload = ApiCallPayload(result, record, SignedIntValue(record.ReturnValue), args.str(), "");
+        break;
+    case KnMonTransportApiId::Socket:
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "int", "af", "in", SignedIntValue32(record.Values32[0]), SignedIntValue32(record.Values32[0]), SignedIntValue32(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "int", "type", "in", SignedIntValue32(record.Values32[1]), SignedIntValue32(record.Values32[1]), SignedIntValue32(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "int", "protocol", "in", SignedIntValue32(record.Values32[2]), SignedIntValue32(record.Values32[2]), SignedIntValue32(record.Values32[2]));
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    case KnMonTransportApiId::Closesocket:
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "SOCKET", "s", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture));
+        payload = ApiCallPayload(result, record, SignedIntValue(record.ReturnValue), args.str(), "");
+        break;
+    case KnMonTransportApiId::GetAddrInfo:
+    {
+        const std::string hintsPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string hintsDecoded = record.Values64[0] == 0 ? hintsPointer : AddrInfoHintText(record.Values32[0], record.Values32[1], record.Values32[2]);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "PCSTR", "pNodeName", "in", text0, text0, text0) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "PCSTR", "pServiceName", "in", text1, text1, text1) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "const ADDRINFOA*", "pHints", "in", hintsPointer, hintsPointer, hintsDecoded) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "PADDRINFOA*", "ppResult", "out", HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[2], result.Architecture), HexPointerValue(record.Values64[2], result.Architecture));
+        payload = ApiCallPayload(result, record, SignedIntValue(record.ReturnValue), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::FreeAddrInfo:
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "PADDRINFOA", "pAddrInfo", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture));
+        payload = ApiCallPayload(result, record, "void", args.str(), "");
+        break;
+    case KnMonTransportApiId::WSAGetLastError:
+        payload = ApiCallPayload(result, record, SignedIntValue(record.ReturnValue), args.str(), "");
         break;
     default:
         break;

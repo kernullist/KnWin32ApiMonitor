@@ -405,12 +405,21 @@ Current verified behavior:
 9. `GetProcAddress` and `LdrGetProcedureAddress` resolver calls for `KnMonDynamicProbe` are captured as resolver-tagged shared-memory `api_call` events.
 10. Resolver records include bounded function-name evidence and return/status values without claiming returned-pointer instrumentation.
 11. Unloaded owner-module restoration races are handled without stale writes and healthy shutdown reports `restoredHooks=installedHooks`.
+12. The first Wave 2 live slice captures selected `ws2_32.dll` Winsock bootstrap and address-resolution APIs through the same shared-memory transport:
+   - `WSAStartup`
+   - `WSACleanup`
+   - `socket`
+   - `closesocket`
+   - `getaddrinfo`
+   - `freeaddrinfo`
+   - `WSAGetLastError`
+13. `WS2_32.dll` ordinal imports for the selected Winsock APIs are matched only through explicit hook-definition ordinals; broad ordinal patching remains out of scope.
 
 Next implementation focus:
 
-1. Generate decoder tables for the new Wave 2 metadata before enabling Wave 2 hooks.
-2. Keep generated ID artifacts as the gate before any new transport ABI expansion.
-3. Design a Wave 2 hook enablement plan that preserves shared-memory backpressure and hook-overhead gates.
+1. Keep the selected Winsock slice under shared-memory backpressure and hook-overhead gates.
+2. Design payload-heavy network hooks (`send`, `recv`, `sendto`, `recvfrom`) separately before enabling buffer capture at scale.
+3. Stage the next Wave 2 DLL/API family only after deterministic smoke evidence and transport-budget checks exist.
 4. Keep returned-pointer instrumentation as a separate reviewed design item.
 
 ## Phase 10: Definition System V1
@@ -447,18 +456,19 @@ Current verified behavior:
 9. Restricted buffer length expression validation rejects unsupported tokens and unknown parameter identifiers without arbitrary code execution.
 10. The Rohitab XML importer prototype converts a small local XML fixture into deterministic draft definition JSON and marks unknown decodes as `unresolved`.
 11. `npm run defs:coverage` reports by DLL, family, risk, hook policy, coverage status, and decode quality.
-12. Wave 2 definition-only metadata is committed for `advapi32.dll`, `bcrypt.dll`, `crypt32.dll`, `rpcrt4.dll`, `ws2_32.dll`, `wininet.dll`, and `winhttp.dll`.
+12. Wave 2 metadata is committed for `advapi32.dll`, `bcrypt.dll`, `crypt32.dll`, `rpcrt4.dll`, `ws2_32.dll`, `wininet.dll`, and `winhttp.dll`.
 13. Stable generated IDs now cover 10 modules and 90 APIs, with Wave 2 API IDs `14` through `90`.
-14. The coverage report currently totals 77 `definition_only`, 4 `hooked`, and 9 `smoke_verified` APIs.
+14. The coverage report currently totals 70 `definition_only`, 4 `hooked`, and 16 `smoke_verified` APIs.
 15. `npm run defs:generate` emits deterministic controller-side decoder metadata:
    - `generated/definition-decoder-tables.json`
    - `native/knmon-common/include/knmon/common/GeneratedApiMetadata.h`
 16. The controller uses generated metadata for API/module names, family/category tags, argument names/types/directions, decode aliases, and capture timing while preserving explicit per-API shared-memory slot interpretation.
+17. The selected `ws2_32.dll` Winsock slice is marked `iat` and `smoke_verified`; unimplemented Wave 2 APIs remain `definition_only`.
 
 Next implementation focus:
 
-1. Add Wave 2 hook ABI mapping only after generated decoder metadata, transport budget checks, and hook-overhead smokes are green.
-2. Keep Wave 2 live hook enablement staged by DLL/API family with definition coverage status updated only after deterministic smoke evidence exists.
+1. Expand Wave 2 live hooks only by small DLL/API-family slices with deterministic smoke evidence.
+2. Review a dedicated ABI and performance plan before enabling high-volume network payload hooks.
 3. Design returned-pointer instrumentation only after the IAT resolver monitoring path remains stable under transport and hook-overhead gates.
 
 ## Phase 11: Controlled Attach And Process Tree Supervision

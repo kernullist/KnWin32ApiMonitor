@@ -1395,14 +1395,14 @@
     {
       "callingConvention": "stdcall",
       "category": "winsock_startup",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": 0
       },
       "family": "network",
       "firstParameterIndex": 254,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 59,
       "module": "ws2_32.dll",
       "moduleId": 8,
@@ -1419,14 +1419,14 @@
     {
       "callingConvention": "stdcall",
       "category": "winsock_cleanup",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": 0
       },
       "family": "network",
       "firstParameterIndex": 256,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 60,
       "module": "ws2_32.dll",
       "moduleId": 8,
@@ -1443,14 +1443,14 @@
     {
       "callingConvention": "stdcall",
       "category": "socket_create",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnEqual": "INVALID_SOCKET"
       },
       "family": "network",
       "firstParameterIndex": 256,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 61,
       "module": "ws2_32.dll",
       "moduleId": 8,
@@ -1467,14 +1467,14 @@
     {
       "callingConvention": "stdcall",
       "category": "socket_close",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnEqual": "SOCKET_ERROR"
       },
       "family": "network",
       "firstParameterIndex": 259,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 62,
       "module": "ws2_32.dll",
       "moduleId": 8,
@@ -1611,14 +1611,14 @@
     {
       "callingConvention": "stdcall",
       "category": "socket_address_resolve",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": 0
       },
       "family": "network",
       "firstParameterIndex": 283,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 68,
       "module": "ws2_32.dll",
       "moduleId": 8,
@@ -1635,12 +1635,12 @@
     {
       "callingConvention": "stdcall",
       "category": "socket_address_free",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {},
       "family": "network",
       "firstParameterIndex": 287,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 69,
       "module": "ws2_32.dll",
       "moduleId": 8,
@@ -1657,12 +1657,12 @@
     {
       "callingConvention": "stdcall",
       "category": "winsock_error_query",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {},
       "family": "network",
       "firstParameterIndex": 288,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 70,
       "module": "ws2_32.dll",
       "moduleId": 8,

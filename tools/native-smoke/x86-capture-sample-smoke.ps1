@@ -13,7 +13,14 @@ $requiredApis = @(
     "WriteFile",
     "CloseHandle",
     "GetProcAddress",
-    "LdrGetProcedureAddress"
+    "LdrGetProcedureAddress",
+    "WSAStartup",
+    "WSACleanup",
+    "socket",
+    "closesocket",
+    "getaddrinfo",
+    "freeaddrinfo",
+    "WSAGetLastError"
 )
 
 if (-not (Test-Path -LiteralPath $helperPath))

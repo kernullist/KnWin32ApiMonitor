@@ -219,7 +219,7 @@ Resolver calls are monitored through eligible-module IAT hooks in the controlled
 
 The resolver events capture bounded function-name or ordinal evidence, module handle evidence, and return/status values. This coverage intentionally means the resolver API calls themselves are visible. It does not imply returned-pointer instrumentation, inline detours, EAT patching, or automatic coverage for later calls made through resolver-returned function pointers.
 
-Wave 2 metadata is definition-only and does not enable live hooks yet. The committed Wave 2 definition catalog adds 77 APIs across:
+Wave 2 metadata adds 77 APIs across:
 
 1. `advapi32.dll`: registry, token, privilege, and service-control APIs.
 2. `bcrypt.dll`: CNG algorithm, key, encryption/decryption, hash, and random APIs.
@@ -229,11 +229,13 @@ Wave 2 metadata is definition-only and does not enable live hooks yet. The commi
 6. `wininet.dll`: WinINet session, connection, request, transfer, and option APIs.
 7. `winhttp.dll`: WinHTTP session, connection, request, transfer, option, and header APIs.
 
+The first live Wave 2 slice is limited to smoke-verified `ws2_32.dll` bootstrap and address-resolution IAT hooks: `WSAStartup`, `WSACleanup`, `socket`, `closesocket`, `getaddrinfo`, `freeaddrinfo`, and `WSAGetLastError`. All other Wave 2 APIs remain `definition_only`.
+
 The current definition coverage report totals 90 APIs:
 
-1. `definition_only`: 77
+1. `definition_only`: 70
 2. `hooked`: 4
-3. `smoke_verified`: 9
+3. `smoke_verified`: 16
 
 `NtCreateFile` is captured as a controlled `ntdll.dll` IAT hook in the repository sample target. The native event keeps `returnValue` as the NTSTATUS hex string. For compatibility with the existing trace error model, `lastErrorCode` remains `0` on NT success and a mapped Win32 error on NT failure.
 
@@ -251,7 +253,7 @@ The `NtCreateFile` event includes bounded snapshots for:
 
 Current native API call records are written by the agent into a shared-memory binary ring, then normalized by the controller into the same `api_call` JSON shape outside the target process. Named-pipe JSON remains only for low-volume control and lifecycle messages.
 
-Controller-side normalization uses generated decoder metadata for descriptors. Per-API shared-memory slot interpretation remains explicit until a later hook ABI expansion adds generic per-argument payload mapping.
+Controller-side normalization uses generated decoder metadata for descriptors. Per-API shared-memory slot interpretation remains explicit. The selected Winsock slice uses the existing fixed transport record slots; high-volume network payload hooks remain deferred until a later hook ABI expansion and overhead review.
 
 Loader-aware Wave 1 records add `LoadLibraryW` evidence and post-load File I/O evidence from `knmon-dynamic-probe.dll`. Resolver records add `GetProcAddress` and `LdrGetProcedureAddress` evidence for the same dynamic probe export. The agent emits module inventory and IAT sweep status messages through the named pipe, but API call events remain shared-memory records.
 

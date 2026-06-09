@@ -21,7 +21,7 @@ This repository is bootstrapping a new API Monitor inspired by Rohitab API Monit
 - Durable helper-written sample sessions with manifest, audit, agent-event, and trace-event JSONL files.
 - Session validation and replay without relaunching or reinjecting the sample target.
 - Synthetic collector intake with deterministic bounded queue backpressure validation.
-- Wave 2 definition-only metadata for registry, security, crypto, RPC, Winsock, WinINet, and WinHTTP APIs.
+- Wave 2 metadata for registry, security, crypto, RPC, Winsock, WinINet, and WinHTTP APIs, with a first smoke-verified Winsock bootstrap/address-resolution hook slice.
 
 ## Current Status
 
@@ -55,13 +55,14 @@ Implemented now:
 24. Loader-aware PEB module inventory, eligible-module IAT sweep, and dynamic-load re-hooking for the controlled sample path.
 25. Repository-owned `knmon-dynamic-probe.dll` sample that proves post-load IAT coverage.
 26. Definition System V1 schema validation, fixtures, decode alias metadata, enum/flag metadata, stable generated transport IDs, generated controller-side decoder tables, Rohitab XML importer prototype, and coverage report command.
-27. Wave 2 definition-only metadata with stable IDs for `advapi32.dll`, `bcrypt.dll`, `crypt32.dll`, `rpcrt4.dll`, `ws2_32.dll`, `wininet.dll`, and `winhttp.dll`.
+27. Wave 2 metadata with stable IDs for `advapi32.dll`, `bcrypt.dll`, `crypt32.dll`, `rpcrt4.dll`, `ws2_32.dll`, `wininet.dll`, and `winhttp.dll`.
+28. First live Wave 2 Winsock slice for `WSAStartup`, `WSACleanup`, `socket`, `closesocket`, `getaddrinfo`, `freeaddrinfo`, and `WSAGetLastError`.
 
 Not implemented yet:
 
 1. Arbitrary already-running process injection.
 2. Continuous streaming capture for long-running targets.
-3. Live Wave 2/3/4 broad system DLL hooks beyond the current loader-aware Wave 1 foundation.
+3. Broad Wave 2/3/4 system DLL hooks beyond the current Wave 1 foundation and first Winsock slice.
 4. Breakpoint mutation.
 5. COM monitoring.
 6. Kernel-mode helper.
@@ -93,12 +94,21 @@ Verified live hook coverage:
 7. `LoadLibraryW`
 8. `GetProcAddress`
 9. `LdrGetProcedureAddress`
+10. `WSAStartup`
+11. `WSACleanup`
+12. `socket`
+13. `closesocket`
+14. `getaddrinfo`
+15. `freeaddrinfo`
+16. `WSAGetLastError`
 
 The current smoke path captures real sample-target File I/O events, a deterministic `LoadLibraryW("knmon-dynamic-probe.dll")` loader event, and resolver calls for `GetProcAddress` and `LdrGetProcedureAddress` through `transportMode=shared-memory`, with `droppedEvents=0` on the healthy path. `ReadFile` and `WriteFile` include bounded 16-byte buffer previews. `NtCreateFile` is captured as an explicit `ntdll.dll` event with `returnValue` carrying the NTSTATUS hex value and a bounded `ObjectAttributes` object-name decode. Resolver events include bounded function-name evidence and return/status values, but calls made through resolver-returned function pointers are not automatically instrumented. Backpressure can be forced with `KNMON_TRANSPORT_CAPACITY`; the current bounded ring uses drop-newest accounting and reports transport produced/consumed/dropped records plus min/average/max hook overhead estimates.
 
+The first live Wave 2 slice is intentionally narrow: `ws2_32.dll` Winsock startup, cleanup, socket create/close, localhost address resolution, address-info free, and Winsock error query calls are captured from the controlled sample path. High-volume network payload hooks such as `send`, `recv`, `sendto`, and `recvfrom` remain definition-only until a separate transport ABI and overhead review.
+
 Healthy same-bitness x64 and x86 lifecycle evidence currently reports at least the six required File I/O hooks, `restoredHooks=installedHooks`, `failedHooks=0`, and `reason=process_detach` through `agent_shutdown`.
 
-Definition-only Wave 2 metadata is committed for 77 additional APIs across `advapi32.dll`, `bcrypt.dll`, `crypt32.dll`, `rpcrt4.dll`, `ws2_32.dll`, `wininet.dll`, and `winhttp.dll`. These APIs have stable generated IDs and decode aliases, but they are not enabled as live hooks yet. The current definition coverage report totals 90 APIs: 77 `definition_only`, 4 `hooked`, and 9 `smoke_verified`.
+Wave 2 metadata is committed for 77 additional APIs across `advapi32.dll`, `bcrypt.dll`, `crypt32.dll`, `rpcrt4.dll`, `ws2_32.dll`, `wininet.dll`, and `winhttp.dll`. Seven selected `ws2_32.dll` APIs are now smoke-verified IAT hooks; the remaining Wave 2 APIs stay `definition_only`. The current definition coverage report totals 90 APIs: 70 `definition_only`, 4 `hooked`, and 16 `smoke_verified`.
 
 Generated decoder metadata is now emitted for controller-side rendering. The agent still writes compact shared-memory records and does not parse definitions, while the controller uses generated metadata for API/module names, tags, argument labels, decode aliases, and capture timing.
 
@@ -176,6 +186,7 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\loader-aware-iat-swe
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\dynamic-load-rehook-smoke.ps1
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\resolver-monitoring-smoke.ps1
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\generated-decoder-tables-smoke.ps1
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave2-winsock-smoke.ps1
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\injection-preflight-negative-smoke.ps1
 build\native\Debug\knmon-collector.exe smoke-backpressure --capacity 4 --events 10
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\collector-backpressure-smoke.ps1
@@ -193,7 +204,7 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-s
 
 `capture-sample` uses the same controlled launch path, keeps the named pipe open for low-volume control/lifecycle messages, inventories loaded modules, installs same-bitness IAT hooks for the stable File I/O, loader-aware Wave 1, and resolver call set, drains API calls from shared memory, and returns schema-versioned `api_call` events plus dropped-event accounting.
 
-The repeated smoke script verifies five consecutive controlled x64 captures, the stable File I/O API set, zero dropped events, and hook restore counts. The `NtCreateFile` smoke verifies the `ntdll.dll` module, NTSTATUS return format, decoded sample object path, shared-memory transport mode, and clean hook restore. The shared-memory transport smoke verifies healthy x64 transport metrics and hook overhead. The shared-memory backpressure smoke forces a tiny ring capacity and verifies non-blocking dropped-event accounting. The loader-aware smokes verify PEB module inventory, eligible-module IAT sweep evidence, `LoadLibraryW` capture, dynamic-load re-hooking, and post-load `knmon-dynamic-probe.dll` API evidence. The resolver monitoring smoke verifies `GetProcAddress` and `LdrGetProcedureAddress` call visibility, resolver tags, bounded `KnMonDynamicProbe` argument evidence, and clean hook restore. The generated decoder tables smoke verifies generated metadata freshness plus controller-rendered API family/category and argument decode metadata. The x86 smoke verifies the same File I/O API set, loader evidence, resolver evidence, shared-memory transport, and hook lifecycle from a Win32 helper/target/agent build. The preflight negative smoke verifies missing target, missing agent, and available architecture mismatch failures before remote mutation.
+The repeated smoke script verifies five consecutive controlled x64 captures, the stable File I/O API set, zero dropped events, and hook restore counts. The `NtCreateFile` smoke verifies the `ntdll.dll` module, NTSTATUS return format, decoded sample object path, shared-memory transport mode, and clean hook restore. The shared-memory transport smoke verifies healthy x64 transport metrics and hook overhead. The shared-memory backpressure smoke forces a tiny ring capacity and verifies non-blocking dropped-event accounting. The loader-aware smokes verify PEB module inventory, eligible-module IAT sweep evidence, `LoadLibraryW` capture, dynamic-load re-hooking, and post-load `knmon-dynamic-probe.dll` API evidence. The resolver monitoring smoke verifies `GetProcAddress` and `LdrGetProcedureAddress` call visibility, resolver tags, bounded `KnMonDynamicProbe` argument evidence, and clean hook restore. The generated decoder tables smoke verifies generated metadata freshness plus controller-rendered API family/category and argument decode metadata. The Wave 2 Winsock smoke verifies the selected `ws2_32.dll` bootstrap/address-resolution API records, generated network metadata, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The x86 smoke verifies the same File I/O API set, loader evidence, resolver evidence, shared-memory transport, and hook lifecycle from a Win32 helper/target/agent build. The preflight negative smoke verifies missing target, missing agent, and available architecture mismatch failures before remote mutation.
 
 `capture-sample --write-session` persists the bounded capture into a replayable session directory. Session validation checks manifest architecture, HELLO architecture/version evidence, dropped-event accounting, shutdown hook restore counts, and trace rows before replay returns data from disk without relaunching the target.
 
@@ -216,7 +227,7 @@ npm run defs:coverage
 
 `defs:validate` runs JSON Schema validation for committed definition JSON files, semantic checks for decode aliases, enum/flag references, length expressions, duplicate APIs, stable ID assignments, generated decoder table freshness, definition fixtures, the Rohitab importer fixture, and a coverage-report bucket check. `defs:decoder-tables` is a focused generated-table check. `defs:coverage` prints a deterministic Markdown report that separates `definition_only`, `hooked`, and `smoke_verified` API coverage.
 
-The current committed definition catalog includes 90 APIs. Wave 2 APIs are intentionally marked `definition_only` until hook ABI expansion and performance gates are reviewed.
+The current committed definition catalog includes 90 APIs. Only the selected Winsock bootstrap/address-resolution APIs have moved to `iat` and `smoke_verified`; remaining Wave 2 APIs are intentionally marked `definition_only` until hook ABI expansion and performance gates are reviewed.
 
 Validate session fixtures:
 

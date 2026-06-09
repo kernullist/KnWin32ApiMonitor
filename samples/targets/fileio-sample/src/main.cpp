@@ -1,3 +1,5 @@
+#include <WinSock2.h>
+#include <WS2tcpip.h>
 #include <Windows.h>
 #include <winternl.h>
 
@@ -196,6 +198,79 @@ bool RunDynamicLoadProbe()
     return success;
 }
 
+bool RunWinsockProbe()
+{
+    bool success = false;
+    bool started = false;
+    WSADATA wsaData = {};
+    ADDRINFOA hints = {};
+    PADDRINFOA results = nullptr;
+    SOCKET socketHandle = INVALID_SOCKET;
+
+    do
+    {
+        const int startupResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+        if (startupResult != 0)
+        {
+            std::cout << "WSAStartup failed with " << startupResult << "\n";
+            break;
+        }
+
+        started = true;
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_protocol = IPPROTO_TCP;
+
+        const int addressResult = getaddrinfo("localhost", "80", &hints, &results);
+        if (addressResult != 0)
+        {
+            std::cout << "getaddrinfo failed with " << addressResult << "\n";
+            break;
+        }
+
+        socketHandle = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (socketHandle == INVALID_SOCKET)
+        {
+            std::cout << "socket failed with " << WSAGetLastError() << "\n";
+            break;
+        }
+
+        const int lastError = WSAGetLastError();
+        std::cout << "winsock probe last_error=" << lastError << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (socketHandle != INVALID_SOCKET)
+    {
+        const int closeResult = closesocket(socketHandle);
+        socketHandle = INVALID_SOCKET;
+        if (closeResult == SOCKET_ERROR)
+        {
+            std::cout << "closesocket failed with " << WSAGetLastError() << "\n";
+            success = false;
+        }
+    }
+
+    if (results != nullptr)
+    {
+        freeaddrinfo(results);
+        results = nullptr;
+    }
+
+    if (started)
+    {
+        const int cleanupResult = WSACleanup();
+        if (cleanupResult != 0)
+        {
+            std::cout << "WSACleanup failed with " << WSAGetLastError() << "\n";
+            success = false;
+        }
+    }
+
+    return success;
+}
+
 int RunFileIo(bool slow)
 {
     int exitCode = 1;
@@ -259,6 +334,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunDynamicLoadProbe())
+        {
+            break;
+        }
+
+        if (!RunWinsockProbe())
         {
             break;
         }

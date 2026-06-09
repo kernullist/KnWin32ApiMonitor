@@ -1,5 +1,7 @@
 #include <knmon/common/Protocol.h>
 
+#include <WinSock2.h>
+#include <WS2tcpip.h>
 #include <Windows.h>
 #include <winternl.h>
 
@@ -11,6 +13,14 @@
 #include <intrin.h>
 #include <sstream>
 #include <string>
+
+#ifdef GetAddrInfo
+#undef GetAddrInfo
+#endif
+
+#ifdef FreeAddrInfo
+#undef FreeAddrInfo
+#endif
 
 #ifndef NT_SUCCESS
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
@@ -75,6 +85,13 @@ using LoadLibraryAFn = HMODULE(WINAPI*)(LPCSTR);
 using LoadLibraryExWFn = HMODULE(WINAPI*)(LPCWSTR, HANDLE, DWORD);
 using LoadLibraryExAFn = HMODULE(WINAPI*)(LPCSTR, HANDLE, DWORD);
 using GetProcAddressFn = FARPROC(WINAPI*)(HMODULE, LPCSTR);
+using WSAStartupFn = int(WINAPI*)(WORD, LPWSADATA);
+using WSACleanupFn = int(WINAPI*)();
+using SocketFn = SOCKET(WINAPI*)(int, int, int);
+using ClosesocketFn = int(WINAPI*)(SOCKET);
+using GetAddrInfoFn = int(WINAPI*)(PCSTR, PCSTR, const ADDRINFOA*, PADDRINFOA*);
+using FreeAddrInfoFn = void(WINAPI*)(PADDRINFOA);
+using WSAGetLastErrorFn = int(WINAPI*)();
 using NtCreateFileFn = NTSTATUS(NTAPI*)(
     PHANDLE,
     ACCESS_MASK,
@@ -112,6 +129,13 @@ LoadLibraryAFn g_originalLoadLibraryA = nullptr;
 LoadLibraryExWFn g_originalLoadLibraryExW = nullptr;
 LoadLibraryExAFn g_originalLoadLibraryExA = nullptr;
 GetProcAddressFn g_originalGetProcAddress = nullptr;
+WSAStartupFn g_originalWSAStartup = nullptr;
+WSACleanupFn g_originalWSACleanup = nullptr;
+SocketFn g_originalSocket = nullptr;
+ClosesocketFn g_originalClosesocket = nullptr;
+GetAddrInfoFn g_originalGetAddrInfo = nullptr;
+FreeAddrInfoFn g_originalFreeAddrInfo = nullptr;
+WSAGetLastErrorFn g_originalWSAGetLastError = nullptr;
 NtCreateFileFn g_originalNtCreateFile = nullptr;
 LdrLoadDllFn g_originalLdrLoadDll = nullptr;
 LdrGetProcedureAddressFn g_originalLdrGetProcedureAddress = nullptr;
@@ -179,12 +203,13 @@ struct HookDefinition
     bool Required = false;
     bool ReportStatus = false;
     bool LoaderApi = false;
+    WORD ImportOrdinal = 0;
     std::uint32_t LastPatchedSlots = 0;
 };
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 13;
+constexpr std::size_t HookDefinitionCount = 20;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1002,6 +1027,10 @@ std::uint16_t ModuleId(const char* moduleName)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::KernelBase);
     }
+    else if (_stricmp(moduleName, "ws2_32.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Ws2_32);
+    }
 
     return result;
 }
@@ -1689,6 +1718,164 @@ void EmitLdrGetProcedureAddressEvent(
     }
 }
 
+void EmitWSAStartupEvent(
+    int result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    WORD versionRequested,
+    LPWSADATA data)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::WSAStartup, "ws2_32.dll", start, end, result == 0 ? 0 : static_cast<DWORD>(result));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values32[0] = versionRequested;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(data));
+
+        WSADATA localData = {};
+        if (result == 0 && ReadCurrentProcessValue(data, &localData))
+        {
+            CopyAsciiText(record->Text0, &record->Text0Length, sizeof(record->Text0), localData.szDescription);
+            CopyAsciiText(record->Text1, &record->Text1Length, sizeof(record->Text1), localData.szSystemStatus);
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitWSACleanupEvent(
+    int result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::WSACleanup, "ws2_32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitSocketEvent(
+    SOCKET result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    int af,
+    int type,
+    int protocol)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::Socket, "ws2_32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uintptr_t>(result));
+        record->Values32[0] = static_cast<std::uint32_t>(af);
+        record->Values32[1] = static_cast<std::uint32_t>(type);
+        record->Values32[2] = static_cast<std::uint32_t>(protocol);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitClosesocketEvent(
+    int result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    SOCKET socketValue)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::Closesocket, "ws2_32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(static_cast<std::uintptr_t>(socketValue));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetAddrInfoEvent(
+    int result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    PCSTR nodeName,
+    PCSTR serviceName,
+    const ADDRINFOA* hints,
+    PADDRINFOA* resolved)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetAddrInfo, "ws2_32.dll", start, end, result == 0 ? 0 : static_cast<DWORD>(result));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(hints));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(resolved));
+
+        PADDRINFOA resolvedValue = nullptr;
+        if (result == 0 && ReadCurrentProcessValue(resolved, &resolvedValue))
+        {
+            record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(resolvedValue));
+        }
+
+        ADDRINFOA localHints = {};
+        if (ReadCurrentProcessValue(hints, &localHints))
+        {
+            record->Values32[0] = static_cast<std::uint32_t>(localHints.ai_family);
+            record->Values32[1] = static_cast<std::uint32_t>(localHints.ai_socktype);
+            record->Values32[2] = static_cast<std::uint32_t>(localHints.ai_protocol);
+        }
+
+        CopyAsciiText(record->Text0, &record->Text0Length, sizeof(record->Text0), nodeName);
+        CopyAsciiText(record->Text1, &record->Text1Length, sizeof(record->Text1), serviceName);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitFreeAddrInfoEvent(
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    PADDRINFOA addrInfo)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::FreeAddrInfo, "ws2_32.dll", start, end, 0);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(addrInfo));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitWSAGetLastErrorEvent(
+    int result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::WSAGetLastError, "ws2_32.dll", start, end, 0);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void* ResolveExport(const char* moduleName, const char* name)
 {
     void* result = nullptr;
@@ -1977,6 +2164,13 @@ HMODULE WINAPI HookedLoadLibraryA(LPCSTR fileName);
 HMODULE WINAPI HookedLoadLibraryExW(LPCWSTR fileName, HANDLE file, DWORD flags);
 HMODULE WINAPI HookedLoadLibraryExA(LPCSTR fileName, HANDLE file, DWORD flags);
 FARPROC WINAPI HookedGetProcAddress(HMODULE module, LPCSTR procName);
+int WINAPI HookedWSAStartup(WORD versionRequested, LPWSADATA data);
+int WINAPI HookedWSACleanup();
+SOCKET WINAPI HookedSocket(int af, int type, int protocol);
+int WINAPI HookedClosesocket(SOCKET socketValue);
+int WINAPI HookedGetAddrInfo(PCSTR nodeName, PCSTR serviceName, const ADDRINFOA* hints, PADDRINFOA* result);
+void WINAPI HookedFreeAddrInfo(PADDRINFOA addrInfo);
+int WINAPI HookedWSAGetLastError();
 NTSTATUS NTAPI HookedNtCreateFile(PHANDLE fileHandle, ACCESS_MASK desiredAccess, POBJECT_ATTRIBUTES objectAttributes, PIO_STATUS_BLOCK ioStatusBlock, PLARGE_INTEGER allocationSize, ULONG fileAttributes, ULONG shareAccess, ULONG createDisposition, ULONG createOptions, PVOID eaBuffer, ULONG eaLength);
 NTSTATUS NTAPI HookedLdrLoadDll(PWSTR pathToFile, ULONG flags, PUNICODE_STRING moduleFileName, PHANDLE moduleHandle);
 NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functionName, ULONG ordinal, PVOID* functionAddress);
@@ -1984,35 +2178,46 @@ NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functio
 std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
 {
     return {
-        HookDefinition { "kernel32.dll", "CreateFileW", reinterpret_cast<void*>(HookedCreateFileW), reinterpret_cast<void**>(&g_originalCreateFileW), true, true, false, 0 },
-        HookDefinition { "kernel32.dll", "CreateFileA", reinterpret_cast<void*>(HookedCreateFileA), reinterpret_cast<void**>(&g_originalCreateFileA), true, true, false, 0 },
-        HookDefinition { "kernel32.dll", "ReadFile", reinterpret_cast<void*>(HookedReadFile), reinterpret_cast<void**>(&g_originalReadFile), true, true, false, 0 },
-        HookDefinition { "kernel32.dll", "WriteFile", reinterpret_cast<void*>(HookedWriteFile), reinterpret_cast<void**>(&g_originalWriteFile), true, true, false, 0 },
-        HookDefinition { "kernel32.dll", "CloseHandle", reinterpret_cast<void*>(HookedCloseHandle), reinterpret_cast<void**>(&g_originalCloseHandle), true, true, false, 0 },
-        HookDefinition { "ntdll.dll", "NtCreateFile", reinterpret_cast<void*>(HookedNtCreateFile), reinterpret_cast<void**>(&g_originalNtCreateFile), true, true, false, 0 },
-        HookDefinition { "kernel32.dll", "LoadLibraryW", reinterpret_cast<void*>(HookedLoadLibraryW), reinterpret_cast<void**>(&g_originalLoadLibraryW), false, true, true, 0 },
-        HookDefinition { "kernel32.dll", "LoadLibraryA", reinterpret_cast<void*>(HookedLoadLibraryA), reinterpret_cast<void**>(&g_originalLoadLibraryA), false, true, true, 0 },
-        HookDefinition { "kernel32.dll", "LoadLibraryExW", reinterpret_cast<void*>(HookedLoadLibraryExW), reinterpret_cast<void**>(&g_originalLoadLibraryExW), false, true, true, 0 },
-        HookDefinition { "kernel32.dll", "LoadLibraryExA", reinterpret_cast<void*>(HookedLoadLibraryExA), reinterpret_cast<void**>(&g_originalLoadLibraryExA), false, true, true, 0 },
-        HookDefinition { "ntdll.dll", "LdrLoadDll", reinterpret_cast<void*>(HookedLdrLoadDll), reinterpret_cast<void**>(&g_originalLdrLoadDll), false, true, true, 0 },
-        HookDefinition { "kernel32.dll", "GetProcAddress", reinterpret_cast<void*>(HookedGetProcAddress), reinterpret_cast<void**>(&g_originalGetProcAddress), false, true, false, 0 },
-        HookDefinition { "ntdll.dll", "LdrGetProcedureAddress", reinterpret_cast<void*>(HookedLdrGetProcedureAddress), reinterpret_cast<void**>(&g_originalLdrGetProcedureAddress), false, true, false, 0 },
+        HookDefinition { "kernel32.dll", "CreateFileW", reinterpret_cast<void*>(HookedCreateFileW), reinterpret_cast<void**>(&g_originalCreateFileW), true, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "CreateFileA", reinterpret_cast<void*>(HookedCreateFileA), reinterpret_cast<void**>(&g_originalCreateFileA), true, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "ReadFile", reinterpret_cast<void*>(HookedReadFile), reinterpret_cast<void**>(&g_originalReadFile), true, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "WriteFile", reinterpret_cast<void*>(HookedWriteFile), reinterpret_cast<void**>(&g_originalWriteFile), true, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "CloseHandle", reinterpret_cast<void*>(HookedCloseHandle), reinterpret_cast<void**>(&g_originalCloseHandle), true, true, false, 0, 0 },
+        HookDefinition { "ntdll.dll", "NtCreateFile", reinterpret_cast<void*>(HookedNtCreateFile), reinterpret_cast<void**>(&g_originalNtCreateFile), true, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "LoadLibraryW", reinterpret_cast<void*>(HookedLoadLibraryW), reinterpret_cast<void**>(&g_originalLoadLibraryW), false, true, true, 0, 0 },
+        HookDefinition { "kernel32.dll", "LoadLibraryA", reinterpret_cast<void*>(HookedLoadLibraryA), reinterpret_cast<void**>(&g_originalLoadLibraryA), false, true, true, 0, 0 },
+        HookDefinition { "kernel32.dll", "LoadLibraryExW", reinterpret_cast<void*>(HookedLoadLibraryExW), reinterpret_cast<void**>(&g_originalLoadLibraryExW), false, true, true, 0, 0 },
+        HookDefinition { "kernel32.dll", "LoadLibraryExA", reinterpret_cast<void*>(HookedLoadLibraryExA), reinterpret_cast<void**>(&g_originalLoadLibraryExA), false, true, true, 0, 0 },
+        HookDefinition { "ntdll.dll", "LdrLoadDll", reinterpret_cast<void*>(HookedLdrLoadDll), reinterpret_cast<void**>(&g_originalLdrLoadDll), false, true, true, 0, 0 },
+        HookDefinition { "kernel32.dll", "GetProcAddress", reinterpret_cast<void*>(HookedGetProcAddress), reinterpret_cast<void**>(&g_originalGetProcAddress), false, true, false, 0, 0 },
+        HookDefinition { "ntdll.dll", "LdrGetProcedureAddress", reinterpret_cast<void*>(HookedLdrGetProcedureAddress), reinterpret_cast<void**>(&g_originalLdrGetProcedureAddress), false, true, false, 0, 0 },
+        HookDefinition { "ws2_32.dll", "WSAStartup", reinterpret_cast<void*>(HookedWSAStartup), reinterpret_cast<void**>(&g_originalWSAStartup), false, true, false, 115, 0 },
+        HookDefinition { "ws2_32.dll", "WSACleanup", reinterpret_cast<void*>(HookedWSACleanup), reinterpret_cast<void**>(&g_originalWSACleanup), false, true, false, 116, 0 },
+        HookDefinition { "ws2_32.dll", "socket", reinterpret_cast<void*>(HookedSocket), reinterpret_cast<void**>(&g_originalSocket), false, true, false, 23, 0 },
+        HookDefinition { "ws2_32.dll", "closesocket", reinterpret_cast<void*>(HookedClosesocket), reinterpret_cast<void**>(&g_originalClosesocket), false, true, false, 3, 0 },
+        HookDefinition { "ws2_32.dll", "getaddrinfo", reinterpret_cast<void*>(HookedGetAddrInfo), reinterpret_cast<void**>(&g_originalGetAddrInfo), false, true, false, 0, 0 },
+        HookDefinition { "ws2_32.dll", "freeaddrinfo", reinterpret_cast<void*>(HookedFreeAddrInfo), reinterpret_cast<void**>(&g_originalFreeAddrInfo), false, true, false, 0, 0 },
+        HookDefinition { "ws2_32.dll", "WSAGetLastError", reinterpret_cast<void*>(HookedWSAGetLastError), reinterpret_cast<void**>(&g_originalWSAGetLastError), false, true, false, 111, 0 },
     };
 }
 
-bool ImportNameMatches(std::uint8_t* base, std::uint32_t size, IMAGE_THUNK_DATA* originalThunk, const char* functionName)
+bool ImportMatchesDefinition(std::uint8_t* base, std::uint32_t size, IMAGE_THUNK_DATA* originalThunk, const HookDefinition& definition)
 {
     bool matches = false;
 
     do
     {
-        if (base == nullptr || originalThunk == nullptr || functionName == nullptr)
+        if (base == nullptr || originalThunk == nullptr || definition.ApiName == nullptr)
         {
             break;
         }
 
         if (IMAGE_SNAP_BY_ORDINAL(originalThunk->u1.Ordinal))
         {
+            if (definition.ImportOrdinal != 0 && IMAGE_ORDINAL(originalThunk->u1.Ordinal) == definition.ImportOrdinal)
+            {
+                matches = true;
+            }
             break;
         }
 
@@ -2026,7 +2231,7 @@ bool ImportNameMatches(std::uint8_t* base, std::uint32_t size, IMAGE_THUNK_DATA*
             break;
         }
 
-        if (std::strcmp(reinterpret_cast<const char*>(importByName->Name), functionName) == 0)
+        if (std::strcmp(reinterpret_cast<const char*>(importByName->Name), definition.ApiName) == 0)
         {
             matches = true;
         }
@@ -2089,7 +2294,7 @@ void PatchImportInModule(ModuleInfo& module, HookDefinition& definition, SweepSt
                     originalThunk[thunkIndex].u1.AddressOfData != 0;
                 ++thunkIndex)
             {
-                if (!ImportNameMatches(base, module.SizeOfImage, &originalThunk[thunkIndex], definition.ApiName))
+                if (!ImportMatchesDefinition(base, module.SizeOfImage, &originalThunk[thunkIndex], definition))
                 {
                     continue;
                 }
@@ -2794,6 +2999,196 @@ NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functio
     }
 
     return status;
+}
+
+int WINAPI HookedWSAStartup(WORD versionRequested, LPWSADATA data)
+{
+    if (g_inHook || !HooksEnabled() || g_originalWSAStartup == nullptr)
+    {
+        if (g_originalWSAStartup == nullptr)
+        {
+            return WSASYSNOTREADY;
+        }
+
+        return g_originalWSAStartup(versionRequested, data);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const int result = g_originalWSAStartup(versionRequested, data);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitWSAStartupEvent(result, start, end, versionRequested, data);
+    }
+
+    return result;
+}
+
+int WINAPI HookedWSACleanup()
+{
+    if (g_inHook || !HooksEnabled() || g_originalWSACleanup == nullptr)
+    {
+        if (g_originalWSACleanup == nullptr)
+        {
+            return SOCKET_ERROR;
+        }
+
+        return g_originalWSACleanup();
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const int result = g_originalWSACleanup();
+    const DWORD errorCode = result == SOCKET_ERROR && g_originalWSAGetLastError != nullptr ? static_cast<DWORD>(g_originalWSAGetLastError()) : 0;
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitWSACleanupEvent(result, errorCode, start, end);
+    }
+
+    return result;
+}
+
+SOCKET WINAPI HookedSocket(int af, int type, int protocol)
+{
+    if (g_inHook || !HooksEnabled() || g_originalSocket == nullptr)
+    {
+        if (g_originalSocket == nullptr)
+        {
+            return INVALID_SOCKET;
+        }
+
+        return g_originalSocket(af, type, protocol);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const SOCKET result = g_originalSocket(af, type, protocol);
+    const DWORD errorCode = result == INVALID_SOCKET && g_originalWSAGetLastError != nullptr ? static_cast<DWORD>(g_originalWSAGetLastError()) : 0;
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitSocketEvent(result, errorCode, start, end, af, type, protocol);
+    }
+
+    return result;
+}
+
+int WINAPI HookedClosesocket(SOCKET socketValue)
+{
+    if (g_inHook || !HooksEnabled() || g_originalClosesocket == nullptr)
+    {
+        if (g_originalClosesocket == nullptr)
+        {
+            return SOCKET_ERROR;
+        }
+
+        return g_originalClosesocket(socketValue);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const int result = g_originalClosesocket(socketValue);
+    const DWORD errorCode = result == SOCKET_ERROR && g_originalWSAGetLastError != nullptr ? static_cast<DWORD>(g_originalWSAGetLastError()) : 0;
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitClosesocketEvent(result, errorCode, start, end, socketValue);
+    }
+
+    return result;
+}
+
+int WINAPI HookedGetAddrInfo(PCSTR nodeName, PCSTR serviceName, const ADDRINFOA* hints, PADDRINFOA* resultValue)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetAddrInfo == nullptr)
+    {
+        if (g_originalGetAddrInfo == nullptr)
+        {
+            return EAI_FAIL;
+        }
+
+        return g_originalGetAddrInfo(nodeName, serviceName, hints, resultValue);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const int result = g_originalGetAddrInfo(nodeName, serviceName, hints, resultValue);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitGetAddrInfoEvent(result, start, end, nodeName, serviceName, hints, resultValue);
+    }
+
+    return result;
+}
+
+void WINAPI HookedFreeAddrInfo(PADDRINFOA addrInfo)
+{
+    if (g_inHook || !HooksEnabled() || g_originalFreeAddrInfo == nullptr)
+    {
+        if (g_originalFreeAddrInfo != nullptr)
+        {
+            g_originalFreeAddrInfo(addrInfo);
+        }
+
+        return;
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    g_originalFreeAddrInfo(addrInfo);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitFreeAddrInfoEvent(start, end, addrInfo);
+    }
+}
+
+int WINAPI HookedWSAGetLastError()
+{
+    if (g_inHook || !HooksEnabled() || g_originalWSAGetLastError == nullptr)
+    {
+        if (g_originalWSAGetLastError == nullptr)
+        {
+            return 0;
+        }
+
+        return g_originalWSAGetLastError();
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const int result = g_originalWSAGetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitWSAGetLastErrorEvent(result, start, end);
+    }
+
+    return result;
 }
 
 bool InstallHooks()
