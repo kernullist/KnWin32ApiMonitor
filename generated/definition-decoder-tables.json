@@ -315,14 +315,14 @@
     {
       "callingConvention": "stdcall",
       "category": "registry_key_open",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": "ERROR_SUCCESS"
       },
       "family": "registry",
       "firstParameterIndex": 54,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 14,
       "module": "advapi32.dll",
       "moduleId": 4,
@@ -339,14 +339,14 @@
     {
       "callingConvention": "stdcall",
       "category": "registry_key_create",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": "ERROR_SUCCESS"
       },
       "family": "registry",
       "firstParameterIndex": 59,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 15,
       "module": "advapi32.dll",
       "moduleId": 4,
@@ -363,14 +363,14 @@
     {
       "callingConvention": "stdcall",
       "category": "registry_value_query",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": "ERROR_SUCCESS"
       },
       "family": "registry",
       "firstParameterIndex": 68,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 16,
       "module": "advapi32.dll",
       "moduleId": 4,
@@ -387,14 +387,14 @@
     {
       "callingConvention": "stdcall",
       "category": "registry_value_set",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": "ERROR_SUCCESS"
       },
       "family": "registry",
       "firstParameterIndex": 74,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 17,
       "module": "advapi32.dll",
       "moduleId": 4,
@@ -411,14 +411,14 @@
     {
       "callingConvention": "stdcall",
       "category": "registry_value_delete",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": "ERROR_SUCCESS"
       },
       "family": "registry",
       "firstParameterIndex": 80,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 18,
       "module": "advapi32.dll",
       "moduleId": 4,
@@ -435,14 +435,14 @@
     {
       "callingConvention": "stdcall",
       "category": "registry_key_close",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": "ERROR_SUCCESS"
       },
       "family": "registry",
       "firstParameterIndex": 82,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 19,
       "module": "advapi32.dll",
       "moduleId": 4,

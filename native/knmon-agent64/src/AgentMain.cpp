@@ -43,6 +43,8 @@ namespace
 constexpr const wchar_t* AgentVersion = L"0.2.0";
 constexpr std::size_t MaxBufferPreviewBytes = 16;
 constexpr std::size_t MaxNtObjectNameBytes = 512;
+constexpr std::size_t MaxRegistryStringChars = 256;
+constexpr std::size_t MaxRegistryDataPreviewBytes = 128;
 
 struct KnMonPebLdrData
 {
@@ -85,6 +87,12 @@ using LoadLibraryAFn = HMODULE(WINAPI*)(LPCSTR);
 using LoadLibraryExWFn = HMODULE(WINAPI*)(LPCWSTR, HANDLE, DWORD);
 using LoadLibraryExAFn = HMODULE(WINAPI*)(LPCSTR, HANDLE, DWORD);
 using GetProcAddressFn = FARPROC(WINAPI*)(HMODULE, LPCSTR);
+using RegOpenKeyExWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR, DWORD, REGSAM, PHKEY);
+using RegCreateKeyExWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR, DWORD, LPWSTR, DWORD, REGSAM, const SECURITY_ATTRIBUTES*, PHKEY, LPDWORD);
+using RegQueryValueExWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR, LPDWORD, LPDWORD, LPBYTE, LPDWORD);
+using RegSetValueExWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR, DWORD, DWORD, const BYTE*, DWORD);
+using RegDeleteValueWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR);
+using RegCloseKeyFn = LSTATUS(WINAPI*)(HKEY);
 using WSAStartupFn = int(WINAPI*)(WORD, LPWSADATA);
 using WSACleanupFn = int(WINAPI*)();
 using SocketFn = SOCKET(WINAPI*)(int, int, int);
@@ -129,6 +137,12 @@ LoadLibraryAFn g_originalLoadLibraryA = nullptr;
 LoadLibraryExWFn g_originalLoadLibraryExW = nullptr;
 LoadLibraryExAFn g_originalLoadLibraryExA = nullptr;
 GetProcAddressFn g_originalGetProcAddress = nullptr;
+RegOpenKeyExWFn g_originalRegOpenKeyExW = nullptr;
+RegCreateKeyExWFn g_originalRegCreateKeyExW = nullptr;
+RegQueryValueExWFn g_originalRegQueryValueExW = nullptr;
+RegSetValueExWFn g_originalRegSetValueExW = nullptr;
+RegDeleteValueWFn g_originalRegDeleteValueW = nullptr;
+RegCloseKeyFn g_originalRegCloseKey = nullptr;
 WSAStartupFn g_originalWSAStartup = nullptr;
 WSACleanupFn g_originalWSACleanup = nullptr;
 SocketFn g_originalSocket = nullptr;
@@ -209,7 +223,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 20;
+constexpr std::size_t HookDefinitionCount = 26;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -634,6 +648,223 @@ void CopyBufferPreviewText(char* destination, std::uint32_t* length, std::size_t
     }
 }
 
+std::uint32_t CopyWidePointerText(char* destination, std::uint32_t* length, std::size_t capacity, const wchar_t* source)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::array<wchar_t, MaxRegistryStringChars + 1> localBuffer = {};
+    std::uint32_t copiedChars = 0;
+    bool terminated = false;
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            break;
+        }
+
+        while (copiedChars < MaxRegistryStringChars)
+        {
+            wchar_t ch = L'\0';
+            SIZE_T bytesRead = 0;
+            if (!ReadProcessMemory(GetCurrentProcess(), source + copiedChars, &ch, sizeof(ch), &bytesRead) || bytesRead != sizeof(ch))
+            {
+                status = copiedChars == 0 ?
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory) :
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+                break;
+            }
+
+            if (ch == L'\0')
+            {
+                terminated = true;
+                break;
+            }
+
+            localBuffer[copiedChars] = ch;
+            ++copiedChars;
+        }
+
+        if (!terminated && status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+        }
+
+        CopyWideCountText(destination, capacity, localBuffer.data(), copiedChars);
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = destination == nullptr ? 0 : static_cast<std::uint32_t>(std::strlen(destination));
+    }
+
+    return status;
+}
+
+void CopyLocalHexPreviewText(char* destination, std::uint32_t* length, std::size_t capacity, const unsigned char* buffer, DWORD bytes)
+{
+    std::uint32_t copied = 0;
+    static constexpr char Hex[] = "0123456789abcdef";
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            break;
+        }
+
+        destination[0] = '\0';
+        if (buffer == nullptr || bytes == 0)
+        {
+            break;
+        }
+
+        const DWORD captured = bytes < MaxBufferPreviewBytes ? bytes : static_cast<DWORD>(MaxBufferPreviewBytes);
+        for (DWORD index = 0; index < captured; ++index)
+        {
+            if (copied + 3 >= capacity)
+            {
+                break;
+            }
+
+            if (index != 0)
+            {
+                destination[copied] = ' ';
+                ++copied;
+            }
+
+            destination[copied] = Hex[(buffer[index] >> 4) & 0x0f];
+            ++copied;
+            destination[copied] = Hex[buffer[index] & 0x0f];
+            ++copied;
+        }
+
+        destination[copied] = '\0';
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+}
+
+std::uint32_t CopyRegistryDataPreviewText(
+    char* destination,
+    std::uint32_t* length,
+    std::size_t capacity,
+    DWORD valueType,
+    const BYTE* data,
+    DWORD bytes)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (data == nullptr || bytes == 0)
+        {
+            break;
+        }
+
+        DWORD capturedBytes = bytes < MaxRegistryDataPreviewBytes ? bytes : static_cast<DWORD>(MaxRegistryDataPreviewBytes);
+        if (capturedBytes < bytes)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+        }
+
+        if (valueType == REG_SZ || valueType == REG_EXPAND_SZ)
+        {
+            capturedBytes -= capturedBytes % sizeof(wchar_t);
+            if (capturedBytes == 0)
+            {
+                break;
+            }
+
+            std::array<wchar_t, (MaxRegistryDataPreviewBytes / sizeof(wchar_t)) + 1> localWide = {};
+            SIZE_T bytesRead = 0;
+            if (!ReadProcessMemory(GetCurrentProcess(), data, localWide.data(), capturedBytes, &bytesRead) || bytesRead == 0)
+            {
+                CopyHexPointerText(destination, length, capacity, data);
+                status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+                break;
+            }
+
+            bytesRead -= bytesRead % sizeof(wchar_t);
+            std::size_t charCount = bytesRead / sizeof(wchar_t);
+            if (charCount >= localWide.size())
+            {
+                charCount = localWide.size() - 1;
+            }
+
+            while (charCount > 0 && localWide[charCount - 1] == L'\0')
+            {
+                --charCount;
+            }
+
+            CopyWideCountText(destination, capacity, localWide.data(), charCount);
+            if (bytesRead < capturedBytes && status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
+            {
+                status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+            }
+            break;
+        }
+
+        if (valueType == REG_DWORD && bytes >= sizeof(DWORD))
+        {
+            DWORD localDword = 0;
+            SIZE_T bytesRead = 0;
+            if (!ReadProcessMemory(GetCurrentProcess(), data, &localDword, sizeof(localDword), &bytesRead) || bytesRead != sizeof(localDword))
+            {
+                CopyHexPointerText(destination, length, capacity, data);
+                status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+                break;
+            }
+
+            char buffer[32] = {};
+            std::snprintf(buffer, sizeof(buffer), "dword=0x%08lx", static_cast<unsigned long>(localDword));
+            CopyAsciiText(destination, length, capacity, buffer);
+            break;
+        }
+
+        std::array<unsigned char, MaxRegistryDataPreviewBytes> localBytes = {};
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), data, localBytes.data(), capturedBytes, &bytesRead) || bytesRead == 0)
+        {
+            CopyHexPointerText(destination, length, capacity, data);
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        CopyLocalHexPreviewText(destination, length, capacity, localBytes.data(), static_cast<DWORD>(bytesRead));
+        if (bytesRead < capturedBytes && status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+    }
+    while (false);
+
+    if (length != nullptr && destination != nullptr)
+    {
+        *length = static_cast<std::uint32_t>(std::strlen(destination));
+    }
+
+    return status;
+}
+
 bool IsOrdinalProcName(LPCSTR procName)
 {
     const std::uintptr_t value = reinterpret_cast<std::uintptr_t>(procName);
@@ -1026,6 +1257,10 @@ std::uint16_t ModuleId(const char* moduleName)
     else if (std::strcmp(moduleName, "kernelbase.dll") == 0)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::KernelBase);
+    }
+    else if (_stricmp(moduleName, "advapi32.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Advapi32);
     }
     else if (_stricmp(moduleName, "ws2_32.dll") == 0)
     {
@@ -1718,6 +1953,199 @@ void EmitLdrGetProcedureAddressEvent(
     }
 }
 
+void EmitRegOpenKeyExWEvent(
+    LSTATUS result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HKEY key,
+    LPCWSTR subKey,
+    DWORD options,
+    REGSAM desiredAccess,
+    PHKEY resultKey)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::RegOpenKeyExW, "advapi32.dll", start, end, result == ERROR_SUCCESS ? 0 : static_cast<DWORD>(result));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(key));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(resultKey));
+
+        HKEY openedKey = nullptr;
+        if (result == ERROR_SUCCESS && ReadCurrentProcessValue(resultKey, &openedKey))
+        {
+            record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(openedKey));
+        }
+
+        record->Values32[0] = options;
+        record->Values32[1] = desiredAccess;
+        record->Values32[2] = CopyWidePointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), subKey);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitRegCreateKeyExWEvent(
+    LSTATUS result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HKEY key,
+    LPCWSTR subKey,
+    DWORD reserved,
+    LPWSTR keyClass,
+    DWORD options,
+    REGSAM desiredAccess,
+    const SECURITY_ATTRIBUTES* securityAttributes,
+    PHKEY resultKey,
+    LPDWORD disposition)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::RegCreateKeyExW, "advapi32.dll", start, end, result == ERROR_SUCCESS ? 0 : static_cast<DWORD>(result));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(key));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(securityAttributes));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(resultKey));
+        record->Values64[4] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(disposition));
+
+        HKEY createdKey = nullptr;
+        if (result == ERROR_SUCCESS && ReadCurrentProcessValue(resultKey, &createdKey))
+        {
+            record->Values64[3] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(createdKey));
+        }
+
+        DWORD dispositionValue = 0;
+        if (result == ERROR_SUCCESS && ReadCurrentProcessValue(disposition, &dispositionValue))
+        {
+            record->Values32[3] = dispositionValue;
+        }
+
+        record->Values32[0] = reserved;
+        record->Values32[1] = options;
+        record->Values32[2] = desiredAccess;
+        record->Values32[4] = CopyWidePointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), subKey);
+        record->Values32[5] = CopyWidePointerText(record->Text1, &record->Text1Length, sizeof(record->Text1), keyClass);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitRegQueryValueExWEvent(
+    LSTATUS result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HKEY key,
+    LPCWSTR valueName,
+    LPDWORD reserved,
+    LPDWORD valueType,
+    LPBYTE data,
+    LPDWORD dataBytes)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::RegQueryValueExW, "advapi32.dll", start, end, result == ERROR_SUCCESS ? 0 : static_cast<DWORD>(result));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(key));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(reserved));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(valueType));
+        record->Values64[3] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(data));
+        record->Values64[4] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(dataBytes));
+
+        DWORD localType = 0;
+        if (ReadCurrentProcessValue(valueType, &localType))
+        {
+            record->Values32[0] = localType;
+        }
+
+        DWORD localBytes = 0;
+        if (ReadCurrentProcessValue(dataBytes, &localBytes))
+        {
+            record->Values32[1] = localBytes;
+        }
+
+        record->Values32[2] = CopyWidePointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), valueName);
+        if (result == ERROR_SUCCESS)
+        {
+            record->Values32[3] = CopyRegistryDataPreviewText(record->Text1, &record->Text1Length, sizeof(record->Text1), localType, data, localBytes);
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitRegSetValueExWEvent(
+    LSTATUS result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HKEY key,
+    LPCWSTR valueName,
+    DWORD reserved,
+    DWORD valueType,
+    const BYTE* data,
+    DWORD dataBytes)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::RegSetValueExW, "advapi32.dll", start, end, result == ERROR_SUCCESS ? 0 : static_cast<DWORD>(result));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(key));
+        record->Values64[1] = reserved;
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(data));
+        record->Values32[0] = valueType;
+        record->Values32[1] = dataBytes;
+        record->Values32[2] = CopyWidePointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), valueName);
+        record->Values32[3] = CopyRegistryDataPreviewText(record->Text1, &record->Text1Length, sizeof(record->Text1), valueType, data, dataBytes);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitRegDeleteValueWEvent(
+    LSTATUS result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HKEY key,
+    LPCWSTR valueName)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::RegDeleteValueW, "advapi32.dll", start, end, result == ERROR_SUCCESS ? 0 : static_cast<DWORD>(result));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(key));
+        record->Values32[0] = CopyWidePointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), valueName);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitRegCloseKeyEvent(
+    LSTATUS result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HKEY key)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::RegCloseKey, "advapi32.dll", start, end, result == ERROR_SUCCESS ? 0 : static_cast<DWORD>(result));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(key));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void EmitWSAStartupEvent(
     int result,
     const LARGE_INTEGER& start,
@@ -2164,6 +2592,12 @@ HMODULE WINAPI HookedLoadLibraryA(LPCSTR fileName);
 HMODULE WINAPI HookedLoadLibraryExW(LPCWSTR fileName, HANDLE file, DWORD flags);
 HMODULE WINAPI HookedLoadLibraryExA(LPCSTR fileName, HANDLE file, DWORD flags);
 FARPROC WINAPI HookedGetProcAddress(HMODULE module, LPCSTR procName);
+LSTATUS WINAPI HookedRegOpenKeyExW(HKEY key, LPCWSTR subKey, DWORD options, REGSAM desiredAccess, PHKEY resultKey);
+LSTATUS WINAPI HookedRegCreateKeyExW(HKEY key, LPCWSTR subKey, DWORD reserved, LPWSTR keyClass, DWORD options, REGSAM desiredAccess, const SECURITY_ATTRIBUTES* securityAttributes, PHKEY resultKey, LPDWORD disposition);
+LSTATUS WINAPI HookedRegQueryValueExW(HKEY key, LPCWSTR valueName, LPDWORD reserved, LPDWORD valueType, LPBYTE data, LPDWORD dataBytes);
+LSTATUS WINAPI HookedRegSetValueExW(HKEY key, LPCWSTR valueName, DWORD reserved, DWORD valueType, const BYTE* data, DWORD dataBytes);
+LSTATUS WINAPI HookedRegDeleteValueW(HKEY key, LPCWSTR valueName);
+LSTATUS WINAPI HookedRegCloseKey(HKEY key);
 int WINAPI HookedWSAStartup(WORD versionRequested, LPWSADATA data);
 int WINAPI HookedWSACleanup();
 SOCKET WINAPI HookedSocket(int af, int type, int protocol);
@@ -2191,6 +2625,12 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "ntdll.dll", "LdrLoadDll", reinterpret_cast<void*>(HookedLdrLoadDll), reinterpret_cast<void**>(&g_originalLdrLoadDll), false, true, true, 0, 0 },
         HookDefinition { "kernel32.dll", "GetProcAddress", reinterpret_cast<void*>(HookedGetProcAddress), reinterpret_cast<void**>(&g_originalGetProcAddress), false, true, false, 0, 0 },
         HookDefinition { "ntdll.dll", "LdrGetProcedureAddress", reinterpret_cast<void*>(HookedLdrGetProcedureAddress), reinterpret_cast<void**>(&g_originalLdrGetProcedureAddress), false, true, false, 0, 0 },
+        HookDefinition { "advapi32.dll", "RegOpenKeyExW", reinterpret_cast<void*>(HookedRegOpenKeyExW), reinterpret_cast<void**>(&g_originalRegOpenKeyExW), false, true, false, 0, 0 },
+        HookDefinition { "advapi32.dll", "RegCreateKeyExW", reinterpret_cast<void*>(HookedRegCreateKeyExW), reinterpret_cast<void**>(&g_originalRegCreateKeyExW), false, true, false, 0, 0 },
+        HookDefinition { "advapi32.dll", "RegQueryValueExW", reinterpret_cast<void*>(HookedRegQueryValueExW), reinterpret_cast<void**>(&g_originalRegQueryValueExW), false, true, false, 0, 0 },
+        HookDefinition { "advapi32.dll", "RegSetValueExW", reinterpret_cast<void*>(HookedRegSetValueExW), reinterpret_cast<void**>(&g_originalRegSetValueExW), false, true, false, 0, 0 },
+        HookDefinition { "advapi32.dll", "RegDeleteValueW", reinterpret_cast<void*>(HookedRegDeleteValueW), reinterpret_cast<void**>(&g_originalRegDeleteValueW), false, true, false, 0, 0 },
+        HookDefinition { "advapi32.dll", "RegCloseKey", reinterpret_cast<void*>(HookedRegCloseKey), reinterpret_cast<void**>(&g_originalRegCloseKey), false, true, false, 0, 0 },
         HookDefinition { "ws2_32.dll", "WSAStartup", reinterpret_cast<void*>(HookedWSAStartup), reinterpret_cast<void**>(&g_originalWSAStartup), false, true, false, 115, 0 },
         HookDefinition { "ws2_32.dll", "WSACleanup", reinterpret_cast<void*>(HookedWSACleanup), reinterpret_cast<void**>(&g_originalWSACleanup), false, true, false, 116, 0 },
         HookDefinition { "ws2_32.dll", "socket", reinterpret_cast<void*>(HookedSocket), reinterpret_cast<void**>(&g_originalSocket), false, true, false, 23, 0 },
@@ -2999,6 +3439,177 @@ NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functio
     }
 
     return status;
+}
+
+LSTATUS WINAPI HookedRegOpenKeyExW(HKEY key, LPCWSTR subKey, DWORD options, REGSAM desiredAccess, PHKEY resultKey)
+{
+    if (g_inHook || !HooksEnabled() || g_originalRegOpenKeyExW == nullptr)
+    {
+        if (g_originalRegOpenKeyExW == nullptr)
+        {
+            return ERROR_PROC_NOT_FOUND;
+        }
+
+        return g_originalRegOpenKeyExW(key, subKey, options, desiredAccess, resultKey);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const LSTATUS result = g_originalRegOpenKeyExW(key, subKey, options, desiredAccess, resultKey);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitRegOpenKeyExWEvent(result, start, end, key, subKey, options, desiredAccess, resultKey);
+    }
+
+    return result;
+}
+
+LSTATUS WINAPI HookedRegCreateKeyExW(
+    HKEY key,
+    LPCWSTR subKey,
+    DWORD reserved,
+    LPWSTR keyClass,
+    DWORD options,
+    REGSAM desiredAccess,
+    const SECURITY_ATTRIBUTES* securityAttributes,
+    PHKEY resultKey,
+    LPDWORD disposition)
+{
+    if (g_inHook || !HooksEnabled() || g_originalRegCreateKeyExW == nullptr)
+    {
+        if (g_originalRegCreateKeyExW == nullptr)
+        {
+            return ERROR_PROC_NOT_FOUND;
+        }
+
+        return g_originalRegCreateKeyExW(key, subKey, reserved, keyClass, options, desiredAccess, securityAttributes, resultKey, disposition);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const LSTATUS result = g_originalRegCreateKeyExW(key, subKey, reserved, keyClass, options, desiredAccess, securityAttributes, resultKey, disposition);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitRegCreateKeyExWEvent(result, start, end, key, subKey, reserved, keyClass, options, desiredAccess, securityAttributes, resultKey, disposition);
+    }
+
+    return result;
+}
+
+LSTATUS WINAPI HookedRegQueryValueExW(HKEY key, LPCWSTR valueName, LPDWORD reserved, LPDWORD valueType, LPBYTE data, LPDWORD dataBytes)
+{
+    if (g_inHook || !HooksEnabled() || g_originalRegQueryValueExW == nullptr)
+    {
+        if (g_originalRegQueryValueExW == nullptr)
+        {
+            return ERROR_PROC_NOT_FOUND;
+        }
+
+        return g_originalRegQueryValueExW(key, valueName, reserved, valueType, data, dataBytes);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const LSTATUS result = g_originalRegQueryValueExW(key, valueName, reserved, valueType, data, dataBytes);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitRegQueryValueExWEvent(result, start, end, key, valueName, reserved, valueType, data, dataBytes);
+    }
+
+    return result;
+}
+
+LSTATUS WINAPI HookedRegSetValueExW(HKEY key, LPCWSTR valueName, DWORD reserved, DWORD valueType, const BYTE* data, DWORD dataBytes)
+{
+    if (g_inHook || !HooksEnabled() || g_originalRegSetValueExW == nullptr)
+    {
+        if (g_originalRegSetValueExW == nullptr)
+        {
+            return ERROR_PROC_NOT_FOUND;
+        }
+
+        return g_originalRegSetValueExW(key, valueName, reserved, valueType, data, dataBytes);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const LSTATUS result = g_originalRegSetValueExW(key, valueName, reserved, valueType, data, dataBytes);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitRegSetValueExWEvent(result, start, end, key, valueName, reserved, valueType, data, dataBytes);
+    }
+
+    return result;
+}
+
+LSTATUS WINAPI HookedRegDeleteValueW(HKEY key, LPCWSTR valueName)
+{
+    if (g_inHook || !HooksEnabled() || g_originalRegDeleteValueW == nullptr)
+    {
+        if (g_originalRegDeleteValueW == nullptr)
+        {
+            return ERROR_PROC_NOT_FOUND;
+        }
+
+        return g_originalRegDeleteValueW(key, valueName);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const LSTATUS result = g_originalRegDeleteValueW(key, valueName);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitRegDeleteValueWEvent(result, start, end, key, valueName);
+    }
+
+    return result;
+}
+
+LSTATUS WINAPI HookedRegCloseKey(HKEY key)
+{
+    if (g_inHook || !HooksEnabled() || g_originalRegCloseKey == nullptr)
+    {
+        if (g_originalRegCloseKey == nullptr)
+        {
+            return ERROR_PROC_NOT_FOUND;
+        }
+
+        return g_originalRegCloseKey(key);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const LSTATUS result = g_originalRegCloseKey(key);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitRegCloseKeyEvent(result, start, end, key);
+    }
+
+    return result;
 }
 
 int WINAPI HookedWSAStartup(WORD versionRequested, LPWSADATA data)

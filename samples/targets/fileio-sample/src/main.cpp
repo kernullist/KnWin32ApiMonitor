@@ -93,6 +93,11 @@ void LogLastError(const char* operation)
     std::cout << operation << " failed with " << GetLastError() << "\n";
 }
 
+void LogRegistryStatus(const char* operation, LSTATUS status)
+{
+    std::cout << operation << " failed with " << status << "\n";
+}
+
 bool RunNtCreateFileProbe(const std::wstring& path)
 {
     bool success = false;
@@ -193,6 +198,146 @@ bool RunDynamicLoadProbe()
     if (module != nullptr)
     {
         FreeLibrary(module);
+    }
+
+    return success;
+}
+
+bool RunRegistryProbe()
+{
+    bool success = false;
+    HKEY key = nullptr;
+    HKEY openedKey = nullptr;
+    DWORD disposition = 0;
+    DWORD valueType = 0;
+    DWORD queryBytes = 0;
+    const wchar_t* sampleKey = L"Software\\KNMonApiMonitorSample";
+    const wchar_t* valueName = L"SampleValue";
+    const std::wstring valueData = L"KNMon registry sample value";
+    std::array<wchar_t, 128> queryBuffer = {};
+
+    do
+    {
+        LSTATUS status = RegCreateKeyExW(
+            HKEY_CURRENT_USER,
+            sampleKey,
+            0,
+            nullptr,
+            REG_OPTION_NON_VOLATILE,
+            KEY_READ | KEY_WRITE,
+            nullptr,
+            &key,
+            &disposition);
+
+        if (status != ERROR_SUCCESS)
+        {
+            LogRegistryStatus("RegCreateKeyExW", status);
+            break;
+        }
+
+        const DWORD valueBytes = static_cast<DWORD>((valueData.size() + 1) * sizeof(wchar_t));
+        status = RegSetValueExW(
+            key,
+            valueName,
+            0,
+            REG_SZ,
+            reinterpret_cast<const BYTE*>(valueData.c_str()),
+            valueBytes);
+
+        if (status != ERROR_SUCCESS)
+        {
+            LogRegistryStatus("RegSetValueExW", status);
+            break;
+        }
+
+        queryBytes = static_cast<DWORD>(queryBuffer.size() * sizeof(wchar_t));
+        status = RegQueryValueExW(
+            key,
+            valueName,
+            nullptr,
+            &valueType,
+            reinterpret_cast<LPBYTE>(queryBuffer.data()),
+            &queryBytes);
+
+        if (status != ERROR_SUCCESS)
+        {
+            LogRegistryStatus("RegQueryValueExW(create handle)", status);
+            break;
+        }
+
+        status = RegCloseKey(key);
+        key = nullptr;
+        if (status != ERROR_SUCCESS)
+        {
+            LogRegistryStatus("RegCloseKey(create handle)", status);
+            break;
+        }
+
+        status = RegOpenKeyExW(
+            HKEY_CURRENT_USER,
+            sampleKey,
+            0,
+            KEY_READ | KEY_WRITE,
+            &openedKey);
+
+        if (status != ERROR_SUCCESS)
+        {
+            LogRegistryStatus("RegOpenKeyExW", status);
+            break;
+        }
+
+        queryBuffer.fill(L'\0');
+        valueType = 0;
+        queryBytes = static_cast<DWORD>(queryBuffer.size() * sizeof(wchar_t));
+        status = RegQueryValueExW(
+            openedKey,
+            valueName,
+            nullptr,
+            &valueType,
+            reinterpret_cast<LPBYTE>(queryBuffer.data()),
+            &queryBytes);
+
+        if (status != ERROR_SUCCESS)
+        {
+            LogRegistryStatus("RegQueryValueExW(open handle)", status);
+            break;
+        }
+
+        status = RegDeleteValueW(openedKey, valueName);
+        if (status != ERROR_SUCCESS)
+        {
+            LogRegistryStatus("RegDeleteValueW", status);
+            break;
+        }
+
+        status = RegCloseKey(openedKey);
+        openedKey = nullptr;
+        if (status != ERROR_SUCCESS)
+        {
+            LogRegistryStatus("RegCloseKey(open handle)", status);
+            break;
+        }
+
+        std::cout << "registry roundtrip disposition=" << disposition << " type=" << valueType << " bytes=" << queryBytes << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (openedKey != nullptr)
+    {
+        RegCloseKey(openedKey);
+    }
+
+    if (key != nullptr)
+    {
+        RegCloseKey(key);
+    }
+
+    const LSTATUS cleanupStatus = RegDeleteKeyW(HKEY_CURRENT_USER, sampleKey);
+    if (success && cleanupStatus != ERROR_SUCCESS && cleanupStatus != ERROR_FILE_NOT_FOUND)
+    {
+        LogRegistryStatus("RegDeleteKeyW(cleanup)", cleanupStatus);
+        success = false;
     }
 
     return success;
@@ -334,6 +479,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunDynamicLoadProbe())
+        {
+            break;
+        }
+
+        if (!RunRegistryProbe())
         {
             break;
         }

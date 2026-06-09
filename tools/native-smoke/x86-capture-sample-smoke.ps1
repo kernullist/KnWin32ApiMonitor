@@ -14,6 +14,12 @@ $requiredApis = @(
     "CloseHandle",
     "GetProcAddress",
     "LdrGetProcedureAddress",
+    "RegOpenKeyExW",
+    "RegCreateKeyExW",
+    "RegQueryValueExW",
+    "RegSetValueExW",
+    "RegDeleteValueW",
+    "RegCloseKey",
     "WSAStartup",
     "WSACleanup",
     "socket",
@@ -109,6 +115,36 @@ $ldrArgs = ($ldr[0].arguments | ConvertTo-Json -Depth 8)
 if ($ldrArgs -notmatch "KnMonDynamicProbe")
 {
     throw "x86 LdrGetProcedureAddress arguments did not include dynamic probe evidence: $ldrArgs"
+}
+
+$registryEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "registry" })
+if ($registryEvents.Count -lt 6)
+{
+    throw "x86 capture did not include the selected registry API family slice."
+}
+
+$registryCreate = @($registryEvents | Where-Object { $_.api -eq "RegCreateKeyExW" } | Select-Object -First 1)
+if ($registryCreate.Count -ne 1 -or $registryCreate[0].module -ne "advapi32.dll" -or $registryCreate[0].hookPolicy -ne "iat" -or $registryCreate[0].coverageStatus -ne "smoke_verified")
+{
+    throw "x86 RegCreateKeyExW metadata mismatch."
+}
+
+$registryCreateArgs = ($registryCreate[0].arguments | ConvertTo-Json -Depth 8)
+if ($registryCreateArgs -notmatch "KNMonApiMonitorSample")
+{
+    throw "x86 registry arguments did not include sample key evidence: $registryCreateArgs"
+}
+
+$registrySet = @($registryEvents | Where-Object { $_.api -eq "RegSetValueExW" } | Select-Object -First 1)
+if ($registrySet.Count -ne 1)
+{
+    throw "x86 capture did not include RegSetValueExW."
+}
+
+$registrySetArgs = ($registrySet[0].arguments | ConvertTo-Json -Depth 8)
+if ($registrySetArgs -notmatch "SampleValue")
+{
+    throw "x86 registry arguments did not include sample value evidence: $registrySetArgs"
 }
 
 $dynamicSweep = @($result.agentMessages | Where-Object { $_.messageType -eq "iat_sweep" -and $_.reason -eq "dynamic_load" } | Select-Object -Last 1)
