@@ -675,14 +675,14 @@
     {
       "callingConvention": "stdcall",
       "category": "cng_algorithm_open",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "return_ntstatus",
       "failure": {
         "ntSuccess": false
       },
       "family": "crypto",
       "firstParameterIndex": 121,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 29,
       "module": "bcrypt.dll",
       "moduleId": 5,
@@ -699,14 +699,14 @@
     {
       "callingConvention": "stdcall",
       "category": "cng_algorithm_close",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "return_ntstatus",
       "failure": {
         "ntSuccess": false
       },
       "family": "crypto",
       "firstParameterIndex": 125,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 30,
       "module": "bcrypt.dll",
       "moduleId": 5,
@@ -723,14 +723,14 @@
     {
       "callingConvention": "stdcall",
       "category": "cng_property_get",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "return_ntstatus",
       "failure": {
         "ntSuccess": false
       },
       "family": "crypto",
       "firstParameterIndex": 127,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 31,
       "module": "bcrypt.dll",
       "moduleId": 5,
@@ -867,14 +867,14 @@
     {
       "callingConvention": "stdcall",
       "category": "cng_random",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "return_ntstatus",
       "failure": {
         "ntSuccess": false
       },
       "family": "crypto",
       "firstParameterIndex": 166,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 37,
       "module": "bcrypt.dll",
       "moduleId": 5,

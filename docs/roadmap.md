@@ -330,7 +330,7 @@ Current verified behavior:
 4. API hook fast paths no longer write API event JSON to the named pipe.
 5. Named pipe remains for low-volume HELLO, hook install status, dropped-event summary, and shutdown lifecycle messages.
 6. The controller drains binary records and normalizes them into the existing `api_call` JSON shape outside the target process.
-7. Healthy x64/x86 captures consume shared-memory API records for File I/O, loader-aware sample events, resolver events, the selected registry slice, the selected Winsock slice, and the selected RPCRT4 binding slice with zero dropped events.
+7. Healthy x64/x86 captures consume shared-memory API records for File I/O, loader-aware sample events, resolver events, the selected registry slice, the selected Winsock slice, the selected RPCRT4 binding slice, and the selected bcrypt CNG provider/RNG slice with zero dropped events.
 8. Backpressure smoke with `KNMON_TRANSPORT_CAPACITY=2` completes capture, retains bounded records, and reports dropped transport events.
 9. Capture results expose transport capacity, produced/consumed/dropped counts, high-water mark, and min/average/max hook overhead metrics.
 10. Session write, validation, and replay remain compatible with shared-memory-normalized `api_call` events.
@@ -427,11 +427,17 @@ Current verified behavior:
    - `RpcStringFreeW`
    - `RpcBindingFree`
 16. RPCRT4 records render generated metadata, `RPC_STATUS` values, pointer-sized binding/string handles, and bounded `ncalrpc`/`KNMonRpcSample` string evidence outside the target process.
-17. `WS2_32.dll` ordinal imports for the selected Winsock APIs are matched only through explicit hook-definition ordinals; broad ordinal patching remains out of scope.
+17. The bcrypt Wave 2 live slice captures selected low-volume `bcrypt.dll` CNG provider/RNG APIs through the same shared-memory transport:
+   - `BCryptOpenAlgorithmProvider`
+   - `BCryptCloseAlgorithmProvider`
+   - `BCryptGetProperty`
+   - `BCryptGenRandom`
+18. bcrypt records render generated metadata, NTSTATUS values, provider handles, algorithm/property names, pointer values, and byte counts outside the target process. They intentionally do not copy random, key, plaintext, ciphertext, IV, or hash input bytes.
+19. `WS2_32.dll` ordinal imports for the selected Winsock APIs are matched only through explicit hook-definition ordinals; broad ordinal patching remains out of scope.
 
 Next implementation focus:
 
-1. Keep the selected Winsock, registry, and RPCRT4 binding slices under shared-memory backpressure and hook-overhead gates.
+1. Keep the selected Winsock, registry, RPCRT4 binding, and bcrypt CNG provider/RNG slices under shared-memory backpressure and hook-overhead gates.
 2. Design payload-heavy network hooks (`send`, `recv`, `sendto`, `recvfrom`) separately before enabling buffer capture at scale.
 3. Stage the next Wave 2 DLL/API family only after deterministic smoke evidence and transport-budget checks exist.
 4. Keep returned-pointer instrumentation as a separate reviewed design item.
@@ -472,18 +478,18 @@ Current verified behavior:
 11. `npm run defs:coverage` reports by DLL, family, risk, hook policy, coverage status, and decode quality.
 12. Wave 2 metadata is committed for `advapi32.dll`, `bcrypt.dll`, `crypt32.dll`, `rpcrt4.dll`, `ws2_32.dll`, `wininet.dll`, and `winhttp.dll`.
 13. Stable generated IDs now cover 10 modules and 90 APIs, with Wave 2 API IDs `14` through `90`.
-14. The coverage report currently totals 60 `definition_only`, 4 `hooked`, and 26 `smoke_verified` APIs.
+14. The coverage report currently totals 56 `definition_only`, 4 `hooked`, and 30 `smoke_verified` APIs.
 15. `npm run defs:generate` emits deterministic controller-side decoder metadata:
    - `generated/definition-decoder-tables.json`
    - `native/knmon-common/include/knmon/common/GeneratedApiMetadata.h`
 16. The controller uses generated metadata for API/module names, family/category tags, argument names/types/directions, decode aliases, and capture timing while preserving explicit per-API shared-memory slot interpretation.
-17. The selected `advapi32.dll` registry slice, `rpcrt4.dll` local binding slice, and `ws2_32.dll` Winsock slice are marked `iat` and `smoke_verified`; unimplemented Wave 2 APIs remain `definition_only`.
+17. The selected `advapi32.dll` registry slice, `bcrypt.dll` CNG provider/RNG slice, `rpcrt4.dll` local binding slice, and `ws2_32.dll` Winsock slice are marked `iat` and `smoke_verified`; unimplemented Wave 2 APIs remain `definition_only`.
 
 Next implementation focus:
 
 1. Expand Wave 2 live hooks only by small DLL/API-family slices with deterministic smoke evidence.
 2. Review a dedicated ABI and performance plan before enabling high-volume network payload hooks.
-3. Prefer the next low-volume API family before payload-heavy hooks, while keeping token, service-control, crypto, RPC auth/endpoint/UUID, WinINet, and WinHTTP work behind separate smoke and transport-budget gates.
+3. Prefer the next low-volume API family before payload-heavy hooks, while keeping token, service-control, crypto key/encrypt/decrypt/hash, RPC auth/endpoint/UUID, WinINet, and WinHTTP work behind separate smoke and transport-budget gates.
 4. Design returned-pointer instrumentation only after the IAT resolver monitoring path remains stable under transport and hook-overhead gates.
 
 ## Phase 11: Controlled Attach And Process Tree Supervision

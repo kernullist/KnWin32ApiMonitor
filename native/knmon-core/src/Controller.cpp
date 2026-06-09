@@ -1120,6 +1120,49 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "HKEY", "hKey", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture));
         payload = ApiCallPayload(result, record, LStatusValue(record.ReturnValue), args.str(), "");
         break;
+    case KnMonTransportApiId::BCryptOpenAlgorithmProvider:
+    {
+        const std::string algorithmPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string algorithmHandle = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string algorithmIdPointer = HexPointerValue(record.Values64[2], result.Architecture);
+        const std::string implementationPointer = HexPointerValue(record.Values64[3], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "BCRYPT_ALG_HANDLE*", "phAlgorithm", "out", algorithmPointer, algorithmHandle, algorithmHandle) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPCWSTR", "pszAlgId", "in", algorithmIdPointer, algorithmIdPointer, text0.empty() ? algorithmIdPointer : text0, DecodeStatusName(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "LPCWSTR", "pszImplementation", "in", implementationPointer, implementationPointer, text1.empty() ? implementationPointer : text1, DecodeStatusName(record.Values32[2])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "ULONG", "dwFlags", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]));
+        payload = ApiCallPayload(result, record, HexNtStatusValue(record.ReturnCode), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::BCryptCloseAlgorithmProvider:
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "BCRYPT_ALG_HANDLE", "hAlgorithm", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture)) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "ULONG", "dwFlags", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]));
+        payload = ApiCallPayload(result, record, HexNtStatusValue(record.ReturnCode), args.str(), "");
+        break;
+    case KnMonTransportApiId::BCryptGetProperty:
+    {
+        const std::string objectHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string propertyPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string outputPointer = HexPointerValue(record.Values64[2], result.Architecture);
+        const std::string resultBytesPointer = HexPointerValue(record.Values64[3], result.Architecture);
+        const std::string propertyDecoded = text0.empty() ? propertyPointer : text0;
+        const std::string outputDecoded = text1.empty() ? outputPointer : text1;
+        const std::string resultBytes = std::to_string(record.Values32[2]);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "BCRYPT_HANDLE", "hObject", "in", objectHandle, objectHandle, objectHandle) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPCWSTR", "pszProperty", "in", propertyPointer, propertyPointer, propertyDecoded, DecodeStatusName(record.Values32[3])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "PUCHAR", "pbOutput", "out", outputPointer, outputDecoded, outputDecoded, DecodeStatusName(record.Values32[4])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "ULONG", "cbOutput", "in", std::to_string(record.Values32[0]), std::to_string(record.Values32[0]), std::to_string(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 4, "ULONG*", "pcbResult", "out", resultBytesPointer, resultBytes, resultBytes) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 5, "ULONG", "dwFlags", "in", HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]));
+        payload = ApiCallPayload(result, record, HexNtStatusValue(record.ReturnCode), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::BCryptGenRandom:
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "BCRYPT_ALG_HANDLE", "hAlgorithm", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture)) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "PUCHAR", "pbBuffer", "out", HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture)) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "ULONG", "cbBuffer", "in", std::to_string(record.Values32[0]), std::to_string(record.Values32[0]), std::to_string(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "ULONG", "dwFlags", "in", HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]));
+        payload = ApiCallPayload(result, record, HexNtStatusValue(record.ReturnCode), args.str(), "");
+        break;
     case KnMonTransportApiId::RpcStringBindingComposeW:
     {
         const std::string objUuidPointer = HexPointerValue(record.Values64[0], result.Architecture);

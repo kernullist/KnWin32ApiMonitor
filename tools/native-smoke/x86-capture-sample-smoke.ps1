@@ -20,6 +20,10 @@ $requiredApis = @(
     "RegSetValueExW",
     "RegDeleteValueW",
     "RegCloseKey",
+    "BCryptOpenAlgorithmProvider",
+    "BCryptCloseAlgorithmProvider",
+    "BCryptGetProperty",
+    "BCryptGenRandom",
     "RpcStringBindingComposeW",
     "RpcBindingFromStringBindingW",
     "RpcStringFreeW",
@@ -149,6 +153,42 @@ $registrySetArgs = ($registrySet[0].arguments | ConvertTo-Json -Depth 8)
 if ($registrySetArgs -notmatch "SampleValue")
 {
     throw "x86 registry arguments did not include sample value evidence: $registrySetArgs"
+}
+
+$cryptoEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "crypto" })
+if ($cryptoEvents.Count -lt 4)
+{
+    throw "x86 capture did not include the selected bcrypt CNG API family slice."
+}
+
+$bcryptOpen = @($cryptoEvents | Where-Object { $_.api -eq "BCryptOpenAlgorithmProvider" } | Select-Object -First 1)
+if ($bcryptOpen.Count -ne 1 -or $bcryptOpen[0].module -ne "bcrypt.dll" -or $bcryptOpen[0].hookPolicy -ne "iat" -or $bcryptOpen[0].coverageStatus -ne "smoke_verified")
+{
+    throw "x86 BCryptOpenAlgorithmProvider metadata mismatch."
+}
+
+$bcryptOpenArgs = ($bcryptOpen[0].arguments | ConvertTo-Json -Depth 8)
+if ($bcryptOpenArgs -notmatch "RNG")
+{
+    throw "x86 bcrypt open arguments did not include RNG evidence: $bcryptOpenArgs"
+}
+
+$bcryptProperty = @($cryptoEvents | Where-Object { $_.api -eq "BCryptGetProperty" } | Select-Object -First 1)
+if ($bcryptProperty.Count -ne 1)
+{
+    throw "x86 capture did not include BCryptGetProperty."
+}
+
+$bcryptPropertyArgs = ($bcryptProperty[0].arguments | ConvertTo-Json -Depth 8)
+if ($bcryptPropertyArgs -notmatch "AlgorithmName" -or $bcryptPropertyArgs -notmatch "RNG")
+{
+    throw "x86 bcrypt property arguments did not include AlgorithmName/RNG evidence: $bcryptPropertyArgs"
+}
+
+$bcryptRandom = @($cryptoEvents | Where-Object { $_.api -eq "BCryptGenRandom" } | Select-Object -First 1)
+if ($bcryptRandom.Count -ne 1 -or -not [string]::IsNullOrEmpty($bcryptRandom[0].bufferPreview))
+{
+    throw "x86 BCryptGenRandom exposed buffer preview or was not captured."
 }
 
 $rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })

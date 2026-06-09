@@ -1,6 +1,7 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
+#include <bcrypt.h>
 #include <rpc.h>
 #include <winternl.h>
 
@@ -417,6 +418,71 @@ bool RunRpcBindingProbe()
     return success;
 }
 
+bool RunBcryptProbe()
+{
+    bool success = false;
+    BCRYPT_ALG_HANDLE algorithm = nullptr;
+    std::array<UCHAR, 128> propertyBuffer = {};
+    ULONG propertyBytes = 0;
+    std::array<UCHAR, 16> randomBuffer = {};
+
+    do
+    {
+        NTSTATUS status = BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_RNG_ALGORITHM, nullptr, 0);
+        if (!NT_SUCCESS(status))
+        {
+            std::cout << "BCryptOpenAlgorithmProvider failed with " << HexNtStatus(status) << "\n";
+            break;
+        }
+
+        status = BCryptGetProperty(
+            algorithm,
+            BCRYPT_ALGORITHM_NAME,
+            propertyBuffer.data(),
+            static_cast<ULONG>(propertyBuffer.size()),
+            &propertyBytes,
+            0);
+
+        if (!NT_SUCCESS(status))
+        {
+            std::cout << "BCryptGetProperty failed with " << HexNtStatus(status) << "\n";
+            break;
+        }
+
+        status = BCryptGenRandom(algorithm, randomBuffer.data(), static_cast<ULONG>(randomBuffer.size()), 0);
+        if (!NT_SUCCESS(status))
+        {
+            std::cout << "BCryptGenRandom failed with " << HexNtStatus(status) << "\n";
+            break;
+        }
+
+        status = BCryptCloseAlgorithmProvider(algorithm, 0);
+        algorithm = nullptr;
+        if (!NT_SUCCESS(status))
+        {
+            std::cout << "BCryptCloseAlgorithmProvider failed with " << HexNtStatus(status) << "\n";
+            break;
+        }
+
+        std::cout << "bcrypt cng roundtrip property_bytes=" << propertyBytes << " random_bytes=" << randomBuffer.size() << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (algorithm != nullptr)
+    {
+        const NTSTATUS cleanupStatus = BCryptCloseAlgorithmProvider(algorithm, 0);
+        if (!NT_SUCCESS(cleanupStatus))
+        {
+            std::cout << "BCryptCloseAlgorithmProvider(cleanup) failed with " << HexNtStatus(cleanupStatus) << "\n";
+            success = false;
+        }
+    }
+
+    SecureZeroMemory(randomBuffer.data(), randomBuffer.size());
+    return success;
+}
+
 bool RunWinsockProbe()
 {
     bool success = false;
@@ -563,6 +629,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunRpcBindingProbe())
+        {
+            break;
+        }
+
+        if (!RunBcryptProbe())
         {
             break;
         }
