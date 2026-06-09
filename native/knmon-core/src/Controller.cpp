@@ -1193,6 +1193,23 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "HCRYPTMSG", "hCryptMsg", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture));
         payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
         break;
+    case KnMonTransportApiId::WinHttpOpen:
+    {
+        const std::string agentPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string proxyPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string proxyBypassPointer = HexPointerValue(record.Values64[2], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPCWSTR", "pszAgentW", "in", agentPointer, agentPointer, text0.empty() ? agentPointer : text0, DecodeStatusName(record.Values32[2])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "dwAccessType", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "LPCWSTR", "pszProxyW", "in", proxyPointer, proxyPointer, text1.empty() ? proxyPointer : text1, DecodeStatusName(record.Values32[3])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "LPCWSTR", "pszProxyBypassW", "in", proxyBypassPointer, proxyBypassPointer, text2.empty() ? proxyBypassPointer : text2, DecodeStatusName(record.Values32[4])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 4, "DWORD", "dwFlags", "in", HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]));
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::WinHttpCloseHandle:
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HINTERNET", "hInternet", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture));
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
     case KnMonTransportApiId::RpcStringBindingComposeW:
     {
         const std::string objUuidPointer = HexPointerValue(record.Values64[0], result.Architecture);

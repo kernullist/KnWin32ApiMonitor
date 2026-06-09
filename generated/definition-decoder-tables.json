@@ -1919,14 +1919,14 @@
     {
       "callingConvention": "stdcall",
       "category": "winhttp_session_open",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "GetLastError",
       "failure": {
         "returnEqual": "NULL"
       },
       "family": "http",
       "firstParameterIndex": 337,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 81,
       "module": "winhttp.dll",
       "moduleId": 10,
@@ -1943,14 +1943,14 @@
     {
       "callingConvention": "stdcall",
       "category": "winhttp_handle_close",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "GetLastError",
       "failure": {
         "returnEqual": "FALSE"
       },
       "family": "http",
       "firstParameterIndex": 342,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 82,
       "module": "winhttp.dll",
       "moduleId": 10,

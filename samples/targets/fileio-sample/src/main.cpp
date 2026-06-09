@@ -4,6 +4,7 @@
 #include <bcrypt.h>
 #include <rpc.h>
 #include <wincrypt.h>
+#include <winhttp.h>
 #include <winternl.h>
 
 #include <array>
@@ -546,6 +547,50 @@ bool RunCrypt32Probe()
     return success;
 }
 
+bool RunWinHttpProbe()
+{
+    bool success = false;
+    HINTERNET session = nullptr;
+
+    do
+    {
+        session = WinHttpOpen(
+            L"KNMonWinHttpSample/1.0",
+            WINHTTP_ACCESS_TYPE_NO_PROXY,
+            WINHTTP_NO_PROXY_NAME,
+            WINHTTP_NO_PROXY_BYPASS,
+            0);
+
+        if (session == nullptr)
+        {
+            LogLastError("WinHttpOpen");
+            break;
+        }
+
+        if (!WinHttpCloseHandle(session))
+        {
+            LogLastError("WinHttpCloseHandle");
+            break;
+        }
+
+        session = nullptr;
+        std::cout << "winhttp session roundtrip access_type=" << WINHTTP_ACCESS_TYPE_NO_PROXY << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (session != nullptr)
+    {
+        if (!WinHttpCloseHandle(session))
+        {
+            LogLastError("WinHttpCloseHandle(cleanup)");
+            success = false;
+        }
+    }
+
+    return success;
+}
+
 bool RunWinsockProbe()
 {
     bool success = false;
@@ -702,6 +747,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunCrypt32Probe())
+        {
+            break;
+        }
+
+        if (!RunWinHttpProbe())
         {
             break;
         }

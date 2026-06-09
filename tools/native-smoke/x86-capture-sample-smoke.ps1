@@ -28,6 +28,8 @@ $requiredApis = @(
     "CertCloseStore",
     "CryptMsgOpenToDecode",
     "CryptMsgClose",
+    "WinHttpOpen",
+    "WinHttpCloseHandle",
     "RpcStringBindingComposeW",
     "RpcBindingFromStringBindingW",
     "RpcStringFreeW",
@@ -256,6 +258,45 @@ $crypt32Args = @($result.capturedEvents | Where-Object { $_.module -eq "crypt32.
 if ($crypt32Args -match "BEGIN CERTIFICATE|PRIVATE KEY|plaintext|ciphertext|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 crypt32 events appear to expose blob or secret-bearing evidence: $crypt32Args"
+}
+
+$httpEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "http" })
+if ($httpEvents.Count -lt 2)
+{
+    throw "x86 capture did not include the selected WinHTTP session API family slice."
+}
+
+$winHttpOpen = @($httpEvents | Where-Object { $_.api -eq "WinHttpOpen" } | Select-Object -First 1)
+if ($winHttpOpen.Count -ne 1 -or $winHttpOpen[0].module -ne "winhttp.dll" -or $winHttpOpen[0].hookPolicy -ne "iat" -or $winHttpOpen[0].coverageStatus -ne "smoke_verified")
+{
+    throw "x86 WinHttpOpen metadata mismatch."
+}
+
+$winHttpOpenArgs = ($winHttpOpen[0].arguments | ConvertTo-Json -Depth 8)
+if ($winHttpOpenArgs -notmatch "KNMonWinHttpSample/1.0" -or $winHttpOpenArgs -notmatch "0x00000001")
+{
+    throw "x86 WinHttpOpen arguments did not include sample no-proxy evidence: $winHttpOpenArgs"
+}
+
+foreach ($argName in @("pszProxyW", "pszProxyBypassW"))
+{
+    $argument = @($winHttpOpen[0].arguments | Where-Object { $_.name -eq $argName } | Select-Object -First 1)
+    if ($argument.Count -ne 1 -or $argument[0].rawValue -notmatch "^0x0+$")
+    {
+        throw "x86 WinHttpOpen $argName was not null: $($argument[0] | ConvertTo-Json -Depth 8)"
+    }
+}
+
+$winHttpClose = @($httpEvents | Where-Object { $_.api -eq "WinHttpCloseHandle" } | Select-Object -First 1)
+if ($winHttpClose.Count -ne 1)
+{
+    throw "x86 capture did not include WinHttpCloseHandle."
+}
+
+$winHttpArgs = @($result.capturedEvents | Where-Object { $_.module -eq "winhttp.dll" } | ForEach-Object { $_.arguments } | ConvertTo-Json -Depth 8)
+if ($winHttpArgs -cmatch "https?://|Authorization|Cookie|Set-Cookie|POST|GET /|BEGIN CERTIFICATE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 WinHTTP events appear to expose URL/header/body/credential or byte-preview evidence: $winHttpArgs"
 }
 
 $rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })
