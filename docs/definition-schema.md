@@ -18,9 +18,16 @@ definitions/
   metadata/enums.json
   metadata/flags.json
   metadata/id-assignments.json
+  win32/advapi32.json
+  win32/bcrypt.json
+  win32/crypt32.json
   win32/file-io.json
   win32/loader.json
+  win32/rpcrt4.json
   win32/resolver.json
+  win32/winhttp.json
+  win32/wininet.json
+  win32/ws2_32.json
 contracts/
   api-definition.schema.json
   definition-metadata.schema.json
@@ -140,7 +147,7 @@ Decode aliases are centralized in `definitions/metadata/decode-aliases.json`. Ea
 
 Enum values live in `definitions/metadata/enums.json`; flag values live in `definitions/metadata/flags.json`. Numeric values may be decimal or hex strings and are normalized by tooling for validation/reporting.
 
-Current File I/O decode metadata covers file access masks, file share masks, CreateFile creation disposition, NT file disposition, File flags/attributes, NT create options, and LoadLibrary flags.
+Current File I/O decode metadata covers file access masks, file share masks, CreateFile creation disposition, NT file disposition, File flags/attributes, NT create options, and LoadLibrary flags. Wave 2 definition-only metadata also registers generic aliases for access masks, CNG handles, certificate contexts, RPC bindings, socket handles, internet handles, sockaddr/addrinfo objects, token privileges, service status records, and pointer buffers used by controller-side decoders.
 
 ## Stable Transport IDs
 
@@ -153,14 +160,23 @@ Existing transport IDs are preserved:
 
 1. File I/O API IDs `1` through `6`.
 2. Loader API IDs `7` through `11`.
-3. Module IDs:
+3. Resolver API IDs `12` through `13`.
+4. Wave 2 definition-only API IDs `14` through `90`.
+5. Module IDs:
    - `kernel32.dll = 1`
    - `ntdll.dll = 2`
    - `kernelbase.dll = 3`
+   - `advapi32.dll = 4`
+   - `bcrypt.dll = 5`
+   - `crypt32.dll = 6`
+   - `rpcrt4.dll = 7`
+   - `ws2_32.dll = 8`
+   - `wininet.dll = 9`
+   - `winhttp.dll = 10`
 
 The native agent and controller use generated compile-time enum constants through `GeneratedApiIds.h`; target hook fast paths do not parse definitions or metadata.
 
-## File I/O And Loader Coverage
+## File I/O, Loader, Resolver, And Wave 2 Metadata Coverage
 
 The first validator requires definitions for:
 
@@ -195,6 +211,22 @@ Resolver calls are monitored through eligible-module IAT hooks in the controlled
 2. `LdrGetProcedureAddress`
 
 The resolver events capture bounded function-name or ordinal evidence, module handle evidence, and return/status values. This coverage intentionally means the resolver API calls themselves are visible. It does not imply returned-pointer instrumentation, inline detours, EAT patching, or automatic coverage for later calls made through resolver-returned function pointers.
+
+Wave 2 metadata is definition-only and does not enable live hooks yet. The committed Wave 2 definition catalog adds 77 APIs across:
+
+1. `advapi32.dll`: registry, token, privilege, and service-control APIs.
+2. `bcrypt.dll`: CNG algorithm, key, encryption/decryption, hash, and random APIs.
+3. `crypt32.dll`: certificate store, certificate chain, and cryptographic message APIs.
+4. `rpcrt4.dll`: RPC string binding, binding option/auth, endpoint inquiry, and UUID APIs.
+5. `ws2_32.dll`: Winsock startup, socket, connect, send/receive, and address-resolution APIs.
+6. `wininet.dll`: WinINet session, connection, request, transfer, and option APIs.
+7. `winhttp.dll`: WinHTTP session, connection, request, transfer, option, and header APIs.
+
+The current definition coverage report totals 90 APIs:
+
+1. `definition_only`: 77
+2. `hooked`: 4
+3. `smoke_verified`: 9
 
 `NtCreateFile` is captured as a controlled `ntdll.dll` IAT hook in the repository sample target. The native event keeps `returnValue` as the NTSTATUS hex string. For compatibility with the existing trace error model, `lastErrorCode` remains `0` on NT success and a mapped Win32 error on NT failure.
 

@@ -408,9 +408,10 @@ Current verified behavior:
 
 Next implementation focus:
 
-1. Broaden Wave 2 system DLL API definitions only after generated IDs, definition validation, transport, and hook-overhead gates remain green.
+1. Generate decoder tables for the new Wave 2 metadata before enabling Wave 2 hooks.
 2. Keep generated ID artifacts as the gate before any new transport ABI expansion.
-3. Keep returned-pointer instrumentation as a separate reviewed design item.
+3. Design a Wave 2 hook enablement plan that preserves shared-memory backpressure and hook-overhead gates.
+4. Keep returned-pointer instrumentation as a separate reviewed design item.
 
 ## Phase 10: Definition System V1
 
@@ -446,11 +447,14 @@ Current verified behavior:
 9. Restricted buffer length expression validation rejects unsupported tokens and unknown parameter identifiers without arbitrary code execution.
 10. The Rohitab XML importer prototype converts a small local XML fixture into deterministic draft definition JSON and marks unknown decodes as `unresolved`.
 11. `npm run defs:coverage` reports by DLL, family, risk, hook policy, coverage status, and decode quality.
+12. Wave 2 definition-only metadata is committed for `advapi32.dll`, `bcrypt.dll`, `crypt32.dll`, `rpcrt4.dll`, `ws2_32.dll`, `wininet.dll`, and `winhttp.dll`.
+13. Stable generated IDs now cover 10 modules and 90 APIs, with Wave 2 API IDs `14` through `90`.
+14. The coverage report currently totals 77 `definition_only`, 4 `hooked`, and 9 `smoke_verified` APIs.
 
 Next implementation focus:
 
-1. Add Wave 2 definition-only metadata before any Wave 2 hook enablement.
-2. Start generated decoder tables for controller-side argument rendering after coverage reports remain stable.
+1. Start generated decoder tables for controller-side argument rendering after coverage reports remain stable.
+2. Add Wave 2 hook ABI mapping only after decoder-table generation and transport budget checks are green.
 3. Design returned-pointer instrumentation only after the IAT resolver monitoring path remains stable under transport and hook-overhead gates.
 
 ## Phase 11: Controlled Attach And Process Tree Supervision

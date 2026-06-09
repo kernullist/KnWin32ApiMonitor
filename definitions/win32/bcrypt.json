@@ -1,0 +1,230 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "bcrypt",
+  "description": "Wave 2 definition-only metadata for CNG algorithm, key, hash, and random APIs.",
+  "apis": [
+    {
+      "module": "BCRYPT.dll",
+      "name": "BCryptOpenAlgorithmProvider",
+      "family": "crypto",
+      "category": "cng_algorithm_open",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "NTSTATUS",
+      "errorSource": "return_ntstatus",
+      "success": { "ntSuccess": true },
+      "failure": { "ntSuccess": false },
+      "parameters": [
+        { "name": "phAlgorithm", "type": "BCRYPT_ALG_HANDLE*", "direction": "out", "decode": "bcrypt_handle_pointer", "captureTiming": "post" },
+        { "name": "pszAlgId", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string", "maxBytes": 512 },
+        { "name": "pszImplementation", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "dwFlags", "type": "ULONG", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "BCRYPT.dll",
+      "name": "BCryptCloseAlgorithmProvider",
+      "family": "crypto",
+      "category": "cng_algorithm_close",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "NTSTATUS",
+      "errorSource": "return_ntstatus",
+      "success": { "ntSuccess": true },
+      "failure": { "ntSuccess": false },
+      "parameters": [
+        { "name": "hAlgorithm", "type": "BCRYPT_ALG_HANDLE", "direction": "in", "decode": "bcrypt_handle" },
+        { "name": "dwFlags", "type": "ULONG", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "BCRYPT.dll",
+      "name": "BCryptGetProperty",
+      "family": "crypto",
+      "category": "cng_property_get",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "NTSTATUS",
+      "errorSource": "return_ntstatus",
+      "success": { "ntSuccess": true },
+      "failure": { "ntSuccess": false },
+      "parameters": [
+        { "name": "hObject", "type": "BCRYPT_HANDLE", "direction": "in", "decode": "bcrypt_handle" },
+        { "name": "pszProperty", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string", "maxBytes": 512 },
+        { "name": "pbOutput", "type": "PUCHAR", "direction": "out", "decode": "buffer_optional", "nullable": true, "lengthFrom": "cbOutput", "maxBytes": 4096, "captureTiming": "post" },
+        { "name": "cbOutput", "type": "ULONG", "direction": "in", "decode": "byte_count" },
+        { "name": "pcbResult", "type": "ULONG*", "direction": "out", "decode": "dword_pointer", "captureTiming": "post" },
+        { "name": "dwFlags", "type": "ULONG", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "BCRYPT.dll",
+      "name": "BCryptSetProperty",
+      "family": "crypto",
+      "category": "cng_property_set",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "NTSTATUS",
+      "errorSource": "return_ntstatus",
+      "success": { "ntSuccess": true },
+      "failure": { "ntSuccess": false },
+      "parameters": [
+        { "name": "hObject", "type": "BCRYPT_HANDLE", "direction": "in", "decode": "bcrypt_handle" },
+        { "name": "pszProperty", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string", "maxBytes": 512 },
+        { "name": "pbInput", "type": "PUCHAR", "direction": "in", "decode": "buffer_optional", "nullable": true, "lengthFrom": "cbInput", "maxBytes": 4096 },
+        { "name": "cbInput", "type": "ULONG", "direction": "in", "decode": "byte_count" },
+        { "name": "dwFlags", "type": "ULONG", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "BCRYPT.dll",
+      "name": "BCryptGenerateSymmetricKey",
+      "family": "crypto",
+      "category": "cng_symmetric_key_create",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "NTSTATUS",
+      "errorSource": "return_ntstatus",
+      "success": { "ntSuccess": true },
+      "failure": { "ntSuccess": false },
+      "parameters": [
+        { "name": "hAlgorithm", "type": "BCRYPT_ALG_HANDLE", "direction": "in", "decode": "bcrypt_handle" },
+        { "name": "phKey", "type": "BCRYPT_KEY_HANDLE*", "direction": "out", "decode": "bcrypt_handle_pointer", "captureTiming": "post" },
+        { "name": "pbKeyObject", "type": "PUCHAR", "direction": "inout", "decode": "buffer_optional", "nullable": true, "lengthFrom": "cbKeyObject", "maxBytes": 4096, "captureTiming": "pre_post" },
+        { "name": "cbKeyObject", "type": "ULONG", "direction": "in", "decode": "byte_count" },
+        { "name": "pbSecret", "type": "PUCHAR", "direction": "in", "decode": "buffer", "lengthFrom": "cbSecret", "maxBytes": 4096 },
+        { "name": "cbSecret", "type": "ULONG", "direction": "in", "decode": "byte_count" },
+        { "name": "dwFlags", "type": "ULONG", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "BCRYPT.dll",
+      "name": "BCryptDestroyKey",
+      "family": "crypto",
+      "category": "cng_key_destroy",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "NTSTATUS",
+      "errorSource": "return_ntstatus",
+      "success": { "ntSuccess": true },
+      "failure": { "ntSuccess": false },
+      "parameters": [
+        { "name": "hKey", "type": "BCRYPT_KEY_HANDLE", "direction": "in", "decode": "bcrypt_handle" }
+      ]
+    },
+    {
+      "module": "BCRYPT.dll",
+      "name": "BCryptEncrypt",
+      "family": "crypto",
+      "category": "cng_encrypt",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "NTSTATUS",
+      "errorSource": "return_ntstatus",
+      "success": { "ntSuccess": true },
+      "failure": { "ntSuccess": false },
+      "parameters": [
+        { "name": "hKey", "type": "BCRYPT_KEY_HANDLE", "direction": "in", "decode": "bcrypt_handle" },
+        { "name": "pbInput", "type": "PUCHAR", "direction": "in", "decode": "buffer", "lengthFrom": "cbInput", "maxBytes": 4096 },
+        { "name": "cbInput", "type": "ULONG", "direction": "in", "decode": "byte_count" },
+        { "name": "pPaddingInfo", "type": "VOID*", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "pbIV", "type": "PUCHAR", "direction": "inout", "decode": "buffer_optional", "nullable": true, "lengthFrom": "cbIV", "maxBytes": 4096, "captureTiming": "pre_post" },
+        { "name": "cbIV", "type": "ULONG", "direction": "in", "decode": "byte_count" },
+        { "name": "pbOutput", "type": "PUCHAR", "direction": "out", "decode": "buffer_optional", "nullable": true, "lengthFrom": "cbOutput", "maxBytes": 4096, "captureTiming": "post" },
+        { "name": "cbOutput", "type": "ULONG", "direction": "in", "decode": "byte_count" },
+        { "name": "pcbResult", "type": "ULONG*", "direction": "out", "decode": "dword_pointer", "captureTiming": "post" },
+        { "name": "dwFlags", "type": "ULONG", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "BCRYPT.dll",
+      "name": "BCryptDecrypt",
+      "family": "crypto",
+      "category": "cng_decrypt",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "NTSTATUS",
+      "errorSource": "return_ntstatus",
+      "success": { "ntSuccess": true },
+      "failure": { "ntSuccess": false },
+      "parameters": [
+        { "name": "hKey", "type": "BCRYPT_KEY_HANDLE", "direction": "in", "decode": "bcrypt_handle" },
+        { "name": "pbInput", "type": "PUCHAR", "direction": "in", "decode": "buffer", "lengthFrom": "cbInput", "maxBytes": 4096 },
+        { "name": "cbInput", "type": "ULONG", "direction": "in", "decode": "byte_count" },
+        { "name": "pPaddingInfo", "type": "VOID*", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "pbIV", "type": "PUCHAR", "direction": "inout", "decode": "buffer_optional", "nullable": true, "lengthFrom": "cbIV", "maxBytes": 4096, "captureTiming": "pre_post" },
+        { "name": "cbIV", "type": "ULONG", "direction": "in", "decode": "byte_count" },
+        { "name": "pbOutput", "type": "PUCHAR", "direction": "out", "decode": "buffer_optional", "nullable": true, "lengthFrom": "cbOutput", "maxBytes": 4096, "captureTiming": "post" },
+        { "name": "cbOutput", "type": "ULONG", "direction": "in", "decode": "byte_count" },
+        { "name": "pcbResult", "type": "ULONG*", "direction": "out", "decode": "dword_pointer", "captureTiming": "post" },
+        { "name": "dwFlags", "type": "ULONG", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "BCRYPT.dll",
+      "name": "BCryptGenRandom",
+      "family": "crypto",
+      "category": "cng_random",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "NTSTATUS",
+      "errorSource": "return_ntstatus",
+      "success": { "ntSuccess": true },
+      "failure": { "ntSuccess": false },
+      "parameters": [
+        { "name": "hAlgorithm", "type": "BCRYPT_ALG_HANDLE", "direction": "in", "decode": "bcrypt_handle", "nullable": true },
+        { "name": "pbBuffer", "type": "PUCHAR", "direction": "out", "decode": "buffer", "lengthFrom": "cbBuffer", "maxBytes": 4096, "captureTiming": "post" },
+        { "name": "cbBuffer", "type": "ULONG", "direction": "in", "decode": "byte_count" },
+        { "name": "dwFlags", "type": "ULONG", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "BCRYPT.dll",
+      "name": "BCryptHashData",
+      "family": "crypto",
+      "category": "cng_hash_update",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "NTSTATUS",
+      "errorSource": "return_ntstatus",
+      "success": { "ntSuccess": true },
+      "failure": { "ntSuccess": false },
+      "parameters": [
+        { "name": "hHash", "type": "BCRYPT_HASH_HANDLE", "direction": "in", "decode": "bcrypt_handle" },
+        { "name": "pbInput", "type": "PUCHAR", "direction": "in", "decode": "buffer", "lengthFrom": "cbInput", "maxBytes": 4096 },
+        { "name": "cbInput", "type": "ULONG", "direction": "in", "decode": "byte_count" },
+        { "name": "dwFlags", "type": "ULONG", "direction": "in", "decode": "byte_count" }
+      ]
+    }
+  ]
+}

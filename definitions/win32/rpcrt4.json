@@ -1,0 +1,209 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "rpcrt4",
+  "description": "Wave 2 definition-only metadata for RPC binding, endpoint inquiry, and UUID APIs.",
+  "apis": [
+    {
+      "module": "RPCRT4.dll",
+      "name": "RpcStringBindingComposeW",
+      "family": "rpc",
+      "category": "rpc_string_binding_compose",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "RPC_STATUS",
+      "errorSource": "none",
+      "success": { "returnEqual": "RPC_S_OK" },
+      "failure": { "returnNotEqual": "RPC_S_OK" },
+      "parameters": [
+        { "name": "ObjUuid", "type": "RPC_WSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "ProtSeq", "type": "RPC_WSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "NetworkAddr", "type": "RPC_WSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "Endpoint", "type": "RPC_WSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "Options", "type": "RPC_WSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "StringBinding", "type": "RPC_WSTR*", "direction": "out", "decode": "rpc_string_pointer", "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "RPCRT4.dll",
+      "name": "RpcBindingFromStringBindingW",
+      "family": "rpc",
+      "category": "rpc_binding_from_string",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "RPC_STATUS",
+      "errorSource": "none",
+      "success": { "returnEqual": "RPC_S_OK" },
+      "failure": { "returnNotEqual": "RPC_S_OK" },
+      "parameters": [
+        { "name": "StringBinding", "type": "RPC_WSTR", "direction": "in", "decode": "utf16_string", "maxBytes": 512 },
+        { "name": "Binding", "type": "RPC_BINDING_HANDLE*", "direction": "out", "decode": "rpc_binding_handle_pointer", "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "RPCRT4.dll",
+      "name": "RpcStringFreeW",
+      "family": "rpc",
+      "category": "rpc_string_free",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "RPC_STATUS",
+      "errorSource": "none",
+      "success": { "returnEqual": "RPC_S_OK" },
+      "failure": { "returnNotEqual": "RPC_S_OK" },
+      "parameters": [
+        { "name": "String", "type": "RPC_WSTR*", "direction": "inout", "decode": "rpc_string_pointer", "captureTiming": "pre_post" }
+      ]
+    },
+    {
+      "module": "RPCRT4.dll",
+      "name": "RpcBindingFree",
+      "family": "rpc",
+      "category": "rpc_binding_free",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "RPC_STATUS",
+      "errorSource": "none",
+      "success": { "returnEqual": "RPC_S_OK" },
+      "failure": { "returnNotEqual": "RPC_S_OK" },
+      "parameters": [
+        { "name": "Binding", "type": "RPC_BINDING_HANDLE*", "direction": "inout", "decode": "rpc_binding_handle_pointer", "captureTiming": "pre_post" }
+      ]
+    },
+    {
+      "module": "RPCRT4.dll",
+      "name": "RpcBindingSetAuthInfoW",
+      "family": "rpc",
+      "category": "rpc_binding_auth_set",
+      "risk": "critical",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "RPC_STATUS",
+      "errorSource": "none",
+      "success": { "returnEqual": "RPC_S_OK" },
+      "failure": { "returnNotEqual": "RPC_S_OK" },
+      "parameters": [
+        { "name": "Binding", "type": "RPC_BINDING_HANDLE", "direction": "in", "decode": "rpc_binding_handle" },
+        { "name": "ServerPrincName", "type": "RPC_WSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "AuthnLevel", "type": "unsigned long", "direction": "in", "decode": "byte_count" },
+        { "name": "AuthnSvc", "type": "unsigned long", "direction": "in", "decode": "byte_count" },
+        { "name": "AuthIdentity", "type": "RPC_AUTH_IDENTITY_HANDLE", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "AuthzSvc", "type": "unsigned long", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "RPCRT4.dll",
+      "name": "RpcBindingSetOption",
+      "family": "rpc",
+      "category": "rpc_binding_option_set",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "RPC_STATUS",
+      "errorSource": "none",
+      "success": { "returnEqual": "RPC_S_OK" },
+      "failure": { "returnNotEqual": "RPC_S_OK" },
+      "parameters": [
+        { "name": "hBinding", "type": "RPC_BINDING_HANDLE", "direction": "in", "decode": "rpc_binding_handle" },
+        { "name": "option", "type": "unsigned long", "direction": "in", "decode": "byte_count" },
+        { "name": "optionValue", "type": "ULONG_PTR", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "RPCRT4.dll",
+      "name": "RpcMgmtEpEltInqBegin",
+      "family": "rpc",
+      "category": "rpc_endpoint_inquiry_begin",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "RPC_STATUS",
+      "errorSource": "none",
+      "success": { "returnEqual": "RPC_S_OK" },
+      "failure": { "returnNotEqual": "RPC_S_OK" },
+      "parameters": [
+        { "name": "EpBinding", "type": "RPC_BINDING_HANDLE", "direction": "in", "decode": "rpc_binding_handle", "nullable": true },
+        { "name": "InquiryType", "type": "unsigned long", "direction": "in", "decode": "byte_count" },
+        { "name": "IfId", "type": "RPC_IF_ID*", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "VersOption", "type": "unsigned long", "direction": "in", "decode": "byte_count" },
+        { "name": "ObjectUuid", "type": "UUID*", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "InquiryContext", "type": "RPC_EP_INQ_HANDLE*", "direction": "out", "decode": "pointer_pointer", "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "RPCRT4.dll",
+      "name": "RpcMgmtEpEltInqNextW",
+      "family": "rpc",
+      "category": "rpc_endpoint_inquiry_next",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "RPC_STATUS",
+      "errorSource": "none",
+      "success": { "returnEqual": "RPC_S_OK" },
+      "failure": { "returnNotEqual": "RPC_S_OK" },
+      "parameters": [
+        { "name": "InquiryContext", "type": "RPC_EP_INQ_HANDLE", "direction": "in", "decode": "pointer" },
+        { "name": "IfId", "type": "RPC_IF_ID*", "direction": "out", "decode": "pointer", "nullable": true, "captureTiming": "post" },
+        { "name": "Binding", "type": "RPC_BINDING_HANDLE*", "direction": "out", "decode": "rpc_binding_handle_pointer", "nullable": true, "captureTiming": "post" },
+        { "name": "ObjectUuid", "type": "UUID*", "direction": "out", "decode": "pointer", "nullable": true, "captureTiming": "post" },
+        { "name": "Annotation", "type": "RPC_WSTR*", "direction": "out", "decode": "rpc_string_pointer", "nullable": true, "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "RPCRT4.dll",
+      "name": "RpcMgmtEpEltInqDone",
+      "family": "rpc",
+      "category": "rpc_endpoint_inquiry_done",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "RPC_STATUS",
+      "errorSource": "none",
+      "success": { "returnEqual": "RPC_S_OK" },
+      "failure": { "returnNotEqual": "RPC_S_OK" },
+      "parameters": [
+        { "name": "InquiryContext", "type": "RPC_EP_INQ_HANDLE*", "direction": "inout", "decode": "pointer_pointer", "captureTiming": "pre_post" }
+      ]
+    },
+    {
+      "module": "RPCRT4.dll",
+      "name": "UuidCreate",
+      "family": "rpc",
+      "category": "uuid_create",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "RPC_STATUS",
+      "errorSource": "none",
+      "success": { "returnEqual": "RPC_S_OK" },
+      "failure": { "returnNotEqual": "RPC_S_OK" },
+      "parameters": [
+        { "name": "Uuid", "type": "UUID*", "direction": "out", "decode": "buffer", "maxBytes": 16, "captureTiming": "post" }
+      ]
+    }
+  ]
+}

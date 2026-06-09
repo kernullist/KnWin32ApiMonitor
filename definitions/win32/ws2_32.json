@@ -1,0 +1,243 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "ws2_32",
+  "description": "Wave 2 definition-only metadata for Winsock startup, socket, connection, send, receive, and address-resolution APIs.",
+  "apis": [
+    {
+      "module": "WS2_32.dll",
+      "name": "WSAStartup",
+      "family": "network",
+      "category": "winsock_startup",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "int",
+      "errorSource": "none",
+      "success": { "returnEqual": 0 },
+      "failure": { "returnNotEqual": 0 },
+      "parameters": [
+        { "name": "wVersionRequested", "type": "WORD", "direction": "in", "decode": "byte_count" },
+        { "name": "lpWSAData", "type": "LPWSADATA", "direction": "out", "decode": "buffer", "maxBytes": 512, "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "WS2_32.dll",
+      "name": "WSACleanup",
+      "family": "network",
+      "category": "winsock_cleanup",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "int",
+      "errorSource": "none",
+      "success": { "returnEqual": 0 },
+      "failure": { "returnNotEqual": 0 },
+      "parameters": []
+    },
+    {
+      "module": "WS2_32.dll",
+      "name": "socket",
+      "family": "network",
+      "category": "socket_create",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "SOCKET",
+      "errorSource": "none",
+      "success": { "returnNotEqual": "INVALID_SOCKET" },
+      "failure": { "returnEqual": "INVALID_SOCKET" },
+      "parameters": [
+        { "name": "af", "type": "int", "direction": "in", "decode": "byte_count" },
+        { "name": "type", "type": "int", "direction": "in", "decode": "byte_count" },
+        { "name": "protocol", "type": "int", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "WS2_32.dll",
+      "name": "closesocket",
+      "family": "network",
+      "category": "socket_close",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "int",
+      "errorSource": "none",
+      "success": { "returnNotEqual": "SOCKET_ERROR" },
+      "failure": { "returnEqual": "SOCKET_ERROR" },
+      "parameters": [
+        { "name": "s", "type": "SOCKET", "direction": "in", "decode": "socket_handle" }
+      ]
+    },
+    {
+      "module": "WS2_32.dll",
+      "name": "connect",
+      "family": "network",
+      "category": "socket_connect",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "int",
+      "errorSource": "none",
+      "success": { "returnNotEqual": "SOCKET_ERROR" },
+      "failure": { "returnEqual": "SOCKET_ERROR" },
+      "parameters": [
+        { "name": "s", "type": "SOCKET", "direction": "in", "decode": "socket_handle" },
+        { "name": "name", "type": "const sockaddr*", "direction": "in", "decode": "sockaddr", "maxBytes": 256 },
+        { "name": "namelen", "type": "int", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "WS2_32.dll",
+      "name": "send",
+      "family": "network",
+      "category": "socket_send",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "int",
+      "errorSource": "none",
+      "success": { "returnNotEqual": "SOCKET_ERROR" },
+      "failure": { "returnEqual": "SOCKET_ERROR" },
+      "parameters": [
+        { "name": "s", "type": "SOCKET", "direction": "in", "decode": "socket_handle" },
+        { "name": "buf", "type": "const char*", "direction": "in", "decode": "buffer", "lengthFrom": "len", "maxBytes": 4096 },
+        { "name": "len", "type": "int", "direction": "in", "decode": "byte_count" },
+        { "name": "flags", "type": "int", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "WS2_32.dll",
+      "name": "recv",
+      "family": "network",
+      "category": "socket_recv",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "int",
+      "errorSource": "none",
+      "success": { "returnNotEqual": "SOCKET_ERROR" },
+      "failure": { "returnEqual": "SOCKET_ERROR" },
+      "parameters": [
+        { "name": "s", "type": "SOCKET", "direction": "in", "decode": "socket_handle" },
+        { "name": "buf", "type": "char*", "direction": "out", "decode": "buffer", "lengthFrom": "len", "maxBytes": 4096, "captureTiming": "post" },
+        { "name": "len", "type": "int", "direction": "in", "decode": "byte_count" },
+        { "name": "flags", "type": "int", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "WS2_32.dll",
+      "name": "sendto",
+      "family": "network",
+      "category": "socket_sendto",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "int",
+      "errorSource": "none",
+      "success": { "returnNotEqual": "SOCKET_ERROR" },
+      "failure": { "returnEqual": "SOCKET_ERROR" },
+      "parameters": [
+        { "name": "s", "type": "SOCKET", "direction": "in", "decode": "socket_handle" },
+        { "name": "buf", "type": "const char*", "direction": "in", "decode": "buffer", "lengthFrom": "len", "maxBytes": 4096 },
+        { "name": "len", "type": "int", "direction": "in", "decode": "byte_count" },
+        { "name": "flags", "type": "int", "direction": "in", "decode": "byte_count" },
+        { "name": "to", "type": "const sockaddr*", "direction": "in", "decode": "sockaddr", "nullable": true, "maxBytes": 256 },
+        { "name": "tolen", "type": "int", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "WS2_32.dll",
+      "name": "recvfrom",
+      "family": "network",
+      "category": "socket_recvfrom",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "int",
+      "errorSource": "none",
+      "success": { "returnNotEqual": "SOCKET_ERROR" },
+      "failure": { "returnEqual": "SOCKET_ERROR" },
+      "parameters": [
+        { "name": "s", "type": "SOCKET", "direction": "in", "decode": "socket_handle" },
+        { "name": "buf", "type": "char*", "direction": "out", "decode": "buffer", "lengthFrom": "len", "maxBytes": 4096, "captureTiming": "post" },
+        { "name": "len", "type": "int", "direction": "in", "decode": "byte_count" },
+        { "name": "flags", "type": "int", "direction": "in", "decode": "byte_count" },
+        { "name": "from", "type": "sockaddr*", "direction": "out", "decode": "sockaddr", "nullable": true, "maxBytes": 256, "captureTiming": "post" },
+        { "name": "fromlen", "type": "int*", "direction": "inout", "decode": "dword_pointer", "nullable": true, "captureTiming": "pre_post" }
+      ]
+    },
+    {
+      "module": "WS2_32.dll",
+      "name": "getaddrinfo",
+      "family": "network",
+      "category": "socket_address_resolve",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "int",
+      "errorSource": "none",
+      "success": { "returnEqual": 0 },
+      "failure": { "returnNotEqual": 0 },
+      "parameters": [
+        { "name": "pNodeName", "type": "PCSTR", "direction": "in", "decode": "ansi_string", "nullable": true, "maxBytes": 512 },
+        { "name": "pServiceName", "type": "PCSTR", "direction": "in", "decode": "ansi_string", "nullable": true, "maxBytes": 512 },
+        { "name": "pHints", "type": "const ADDRINFOA*", "direction": "in", "decode": "addrinfo", "nullable": true, "maxBytes": 512 },
+        { "name": "ppResult", "type": "PADDRINFOA*", "direction": "out", "decode": "pointer_pointer", "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "WS2_32.dll",
+      "name": "freeaddrinfo",
+      "family": "network",
+      "category": "socket_address_free",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "void",
+      "errorSource": "none",
+      "success": { "always": true },
+      "failure": {},
+      "parameters": [
+        { "name": "pAddrInfo", "type": "PADDRINFOA", "direction": "in", "decode": "addrinfo", "nullable": true, "maxBytes": 512 }
+      ]
+    },
+    {
+      "module": "WS2_32.dll",
+      "name": "WSAGetLastError",
+      "family": "network",
+      "category": "winsock_error_query",
+      "risk": "low",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "int",
+      "errorSource": "none",
+      "success": { "always": true },
+      "failure": {},
+      "parameters": []
+    }
+  ]
+}

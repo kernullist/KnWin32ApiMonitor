@@ -1,0 +1,226 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "wininet",
+  "description": "Wave 2 definition-only metadata for WinINet session, connection, request, transfer, and option APIs.",
+  "apis": [
+    {
+      "module": "WININET.dll",
+      "name": "InternetOpenW",
+      "family": "internet",
+      "category": "wininet_session_open",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HINTERNET",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "lpszAgent", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "dwAccessType", "type": "DWORD", "direction": "in", "decode": "byte_count" },
+        { "name": "lpszProxy", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "lpszProxyBypass", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "dwFlags", "type": "DWORD", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "WININET.dll",
+      "name": "InternetCloseHandle",
+      "family": "internet",
+      "category": "wininet_handle_close",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "FALSE" },
+      "failure": { "returnEqual": "FALSE" },
+      "parameters": [
+        { "name": "hInternet", "type": "HINTERNET", "direction": "in", "decode": "internet_handle" }
+      ]
+    },
+    {
+      "module": "WININET.dll",
+      "name": "InternetConnectW",
+      "family": "internet",
+      "category": "wininet_connect",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HINTERNET",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "hInternet", "type": "HINTERNET", "direction": "in", "decode": "internet_handle" },
+        { "name": "lpszServerName", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string", "maxBytes": 512 },
+        { "name": "nServerPort", "type": "INTERNET_PORT", "direction": "in", "decode": "byte_count" },
+        { "name": "lpszUserName", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "lpszPassword", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "dwService", "type": "DWORD", "direction": "in", "decode": "byte_count" },
+        { "name": "dwFlags", "type": "DWORD", "direction": "in", "decode": "byte_count" },
+        { "name": "dwContext", "type": "DWORD_PTR", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "WININET.dll",
+      "name": "InternetOpenUrlW",
+      "family": "internet",
+      "category": "wininet_url_open",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HINTERNET",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "hInternet", "type": "HINTERNET", "direction": "in", "decode": "internet_handle" },
+        { "name": "lpszUrl", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string", "maxBytes": 1024 },
+        { "name": "lpszHeaders", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 4096 },
+        { "name": "dwHeadersLength", "type": "DWORD", "direction": "in", "decode": "byte_count" },
+        { "name": "dwFlags", "type": "DWORD", "direction": "in", "decode": "byte_count" },
+        { "name": "dwContext", "type": "DWORD_PTR", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "WININET.dll",
+      "name": "HttpOpenRequestW",
+      "family": "internet",
+      "category": "wininet_http_request_open",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HINTERNET",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "hConnect", "type": "HINTERNET", "direction": "in", "decode": "internet_handle" },
+        { "name": "lpszVerb", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 128 },
+        { "name": "lpszObjectName", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 1024 },
+        { "name": "lpszVersion", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 128 },
+        { "name": "lpszReferrer", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 1024 },
+        { "name": "lplpszAcceptTypes", "type": "LPCWSTR*", "direction": "in", "decode": "pointer_pointer", "nullable": true },
+        { "name": "dwFlags", "type": "DWORD", "direction": "in", "decode": "byte_count" },
+        { "name": "dwContext", "type": "DWORD_PTR", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "WININET.dll",
+      "name": "HttpSendRequestW",
+      "family": "internet",
+      "category": "wininet_http_request_send",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "FALSE" },
+      "failure": { "returnEqual": "FALSE" },
+      "parameters": [
+        { "name": "hRequest", "type": "HINTERNET", "direction": "in", "decode": "internet_handle" },
+        { "name": "lpszHeaders", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 4096 },
+        { "name": "dwHeadersLength", "type": "DWORD", "direction": "in", "decode": "byte_count" },
+        { "name": "lpOptional", "type": "LPVOID", "direction": "in", "decode": "buffer_optional", "nullable": true, "lengthFrom": "dwOptionalLength", "maxBytes": 4096 },
+        { "name": "dwOptionalLength", "type": "DWORD", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "WININET.dll",
+      "name": "InternetReadFile",
+      "family": "internet",
+      "category": "wininet_read",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "FALSE" },
+      "failure": { "returnEqual": "FALSE" },
+      "parameters": [
+        { "name": "hFile", "type": "HINTERNET", "direction": "in", "decode": "internet_handle" },
+        { "name": "lpBuffer", "type": "LPVOID", "direction": "out", "decode": "buffer", "lengthFrom": "dwNumberOfBytesToRead", "maxBytes": 4096, "captureTiming": "post" },
+        { "name": "dwNumberOfBytesToRead", "type": "DWORD", "direction": "in", "decode": "byte_count" },
+        { "name": "lpdwNumberOfBytesRead", "type": "LPDWORD", "direction": "out", "decode": "dword_pointer", "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "WININET.dll",
+      "name": "InternetWriteFile",
+      "family": "internet",
+      "category": "wininet_write",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "FALSE" },
+      "failure": { "returnEqual": "FALSE" },
+      "parameters": [
+        { "name": "hFile", "type": "HINTERNET", "direction": "in", "decode": "internet_handle" },
+        { "name": "lpBuffer", "type": "LPCVOID", "direction": "in", "decode": "buffer", "lengthFrom": "dwNumberOfBytesToWrite", "maxBytes": 4096 },
+        { "name": "dwNumberOfBytesToWrite", "type": "DWORD", "direction": "in", "decode": "byte_count" },
+        { "name": "lpdwNumberOfBytesWritten", "type": "LPDWORD", "direction": "out", "decode": "dword_pointer", "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "WININET.dll",
+      "name": "InternetSetOptionW",
+      "family": "internet",
+      "category": "wininet_option_set",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "FALSE" },
+      "failure": { "returnEqual": "FALSE" },
+      "parameters": [
+        { "name": "hInternet", "type": "HINTERNET", "direction": "in", "decode": "internet_handle", "nullable": true },
+        { "name": "dwOption", "type": "DWORD", "direction": "in", "decode": "byte_count" },
+        { "name": "lpBuffer", "type": "LPVOID", "direction": "in", "decode": "buffer_optional", "nullable": true, "lengthFrom": "dwBufferLength", "maxBytes": 4096 },
+        { "name": "dwBufferLength", "type": "DWORD", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "WININET.dll",
+      "name": "InternetQueryOptionW",
+      "family": "internet",
+      "category": "wininet_option_query",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "FALSE" },
+      "failure": { "returnEqual": "FALSE" },
+      "parameters": [
+        { "name": "hInternet", "type": "HINTERNET", "direction": "in", "decode": "internet_handle", "nullable": true },
+        { "name": "dwOption", "type": "DWORD", "direction": "in", "decode": "byte_count" },
+        { "name": "lpBuffer", "type": "LPVOID", "direction": "out", "decode": "buffer_optional", "nullable": true, "lengthFrom": "lpdwBufferLength", "maxBytes": 4096, "captureTiming": "post" },
+        { "name": "lpdwBufferLength", "type": "LPDWORD", "direction": "inout", "decode": "dword_pointer", "captureTiming": "pre_post" }
+      ]
+    }
+  ]
+}
