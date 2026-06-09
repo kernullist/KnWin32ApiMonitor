@@ -1,6 +1,7 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
+#include <rpc.h>
 #include <winternl.h>
 
 #include <array>
@@ -343,6 +344,79 @@ bool RunRegistryProbe()
     return success;
 }
 
+bool RunRpcBindingProbe()
+{
+    bool success = false;
+    RPC_WSTR stringBinding = nullptr;
+    RPC_BINDING_HANDLE binding = nullptr;
+    auto* protocolSequence = reinterpret_cast<RPC_WSTR>(const_cast<wchar_t*>(L"ncalrpc"));
+    auto* endpoint = reinterpret_cast<RPC_WSTR>(const_cast<wchar_t*>(L"KNMonRpcSample"));
+
+    do
+    {
+        RPC_STATUS status = RpcStringBindingComposeW(
+            nullptr,
+            protocolSequence,
+            nullptr,
+            endpoint,
+            nullptr,
+            &stringBinding);
+
+        if (status != RPC_S_OK)
+        {
+            std::cout << "RpcStringBindingComposeW failed with " << status << "\n";
+            break;
+        }
+
+        status = RpcBindingFromStringBindingW(stringBinding, &binding);
+        if (status != RPC_S_OK)
+        {
+            std::cout << "RpcBindingFromStringBindingW failed with " << status << "\n";
+            break;
+        }
+
+        status = RpcBindingFree(&binding);
+        if (status != RPC_S_OK)
+        {
+            std::cout << "RpcBindingFree failed with " << status << "\n";
+            break;
+        }
+
+        status = RpcStringFreeW(&stringBinding);
+        if (status != RPC_S_OK)
+        {
+            std::cout << "RpcStringFreeW failed with " << status << "\n";
+            break;
+        }
+
+        std::cout << "rpc binding roundtrip endpoint=KNMonRpcSample\n";
+        success = true;
+    }
+    while (false);
+
+    if (binding != nullptr)
+    {
+        const RPC_STATUS cleanupStatus = RpcBindingFree(&binding);
+        if (cleanupStatus != RPC_S_OK)
+        {
+            std::cout << "RpcBindingFree(cleanup) failed with " << cleanupStatus << "\n";
+            success = false;
+        }
+    }
+
+    if (stringBinding != nullptr)
+    {
+        const RPC_STATUS cleanupStatus = RpcStringFreeW(&stringBinding);
+        if (cleanupStatus != RPC_S_OK)
+        {
+            std::cout << "RpcStringFreeW(cleanup) failed with " << cleanupStatus << "\n";
+            success = false;
+        }
+    }
+
+    return success;
+}
+
 bool RunWinsockProbe()
 {
     bool success = false;
@@ -484,6 +558,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunRegistryProbe())
+        {
+            break;
+        }
+
+        if (!RunRpcBindingProbe())
         {
             break;
         }

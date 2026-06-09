@@ -1155,14 +1155,14 @@
     {
       "callingConvention": "stdcall",
       "category": "rpc_string_binding_compose",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": "RPC_S_OK"
       },
       "family": "rpc",
       "firstParameterIndex": 222,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 49,
       "module": "rpcrt4.dll",
       "moduleId": 7,
@@ -1179,14 +1179,14 @@
     {
       "callingConvention": "stdcall",
       "category": "rpc_binding_from_string",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": "RPC_S_OK"
       },
       "family": "rpc",
       "firstParameterIndex": 228,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 50,
       "module": "rpcrt4.dll",
       "moduleId": 7,
@@ -1203,14 +1203,14 @@
     {
       "callingConvention": "stdcall",
       "category": "rpc_string_free",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": "RPC_S_OK"
       },
       "family": "rpc",
       "firstParameterIndex": 230,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 51,
       "module": "rpcrt4.dll",
       "moduleId": 7,
@@ -1227,14 +1227,14 @@
     {
       "callingConvention": "stdcall",
       "category": "rpc_binding_free",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": "RPC_S_OK"
       },
       "family": "rpc",
       "firstParameterIndex": 231,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 52,
       "module": "rpcrt4.dll",
       "moduleId": 7,

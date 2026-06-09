@@ -20,6 +20,10 @@ $requiredApis = @(
     "RegSetValueExW",
     "RegDeleteValueW",
     "RegCloseKey",
+    "RpcStringBindingComposeW",
+    "RpcBindingFromStringBindingW",
+    "RpcStringFreeW",
+    "RpcBindingFree",
     "WSAStartup",
     "WSACleanup",
     "socket",
@@ -145,6 +149,36 @@ $registrySetArgs = ($registrySet[0].arguments | ConvertTo-Json -Depth 8)
 if ($registrySetArgs -notmatch "SampleValue")
 {
     throw "x86 registry arguments did not include sample value evidence: $registrySetArgs"
+}
+
+$rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })
+if ($rpcEvents.Count -lt 4)
+{
+    throw "x86 capture did not include the selected RPCRT4 binding API family slice."
+}
+
+$rpcCompose = @($rpcEvents | Where-Object { $_.api -eq "RpcStringBindingComposeW" } | Select-Object -First 1)
+if ($rpcCompose.Count -ne 1 -or $rpcCompose[0].module -ne "rpcrt4.dll" -or $rpcCompose[0].hookPolicy -ne "iat" -or $rpcCompose[0].coverageStatus -ne "smoke_verified")
+{
+    throw "x86 RpcStringBindingComposeW metadata mismatch."
+}
+
+$rpcComposeArgs = ($rpcCompose[0].arguments | ConvertTo-Json -Depth 8)
+if ($rpcComposeArgs -notmatch "ncalrpc" -or $rpcComposeArgs -notmatch "KNMonRpcSample")
+{
+    throw "x86 RPC compose arguments did not include local binding evidence: $rpcComposeArgs"
+}
+
+$rpcStringFree = @($rpcEvents | Where-Object { $_.api -eq "RpcStringFreeW" } | Select-Object -First 1)
+if ($rpcStringFree.Count -ne 1)
+{
+    throw "x86 capture did not include RpcStringFreeW."
+}
+
+$rpcStringFreeArgs = ($rpcStringFree[0].arguments | ConvertTo-Json -Depth 8)
+if ($rpcStringFreeArgs -notmatch "ncalrpc" -or $rpcStringFreeArgs -notmatch "KNMonRpcSample")
+{
+    throw "x86 RPC string-free arguments did not include pre-free binding evidence: $rpcStringFreeArgs"
 }
 
 $dynamicSweep = @($result.agentMessages | Where-Object { $_.messageType -eq "iat_sweep" -and $_.reason -eq "dynamic_load" } | Select-Object -Last 1)

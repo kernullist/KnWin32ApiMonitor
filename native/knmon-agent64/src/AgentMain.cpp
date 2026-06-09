@@ -3,6 +3,7 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
+#include <rpc.h>
 #include <winternl.h>
 
 #include <array>
@@ -93,6 +94,10 @@ using RegQueryValueExWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR, LPDWORD, LPDWORD, LPB
 using RegSetValueExWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR, DWORD, DWORD, const BYTE*, DWORD);
 using RegDeleteValueWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR);
 using RegCloseKeyFn = LSTATUS(WINAPI*)(HKEY);
+using RpcStringBindingComposeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR*);
+using RpcBindingFromStringBindingWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_BINDING_HANDLE*);
+using RpcStringFreeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR*);
+using RpcBindingFreeFn = RPC_STATUS(RPC_ENTRY*)(RPC_BINDING_HANDLE*);
 using WSAStartupFn = int(WINAPI*)(WORD, LPWSADATA);
 using WSACleanupFn = int(WINAPI*)();
 using SocketFn = SOCKET(WINAPI*)(int, int, int);
@@ -143,6 +148,10 @@ RegQueryValueExWFn g_originalRegQueryValueExW = nullptr;
 RegSetValueExWFn g_originalRegSetValueExW = nullptr;
 RegDeleteValueWFn g_originalRegDeleteValueW = nullptr;
 RegCloseKeyFn g_originalRegCloseKey = nullptr;
+RpcStringBindingComposeWFn g_originalRpcStringBindingComposeW = nullptr;
+RpcBindingFromStringBindingWFn g_originalRpcBindingFromStringBindingW = nullptr;
+RpcStringFreeWFn g_originalRpcStringFreeW = nullptr;
+RpcBindingFreeFn g_originalRpcBindingFree = nullptr;
 WSAStartupFn g_originalWSAStartup = nullptr;
 WSACleanupFn g_originalWSACleanup = nullptr;
 SocketFn g_originalSocket = nullptr;
@@ -223,7 +232,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 26;
+constexpr std::size_t HookDefinitionCount = 30;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1266,6 +1275,10 @@ std::uint16_t ModuleId(const char* moduleName)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Ws2_32);
     }
+    else if (_stricmp(moduleName, "rpcrt4.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Rpcrt4);
+    }
 
     return result;
 }
@@ -2146,6 +2159,125 @@ void EmitRegCloseKeyEvent(
     }
 }
 
+std::uint32_t CopyRpcWideStringText(char* destination, std::uint32_t* length, std::size_t capacity, RPC_WSTR source)
+{
+    return CopyWidePointerText(destination, length, capacity, reinterpret_cast<const wchar_t*>(source));
+}
+
+void EmitRpcStringBindingComposeWEvent(
+    RPC_STATUS result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    RPC_WSTR objUuid,
+    RPC_WSTR protSeq,
+    RPC_WSTR networkAddr,
+    RPC_WSTR endpoint,
+    RPC_WSTR options,
+    RPC_WSTR* stringBinding)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::RpcStringBindingComposeW, "rpcrt4.dll", start, end, result == RPC_S_OK ? 0 : static_cast<DWORD>(result));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(objUuid));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(protSeq));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(networkAddr));
+        record->Values64[3] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(endpoint));
+        record->Values64[4] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(options));
+        record->Values64[5] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(stringBinding));
+
+        RPC_WSTR composedBinding = nullptr;
+        if (result == RPC_S_OK && ReadCurrentProcessValue(stringBinding, &composedBinding))
+        {
+            record->Values64[6] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(composedBinding));
+        }
+
+        record->Values32[0] = CopyRpcWideStringText(record->Text0, &record->Text0Length, sizeof(record->Text0), composedBinding);
+        record->Values32[1] = CopyRpcWideStringText(record->Text1, &record->Text1Length, sizeof(record->Text1), protSeq);
+        record->Values32[2] = CopyRpcWideStringText(record->Text2, &record->Text2Length, sizeof(record->Text2), endpoint);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitRpcBindingFromStringBindingWEvent(
+    RPC_STATUS result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    RPC_WSTR stringBinding,
+    RPC_BINDING_HANDLE* binding)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::RpcBindingFromStringBindingW, "rpcrt4.dll", start, end, result == RPC_S_OK ? 0 : static_cast<DWORD>(result));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(stringBinding));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(binding));
+
+        RPC_BINDING_HANDLE bindingValue = nullptr;
+        if (result == RPC_S_OK && ReadCurrentProcessValue(binding, &bindingValue))
+        {
+            record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(bindingValue));
+        }
+
+        record->Values32[0] = CopyRpcWideStringText(record->Text0, &record->Text0Length, sizeof(record->Text0), stringBinding);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitRpcStringFreeWEvent(
+    RPC_STATUS result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    RPC_WSTR* string,
+    RPC_WSTR preString,
+    RPC_WSTR postString,
+    const char* preStringText,
+    std::uint32_t preStringTextStatus)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::RpcStringFreeW, "rpcrt4.dll", start, end, result == RPC_S_OK ? 0 : static_cast<DWORD>(result));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(string));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(preString));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(postString));
+        record->Values32[0] = preStringTextStatus;
+        CopyAsciiText(record->Text0, &record->Text0Length, sizeof(record->Text0), preStringText);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitRpcBindingFreeEvent(
+    RPC_STATUS result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    RPC_BINDING_HANDLE* binding,
+    RPC_BINDING_HANDLE preBinding,
+    RPC_BINDING_HANDLE postBinding)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::RpcBindingFree, "rpcrt4.dll", start, end, result == RPC_S_OK ? 0 : static_cast<DWORD>(result));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(binding));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(preBinding));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(postBinding));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void EmitWSAStartupEvent(
     int result,
     const LARGE_INTEGER& start,
@@ -2598,6 +2730,10 @@ LSTATUS WINAPI HookedRegQueryValueExW(HKEY key, LPCWSTR valueName, LPDWORD reser
 LSTATUS WINAPI HookedRegSetValueExW(HKEY key, LPCWSTR valueName, DWORD reserved, DWORD valueType, const BYTE* data, DWORD dataBytes);
 LSTATUS WINAPI HookedRegDeleteValueW(HKEY key, LPCWSTR valueName);
 LSTATUS WINAPI HookedRegCloseKey(HKEY key);
+RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR protSeq, RPC_WSTR networkAddr, RPC_WSTR endpoint, RPC_WSTR options, RPC_WSTR* stringBinding);
+RPC_STATUS RPC_ENTRY HookedRpcBindingFromStringBindingW(RPC_WSTR stringBinding, RPC_BINDING_HANDLE* binding);
+RPC_STATUS RPC_ENTRY HookedRpcStringFreeW(RPC_WSTR* string);
+RPC_STATUS RPC_ENTRY HookedRpcBindingFree(RPC_BINDING_HANDLE* binding);
 int WINAPI HookedWSAStartup(WORD versionRequested, LPWSADATA data);
 int WINAPI HookedWSACleanup();
 SOCKET WINAPI HookedSocket(int af, int type, int protocol);
@@ -2631,6 +2767,10 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "advapi32.dll", "RegSetValueExW", reinterpret_cast<void*>(HookedRegSetValueExW), reinterpret_cast<void**>(&g_originalRegSetValueExW), false, true, false, 0, 0 },
         HookDefinition { "advapi32.dll", "RegDeleteValueW", reinterpret_cast<void*>(HookedRegDeleteValueW), reinterpret_cast<void**>(&g_originalRegDeleteValueW), false, true, false, 0, 0 },
         HookDefinition { "advapi32.dll", "RegCloseKey", reinterpret_cast<void*>(HookedRegCloseKey), reinterpret_cast<void**>(&g_originalRegCloseKey), false, true, false, 0, 0 },
+        HookDefinition { "rpcrt4.dll", "RpcStringBindingComposeW", reinterpret_cast<void*>(HookedRpcStringBindingComposeW), reinterpret_cast<void**>(&g_originalRpcStringBindingComposeW), false, true, false, 0, 0 },
+        HookDefinition { "rpcrt4.dll", "RpcBindingFromStringBindingW", reinterpret_cast<void*>(HookedRpcBindingFromStringBindingW), reinterpret_cast<void**>(&g_originalRpcBindingFromStringBindingW), false, true, false, 0, 0 },
+        HookDefinition { "rpcrt4.dll", "RpcStringFreeW", reinterpret_cast<void*>(HookedRpcStringFreeW), reinterpret_cast<void**>(&g_originalRpcStringFreeW), false, true, false, 0, 0 },
+        HookDefinition { "rpcrt4.dll", "RpcBindingFree", reinterpret_cast<void*>(HookedRpcBindingFree), reinterpret_cast<void**>(&g_originalRpcBindingFree), false, true, false, 0, 0 },
         HookDefinition { "ws2_32.dll", "WSAStartup", reinterpret_cast<void*>(HookedWSAStartup), reinterpret_cast<void**>(&g_originalWSAStartup), false, true, false, 115, 0 },
         HookDefinition { "ws2_32.dll", "WSACleanup", reinterpret_cast<void*>(HookedWSACleanup), reinterpret_cast<void**>(&g_originalWSACleanup), false, true, false, 116, 0 },
         HookDefinition { "ws2_32.dll", "socket", reinterpret_cast<void*>(HookedSocket), reinterpret_cast<void**>(&g_originalSocket), false, true, false, 23, 0 },
@@ -3607,6 +3747,138 @@ LSTATUS WINAPI HookedRegCloseKey(HKEY key)
     if (HooksEnabled())
     {
         EmitRegCloseKeyEvent(result, start, end, key);
+    }
+
+    return result;
+}
+
+RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR protSeq, RPC_WSTR networkAddr, RPC_WSTR endpoint, RPC_WSTR options, RPC_WSTR* stringBinding)
+{
+    if (g_inHook || !HooksEnabled() || g_originalRpcStringBindingComposeW == nullptr)
+    {
+        if (g_originalRpcStringBindingComposeW == nullptr)
+        {
+            return RPC_S_CALL_FAILED;
+        }
+
+        return g_originalRpcStringBindingComposeW(objUuid, protSeq, networkAddr, endpoint, options, stringBinding);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const RPC_STATUS result = g_originalRpcStringBindingComposeW(objUuid, protSeq, networkAddr, endpoint, options, stringBinding);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitRpcStringBindingComposeWEvent(result, start, end, objUuid, protSeq, networkAddr, endpoint, options, stringBinding);
+    }
+
+    return result;
+}
+
+RPC_STATUS RPC_ENTRY HookedRpcBindingFromStringBindingW(RPC_WSTR stringBinding, RPC_BINDING_HANDLE* binding)
+{
+    if (g_inHook || !HooksEnabled() || g_originalRpcBindingFromStringBindingW == nullptr)
+    {
+        if (g_originalRpcBindingFromStringBindingW == nullptr)
+        {
+            return RPC_S_CALL_FAILED;
+        }
+
+        return g_originalRpcBindingFromStringBindingW(stringBinding, binding);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const RPC_STATUS result = g_originalRpcBindingFromStringBindingW(stringBinding, binding);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitRpcBindingFromStringBindingWEvent(result, start, end, stringBinding, binding);
+    }
+
+    return result;
+}
+
+RPC_STATUS RPC_ENTRY HookedRpcStringFreeW(RPC_WSTR* string)
+{
+    if (g_inHook || !HooksEnabled() || g_originalRpcStringFreeW == nullptr)
+    {
+        if (g_originalRpcStringFreeW == nullptr)
+        {
+            return RPC_S_CALL_FAILED;
+        }
+
+        return g_originalRpcStringFreeW(string);
+    }
+
+    HookReentryGuard guard;
+    RPC_WSTR preString = nullptr;
+    char preStringText[knmon::KnMonTransportText0Bytes] = {};
+    std::uint32_t preStringTextStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+
+    if (ReadCurrentProcessValue(string, &preString))
+    {
+        preStringTextStatus = CopyRpcWideStringText(preStringText, nullptr, sizeof(preStringText), preString);
+    }
+    else
+    {
+        preStringTextStatus = string == nullptr ?
+            static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer) :
+            static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+    }
+
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const RPC_STATUS result = g_originalRpcStringFreeW(string);
+    QueryPerformanceCounter(&end);
+
+    RPC_WSTR postString = nullptr;
+    ReadCurrentProcessValue(string, &postString);
+
+    if (HooksEnabled())
+    {
+        EmitRpcStringFreeWEvent(result, start, end, string, preString, postString, preStringText, preStringTextStatus);
+    }
+
+    return result;
+}
+
+RPC_STATUS RPC_ENTRY HookedRpcBindingFree(RPC_BINDING_HANDLE* binding)
+{
+    if (g_inHook || !HooksEnabled() || g_originalRpcBindingFree == nullptr)
+    {
+        if (g_originalRpcBindingFree == nullptr)
+        {
+            return RPC_S_CALL_FAILED;
+        }
+
+        return g_originalRpcBindingFree(binding);
+    }
+
+    HookReentryGuard guard;
+    RPC_BINDING_HANDLE preBinding = nullptr;
+    ReadCurrentProcessValue(binding, &preBinding);
+
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const RPC_STATUS result = g_originalRpcBindingFree(binding);
+    QueryPerformanceCounter(&end);
+
+    RPC_BINDING_HANDLE postBinding = nullptr;
+    ReadCurrentProcessValue(binding, &postBinding);
+
+    if (HooksEnabled())
+    {
+        EmitRpcBindingFreeEvent(result, start, end, binding, preBinding, postBinding);
     }
 
     return result;

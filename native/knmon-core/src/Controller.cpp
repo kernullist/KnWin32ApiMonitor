@@ -728,6 +728,12 @@ std::string LStatusValue(std::uint64_t value)
     return std::to_string(code) + " (" + HexDwordValue(code) + ")";
 }
 
+std::string RpcStatusValue(std::uint64_t value)
+{
+    const std::uint32_t code = static_cast<std::uint32_t>(value);
+    return std::to_string(code) + " (" + HexDwordValue(code) + ")";
+}
+
 std::string HexNtStatusValue(std::uint32_t value)
 {
     return HexFixed(value, 8);
@@ -972,6 +978,7 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
     std::string payload;
     const std::string text0 = TransportText(record.Text0, record.Text0Length, sizeof(record.Text0));
     const std::string text1 = TransportText(record.Text1, record.Text1Length, sizeof(record.Text1));
+    const std::string text2 = TransportText(record.Text2, record.Text2Length, sizeof(record.Text2));
     std::ostringstream args;
 
     switch (static_cast<KnMonTransportApiId>(record.ApiId))
@@ -1113,6 +1120,54 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "HKEY", "hKey", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture));
         payload = ApiCallPayload(result, record, LStatusValue(record.ReturnValue), args.str(), "");
         break;
+    case KnMonTransportApiId::RpcStringBindingComposeW:
+    {
+        const std::string objUuidPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string protSeqPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string networkAddrPointer = HexPointerValue(record.Values64[2], result.Architecture);
+        const std::string endpointPointer = HexPointerValue(record.Values64[3], result.Architecture);
+        const std::string optionsPointer = HexPointerValue(record.Values64[4], result.Architecture);
+        const std::string stringBindingPointer = HexPointerValue(record.Values64[5], result.Architecture);
+        const std::string composedBindingPointer = HexPointerValue(record.Values64[6], result.Architecture);
+        const std::string composedBinding = text0.empty() ? composedBindingPointer : text0;
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "RPC_WSTR", "ObjUuid", "in", objUuidPointer, objUuidPointer, objUuidPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "RPC_WSTR", "ProtSeq", "in", protSeqPointer, protSeqPointer, text1.empty() ? protSeqPointer : text1, DecodeStatusName(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "RPC_WSTR", "NetworkAddr", "in", networkAddrPointer, networkAddrPointer, networkAddrPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "RPC_WSTR", "Endpoint", "in", endpointPointer, endpointPointer, text2.empty() ? endpointPointer : text2, DecodeStatusName(record.Values32[2])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 4, "RPC_WSTR", "Options", "in", optionsPointer, optionsPointer, optionsPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 5, "RPC_WSTR*", "StringBinding", "out", stringBindingPointer, composedBinding, composedBinding, DecodeStatusName(record.Values32[0]));
+        payload = ApiCallPayload(result, record, RpcStatusValue(record.ReturnValue), args.str(), text0);
+        break;
+    }
+    case KnMonTransportApiId::RpcBindingFromStringBindingW:
+    {
+        const std::string stringBindingPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string bindingPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string bindingValue = HexPointerValue(record.Values64[2], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "RPC_WSTR", "StringBinding", "in", stringBindingPointer, stringBindingPointer, text0.empty() ? stringBindingPointer : text0, DecodeStatusName(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "RPC_BINDING_HANDLE*", "Binding", "out", bindingPointer, bindingValue, bindingValue);
+        payload = ApiCallPayload(result, record, RpcStatusValue(record.ReturnValue), args.str(), text0);
+        break;
+    }
+    case KnMonTransportApiId::RpcStringFreeW:
+    {
+        const std::string stringPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string preStringPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string postStringPointer = HexPointerValue(record.Values64[2], result.Architecture);
+        const std::string preString = text0.empty() ? preStringPointer : text0;
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "RPC_WSTR*", "String", "inout", stringPointer, postStringPointer, preString, DecodeStatusName(record.Values32[0]));
+        payload = ApiCallPayload(result, record, RpcStatusValue(record.ReturnValue), args.str(), text0);
+        break;
+    }
+    case KnMonTransportApiId::RpcBindingFree:
+    {
+        const std::string bindingPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string preBinding = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string postBinding = HexPointerValue(record.Values64[2], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "RPC_BINDING_HANDLE*", "Binding", "inout", bindingPointer, postBinding, preBinding);
+        payload = ApiCallPayload(result, record, RpcStatusValue(record.ReturnValue), args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::WSAStartup:
     {
         const std::string dataPointer = HexPointerValue(record.Values64[0], result.Architecture);
