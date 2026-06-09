@@ -60,6 +60,97 @@ enum class KnMonAgentMessageType : std::uint32_t
     AgentShutdown = 6,
 };
 
+enum class KnMonTransportEventKind : std::uint16_t
+{
+    Unknown = 0,
+    ApiCall = 1,
+};
+
+enum class KnMonTransportApiId : std::uint16_t
+{
+    Unknown = 0,
+    CreateFileW = 1,
+    CreateFileA = 2,
+    NtCreateFile = 3,
+    ReadFile = 4,
+    WriteFile = 5,
+    CloseHandle = 6,
+};
+
+enum class KnMonTransportModuleId : std::uint16_t
+{
+    Unknown = 0,
+    Kernel32 = 1,
+    Ntdll = 2,
+};
+
+inline constexpr std::uint32_t KnMonTransportMagic = 0x4d54534b;
+inline constexpr std::uint16_t KnMonTransportAbiVersion = 1;
+inline constexpr std::uint32_t KnMonTransportDefaultCapacity = 1024;
+inline constexpr std::uint32_t KnMonTransportMinCapacity = 2;
+inline constexpr std::uint32_t KnMonTransportMaxCapacity = 65536;
+inline constexpr std::uint32_t KnMonTransportOperationIdChars = 64;
+inline constexpr std::uint32_t KnMonTransportText0Bytes = 512;
+inline constexpr std::uint32_t KnMonTransportText1Bytes = 160;
+inline constexpr std::uint32_t KnMonTransportText2Bytes = 80;
+inline constexpr std::uint32_t KnMonTransportSlotCount64 = 8;
+inline constexpr std::uint32_t KnMonTransportSlotCount32 = 8;
+
+enum class KnMonTransportRecordState : std::int32_t
+{
+    Free = 0,
+    Writing = 1,
+    Committed = 2,
+};
+
+struct KnMonTransportHeader
+{
+    std::uint32_t Magic = KnMonTransportMagic;
+    std::uint16_t AbiVersion = KnMonTransportAbiVersion;
+    std::uint16_t HeaderSize = 0;
+    std::uint32_t Architecture = 0;
+    std::uint32_t Capacity = 0;
+    std::uint32_t RecordSize = 0;
+    std::uint32_t Flags = 0;
+    alignas(8) volatile std::int64_t ProducerSequence = 0;
+    alignas(8) volatile std::int64_t ConsumerSequence = 0;
+    alignas(8) volatile std::int64_t DroppedEvents = 0;
+    alignas(8) volatile std::int64_t HighWaterMark = 0;
+    wchar_t OperationId[KnMonTransportOperationIdChars] = {};
+};
+
+struct KnMonTransportRecord
+{
+    alignas(8) volatile std::int64_t Sequence = -1;
+    volatile std::int32_t State = static_cast<std::int32_t>(KnMonTransportRecordState::Free);
+    std::uint16_t RecordSize = 0;
+    std::uint16_t EventKind = static_cast<std::uint16_t>(KnMonTransportEventKind::Unknown);
+    std::uint16_t ApiId = static_cast<std::uint16_t>(KnMonTransportApiId::Unknown);
+    std::uint16_t ModuleId = static_cast<std::uint16_t>(KnMonTransportModuleId::Unknown);
+    std::uint32_t Flags = 0;
+    std::uint32_t ProcessId = 0;
+    std::uint32_t ThreadId = 0;
+    std::uint64_t DurationUs = 0;
+    std::uint64_t HookOverheadUs = 0;
+    std::uint64_t StartQpc = 0;
+    std::uint64_t EndQpc = 0;
+    std::uint64_t ReturnValue = 0;
+    std::uint32_t ReturnCode = 0;
+    std::uint32_t LastErrorCode = 0;
+    std::uint64_t Values64[KnMonTransportSlotCount64] = {};
+    std::uint32_t Values32[KnMonTransportSlotCount32] = {};
+    std::uint32_t Text0Length = 0;
+    std::uint32_t Text1Length = 0;
+    std::uint32_t Text2Length = 0;
+    char Text0[KnMonTransportText0Bytes] = {};
+    char Text1[KnMonTransportText1Bytes] = {};
+    char Text2[KnMonTransportText2Bytes] = {};
+};
+
+static_assert(sizeof(KnMonTransportHeader) % 8 == 0, "transport header must remain 8-byte aligned");
+static_assert(alignof(KnMonTransportRecord) >= 8, "transport records must keep 64-bit counters aligned");
+static_assert(sizeof(KnMonTransportRecord) % 8 == 0, "transport record must remain 8-byte aligned");
+
 struct KnMonProtocolVersion
 {
     std::uint16_t Major = KnMonProtocolMajor;
@@ -227,6 +318,15 @@ struct KnMonCaptureResult
     std::string Operation;
     std::string Message;
     std::uint64_t DroppedEvents = 0;
+    std::string TransportMode = "named-pipe-json";
+    std::uint64_t TransportCapacity = 0;
+    std::uint64_t TransportRecordsProduced = 0;
+    std::uint64_t TransportRecordsConsumed = 0;
+    std::uint64_t TransportDroppedEvents = 0;
+    std::uint64_t TransportHighWaterMark = 0;
+    std::uint64_t HookOverheadMinUs = 0;
+    std::uint64_t HookOverheadAvgUs = 0;
+    std::uint64_t HookOverheadMaxUs = 0;
     KnMonAgentHandshake Handshake;
     std::vector<KnMonAuditEvent> AuditEvents;
     std::vector<KnMonAgentMessage> AgentMessages;

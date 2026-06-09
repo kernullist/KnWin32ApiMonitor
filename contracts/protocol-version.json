@@ -16,12 +16,21 @@
     "captureMode": "bounded-native-capture",
     "hookMethod": "iat",
     "controlledSampleOnly": true,
+    "apiEventTransport": "shared-memory",
+    "controlMessageTransport": "named-pipe-json",
     "hookedApis": ["CreateFileW", "CreateFileA", "NtCreateFile", "ReadFile", "WriteFile", "CloseHandle"],
     "hookedModules": ["kernel32.dll", "ntdll.dll"],
     "expectedHookCount": 6,
     "messageTypes": ["agent_hello", "hook_installed", "hook_install_failed", "api_call", "dropped_events", "agent_shutdown"],
     "lifecycleStates": ["starting", "running", "stopping", "disabled", "failed"],
     "shutdownFields": ["reason", "lifecycleState", "installedHooks", "restoredHooks", "failedHooks", "droppedCount"]
+  },
+  "sharedMemoryTransport": {
+    "abiVersion": 1,
+    "overflowPolicy": "drop-newest",
+    "defaultCapacity": 1024,
+    "hotPathPolicy": ["no_api_json_serialization", "no_blocking_pipe_write_for_api_events", "bounded_payloads"],
+    "metricsFields": ["transportMode", "transportCapacity", "transportRecordsProduced", "transportRecordsConsumed", "transportDroppedEvents", "transportHighWaterMark", "hookOverheadMinUs", "hookOverheadAvgUs", "hookOverheadMaxUs"]
   },
   "sessionWriter": {
     "captureCommand": "capture-sample --write-session <dir>",

@@ -549,6 +549,12 @@ function App() {
                   <span>{captureResult ? captureResult.capturedEvents.length : 0}</span>
                   <label>Dropped</label>
                   <span>{captureResult ? captureResult.droppedEvents : droppedCount}</span>
+                  <label>Transport</label>
+                  <span>{captureResult ? captureResult.transportMode : "not active"}</span>
+                  <label>Transport rows</label>
+                  <span>{captureResult ? `${captureResult.transportRecordsConsumed}/${captureResult.transportRecordsProduced}` : "0/0"}</span>
+                  <label>Hook avg</label>
+                  <span>{captureResult ? `${captureResult.hookOverheadAvgUs} us avg` : "not measured"}</span>
                   <label>Session</label>
                   <span>{lastSession ? lastSession.sessionId || "latest-sample-fileio" : "not saved"}</span>
                 </div>

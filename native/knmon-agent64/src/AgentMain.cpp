@@ -1,13 +1,15 @@
+#include <knmon/common/Protocol.h>
+
 #include <Windows.h>
 #include <winternl.h>
 
 #include <array>
+#include <cstdio>
 #include <cstdint>
 #include <cstring>
 #include <iomanip>
 #include <sstream>
 #include <string>
-#include <vector>
 
 #ifndef NT_SUCCESS
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
@@ -51,6 +53,10 @@ using NtCreateFileFn = NTSTATUS(NTAPI*)(
 using RtlNtStatusToDosErrorFn = ULONG(WINAPI*)(NTSTATUS);
 
 HANDLE g_pipeHandle = INVALID_HANDLE_VALUE;
+HANDLE g_transportMapping = nullptr;
+knmon::KnMonTransportHeader* g_transportHeader = nullptr;
+knmon::KnMonTransportRecord* g_transportRecords = nullptr;
+std::uint32_t g_transportCapacity = 0;
 SRWLOCK g_pipeLock = SRWLOCK_INIT;
 volatile LONG64 g_sequence = 0;
 volatile LONG64 g_droppedEvents = 0;
@@ -201,6 +207,12 @@ std::wstring ReadEnv(const wchar_t* name)
     return result;
 }
 
+bool EnvEnabled(const wchar_t* name)
+{
+    const std::wstring value = ReadEnv(name);
+    return value == L"1" || value == L"true" || value == L"TRUE";
+}
+
 std::string JsonEscape(const std::string& value)
 {
     std::ostringstream stream;
@@ -264,133 +276,475 @@ std::string NowUtc()
     return stream.str();
 }
 
-std::string FormatWindowsError(DWORD errorCode)
+void CopyAsciiText(char* destination, std::uint32_t* length, std::size_t capacity, const char* source)
 {
-    std::string result;
-    LPWSTR message = nullptr;
+    std::uint32_t copied = 0;
 
     do
     {
-        if (errorCode == 0)
+        if (destination == nullptr || capacity == 0)
         {
-            result = "success";
             break;
         }
 
-        const DWORD length = FormatMessageW(
-            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-            nullptr,
-            errorCode,
-            0,
-            reinterpret_cast<LPWSTR>(&message),
-            0,
-            nullptr);
-
-        if (length == 0 || message == nullptr)
+        destination[0] = '\0';
+        if (source == nullptr)
         {
-            std::ostringstream stream;
-            stream << "Windows error " << errorCode;
-            result = stream.str();
             break;
         }
 
-        result = WideToUtf8(message);
-        while (!result.empty() && (result.back() == '\r' || result.back() == '\n' || result.back() == ' '))
+        while (copied + 1 < capacity && source[copied] != '\0')
         {
-            result.pop_back();
+            destination[copied] = source[copied];
+            ++copied;
+        }
+
+        destination[copied] = '\0';
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+}
+
+void CopyWideText(char* destination, std::uint32_t* length, std::size_t capacity, const wchar_t* source)
+{
+    std::uint32_t copied = 0;
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            break;
+        }
+
+        const int converted = WideCharToMultiByte(CP_UTF8, 0, source, -1, destination, static_cast<int>(capacity), nullptr, nullptr);
+        if (converted <= 0)
+        {
+            break;
+        }
+
+        copied = static_cast<std::uint32_t>(converted - 1);
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+}
+
+void CopyHexPointerText(char* destination, std::uint32_t* length, std::size_t capacity, const void* value)
+{
+    int written = 0;
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            break;
+        }
+
+        destination[0] = '\0';
+        written = std::snprintf(
+            destination,
+            capacity,
+            sizeof(void*) == 8 ? "0x%016llx" : "0x%08llx",
+            static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(value)));
+        if (written < 0)
+        {
+            written = 0;
+            destination[0] = '\0';
         }
     }
     while (false);
 
-    if (message != nullptr)
+    if (length != nullptr)
     {
-        LocalFree(message);
+        *length = static_cast<std::uint32_t>(written < 0 ? 0 : written);
+    }
+}
+
+void CopyBufferPreviewText(char* destination, std::uint32_t* length, std::size_t capacity, const void* buffer, DWORD bytes)
+{
+    std::uint32_t copied = 0;
+    static constexpr char Hex[] = "0123456789abcdef";
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            break;
+        }
+
+        destination[0] = '\0';
+        if (buffer == nullptr || bytes == 0)
+        {
+            break;
+        }
+
+        const auto* source = static_cast<const unsigned char*>(buffer);
+        const DWORD captured = bytes < MaxBufferPreviewBytes ? bytes : static_cast<DWORD>(MaxBufferPreviewBytes);
+        for (DWORD index = 0; index < captured; ++index)
+        {
+            if (copied + 3 >= capacity)
+            {
+                break;
+            }
+
+            if (index != 0)
+            {
+                destination[copied] = ' ';
+                ++copied;
+            }
+
+            destination[copied] = Hex[(source[index] >> 4) & 0x0f];
+            ++copied;
+            destination[copied] = Hex[source[index] & 0x0f];
+            ++copied;
+        }
+
+        destination[copied] = '\0';
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+}
+
+template <typename T>
+bool ReadCurrentProcessValue(const T* address, T* value);
+
+std::uint64_t DurationUs(const LARGE_INTEGER& start, const LARGE_INTEGER& end);
+
+std::uint32_t CopyUnicodeStringText(char* destination, std::uint32_t* length, std::size_t capacity, const UNICODE_STRING* value)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (value == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        UNICODE_STRING local = {};
+        if (!ReadCurrentProcessValue(value, &local))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        if (local.Buffer == nullptr || local.Length == 0)
+        {
+            break;
+        }
+
+        std::size_t capturedBytes = local.Length;
+        if (capturedBytes > MaxNtObjectNameBytes)
+        {
+            capturedBytes = MaxNtObjectNameBytes;
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+        }
+
+        capturedBytes -= capturedBytes % sizeof(wchar_t);
+        if (capturedBytes == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        std::array<wchar_t, (MaxNtObjectNameBytes / sizeof(wchar_t)) + 1> localBuffer = {};
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), local.Buffer, localBuffer.data(), capturedBytes, &bytesRead) || bytesRead == 0)
+        {
+            CopyHexPointerText(destination, length, capacity, local.Buffer);
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        bytesRead -= bytesRead % sizeof(wchar_t);
+        localBuffer[bytesRead / sizeof(wchar_t)] = L'\0';
+        CopyWideText(destination, length, capacity, localBuffer.data());
+    }
+    while (false);
+
+    return status;
+}
+
+std::uint32_t CopyObjectAttributesName(char* destination, std::uint32_t* length, std::size_t capacity, const OBJECT_ATTRIBUTES* objectAttributes)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+
+    do
+    {
+        if (objectAttributes == nullptr)
+        {
+            CopyAsciiText(destination, length, capacity, "");
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        OBJECT_ATTRIBUTES local = {};
+        if (!ReadCurrentProcessValue(objectAttributes, &local))
+        {
+            CopyHexPointerText(destination, length, capacity, objectAttributes);
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        status = CopyUnicodeStringText(destination, length, capacity, local.ObjectName);
+        if (destination != nullptr && destination[0] == '\0')
+        {
+            CopyHexPointerText(destination, length, capacity, local.ObjectName);
+        }
+    }
+    while (false);
+
+    return status;
+}
+
+std::uint32_t CopyIoStatusBlockText(char* destination, std::uint32_t* length, std::size_t capacity, const IO_STATUS_BLOCK* ioStatusBlock)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+
+    do
+    {
+        if (ioStatusBlock == nullptr)
+        {
+            CopyAsciiText(destination, length, capacity, "");
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        IO_STATUS_BLOCK local = {};
+        if (!ReadCurrentProcessValue(ioStatusBlock, &local))
+        {
+            CopyHexPointerText(destination, length, capacity, ioStatusBlock);
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        char buffer[96] = {};
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            sizeof(void*) == 8 ? "Status=0x%08lx,Information=0x%016llx" : "Status=0x%08lx,Information=0x%08llx",
+            static_cast<unsigned long>(static_cast<std::uint32_t>(local.Status)),
+            static_cast<unsigned long long>(static_cast<std::uintptr_t>(local.Information)));
+        CopyAsciiText(destination, length, capacity, buffer);
+    }
+    while (false);
+
+    return status;
+}
+
+void CountDroppedTransportEvent()
+{
+    InterlockedIncrement64(&g_droppedEvents);
+    if (g_transportHeader != nullptr)
+    {
+        InterlockedIncrement64(&g_transportHeader->DroppedEvents);
+    }
+}
+
+void UpdateTransportHighWaterMark(std::int64_t depth)
+{
+    if (g_transportHeader == nullptr)
+    {
+        return;
+    }
+
+    for (;;)
+    {
+        const std::int64_t current = InterlockedCompareExchange64(&g_transportHeader->HighWaterMark, 0, 0);
+        if (depth <= current)
+        {
+            break;
+        }
+
+        if (InterlockedCompareExchange64(&g_transportHeader->HighWaterMark, depth, current) == current)
+        {
+            break;
+        }
+    }
+}
+
+knmon::KnMonTransportRecord* ReserveTransportRecord()
+{
+    knmon::KnMonTransportRecord* record = nullptr;
+
+    do
+    {
+        if (g_transportHeader == nullptr || g_transportRecords == nullptr || g_transportCapacity == 0)
+        {
+            CountDroppedTransportEvent();
+            break;
+        }
+
+        for (;;)
+        {
+            const std::int64_t producer = InterlockedCompareExchange64(&g_transportHeader->ProducerSequence, 0, 0);
+            const std::int64_t consumer = InterlockedCompareExchange64(&g_transportHeader->ConsumerSequence, 0, 0);
+            const std::int64_t depth = producer - consumer;
+            if (depth >= static_cast<std::int64_t>(g_transportCapacity))
+            {
+                CountDroppedTransportEvent();
+                break;
+            }
+
+            if (InterlockedCompareExchange64(&g_transportHeader->ProducerSequence, producer + 1, producer) == producer)
+            {
+                UpdateTransportHighWaterMark(depth + 1);
+                record = &g_transportRecords[producer % g_transportCapacity];
+                if (InterlockedCompareExchange(
+                        reinterpret_cast<volatile LONG*>(&record->State),
+                        static_cast<LONG>(knmon::KnMonTransportRecordState::Writing),
+                        static_cast<LONG>(knmon::KnMonTransportRecordState::Free)) != static_cast<LONG>(knmon::KnMonTransportRecordState::Free))
+                {
+                    record = nullptr;
+                    CountDroppedTransportEvent();
+                    break;
+                }
+
+                std::memset(record, 0, sizeof(*record));
+                record->State = static_cast<LONG>(knmon::KnMonTransportRecordState::Writing);
+                record->Sequence = producer;
+                record->RecordSize = sizeof(knmon::KnMonTransportRecord);
+                record->EventKind = static_cast<std::uint16_t>(knmon::KnMonTransportEventKind::ApiCall);
+                record->ProcessId = GetCurrentProcessId();
+                record->ThreadId = GetCurrentThreadId();
+                break;
+            }
+        }
+    }
+    while (false);
+
+    return record;
+}
+
+void CommitTransportRecord(knmon::KnMonTransportRecord* record, const LARGE_INTEGER& overheadStart)
+{
+    if (record != nullptr)
+    {
+        LARGE_INTEGER overheadEnd = {};
+        QueryPerformanceCounter(&overheadEnd);
+        record->HookOverheadUs = DurationUs(overheadStart, overheadEnd);
+        MemoryBarrier();
+        InterlockedExchange(reinterpret_cast<volatile LONG*>(&record->State), static_cast<LONG>(knmon::KnMonTransportRecordState::Committed));
+    }
+}
+
+std::uint16_t ModuleId(const char* moduleName)
+{
+    std::uint16_t result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Unknown);
+
+    if (std::strcmp(moduleName, "kernel32.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Kernel32);
+    }
+    else if (std::strcmp(moduleName, "ntdll.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Ntdll);
     }
 
     return result;
 }
 
-std::string HexPointer(const void* value)
+bool OpenTransport(const std::wstring& mappingName)
 {
-    std::ostringstream stream;
-    stream << "0x"
-           << std::hex
-           << std::setfill('0')
-           << std::setw(static_cast<int>(sizeof(void*) * 2))
-           << reinterpret_cast<std::uintptr_t>(value);
-    return stream.str();
-}
-
-std::string HexDword(DWORD value)
-{
-    std::ostringstream stream;
-    stream << "0x"
-           << std::hex
-           << std::setfill('0')
-           << std::setw(8)
-           << value;
-    return stream.str();
-}
-
-std::string HexNtStatus(NTSTATUS status)
-{
-    std::ostringstream stream;
-    stream << "0x"
-           << std::hex
-           << std::setfill('0')
-           << std::setw(8)
-           << static_cast<std::uint32_t>(status);
-    return stream.str();
-}
-
-std::string HexUlongPtr(ULONG_PTR value)
-{
-    std::ostringstream stream;
-    stream << "0x"
-           << std::hex
-           << std::setfill('0')
-           << std::setw(static_cast<int>(sizeof(void*) * 2))
-           << static_cast<std::uintptr_t>(value);
-    return stream.str();
-}
-
-std::string BufferPreview(const void* buffer, DWORD length)
-{
-    std::ostringstream stream;
+    bool opened = false;
 
     do
     {
-        if (buffer == nullptr || length == 0)
+        if (mappingName.empty())
         {
             break;
         }
 
-        const auto* bytes = static_cast<const unsigned char*>(buffer);
-        const DWORD captured = length < MaxBufferPreviewBytes ? length : static_cast<DWORD>(MaxBufferPreviewBytes);
-
-        for (DWORD index = 0; index < captured; ++index)
+        g_transportMapping = OpenFileMappingW(FILE_MAP_ALL_ACCESS, FALSE, mappingName.c_str());
+        if (g_transportMapping == nullptr)
         {
-            if (index != 0)
-            {
-                stream << " ";
-            }
-
-            stream << std::hex
-                   << std::setfill('0')
-                   << std::setw(2)
-                   << static_cast<unsigned int>(bytes[index]);
+            break;
         }
+
+        auto* header = static_cast<knmon::KnMonTransportHeader*>(MapViewOfFile(g_transportMapping, FILE_MAP_ALL_ACCESS, 0, 0, 0));
+        if (header == nullptr)
+        {
+            break;
+        }
+
+        if (
+            header->Magic != knmon::KnMonTransportMagic ||
+            header->AbiVersion != knmon::KnMonTransportAbiVersion ||
+            header->RecordSize != sizeof(knmon::KnMonTransportRecord) ||
+            header->Capacity < knmon::KnMonTransportMinCapacity)
+        {
+            UnmapViewOfFile(header);
+            break;
+        }
+
+        g_transportHeader = header;
+        g_transportRecords = reinterpret_cast<knmon::KnMonTransportRecord*>(reinterpret_cast<unsigned char*>(header) + sizeof(knmon::KnMonTransportHeader));
+        g_transportCapacity = header->Capacity;
+        opened = true;
     }
     while (false);
 
-    return stream.str();
+    if (!opened)
+    {
+        if (g_transportHeader != nullptr)
+        {
+            UnmapViewOfFile(g_transportHeader);
+            g_transportHeader = nullptr;
+            g_transportRecords = nullptr;
+            g_transportCapacity = 0;
+        }
+
+        if (g_transportMapping != nullptr)
+        {
+            CloseHandle(g_transportMapping);
+            g_transportMapping = nullptr;
+        }
+    }
+
+    return opened;
 }
 
-struct DecodeResult
+void CloseTransport()
 {
-    std::string Value;
-    const char* Status = "decoded";
-};
+    if (g_transportHeader != nullptr)
+    {
+        UnmapViewOfFile(g_transportHeader);
+        g_transportHeader = nullptr;
+        g_transportRecords = nullptr;
+        g_transportCapacity = 0;
+    }
+
+    if (g_transportMapping != nullptr)
+    {
+        CloseHandle(g_transportMapping);
+        g_transportMapping = nullptr;
+    }
+}
 
 template <typename T>
 bool ReadCurrentProcessValue(const T* address, T* value)
@@ -415,140 +769,6 @@ bool ReadCurrentProcessValue(const T* address, T* value)
     while (false);
 
     return read;
-}
-
-DecodeResult DecodeUnicodeString(const UNICODE_STRING* value)
-{
-    DecodeResult result;
-
-    do
-    {
-        if (value == nullptr)
-        {
-            result.Status = "invalid_pointer";
-            break;
-        }
-
-        UNICODE_STRING local = {};
-        if (!ReadCurrentProcessValue(value, &local))
-        {
-            result.Status = "unreadable_memory";
-            break;
-        }
-
-        if (local.Buffer == nullptr || local.Length == 0)
-        {
-            break;
-        }
-
-        std::size_t capturedBytes = local.Length;
-        if (capturedBytes > MaxNtObjectNameBytes)
-        {
-            capturedBytes = MaxNtObjectNameBytes;
-            result.Status = "truncated";
-        }
-
-        capturedBytes -= capturedBytes % sizeof(wchar_t);
-        if (capturedBytes == 0)
-        {
-            result.Status = "unreadable_memory";
-            break;
-        }
-
-        std::vector<wchar_t> buffer(capturedBytes / sizeof(wchar_t) + 1);
-        SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), local.Buffer, buffer.data(), capturedBytes, &bytesRead) || bytesRead == 0)
-        {
-            result.Value = HexPointer(local.Buffer);
-            result.Status = "unreadable_memory";
-            break;
-        }
-
-        bytesRead -= bytesRead % sizeof(wchar_t);
-        buffer[bytesRead / sizeof(wchar_t)] = L'\0';
-        result.Value = WideToUtf8(buffer.data());
-    }
-    while (false);
-
-    return result;
-}
-
-DecodeResult DecodeObjectAttributesObjectName(const OBJECT_ATTRIBUTES* objectAttributes)
-{
-    DecodeResult result;
-
-    do
-    {
-        if (objectAttributes == nullptr)
-        {
-            result.Value = "";
-            result.Status = "invalid_pointer";
-            break;
-        }
-
-        OBJECT_ATTRIBUTES local = {};
-        if (!ReadCurrentProcessValue(objectAttributes, &local))
-        {
-            result.Value = HexPointer(objectAttributes);
-            result.Status = "unreadable_memory";
-            break;
-        }
-
-        DecodeResult objectName = DecodeUnicodeString(local.ObjectName);
-        result.Value = objectName.Value.empty() ? HexPointer(local.ObjectName) : objectName.Value;
-        result.Status = objectName.Status;
-    }
-    while (false);
-
-    return result;
-}
-
-DecodeResult DecodeIoStatusBlock(const IO_STATUS_BLOCK* ioStatusBlock)
-{
-    DecodeResult result;
-
-    do
-    {
-        if (ioStatusBlock == nullptr)
-        {
-            result.Status = "invalid_pointer";
-            break;
-        }
-
-        IO_STATUS_BLOCK local = {};
-        if (!ReadCurrentProcessValue(ioStatusBlock, &local))
-        {
-            result.Value = HexPointer(ioStatusBlock);
-            result.Status = "unreadable_memory";
-            break;
-        }
-
-        std::ostringstream stream;
-        stream << "Status=" << HexNtStatus(local.Status) << ",Information=" << HexUlongPtr(local.Information);
-        result.Value = stream.str();
-    }
-    while (false);
-
-    return result;
-}
-
-std::string ReadHandlePointer(PHANDLE handlePointer)
-{
-    std::string result = HexPointer(handlePointer);
-
-    do
-    {
-        HANDLE value = nullptr;
-        if (!ReadCurrentProcessValue(handlePointer, &value))
-        {
-            break;
-        }
-
-        result = HexPointer(value);
-    }
-    while (false);
-
-    return result;
 }
 
 DWORD NtStatusToDosError(NTSTATUS status)
@@ -727,78 +947,194 @@ void SendAgentShutdown(const char* reason, const HookLifecycleCounts& counts)
     SendJson(stream.str());
 }
 
-std::string ArgumentJsonWithStatus(
-    int index,
-    const char* type,
-    const char* name,
-    const char* direction,
-    const std::string& preCallValue,
-    const std::string& postCallValue,
-    const std::string& decodedValue,
-    const char* decodeStatus);
-
-std::string ArgumentJson(
-    int index,
-    const char* type,
-    const char* name,
-    const char* direction,
-    const std::string& preCallValue,
-    const std::string& postCallValue,
-    const std::string& decodedValue)
-{
-    return ArgumentJsonWithStatus(index, type, name, direction, preCallValue, postCallValue, decodedValue, "decoded");
-}
-
-std::string ArgumentJsonWithStatus(
-    int index,
-    const char* type,
-    const char* name,
-    const char* direction,
-    const std::string& preCallValue,
-    const std::string& postCallValue,
-    const std::string& decodedValue,
-    const char* decodeStatus)
-{
-    std::ostringstream stream;
-    stream << "{";
-    stream << "\"index\":" << index << ",";
-    stream << "\"type\":" << Q(type) << ",";
-    stream << "\"name\":" << Q(name) << ",";
-    stream << "\"direction\":" << Q(direction) << ",";
-    stream << "\"rawValue\":" << Q(preCallValue) << ",";
-    stream << "\"preCallValue\":" << Q(preCallValue) << ",";
-    stream << "\"postCallValue\":" << Q(postCallValue) << ",";
-    stream << "\"decodedValue\":" << Q(decodedValue) << ",";
-    stream << "\"decodeStatus\":" << Q(decodeStatus == nullptr ? "decoded" : decodeStatus);
-    stream << "}";
-    return stream.str();
-}
-
-void SendApiCall(
+void FillTransportCommon(
+    knmon::KnMonTransportRecord* record,
+    knmon::KnMonTransportApiId apiId,
     const char* moduleName,
-    const char* apiName,
-    const std::string& returnValue,
-    DWORD errorCode,
-    std::uint64_t durationUs,
-    const std::string& argumentsJson,
-    const std::string& bufferPreview)
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    DWORD errorCode)
 {
-    const LONG64 sequence = NextSequence();
-    std::ostringstream stream;
-    stream << MessagePrefix("api_call", sequence) << ",";
-    stream << "\"api\":" << Q(apiName) << ",";
-    stream << "\"module\":" << Q(moduleName) << ",";
-    stream << "\"process\":\"knmon-sample-fileio.exe\",";
-    stream << "\"returnValue\":" << Q(returnValue) << ",";
-    stream << "\"lastErrorCode\":" << errorCode << ",";
-    stream << "\"lastErrorMessage\":" << Q(errorCode == 0 ? "success" : FormatWindowsError(errorCode)) << ",";
-    stream << "\"durationUs\":" << durationUs << ",";
-    stream << "\"arguments\":[" << argumentsJson << "],";
-    stream << "\"tags\":[\"native-capture\",\"file\",\"hook\"],";
-    stream << "\"stack\":[" << Q(std::string(KNMON_AGENT_DLL_NAME) + "!IatHook") << "," << Q(std::string(moduleName) + "!" + apiName) << "],";
-    stream << "\"bufferPreview\":" << Q(bufferPreview);
-    stream << "}";
-    SendJson(stream.str());
+    if (record != nullptr)
+    {
+        record->ApiId = static_cast<std::uint16_t>(apiId);
+        record->ModuleId = ModuleId(moduleName);
+        record->StartQpc = static_cast<std::uint64_t>(start.QuadPart);
+        record->EndQpc = static_cast<std::uint64_t>(end.QuadPart);
+        record->DurationUs = DurationUs(start, end);
+        record->LastErrorCode = errorCode;
+    }
+}
+
+void EmitCreateFileWEvent(
+    HANDLE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPCWSTR fileName,
+    DWORD desiredAccess,
+    DWORD shareMode,
+    DWORD creationDisposition)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::CreateFileW, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values32[0] = desiredAccess;
+        record->Values32[1] = shareMode;
+        record->Values32[2] = creationDisposition;
+        CopyWideText(record->Text0, &record->Text0Length, sizeof(record->Text0), fileName);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitCreateFileAEvent(
+    HANDLE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPCSTR fileName,
+    DWORD desiredAccess,
+    DWORD shareMode,
+    DWORD creationDisposition)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::CreateFileA, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values32[0] = desiredAccess;
+        record->Values32[1] = shareMode;
+        record->Values32[2] = creationDisposition;
+        CopyAsciiText(record->Text0, &record->Text0Length, sizeof(record->Text0), fileName);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitReadFileEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE file,
+    LPVOID buffer,
+    DWORD bytesToRead,
+    DWORD bytesRead)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::ReadFile, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result ? 1 : 0;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(buffer));
+        record->Values32[0] = bytesToRead;
+        record->Values32[1] = bytesRead;
+        CopyBufferPreviewText(record->Text0, &record->Text0Length, sizeof(record->Text0), result ? buffer : nullptr, bytesRead);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitWriteFileEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE file,
+    LPCVOID buffer,
+    DWORD bytesToWrite,
+    DWORD bytesWritten)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::WriteFile, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result ? 1 : 0;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(buffer));
+        record->Values32[0] = bytesToWrite;
+        record->Values32[1] = bytesWritten;
+        CopyBufferPreviewText(record->Text0, &record->Text0Length, sizeof(record->Text0), buffer, bytesToWrite);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitCloseHandleEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE handle)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::CloseHandle, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result ? 1 : 0;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(handle));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitNtCreateFileEvent(
+    NTSTATUS status,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    PHANDLE fileHandle,
+    ACCESS_MASK desiredAccess,
+    POBJECT_ATTRIBUTES objectAttributes,
+    PIO_STATUS_BLOCK ioStatusBlock,
+    PLARGE_INTEGER allocationSize,
+    ULONG fileAttributes,
+    ULONG shareAccess,
+    ULONG createDisposition,
+    ULONG createOptions,
+    PVOID eaBuffer,
+    ULONG eaLength)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::NtCreateFile, "ntdll.dll", start, end, errorCode);
+        record->ReturnCode = static_cast<std::uint32_t>(status);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(fileHandle));
+        HANDLE localHandle = nullptr;
+        if (NT_SUCCESS(status) && ReadCurrentProcessValue(fileHandle, &localHandle))
+        {
+            record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(localHandle));
+        }
+        else
+        {
+            record->Values64[1] = record->Values64[0];
+        }
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(objectAttributes));
+        record->Values64[3] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(ioStatusBlock));
+        record->Values64[4] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(allocationSize));
+        record->Values64[5] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(eaBuffer));
+        record->Values32[0] = desiredAccess;
+        record->Values32[1] = fileAttributes;
+        record->Values32[2] = shareAccess;
+        record->Values32[3] = createDisposition;
+        record->Values32[4] = createOptions;
+        record->Values32[5] = eaLength;
+        record->Values32[6] = CopyObjectAttributesName(record->Text0, &record->Text0Length, sizeof(record->Text0), objectAttributes);
+        record->Values32[7] = CopyIoStatusBlockText(record->Text1, &record->Text1Length, sizeof(record->Text1), ioStatusBlock);
+        CommitTransportRecord(record, overheadStart);
+    }
 }
 
 void* ResolveExport(const char* moduleName, const char* name)
@@ -1043,15 +1379,9 @@ HANDLE WINAPI HookedCreateFileW(
 
     const bool failed = result == INVALID_HANDLE_VALUE;
     const DWORD eventError = failed ? lastError : 0;
-    const std::string path = WideToUtf8(fileName);
-    std::ostringstream args;
-    args << ArgumentJson(0, "LPCWSTR", "lpFileName", "in", path, path, path) << ",";
-    args << ArgumentJson(1, "DWORD", "dwDesiredAccess", "in", HexDword(desiredAccess), HexDword(desiredAccess), HexDword(desiredAccess)) << ",";
-    args << ArgumentJson(2, "DWORD", "dwShareMode", "in", HexDword(shareMode), HexDword(shareMode), HexDword(shareMode)) << ",";
-    args << ArgumentJson(3, "DWORD", "dwCreationDisposition", "in", HexDword(creationDisposition), HexDword(creationDisposition), HexDword(creationDisposition));
     if (HooksEnabled())
     {
-        SendApiCall("kernel32.dll", "CreateFileW", HexPointer(result), eventError, DurationUs(start, end), args.str(), "");
+        EmitCreateFileWEvent(result, eventError, start, end, fileName, desiredAccess, shareMode, creationDisposition);
     }
 
     SetLastError(lastError);
@@ -1088,15 +1418,9 @@ HANDLE WINAPI HookedCreateFileA(
 
     const bool failed = result == INVALID_HANDLE_VALUE;
     const DWORD eventError = failed ? lastError : 0;
-    const std::string path = fileName == nullptr ? "" : fileName;
-    std::ostringstream args;
-    args << ArgumentJson(0, "LPCSTR", "lpFileName", "in", path, path, path) << ",";
-    args << ArgumentJson(1, "DWORD", "dwDesiredAccess", "in", HexDword(desiredAccess), HexDword(desiredAccess), HexDword(desiredAccess)) << ",";
-    args << ArgumentJson(2, "DWORD", "dwShareMode", "in", HexDword(shareMode), HexDword(shareMode), HexDword(shareMode)) << ",";
-    args << ArgumentJson(3, "DWORD", "dwCreationDisposition", "in", HexDword(creationDisposition), HexDword(creationDisposition), HexDword(creationDisposition));
     if (HooksEnabled())
     {
-        SendApiCall("kernel32.dll", "CreateFileA", HexPointer(result), eventError, DurationUs(start, end), args.str(), "");
+        EmitCreateFileAEvent(result, eventError, start, end, fileName, desiredAccess, shareMode, creationDisposition);
     }
 
     SetLastError(lastError);
@@ -1126,14 +1450,9 @@ BOOL WINAPI HookedReadFile(HANDLE file, LPVOID buffer, DWORD bytesToRead, LPDWOR
 
     const DWORD actualBytes = bytesRead == nullptr ? 0 : *bytesRead;
     const DWORD eventError = result ? 0 : lastError;
-    std::ostringstream args;
-    args << ArgumentJson(0, "HANDLE", "hFile", "in", HexPointer(file), HexPointer(file), HexPointer(file)) << ",";
-    args << ArgumentJson(1, "LPVOID", "lpBuffer", "out", HexPointer(buffer), HexPointer(buffer), HexPointer(buffer)) << ",";
-    args << ArgumentJson(2, "DWORD", "nNumberOfBytesToRead", "in", std::to_string(bytesToRead), std::to_string(bytesToRead), std::to_string(bytesToRead)) << ",";
-    args << ArgumentJson(3, "LPDWORD", "lpNumberOfBytesRead", "out", HexPointer(bytesRead), std::to_string(actualBytes), std::to_string(actualBytes));
     if (HooksEnabled())
     {
-        SendApiCall("kernel32.dll", "ReadFile", result ? "TRUE" : "FALSE", eventError, DurationUs(start, end), args.str(), result ? BufferPreview(buffer, actualBytes) : "");
+        EmitReadFileEvent(result, eventError, start, end, file, buffer, bytesToRead, actualBytes);
     }
 
     SetLastError(lastError);
@@ -1154,7 +1473,6 @@ BOOL WINAPI HookedWriteFile(HANDLE file, LPCVOID buffer, DWORD bytesToWrite, LPD
     }
 
     HookReentryGuard guard;
-    const std::string preview = BufferPreview(buffer, bytesToWrite);
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
@@ -1164,14 +1482,9 @@ BOOL WINAPI HookedWriteFile(HANDLE file, LPCVOID buffer, DWORD bytesToWrite, LPD
 
     const DWORD actualBytes = bytesWritten == nullptr ? 0 : *bytesWritten;
     const DWORD eventError = result ? 0 : lastError;
-    std::ostringstream args;
-    args << ArgumentJson(0, "HANDLE", "hFile", "in", HexPointer(file), HexPointer(file), HexPointer(file)) << ",";
-    args << ArgumentJson(1, "LPCVOID", "lpBuffer", "in", HexPointer(buffer), HexPointer(buffer), preview) << ",";
-    args << ArgumentJson(2, "DWORD", "nNumberOfBytesToWrite", "in", std::to_string(bytesToWrite), std::to_string(bytesToWrite), std::to_string(bytesToWrite)) << ",";
-    args << ArgumentJson(3, "LPDWORD", "lpNumberOfBytesWritten", "out", HexPointer(bytesWritten), std::to_string(actualBytes), std::to_string(actualBytes));
     if (HooksEnabled())
     {
-        SendApiCall("kernel32.dll", "WriteFile", result ? "TRUE" : "FALSE", eventError, DurationUs(start, end), args.str(), preview);
+        EmitWriteFileEvent(result, eventError, start, end, file, buffer, bytesToWrite, actualBytes);
     }
 
     SetLastError(lastError);
@@ -1200,11 +1513,9 @@ BOOL WINAPI HookedCloseHandle(HANDLE handle)
     QueryPerformanceCounter(&end);
 
     const DWORD eventError = result ? 0 : lastError;
-    std::ostringstream args;
-    args << ArgumentJson(0, "HANDLE", "hObject", "in", HexPointer(handle), HexPointer(handle), HexPointer(handle));
     if (HooksEnabled())
     {
-        SendApiCall("kernel32.dll", "CloseHandle", result ? "TRUE" : "FALSE", eventError, DurationUs(start, end), args.str(), "");
+        EmitCloseHandleEvent(result, eventError, start, end, handle);
     }
 
     SetLastError(lastError);
@@ -1264,29 +1575,24 @@ NTSTATUS NTAPI HookedNtCreateFile(
     QueryPerformanceCounter(&end);
 
     const DWORD eventError = NtStatusToDosError(status);
-    const DecodeResult objectName = DecodeObjectAttributesObjectName(objectAttributes);
-    const DecodeResult ioStatus = DecodeIoStatusBlock(ioStatusBlock);
-    const std::string fileHandlePointer = HexPointer(fileHandle);
-    const std::string fileHandleValue = NT_SUCCESS(status) ? ReadHandlePointer(fileHandle) : fileHandlePointer;
-    const std::string objectDecoded = objectName.Value.empty() ? HexPointer(objectAttributes) : objectName.Value;
-    const std::string ioStatusDecoded = ioStatus.Value.empty() ? HexPointer(ioStatusBlock) : ioStatus.Value;
-
-    std::ostringstream args;
-    args << ArgumentJson(0, "PHANDLE", "FileHandle", "out", fileHandlePointer, fileHandleValue, fileHandleValue) << ",";
-    args << ArgumentJson(1, "ACCESS_MASK", "DesiredAccess", "in", HexDword(desiredAccess), HexDword(desiredAccess), HexDword(desiredAccess)) << ",";
-    args << ArgumentJsonWithStatus(2, "POBJECT_ATTRIBUTES", "ObjectAttributes", "in", HexPointer(objectAttributes), HexPointer(objectAttributes), objectDecoded, objectName.Status) << ",";
-    args << ArgumentJsonWithStatus(3, "PIO_STATUS_BLOCK", "IoStatusBlock", "out", HexPointer(ioStatusBlock), ioStatusDecoded, ioStatusDecoded, ioStatus.Status) << ",";
-    args << ArgumentJson(4, "PLARGE_INTEGER", "AllocationSize", "in", HexPointer(allocationSize), HexPointer(allocationSize), HexPointer(allocationSize)) << ",";
-    args << ArgumentJson(5, "ULONG", "FileAttributes", "in", HexDword(fileAttributes), HexDword(fileAttributes), HexDword(fileAttributes)) << ",";
-    args << ArgumentJson(6, "ULONG", "ShareAccess", "in", HexDword(shareAccess), HexDword(shareAccess), HexDword(shareAccess)) << ",";
-    args << ArgumentJson(7, "ULONG", "CreateDisposition", "in", HexDword(createDisposition), HexDword(createDisposition), HexDword(createDisposition)) << ",";
-    args << ArgumentJson(8, "ULONG", "CreateOptions", "in", HexDword(createOptions), HexDword(createOptions), HexDword(createOptions)) << ",";
-    args << ArgumentJson(9, "PVOID", "EaBuffer", "in", HexPointer(eaBuffer), HexPointer(eaBuffer), HexPointer(eaBuffer)) << ",";
-    args << ArgumentJson(10, "ULONG", "EaLength", "in", std::to_string(eaLength), std::to_string(eaLength), std::to_string(eaLength));
-
     if (HooksEnabled())
     {
-        SendApiCall("ntdll.dll", "NtCreateFile", HexNtStatus(status), eventError, DurationUs(start, end), args.str(), "");
+        EmitNtCreateFileEvent(
+            status,
+            eventError,
+            start,
+            end,
+            fileHandle,
+            desiredAccess,
+            objectAttributes,
+            ioStatusBlock,
+            allocationSize,
+            fileAttributes,
+            shareAccess,
+            createDisposition,
+            createOptions,
+            eaBuffer,
+            eaLength);
     }
 
     return status;
@@ -1361,12 +1667,15 @@ void ShutdownAgent(const char* reason, AgentLifecycleState finalState)
     HookLifecycleCounts counts = UninstallHooks();
     SetLifecycleState(finalState);
     SendAgentShutdown(reason, counts);
+    CloseTransport();
     CloseAgentPipe();
 }
 
 DWORD WINAPI AgentWorker(void*)
 {
     const std::wstring pipeName = ReadEnv(L"KNMON_AGENT_PIPE");
+    const std::wstring transportName = ReadEnv(L"KNMON_TRANSPORT_NAME");
+    const bool transportRequired = EnvEnabled(L"KNMON_TRANSPORT_REQUIRED");
     g_operationId = ReadEnv(L"KNMON_OPERATION_ID");
 
     do
@@ -1413,6 +1722,14 @@ DWORD WINAPI AgentWorker(void*)
         ReleaseSRWLockExclusive(&g_pipeLock);
 
         SendHello();
+
+        if (transportRequired && !OpenTransport(transportName))
+        {
+            SendHookStatus("knmon-transport", "shared_memory", false, "Required shared-memory transport could not be opened by the agent.");
+            SendDroppedEvents();
+            ShutdownAgent("transport_open_failed", AgentLifecycleState::Failed);
+            break;
+        }
 
         if (!InstallHooks())
         {

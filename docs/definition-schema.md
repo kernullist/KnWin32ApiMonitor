@@ -94,6 +94,8 @@ The `NtCreateFile` event includes bounded snapshots for:
 
 `ObjectAttributes` decoding copies at most the bounded `UNICODE_STRING` length used by the agent and falls back to pointer evidence with `invalid_pointer`, `unreadable_memory`, or `truncated` status when needed.
 
+Current native API call records are written by the agent into a shared-memory binary ring, then normalized by the controller into the same `api_call` JSON shape outside the target process. Named-pipe JSON remains only for low-volume control and lifecycle messages.
+
 ## Agent Event Contracts
 
 Bounded native capture uses schema-versioned agent messages. Every agent message carries:
@@ -115,7 +117,19 @@ The current message types are:
 5. `dropped_events`
 6. `agent_shutdown`
 
-`capture-result.schema.json` wraps the bounded helper result, audit events, raw agent messages, captured `api_call` events, and dropped-event accounting.
+`capture-result.schema.json` wraps the bounded helper result, audit events, raw agent messages, captured `api_call` events, dropped-event accounting, shared-memory transport metrics, and min/average/max hook overhead metrics.
+
+Current transport metric fields are:
+
+1. `transportMode`
+2. `transportCapacity`
+3. `transportRecordsProduced`
+4. `transportRecordsConsumed`
+5. `transportDroppedEvents`
+6. `transportHighWaterMark`
+7. `hookOverheadMinUs`
+8. `hookOverheadAvgUs`
+9. `hookOverheadMaxUs`
 
 `agent_hello` requires architecture, agent version, and message evidence so the controller/session validator can prove the loaded agent bitness matches the selected same-bitness path.
 

@@ -107,7 +107,7 @@ Future responsibilities:
 2. Attach/detach to selected targets.
 3. Supervise long-running agent lifecycle.
 4. Manage child process auto-attach policy.
-5. Move high-volume events to collector shared memory.
+5. Move the current shared-memory drain from the controller into a dedicated collector reader.
 
 Current controlled launch behavior:
 
@@ -134,11 +134,20 @@ Current binary-open diagnostics distinguish missing paths, true access-denied fa
 Current bounded capture behavior:
 
 1. Use the same controlled early-bird launch path.
-2. Keep the named pipe open for line/message-style agent events.
-3. Collect `agent_hello`, `hook_installed`, `api_call`, `dropped_events`, and `agent_shutdown` messages until the sample exits or a bounded timeout fires.
-4. Return a structured `capture-result` JSON object to Rust/Tauri.
-5. Optionally write a session directory containing manifest, audit, raw agent event, and trace event files.
-6. Map `api_call` events into the existing UI trace table.
+2. Create a bounded shared-memory ring before target resume and pass the mapping name to the agent.
+3. Keep the named pipe open for low-volume `agent_hello`, hook status, dropped-event summary, and `agent_shutdown` messages.
+4. Collect API call records from shared memory and normalize them outside the target process into schema-versioned `api_call` events.
+5. Return a structured `capture-result` JSON object to Rust/Tauri with transport mode, produced/consumed/dropped record counts, high-water mark, and min/average/max hook overhead metrics.
+6. Optionally write a session directory containing manifest, audit, raw agent event, and trace event files.
+7. Map `api_call` events into the existing UI trace table.
+
+Current shared-memory transport behavior:
+
+1. API hooks reserve fixed-size binary records with API id, module id, process/thread id, timing fields, return/error fields, bounded numeric slots, and bounded text slots.
+2. API hook fast paths do not serialize API JSON and do not write API events to the named pipe.
+3. The ring uses drop-newest overflow accounting when producer depth reaches capacity.
+4. `KNMON_TRANSPORT_CAPACITY` can force a smaller capacity for pressure smoke tests.
+5. The controller reconstructs current JSON-compatible trace rows after draining the binary records.
 
 ## Collector
 
@@ -163,11 +172,10 @@ This command does not launch, inject, attach, or consume process handles. It pus
 
 Future behavior:
 
-1. Consume shared-memory ring buffer events.
-2. Normalize event records.
-3. Write `.knapm` session chunks.
-4. Stream events to Tauri/UI.
-5. Add high-volume multi-threaded transport after the bounded policy stays stable.
+1. Move the current controller-side shared-memory drain into a dedicated collector reader.
+2. Write `.knapm` session chunks.
+3. Stream events to Tauri/UI.
+4. Add high-volume multi-threaded transport after the bounded policy stays stable.
 
 ## Agents
 
@@ -176,7 +184,7 @@ Locations:
 - `native/knmon-agent32`
 - `native/knmon-agent64`
 
-`knmon-agent64` and `knmon-agent32` share one agent implementation source. Each starts a worker thread from `DllMain`, reads `KNMON_AGENT_PIPE` and `KNMON_OPERATION_ID`, writes a versioned JSON HELLO payload with its actual architecture, installs controlled sample-target IAT hooks, and emits `api_call` events for the stable File I/O set.
+`knmon-agent64` and `knmon-agent32` share one agent implementation source. Each starts a worker thread from `DllMain`, reads `KNMON_AGENT_PIPE`, `KNMON_OPERATION_ID`, and the optional required shared-memory transport mapping name, writes a versioned JSON HELLO payload with its actual architecture, installs controlled sample-target IAT hooks, and writes stable File I/O API records into shared memory.
 
 Current lifecycle states:
 
@@ -214,14 +222,14 @@ Current agent limitations:
 
 1. Hooks are installed only in the repository-controlled sample target flow.
 2. Hook method is IAT patching of the main module, not inline trampoline or EAT patching.
-3. Event transport is a bounded named-pipe path, not shared memory.
+3. API event transport is shared memory for the controlled sample path; named pipe remains for low-volume control and lifecycle messages.
 4. Shutdown cleanup is scoped to the controlled sample target lifecycle; arbitrary detach from already-running processes remains unsupported.
 5. Cross-bitness injection is rejected during preflight.
 
 Future agent responsibilities:
 
-1. Capture richer call stack metadata.
-2. Move high-volume events to collector shared memory.
+1. Capture richer call stack metadata when explicitly enabled.
+2. Support a dedicated collector reader for high-volume shared-memory transport.
 3. Add loader-aware system DLL coverage.
 4. Add arbitrary attach/detach only after a separate review.
 

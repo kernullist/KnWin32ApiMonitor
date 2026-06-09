@@ -64,6 +64,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         KNMON_AGENT_DLL_NAME="knmon-agent64.dll"
         KNMON_AGENT_HELLO_MESSAGE="KNMon x64 agent loaded by controlled early-bird APC"
     )
+    target_link_libraries(knmon-agent64 PRIVATE knmon-common)
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
     add_library(knmon-agent32 SHARED
         ${KNMON_AGENT_SOURCE}
@@ -75,6 +76,7 @@ elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
         KNMON_AGENT_DLL_NAME="knmon-agent32.dll"
         KNMON_AGENT_HELLO_MESSAGE="KNMon x86 agent loaded by controlled early-bird APC"
     )
+    target_link_libraries(knmon-agent32 PRIVATE knmon-common)
 else()
     message(FATAL_ERROR "Unsupported pointer size for KNMon agent build.")
 endif()

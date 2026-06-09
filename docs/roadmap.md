@@ -270,11 +270,13 @@ Current verified behavior:
 
 Next implementation focus:
 
-1. Move target-process event emission from named-pipe JSON to a low-overhead shared-memory binary transport.
-2. Add hook overhead measurement before broad system DLL coverage.
+1. Start loader-aware system DLL coverage only on top of the shared-memory transport budget.
+2. Keep hook overhead and dropped-event metrics as release gates for every coverage wave.
 3. Keep same-bitness preflight as the gate for future attach and child-process monitoring.
 
 ## Phase 8: Low-Overhead Event Transport
+
+Status: implemented foundation for controlled sample API events.
 
 Goal:
 
@@ -319,6 +321,25 @@ Exit criteria:
 1. Hook path remains bounded and non-blocking under collector backpressure.
 2. Broad API coverage can be enabled without using named-pipe JSON as the hot path.
 3. Session writer can consume high-volume events without losing manifest/replay integrity.
+
+Current verified behavior:
+
+1. The controller creates a bounded shared-memory ring before target resume and passes its mapping name to the agent.
+2. x64 and x86 controlled sample captures report `transportMode=shared-memory`.
+3. API hook fast paths write fixed-size binary records with API id, module id, process/thread id, timing, return/error fields, bounded numeric slots, and bounded text slots.
+4. API hook fast paths no longer write API event JSON to the named pipe.
+5. Named pipe remains for low-volume HELLO, hook install status, dropped-event summary, and shutdown lifecycle messages.
+6. The controller drains binary records and normalizes them into the existing `api_call` JSON shape outside the target process.
+7. Healthy x64/x86 captures consume 8 shared-memory API records with zero dropped events.
+8. Backpressure smoke with `KNMON_TRANSPORT_CAPACITY=2` completes capture, retains bounded records, and reports dropped transport events.
+9. Capture results expose transport capacity, produced/consumed/dropped counts, high-water mark, and min/average/max hook overhead metrics.
+10. Session write, validation, and replay remain compatible with shared-memory-normalized `api_call` events.
+
+Next implementation focus:
+
+1. Phase 9 loader-aware module inventory and all-loaded-module IAT sweep for `ntdll.dll`, `kernelbase.dll`, and `kernel32.dll`.
+2. Keep resolver monitoring design separate from returned-pointer instrumentation.
+3. Promote the controller-side shared-memory drain into a dedicated collector reader when event volume increases beyond the controlled sample path.
 
 ## Phase 9: Loader-Aware System DLL API Coverage
 

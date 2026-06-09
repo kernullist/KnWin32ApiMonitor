@@ -4,6 +4,8 @@
 #include <TlHelp32.h>
 
 #include <array>
+#include <algorithm>
+#include <cstring>
 #include <filesystem>
 #include <iomanip>
 #include <sstream>
@@ -114,6 +116,52 @@ std::string FormatWindowsError(DWORD errorCode)
     }
 
     return result;
+}
+
+std::string JsonEscape(const std::string& value)
+{
+    std::ostringstream stream;
+
+    for (const char ch : value)
+    {
+        const unsigned char byte = static_cast<unsigned char>(ch);
+        switch (ch)
+        {
+        case '\\':
+            stream << "\\\\";
+            break;
+        case '"':
+            stream << "\\\"";
+            break;
+        case '\n':
+            stream << "\\n";
+            break;
+        case '\r':
+            stream << "\\r";
+            break;
+        case '\t':
+            stream << "\\t";
+            break;
+        default:
+            if (byte < 0x20)
+            {
+                const char* hex = "0123456789abcdef";
+                stream << "\\u00" << hex[(byte >> 4) & 0x0f] << hex[byte & 0x0f];
+            }
+            else
+            {
+                stream << ch;
+            }
+            break;
+        }
+    }
+
+    return stream.str();
+}
+
+std::string Q(const std::string& value)
+{
+    return "\"" + JsonEscape(value) + "\"";
 }
 
 std::string NowUtc()
@@ -633,6 +681,514 @@ bool ValidateHandshakeEvidence(
     while (false);
 
     return valid;
+}
+
+std::uint64_t ExtractJsonUInt64(const std::string& payload, const std::string& key);
+KnMonAgentMessage BuildAgentMessage(const KnMonCaptureResult& result, const std::string& rawPayload);
+
+std::string FileNameFromPath(const std::string& path)
+{
+    std::string result = path;
+    const std::size_t slash = result.find_last_of("\\/");
+    if (slash != std::string::npos && slash + 1 < result.size())
+    {
+        result = result.substr(slash + 1);
+    }
+
+    return result;
+}
+
+std::string HexFixed(std::uint64_t value, int width)
+{
+    std::ostringstream stream;
+    stream << "0x"
+           << std::hex
+           << std::setfill('0')
+           << std::setw(width)
+           << value;
+    return stream.str();
+}
+
+std::string HexPointerValue(std::uint64_t value, const std::string& architecture)
+{
+    return HexFixed(value, architecture == "x86" ? 8 : 16);
+}
+
+std::string HexDwordValue(std::uint32_t value)
+{
+    return HexFixed(value, 8);
+}
+
+std::string HexNtStatusValue(std::uint32_t value)
+{
+    return HexFixed(value, 8);
+}
+
+std::string DecodeStatusName(std::uint32_t value)
+{
+    std::string result = "decoded";
+
+    switch (static_cast<KnMonDecodeStatus>(value))
+    {
+    case KnMonDecodeStatus::Decoded:
+        result = "decoded";
+        break;
+    case KnMonDecodeStatus::Partial:
+        result = "partial";
+        break;
+    case KnMonDecodeStatus::InvalidPointer:
+        result = "invalid_pointer";
+        break;
+    case KnMonDecodeStatus::UnreadableMemory:
+        result = "unreadable_memory";
+        break;
+    case KnMonDecodeStatus::DefinitionMissing:
+        result = "definition_missing";
+        break;
+    case KnMonDecodeStatus::Truncated:
+        result = "truncated";
+        break;
+    default:
+        result = "decoded";
+        break;
+    }
+
+    return result;
+}
+
+std::string TransportApiName(std::uint16_t apiId)
+{
+    std::string result = "Unknown";
+
+    switch (static_cast<KnMonTransportApiId>(apiId))
+    {
+    case KnMonTransportApiId::CreateFileW:
+        result = "CreateFileW";
+        break;
+    case KnMonTransportApiId::CreateFileA:
+        result = "CreateFileA";
+        break;
+    case KnMonTransportApiId::NtCreateFile:
+        result = "NtCreateFile";
+        break;
+    case KnMonTransportApiId::ReadFile:
+        result = "ReadFile";
+        break;
+    case KnMonTransportApiId::WriteFile:
+        result = "WriteFile";
+        break;
+    case KnMonTransportApiId::CloseHandle:
+        result = "CloseHandle";
+        break;
+    default:
+        break;
+    }
+
+    return result;
+}
+
+std::string TransportModuleName(std::uint16_t moduleId)
+{
+    std::string result = "unknown.dll";
+
+    switch (static_cast<KnMonTransportModuleId>(moduleId))
+    {
+    case KnMonTransportModuleId::Kernel32:
+        result = "kernel32.dll";
+        break;
+    case KnMonTransportModuleId::Ntdll:
+        result = "ntdll.dll";
+        break;
+    default:
+        break;
+    }
+
+    return result;
+}
+
+std::string TransportText(const char* text, std::uint32_t length, std::size_t capacity)
+{
+    std::string result;
+
+    do
+    {
+        if (text == nullptr || capacity == 0)
+        {
+            break;
+        }
+
+        std::size_t actualLength = 0;
+        if (length > 0 && length < capacity)
+        {
+            actualLength = length;
+        }
+        else
+        {
+            while (actualLength < capacity && text[actualLength] != '\0')
+            {
+                ++actualLength;
+            }
+        }
+
+        result.assign(text, actualLength);
+    }
+    while (false);
+
+    return result;
+}
+
+std::string ArgumentJson(
+    int index,
+    const std::string& type,
+    const std::string& name,
+    const std::string& direction,
+    const std::string& preCallValue,
+    const std::string& postCallValue,
+    const std::string& decodedValue,
+    const std::string& decodeStatus = "decoded")
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"index\":" << index << ",";
+    stream << "\"type\":" << Q(type) << ",";
+    stream << "\"name\":" << Q(name) << ",";
+    stream << "\"direction\":" << Q(direction) << ",";
+    stream << "\"rawValue\":" << Q(preCallValue) << ",";
+    stream << "\"preCallValue\":" << Q(preCallValue) << ",";
+    stream << "\"postCallValue\":" << Q(postCallValue) << ",";
+    stream << "\"decodedValue\":" << Q(decodedValue) << ",";
+    stream << "\"decodeStatus\":" << Q(decodeStatus);
+    stream << "}";
+    return stream.str();
+}
+
+std::string ApiCallPayload(
+    const KnMonCaptureResult& result,
+    const KnMonTransportRecord& record,
+    const std::string& returnValue,
+    const std::string& argumentsJson,
+    const std::string& bufferPreview)
+{
+    const std::string apiName = TransportApiName(record.ApiId);
+    const std::string moduleName = TransportModuleName(record.ModuleId);
+    const std::string agentName = FileNameFromPath(result.AgentPath);
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"messageType\":\"api_call\",";
+    stream << "\"operationId\":" << Q(result.OperationId) << ",";
+    stream << "\"pid\":" << record.ProcessId << ",";
+    stream << "\"tid\":" << record.ThreadId << ",";
+    stream << "\"timestampUtc\":" << Q(NowUtc()) << ",";
+    stream << "\"sequence\":" << record.Sequence << ",";
+    stream << "\"api\":" << Q(apiName) << ",";
+    stream << "\"module\":" << Q(moduleName) << ",";
+    stream << "\"process\":\"knmon-sample-fileio.exe\",";
+    stream << "\"returnValue\":" << Q(returnValue) << ",";
+    stream << "\"lastErrorCode\":" << record.LastErrorCode << ",";
+    stream << "\"lastErrorMessage\":" << Q(record.LastErrorCode == 0 ? "success" : FormatWindowsError(record.LastErrorCode)) << ",";
+    stream << "\"durationUs\":" << record.DurationUs << ",";
+    stream << "\"arguments\":[" << argumentsJson << "],";
+    stream << "\"tags\":[\"native-capture\",\"file\",\"hook\",\"shared-memory\"],";
+    stream << "\"stack\":[" << Q(agentName + "!IatHook") << "," << Q(moduleName + "!" + apiName) << "],";
+    stream << "\"bufferPreview\":" << Q(bufferPreview);
+    stream << "}";
+    return stream.str();
+}
+
+std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnMonTransportRecord& record)
+{
+    std::string payload;
+    const std::string text0 = TransportText(record.Text0, record.Text0Length, sizeof(record.Text0));
+    const std::string text1 = TransportText(record.Text1, record.Text1Length, sizeof(record.Text1));
+    std::ostringstream args;
+
+    switch (static_cast<KnMonTransportApiId>(record.ApiId))
+    {
+    case KnMonTransportApiId::CreateFileW:
+        args << ArgumentJson(0, "LPCWSTR", "lpFileName", "in", text0, text0, text0) << ",";
+        args << ArgumentJson(1, "DWORD", "dwDesiredAccess", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0])) << ",";
+        args << ArgumentJson(2, "DWORD", "dwShareMode", "in", HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1])) << ",";
+        args << ArgumentJson(3, "DWORD", "dwCreationDisposition", "in", HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2]));
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    case KnMonTransportApiId::CreateFileA:
+        args << ArgumentJson(0, "LPCSTR", "lpFileName", "in", text0, text0, text0) << ",";
+        args << ArgumentJson(1, "DWORD", "dwDesiredAccess", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0])) << ",";
+        args << ArgumentJson(2, "DWORD", "dwShareMode", "in", HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1])) << ",";
+        args << ArgumentJson(3, "DWORD", "dwCreationDisposition", "in", HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2]));
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    case KnMonTransportApiId::ReadFile:
+        args << ArgumentJson(0, "HANDLE", "hFile", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture)) << ",";
+        args << ArgumentJson(1, "LPVOID", "lpBuffer", "out", HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture)) << ",";
+        args << ArgumentJson(2, "DWORD", "nNumberOfBytesToRead", "in", std::to_string(record.Values32[0]), std::to_string(record.Values32[0]), std::to_string(record.Values32[0])) << ",";
+        args << ArgumentJson(3, "LPDWORD", "lpNumberOfBytesRead", "out", "0x00000000", std::to_string(record.Values32[1]), std::to_string(record.Values32[1]));
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), text0);
+        break;
+    case KnMonTransportApiId::WriteFile:
+        args << ArgumentJson(0, "HANDLE", "hFile", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture)) << ",";
+        args << ArgumentJson(1, "LPCVOID", "lpBuffer", "in", HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture), text0) << ",";
+        args << ArgumentJson(2, "DWORD", "nNumberOfBytesToWrite", "in", std::to_string(record.Values32[0]), std::to_string(record.Values32[0]), std::to_string(record.Values32[0])) << ",";
+        args << ArgumentJson(3, "LPDWORD", "lpNumberOfBytesWritten", "out", "0x00000000", std::to_string(record.Values32[1]), std::to_string(record.Values32[1]));
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), text0);
+        break;
+    case KnMonTransportApiId::CloseHandle:
+        args << ArgumentJson(0, "HANDLE", "hObject", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture));
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    case KnMonTransportApiId::NtCreateFile:
+        args << ArgumentJson(0, "PHANDLE", "FileHandle", "out", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture)) << ",";
+        args << ArgumentJson(1, "ACCESS_MASK", "DesiredAccess", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0])) << ",";
+        args << ArgumentJson(2, "POBJECT_ATTRIBUTES", "ObjectAttributes", "in", HexPointerValue(record.Values64[2], result.Architecture), HexPointerValue(record.Values64[2], result.Architecture), text0, DecodeStatusName(record.Values32[6])) << ",";
+        args << ArgumentJson(3, "PIO_STATUS_BLOCK", "IoStatusBlock", "out", HexPointerValue(record.Values64[3], result.Architecture), text1, text1, DecodeStatusName(record.Values32[7])) << ",";
+        args << ArgumentJson(4, "PLARGE_INTEGER", "AllocationSize", "in", HexPointerValue(record.Values64[4], result.Architecture), HexPointerValue(record.Values64[4], result.Architecture), HexPointerValue(record.Values64[4], result.Architecture)) << ",";
+        args << ArgumentJson(5, "ULONG", "FileAttributes", "in", HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1])) << ",";
+        args << ArgumentJson(6, "ULONG", "ShareAccess", "in", HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2])) << ",";
+        args << ArgumentJson(7, "ULONG", "CreateDisposition", "in", HexDwordValue(record.Values32[3]), HexDwordValue(record.Values32[3]), HexDwordValue(record.Values32[3])) << ",";
+        args << ArgumentJson(8, "ULONG", "CreateOptions", "in", HexDwordValue(record.Values32[4]), HexDwordValue(record.Values32[4]), HexDwordValue(record.Values32[4])) << ",";
+        args << ArgumentJson(9, "PVOID", "EaBuffer", "in", HexPointerValue(record.Values64[5], result.Architecture), HexPointerValue(record.Values64[5], result.Architecture), HexPointerValue(record.Values64[5], result.Architecture)) << ",";
+        args << ArgumentJson(10, "ULONG", "EaLength", "in", std::to_string(record.Values32[5]), std::to_string(record.Values32[5]), std::to_string(record.Values32[5]));
+        payload = ApiCallPayload(result, record, HexNtStatusValue(record.ReturnCode), args.str(), "");
+        break;
+    default:
+        break;
+    }
+
+    return payload;
+}
+
+std::uint32_t TransportCapacityFromEnvironment()
+{
+    std::uint32_t capacity = KnMonTransportDefaultCapacity;
+    std::array<wchar_t, 32> buffer = {};
+    const DWORD length = GetEnvironmentVariableW(L"KNMON_TRANSPORT_CAPACITY", buffer.data(), static_cast<DWORD>(buffer.size()));
+
+    if (length > 0 && length < buffer.size())
+    {
+        wchar_t* end = nullptr;
+        const unsigned long parsed = wcstoul(buffer.data(), &end, 10);
+        if (parsed > 0)
+        {
+            capacity = static_cast<std::uint32_t>(std::clamp<unsigned long>(parsed, KnMonTransportMinCapacity, KnMonTransportMaxCapacity));
+        }
+    }
+
+    return capacity;
+}
+
+std::wstring TransportMappingName(const std::string& operationId)
+{
+    std::wstring result = L"Local\\KNMonTransport_";
+    for (const char ch : operationId)
+    {
+        if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '_')
+        {
+            result.push_back(static_cast<wchar_t>(ch));
+        }
+        else
+        {
+            result.push_back(L'_');
+        }
+    }
+
+    return result;
+}
+
+struct SharedTransportSession
+{
+    HANDLE MappingHandle = nullptr;
+    KnMonTransportHeader* Header = nullptr;
+    KnMonTransportRecord* Records = nullptr;
+    std::wstring MappingName;
+    std::uint32_t Capacity = 0;
+    std::uint64_t MappingSize = 0;
+};
+
+void CloseSharedTransport(SharedTransportSession& transport)
+{
+    if (transport.Header != nullptr)
+    {
+        UnmapViewOfFile(transport.Header);
+        transport.Header = nullptr;
+        transport.Records = nullptr;
+    }
+
+    if (transport.MappingHandle != nullptr)
+    {
+        CloseHandle(transport.MappingHandle);
+        transport.MappingHandle = nullptr;
+    }
+
+    transport.Capacity = 0;
+    transport.MappingSize = 0;
+    transport.MappingName.clear();
+}
+
+bool CreateSharedTransport(
+    SharedTransportSession& transport,
+    const std::string& operationId,
+    KnMonAgentArchitecture architecture,
+    DWORD* errorCode)
+{
+    bool created = false;
+
+    do
+    {
+        CloseSharedTransport(transport);
+        transport.Capacity = TransportCapacityFromEnvironment();
+        transport.MappingName = TransportMappingName(operationId);
+        transport.MappingSize = sizeof(KnMonTransportHeader) + (static_cast<std::uint64_t>(transport.Capacity) * sizeof(KnMonTransportRecord));
+        transport.MappingHandle = CreateFileMappingW(
+            INVALID_HANDLE_VALUE,
+            nullptr,
+            PAGE_READWRITE,
+            static_cast<DWORD>((transport.MappingSize >> 32) & 0xffffffffULL),
+            static_cast<DWORD>(transport.MappingSize & 0xffffffffULL),
+            transport.MappingName.c_str());
+        if (transport.MappingHandle == nullptr)
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
+
+        transport.Header = static_cast<KnMonTransportHeader*>(MapViewOfFile(transport.MappingHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0));
+        if (transport.Header == nullptr)
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
+
+        std::memset(transport.Header, 0, static_cast<std::size_t>(transport.MappingSize));
+        transport.Header->Magic = KnMonTransportMagic;
+        transport.Header->AbiVersion = KnMonTransportAbiVersion;
+        transport.Header->HeaderSize = sizeof(KnMonTransportHeader);
+        transport.Header->Architecture = static_cast<std::uint32_t>(architecture);
+        transport.Header->Capacity = transport.Capacity;
+        transport.Header->RecordSize = sizeof(KnMonTransportRecord);
+        transport.Header->Flags = 0;
+        const std::wstring wideOperationId = Utf8ToWide(operationId);
+        wcsncpy_s(transport.Header->OperationId, wideOperationId.c_str(), _TRUNCATE);
+        transport.Records = reinterpret_cast<KnMonTransportRecord*>(reinterpret_cast<unsigned char*>(transport.Header) + sizeof(KnMonTransportHeader));
+        for (std::uint32_t index = 0; index < transport.Capacity; ++index)
+        {
+            transport.Records[index].Sequence = -1;
+            transport.Records[index].State = static_cast<std::int32_t>(KnMonTransportRecordState::Free);
+            transport.Records[index].RecordSize = sizeof(KnMonTransportRecord);
+        }
+
+        created = true;
+        if (errorCode != nullptr)
+        {
+            *errorCode = 0;
+        }
+    }
+    while (false);
+
+    if (!created)
+    {
+        CloseSharedTransport(transport);
+    }
+
+    return created;
+}
+
+std::uint64_t NonNegativeCounter(std::int64_t value)
+{
+    return value < 0 ? 0 : static_cast<std::uint64_t>(value);
+}
+
+std::int64_t ReadTransportCounter(volatile std::int64_t* value)
+{
+    std::int64_t result = 0;
+
+    if (value != nullptr)
+    {
+        result = InterlockedCompareExchange64(value, 0, 0);
+    }
+
+    return result;
+}
+
+void UpdateTransportMetrics(KnMonCaptureResult& result, const SharedTransportSession& transport)
+{
+    result.TransportMode = "shared-memory";
+    result.TransportCapacity = transport.Capacity;
+
+    if (transport.Header != nullptr)
+    {
+        result.TransportRecordsProduced = NonNegativeCounter(ReadTransportCounter(&transport.Header->ProducerSequence));
+        result.TransportRecordsConsumed = NonNegativeCounter(ReadTransportCounter(&transport.Header->ConsumerSequence));
+        result.TransportDroppedEvents = NonNegativeCounter(ReadTransportCounter(&transport.Header->DroppedEvents));
+        result.TransportHighWaterMark = NonNegativeCounter(ReadTransportCounter(&transport.Header->HighWaterMark));
+        result.DroppedEvents = std::max(result.DroppedEvents, result.TransportDroppedEvents);
+    }
+}
+
+void RecordHookOverhead(KnMonCaptureResult& result, std::uint64_t overheadUs)
+{
+    const std::uint64_t nextCount = static_cast<std::uint64_t>(result.CapturedEvents.size()) + 1;
+
+    if (nextCount == 1)
+    {
+        result.HookOverheadMinUs = overheadUs;
+        result.HookOverheadAvgUs = overheadUs;
+        result.HookOverheadMaxUs = overheadUs;
+        return;
+    }
+
+    result.HookOverheadMinUs = std::min(result.HookOverheadMinUs, overheadUs);
+    result.HookOverheadMaxUs = std::max(result.HookOverheadMaxUs, overheadUs);
+    result.HookOverheadAvgUs = ((result.HookOverheadAvgUs * (nextCount - 1)) + overheadUs) / nextCount;
+}
+
+void DrainSharedTransport(KnMonCaptureResult& result, SharedTransportSession& transport)
+{
+    if (transport.Header == nullptr || transport.Records == nullptr || transport.Capacity == 0)
+    {
+        return;
+    }
+
+    for (;;)
+    {
+        const std::int64_t consumer = ReadTransportCounter(&transport.Header->ConsumerSequence);
+        const std::int64_t producer = ReadTransportCounter(&transport.Header->ProducerSequence);
+        if (consumer >= producer)
+        {
+            break;
+        }
+
+        KnMonTransportRecord& record = transport.Records[consumer % transport.Capacity];
+        if (
+            record.Sequence != consumer ||
+            record.State != static_cast<std::int32_t>(KnMonTransportRecordState::Committed))
+        {
+            break;
+        }
+
+        const std::string payload = BuildTransportApiPayload(result, record);
+        if (!payload.empty())
+        {
+            RecordHookOverhead(result, record.HookOverheadUs);
+            KnMonAgentMessage message = BuildAgentMessage(result, payload);
+            result.AgentMessages.push_back(message);
+            result.CapturedEvents.push_back(message);
+            AddAudit(result, "api_call_received", "shared_memory_transport_read", message.RawPayload);
+        }
+
+        record.State = static_cast<std::int32_t>(KnMonTransportRecordState::Free);
+        record.Sequence = -1;
+        MemoryBarrier();
+        InterlockedExchange64(&transport.Header->ConsumerSequence, consumer + 1);
+    }
+
+    UpdateTransportMetrics(result, transport);
 }
 
 std::wstring QuoteArgument(const std::wstring& value)
@@ -1386,6 +1942,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
     STARTUPINFOW startupInfo = {};
     startupInfo.cb = sizeof(startupInfo);
     HANDLE pipeHandle = INVALID_HANDLE_VALUE;
+    SharedTransportSession transport;
     void* remoteDllPath = nullptr;
     bool processCreated = false;
     bool processResumed = false;
@@ -1428,6 +1985,18 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
 
         AddAudit(result, "event_pipe_created", "CreateNamedPipeW", WideToUtf8(pipeName.c_str()));
 
+        DWORD transportError = 0;
+        if (!CreateSharedTransport(transport, result.OperationId, requestedArchitecture, &transportError))
+        {
+            SetResultError(result, transportError, "win32", "shared_memory_transport_create", "Failed to create shared-memory event transport.");
+            AddAudit(result, "transport_setup_failed", "shared_memory_transport_create", "Shared-memory event transport setup failed.", transportError, "win32");
+            fatalError = true;
+            break;
+        }
+
+        UpdateTransportMetrics(result, transport);
+        AddAudit(result, "transport_created", "CreateFileMappingW", "Shared-memory event transport created.");
+
         const std::wstring targetPath = Utf8ToWide(request.TargetPath);
         const std::wstring agentPath = Utf8ToWide(request.AgentPath);
         const std::wstring workingDirectory = request.WorkingDirectory.empty() ? std::filesystem::path(targetPath).parent_path().wstring() : Utf8ToWide(request.WorkingDirectory);
@@ -1439,6 +2008,8 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         EnvironmentOverride pipeEnv(L"KNMON_AGENT_PIPE", pipeName);
         EnvironmentOverride operationEnv(L"KNMON_OPERATION_ID", Utf8ToWide(result.OperationId));
         EnvironmentOverride modeEnv(L"KNMON_CAPTURE_MODE", L"fileio");
+        EnvironmentOverride transportEnv(L"KNMON_TRANSPORT_NAME", transport.MappingName);
+        EnvironmentOverride transportRequiredEnv(L"KNMON_TRANSPORT_REQUIRED", L"1");
 
         if (!CreateProcessW(
             targetPath.c_str(),
@@ -1554,6 +2125,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         {
             std::string payload;
             pipeError = 0;
+            DrainSharedTransport(result, transport);
 
             if (ReadPipeMessage(pipeHandle, 2500, &payload, &pipeError))
             {
@@ -1609,8 +2181,11 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                     AddAudit(result, "agent_message_received", "agent_event_read", payload);
                 }
 
+                DrainSharedTransport(result, transport);
                 continue;
             }
+
+            DrainSharedTransport(result, transport);
 
             if (pipeError == ERROR_BROKEN_PIPE || pipeError == ERROR_HANDLE_EOF || pipeError == ERROR_NO_DATA)
             {
@@ -1624,6 +2199,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                 const DWORD processWait = WaitForSingleObject(processInfo.hProcess, 0);
                 if (processWait == WAIT_OBJECT_0)
                 {
+                    DrainSharedTransport(result, transport);
                     captureEnded = true;
                     break;
                 }
@@ -1647,6 +2223,9 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         {
             break;
         }
+
+        DrainSharedTransport(result, transport);
+        UpdateTransportMetrics(result, transport);
 
         if (hookInstalledCount >= ExpectedFileIoHookCount)
         {
@@ -1747,6 +2326,10 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         DisconnectNamedPipe(pipeHandle);
         CloseHandle(pipeHandle);
     }
+
+    DrainSharedTransport(result, transport);
+    UpdateTransportMetrics(result, transport);
+    CloseSharedTransport(transport);
 
     if (processInfo.hThread != nullptr)
     {

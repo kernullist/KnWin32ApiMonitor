@@ -15,6 +15,7 @@ This repository is bootstrapping a new API Monitor inspired by Rohitab API Monit
 - Explicit controlled `NtCreateFile` capture from `ntdll.dll` with NTSTATUS return evidence.
 - Deterministic x64/x86 agent lifecycle telemetry with hook restore evidence on shutdown.
 - Same-bitness injection preflight for target/agent architecture and missing binary failures.
+- Shared-memory binary API event transport for the controlled sample capture hot path.
 - Durable helper-written sample sessions with manifest, audit, agent-event, and trace-event JSONL files.
 - Session validation and replay without relaunching or reinjecting the sample target.
 - Synthetic collector intake with deterministic bounded queue backpressure validation.
@@ -47,12 +48,13 @@ Implemented now:
 20. `knmon-collector.exe smoke-backpressure` for deterministic collector queue/drop accounting.
 21. Controlled `NtCreateFile` capture with bounded `OBJECT_ATTRIBUTES` object-name decoding.
 22. Same-bitness x64/x86 controlled injection preflight with missing binary and architecture mismatch diagnostics.
+23. Shared-memory binary API event transport with bounded ring capacity, drop-newest accounting, and hook overhead metrics.
 
 Not implemented yet:
 
 1. Arbitrary already-running process injection.
 2. Continuous streaming capture for long-running targets.
-3. Shared-memory event transport.
+3. Loader-aware broad system DLL coverage.
 4. Breakpoint mutation.
 5. COM monitoring.
 6. Kernel-mode helper.
@@ -65,12 +67,13 @@ Current native capture is a bounded, controlled sample-target flow:
 1. `knmon-native-helper.exe capture-sample` launches `knmon-sample-fileio.exe` suspended.
 2. The controller runs same-bitness preflight for target and agent binaries before remote mutation.
 3. The controller queues an early-bird APC to load `knmon-agent64.dll` in x64 builds or `knmon-agent32.dll` in Win32 builds.
-4. The agent sends `agent_hello`, installs main-module IAT hooks, and emits schema-versioned `api_call` events.
-5. On target shutdown, the agent disables new hook events, restores patched IAT slots where possible, and emits `agent_shutdown` with `reason`, lifecycle state, hook counts, and dropped-event count.
-6. The helper returns one structured `capture-result` JSON object with audit events, raw agent messages, captured events, lifecycle evidence, and dropped-event accounting.
-7. `capture-sample --write-session <dir>` writes `manifest.json`, `audit.jsonl`, `agent-events.jsonl`, and `trace-events.jsonl`.
-8. `replay-session --session <dir>` returns trace-compatible events without launching a target or loading an agent.
-9. The Tauri commands map captured or replayed File I/O events into the React trace table.
+4. The controller creates a bounded shared-memory event transport and passes its mapping name to the agent.
+5. The agent sends low-volume `agent_hello` and lifecycle messages through the named pipe, installs main-module IAT hooks, and writes API call records into shared memory.
+6. The controller drains binary records, normalizes them outside the target process into schema-versioned `api_call` events, and returns one structured `capture-result` JSON object with transport metrics.
+7. On target shutdown, the agent disables new hook events, restores patched IAT slots where possible, and emits `agent_shutdown` with `reason`, lifecycle state, hook counts, and dropped-event count.
+8. `capture-sample --write-session <dir>` writes `manifest.json`, `audit.jsonl`, `agent-events.jsonl`, and `trace-events.jsonl`.
+9. `replay-session --session <dir>` returns trace-compatible events without launching a target or loading an agent.
+10. The Tauri commands map captured or replayed File I/O events into the React trace table.
 
 Verified live hook coverage:
 
@@ -81,7 +84,7 @@ Verified live hook coverage:
 5. `WriteFile`
 6. `CloseHandle`
 
-The current smoke path captures real sample-target File I/O events and reports `droppedEvents=0` on the healthy path. `ReadFile` and `WriteFile` include bounded 16-byte buffer previews. `NtCreateFile` is captured as an explicit `ntdll.dll` event with `returnValue` carrying the NTSTATUS hex value and a bounded `ObjectAttributes` object-name decode.
+The current smoke path captures real sample-target File I/O events through `transportMode=shared-memory` and reports `droppedEvents=0` on the healthy path. `ReadFile` and `WriteFile` include bounded 16-byte buffer previews. `NtCreateFile` is captured as an explicit `ntdll.dll` event with `returnValue` carrying the NTSTATUS hex value and a bounded `ObjectAttributes` object-name decode. Backpressure can be forced with `KNMON_TRANSPORT_CAPACITY`; the current bounded ring uses drop-newest accounting and reports transport produced/consumed/dropped records plus min/average/max hook overhead estimates.
 
 Healthy same-bitness x64 and x86 lifecycle evidence currently reports `installedHooks=6`, `restoredHooks=6`, `failedHooks=0`, and `reason=process_detach` through `agent_shutdown`.
 
@@ -153,6 +156,8 @@ build\native\Debug\knmon-native-helper.exe validate-session --session captures\l
 build\native\Debug\knmon-native-helper.exe replay-session --session captures\latest-sample-fileio
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\repeat-capture-sample.ps1 -Count 5
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\ntcreatefile-capture-smoke.ps1
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\shared-memory-transport-smoke.ps1
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\shared-memory-backpressure-smoke.ps1
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\injection-preflight-negative-smoke.ps1
 build\native\Debug\knmon-collector.exe smoke-backpressure --capacity 4 --events 10
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\collector-backpressure-smoke.ps1
@@ -168,9 +173,9 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-s
 
 `launch-sample` creates `knmon-sample-fileio.exe` suspended, queues an early-bird APC to load the same-bitness agent DLL, resumes the primary thread, and waits for an agent HELLO handshake.
 
-`capture-sample` uses the same controlled launch path, keeps the event pipe open until the sample target exits, installs same-bitness IAT hooks for the stable File I/O set, and returns schema-versioned `api_call` events plus dropped-event accounting.
+`capture-sample` uses the same controlled launch path, keeps the named pipe open for low-volume control/lifecycle messages, installs same-bitness IAT hooks for the stable File I/O set, drains API calls from shared memory, and returns schema-versioned `api_call` events plus dropped-event accounting.
 
-The repeated smoke script verifies five consecutive controlled x64 captures, the stable File I/O API set, zero dropped events, and hook restore counts. The `NtCreateFile` smoke verifies the `ntdll.dll` module, NTSTATUS return format, decoded sample object path, and six restored hooks. The x86 smoke verifies the same API set and hook lifecycle from a Win32 helper/target/agent build. The preflight negative smoke verifies missing target, missing agent, and available architecture mismatch failures before remote mutation.
+The repeated smoke script verifies five consecutive controlled x64 captures, the stable File I/O API set, zero dropped events, and hook restore counts. The `NtCreateFile` smoke verifies the `ntdll.dll` module, NTSTATUS return format, decoded sample object path, shared-memory transport mode, and six restored hooks. The shared-memory transport smoke verifies healthy x64 transport metrics and hook overhead. The shared-memory backpressure smoke forces a tiny ring capacity and verifies non-blocking dropped-event accounting. The x86 smoke verifies the same API set, shared-memory transport, and hook lifecycle from a Win32 helper/target/agent build. The preflight negative smoke verifies missing target, missing agent, and available architecture mismatch failures before remote mutation.
 
 `capture-sample --write-session` persists the bounded capture into a replayable session directory. Session validation checks manifest architecture, HELLO architecture/version evidence, dropped-event accounting, shutdown hook restore counts, and trace rows before replay returns data from disk without relaunching the target.
 

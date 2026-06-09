@@ -855,6 +855,15 @@ std::string ToJson(const knmon::KnMonCaptureResult& result)
     stream << "\"operation\":" << Q(result.Operation) << ",";
     stream << "\"message\":" << Q(result.Message) << ",";
     stream << "\"droppedEvents\":" << result.DroppedEvents << ",";
+    stream << "\"transportMode\":" << Q(result.TransportMode) << ",";
+    stream << "\"transportCapacity\":" << result.TransportCapacity << ",";
+    stream << "\"transportRecordsProduced\":" << result.TransportRecordsProduced << ",";
+    stream << "\"transportRecordsConsumed\":" << result.TransportRecordsConsumed << ",";
+    stream << "\"transportDroppedEvents\":" << result.TransportDroppedEvents << ",";
+    stream << "\"transportHighWaterMark\":" << result.TransportHighWaterMark << ",";
+    stream << "\"hookOverheadMinUs\":" << result.HookOverheadMinUs << ",";
+    stream << "\"hookOverheadAvgUs\":" << result.HookOverheadAvgUs << ",";
+    stream << "\"hookOverheadMaxUs\":" << result.HookOverheadMaxUs << ",";
     stream << "\"handshake\":" << ToJson(result.Handshake) << ",";
     stream << "\"auditEvents\":[";
     for (std::size_t index = 0; index < result.AuditEvents.size(); ++index)

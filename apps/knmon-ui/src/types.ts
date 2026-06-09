@@ -120,6 +120,15 @@ export interface CaptureResult {
   operation: string;
   message: string;
   droppedEvents: number;
+  transportMode: string;
+  transportCapacity: number;
+  transportRecordsProduced: number;
+  transportRecordsConsumed: number;
+  transportDroppedEvents: number;
+  transportHighWaterMark: number;
+  hookOverheadMinUs: number;
+  hookOverheadAvgUs: number;
+  hookOverheadMaxUs: number;
   handshake: AgentHandshake;
   auditEvents: AuditEvent[];
   agentMessages: unknown[];

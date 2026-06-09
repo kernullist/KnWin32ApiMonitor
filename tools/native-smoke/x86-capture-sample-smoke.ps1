@@ -41,6 +41,11 @@ if ($result.handshake.architecture -ne "x86")
     throw "x86 HELLO architecture mismatch: $($result.handshake.architecture)"
 }
 
+if ($result.transportMode -ne "shared-memory")
+{
+    throw "x86 capture did not use shared-memory transport: $($result.transportMode)"
+}
+
 if ($result.droppedEvents -ne 0)
 {
     throw "x86 capture reported dropped events: $($result.droppedEvents)"

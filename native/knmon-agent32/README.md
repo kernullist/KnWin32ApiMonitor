@@ -9,8 +9,8 @@ Current behavior:
 3. Supports only same-bitness x86 helper -> x86 target -> `knmon-agent32.dll` capture.
 4. Sends a versioned HELLO JSON payload with `architecture = "x86"`.
 5. Installs main-module IAT hooks in the controlled sample target.
-6. Emits bounded `api_call` events for `CreateFileW`, `CreateFileA`, `NtCreateFile`, `ReadFile`, `WriteFile`, and `CloseHandle`.
-7. Emits hook status, dropped-event accounting, and `agent_shutdown` lifecycle evidence.
+6. Writes bounded binary API records for `CreateFileW`, `CreateFileA`, `NtCreateFile`, `ReadFile`, `WriteFile`, and `CloseHandle` into the required shared-memory transport.
+7. Emits hook status, dropped-event accounting, and `agent_shutdown` lifecycle evidence through the named pipe.
 8. Captures `NtCreateFile` from `ntdll.dll` with NTSTATUS return evidence and bounded `OBJECT_ATTRIBUTES` object-name decoding.
 
-The x86 path is intentionally scoped to the repository sample target launched by a Win32 helper. It does not support cross-bitness injection, arbitrary already-running process attach, manual mapping, stealth loading, or inline trampoline hooks.
+The current API hook fast path does not serialize API JSON or write API events to the named pipe. The x86 path is intentionally scoped to the repository sample target launched by a Win32 helper. It does not support cross-bitness injection, arbitrary already-running process attach, manual mapping, stealth loading, or inline trampoline hooks.

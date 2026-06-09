@@ -30,6 +30,11 @@ if (-not $result.handshake.received)
     throw "Capture did not receive HELLO."
 }
 
+if ($result.transportMode -ne "shared-memory")
+{
+    throw "Capture did not use shared-memory transport: $($result.transportMode)"
+}
+
 if ($result.droppedEvents -ne 0)
 {
     throw "Capture reported dropped events: $($result.droppedEvents)"
