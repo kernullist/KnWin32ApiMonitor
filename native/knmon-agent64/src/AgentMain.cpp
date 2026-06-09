@@ -98,6 +98,8 @@ using RegQueryValueExWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR, LPDWORD, LPDWORD, LPB
 using RegSetValueExWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR, DWORD, DWORD, const BYTE*, DWORD);
 using RegDeleteValueWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR);
 using RegCloseKeyFn = LSTATUS(WINAPI*)(HKEY);
+using OpenProcessTokenFn = BOOL(WINAPI*)(HANDLE, DWORD, PHANDLE);
+using LookupPrivilegeValueWFn = BOOL(WINAPI*)(LPCWSTR, LPCWSTR, PLUID);
 using BCryptOpenAlgorithmProviderFn = NTSTATUS(WINAPI*)(BCRYPT_ALG_HANDLE*, LPCWSTR, LPCWSTR, ULONG);
 using BCryptCloseAlgorithmProviderFn = NTSTATUS(WINAPI*)(BCRYPT_ALG_HANDLE, ULONG);
 using BCryptGetPropertyFn = NTSTATUS(WINAPI*)(BCRYPT_HANDLE, LPCWSTR, PUCHAR, ULONG, ULONG*, ULONG);
@@ -164,6 +166,8 @@ RegQueryValueExWFn g_originalRegQueryValueExW = nullptr;
 RegSetValueExWFn g_originalRegSetValueExW = nullptr;
 RegDeleteValueWFn g_originalRegDeleteValueW = nullptr;
 RegCloseKeyFn g_originalRegCloseKey = nullptr;
+OpenProcessTokenFn g_originalOpenProcessToken = nullptr;
+LookupPrivilegeValueWFn g_originalLookupPrivilegeValueW = nullptr;
 BCryptOpenAlgorithmProviderFn g_originalBCryptOpenAlgorithmProvider = nullptr;
 BCryptCloseAlgorithmProviderFn g_originalBCryptCloseAlgorithmProvider = nullptr;
 BCryptGetPropertyFn g_originalBCryptGetProperty = nullptr;
@@ -260,7 +264,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 42;
+constexpr std::size_t HookDefinitionCount = 44;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -2248,6 +2252,69 @@ void EmitRegCloseKeyEvent(
     }
 }
 
+void EmitOpenProcessTokenEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE process,
+    DWORD desiredAccess,
+    PHANDLE token)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::OpenProcessToken, "advapi32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(process));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(token));
+
+        HANDLE tokenValue = nullptr;
+        if (result != FALSE && ReadCurrentProcessValue(token, &tokenValue))
+        {
+            record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(tokenValue));
+        }
+
+        record->Values32[0] = desiredAccess;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitLookupPrivilegeValueWEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPCWSTR systemName,
+    LPCWSTR name,
+    PLUID luid)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::LookupPrivilegeValueW, "advapi32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(systemName));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(name));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(luid));
+        record->Values32[0] = CopyWidePointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), systemName);
+        record->Values32[1] = CopyWidePointerText(record->Text1, &record->Text1Length, sizeof(record->Text1), name);
+
+        LUID localLuid = {};
+        if (result != FALSE && ReadCurrentProcessValue(luid, &localLuid))
+        {
+            record->Values32[2] = localLuid.LowPart;
+            record->Values32[3] = static_cast<std::uint32_t>(localLuid.HighPart);
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void EmitBCryptOpenAlgorithmProviderEvent(
     NTSTATUS status,
     DWORD errorCode,
@@ -3137,6 +3204,8 @@ LSTATUS WINAPI HookedRegQueryValueExW(HKEY key, LPCWSTR valueName, LPDWORD reser
 LSTATUS WINAPI HookedRegSetValueExW(HKEY key, LPCWSTR valueName, DWORD reserved, DWORD valueType, const BYTE* data, DWORD dataBytes);
 LSTATUS WINAPI HookedRegDeleteValueW(HKEY key, LPCWSTR valueName);
 LSTATUS WINAPI HookedRegCloseKey(HKEY key);
+BOOL WINAPI HookedOpenProcessToken(HANDLE process, DWORD desiredAccess, PHANDLE token);
+BOOL WINAPI HookedLookupPrivilegeValueW(LPCWSTR systemName, LPCWSTR name, PLUID luid);
 NTSTATUS WINAPI HookedBCryptOpenAlgorithmProvider(BCRYPT_ALG_HANDLE* algorithm, LPCWSTR algorithmId, LPCWSTR implementation, ULONG flags);
 NTSTATUS WINAPI HookedBCryptCloseAlgorithmProvider(BCRYPT_ALG_HANDLE algorithm, ULONG flags);
 NTSTATUS WINAPI HookedBCryptGetProperty(BCRYPT_HANDLE object, LPCWSTR property, PUCHAR output, ULONG outputBytes, ULONG* resultBytes, ULONG flags);
@@ -3186,6 +3255,8 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "advapi32.dll", "RegSetValueExW", reinterpret_cast<void*>(HookedRegSetValueExW), reinterpret_cast<void**>(&g_originalRegSetValueExW), false, true, false, 0, 0 },
         HookDefinition { "advapi32.dll", "RegDeleteValueW", reinterpret_cast<void*>(HookedRegDeleteValueW), reinterpret_cast<void**>(&g_originalRegDeleteValueW), false, true, false, 0, 0 },
         HookDefinition { "advapi32.dll", "RegCloseKey", reinterpret_cast<void*>(HookedRegCloseKey), reinterpret_cast<void**>(&g_originalRegCloseKey), false, true, false, 0, 0 },
+        HookDefinition { "advapi32.dll", "OpenProcessToken", reinterpret_cast<void*>(HookedOpenProcessToken), reinterpret_cast<void**>(&g_originalOpenProcessToken), false, true, false, 0, 0 },
+        HookDefinition { "advapi32.dll", "LookupPrivilegeValueW", reinterpret_cast<void*>(HookedLookupPrivilegeValueW), reinterpret_cast<void**>(&g_originalLookupPrivilegeValueW), false, true, false, 0, 0 },
         HookDefinition { "bcrypt.dll", "BCryptOpenAlgorithmProvider", reinterpret_cast<void*>(HookedBCryptOpenAlgorithmProvider), reinterpret_cast<void**>(&g_originalBCryptOpenAlgorithmProvider), false, true, false, 0, 0 },
         HookDefinition { "bcrypt.dll", "BCryptCloseAlgorithmProvider", reinterpret_cast<void*>(HookedBCryptCloseAlgorithmProvider), reinterpret_cast<void**>(&g_originalBCryptCloseAlgorithmProvider), false, true, false, 0, 0 },
         HookDefinition { "bcrypt.dll", "BCryptGetProperty", reinterpret_cast<void*>(HookedBCryptGetProperty), reinterpret_cast<void**>(&g_originalBCryptGetProperty), false, true, false, 0, 0 },
@@ -4180,6 +4251,68 @@ LSTATUS WINAPI HookedRegCloseKey(HKEY key)
         EmitRegCloseKeyEvent(result, start, end, key);
     }
 
+    return result;
+}
+
+BOOL WINAPI HookedOpenProcessToken(HANDLE process, DWORD desiredAccess, PHANDLE token)
+{
+    if (g_inHook || !HooksEnabled() || g_originalOpenProcessToken == nullptr)
+    {
+        if (g_originalOpenProcessToken == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalOpenProcessToken(process, desiredAccess, token);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalOpenProcessToken(process, desiredAccess, token);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FALSE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitOpenProcessTokenEvent(result, eventError, start, end, process, desiredAccess, token);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedLookupPrivilegeValueW(LPCWSTR systemName, LPCWSTR name, PLUID luid)
+{
+    if (g_inHook || !HooksEnabled() || g_originalLookupPrivilegeValueW == nullptr)
+    {
+        if (g_originalLookupPrivilegeValueW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalLookupPrivilegeValueW(systemName, name, luid);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalLookupPrivilegeValueW(systemName, name, luid);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FALSE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitLookupPrivilegeValueWEvent(result, eventError, start, end, systemName, name, luid);
+    }
+
+    SetLastError(lastError);
     return result;
 }
 

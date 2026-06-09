@@ -1120,6 +1120,24 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "HKEY", "hKey", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture));
         payload = ApiCallPayload(result, record, LStatusValue(record.ReturnValue), args.str(), "");
         break;
+    case KnMonTransportApiId::OpenProcessToken:
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "ProcessHandle", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture)) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "DesiredAccess", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "PHANDLE", "TokenHandle", "out", HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[2], result.Architecture), HexPointerValue(record.Values64[2], result.Architecture));
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    case KnMonTransportApiId::LookupPrivilegeValueW:
+    {
+        const std::string systemNamePointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string namePointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string luidPointer = HexPointerValue(record.Values64[2], result.Architecture);
+        const std::string luidValue = "LowPart=" + HexDwordValue(record.Values32[2]) + " HighPart=" + HexDwordValue(record.Values32[3]);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPCWSTR", "lpSystemName", "in", systemNamePointer, systemNamePointer, text0.empty() ? systemNamePointer : text0, DecodeStatusName(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPCWSTR", "lpName", "in", namePointer, namePointer, text1.empty() ? namePointer : text1, DecodeStatusName(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "PLUID", "lpLuid", "out", luidPointer, luidValue, luidValue);
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::BCryptOpenAlgorithmProvider:
     {
         const std::string algorithmPointer = HexPointerValue(record.Values64[0], result.Architecture);

@@ -459,14 +459,14 @@
     {
       "callingConvention": "stdcall",
       "category": "token_open",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "GetLastError",
       "failure": {
         "returnEqual": "FALSE"
       },
       "family": "security",
       "firstParameterIndex": 83,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 20,
       "module": "advapi32.dll",
       "moduleId": 4,
@@ -507,14 +507,14 @@
     {
       "callingConvention": "stdcall",
       "category": "privilege_lookup",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "GetLastError",
       "failure": {
         "returnEqual": "FALSE"
       },
       "family": "security",
       "firstParameterIndex": 92,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 22,
       "module": "advapi32.dll",
       "moduleId": 4,

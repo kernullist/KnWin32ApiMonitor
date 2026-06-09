@@ -348,6 +348,47 @@ bool RunRegistryProbe()
     return success;
 }
 
+bool RunTokenQueryProbe()
+{
+    bool success = false;
+    HANDLE token = nullptr;
+    LUID luid = {};
+
+    do
+    {
+        if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token))
+        {
+            LogLastError("OpenProcessToken");
+            break;
+        }
+
+        if (!LookupPrivilegeValueW(nullptr, L"SeChangeNotifyPrivilege", &luid))
+        {
+            LogLastError("LookupPrivilegeValueW");
+            break;
+        }
+
+        std::cout << "token query roundtrip access=" << TOKEN_QUERY
+                  << " privilege=SeChangeNotifyPrivilege"
+                  << " luid_low=" << luid.LowPart
+                  << " luid_high=" << luid.HighPart
+                  << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (token != nullptr)
+    {
+        if (!CloseHandle(token))
+        {
+            LogLastError("CloseHandle(token)");
+            success = false;
+        }
+    }
+
+    return success;
+}
+
 bool RunRpcBindingProbe()
 {
     bool success = false;
@@ -777,6 +818,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunRegistryProbe())
+        {
+            break;
+        }
+
+        if (!RunTokenQueryProbe())
         {
             break;
         }

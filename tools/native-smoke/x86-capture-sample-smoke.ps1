@@ -20,6 +20,8 @@ $requiredApis = @(
     "RegSetValueExW",
     "RegDeleteValueW",
     "RegCloseKey",
+    "OpenProcessToken",
+    "LookupPrivilegeValueW",
     "BCryptOpenAlgorithmProvider",
     "BCryptCloseAlgorithmProvider",
     "BCryptGetProperty",
@@ -161,6 +163,70 @@ $registrySetArgs = ($registrySet[0].arguments | ConvertTo-Json -Depth 8)
 if ($registrySetArgs -notmatch "SampleValue")
 {
     throw "x86 registry arguments did not include sample value evidence: $registrySetArgs"
+}
+
+$securityEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "security" })
+if ($securityEvents.Count -lt 2)
+{
+    throw "x86 capture did not include the selected advapi32 token query API family slice."
+}
+
+$openToken = @($securityEvents | Where-Object { $_.api -eq "OpenProcessToken" } | Select-Object -First 1)
+if ($openToken.Count -ne 1 -or $openToken[0].module -ne "advapi32.dll" -or $openToken[0].hookPolicy -ne "iat" -or $openToken[0].coverageStatus -ne "smoke_verified")
+{
+    throw "x86 OpenProcessToken metadata mismatch."
+}
+
+$openTokenArgs = ($openToken[0].arguments | ConvertTo-Json -Depth 8)
+if ($openTokenArgs -notmatch "0x00000008")
+{
+    throw "x86 OpenProcessToken arguments did not include TOKEN_QUERY evidence: $openTokenArgs"
+}
+
+$tokenHandle = @($openToken[0].arguments | Where-Object { $_.name -eq "TokenHandle" } | Select-Object -First 1)
+if ($tokenHandle.Count -ne 1 -or $tokenHandle[0].postCallValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 OpenProcessToken did not include a non-null token handle value: $($tokenHandle[0] | ConvertTo-Json -Depth 8)"
+}
+
+$lookupPrivilege = @($securityEvents | Where-Object { $_.api -eq "LookupPrivilegeValueW" } | Select-Object -First 1)
+if ($lookupPrivilege.Count -ne 1 -or $lookupPrivilege[0].module -ne "advapi32.dll" -or $lookupPrivilege[0].hookPolicy -ne "iat" -or $lookupPrivilege[0].coverageStatus -ne "smoke_verified")
+{
+    throw "x86 LookupPrivilegeValueW metadata mismatch."
+}
+
+$lookupArgs = ($lookupPrivilege[0].arguments | ConvertTo-Json -Depth 8)
+if ($lookupArgs -notmatch "SeChangeNotifyPrivilege")
+{
+    throw "x86 LookupPrivilegeValueW arguments did not include stable privilege evidence: $lookupArgs"
+}
+
+$systemName = @($lookupPrivilege[0].arguments | Where-Object { $_.name -eq "lpSystemName" } | Select-Object -First 1)
+if ($systemName.Count -ne 1 -or $systemName[0].rawValue -notmatch "^0x0+$")
+{
+    throw "x86 LookupPrivilegeValueW lpSystemName was not null: $($systemName[0] | ConvertTo-Json -Depth 8)"
+}
+
+$luidArg = @($lookupPrivilege[0].arguments | Where-Object { $_.name -eq "lpLuid" } | Select-Object -First 1)
+if ($luidArg.Count -ne 1 -or $luidArg[0].decodedValue -notmatch "LowPart=0x" -or $luidArg[0].decodedValue -notmatch "HighPart=0x")
+{
+    throw "x86 LookupPrivilegeValueW did not include LUID numeric evidence: $($luidArg[0] | ConvertTo-Json -Depth 8)"
+}
+
+if (@($result.capturedEvents | Where-Object { $_.api -eq "AdjustTokenPrivileges" }).Count -ne 0)
+{
+    throw "x86 token query capture unexpectedly included AdjustTokenPrivileges."
+}
+
+if (@($result.capturedEvents | Where-Object { $_.apiFamily -eq "service-control" }).Count -ne 0)
+{
+    throw "x86 token query capture unexpectedly included service-control events."
+}
+
+$securityArgs = @($securityEvents | ForEach-Object { $_.arguments } | ConvertTo-Json -Depth 8)
+if ($securityArgs -cmatch "TOKEN_PRIVILEGES|S-1-[0-9-]+|Password|Credential|PRIVATE KEY|BinaryPath|ServiceName|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 token query events appear to expose mutation, SID, credential, service, or byte-preview evidence: $securityArgs"
 }
 
 $cryptoEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "crypto" })
