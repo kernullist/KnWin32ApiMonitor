@@ -166,7 +166,7 @@ Existing transport IDs are preserved:
 1. File I/O API IDs `1` through `6`.
 2. Loader API IDs `7` through `11`.
 3. Resolver API IDs `12` through `13`.
-4. Wave 2 API IDs `14` through `90`, with selected registry, bcrypt CNG provider/RNG, RPCRT4 binding, and Winsock IDs promoted from definition-only to smoke-verified IAT coverage.
+4. Wave 2 API IDs `14` through `90`, with selected registry, bcrypt CNG provider/RNG, crypt32 certificate-store/message-handle, RPCRT4 binding, and Winsock IDs promoted from definition-only to smoke-verified IAT coverage.
 5. Module IDs:
    - `kernel32.dll = 1`
    - `ntdll.dll = 2`
@@ -229,13 +229,13 @@ Wave 2 metadata adds 77 APIs across:
 6. `wininet.dll`: WinINet session, connection, request, transfer, and option APIs.
 7. `winhttp.dll`: WinHTTP session, connection, request, transfer, option, and header APIs.
 
-The live Wave 2 slices are limited to smoke-verified `advapi32.dll` registry, `bcrypt.dll` CNG provider/RNG, `rpcrt4.dll` local RPC binding, and `ws2_32.dll` bootstrap/address-resolution IAT hooks. The selected registry APIs are `RegOpenKeyExW`, `RegCreateKeyExW`, `RegQueryValueExW`, `RegSetValueExW`, `RegDeleteValueW`, and `RegCloseKey`. The selected bcrypt APIs are `BCryptOpenAlgorithmProvider`, `BCryptCloseAlgorithmProvider`, `BCryptGetProperty`, and `BCryptGenRandom`. The selected RPCRT4 APIs are `RpcStringBindingComposeW`, `RpcBindingFromStringBindingW`, `RpcStringFreeW`, and `RpcBindingFree`. The selected Winsock APIs are `WSAStartup`, `WSACleanup`, `socket`, `closesocket`, `getaddrinfo`, `freeaddrinfo`, and `WSAGetLastError`. All other Wave 2 APIs remain `definition_only`.
+The live Wave 2 slices are limited to smoke-verified `advapi32.dll` registry, `bcrypt.dll` CNG provider/RNG, `crypt32.dll` certificate-store/message-handle, `rpcrt4.dll` local RPC binding, and `ws2_32.dll` bootstrap/address-resolution IAT hooks. The selected registry APIs are `RegOpenKeyExW`, `RegCreateKeyExW`, `RegQueryValueExW`, `RegSetValueExW`, `RegDeleteValueW`, and `RegCloseKey`. The selected bcrypt APIs are `BCryptOpenAlgorithmProvider`, `BCryptCloseAlgorithmProvider`, `BCryptGetProperty`, and `BCryptGenRandom`. The selected crypt32 APIs are `CertOpenStore`, `CertCloseStore`, `CryptMsgOpenToDecode`, and `CryptMsgClose`. The selected RPCRT4 APIs are `RpcStringBindingComposeW`, `RpcBindingFromStringBindingW`, `RpcStringFreeW`, and `RpcBindingFree`. The selected Winsock APIs are `WSAStartup`, `WSACleanup`, `socket`, `closesocket`, `getaddrinfo`, `freeaddrinfo`, and `WSAGetLastError`. All other Wave 2 APIs remain `definition_only`.
 
 The current definition coverage report totals 90 APIs:
 
-1. `definition_only`: 56
+1. `definition_only`: 52
 2. `hooked`: 4
-3. `smoke_verified`: 30
+3. `smoke_verified`: 34
 
 `NtCreateFile` is captured as a controlled `ntdll.dll` IAT hook in the repository sample target. The native event keeps `returnValue` as the NTSTATUS hex string. For compatibility with the existing trace error model, `lastErrorCode` remains `0` on NT success and a mapped Win32 error on NT failure.
 
@@ -253,7 +253,7 @@ The `NtCreateFile` event includes bounded snapshots for:
 
 Current native API call records are written by the agent into a shared-memory binary ring, then normalized by the controller into the same `api_call` JSON shape outside the target process. Named-pipe JSON remains only for low-volume control and lifecycle messages.
 
-Controller-side normalization uses generated decoder metadata for descriptors. Per-API shared-memory slot interpretation remains explicit. The selected registry, bcrypt CNG provider/RNG, RPCRT4 binding, and Winsock slices use the existing fixed transport record slots. The bcrypt slice records provider handles, algorithm/property names, status, pointer, and size evidence only; it does not copy random, key, plaintext, ciphertext, IV, or hash input bytes. High-volume network payload hooks remain deferred until a later hook ABI expansion and overhead review.
+Controller-side normalization uses generated decoder metadata for descriptors. Per-API shared-memory slot interpretation remains explicit. The selected registry, bcrypt CNG provider/RNG, crypt32 certificate-store/message-handle, RPCRT4 binding, and Winsock slices use the existing fixed transport record slots. The bcrypt slice records provider handles, algorithm/property names, status, pointer, and size evidence only; it does not copy random, key, plaintext, ciphertext, IV, or hash input bytes. The crypt32 slice records certificate-store/message handles, provider ID or bounded provider text, encoding/flag values, and pointer evidence only; it does not copy certificate blobs, private keys, cryptographic message payloads, random bytes, keys, plaintext, ciphertext, IVs, or hash input bytes. High-volume network payload hooks remain deferred until a later hook ABI expansion and overhead review.
 
 Loader-aware Wave 1 records add `LoadLibraryW` evidence and post-load File I/O evidence from `knmon-dynamic-probe.dll`. Resolver records add `GetProcAddress` and `LdrGetProcedureAddress` evidence for the same dynamic probe export. The agent emits module inventory and IAT sweep status messages through the named pipe, but API call events remain shared-memory records.
 

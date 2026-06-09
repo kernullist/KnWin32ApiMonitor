@@ -88,6 +88,7 @@ target_link_libraries(knmon-sample-fileio PRIVATE ntdll ws2_32)
 target_link_libraries(knmon-sample-fileio PRIVATE advapi32)
 target_link_libraries(knmon-sample-fileio PRIVATE rpcrt4)
 target_link_libraries(knmon-sample-fileio PRIVATE bcrypt)
+target_link_libraries(knmon-sample-fileio PRIVATE crypt32)
 target_compile_definitions(knmon-sample-fileio PRIVATE
     WIN32_LEAN_AND_MEAN
     NOMINMAX

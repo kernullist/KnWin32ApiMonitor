@@ -915,14 +915,14 @@
     {
       "callingConvention": "stdcall",
       "category": "certificate_store_open",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "GetLastError",
       "failure": {
         "returnEqual": "NULL"
       },
       "family": "certificate",
       "firstParameterIndex": 174,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 39,
       "module": "crypt32.dll",
       "moduleId": 6,
@@ -939,14 +939,14 @@
     {
       "callingConvention": "stdcall",
       "category": "certificate_store_close",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "GetLastError",
       "failure": {
         "returnEqual": "FALSE"
       },
       "family": "certificate",
       "firstParameterIndex": 179,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 40,
       "module": "crypt32.dll",
       "moduleId": 6,
@@ -1083,14 +1083,14 @@
     {
       "callingConvention": "stdcall",
       "category": "crypt_message_open_decode",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "GetLastError",
       "failure": {
         "returnEqual": "NULL"
       },
       "family": "crypto-message",
       "firstParameterIndex": 211,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 46,
       "module": "crypt32.dll",
       "moduleId": 6,
@@ -1131,14 +1131,14 @@
     {
       "callingConvention": "stdcall",
       "category": "crypt_message_close",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "GetLastError",
       "failure": {
         "returnEqual": "FALSE"
       },
       "family": "crypto-message",
       "firstParameterIndex": 221,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 48,
       "module": "crypt32.dll",
       "moduleId": 6,

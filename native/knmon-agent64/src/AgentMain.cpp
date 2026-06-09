@@ -5,6 +5,7 @@
 #include <Windows.h>
 #include <bcrypt.h>
 #include <rpc.h>
+#include <wincrypt.h>
 #include <winternl.h>
 
 #include <array>
@@ -99,6 +100,10 @@ using BCryptOpenAlgorithmProviderFn = NTSTATUS(WINAPI*)(BCRYPT_ALG_HANDLE*, LPCW
 using BCryptCloseAlgorithmProviderFn = NTSTATUS(WINAPI*)(BCRYPT_ALG_HANDLE, ULONG);
 using BCryptGetPropertyFn = NTSTATUS(WINAPI*)(BCRYPT_HANDLE, LPCWSTR, PUCHAR, ULONG, ULONG*, ULONG);
 using BCryptGenRandomFn = NTSTATUS(WINAPI*)(BCRYPT_ALG_HANDLE, PUCHAR, ULONG, ULONG);
+using CertOpenStoreFn = HCERTSTORE(WINAPI*)(LPCSTR, DWORD, HCRYPTPROV_LEGACY, DWORD, const void*);
+using CertCloseStoreFn = BOOL(WINAPI*)(HCERTSTORE, DWORD);
+using CryptMsgOpenToDecodeFn = HCRYPTMSG(WINAPI*)(DWORD, DWORD, DWORD, HCRYPTPROV_LEGACY, PCERT_INFO, PCMSG_STREAM_INFO);
+using CryptMsgCloseFn = BOOL(WINAPI*)(HCRYPTMSG);
 using RpcStringBindingComposeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR*);
 using RpcBindingFromStringBindingWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_BINDING_HANDLE*);
 using RpcStringFreeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR*);
@@ -157,6 +162,10 @@ BCryptOpenAlgorithmProviderFn g_originalBCryptOpenAlgorithmProvider = nullptr;
 BCryptCloseAlgorithmProviderFn g_originalBCryptCloseAlgorithmProvider = nullptr;
 BCryptGetPropertyFn g_originalBCryptGetProperty = nullptr;
 BCryptGenRandomFn g_originalBCryptGenRandom = nullptr;
+CertOpenStoreFn g_originalCertOpenStore = nullptr;
+CertCloseStoreFn g_originalCertCloseStore = nullptr;
+CryptMsgOpenToDecodeFn g_originalCryptMsgOpenToDecode = nullptr;
+CryptMsgCloseFn g_originalCryptMsgClose = nullptr;
 RpcStringBindingComposeWFn g_originalRpcStringBindingComposeW = nullptr;
 RpcBindingFromStringBindingWFn g_originalRpcBindingFromStringBindingW = nullptr;
 RpcStringFreeWFn g_originalRpcStringFreeW = nullptr;
@@ -241,7 +250,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 34;
+constexpr std::size_t HookDefinitionCount = 38;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -889,6 +898,12 @@ bool IsOrdinalProcName(LPCSTR procName)
     return value != 0 && (value >> 16) == 0;
 }
 
+bool IsLowPointerValue(const void* value)
+{
+    const std::uintptr_t pointerValue = reinterpret_cast<std::uintptr_t>(value);
+    return pointerValue != 0 && pointerValue <= 0xFFFF;
+}
+
 std::uint32_t CopyAnsiPointerText(char* destination, std::uint32_t* length, std::size_t capacity, const char* source)
 {
     std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
@@ -944,6 +959,45 @@ std::uint32_t CopyAnsiPointerText(char* destination, std::uint32_t* length, std:
     {
         *length = copied;
     }
+
+    return status;
+}
+
+std::uint32_t CopyCertStoreProviderText(char* destination, std::uint32_t* length, std::size_t capacity, LPCSTR provider)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (length != nullptr)
+        {
+            *length = 0;
+        }
+
+        if (provider == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        if (IsLowPointerValue(provider))
+        {
+            char buffer[32] = {};
+            std::snprintf(buffer, sizeof(buffer), "provider_id:%u", static_cast<unsigned int>(reinterpret_cast<std::uintptr_t>(provider)));
+            CopyAsciiText(destination, length, capacity, buffer);
+            break;
+        }
+
+        status = CopyAnsiPointerText(destination, length, capacity, provider);
+    }
+    while (false);
 
     return status;
 }
@@ -1283,6 +1337,10 @@ std::uint16_t ModuleId(const char* moduleName)
     else if (_stricmp(moduleName, "bcrypt.dll") == 0)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Bcrypt);
+    }
+    else if (_stricmp(moduleName, "crypt32.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Crypt32);
     }
     else if (_stricmp(moduleName, "ws2_32.dll") == 0)
     {
@@ -2295,6 +2353,103 @@ void EmitBCryptGenRandomEvent(
     }
 }
 
+void EmitCertOpenStoreEvent(
+    HCERTSTORE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPCSTR provider,
+    DWORD encodingType,
+    HCRYPTPROV_LEGACY cryptProvider,
+    DWORD flags,
+    const void* parameters)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::CertOpenStore, "crypt32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(provider));
+        record->Values64[1] = static_cast<std::uint64_t>(static_cast<std::uintptr_t>(cryptProvider));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(parameters));
+        record->Values32[0] = encodingType;
+        record->Values32[1] = flags;
+        record->Values32[2] = CopyCertStoreProviderText(record->Text0, &record->Text0Length, sizeof(record->Text0), provider);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitCertCloseStoreEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HCERTSTORE store,
+    DWORD flags)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::CertCloseStore, "crypt32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(store));
+        record->Values32[0] = flags;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitCryptMsgOpenToDecodeEvent(
+    HCRYPTMSG result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    DWORD encodingType,
+    DWORD flags,
+    DWORD messageType,
+    HCRYPTPROV_LEGACY cryptProvider,
+    PCERT_INFO recipientInfo,
+    PCMSG_STREAM_INFO streamInfo)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::CryptMsgOpenToDecode, "crypt32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(static_cast<std::uintptr_t>(cryptProvider));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(recipientInfo));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(streamInfo));
+        record->Values32[0] = encodingType;
+        record->Values32[1] = flags;
+        record->Values32[2] = messageType;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitCryptMsgCloseEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HCRYPTMSG message)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::CryptMsgClose, "crypt32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(message));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 std::uint32_t CopyRpcWideStringText(char* destination, std::uint32_t* length, std::size_t capacity, RPC_WSTR source)
 {
     return CopyWidePointerText(destination, length, capacity, reinterpret_cast<const wchar_t*>(source));
@@ -2870,6 +3025,10 @@ NTSTATUS WINAPI HookedBCryptOpenAlgorithmProvider(BCRYPT_ALG_HANDLE* algorithm, 
 NTSTATUS WINAPI HookedBCryptCloseAlgorithmProvider(BCRYPT_ALG_HANDLE algorithm, ULONG flags);
 NTSTATUS WINAPI HookedBCryptGetProperty(BCRYPT_HANDLE object, LPCWSTR property, PUCHAR output, ULONG outputBytes, ULONG* resultBytes, ULONG flags);
 NTSTATUS WINAPI HookedBCryptGenRandom(BCRYPT_ALG_HANDLE algorithm, PUCHAR buffer, ULONG bufferBytes, ULONG flags);
+HCERTSTORE WINAPI HookedCertOpenStore(LPCSTR provider, DWORD encodingType, HCRYPTPROV_LEGACY cryptProvider, DWORD flags, const void* parameters);
+BOOL WINAPI HookedCertCloseStore(HCERTSTORE store, DWORD flags);
+HCRYPTMSG WINAPI HookedCryptMsgOpenToDecode(DWORD encodingType, DWORD flags, DWORD messageType, HCRYPTPROV_LEGACY cryptProvider, PCERT_INFO recipientInfo, PCMSG_STREAM_INFO streamInfo);
+BOOL WINAPI HookedCryptMsgClose(HCRYPTMSG message);
 RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR protSeq, RPC_WSTR networkAddr, RPC_WSTR endpoint, RPC_WSTR options, RPC_WSTR* stringBinding);
 RPC_STATUS RPC_ENTRY HookedRpcBindingFromStringBindingW(RPC_WSTR stringBinding, RPC_BINDING_HANDLE* binding);
 RPC_STATUS RPC_ENTRY HookedRpcStringFreeW(RPC_WSTR* string);
@@ -2911,6 +3070,10 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "bcrypt.dll", "BCryptCloseAlgorithmProvider", reinterpret_cast<void*>(HookedBCryptCloseAlgorithmProvider), reinterpret_cast<void**>(&g_originalBCryptCloseAlgorithmProvider), false, true, false, 0, 0 },
         HookDefinition { "bcrypt.dll", "BCryptGetProperty", reinterpret_cast<void*>(HookedBCryptGetProperty), reinterpret_cast<void**>(&g_originalBCryptGetProperty), false, true, false, 0, 0 },
         HookDefinition { "bcrypt.dll", "BCryptGenRandom", reinterpret_cast<void*>(HookedBCryptGenRandom), reinterpret_cast<void**>(&g_originalBCryptGenRandom), false, true, false, 0, 0 },
+        HookDefinition { "crypt32.dll", "CertOpenStore", reinterpret_cast<void*>(HookedCertOpenStore), reinterpret_cast<void**>(&g_originalCertOpenStore), false, true, false, 0, 0 },
+        HookDefinition { "crypt32.dll", "CertCloseStore", reinterpret_cast<void*>(HookedCertCloseStore), reinterpret_cast<void**>(&g_originalCertCloseStore), false, true, false, 0, 0 },
+        HookDefinition { "crypt32.dll", "CryptMsgOpenToDecode", reinterpret_cast<void*>(HookedCryptMsgOpenToDecode), reinterpret_cast<void**>(&g_originalCryptMsgOpenToDecode), false, true, false, 0, 0 },
+        HookDefinition { "crypt32.dll", "CryptMsgClose", reinterpret_cast<void*>(HookedCryptMsgClose), reinterpret_cast<void**>(&g_originalCryptMsgClose), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringBindingComposeW", reinterpret_cast<void*>(HookedRpcStringBindingComposeW), reinterpret_cast<void**>(&g_originalRpcStringBindingComposeW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcBindingFromStringBindingW", reinterpret_cast<void*>(HookedRpcBindingFromStringBindingW), reinterpret_cast<void**>(&g_originalRpcBindingFromStringBindingW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringFreeW", reinterpret_cast<void*>(HookedRpcStringFreeW), reinterpret_cast<void**>(&g_originalRpcStringFreeW), false, true, false, 0, 0 },
@@ -4006,6 +4169,136 @@ NTSTATUS WINAPI HookedBCryptGenRandom(BCRYPT_ALG_HANDLE algorithm, PUCHAR buffer
     }
 
     return status;
+}
+
+HCERTSTORE WINAPI HookedCertOpenStore(LPCSTR provider, DWORD encodingType, HCRYPTPROV_LEGACY cryptProvider, DWORD flags, const void* parameters)
+{
+    if (g_inHook || !HooksEnabled() || g_originalCertOpenStore == nullptr)
+    {
+        if (g_originalCertOpenStore == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalCertOpenStore(provider, encodingType, cryptProvider, flags, parameters);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HCERTSTORE result = g_originalCertOpenStore(provider, encodingType, cryptProvider, flags, parameters);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitCertOpenStoreEvent(result, eventError, start, end, provider, encodingType, cryptProvider, flags, parameters);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedCertCloseStore(HCERTSTORE store, DWORD flags)
+{
+    if (g_inHook || !HooksEnabled() || g_originalCertCloseStore == nullptr)
+    {
+        if (g_originalCertCloseStore == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalCertCloseStore(store, flags);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalCertCloseStore(store, flags);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FALSE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitCertCloseStoreEvent(result, eventError, start, end, store, flags);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HCRYPTMSG WINAPI HookedCryptMsgOpenToDecode(
+    DWORD encodingType,
+    DWORD flags,
+    DWORD messageType,
+    HCRYPTPROV_LEGACY cryptProvider,
+    PCERT_INFO recipientInfo,
+    PCMSG_STREAM_INFO streamInfo)
+{
+    if (g_inHook || !HooksEnabled() || g_originalCryptMsgOpenToDecode == nullptr)
+    {
+        if (g_originalCryptMsgOpenToDecode == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalCryptMsgOpenToDecode(encodingType, flags, messageType, cryptProvider, recipientInfo, streamInfo);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HCRYPTMSG result = g_originalCryptMsgOpenToDecode(encodingType, flags, messageType, cryptProvider, recipientInfo, streamInfo);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitCryptMsgOpenToDecodeEvent(result, eventError, start, end, encodingType, flags, messageType, cryptProvider, recipientInfo, streamInfo);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedCryptMsgClose(HCRYPTMSG message)
+{
+    if (g_inHook || !HooksEnabled() || g_originalCryptMsgClose == nullptr)
+    {
+        if (g_originalCryptMsgClose == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalCryptMsgClose(message);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalCryptMsgClose(message);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FALSE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitCryptMsgCloseEvent(result, eventError, start, end, message);
+    }
+
+    SetLastError(lastError);
+    return result;
 }
 
 RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR protSeq, RPC_WSTR networkAddr, RPC_WSTR endpoint, RPC_WSTR options, RPC_WSTR* stringBinding)

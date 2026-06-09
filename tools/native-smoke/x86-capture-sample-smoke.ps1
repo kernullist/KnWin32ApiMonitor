@@ -24,6 +24,10 @@ $requiredApis = @(
     "BCryptCloseAlgorithmProvider",
     "BCryptGetProperty",
     "BCryptGenRandom",
+    "CertOpenStore",
+    "CertCloseStore",
+    "CryptMsgOpenToDecode",
+    "CryptMsgClose",
     "RpcStringBindingComposeW",
     "RpcBindingFromStringBindingW",
     "RpcStringFreeW",
@@ -189,6 +193,69 @@ $bcryptRandom = @($cryptoEvents | Where-Object { $_.api -eq "BCryptGenRandom" } 
 if ($bcryptRandom.Count -ne 1 -or -not [string]::IsNullOrEmpty($bcryptRandom[0].bufferPreview))
 {
     throw "x86 BCryptGenRandom exposed buffer preview or was not captured."
+}
+
+$certificateEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "certificate" })
+if ($certificateEvents.Count -lt 2)
+{
+    throw "x86 capture did not include the selected crypt32 certificate API family slice."
+}
+
+$certOpen = @($certificateEvents | Where-Object { $_.api -eq "CertOpenStore" } | Select-Object -First 1)
+if ($certOpen.Count -ne 1 -or $certOpen[0].module -ne "crypt32.dll" -or $certOpen[0].hookPolicy -ne "iat" -or $certOpen[0].coverageStatus -ne "smoke_verified")
+{
+    throw "x86 CertOpenStore metadata mismatch."
+}
+
+$certOpenArgs = ($certOpen[0].arguments | ConvertTo-Json -Depth 8)
+if (($certOpenArgs -notmatch "provider_id:2" -and $certOpenArgs -notmatch "0x0+2") -or $certOpenArgs -notmatch "0x00002000")
+{
+    throw "x86 CertOpenStore arguments did not include memory store evidence: $certOpenArgs"
+}
+
+$certClose = @($certificateEvents | Where-Object { $_.api -eq "CertCloseStore" } | Select-Object -First 1)
+if ($certClose.Count -ne 1)
+{
+    throw "x86 capture did not include CertCloseStore."
+}
+
+$cryptoMessageEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "crypto-message" })
+if ($cryptoMessageEvents.Count -lt 2)
+{
+    throw "x86 capture did not include the selected crypt32 message API family slice."
+}
+
+$messageOpen = @($cryptoMessageEvents | Where-Object { $_.api -eq "CryptMsgOpenToDecode" } | Select-Object -First 1)
+if ($messageOpen.Count -ne 1 -or $messageOpen[0].module -ne "crypt32.dll" -or $messageOpen[0].hookPolicy -ne "iat" -or $messageOpen[0].coverageStatus -ne "smoke_verified")
+{
+    throw "x86 CryptMsgOpenToDecode metadata mismatch."
+}
+
+$messageOpenArgs = ($messageOpen[0].arguments | ConvertTo-Json -Depth 8)
+if ($messageOpenArgs -notmatch "0x00010001")
+{
+    throw "x86 CryptMsgOpenToDecode arguments did not include X509/PKCS7 evidence: $messageOpenArgs"
+}
+
+foreach ($argName in @("pRecipientInfo", "pStreamInfo"))
+{
+    $argument = @($messageOpen[0].arguments | Where-Object { $_.name -eq $argName } | Select-Object -First 1)
+    if ($argument.Count -ne 1 -or $argument[0].rawValue -notmatch "^0x0+$")
+    {
+        throw "x86 CryptMsgOpenToDecode $argName was not null: $($argument[0] | ConvertTo-Json -Depth 8)"
+    }
+}
+
+$messageClose = @($cryptoMessageEvents | Where-Object { $_.api -eq "CryptMsgClose" } | Select-Object -First 1)
+if ($messageClose.Count -ne 1)
+{
+    throw "x86 capture did not include CryptMsgClose."
+}
+
+$crypt32Args = @($result.capturedEvents | Where-Object { $_.module -eq "crypt32.dll" } | ForEach-Object { $_.arguments } | ConvertTo-Json -Depth 8)
+if ($crypt32Args -match "BEGIN CERTIFICATE|PRIVATE KEY|plaintext|ciphertext|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 crypt32 events appear to expose blob or secret-bearing evidence: $crypt32Args"
 }
 
 $rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })

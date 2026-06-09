@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <bcrypt.h>
 #include <rpc.h>
+#include <wincrypt.h>
 #include <winternl.h>
 
 #include <array>
@@ -483,6 +484,68 @@ bool RunBcryptProbe()
     return success;
 }
 
+bool RunCrypt32Probe()
+{
+    bool success = false;
+    HCERTSTORE store = nullptr;
+    HCRYPTMSG message = nullptr;
+
+    do
+    {
+        store = CertOpenStore(CERT_STORE_PROV_MEMORY, 0, 0, CERT_STORE_CREATE_NEW_FLAG, nullptr);
+        if (store == nullptr)
+        {
+            LogLastError("CertOpenStore");
+            break;
+        }
+
+        if (!CertCloseStore(store, 0))
+        {
+            LogLastError("CertCloseStore");
+            break;
+        }
+
+        store = nullptr;
+        message = CryptMsgOpenToDecode(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, 0, 0, 0, nullptr, nullptr);
+        if (message == nullptr)
+        {
+            LogLastError("CryptMsgOpenToDecode");
+            break;
+        }
+
+        if (!CryptMsgClose(message))
+        {
+            LogLastError("CryptMsgClose");
+            break;
+        }
+
+        message = nullptr;
+        std::cout << "crypt32 handle roundtrip store=memory msg_encoding=" << (X509_ASN_ENCODING | PKCS_7_ASN_ENCODING) << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (message != nullptr)
+    {
+        if (!CryptMsgClose(message))
+        {
+            LogLastError("CryptMsgClose(cleanup)");
+            success = false;
+        }
+    }
+
+    if (store != nullptr)
+    {
+        if (!CertCloseStore(store, CERT_CLOSE_STORE_CHECK_FLAG))
+        {
+            LogLastError("CertCloseStore(cleanup)");
+            success = false;
+        }
+    }
+
+    return success;
+}
+
 bool RunWinsockProbe()
 {
     bool success = false;
@@ -634,6 +697,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunBcryptProbe())
+        {
+            break;
+        }
+
+        if (!RunCrypt32Probe())
         {
             break;
         }

@@ -1163,6 +1163,36 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 3, "ULONG", "dwFlags", "in", HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]));
         payload = ApiCallPayload(result, record, HexNtStatusValue(record.ReturnCode), args.str(), "");
         break;
+    case KnMonTransportApiId::CertOpenStore:
+    {
+        const std::string providerPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string providerDecoded = text0.empty() ? providerPointer : text0;
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPCSTR", "lpszStoreProvider", "in", providerPointer, providerPointer, providerDecoded, DecodeStatusName(record.Values32[2])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "dwEncodingType", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "HCRYPTPROV_LEGACY", "hCryptProv", "in", HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture)) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "DWORD", "dwFlags", "in", HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 4, "const void*", "pvPara", "in", HexPointerValue(record.Values64[2], result.Architecture), HexPointerValue(record.Values64[2], result.Architecture), HexPointerValue(record.Values64[2], result.Architecture));
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::CertCloseStore:
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HCERTSTORE", "hCertStore", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture)) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "dwFlags", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]));
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    case KnMonTransportApiId::CryptMsgOpenToDecode:
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "DWORD", "dwMsgEncodingType", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "dwFlags", "in", HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "DWORD", "dwMsgType", "in", HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "HCRYPTPROV_LEGACY", "hCryptProv", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture)) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 4, "PCERT_INFO", "pRecipientInfo", "in", HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture)) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 5, "PCMSG_STREAM_INFO", "pStreamInfo", "in", HexPointerValue(record.Values64[2], result.Architecture), HexPointerValue(record.Values64[2], result.Architecture), HexPointerValue(record.Values64[2], result.Architecture));
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    case KnMonTransportApiId::CryptMsgClose:
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HCRYPTMSG", "hCryptMsg", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture));
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
     case KnMonTransportApiId::RpcStringBindingComposeW:
     {
         const std::string objUuidPointer = HexPointerValue(record.Values64[0], result.Architecture);
