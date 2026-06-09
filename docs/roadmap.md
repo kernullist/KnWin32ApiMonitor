@@ -148,7 +148,7 @@ Current implementation notes:
 2. The agent sends `agent_hello`, `hook_installed`, `hook_install_failed`, `api_call`, `dropped_events`, and `agent_shutdown` messages.
 3. Hook install failure is reported as a precise capture failure.
 4. The shared agent tracks patched IAT slots and restores original entries during shutdown/self-disable where possible.
-5. Healthy shutdown reports `installedHooks=6`, `restoredHooks=6`, and `failedHooks=0`.
+5. Healthy shutdown reports at least the six required File I/O hook groups, `restoredHooks=installedHooks`, and `failedHooks=0`.
 6. x86 uses `knmon-agent32.dll` from a Win32 helper/target/agent build.
 7. Same-bitness preflight rejects missing binaries and available architecture mismatches before remote mutation.
 8. Arbitrary already-running process detach remains future work.
@@ -265,7 +265,7 @@ Current verified behavior:
 3. HELLO evidence reports the actual agent architecture and version.
 4. Controller preflight checks target and agent PE architecture before `CreateProcessW`.
 5. Missing target, missing agent, and available architecture mismatch failures report `preflight_failed` without remote mutation.
-6. x86 capture smoke covers the same six File I/O hooks as x64 and verifies `installedHooks=6`, `restoredHooks=6`, and `failedHooks=0`.
+6. x86 capture smoke covers the same required File I/O hooks as x64, includes loader-aware dynamic-load evidence, and verifies `restoredHooks=installedHooks` with `failedHooks=0`.
 7. x86 session write, validation, and replay preserve HELLO architecture/version evidence plus captured `NtCreateFile` trace evidence.
 
 Next implementation focus:
@@ -330,18 +330,20 @@ Current verified behavior:
 4. API hook fast paths no longer write API event JSON to the named pipe.
 5. Named pipe remains for low-volume HELLO, hook install status, dropped-event summary, and shutdown lifecycle messages.
 6. The controller drains binary records and normalizes them into the existing `api_call` JSON shape outside the target process.
-7. Healthy x64/x86 captures consume 8 shared-memory API records with zero dropped events.
+7. Healthy x64/x86 captures consume shared-memory API records for File I/O plus loader-aware sample events with zero dropped events.
 8. Backpressure smoke with `KNMON_TRANSPORT_CAPACITY=2` completes capture, retains bounded records, and reports dropped transport events.
 9. Capture results expose transport capacity, produced/consumed/dropped counts, high-water mark, and min/average/max hook overhead metrics.
 10. Session write, validation, and replay remain compatible with shared-memory-normalized `api_call` events.
 
 Next implementation focus:
 
-1. Phase 9 loader-aware module inventory and all-loaded-module IAT sweep for `ntdll.dll`, `kernelbase.dll`, and `kernel32.dll`.
+1. Expand loader-aware coverage beyond the controlled Wave 1 sample.
 2. Keep resolver monitoring design separate from returned-pointer instrumentation.
 3. Promote the controller-side shared-memory drain into a dedicated collector reader when event volume increases beyond the controlled sample path.
 
 ## Phase 9: Loader-Aware System DLL API Coverage
+
+Status: implemented foundation for controlled sample dynamic loading and eligible-module IAT sweep.
 
 Goal:
 
@@ -389,6 +391,24 @@ Exit criteria:
 1. APIs imported by dynamically loaded modules are captured after load.
 2. Resolver calls are visible and correlated with later API coverage where possible.
 3. Event volume remains within the Phase 8 transport budget.
+
+Current verified behavior:
+
+1. The agent snapshots the PEB loader list after startup and emits `module_inventory`.
+2. The initial eligible-module IAT sweep emits `iat_sweep` with scanned, eligible, skipped, patched, duplicate, and failed slot counts.
+3. Patch owners exclude the agent and Windows system modules; provider modules for Wave 1 include `kernel32.dll`, `kernelbase.dll`, and `ntdll.dll`.
+4. Hook records are keyed by import slot address to suppress duplicate patches.
+5. The sample target loads `knmon-dynamic-probe.dll` with `LoadLibraryW`.
+6. `LoadLibraryW` is captured as a loader-tagged shared-memory `api_call`.
+7. Successful dynamic load triggers a `dynamic_load` IAT re-sweep.
+8. Post-load File I/O from `knmon-dynamic-probe.dll` is captured after the re-sweep.
+9. Unloaded owner-module restoration races are handled without stale writes and healthy shutdown reports `restoredHooks=installedHooks`.
+
+Next implementation focus:
+
+1. Add explicit resolver monitoring for `GetProcAddress` and `LdrGetProcedureAddress`.
+2. Add module/API id generation from definitions instead of hand-maintained transport ids.
+3. Broaden Wave 2 system DLL API definitions only after transport and hook-overhead gates remain green.
 
 ## Phase 10: Definition System V1
 

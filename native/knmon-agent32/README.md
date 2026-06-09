@@ -8,9 +8,11 @@ Current behavior:
 2. Loaded by the Win32 `knmon-native-helper.exe` through controlled launch-time early-bird APC.
 3. Supports only same-bitness x86 helper -> x86 target -> `knmon-agent32.dll` capture.
 4. Sends a versioned HELLO JSON payload with `architecture = "x86"`.
-5. Installs main-module IAT hooks in the controlled sample target.
-6. Writes bounded binary API records for `CreateFileW`, `CreateFileA`, `NtCreateFile`, `ReadFile`, `WriteFile`, and `CloseHandle` into the required shared-memory transport.
-7. Emits hook status, dropped-event accounting, and `agent_shutdown` lifecycle evidence through the named pipe.
-8. Captures `NtCreateFile` from `ntdll.dll` with NTSTATUS return evidence and bounded `OBJECT_ATTRIBUTES` object-name decoding.
+5. Inventories loaded modules from the PEB loader list.
+6. Installs IAT hooks in eligible non-agent non-system modules and suppresses duplicate import-slot patches.
+7. Writes bounded binary API records for `CreateFileW`, `CreateFileA`, `NtCreateFile`, `ReadFile`, `WriteFile`, `CloseHandle`, and loader events into the required shared-memory transport.
+8. Emits hook status, module inventory, IAT sweep status, dropped-event accounting, and `agent_shutdown` lifecycle evidence through the named pipe.
+9. Captures `NtCreateFile` from `ntdll.dll` with NTSTATUS return evidence and bounded `OBJECT_ATTRIBUTES` object-name decoding.
+10. Re-sweeps eligible modules after dynamic load and captures the controlled `knmon-dynamic-probe.dll` post-load File I/O path.
 
-The current API hook fast path does not serialize API JSON or write API events to the named pipe. The x86 path is intentionally scoped to the repository sample target launched by a Win32 helper. It does not support cross-bitness injection, arbitrary already-running process attach, manual mapping, stealth loading, or inline trampoline hooks.
+The current API hook fast path does not serialize API JSON or write API events to the named pipe. The x86 path is intentionally scoped to the repository sample target launched by a Win32 helper. It does not support cross-bitness injection, arbitrary already-running process attach, manual mapping, stealth loading, returned-pointer instrumentation, or inline trampoline hooks.

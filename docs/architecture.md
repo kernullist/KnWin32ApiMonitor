@@ -184,7 +184,7 @@ Locations:
 - `native/knmon-agent32`
 - `native/knmon-agent64`
 
-`knmon-agent64` and `knmon-agent32` share one agent implementation source. Each starts a worker thread from `DllMain`, reads `KNMON_AGENT_PIPE`, `KNMON_OPERATION_ID`, and the optional required shared-memory transport mapping name, writes a versioned JSON HELLO payload with its actual architecture, installs controlled sample-target IAT hooks, and writes stable File I/O API records into shared memory.
+`knmon-agent64` and `knmon-agent32` share one agent implementation source. Each starts a worker thread from `DllMain`, reads `KNMON_AGENT_PIPE`, `KNMON_OPERATION_ID`, and the optional required shared-memory transport mapping name, writes a versioned JSON HELLO payload with its actual architecture, inventories loaded modules from the PEB loader list, sweeps eligible non-agent non-system module IATs, and writes File I/O plus loader API records into shared memory.
 
 Current lifecycle states:
 
@@ -194,7 +194,7 @@ Current lifecycle states:
 4. `disabled`
 5. `failed`
 
-The agent tracks every patched IAT slot with API name, module, thunk address, original function, replacement function, and install/restore state. During shutdown or self-disable it turns off new hook events, restores original IAT values where possible, and emits `agent_shutdown`.
+The agent tracks every patched IAT slot with API name, imported provider module, owner module, thunk address, original function, replacement function, and install/restore state. During shutdown or self-disable it turns off new hook events, restores original IAT values where possible, treats already-unloaded owner modules as conservatively restored without stale writes, and emits `agent_shutdown`.
 
 Current `agent_shutdown` fields:
 
@@ -215,13 +215,23 @@ Current same-bitness x64/x86 hook coverage:
 4. `ReadFile`
 5. `WriteFile`
 6. `CloseHandle`
+7. `LoadLibraryW`
 
 `NtCreateFile` is captured as an explicit `ntdll.dll` event. Its `returnValue` is the NTSTATUS hex string, while `lastErrorCode` remains a mapped Win32 error code for failure display compatibility. The current controlled sample success path returns `0x00000000` and includes bounded `OBJECT_ATTRIBUTES.ObjectName` evidence.
+
+Current loader-aware behavior:
+
+1. The initial agent worker snapshots the PEB loader list and emits `module_inventory`.
+2. The initial IAT sweep emits `iat_sweep` with scanned, eligible, skipped, patched, duplicate, and failed slot counts.
+3. Eligible patch-owner modules exclude the agent and Windows system modules; Wave 1 provider modules remain `kernel32.dll`, `kernelbase.dll`, and `ntdll.dll`.
+4. The sample target loads `knmon-dynamic-probe.dll`; `LoadLibraryW` is captured as a loader `api_call`.
+5. A successful dynamic load triggers a re-sweep with `reason=dynamic_load`.
+6. The dynamic probe DLL performs File I/O after load, proving post-load IAT coverage.
 
 Current agent limitations:
 
 1. Hooks are installed only in the repository-controlled sample target flow.
-2. Hook method is IAT patching of the main module, not inline trampoline or EAT patching.
+2. Hook method is eligible-module IAT patching, not inline trampoline or EAT patching.
 3. API event transport is shared memory for the controlled sample path; named pipe remains for low-volume control and lifecycle messages.
 4. Shutdown cleanup is scoped to the controlled sample target lifecycle; arbitrary detach from already-running processes remains unsupported.
 5. Cross-bitness injection is rejected during preflight.
@@ -230,7 +240,7 @@ Future agent responsibilities:
 
 1. Capture richer call stack metadata when explicitly enabled.
 2. Support a dedicated collector reader for high-volume shared-memory transport.
-3. Add loader-aware system DLL coverage.
+3. Expand loader-aware system DLL coverage beyond Wave 1.
 4. Add arbitrary attach/detach only after a separate review.
 
 `Launch Sample` still produces an `agent_loaded` row only. `Capture File I/O` produces real `api_call` rows from the controlled sample target.

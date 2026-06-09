@@ -67,9 +67,9 @@ if ($result.droppedEvents -lt $result.transportDroppedEvents)
     throw "Result droppedEvents did not include transport drops: result=$($result.droppedEvents) transport=$($result.transportDroppedEvents)"
 }
 
-if ($result.transportRecordsConsumed -gt $result.transportCapacity)
+if ($result.transportHighWaterMark -gt $result.transportCapacity)
 {
-    throw "Consumed more records than bounded capacity: consumed=$($result.transportRecordsConsumed) capacity=$($result.transportCapacity)"
+    throw "Transport high-water mark exceeded bounded capacity: highWater=$($result.transportHighWaterMark) capacity=$($result.transportCapacity)"
 }
 
 if ($result.capturedEvents.Count -le 0)

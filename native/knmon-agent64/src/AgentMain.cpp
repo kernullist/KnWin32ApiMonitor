@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iomanip>
+#include <intrin.h>
 #include <sstream>
 #include <string>
 
@@ -33,11 +34,46 @@ constexpr const wchar_t* AgentVersion = L"0.2.0";
 constexpr std::size_t MaxBufferPreviewBytes = 16;
 constexpr std::size_t MaxNtObjectNameBytes = 512;
 
+struct KnMonPebLdrData
+{
+    ULONG Length;
+    BOOLEAN Initialized;
+    PVOID SsHandle;
+    LIST_ENTRY InLoadOrderModuleList;
+    LIST_ENTRY InMemoryOrderModuleList;
+    LIST_ENTRY InInitializationOrderModuleList;
+};
+
+struct KnMonLdrDataTableEntry
+{
+    LIST_ENTRY InLoadOrderLinks;
+    LIST_ENTRY InMemoryOrderLinks;
+    LIST_ENTRY InInitializationOrderLinks;
+    PVOID DllBase;
+    PVOID EntryPoint;
+    ULONG SizeOfImage;
+    UNICODE_STRING FullDllName;
+    UNICODE_STRING BaseDllName;
+};
+
+struct KnMonPeb
+{
+    BYTE Reserved1[2];
+    BYTE BeingDebugged;
+    BYTE Reserved2[1];
+    PVOID Reserved3[2];
+    KnMonPebLdrData* Ldr;
+};
+
 using CreateFileWFn = HANDLE(WINAPI*)(LPCWSTR, DWORD, DWORD, LPSECURITY_ATTRIBUTES, DWORD, DWORD, HANDLE);
 using CreateFileAFn = HANDLE(WINAPI*)(LPCSTR, DWORD, DWORD, LPSECURITY_ATTRIBUTES, DWORD, DWORD, HANDLE);
 using ReadFileFn = BOOL(WINAPI*)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
 using WriteFileFn = BOOL(WINAPI*)(HANDLE, LPCVOID, DWORD, LPDWORD, LPOVERLAPPED);
 using CloseHandleFn = BOOL(WINAPI*)(HANDLE);
+using LoadLibraryWFn = HMODULE(WINAPI*)(LPCWSTR);
+using LoadLibraryAFn = HMODULE(WINAPI*)(LPCSTR);
+using LoadLibraryExWFn = HMODULE(WINAPI*)(LPCWSTR, HANDLE, DWORD);
+using LoadLibraryExAFn = HMODULE(WINAPI*)(LPCSTR, HANDLE, DWORD);
 using NtCreateFileFn = NTSTATUS(NTAPI*)(
     PHANDLE,
     ACCESS_MASK,
@@ -50,8 +86,10 @@ using NtCreateFileFn = NTSTATUS(NTAPI*)(
     ULONG,
     PVOID,
     ULONG);
+using LdrLoadDllFn = NTSTATUS(NTAPI*)(PWSTR, ULONG, PUNICODE_STRING, PHANDLE);
 using RtlNtStatusToDosErrorFn = ULONG(WINAPI*)(NTSTATUS);
 
+HMODULE g_agentModule = nullptr;
 HANDLE g_pipeHandle = INVALID_HANDLE_VALUE;
 HANDLE g_transportMapping = nullptr;
 knmon::KnMonTransportHeader* g_transportHeader = nullptr;
@@ -67,7 +105,12 @@ CreateFileAFn g_originalCreateFileA = nullptr;
 ReadFileFn g_originalReadFile = nullptr;
 WriteFileFn g_originalWriteFile = nullptr;
 CloseHandleFn g_originalCloseHandle = nullptr;
+LoadLibraryWFn g_originalLoadLibraryW = nullptr;
+LoadLibraryAFn g_originalLoadLibraryA = nullptr;
+LoadLibraryExWFn g_originalLoadLibraryExW = nullptr;
+LoadLibraryExAFn g_originalLoadLibraryExA = nullptr;
 NtCreateFileFn g_originalNtCreateFile = nullptr;
+LdrLoadDllFn g_originalLdrLoadDll = nullptr;
 std::wstring g_operationId;
 
 enum class AgentLifecycleState : LONG
@@ -81,8 +124,10 @@ enum class AgentLifecycleState : LONG
 
 struct HookRecord
 {
-    const char* ApiName = "";
-    const char* ModuleName = "";
+    char ApiName[64] = {};
+    char ImportModuleName[64] = {};
+    char OwnerModuleName[128] = {};
+    HMODULE OwnerModule = nullptr;
     ULONG_PTR* ThunkAddress = nullptr;
     void* OriginalFunction = nullptr;
     void* ReplacementFunction = nullptr;
@@ -98,7 +143,43 @@ struct HookLifecycleCounts
     int FailedHooks = 0;
 };
 
-constexpr std::size_t MaxHookRecords = 16;
+struct ModuleInfo
+{
+    HMODULE Base = nullptr;
+    std::uint32_t SizeOfImage = 0;
+    char Name[128] = {};
+    char FullPath[512] = {};
+    bool IsAgent = false;
+    bool IsSystem = false;
+    bool HasImports = false;
+    bool Eligible = false;
+};
+
+struct SweepStats
+{
+    std::uint32_t ScannedModules = 0;
+    std::uint32_t EligibleModules = 0;
+    std::uint32_t SkippedModules = 0;
+    std::uint32_t ModulesWithPatches = 0;
+    std::uint32_t PatchedSlots = 0;
+    std::uint32_t DuplicateSlots = 0;
+    std::uint32_t FailedSlots = 0;
+};
+
+struct HookDefinition
+{
+    const char* ImportModuleName = "";
+    const char* ApiName = "";
+    void* ReplacementFunction = nullptr;
+    void** OriginalFunction = nullptr;
+    bool Required = false;
+    bool ReportStatus = false;
+    bool LoaderApi = false;
+    std::uint32_t LastPatchedSlots = 0;
+};
+
+constexpr std::size_t MaxHookRecords = 1024;
+constexpr std::size_t MaxModuleRecords = 256;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
 SRWLOCK g_hookLock = SRWLOCK_INIT;
@@ -340,6 +421,106 @@ void CopyWideText(char* destination, std::uint32_t* length, std::size_t capacity
     {
         *length = copied;
     }
+}
+
+void CopyWideCountText(char* destination, std::size_t capacity, const wchar_t* source, std::size_t charCount)
+{
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr || charCount == 0)
+        {
+            break;
+        }
+
+        const std::size_t boundedChars = charCount < 511 ? charCount : 511;
+        std::array<wchar_t, 512> buffer = {};
+        for (std::size_t index = 0; index < boundedChars; ++index)
+        {
+            buffer[index] = source[index];
+        }
+
+        buffer[boundedChars] = L'\0';
+        CopyWideText(destination, nullptr, capacity, buffer.data());
+    }
+    while (false);
+}
+
+void LowerAsciiInPlace(char* value)
+{
+    if (value == nullptr)
+    {
+        return;
+    }
+
+    for (std::size_t index = 0; value[index] != '\0'; ++index)
+    {
+        if (value[index] >= 'A' && value[index] <= 'Z')
+        {
+            value[index] = static_cast<char>(value[index] - 'A' + 'a');
+        }
+    }
+}
+
+const char* FileNameFromPathText(const char* path)
+{
+    const char* result = path;
+
+    if (path != nullptr)
+    {
+        for (const char* current = path; *current != '\0'; ++current)
+        {
+            if (*current == '\\' || *current == '/')
+            {
+                result = current + 1;
+            }
+        }
+    }
+
+    return result == nullptr ? "" : result;
+}
+
+bool TextContains(const char* value, const char* pattern)
+{
+    bool contains = false;
+
+    do
+    {
+        if (value == nullptr || pattern == nullptr)
+        {
+            break;
+        }
+
+        if (std::strstr(value, pattern) != nullptr)
+        {
+            contains = true;
+        }
+    }
+    while (false);
+
+    return contains;
+}
+
+bool IsWindowsSystemModule(const ModuleInfo& module)
+{
+    bool systemModule = false;
+
+    if (
+        TextContains(module.FullPath, "\\windows\\system32\\") ||
+        TextContains(module.FullPath, "\\windows\\syswow64\\") ||
+        std::strcmp(module.Name, "ntdll.dll") == 0 ||
+        std::strcmp(module.Name, "kernel32.dll") == 0 ||
+        std::strcmp(module.Name, "kernelbase.dll") == 0)
+    {
+        systemModule = true;
+    }
+
+    return systemModule;
 }
 
 void CopyHexPointerText(char* destination, std::uint32_t* length, std::size_t capacity, const void* value)
@@ -665,6 +846,10 @@ std::uint16_t ModuleId(const char* moduleName)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Ntdll);
     }
+    else if (std::strcmp(moduleName, "kernelbase.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::KernelBase);
+    }
 
     return result;
 }
@@ -887,6 +1072,37 @@ void SendHookStatus(const char* moduleName, const char* apiName, bool installed,
     stream << "\"module\":" << Q(moduleName) << ",";
     stream << "\"hookMethod\":\"iat\",";
     stream << "\"message\":" << Q(message);
+    stream << "}";
+    SendJson(stream.str());
+}
+
+void SendModuleInventoryStatus(const SweepStats& stats)
+{
+    const LONG64 sequence = NextSequence();
+    std::ostringstream stream;
+    stream << MessagePrefix("module_inventory", sequence) << ",";
+    stream << "\"scannedModules\":" << stats.ScannedModules << ",";
+    stream << "\"eligibleModules\":" << stats.EligibleModules << ",";
+    stream << "\"skippedModules\":" << stats.SkippedModules << ",";
+    stream << "\"message\":\"Module inventory captured from PEB loader list.\"";
+    stream << "}";
+    SendJson(stream.str());
+}
+
+void SendIatSweepStatus(const char* reason, const SweepStats& stats)
+{
+    const LONG64 sequence = NextSequence();
+    std::ostringstream stream;
+    stream << MessagePrefix("iat_sweep", sequence) << ",";
+    stream << "\"reason\":" << Q(reason == nullptr ? "unknown" : reason) << ",";
+    stream << "\"scannedModules\":" << stats.ScannedModules << ",";
+    stream << "\"eligibleModules\":" << stats.EligibleModules << ",";
+    stream << "\"skippedModules\":" << stats.SkippedModules << ",";
+    stream << "\"patchedModules\":" << stats.ModulesWithPatches << ",";
+    stream << "\"patchedSlots\":" << stats.PatchedSlots << ",";
+    stream << "\"duplicateSlots\":" << stats.DuplicateSlots << ",";
+    stream << "\"failedSlots\":" << stats.FailedSlots << ",";
+    stream << "\"message\":\"Loaded-module IAT sweep completed.\"";
     stream << "}";
     SendJson(stream.str());
 }
@@ -1137,6 +1353,120 @@ void EmitNtCreateFileEvent(
     }
 }
 
+void EmitLoadLibraryWEvent(
+    HMODULE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPCWSTR fileName)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::LoadLibraryW, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        CopyWideText(record->Text0, &record->Text0Length, sizeof(record->Text0), fileName);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitLoadLibraryAEvent(
+    HMODULE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPCSTR fileName)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::LoadLibraryA, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        CopyAsciiText(record->Text0, &record->Text0Length, sizeof(record->Text0), fileName);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitLoadLibraryExWEvent(
+    HMODULE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPCWSTR fileName,
+    HANDLE file,
+    DWORD flags)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::LoadLibraryExW, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
+        record->Values32[0] = flags;
+        CopyWideText(record->Text0, &record->Text0Length, sizeof(record->Text0), fileName);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitLoadLibraryExAEvent(
+    HMODULE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPCSTR fileName,
+    HANDLE file,
+    DWORD flags)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::LoadLibraryExA, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
+        record->Values32[0] = flags;
+        CopyAsciiText(record->Text0, &record->Text0Length, sizeof(record->Text0), fileName);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitLdrLoadDllEvent(
+    NTSTATUS status,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    PWSTR pathToFile,
+    ULONG flags,
+    PUNICODE_STRING moduleFileName,
+    PHANDLE moduleHandle)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::LdrLoadDll, "ntdll.dll", start, end, errorCode);
+        record->ReturnCode = static_cast<std::uint32_t>(status);
+        record->Values32[0] = flags;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(moduleHandle));
+        HANDLE loadedModule = nullptr;
+        if (NT_SUCCESS(status) && ReadCurrentProcessValue(moduleHandle, &loadedModule))
+        {
+            record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(loadedModule));
+        }
+        CopyWideText(record->Text0, &record->Text0Length, sizeof(record->Text0), pathToFile);
+        record->Values32[1] = CopyUnicodeStringText(record->Text1, &record->Text1Length, sizeof(record->Text1), moduleFileName);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void* ResolveExport(const char* moduleName, const char* name)
 {
     void* result = nullptr;
@@ -1156,25 +1486,251 @@ void* ResolveExport(const char* moduleName, const char* name)
     return result;
 }
 
+KnMonPeb* CurrentPeb()
+{
+#if defined(_M_X64)
+    return reinterpret_cast<KnMonPeb*>(__readgsqword(0x60));
+#elif defined(_M_IX86)
+    return reinterpret_cast<KnMonPeb*>(__readfsdword(0x30));
+#else
+    return nullptr;
+#endif
+}
+
+bool ImageRangeContains(const std::uint8_t* base, std::uint32_t size, const void* address, std::size_t bytes)
+{
+    bool contains = false;
+
+    do
+    {
+        if (base == nullptr || address == nullptr || size == 0)
+        {
+            break;
+        }
+
+        const auto* current = static_cast<const std::uint8_t*>(address);
+        if (current < base)
+        {
+            break;
+        }
+
+        const std::uintptr_t offset = static_cast<std::uintptr_t>(current - base);
+        if (offset > size)
+        {
+            break;
+        }
+
+        contains = bytes <= (static_cast<std::size_t>(size) - static_cast<std::size_t>(offset));
+    }
+    while (false);
+
+    return contains;
+}
+
+template <typename T>
+T* ImageRvaToPointer(std::uint8_t* base, std::uint32_t size, DWORD rva, std::size_t minBytes = sizeof(T))
+{
+    T* result = nullptr;
+
+    do
+    {
+        if (base == nullptr || rva == 0 || rva >= size)
+        {
+            break;
+        }
+
+        auto* pointer = reinterpret_cast<T*>(base + rva);
+        if (!ImageRangeContains(base, size, pointer, minBytes))
+        {
+            break;
+        }
+
+        result = pointer;
+    }
+    while (false);
+
+    return result;
+}
+
+bool ReadImageImportDirectory(HMODULE module, std::uint32_t size, IMAGE_IMPORT_DESCRIPTOR** imports)
+{
+    bool present = false;
+
+    do
+    {
+        if (module == nullptr || imports == nullptr)
+        {
+            break;
+        }
+
+        *imports = nullptr;
+        auto* base = reinterpret_cast<std::uint8_t*>(module);
+        auto* dosHeader = reinterpret_cast<IMAGE_DOS_HEADER*>(base);
+        if (!ImageRangeContains(base, size, dosHeader, sizeof(*dosHeader)) || dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+        {
+            break;
+        }
+
+        if (dosHeader->e_lfanew <= 0 || static_cast<std::uint32_t>(dosHeader->e_lfanew) >= size)
+        {
+            break;
+        }
+
+        auto* ntHeaders = reinterpret_cast<IMAGE_NT_HEADERS*>(base + dosHeader->e_lfanew);
+        if (!ImageRangeContains(base, size, ntHeaders, sizeof(*ntHeaders)) || ntHeaders->Signature != IMAGE_NT_SIGNATURE)
+        {
+            break;
+        }
+
+        const IMAGE_DATA_DIRECTORY& importDirectory = ntHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+        if (importDirectory.VirtualAddress == 0 || importDirectory.Size < sizeof(IMAGE_IMPORT_DESCRIPTOR))
+        {
+            break;
+        }
+
+        auto* importDescriptor = ImageRvaToPointer<IMAGE_IMPORT_DESCRIPTOR>(
+            base,
+            size,
+            importDirectory.VirtualAddress,
+            sizeof(IMAGE_IMPORT_DESCRIPTOR));
+        if (importDescriptor == nullptr)
+        {
+            break;
+        }
+
+        *imports = importDescriptor;
+        present = true;
+    }
+    while (false);
+
+    return present;
+}
+
+bool ModuleHasImports(HMODULE module, std::uint32_t size)
+{
+    IMAGE_IMPORT_DESCRIPTOR* imports = nullptr;
+    return ReadImageImportDirectory(module, size, &imports);
+}
+
+std::size_t CaptureModuleSnapshot(std::array<ModuleInfo, MaxModuleRecords>& modules, SweepStats* stats)
+{
+    std::size_t count = 0;
+
+    do
+    {
+        KnMonPeb* peb = CurrentPeb();
+        if (peb == nullptr || peb->Ldr == nullptr)
+        {
+            break;
+        }
+
+        LIST_ENTRY* head = &peb->Ldr->InMemoryOrderModuleList;
+        LIST_ENTRY* current = head->Flink;
+        while (current != nullptr && current != head && count < modules.size())
+        {
+            auto* entry = CONTAINING_RECORD(current, KnMonLdrDataTableEntry, InMemoryOrderLinks);
+            current = current->Flink;
+
+            if (entry == nullptr || entry->DllBase == nullptr)
+            {
+                continue;
+            }
+
+            ModuleInfo& module = modules[count];
+            module = {};
+            module.Base = static_cast<HMODULE>(entry->DllBase);
+            module.SizeOfImage = entry->SizeOfImage;
+            CopyWideCountText(module.FullPath, sizeof(module.FullPath), entry->FullDllName.Buffer, entry->FullDllName.Length / sizeof(wchar_t));
+            CopyWideCountText(module.Name, sizeof(module.Name), entry->BaseDllName.Buffer, entry->BaseDllName.Length / sizeof(wchar_t));
+            if (module.Name[0] == '\0')
+            {
+                CopyAsciiText(module.Name, nullptr, sizeof(module.Name), FileNameFromPathText(module.FullPath));
+            }
+
+            LowerAsciiInPlace(module.Name);
+            LowerAsciiInPlace(module.FullPath);
+            module.IsAgent = module.Base == g_agentModule || std::strcmp(module.Name, KNMON_AGENT_DLL_NAME) == 0;
+            module.IsSystem = IsWindowsSystemModule(module);
+            module.HasImports = ModuleHasImports(module.Base, module.SizeOfImage);
+            module.Eligible = !module.IsAgent && !module.IsSystem && module.HasImports;
+
+            if (stats != nullptr)
+            {
+                ++stats->ScannedModules;
+                if (module.Eligible)
+                {
+                    ++stats->EligibleModules;
+                }
+                else
+                {
+                    ++stats->SkippedModules;
+                }
+            }
+
+            ++count;
+        }
+    }
+    while (false);
+
+    return count;
+}
+
+HookRecord* FindHookRecordByThunkNoLock(ULONG_PTR* thunkAddress)
+{
+    HookRecord* result = nullptr;
+
+    if (thunkAddress != nullptr)
+    {
+        for (std::size_t index = 0; index < g_hookRecordCount; ++index)
+        {
+            if (g_hookRecords[index].ThunkAddress == thunkAddress)
+            {
+                result = &g_hookRecords[index];
+                break;
+            }
+        }
+    }
+
+    return result;
+}
+
 bool AppendHookRecordNoLock(
-    const char* moduleName,
+    const ModuleInfo& ownerModule,
+    const char* importModuleName,
     const char* apiName,
     ULONG_PTR* thunkAddress,
     void* originalFunction,
-    void* replacementFunction)
+    void* replacementFunction,
+    bool* duplicate)
 {
     bool appended = false;
 
     do
     {
+        if (duplicate != nullptr)
+        {
+            *duplicate = false;
+        }
+
+        if (FindHookRecordByThunkNoLock(thunkAddress) != nullptr)
+        {
+            if (duplicate != nullptr)
+            {
+                *duplicate = true;
+            }
+            break;
+        }
+
         if (g_hookRecordCount >= g_hookRecords.size())
         {
             break;
         }
 
         HookRecord& record = g_hookRecords[g_hookRecordCount];
-        record.ApiName = apiName;
-        record.ModuleName = moduleName;
+        CopyAsciiText(record.ApiName, nullptr, sizeof(record.ApiName), apiName);
+        CopyAsciiText(record.ImportModuleName, nullptr, sizeof(record.ImportModuleName), importModuleName);
+        CopyAsciiText(record.OwnerModuleName, nullptr, sizeof(record.OwnerModuleName), ownerModule.Name);
+        record.OwnerModule = ownerModule.Base;
         record.ThunkAddress = thunkAddress;
         record.OriginalFunction = originalFunction;
         record.ReplacementFunction = replacementFunction;
@@ -1189,100 +1745,271 @@ bool AppendHookRecordNoLock(
     return appended;
 }
 
-bool PatchImport(const char* moduleName, const char* functionName, void* replacement, void** original)
+HANDLE WINAPI HookedCreateFileW(LPCWSTR fileName, DWORD desiredAccess, DWORD shareMode, LPSECURITY_ATTRIBUTES securityAttributes, DWORD creationDisposition, DWORD flagsAndAttributes, HANDLE templateFile);
+HANDLE WINAPI HookedCreateFileA(LPCSTR fileName, DWORD desiredAccess, DWORD shareMode, LPSECURITY_ATTRIBUTES securityAttributes, DWORD creationDisposition, DWORD flagsAndAttributes, HANDLE templateFile);
+BOOL WINAPI HookedReadFile(HANDLE file, LPVOID buffer, DWORD bytesToRead, LPDWORD bytesRead, LPOVERLAPPED overlapped);
+BOOL WINAPI HookedWriteFile(HANDLE file, LPCVOID buffer, DWORD bytesToWrite, LPDWORD bytesWritten, LPOVERLAPPED overlapped);
+BOOL WINAPI HookedCloseHandle(HANDLE handle);
+HMODULE WINAPI HookedLoadLibraryW(LPCWSTR fileName);
+HMODULE WINAPI HookedLoadLibraryA(LPCSTR fileName);
+HMODULE WINAPI HookedLoadLibraryExW(LPCWSTR fileName, HANDLE file, DWORD flags);
+HMODULE WINAPI HookedLoadLibraryExA(LPCSTR fileName, HANDLE file, DWORD flags);
+NTSTATUS NTAPI HookedNtCreateFile(PHANDLE fileHandle, ACCESS_MASK desiredAccess, POBJECT_ATTRIBUTES objectAttributes, PIO_STATUS_BLOCK ioStatusBlock, PLARGE_INTEGER allocationSize, ULONG fileAttributes, ULONG shareAccess, ULONG createDisposition, ULONG createOptions, PVOID eaBuffer, ULONG eaLength);
+NTSTATUS NTAPI HookedLdrLoadDll(PWSTR pathToFile, ULONG flags, PUNICODE_STRING moduleFileName, PHANDLE moduleHandle);
+
+std::array<HookDefinition, 11> BuildHookDefinitions()
 {
-    bool patched = false;
+    return {
+        HookDefinition { "kernel32.dll", "CreateFileW", reinterpret_cast<void*>(HookedCreateFileW), reinterpret_cast<void**>(&g_originalCreateFileW), true, true, false, 0 },
+        HookDefinition { "kernel32.dll", "CreateFileA", reinterpret_cast<void*>(HookedCreateFileA), reinterpret_cast<void**>(&g_originalCreateFileA), true, true, false, 0 },
+        HookDefinition { "kernel32.dll", "ReadFile", reinterpret_cast<void*>(HookedReadFile), reinterpret_cast<void**>(&g_originalReadFile), true, true, false, 0 },
+        HookDefinition { "kernel32.dll", "WriteFile", reinterpret_cast<void*>(HookedWriteFile), reinterpret_cast<void**>(&g_originalWriteFile), true, true, false, 0 },
+        HookDefinition { "kernel32.dll", "CloseHandle", reinterpret_cast<void*>(HookedCloseHandle), reinterpret_cast<void**>(&g_originalCloseHandle), true, true, false, 0 },
+        HookDefinition { "ntdll.dll", "NtCreateFile", reinterpret_cast<void*>(HookedNtCreateFile), reinterpret_cast<void**>(&g_originalNtCreateFile), true, true, false, 0 },
+        HookDefinition { "kernel32.dll", "LoadLibraryW", reinterpret_cast<void*>(HookedLoadLibraryW), reinterpret_cast<void**>(&g_originalLoadLibraryW), false, true, true, 0 },
+        HookDefinition { "kernel32.dll", "LoadLibraryA", reinterpret_cast<void*>(HookedLoadLibraryA), reinterpret_cast<void**>(&g_originalLoadLibraryA), false, true, true, 0 },
+        HookDefinition { "kernel32.dll", "LoadLibraryExW", reinterpret_cast<void*>(HookedLoadLibraryExW), reinterpret_cast<void**>(&g_originalLoadLibraryExW), false, true, true, 0 },
+        HookDefinition { "kernel32.dll", "LoadLibraryExA", reinterpret_cast<void*>(HookedLoadLibraryExA), reinterpret_cast<void**>(&g_originalLoadLibraryExA), false, true, true, 0 },
+        HookDefinition { "ntdll.dll", "LdrLoadDll", reinterpret_cast<void*>(HookedLdrLoadDll), reinterpret_cast<void**>(&g_originalLdrLoadDll), false, true, true, 0 },
+    };
+}
+
+bool ImportNameMatches(std::uint8_t* base, std::uint32_t size, IMAGE_THUNK_DATA* originalThunk, const char* functionName)
+{
+    bool matches = false;
 
     do
     {
-        HMODULE mainModule = GetModuleHandleW(nullptr);
-        if (mainModule == nullptr)
+        if (base == nullptr || originalThunk == nullptr || functionName == nullptr)
         {
             break;
         }
 
-        auto* base = reinterpret_cast<std::uint8_t*>(mainModule);
-        auto* dosHeader = reinterpret_cast<IMAGE_DOS_HEADER*>(base);
-        if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+        if (IMAGE_SNAP_BY_ORDINAL(originalThunk->u1.Ordinal))
         {
             break;
         }
 
-        auto* ntHeaders = reinterpret_cast<IMAGE_NT_HEADERS*>(base + dosHeader->e_lfanew);
-        if (ntHeaders->Signature != IMAGE_NT_SIGNATURE)
+        auto* importByName = ImageRvaToPointer<IMAGE_IMPORT_BY_NAME>(
+            base,
+            size,
+            static_cast<DWORD>(originalThunk->u1.AddressOfData),
+            sizeof(WORD) + 1);
+        if (importByName == nullptr)
         {
             break;
         }
 
-        const IMAGE_DATA_DIRECTORY& importDirectory = ntHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
-        if (importDirectory.VirtualAddress == 0)
+        if (std::strcmp(reinterpret_cast<const char*>(importByName->Name), functionName) == 0)
+        {
+            matches = true;
+        }
+    }
+    while (false);
+
+    return matches;
+}
+
+void PatchImportInModule(ModuleInfo& module, HookDefinition& definition, SweepStats& stats)
+{
+    do
+    {
+        if (!module.Eligible || definition.ImportModuleName == nullptr || definition.ApiName == nullptr || definition.ReplacementFunction == nullptr)
         {
             break;
         }
 
-        auto* importDescriptor = reinterpret_cast<IMAGE_IMPORT_DESCRIPTOR*>(base + importDirectory.VirtualAddress);
+        if (definition.OriginalFunction == nullptr || *definition.OriginalFunction == nullptr)
+        {
+            break;
+        }
+
+        auto* base = reinterpret_cast<std::uint8_t*>(module.Base);
+        IMAGE_IMPORT_DESCRIPTOR* importDescriptor = nullptr;
+        if (!ReadImageImportDirectory(module.Base, module.SizeOfImage, &importDescriptor))
+        {
+            break;
+        }
+
         for (; importDescriptor->Name != 0; ++importDescriptor)
         {
-            const char* importedModuleName = reinterpret_cast<const char*>(base + importDescriptor->Name);
-            if (_stricmp(importedModuleName, moduleName) != 0)
+            const char* importedModuleName = ImageRvaToPointer<char>(base, module.SizeOfImage, importDescriptor->Name, 1);
+            if (importedModuleName == nullptr || _stricmp(importedModuleName, definition.ImportModuleName) != 0)
             {
                 continue;
             }
 
-            auto* originalThunk = reinterpret_cast<IMAGE_THUNK_DATA*>(base + importDescriptor->OriginalFirstThunk);
-            auto* firstThunk = reinterpret_cast<IMAGE_THUNK_DATA*>(base + importDescriptor->FirstThunk);
+            auto* firstThunk = ImageRvaToPointer<IMAGE_THUNK_DATA>(base, module.SizeOfImage, importDescriptor->FirstThunk);
+            if (firstThunk == nullptr)
+            {
+                continue;
+            }
 
+            auto* originalThunk = ImageRvaToPointer<IMAGE_THUNK_DATA>(base, module.SizeOfImage, importDescriptor->OriginalFirstThunk);
             if (importDescriptor->OriginalFirstThunk == 0)
             {
                 originalThunk = firstThunk;
             }
 
-            for (; originalThunk->u1.AddressOfData != 0; ++originalThunk, ++firstThunk)
+            if (originalThunk == nullptr)
             {
-                if (IMAGE_SNAP_BY_ORDINAL(originalThunk->u1.Ordinal))
+                continue;
+            }
+
+            for (
+                std::size_t thunkIndex = 0;
+                ImageRangeContains(base, module.SizeOfImage, &originalThunk[thunkIndex], sizeof(IMAGE_THUNK_DATA)) &&
+                    ImageRangeContains(base, module.SizeOfImage, &firstThunk[thunkIndex], sizeof(IMAGE_THUNK_DATA)) &&
+                    originalThunk[thunkIndex].u1.AddressOfData != 0;
+                ++thunkIndex)
+            {
+                if (!ImportNameMatches(base, module.SizeOfImage, &originalThunk[thunkIndex], definition.ApiName))
                 {
                     continue;
                 }
 
-                auto* importByName = reinterpret_cast<IMAGE_IMPORT_BY_NAME*>(base + originalThunk->u1.AddressOfData);
-                if (std::strcmp(reinterpret_cast<const char*>(importByName->Name), functionName) != 0)
+                auto* thunkAddress = reinterpret_cast<ULONG_PTR*>(&firstThunk[thunkIndex].u1.Function);
+                if (FindHookRecordByThunkNoLock(thunkAddress) != nullptr || *thunkAddress == reinterpret_cast<ULONG_PTR>(definition.ReplacementFunction))
                 {
+                    ++stats.DuplicateSlots;
                     continue;
                 }
 
+                void* originalFunction = reinterpret_cast<void*>(*thunkAddress);
                 DWORD oldProtect = 0;
-                if (!VirtualProtect(&firstThunk->u1.Function, sizeof(void*), PAGE_READWRITE, &oldProtect))
+                if (!VirtualProtect(thunkAddress, sizeof(void*), PAGE_READWRITE, &oldProtect))
                 {
+                    ++stats.FailedSlots;
                     continue;
                 }
 
-                if (original != nullptr && *original == nullptr)
-                {
-                    *original = reinterpret_cast<void*>(firstThunk->u1.Function);
-                }
-
-                void* originalFunction = reinterpret_cast<void*>(firstThunk->u1.Function);
-                firstThunk->u1.Function = reinterpret_cast<ULONG_PTR>(replacement);
-                FlushInstructionCache(GetCurrentProcess(), &firstThunk->u1.Function, sizeof(void*));
+                *thunkAddress = reinterpret_cast<ULONG_PTR>(definition.ReplacementFunction);
+                FlushInstructionCache(GetCurrentProcess(), thunkAddress, sizeof(void*));
 
                 DWORD ignored = 0;
-                VirtualProtect(&firstThunk->u1.Function, sizeof(void*), oldProtect, &ignored);
-                if (AppendHookRecordNoLock(moduleName, functionName, &firstThunk->u1.Function, originalFunction, replacement))
+                VirtualProtect(thunkAddress, sizeof(void*), oldProtect, &ignored);
+
+                bool duplicate = false;
+                if (AppendHookRecordNoLock(module, definition.ImportModuleName, definition.ApiName, thunkAddress, originalFunction, definition.ReplacementFunction, &duplicate))
                 {
-                    patched = true;
+                    ++definition.LastPatchedSlots;
+                    ++stats.PatchedSlots;
                 }
                 else
                 {
-                    firstThunk->u1.Function = reinterpret_cast<ULONG_PTR>(originalFunction);
-                    FlushInstructionCache(GetCurrentProcess(), &firstThunk->u1.Function, sizeof(void*));
-                    InterlockedIncrement(&g_failedHooks);
+                    if (VirtualProtect(thunkAddress, sizeof(void*), PAGE_READWRITE, &oldProtect))
+                    {
+                        *thunkAddress = reinterpret_cast<ULONG_PTR>(originalFunction);
+                        FlushInstructionCache(GetCurrentProcess(), thunkAddress, sizeof(void*));
+                        VirtualProtect(thunkAddress, sizeof(void*), oldProtect, &ignored);
+                    }
+
+                    if (duplicate)
+                    {
+                        ++stats.DuplicateSlots;
+                    }
+                    else
+                    {
+                        ++stats.FailedSlots;
+                        InterlockedIncrement(&g_failedHooks);
+                    }
                 }
             }
         }
     }
     while (false);
+}
 
-    return patched;
+void ResolveHookDefinitions(std::array<HookDefinition, 11>& definitions)
+{
+    for (HookDefinition& definition : definitions)
+    {
+        if (definition.OriginalFunction != nullptr && *definition.OriginalFunction == nullptr)
+        {
+            *definition.OriginalFunction = ResolveExport(definition.ImportModuleName, definition.ApiName);
+        }
+    }
+}
+
+bool AddressBelongsToLoadedModule(const void* address)
+{
+    bool loaded = false;
+    HMODULE module = nullptr;
+
+    if (address != nullptr)
+    {
+        loaded = GetModuleHandleExW(
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            reinterpret_cast<LPCWSTR>(address),
+            &module) != FALSE;
+    }
+
+    return loaded;
+}
+
+bool SweepLoadedModules(const char* reason, bool reportHookStatus, SweepStats* outStats)
+{
+    bool requiredCoverage = true;
+    SweepStats stats = {};
+    std::array<ModuleInfo, MaxModuleRecords> modules = {};
+    std::array<HookDefinition, 11> definitions = BuildHookDefinitions();
+    ResolveHookDefinitions(definitions);
+    const std::size_t moduleCount = CaptureModuleSnapshot(modules, &stats);
+
+    AcquireSRWLockExclusive(&g_hookLock);
+    for (std::size_t moduleIndex = 0; moduleIndex < moduleCount; ++moduleIndex)
+    {
+        ModuleInfo& module = modules[moduleIndex];
+        const std::uint32_t patchedBefore = stats.PatchedSlots;
+
+        for (HookDefinition& definition : definitions)
+        {
+            PatchImportInModule(module, definition, stats);
+        }
+
+        if (stats.PatchedSlots > patchedBefore)
+        {
+            ++stats.ModulesWithPatches;
+        }
+    }
+    ReleaseSRWLockExclusive(&g_hookLock);
+
+    if (reportHookStatus)
+    {
+        SendModuleInventoryStatus(stats);
+    }
+
+    SendIatSweepStatus(reason, stats);
+
+    for (HookDefinition& definition : definitions)
+    {
+        if (reportHookStatus && definition.Required && definition.LastPatchedSlots == 0)
+        {
+            requiredCoverage = false;
+            InterlockedIncrement(&g_failedHooks);
+        }
+
+        if (reportHookStatus && definition.ReportStatus)
+        {
+            if (definition.LastPatchedSlots > 0)
+            {
+                std::ostringstream message;
+                message << "Loaded-module IAT sweep patched " << definition.LastPatchedSlots << " import slot(s).";
+                SendHookStatus(definition.ImportModuleName, definition.ApiName, true, message.str());
+            }
+            else if (definition.Required)
+            {
+                SendHookStatus(definition.ImportModuleName, definition.ApiName, false, "Required IAT entry was not found in eligible loaded modules.");
+            }
+        }
+    }
+
+    if (outStats != nullptr)
+    {
+        *outStats = stats;
+    }
+
+    return requiredCoverage;
 }
 
 HookLifecycleCounts UninstallHooks()
@@ -1315,9 +2042,23 @@ HookLifecycleCounts UninstallHooks()
 
         ++counts.InstalledHooks;
 
+        if (!AddressBelongsToLoadedModule(record.ThunkAddress))
+        {
+            record.Restored = true;
+            ++counts.RestoredHooks;
+            continue;
+        }
+
         DWORD oldProtect = 0;
         if (!VirtualProtect(record.ThunkAddress, sizeof(void*), PAGE_READWRITE, &oldProtect))
         {
+            if (!AddressBelongsToLoadedModule(record.ThunkAddress))
+            {
+                record.Restored = true;
+                ++counts.RestoredHooks;
+                continue;
+            }
+
             record.Failed = true;
             ++counts.FailedHooks;
             continue;
@@ -1522,6 +2263,146 @@ BOOL WINAPI HookedCloseHandle(HANDLE handle)
     return result;
 }
 
+HMODULE WINAPI HookedLoadLibraryW(LPCWSTR fileName)
+{
+    if (g_inHook || !HooksEnabled() || g_originalLoadLibraryW == nullptr)
+    {
+        if (g_originalLoadLibraryW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalLoadLibraryW(fileName);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HMODULE result = g_originalLoadLibraryW(fileName);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitLoadLibraryWEvent(result, eventError, start, end, fileName);
+        if (result != nullptr)
+        {
+            SweepLoadedModules("dynamic_load", false, nullptr);
+        }
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HMODULE WINAPI HookedLoadLibraryA(LPCSTR fileName)
+{
+    if (g_inHook || !HooksEnabled() || g_originalLoadLibraryA == nullptr)
+    {
+        if (g_originalLoadLibraryA == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalLoadLibraryA(fileName);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HMODULE result = g_originalLoadLibraryA(fileName);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitLoadLibraryAEvent(result, eventError, start, end, fileName);
+        if (result != nullptr)
+        {
+            SweepLoadedModules("dynamic_load", false, nullptr);
+        }
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HMODULE WINAPI HookedLoadLibraryExW(LPCWSTR fileName, HANDLE file, DWORD flags)
+{
+    if (g_inHook || !HooksEnabled() || g_originalLoadLibraryExW == nullptr)
+    {
+        if (g_originalLoadLibraryExW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalLoadLibraryExW(fileName, file, flags);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HMODULE result = g_originalLoadLibraryExW(fileName, file, flags);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitLoadLibraryExWEvent(result, eventError, start, end, fileName, file, flags);
+        if (result != nullptr)
+        {
+            SweepLoadedModules("dynamic_load", false, nullptr);
+        }
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HMODULE WINAPI HookedLoadLibraryExA(LPCSTR fileName, HANDLE file, DWORD flags)
+{
+    if (g_inHook || !HooksEnabled() || g_originalLoadLibraryExA == nullptr)
+    {
+        if (g_originalLoadLibraryExA == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalLoadLibraryExA(fileName, file, flags);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HMODULE result = g_originalLoadLibraryExA(fileName, file, flags);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitLoadLibraryExAEvent(result, eventError, start, end, fileName, file, flags);
+        if (result != nullptr)
+        {
+            SweepLoadedModules("dynamic_load", false, nullptr);
+        }
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
 NTSTATUS NTAPI HookedNtCreateFile(
     PHANDLE fileHandle,
     ACCESS_MASK desiredAccess,
@@ -1598,42 +2479,41 @@ NTSTATUS NTAPI HookedNtCreateFile(
     return status;
 }
 
-bool InstallHook(const char* moduleName, const char* apiName, void* replacement, void** original)
+NTSTATUS NTAPI HookedLdrLoadDll(PWSTR pathToFile, ULONG flags, PUNICODE_STRING moduleFileName, PHANDLE moduleHandle)
 {
-    bool installed = false;
-
-    do
+    if (g_inHook || !HooksEnabled() || g_originalLdrLoadDll == nullptr)
     {
-        if (original != nullptr && *original == nullptr)
+        if (g_originalLdrLoadDll == nullptr)
         {
-            *original = ResolveExport(moduleName, apiName);
+            return static_cast<NTSTATUS>(0xC000007AL);
         }
 
-        AcquireSRWLockExclusive(&g_hookLock);
-        installed = PatchImport(moduleName, apiName, replacement, original);
-        ReleaseSRWLockExclusive(&g_hookLock);
+        return g_originalLdrLoadDll(pathToFile, flags, moduleFileName, moduleHandle);
     }
-    while (false);
 
-    if (!installed)
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    NTSTATUS status = g_originalLdrLoadDll(pathToFile, flags, moduleFileName, moduleHandle);
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = NtStatusToDosError(status);
+    if (HooksEnabled())
     {
-        InterlockedIncrement(&g_failedHooks);
+        EmitLdrLoadDllEvent(status, eventError, start, end, pathToFile, flags, moduleFileName, moduleHandle);
+        if (NT_SUCCESS(status))
+        {
+            SweepLoadedModules("dynamic_load", false, nullptr);
+        }
     }
 
-    SendHookStatus(moduleName, apiName, installed, installed ? "IAT hook installed in controlled sample target." : "IAT entry was not found in controlled sample target.");
-    return installed;
+    return status;
 }
 
 bool InstallHooks()
 {
-    bool allInstalled = true;
-
-    allInstalled = InstallHook("kernel32.dll", "CreateFileW", reinterpret_cast<void*>(HookedCreateFileW), reinterpret_cast<void**>(&g_originalCreateFileW)) && allInstalled;
-    allInstalled = InstallHook("kernel32.dll", "CreateFileA", reinterpret_cast<void*>(HookedCreateFileA), reinterpret_cast<void**>(&g_originalCreateFileA)) && allInstalled;
-    allInstalled = InstallHook("kernel32.dll", "ReadFile", reinterpret_cast<void*>(HookedReadFile), reinterpret_cast<void**>(&g_originalReadFile)) && allInstalled;
-    allInstalled = InstallHook("kernel32.dll", "WriteFile", reinterpret_cast<void*>(HookedWriteFile), reinterpret_cast<void**>(&g_originalWriteFile)) && allInstalled;
-    allInstalled = InstallHook("kernel32.dll", "CloseHandle", reinterpret_cast<void*>(HookedCloseHandle), reinterpret_cast<void**>(&g_originalCloseHandle)) && allInstalled;
-    allInstalled = InstallHook("ntdll.dll", "NtCreateFile", reinterpret_cast<void*>(HookedNtCreateFile), reinterpret_cast<void**>(&g_originalNtCreateFile)) && allInstalled;
+    const bool allInstalled = SweepLoadedModules("initial", true, nullptr);
 
     if (allInstalled)
     {
@@ -1757,6 +2637,7 @@ BOOL APIENTRY DllMain(HMODULE moduleHandle, DWORD reason, LPVOID reserved)
 
     if (reason == DLL_PROCESS_ATTACH)
     {
+        g_agentModule = moduleHandle;
         DisableThreadLibraryCalls(moduleHandle);
         HANDLE threadHandle = CreateThread(nullptr, 0, AgentWorker, nullptr, 0, nullptr);
         if (threadHandle != nullptr)

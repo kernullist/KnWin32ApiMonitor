@@ -135,6 +135,47 @@ bool RunNtCreateFileProbe(const std::wstring& path)
     return success;
 }
 
+bool RunDynamicLoadProbe()
+{
+    bool success = false;
+    HMODULE module = nullptr;
+
+    do
+    {
+        module = LoadLibraryW(L"knmon-dynamic-probe.dll");
+        if (module == nullptr)
+        {
+            LogLastError("LoadLibraryW(knmon-dynamic-probe.dll)");
+            break;
+        }
+
+        using ProbeFn = DWORD(*)();
+        auto probe = reinterpret_cast<ProbeFn>(GetProcAddress(module, "KnMonDynamicProbe"));
+        if (probe == nullptr)
+        {
+            LogLastError("GetProcAddress(KnMonDynamicProbe)");
+            break;
+        }
+
+        const DWORD probeResult = probe();
+        std::cout << "dynamic probe result=" << probeResult << "\n";
+        if (probeResult != 0)
+        {
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    if (module != nullptr)
+    {
+        FreeLibrary(module);
+    }
+
+    return success;
+}
+
 int RunFileIo(bool slow)
 {
     int exitCode = 1;
@@ -193,6 +234,11 @@ int RunFileIo(bool slow)
         fileHandle = INVALID_HANDLE_VALUE;
 
         if (!RunNtCreateFileProbe(path))
+        {
+            break;
+        }
+
+        if (!RunDynamicLoadProbe())
         {
             break;
         }

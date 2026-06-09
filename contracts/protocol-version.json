@@ -18,12 +18,20 @@
     "controlledSampleOnly": true,
     "apiEventTransport": "shared-memory",
     "controlMessageTransport": "named-pipe-json",
-    "hookedApis": ["CreateFileW", "CreateFileA", "NtCreateFile", "ReadFile", "WriteFile", "CloseHandle"],
-    "hookedModules": ["kernel32.dll", "ntdll.dll"],
-    "expectedHookCount": 6,
-    "messageTypes": ["agent_hello", "hook_installed", "hook_install_failed", "api_call", "dropped_events", "agent_shutdown"],
+    "hookedApis": ["CreateFileW", "CreateFileA", "NtCreateFile", "ReadFile", "WriteFile", "CloseHandle", "LoadLibraryW", "LoadLibraryA", "LoadLibraryExW", "LoadLibraryExA", "LdrLoadDll"],
+    "hookedModules": ["kernel32.dll", "kernelbase.dll", "ntdll.dll"],
+    "minimumRequiredHookCount": 6,
+    "messageTypes": ["agent_hello", "hook_installed", "hook_install_failed", "api_call", "dropped_events", "agent_shutdown", "module_inventory", "iat_sweep"],
     "lifecycleStates": ["starting", "running", "stopping", "disabled", "failed"],
     "shutdownFields": ["reason", "lifecycleState", "installedHooks", "restoredHooks", "failedHooks", "droppedCount"]
+  },
+  "loaderAwareCoverage": {
+    "moduleInventorySource": "PEB loader list snapshot",
+    "patchOwnerPolicy": "eligible non-agent non-system modules",
+    "providerModulesWave1": ["ntdll.dll", "kernelbase.dll", "kernel32.dll"],
+    "dynamicLoadApis": ["LoadLibraryW", "LoadLibraryA", "LoadLibraryExW", "LoadLibraryExA", "LdrLoadDll"],
+    "statusMessageTypes": ["module_inventory", "iat_sweep"],
+    "dynamicProbe": "knmon-dynamic-probe.dll"
   },
   "sharedMemoryTransport": {
     "abiVersion": 1,

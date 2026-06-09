@@ -79,6 +79,7 @@ Current live same-bitness x64/x86 sample capture covers:
 4. `ReadFile`
 5. `WriteFile`
 6. `CloseHandle`
+7. `LoadLibraryW`
 
 `NtCreateFile` is captured as a controlled `ntdll.dll` IAT hook in the repository sample target. The native event keeps `returnValue` as the NTSTATUS hex string. For compatibility with the existing trace error model, `lastErrorCode` remains `0` on NT success and a mapped Win32 error on NT failure.
 
@@ -95,6 +96,8 @@ The `NtCreateFile` event includes bounded snapshots for:
 `ObjectAttributes` decoding copies at most the bounded `UNICODE_STRING` length used by the agent and falls back to pointer evidence with `invalid_pointer`, `unreadable_memory`, or `truncated` status when needed.
 
 Current native API call records are written by the agent into a shared-memory binary ring, then normalized by the controller into the same `api_call` JSON shape outside the target process. Named-pipe JSON remains only for low-volume control and lifecycle messages.
+
+Loader-aware Wave 1 records add `LoadLibraryW` evidence and post-load File I/O evidence from `knmon-dynamic-probe.dll`. The agent emits module inventory and IAT sweep status messages through the named pipe, but API call events remain shared-memory records.
 
 ## Agent Event Contracts
 
@@ -116,6 +119,8 @@ The current message types are:
 4. `api_call`
 5. `dropped_events`
 6. `agent_shutdown`
+7. `module_inventory`
+8. `iat_sweep`
 
 `capture-result.schema.json` wraps the bounded helper result, audit events, raw agent messages, captured `api_call` events, dropped-event accounting, shared-memory transport metrics, and min/average/max hook overhead metrics.
 
@@ -142,7 +147,24 @@ Current transport metric fields are:
 5. `failedHooks`
 6. `droppedCount`
 
-For the current healthy x64 and x86 sample paths, `restoredHooks` must be greater than or equal to `installedHooks`, and `failedHooks` must be `0`.
+For the current healthy x64 and x86 sample paths, at least the six required File I/O hook groups must be installed, `restoredHooks` must equal `installedHooks`, and `failedHooks` must be `0`.
+
+`module_inventory` reports PEB loader-list scan evidence:
+
+1. `scannedModules`
+2. `eligibleModules`
+3. `skippedModules`
+
+`iat_sweep` reports startup and dynamic-load re-hook evidence:
+
+1. `reason`
+2. `scannedModules`
+3. `eligibleModules`
+4. `skippedModules`
+5. `patchedModules`
+6. `patchedSlots`
+7. `duplicateSlots`
+8. `failedSlots`
 
 The helper result and session manifest preserve architecture evidence from the selected same-bitness path. The current supported live architectures are `x64` and `x86`; cross-bitness injection is rejected before remote mutation.
 

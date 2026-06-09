@@ -12,9 +12,11 @@ Current verification gates include:
 6. `NtCreateFile` native capture smoke through `tools\native-smoke\ntcreatefile-capture-smoke.ps1`.
 7. Shared-memory transport smoke through `tools\native-smoke\shared-memory-transport-smoke.ps1`.
 8. Shared-memory backpressure smoke through `tools\native-smoke\shared-memory-backpressure-smoke.ps1`.
-9. Injection preflight negative smoke through `tools\native-smoke\injection-preflight-negative-smoke.ps1`.
-10. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
-11. Collector fixture and native smoke validation through `npm run collector:validate`.
+9. Loader-aware IAT sweep smoke through `tools\native-smoke\loader-aware-iat-sweep-smoke.ps1`.
+10. Dynamic-load re-hook smoke through `tools\native-smoke\dynamic-load-rehook-smoke.ps1`.
+11. Injection preflight negative smoke through `tools\native-smoke\injection-preflight-negative-smoke.ps1`.
+12. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
+13. Collector fixture and native smoke validation through `npm run collector:validate`.
 
 Run repeated lifecycle smoke:
 
@@ -22,7 +24,7 @@ Run repeated lifecycle smoke:
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\repeat-capture-sample.ps1 -Count 5
 ```
 
-The script verifies five consecutive controlled sample captures, the stable File I/O API set, zero dropped events, exactly one `agent_shutdown` event per run, and restored hook counts.
+The script verifies five consecutive controlled sample captures, the stable File I/O API set, dynamic loader evidence, zero dropped events, exactly one `agent_shutdown` event per run, and restored hook counts.
 
 Run `NtCreateFile` capture smoke:
 
@@ -30,7 +32,7 @@ Run `NtCreateFile` capture smoke:
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\ntcreatefile-capture-smoke.ps1
 ```
 
-The `NtCreateFile` smoke verifies the controlled `ntdll.dll` event, NTSTATUS return format, decoded sample object path evidence, shared-memory transport mode, zero dropped events, and six restored hooks.
+The `NtCreateFile` smoke verifies the controlled `ntdll.dll` event, NTSTATUS return format, decoded sample object path evidence, shared-memory transport mode, zero dropped events, and clean hook restore.
 
 Run shared-memory transport smoke:
 
@@ -38,7 +40,7 @@ Run shared-memory transport smoke:
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\shared-memory-transport-smoke.ps1
 ```
 
-The shared-memory transport smoke verifies the healthy controlled x64 capture uses `transportMode=shared-memory`, consumes all produced records, reports zero dropped transport events, preserves the six File I/O APIs, and records hook overhead metrics.
+The shared-memory transport smoke verifies the healthy controlled x64 capture uses `transportMode=shared-memory`, consumes all produced records, reports zero dropped transport events, preserves the required File I/O APIs, and records hook overhead metrics.
 
 Run shared-memory backpressure smoke:
 
@@ -47,6 +49,22 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\shared-memory-backpr
 ```
 
 The shared-memory backpressure smoke forces a tiny transport capacity, verifies capture still completes without target hang, and checks nonzero transport dropped-event accounting.
+
+Run loader-aware IAT sweep smoke:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\loader-aware-iat-sweep-smoke.ps1
+```
+
+The loader-aware smoke verifies PEB module inventory evidence, initial IAT sweep status, required File I/O API preservation, shared-memory transport mode, zero drops, and clean hook restore.
+
+Run dynamic-load re-hook smoke:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\dynamic-load-rehook-smoke.ps1
+```
+
+The dynamic-load smoke verifies `LoadLibraryW` capture for `knmon-dynamic-probe.dll`, a `dynamic_load` IAT re-sweep, new patched slots after load, and post-load File I/O evidence from the probe DLL.
 
 Run injection preflight negative smoke:
 
@@ -64,7 +82,7 @@ cmake --build build/native-win32 --config Debug
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-smoke.ps1
 ```
 
-The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the six File I/O APIs, `NtCreateFile` NTSTATUS evidence, zero dropped events, and six restored hooks.
+The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, zero dropped events, and clean hook restore.
 
 Run collector backpressure smoke:
 

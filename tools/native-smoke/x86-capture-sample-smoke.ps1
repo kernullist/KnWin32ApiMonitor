@@ -66,6 +66,23 @@ if ($ntEvents.Count -lt 1)
     throw "x86 capture did not include NtCreateFile."
 }
 
+$loaderEvents = @($result.capturedEvents | Where-Object { $_.api -eq "LoadLibraryW" })
+if ($loaderEvents.Count -lt 1)
+{
+    throw "x86 capture did not include LoadLibraryW dynamic-load evidence."
+}
+
+$dynamicSweep = @($result.agentMessages | Where-Object { $_.messageType -eq "iat_sweep" -and $_.reason -eq "dynamic_load" } | Select-Object -Last 1)
+if ($dynamicSweep.Count -ne 1)
+{
+    throw "x86 capture did not include dynamic-load re-hook sweep evidence."
+}
+
+if ($dynamicSweep[0].patchedSlots -lt 1)
+{
+    throw "x86 dynamic-load sweep did not patch any new slots."
+}
+
 $ntEvent = $ntEvents[0]
 if ($ntEvent.module -ne "ntdll.dll")
 {
@@ -89,12 +106,12 @@ if ($shutdown.Count -ne 1)
     throw "x86 capture did not receive exactly one agent_shutdown event."
 }
 
-if ($shutdown[0].installedHooks -ne 6)
+if ($shutdown[0].installedHooks -lt 6)
 {
     throw "x86 unexpected installedHooks: $($shutdown[0].installedHooks)"
 }
 
-if ($shutdown[0].restoredHooks -ne 6)
+if ($shutdown[0].restoredHooks -ne $shutdown[0].installedHooks)
 {
     throw "x86 unexpected restoredHooks: $($shutdown[0].restoredHooks)"
 }

@@ -83,7 +83,7 @@ if ($shutdown.Count -ne 1)
     throw "Capture did not receive exactly one agent_shutdown event."
 }
 
-if ($shutdown[0].installedHooks -ne 6)
+if ($shutdown[0].installedHooks -lt 6)
 {
     throw "Unexpected installedHooks: $($shutdown[0].installedHooks)"
 }

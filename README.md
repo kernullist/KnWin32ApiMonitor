@@ -49,12 +49,14 @@ Implemented now:
 21. Controlled `NtCreateFile` capture with bounded `OBJECT_ATTRIBUTES` object-name decoding.
 22. Same-bitness x64/x86 controlled injection preflight with missing binary and architecture mismatch diagnostics.
 23. Shared-memory binary API event transport with bounded ring capacity, drop-newest accounting, and hook overhead metrics.
+24. Loader-aware PEB module inventory, eligible-module IAT sweep, and dynamic-load re-hooking for the controlled sample path.
+25. Repository-owned `knmon-dynamic-probe.dll` sample that proves post-load IAT coverage.
 
 Not implemented yet:
 
 1. Arbitrary already-running process injection.
 2. Continuous streaming capture for long-running targets.
-3. Loader-aware broad system DLL coverage.
+3. Wave 2/3/4 broad system DLL coverage beyond the current loader-aware Wave 1 foundation.
 4. Breakpoint mutation.
 5. COM monitoring.
 6. Kernel-mode helper.
@@ -68,7 +70,7 @@ Current native capture is a bounded, controlled sample-target flow:
 2. The controller runs same-bitness preflight for target and agent binaries before remote mutation.
 3. The controller queues an early-bird APC to load `knmon-agent64.dll` in x64 builds or `knmon-agent32.dll` in Win32 builds.
 4. The controller creates a bounded shared-memory event transport and passes its mapping name to the agent.
-5. The agent sends low-volume `agent_hello` and lifecycle messages through the named pipe, installs main-module IAT hooks, and writes API call records into shared memory.
+5. The agent sends low-volume `agent_hello` and lifecycle messages through the named pipe, inventories loaded modules from the PEB loader list, sweeps eligible module IATs, and writes API call records into shared memory.
 6. The controller drains binary records, normalizes them outside the target process into schema-versioned `api_call` events, and returns one structured `capture-result` JSON object with transport metrics.
 7. On target shutdown, the agent disables new hook events, restores patched IAT slots where possible, and emits `agent_shutdown` with `reason`, lifecycle state, hook counts, and dropped-event count.
 8. `capture-sample --write-session <dir>` writes `manifest.json`, `audit.jsonl`, `agent-events.jsonl`, and `trace-events.jsonl`.
@@ -83,10 +85,11 @@ Verified live hook coverage:
 4. `ReadFile`
 5. `WriteFile`
 6. `CloseHandle`
+7. `LoadLibraryW`
 
-The current smoke path captures real sample-target File I/O events through `transportMode=shared-memory` and reports `droppedEvents=0` on the healthy path. `ReadFile` and `WriteFile` include bounded 16-byte buffer previews. `NtCreateFile` is captured as an explicit `ntdll.dll` event with `returnValue` carrying the NTSTATUS hex value and a bounded `ObjectAttributes` object-name decode. Backpressure can be forced with `KNMON_TRANSPORT_CAPACITY`; the current bounded ring uses drop-newest accounting and reports transport produced/consumed/dropped records plus min/average/max hook overhead estimates.
+The current smoke path captures real sample-target File I/O events plus a deterministic `LoadLibraryW("knmon-dynamic-probe.dll")` loader event through `transportMode=shared-memory` and reports `droppedEvents=0` on the healthy path. `ReadFile` and `WriteFile` include bounded 16-byte buffer previews. `NtCreateFile` is captured as an explicit `ntdll.dll` event with `returnValue` carrying the NTSTATUS hex value and a bounded `ObjectAttributes` object-name decode. Backpressure can be forced with `KNMON_TRANSPORT_CAPACITY`; the current bounded ring uses drop-newest accounting and reports transport produced/consumed/dropped records plus min/average/max hook overhead estimates.
 
-Healthy same-bitness x64 and x86 lifecycle evidence currently reports `installedHooks=6`, `restoredHooks=6`, `failedHooks=0`, and `reason=process_detach` through `agent_shutdown`.
+Healthy same-bitness x64 and x86 lifecycle evidence currently reports at least the six required File I/O hooks, `restoredHooks=installedHooks`, `failedHooks=0`, and `reason=process_detach` through `agent_shutdown`.
 
 ## Safety Boundary
 
@@ -158,6 +161,8 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\repeat-capture-sampl
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\ntcreatefile-capture-smoke.ps1
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\shared-memory-transport-smoke.ps1
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\shared-memory-backpressure-smoke.ps1
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\loader-aware-iat-sweep-smoke.ps1
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\dynamic-load-rehook-smoke.ps1
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\injection-preflight-negative-smoke.ps1
 build\native\Debug\knmon-collector.exe smoke-backpressure --capacity 4 --events 10
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\collector-backpressure-smoke.ps1
@@ -173,9 +178,9 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-s
 
 `launch-sample` creates `knmon-sample-fileio.exe` suspended, queues an early-bird APC to load the same-bitness agent DLL, resumes the primary thread, and waits for an agent HELLO handshake.
 
-`capture-sample` uses the same controlled launch path, keeps the named pipe open for low-volume control/lifecycle messages, installs same-bitness IAT hooks for the stable File I/O set, drains API calls from shared memory, and returns schema-versioned `api_call` events plus dropped-event accounting.
+`capture-sample` uses the same controlled launch path, keeps the named pipe open for low-volume control/lifecycle messages, inventories loaded modules, installs same-bitness IAT hooks for the stable File I/O and loader-aware Wave 1 set, drains API calls from shared memory, and returns schema-versioned `api_call` events plus dropped-event accounting.
 
-The repeated smoke script verifies five consecutive controlled x64 captures, the stable File I/O API set, zero dropped events, and hook restore counts. The `NtCreateFile` smoke verifies the `ntdll.dll` module, NTSTATUS return format, decoded sample object path, shared-memory transport mode, and six restored hooks. The shared-memory transport smoke verifies healthy x64 transport metrics and hook overhead. The shared-memory backpressure smoke forces a tiny ring capacity and verifies non-blocking dropped-event accounting. The x86 smoke verifies the same API set, shared-memory transport, and hook lifecycle from a Win32 helper/target/agent build. The preflight negative smoke verifies missing target, missing agent, and available architecture mismatch failures before remote mutation.
+The repeated smoke script verifies five consecutive controlled x64 captures, the stable File I/O API set, zero dropped events, and hook restore counts. The `NtCreateFile` smoke verifies the `ntdll.dll` module, NTSTATUS return format, decoded sample object path, shared-memory transport mode, and clean hook restore. The shared-memory transport smoke verifies healthy x64 transport metrics and hook overhead. The shared-memory backpressure smoke forces a tiny ring capacity and verifies non-blocking dropped-event accounting. The loader-aware smokes verify PEB module inventory, eligible-module IAT sweep evidence, `LoadLibraryW` capture, dynamic-load re-hooking, and post-load `knmon-dynamic-probe.dll` API evidence. The x86 smoke verifies the same API set, loader evidence, shared-memory transport, and hook lifecycle from a Win32 helper/target/agent build. The preflight negative smoke verifies missing target, missing agent, and available architecture mismatch failures before remote mutation.
 
 `capture-sample --write-session` persists the bounded capture into a replayable session directory. Session validation checks manifest architecture, HELLO architecture/version evidence, dropped-event accounting, shutdown hook restore counts, and trace rows before replay returns data from disk without relaunching the target.
 

@@ -21,7 +21,9 @@
         "hook_install_failed",
         "api_call",
         "dropped_events",
-        "agent_shutdown"
+        "agent_shutdown",
+        "module_inventory",
+        "iat_sweep"
       ]
     },
     "operationId": { "type": "string" },
@@ -58,6 +60,13 @@
     "installedHooks": { "type": "integer", "minimum": 0 },
     "restoredHooks": { "type": "integer", "minimum": 0 },
     "failedHooks": { "type": "integer", "minimum": 0 },
+    "scannedModules": { "type": "integer", "minimum": 0 },
+    "eligibleModules": { "type": "integer", "minimum": 0 },
+    "skippedModules": { "type": "integer", "minimum": 0 },
+    "patchedModules": { "type": "integer", "minimum": 0 },
+    "patchedSlots": { "type": "integer", "minimum": 0 },
+    "duplicateSlots": { "type": "integer", "minimum": 0 },
+    "failedSlots": { "type": "integer", "minimum": 0 },
     "message": { "type": "string" }
   },
   "allOf": [

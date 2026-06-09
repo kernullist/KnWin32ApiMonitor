@@ -89,3 +89,11 @@ target_compile_definitions(knmon-sample-fileio PRIVATE
     WIN32_LEAN_AND_MEAN
     NOMINMAX
 )
+
+add_library(knmon-dynamic-probe SHARED
+    ../samples/targets/dynamic-probe/src/main.cpp
+)
+target_compile_definitions(knmon-dynamic-probe PRIVATE
+    WIN32_LEAN_AND_MEAN
+    NOMINMAX
+)

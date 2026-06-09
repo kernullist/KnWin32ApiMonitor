@@ -780,6 +780,21 @@ std::string TransportApiName(std::uint16_t apiId)
     case KnMonTransportApiId::CloseHandle:
         result = "CloseHandle";
         break;
+    case KnMonTransportApiId::LoadLibraryW:
+        result = "LoadLibraryW";
+        break;
+    case KnMonTransportApiId::LoadLibraryA:
+        result = "LoadLibraryA";
+        break;
+    case KnMonTransportApiId::LoadLibraryExW:
+        result = "LoadLibraryExW";
+        break;
+    case KnMonTransportApiId::LoadLibraryExA:
+        result = "LoadLibraryExA";
+        break;
+    case KnMonTransportApiId::LdrLoadDll:
+        result = "LdrLoadDll";
+        break;
     default:
         break;
     }
@@ -798,6 +813,9 @@ std::string TransportModuleName(std::uint16_t moduleId)
         break;
     case KnMonTransportModuleId::Ntdll:
         result = "ntdll.dll";
+        break;
+    case KnMonTransportModuleId::KernelBase:
+        result = "kernelbase.dll";
         break;
     default:
         break;
@@ -867,7 +885,8 @@ std::string ApiCallPayload(
     const KnMonTransportRecord& record,
     const std::string& returnValue,
     const std::string& argumentsJson,
-    const std::string& bufferPreview)
+    const std::string& bufferPreview,
+    const std::string& categoryTag = "file")
 {
     const std::string apiName = TransportApiName(record.ApiId);
     const std::string moduleName = TransportModuleName(record.ModuleId);
@@ -889,7 +908,7 @@ std::string ApiCallPayload(
     stream << "\"lastErrorMessage\":" << Q(record.LastErrorCode == 0 ? "success" : FormatWindowsError(record.LastErrorCode)) << ",";
     stream << "\"durationUs\":" << record.DurationUs << ",";
     stream << "\"arguments\":[" << argumentsJson << "],";
-    stream << "\"tags\":[\"native-capture\",\"file\",\"hook\",\"shared-memory\"],";
+    stream << "\"tags\":[\"native-capture\"," << Q(categoryTag) << ",\"hook\",\"shared-memory\"],";
     stream << "\"stack\":[" << Q(agentName + "!IatHook") << "," << Q(moduleName + "!" + apiName) << "],";
     stream << "\"bufferPreview\":" << Q(bufferPreview);
     stream << "}";
@@ -950,6 +969,33 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJson(9, "PVOID", "EaBuffer", "in", HexPointerValue(record.Values64[5], result.Architecture), HexPointerValue(record.Values64[5], result.Architecture), HexPointerValue(record.Values64[5], result.Architecture)) << ",";
         args << ArgumentJson(10, "ULONG", "EaLength", "in", std::to_string(record.Values32[5]), std::to_string(record.Values32[5]), std::to_string(record.Values32[5]));
         payload = ApiCallPayload(result, record, HexNtStatusValue(record.ReturnCode), args.str(), "");
+        break;
+    case KnMonTransportApiId::LoadLibraryW:
+        args << ArgumentJson(0, "LPCWSTR", "lpLibFileName", "in", text0, text0, text0);
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "", "loader");
+        break;
+    case KnMonTransportApiId::LoadLibraryA:
+        args << ArgumentJson(0, "LPCSTR", "lpLibFileName", "in", text0, text0, text0);
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "", "loader");
+        break;
+    case KnMonTransportApiId::LoadLibraryExW:
+        args << ArgumentJson(0, "LPCWSTR", "lpLibFileName", "in", text0, text0, text0) << ",";
+        args << ArgumentJson(1, "HANDLE", "hFile", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture)) << ",";
+        args << ArgumentJson(2, "DWORD", "dwFlags", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]));
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "", "loader");
+        break;
+    case KnMonTransportApiId::LoadLibraryExA:
+        args << ArgumentJson(0, "LPCSTR", "lpLibFileName", "in", text0, text0, text0) << ",";
+        args << ArgumentJson(1, "HANDLE", "hFile", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture)) << ",";
+        args << ArgumentJson(2, "DWORD", "dwFlags", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]));
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "", "loader");
+        break;
+    case KnMonTransportApiId::LdrLoadDll:
+        args << ArgumentJson(0, "PWSTR", "PathToFile", "in", text0, text0, text0) << ",";
+        args << ArgumentJson(1, "ULONG", "Flags", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0])) << ",";
+        args << ArgumentJson(2, "PUNICODE_STRING", "ModuleFileName", "in", text1, text1, text1, DecodeStatusName(record.Values32[1])) << ",";
+        args << ArgumentJson(3, "PHANDLE", "ModuleHandle", "out", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture));
+        payload = ApiCallPayload(result, record, HexNtStatusValue(record.ReturnCode), args.str(), "", "loader");
         break;
     default:
         break;

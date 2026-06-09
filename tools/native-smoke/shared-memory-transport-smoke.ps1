@@ -82,7 +82,7 @@ if ($shutdown.Count -ne 1)
     throw "Shared-memory capture did not receive exactly one agent_shutdown event."
 }
 
-if ($shutdown[0].installedHooks -ne 6 -or $shutdown[0].restoredHooks -ne 6 -or $shutdown[0].failedHooks -ne 0)
+if ($shutdown[0].installedHooks -lt 6 -or $shutdown[0].restoredHooks -ne $shutdown[0].installedHooks -or $shutdown[0].failedHooks -ne 0)
 {
     throw "Unexpected hook lifecycle counts: installed=$($shutdown[0].installedHooks) restored=$($shutdown[0].restoredHooks) failed=$($shutdown[0].failedHooks)"
 }
