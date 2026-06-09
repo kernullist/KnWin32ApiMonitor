@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "0.1.0",
+  "metadataType": "id_assignments",
+  "modules": [
+    { "id": 1, "name": "kernel32.dll", "symbol": "Kernel32" }
+  ],
+  "apis": [
+    { "id": 1, "module": "kernel32.dll", "name": "CreateFileW", "symbol": "CreateFileW" },
+    { "id": 1, "module": "kernel32.dll", "name": "CreateFileA", "symbol": "CreateFileA" }
+  ]
+}

@@ -21,7 +21,8 @@ flowchart LR
     SAMPLE["knmon-sample-fileio<br/>controlled target"]
     AGENT["knmon-agent32/64<br/>HELLO + IAT hooks + shutdown"]
     SESSION["captures/<br/>manifest + JSONL"]
-    DEF["definitions<br/>API decode metadata"]
+    DEF["definitions<br/>API decode metadata + ID metadata"]
+    GEN["generated<br/>definition ID artifacts"]
     CONTRACT["contracts<br/>JSON schemas"]
 
     UI --> TAURI
@@ -34,6 +35,8 @@ flowchart LR
     CORE --> COL
     HELPER --> SESSION
     SESSION --> HELPER
+    DEF --> GEN
+    GEN --> CORE
     DEF --> UI
     CONTRACT --> UI
     CONTRACT --> CORE
@@ -267,24 +270,54 @@ Location: `contracts`
 Current contract artifacts:
 
 1. `protocol-version.json`
-2. `event.schema.json`
-3. `argument.schema.json`
-4. `memory-snapshot.schema.json`
-5. `target-process.schema.json`
-6. `capture-session-state.schema.json`
-7. `launch-request.schema.json`
-8. `launch-result.schema.json`
-9. `agent-handshake.schema.json`
-10. `audit-event.schema.json`
-11. `agent-event.schema.json`
-12. `hook-status.schema.json`
-13. `capture-result.schema.json`
-14. `session-info.schema.json`
-15. `session-manifest.schema.json`
-16. `session-replay-result.schema.json`
-17. `collector-stats.schema.json`
+2. `api-definition.schema.json`
+3. `definition-metadata.schema.json`
+4. `event.schema.json`
+5. `argument.schema.json`
+6. `memory-snapshot.schema.json`
+7. `target-process.schema.json`
+8. `capture-session-state.schema.json`
+9. `launch-request.schema.json`
+10. `launch-result.schema.json`
+11. `agent-handshake.schema.json`
+12. `audit-event.schema.json`
+13. `agent-event.schema.json`
+14. `hook-status.schema.json`
+15. `capture-result.schema.json`
+16. `session-info.schema.json`
+17. `session-manifest.schema.json`
+18. `session-replay-result.schema.json`
+19. `collector-stats.schema.json`
 
 The TypeScript event model and C++ `Protocol.h` are aligned around these Phase 1 fields.
+
+## Definition System
+
+Locations:
+
+1. `definitions/win32`
+2. `definitions/metadata`
+3. `generated`
+4. `tools/def-validator`
+5. `tools/rohitab-importer`
+
+Definition System V1 keeps decode metadata outside the target process. API definition JSON files are validated by `contracts/api-definition.schema.json`, while decode aliases, enum sets, flag sets, and stable ID assignments are validated by `contracts/definition-metadata.schema.json` plus semantic checks.
+
+Current metadata registries:
+
+1. `definitions/metadata/decode-aliases.json`
+2. `definitions/metadata/enums.json`
+3. `definitions/metadata/flags.json`
+4. `definitions/metadata/id-assignments.json`
+
+Generated ID artifacts:
+
+1. `generated/definition-ids.json`
+2. `native/knmon-common/include/knmon/common/GeneratedApiIds.h`
+
+`Protocol.h` includes `GeneratedApiIds.h`, so the current compact shared-memory transport API and module IDs are generated from the stable assignment metadata. The generated values preserve the existing File I/O ids `1` through `6`, loader ids `7` through `11`, and Wave 1 module ids for `kernel32.dll`, `ntdll.dll`, and `kernelbase.dll`.
+
+The injected agent does not parse JSON, XML, schemas, or metadata registries. Generated IDs are compile-time constants; schema validation, Rohitab XML import, coverage reporting, enum/flag validation, decode alias validation, and length-expression validation run only in repository tooling.
 
 ## Session And Export
 

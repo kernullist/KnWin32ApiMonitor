@@ -1,0 +1,11 @@
+<api-monitor>
+  <module name="KERNEL32.dll">
+    <api name="GetTempPathW" returnType="DWORD" callingConvention="stdcall" errorSource="GetLastError" family="file-io" category="path_query">
+      <param name="nBufferLength" type="DWORD" direction="in" />
+      <param name="lpBuffer" type="LPWSTR" direction="out" />
+    </api>
+    <api name="FixtureUnresolved" returnType="BOOL" callingConvention="stdcall" errorSource="GetLastError">
+      <param name="Context" type="PVOID" direction="in" />
+    </api>
+  </module>
+</api-monitor>

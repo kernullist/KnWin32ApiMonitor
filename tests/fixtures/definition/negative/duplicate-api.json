@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "fixture-negative",
+  "apis": [
+    {
+      "module": "KERNEL32.dll",
+      "name": "DuplicateFixture",
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "parameters": [
+        { "name": "Value", "type": "DWORD", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "DuplicateFixture",
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "parameters": [
+        { "name": "Value", "type": "DWORD", "direction": "in", "decode": "byte_count" }
+      ]
+    }
+  ]
+}

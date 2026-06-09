@@ -16,6 +16,7 @@ This repository is bootstrapping a new API Monitor inspired by Rohitab API Monit
 - Deterministic x64/x86 agent lifecycle telemetry with hook restore evidence on shutdown.
 - Same-bitness injection preflight for target/agent architecture and missing binary failures.
 - Shared-memory binary API event transport for the controlled sample capture hot path.
+- Definition System V1 with JSON Schema validation, decode metadata registries, deterministic API/module id generation, Rohitab XML importer fixtures, and coverage reporting.
 - Durable helper-written sample sessions with manifest, audit, agent-event, and trace-event JSONL files.
 - Session validation and replay without relaunching or reinjecting the sample target.
 - Synthetic collector intake with deterministic bounded queue backpressure validation.
@@ -51,6 +52,7 @@ Implemented now:
 23. Shared-memory binary API event transport with bounded ring capacity, drop-newest accounting, and hook overhead metrics.
 24. Loader-aware PEB module inventory, eligible-module IAT sweep, and dynamic-load re-hooking for the controlled sample path.
 25. Repository-owned `knmon-dynamic-probe.dll` sample that proves post-load IAT coverage.
+26. Definition System V1 schema validation, fixtures, decode alias metadata, enum/flag metadata, stable generated transport IDs, Rohitab XML importer prototype, and coverage report command.
 
 Not implemented yet:
 
@@ -189,8 +191,17 @@ The repeated smoke script verifies five consecutive controlled x64 captures, the
 Validate API definitions:
 
 ```powershell
+npm run defs:generate
 npm run defs:validate
+npm run defs:coverage
 ```
+
+`defs:generate` rewrites deterministic definition ID artifacts from `definitions/metadata/id-assignments.json`:
+
+1. `generated/definition-ids.json`
+2. `native/knmon-common/include/knmon/common/GeneratedApiIds.h`
+
+`defs:validate` runs JSON Schema validation for committed definition JSON files, semantic checks for decode aliases, enum/flag references, length expressions, duplicate APIs, stable ID assignments, definition fixtures, the Rohitab importer fixture, and a coverage-report bucket check. `defs:coverage` prints a deterministic Markdown report that separates `definition_only`, `hooked`, and `smoke_verified` API coverage.
 
 Validate session fixtures:
 
@@ -217,10 +228,11 @@ apps/knmon-ui/          Tauri + React workstation UI
 crates/knmon-tauri/     Rust command layer skeleton
 native/                 C++20 native controller, collector, and future agents
 contracts/              Versioned event/process/session JSON contracts
-definitions/            API definition documents
+definitions/            API definition documents and decode/id metadata
+generated/              Deterministic generated definition artifacts
 docs/                   Product and architecture documentation
 samples/                Future sample targets and sessions
-tools/                  Validators and future CLI tools
+tools/                  Validators, definition generators, importer prototype, and future CLI tools
 tests/                  Future integration and definition tests
 ```
 

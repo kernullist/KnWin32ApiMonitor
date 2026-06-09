@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "fixture",
+  "description": "Positive definition validator fixture.",
+  "apis": [
+    {
+      "module": "KERNEL32.dll",
+      "name": "FixtureScalar",
+      "family": "fixture",
+      "category": "scalar",
+      "risk": "low",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "parameters": [
+        { "name": "Value", "type": "DWORD", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "FixtureString",
+      "family": "fixture",
+      "category": "string",
+      "risk": "low",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "parameters": [
+        { "name": "Text", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string", "maxBytes": 128 }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "FixtureBufferLengthFrom",
+      "family": "fixture",
+      "category": "buffer",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "parameters": [
+        { "name": "Buffer", "type": "PVOID", "direction": "in", "decode": "buffer", "lengthFrom": "BufferLength", "maxBytes": 4096 },
+        { "name": "BufferLength", "type": "DWORD", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "FixtureBufferExpression",
+      "family": "fixture",
+      "category": "buffer",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "parameters": [
+        { "name": "Buffer", "type": "PVOID", "direction": "in", "decode": "buffer", "lengthExpression": "min(ElementCount * ElementSize, 4096)", "maxBytes": 4096 },
+        { "name": "ElementCount", "type": "DWORD", "direction": "in", "decode": "byte_count" },
+        { "name": "ElementSize", "type": "DWORD", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "FixtureEnum",
+      "family": "fixture",
+      "category": "enum",
+      "risk": "low",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "parameters": [
+        { "name": "Disposition", "type": "DWORD", "direction": "in", "decode": "file_creation_disposition", "enum": "file_creation_disposition" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "FixtureFlags",
+      "family": "fixture",
+      "category": "flags",
+      "risk": "low",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "parameters": [
+        { "name": "Access", "type": "DWORD", "direction": "in", "decode": "file_access_mask", "flags": "file_access_mask" }
+      ]
+    },
+    {
+      "module": "NTDLL.dll",
+      "name": "FixtureNtStatus",
+      "family": "fixture",
+      "category": "status",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "callingConvention": "ntapi",
+      "returnType": "NTSTATUS",
+      "errorSource": "return_ntstatus",
+      "parameters": [
+        { "name": "Handle", "type": "PHANDLE", "direction": "out", "decode": "handle_pointer", "captureTiming": "post" }
+      ]
+    }
+  ]
+}

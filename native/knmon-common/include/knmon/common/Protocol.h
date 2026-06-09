@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include <knmon/common/GeneratedApiIds.h>
+
 namespace knmon
 {
 inline constexpr std::uint16_t KnMonProtocolMajor = 0;
@@ -64,30 +66,6 @@ enum class KnMonTransportEventKind : std::uint16_t
 {
     Unknown = 0,
     ApiCall = 1,
-};
-
-enum class KnMonTransportApiId : std::uint16_t
-{
-    Unknown = 0,
-    CreateFileW = 1,
-    CreateFileA = 2,
-    NtCreateFile = 3,
-    ReadFile = 4,
-    WriteFile = 5,
-    CloseHandle = 6,
-    LoadLibraryW = 7,
-    LoadLibraryA = 8,
-    LoadLibraryExW = 9,
-    LoadLibraryExA = 10,
-    LdrLoadDll = 11,
-};
-
-enum class KnMonTransportModuleId : std::uint16_t
-{
-    Unknown = 0,
-    Kernel32 = 1,
-    Ntdll = 2,
-    KernelBase = 3,
 };
 
 inline constexpr std::uint32_t KnMonTransportMagic = 0x4d54534b;

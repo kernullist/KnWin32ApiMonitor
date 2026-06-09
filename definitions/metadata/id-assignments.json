@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "0.1.0",
+  "metadataType": "id_assignments",
+  "modules": [
+    { "id": 1, "name": "kernel32.dll", "symbol": "Kernel32" },
+    { "id": 2, "name": "ntdll.dll", "symbol": "Ntdll" },
+    { "id": 3, "name": "kernelbase.dll", "symbol": "KernelBase" }
+  ],
+  "apis": [
+    { "id": 1, "module": "kernel32.dll", "name": "CreateFileW", "symbol": "CreateFileW" },
+    { "id": 2, "module": "kernel32.dll", "name": "CreateFileA", "symbol": "CreateFileA" },
+    { "id": 3, "module": "ntdll.dll", "name": "NtCreateFile", "symbol": "NtCreateFile" },
+    { "id": 4, "module": "kernel32.dll", "name": "ReadFile", "symbol": "ReadFile" },
+    { "id": 5, "module": "kernel32.dll", "name": "WriteFile", "symbol": "WriteFile" },
+    { "id": 6, "module": "kernel32.dll", "name": "CloseHandle", "symbol": "CloseHandle" },
+    { "id": 7, "module": "kernel32.dll", "name": "LoadLibraryW", "symbol": "LoadLibraryW" },
+    { "id": 8, "module": "kernel32.dll", "name": "LoadLibraryA", "symbol": "LoadLibraryA" },
+    { "id": 9, "module": "kernel32.dll", "name": "LoadLibraryExW", "symbol": "LoadLibraryExW" },
+    { "id": 10, "module": "kernel32.dll", "name": "LoadLibraryExA", "symbol": "LoadLibraryExA" },
+    { "id": 11, "module": "ntdll.dll", "name": "LdrLoadDll", "symbol": "LdrLoadDll" },
+    { "id": 12, "module": "kernel32.dll", "name": "GetProcAddress", "symbol": "GetProcAddress" },
+    { "id": 13, "module": "ntdll.dll", "name": "LdrGetProcedureAddress", "symbol": "LdrGetProcedureAddress" }
+  ]
+}

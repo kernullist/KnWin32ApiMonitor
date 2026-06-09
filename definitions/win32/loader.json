@@ -1,0 +1,104 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "loader",
+  "description": "Loader APIs used by the Phase 9 dynamic-load IAT re-sweep path.",
+  "apis": [
+    {
+      "module": "KERNEL32.dll",
+      "name": "LoadLibraryW",
+      "family": "loader",
+      "category": "module_load",
+      "risk": "high",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HMODULE",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "lpLibFileName", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string", "maxBytes": 512 }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "LoadLibraryA",
+      "family": "loader",
+      "category": "module_load",
+      "risk": "high",
+      "hookPolicy": "iat",
+      "coverageStatus": "hooked",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HMODULE",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "lpLibFileName", "type": "LPCSTR", "direction": "in", "decode": "ansi_string", "maxBytes": 512 }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "LoadLibraryExW",
+      "family": "loader",
+      "category": "module_load",
+      "risk": "high",
+      "hookPolicy": "iat",
+      "coverageStatus": "hooked",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HMODULE",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "lpLibFileName", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string", "maxBytes": 512 },
+        { "name": "hFile", "type": "HANDLE", "direction": "in", "decode": "handle", "nullable": true },
+        { "name": "dwFlags", "type": "DWORD", "direction": "in", "decode": "load_library_flags", "flags": "load_library_flags" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "LoadLibraryExA",
+      "family": "loader",
+      "category": "module_load",
+      "risk": "high",
+      "hookPolicy": "iat",
+      "coverageStatus": "hooked",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HMODULE",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "lpLibFileName", "type": "LPCSTR", "direction": "in", "decode": "ansi_string", "maxBytes": 512 },
+        { "name": "hFile", "type": "HANDLE", "direction": "in", "decode": "handle", "nullable": true },
+        { "name": "dwFlags", "type": "DWORD", "direction": "in", "decode": "load_library_flags", "flags": "load_library_flags" }
+      ]
+    },
+    {
+      "module": "NTDLL.dll",
+      "name": "LdrLoadDll",
+      "family": "loader",
+      "category": "module_load_nt",
+      "risk": "high",
+      "hookPolicy": "iat",
+      "coverageStatus": "hooked",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "ntapi",
+      "returnType": "NTSTATUS",
+      "errorSource": "return_ntstatus",
+      "success": { "ntSuccess": true },
+      "failure": { "ntSuccess": false },
+      "parameters": [
+        { "name": "PathToFile", "type": "PWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "Flags", "type": "ULONG", "direction": "in", "decode": "load_library_flags", "flags": "load_library_flags" },
+        { "name": "ModuleFileName", "type": "PUNICODE_STRING", "direction": "in", "decode": "unicode_string", "maxBytes": 512 },
+        { "name": "ModuleHandle", "type": "PHANDLE", "direction": "out", "decode": "module_handle_pointer", "captureTiming": "post" }
+      ]
+    }
+  ]
+}

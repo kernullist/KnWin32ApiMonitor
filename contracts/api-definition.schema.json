@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://knmon.local/contracts/api-definition.schema.json",
+  "title": "KN Win32 API Monitor API Definition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "module", "apis"],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "module": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "apis": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/api"
+      }
+    }
+  },
+  "$defs": {
+    "api": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module", "name", "callingConvention", "returnType", "errorSource", "parameters"],
+      "properties": {
+        "apiId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "module": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+\\.dll$"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "ordinal": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "family": {
+          "type": "string",
+          "minLength": 1
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1
+        },
+        "risk": {
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "minWindowsVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "architectures": {
+          "type": "array",
+          "items": {
+            "enum": ["x86", "x64", "arm64"]
+          },
+          "uniqueItems": true
+        },
+        "hookPolicy": {
+          "enum": ["iat", "inline_review_required", "definition_only", "unsupported", "deferred"]
+        },
+        "coverageStatus": {
+          "enum": ["defined", "id_generated", "hooked", "smoke_verified", "definition_only", "unsupported"]
+        },
+        "callingConvention": {
+          "enum": ["stdcall", "ntapi", "cdecl", "fastcall", "thiscall", "winapi"]
+        },
+        "returnType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "errorSource": {
+          "enum": ["GetLastError", "return_ntstatus", "HRESULT", "none"]
+        },
+        "success": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "number", "boolean"]
+          }
+        },
+        "failure": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "number", "boolean"]
+          }
+        },
+        "parameters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/parameter"
+          }
+        }
+      }
+    },
+    "parameter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "direction", "decode"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "direction": {
+          "enum": ["in", "out", "inout", "return"]
+        },
+        "decode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lengthFrom": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "lengthExpression": {
+          "type": "string",
+          "minLength": 1
+        },
+        "enum": {
+          "type": "string",
+          "minLength": 1
+        },
+        "flags": {
+          "type": "string",
+          "minLength": 1
+        },
+        "maxBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "nullable": {
+          "type": "boolean"
+        },
+        "captureTiming": {
+          "enum": ["pre", "post", "pre_post"]
+        }
+      }
+    }
+  }
+}

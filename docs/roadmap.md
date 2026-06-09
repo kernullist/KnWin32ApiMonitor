@@ -407,10 +407,12 @@ Current verified behavior:
 Next implementation focus:
 
 1. Add explicit resolver monitoring for `GetProcAddress` and `LdrGetProcedureAddress`.
-2. Add module/API id generation from definitions instead of hand-maintained transport ids.
-3. Broaden Wave 2 system DLL API definitions only after transport and hook-overhead gates remain green.
+2. Broaden Wave 2 system DLL API definitions only after generated IDs, definition validation, transport, and hook-overhead gates remain green.
+3. Keep generated ID artifacts as the gate before any new transport ABI expansion.
 
 ## Phase 10: Definition System V1
+
+Status: implemented foundation for validated metadata, generated IDs, importer fixtures, and coverage reporting.
 
 Goal:
 
@@ -426,6 +428,28 @@ Deliverables:
 6. Module/API id generation for compact transport.
 7. Rohitab XML importer prototype.
 8. Coverage reports by DLL, API family, argument decode quality, and risk level.
+
+Current verified behavior:
+
+1. API definition JSON files are validated by `contracts/api-definition.schema.json`.
+2. Definition metadata JSON files are validated by `contracts/definition-metadata.schema.json`.
+3. `definitions/metadata/decode-aliases.json` centralizes decode alias behavior and target-memory preview guidance.
+4. `definitions/metadata/enums.json` and `definitions/metadata/flags.json` provide File I/O and loader enum/flag metadata.
+5. `definitions/metadata/id-assignments.json` preserves File I/O API ids `1` through `6`, loader API ids `7` through `11`, and Wave 1 module ids.
+6. `npm run defs:generate` writes deterministic ID artifacts:
+   - `generated/definition-ids.json`
+   - `native/knmon-common/include/knmon/common/GeneratedApiIds.h`
+7. `Protocol.h` consumes the generated native ID header.
+8. Positive and negative definition fixtures prove schema and semantic validation paths.
+9. Restricted buffer length expression validation rejects unsupported tokens and unknown parameter identifiers without arbitrary code execution.
+10. The Rohitab XML importer prototype converts a small local XML fixture into deterministic draft definition JSON and marks unknown decodes as `unresolved`.
+11. `npm run defs:coverage` reports by DLL, family, risk, hook policy, coverage status, and decode quality.
+
+Next implementation focus:
+
+1. Design and implement resolver monitoring for the existing definition-only `GetProcAddress` and `LdrGetProcedureAddress` metadata.
+2. Add Wave 2 definition-only metadata before any Wave 2 hook enablement.
+3. Start generated decoder tables for controller-side argument rendering after coverage reports remain stable.
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 

@@ -14,12 +14,17 @@
     "tauri:build": "npm --workspace apps/knmon-ui run tauri:build",
     "native:configure": "cmake -S native -B build/native",
     "native:build": "cmake --build build/native --config Debug",
-    "defs:validate": "node tools/def-validator/validate-definitions.mjs",
+    "defs:generate": "node tools/def-validator/generate-definition-ids.mjs --write",
+    "defs:coverage": "node tools/def-validator/report-definition-coverage.mjs",
+    "defs:validate": "node tools/def-validator/validate-definitions.mjs && node tools/rohitab-importer/test-importer.mjs && node tools/def-validator/report-definition-coverage.mjs --check",
     "sessions:validate": "node tools/session-validator/validate-session-fixtures.mjs",
     "collector:validate": "node tools/collector-validator/validate-collector-fixtures.mjs",
     "verify": "npm run build && npm run defs:validate && npm run sessions:validate && npm run collector:validate"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0"
   }
 }

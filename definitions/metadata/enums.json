@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "0.1.0",
+  "metadataType": "enums",
+  "enums": [
+    {
+      "name": "file_creation_disposition",
+      "values": [
+        { "name": "CREATE_NEW", "value": "0x00000001" },
+        { "name": "CREATE_ALWAYS", "value": "0x00000002" },
+        { "name": "OPEN_EXISTING", "value": "0x00000003" },
+        { "name": "OPEN_ALWAYS", "value": "0x00000004" },
+        { "name": "TRUNCATE_EXISTING", "value": "0x00000005" }
+      ]
+    },
+    {
+      "name": "nt_file_disposition",
+      "values": [
+        { "name": "FILE_SUPERSEDE", "value": "0x00000000" },
+        { "name": "FILE_OPEN", "value": "0x00000001" },
+        { "name": "FILE_CREATE", "value": "0x00000002" },
+        { "name": "FILE_OPEN_IF", "value": "0x00000003" },
+        { "name": "FILE_OVERWRITE", "value": "0x00000004" },
+        { "name": "FILE_OVERWRITE_IF", "value": "0x00000005" }
+      ]
+    }
+  ]
+}

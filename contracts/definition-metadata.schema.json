@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://knmon.local/contracts/definition-metadata.schema.json",
+  "title": "KN Win32 API Monitor Definition Metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "metadataType"],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "metadataType": {
+      "enum": ["decode_aliases", "enums", "flags", "id_assignments"]
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/decodeAlias"
+      }
+    },
+    "enums": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/valueSet"
+      }
+    },
+    "flags": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/valueSet"
+      }
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/moduleId"
+      }
+    },
+    "apis": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/apiId"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "metadataType": {
+            "const": "decode_aliases"
+          }
+        }
+      },
+      "then": {
+        "required": ["aliases"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "metadataType": {
+            "const": "enums"
+          }
+        }
+      },
+      "then": {
+        "required": ["enums"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "metadataType": {
+            "const": "flags"
+          }
+        }
+      },
+      "then": {
+        "required": ["flags"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "metadataType": {
+            "const": "id_assignments"
+          }
+        }
+      },
+      "then": {
+        "required": ["modules", "apis"]
+      }
+    }
+  ],
+  "$defs": {
+    "decodeAlias": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "kind", "preview", "readsTargetMemory", "maxPreviewBytes"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "kind": {
+          "enum": ["raw", "string", "buffer", "handle", "pointer", "enum", "flags", "object", "count", "status", "unknown"]
+        },
+        "preview": {
+          "type": "string",
+          "minLength": 1
+        },
+        "readsTargetMemory": {
+          "type": "boolean"
+        },
+        "maxPreviewBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "enum": {
+          "type": "string",
+          "minLength": 1
+        },
+        "flags": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "valueSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "values"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "value"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+              },
+              "value": {
+                "type": ["integer", "string"],
+                "pattern": "^(0x[0-9A-Fa-f]+|\\d+)$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "moduleId": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "symbol"],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9_.-]+\\.dll$"
+        },
+        "symbol": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        }
+      }
+    },
+    "apiId": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "module", "name", "symbol"],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "module": {
+          "type": "string",
+          "pattern": "^[a-z0-9_.-]+\\.dll$"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "symbol": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "fixture-negative",
+  "apis": [
+    {
+      "module": "KERNEL32.dll",
+      "name": "InvalidLengthReference",
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "parameters": [
+        { "name": "Buffer", "type": "PVOID", "direction": "in", "decode": "buffer", "lengthFrom": "MissingLength" }
+      ]
+    }
+  ]
+}

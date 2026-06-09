@@ -1,0 +1,107 @@
+{
+  "schemaVersion": "0.1.0",
+  "metadataType": "flags",
+  "flags": [
+    {
+      "name": "file_access_mask",
+      "values": [
+        { "name": "GENERIC_READ", "value": "0x80000000" },
+        { "name": "GENERIC_WRITE", "value": "0x40000000" },
+        { "name": "GENERIC_EXECUTE", "value": "0x20000000" },
+        { "name": "GENERIC_ALL", "value": "0x10000000" },
+        { "name": "DELETE", "value": "0x00010000" },
+        { "name": "READ_CONTROL", "value": "0x00020000" },
+        { "name": "WRITE_DAC", "value": "0x00040000" },
+        { "name": "WRITE_OWNER", "value": "0x00080000" },
+        { "name": "SYNCHRONIZE", "value": "0x00100000" },
+        { "name": "FILE_READ_DATA", "value": "0x00000001" },
+        { "name": "FILE_WRITE_DATA", "value": "0x00000002" },
+        { "name": "FILE_APPEND_DATA", "value": "0x00000004" },
+        { "name": "FILE_READ_EA", "value": "0x00000008" },
+        { "name": "FILE_WRITE_EA", "value": "0x00000010" },
+        { "name": "FILE_EXECUTE", "value": "0x00000020" },
+        { "name": "FILE_READ_ATTRIBUTES", "value": "0x00000080" },
+        { "name": "FILE_WRITE_ATTRIBUTES", "value": "0x00000100" }
+      ]
+    },
+    {
+      "name": "file_share_mask",
+      "values": [
+        { "name": "FILE_SHARE_READ", "value": "0x00000001" },
+        { "name": "FILE_SHARE_WRITE", "value": "0x00000002" },
+        { "name": "FILE_SHARE_DELETE", "value": "0x00000004" }
+      ]
+    },
+    {
+      "name": "file_flags_attributes",
+      "values": [
+        { "name": "FILE_ATTRIBUTE_READONLY", "value": "0x00000001" },
+        { "name": "FILE_ATTRIBUTE_HIDDEN", "value": "0x00000002" },
+        { "name": "FILE_ATTRIBUTE_SYSTEM", "value": "0x00000004" },
+        { "name": "FILE_ATTRIBUTE_DIRECTORY", "value": "0x00000010" },
+        { "name": "FILE_ATTRIBUTE_ARCHIVE", "value": "0x00000020" },
+        { "name": "FILE_ATTRIBUTE_DEVICE", "value": "0x00000040" },
+        { "name": "FILE_ATTRIBUTE_NORMAL", "value": "0x00000080" },
+        { "name": "FILE_ATTRIBUTE_TEMPORARY", "value": "0x00000100" },
+        { "name": "FILE_ATTRIBUTE_REPARSE_POINT", "value": "0x00000400" },
+        { "name": "FILE_ATTRIBUTE_COMPRESSED", "value": "0x00000800" },
+        { "name": "FILE_FLAG_WRITE_THROUGH", "value": "0x80000000" },
+        { "name": "FILE_FLAG_OVERLAPPED", "value": "0x40000000" },
+        { "name": "FILE_FLAG_NO_BUFFERING", "value": "0x20000000" },
+        { "name": "FILE_FLAG_RANDOM_ACCESS", "value": "0x10000000" },
+        { "name": "FILE_FLAG_SEQUENTIAL_SCAN", "value": "0x08000000" },
+        { "name": "FILE_FLAG_DELETE_ON_CLOSE", "value": "0x04000000" },
+        { "name": "FILE_FLAG_BACKUP_SEMANTICS", "value": "0x02000000" },
+        { "name": "FILE_FLAG_POSIX_SEMANTICS", "value": "0x01000000" },
+        { "name": "FILE_FLAG_OPEN_REPARSE_POINT", "value": "0x00200000" },
+        { "name": "FILE_FLAG_OPEN_NO_RECALL", "value": "0x00100000" },
+        { "name": "FILE_FLAG_FIRST_PIPE_INSTANCE", "value": "0x00080000" }
+      ]
+    },
+    {
+      "name": "nt_create_options",
+      "values": [
+        { "name": "FILE_DIRECTORY_FILE", "value": "0x00000001" },
+        { "name": "FILE_WRITE_THROUGH", "value": "0x00000002" },
+        { "name": "FILE_SEQUENTIAL_ONLY", "value": "0x00000004" },
+        { "name": "FILE_NO_INTERMEDIATE_BUFFERING", "value": "0x00000008" },
+        { "name": "FILE_SYNCHRONOUS_IO_ALERT", "value": "0x00000010" },
+        { "name": "FILE_SYNCHRONOUS_IO_NONALERT", "value": "0x00000020" },
+        { "name": "FILE_NON_DIRECTORY_FILE", "value": "0x00000040" },
+        { "name": "FILE_CREATE_TREE_CONNECTION", "value": "0x00000080" },
+        { "name": "FILE_COMPLETE_IF_OPLOCKED", "value": "0x00000100" },
+        { "name": "FILE_NO_EA_KNOWLEDGE", "value": "0x00000200" },
+        { "name": "FILE_OPEN_REMOTE_INSTANCE", "value": "0x00000400" },
+        { "name": "FILE_RANDOM_ACCESS", "value": "0x00000800" },
+        { "name": "FILE_DELETE_ON_CLOSE", "value": "0x00001000" },
+        { "name": "FILE_OPEN_BY_FILE_ID", "value": "0x00002000" },
+        { "name": "FILE_OPEN_FOR_BACKUP_INTENT", "value": "0x00004000" },
+        { "name": "FILE_NO_COMPRESSION", "value": "0x00008000" },
+        { "name": "FILE_OPEN_REQUIRING_OPLOCK", "value": "0x00010000" },
+        { "name": "FILE_DISALLOW_EXCLUSIVE", "value": "0x00020000" },
+        { "name": "FILE_SESSION_AWARE", "value": "0x00040000" },
+        { "name": "FILE_RESERVE_OPFILTER", "value": "0x00100000" },
+        { "name": "FILE_OPEN_REPARSE_POINT", "value": "0x00200000" },
+        { "name": "FILE_OPEN_NO_RECALL", "value": "0x00400000" },
+        { "name": "FILE_OPEN_FOR_FREE_SPACE_QUERY", "value": "0x00800000" }
+      ]
+    },
+    {
+      "name": "load_library_flags",
+      "values": [
+        { "name": "DONT_RESOLVE_DLL_REFERENCES", "value": "0x00000001" },
+        { "name": "LOAD_LIBRARY_AS_DATAFILE", "value": "0x00000002" },
+        { "name": "LOAD_WITH_ALTERED_SEARCH_PATH", "value": "0x00000008" },
+        { "name": "LOAD_IGNORE_CODE_AUTHZ_LEVEL", "value": "0x00000010" },
+        { "name": "LOAD_LIBRARY_AS_IMAGE_RESOURCE", "value": "0x00000020" },
+        { "name": "LOAD_LIBRARY_AS_DATAFILE_EXCLUSIVE", "value": "0x00000040" },
+        { "name": "LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR", "value": "0x00000100" },
+        { "name": "LOAD_LIBRARY_SEARCH_APPLICATION_DIR", "value": "0x00000200" },
+        { "name": "LOAD_LIBRARY_SEARCH_USER_DIRS", "value": "0x00000400" },
+        { "name": "LOAD_LIBRARY_SEARCH_SYSTEM32", "value": "0x00000800" },
+        { "name": "LOAD_LIBRARY_SEARCH_DEFAULT_DIRS", "value": "0x00001000" },
+        { "name": "LOAD_LIBRARY_SAFE_CURRENT_DIRS", "value": "0x00002000" }
+      ]
+    }
+  ]
+}
