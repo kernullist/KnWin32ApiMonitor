@@ -450,11 +450,15 @@ Current verified behavior:
 12. Wave 2 definition-only metadata is committed for `advapi32.dll`, `bcrypt.dll`, `crypt32.dll`, `rpcrt4.dll`, `ws2_32.dll`, `wininet.dll`, and `winhttp.dll`.
 13. Stable generated IDs now cover 10 modules and 90 APIs, with Wave 2 API IDs `14` through `90`.
 14. The coverage report currently totals 77 `definition_only`, 4 `hooked`, and 9 `smoke_verified` APIs.
+15. `npm run defs:generate` emits deterministic controller-side decoder metadata:
+   - `generated/definition-decoder-tables.json`
+   - `native/knmon-common/include/knmon/common/GeneratedApiMetadata.h`
+16. The controller uses generated metadata for API/module names, family/category tags, argument names/types/directions, decode aliases, and capture timing while preserving explicit per-API shared-memory slot interpretation.
 
 Next implementation focus:
 
-1. Start generated decoder tables for controller-side argument rendering after coverage reports remain stable.
-2. Add Wave 2 hook ABI mapping only after decoder-table generation and transport budget checks are green.
+1. Add Wave 2 hook ABI mapping only after generated decoder metadata, transport budget checks, and hook-overhead smokes are green.
+2. Keep Wave 2 live hook enablement staged by DLL/API family with definition coverage status updated only after deterministic smoke evidence exists.
 3. Design returned-pointer instrumentation only after the IAT resolver monitoring path remains stable under transport and hook-overhead gates.
 
 ## Phase 11: Controlled Attach And Process Tree Supervision

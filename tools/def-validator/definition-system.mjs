@@ -13,7 +13,9 @@ export const positiveFixtureRoot = path.join(repoRoot, "tests", "fixtures", "def
 export const negativeFixtureRoot = path.join(repoRoot, "tests", "fixtures", "definition", "negative");
 export const negativeMetadataFixtureRoot = path.join(repoRoot, "tests", "fixtures", "definition", "negative-metadata");
 export const generatedIdJsonPath = path.join(repoRoot, "generated", "definition-ids.json");
+export const generatedDecoderJsonPath = path.join(repoRoot, "generated", "definition-decoder-tables.json");
 export const generatedApiHeaderPath = path.join(repoRoot, "native", "knmon-common", "include", "knmon", "common", "GeneratedApiIds.h");
+export const generatedApiMetadataHeaderPath = path.join(repoRoot, "native", "knmon-common", "include", "knmon", "common", "GeneratedApiMetadata.h");
 
 const stableApiIds = new Map([
   ["kernel32.dll!CreateFileW", 1],
@@ -26,13 +28,99 @@ const stableApiIds = new Map([
   ["kernel32.dll!LoadLibraryA", 8],
   ["kernel32.dll!LoadLibraryExW", 9],
   ["kernel32.dll!LoadLibraryExA", 10],
-  ["ntdll.dll!LdrLoadDll", 11]
+  ["ntdll.dll!LdrLoadDll", 11],
+  ["kernel32.dll!GetProcAddress", 12],
+  ["ntdll.dll!LdrGetProcedureAddress", 13],
+  ["advapi32.dll!RegOpenKeyExW", 14],
+  ["advapi32.dll!RegCreateKeyExW", 15],
+  ["advapi32.dll!RegQueryValueExW", 16],
+  ["advapi32.dll!RegSetValueExW", 17],
+  ["advapi32.dll!RegDeleteValueW", 18],
+  ["advapi32.dll!RegCloseKey", 19],
+  ["advapi32.dll!OpenProcessToken", 20],
+  ["advapi32.dll!AdjustTokenPrivileges", 21],
+  ["advapi32.dll!LookupPrivilegeValueW", 22],
+  ["advapi32.dll!OpenSCManagerW", 23],
+  ["advapi32.dll!OpenServiceW", 24],
+  ["advapi32.dll!CreateServiceW", 25],
+  ["advapi32.dll!StartServiceW", 26],
+  ["advapi32.dll!ControlService", 27],
+  ["advapi32.dll!DeleteService", 28],
+  ["bcrypt.dll!BCryptOpenAlgorithmProvider", 29],
+  ["bcrypt.dll!BCryptCloseAlgorithmProvider", 30],
+  ["bcrypt.dll!BCryptGetProperty", 31],
+  ["bcrypt.dll!BCryptSetProperty", 32],
+  ["bcrypt.dll!BCryptGenerateSymmetricKey", 33],
+  ["bcrypt.dll!BCryptDestroyKey", 34],
+  ["bcrypt.dll!BCryptEncrypt", 35],
+  ["bcrypt.dll!BCryptDecrypt", 36],
+  ["bcrypt.dll!BCryptGenRandom", 37],
+  ["bcrypt.dll!BCryptHashData", 38],
+  ["crypt32.dll!CertOpenStore", 39],
+  ["crypt32.dll!CertCloseStore", 40],
+  ["crypt32.dll!CertFindCertificateInStore", 41],
+  ["crypt32.dll!CertFreeCertificateContext", 42],
+  ["crypt32.dll!CertGetCertificateChain", 43],
+  ["crypt32.dll!CertVerifyCertificateChainPolicy", 44],
+  ["crypt32.dll!CryptQueryObject", 45],
+  ["crypt32.dll!CryptMsgOpenToDecode", 46],
+  ["crypt32.dll!CryptMsgUpdate", 47],
+  ["crypt32.dll!CryptMsgClose", 48],
+  ["rpcrt4.dll!RpcStringBindingComposeW", 49],
+  ["rpcrt4.dll!RpcBindingFromStringBindingW", 50],
+  ["rpcrt4.dll!RpcStringFreeW", 51],
+  ["rpcrt4.dll!RpcBindingFree", 52],
+  ["rpcrt4.dll!RpcBindingSetAuthInfoW", 53],
+  ["rpcrt4.dll!RpcBindingSetOption", 54],
+  ["rpcrt4.dll!RpcMgmtEpEltInqBegin", 55],
+  ["rpcrt4.dll!RpcMgmtEpEltInqNextW", 56],
+  ["rpcrt4.dll!RpcMgmtEpEltInqDone", 57],
+  ["rpcrt4.dll!UuidCreate", 58],
+  ["ws2_32.dll!WSAStartup", 59],
+  ["ws2_32.dll!WSACleanup", 60],
+  ["ws2_32.dll!socket", 61],
+  ["ws2_32.dll!closesocket", 62],
+  ["ws2_32.dll!connect", 63],
+  ["ws2_32.dll!send", 64],
+  ["ws2_32.dll!recv", 65],
+  ["ws2_32.dll!sendto", 66],
+  ["ws2_32.dll!recvfrom", 67],
+  ["ws2_32.dll!getaddrinfo", 68],
+  ["ws2_32.dll!freeaddrinfo", 69],
+  ["ws2_32.dll!WSAGetLastError", 70],
+  ["wininet.dll!InternetOpenW", 71],
+  ["wininet.dll!InternetCloseHandle", 72],
+  ["wininet.dll!InternetConnectW", 73],
+  ["wininet.dll!InternetOpenUrlW", 74],
+  ["wininet.dll!HttpOpenRequestW", 75],
+  ["wininet.dll!HttpSendRequestW", 76],
+  ["wininet.dll!InternetReadFile", 77],
+  ["wininet.dll!InternetWriteFile", 78],
+  ["wininet.dll!InternetSetOptionW", 79],
+  ["wininet.dll!InternetQueryOptionW", 80],
+  ["winhttp.dll!WinHttpOpen", 81],
+  ["winhttp.dll!WinHttpCloseHandle", 82],
+  ["winhttp.dll!WinHttpConnect", 83],
+  ["winhttp.dll!WinHttpOpenRequest", 84],
+  ["winhttp.dll!WinHttpSendRequest", 85],
+  ["winhttp.dll!WinHttpReceiveResponse", 86],
+  ["winhttp.dll!WinHttpReadData", 87],
+  ["winhttp.dll!WinHttpWriteData", 88],
+  ["winhttp.dll!WinHttpSetOption", 89],
+  ["winhttp.dll!WinHttpQueryHeaders", 90]
 ]);
 
 const stableModuleIds = new Map([
   ["kernel32.dll", 1],
   ["ntdll.dll", 2],
-  ["kernelbase.dll", 3]
+  ["kernelbase.dll", 3],
+  ["advapi32.dll", 4],
+  ["bcrypt.dll", 5],
+  ["crypt32.dll", 6],
+  ["rpcrt4.dll", 7],
+  ["ws2_32.dll", 8],
+  ["wininet.dll", 9],
+  ["winhttp.dll", 10]
 ]);
 
 const validCoverageStatuses = ["defined", "id_generated", "hooked", "smoke_verified", "definition_only", "unsupported"];
@@ -658,45 +746,373 @@ export function buildGeneratedApiHeader(generatedIds) {
   return lines.join("\n");
 }
 
-export function expectedGeneratedArtifacts(metadataIndex) {
-  const generatedIds = buildGeneratedIds(metadataIndex);
+function defaultCaptureTiming(direction) {
+  if (direction === "out") {
+    return "post";
+  }
+
+  if (direction === "inout") {
+    return "pre_post";
+  }
+
+  return "pre";
+}
+
+function moduleIdMap(metadataIndex) {
+  const map = new Map();
+  for (const module of metadataIndex.idAssignments?.modules ?? []) {
+    map.set(normalizeModuleName(module.name), module);
+  }
+
+  return map;
+}
+
+function stableJsonText(value) {
+  return JSON.stringify(stableSortObject(value ?? {}));
+}
+
+function cppString(value) {
+  return JSON.stringify(String(value ?? ""));
+}
+
+function cppBool(value) {
+  return value ? "true" : "false";
+}
+
+function buildGeneratedParameters(apiId, parameters, metadataIndex, firstParameterIndex) {
+  const generated = [];
+  const parameterIndexByName = new Map();
+
+  for (const [index, parameter] of parameters.entries()) {
+    parameterIndexByName.set(parameter.name, index);
+  }
+
+  for (const [index, parameter] of parameters.entries()) {
+    const alias = metadataIndex.aliasByName.get(parameter.decode);
+    const lengthFromIndex = parameter.lengthFrom ? parameterIndexByName.get(parameter.lengthFrom) : undefined;
+    generated.push({
+      apiId,
+      index,
+      absoluteIndex: firstParameterIndex + index,
+      name: parameter.name,
+      type: parameter.type,
+      direction: parameter.direction,
+      decode: parameter.decode,
+      captureTiming: parameter.captureTiming ?? defaultCaptureTiming(parameter.direction),
+      nullable: parameter.nullable ?? false,
+      maxBytes: parameter.maxBytes ?? alias?.maxPreviewBytes ?? 0,
+      enum: parameter.enum ?? "",
+      flags: parameter.flags ?? "",
+      lengthFrom: parameter.lengthFrom ?? "",
+      lengthFromIndex: Number.isInteger(lengthFromIndex) ? lengthFromIndex : -1,
+      lengthExpression: parameter.lengthExpression ? normalizeLengthExpression(parameter.lengthExpression) : ""
+    });
+  }
+
+  return generated;
+}
+
+export function buildGeneratedDecoderTables(apiDocuments, metadataIndex) {
+  const modulesByName = moduleIdMap(metadataIndex);
+  const apiRecords = collectApiRecords(apiDocuments, metadataIndex);
+  const definitionFiles = Array.from(new Set(apiDocuments.map((item) => relativePath(item.filePath)))).sort();
+  const metadataFiles = listMetadataFiles().map((filePath) => relativePath(filePath)).sort();
+
+  const modules = [...(metadataIndex.idAssignments?.modules ?? [])]
+    .sort((left, right) => left.id - right.id)
+    .map((module) => ({
+      id: module.id,
+      name: normalizeModuleName(module.name),
+      symbol: module.symbol
+    }));
+
+  const apis = [];
+  const parameters = [];
+
+  for (const record of apiRecords) {
+    const api = record.api;
+    const assignment = record.assignment;
+    const moduleName = normalizeModuleName(api.module);
+    const moduleAssignment = modulesByName.get(moduleName);
+    const firstParameterIndex = parameters.length;
+    const generatedParameters = buildGeneratedParameters(assignment?.id ?? 0, api.parameters ?? [], metadataIndex, firstParameterIndex);
+
+    apis.push({
+      id: assignment?.id ?? 0,
+      moduleId: moduleAssignment?.id ?? 0,
+      module: moduleName,
+      name: api.name,
+      symbol: assignment?.symbol ?? api.name,
+      family: api.family ?? "uncategorized",
+      category: api.category ?? "uncategorized",
+      risk: api.risk ?? "medium",
+      hookPolicy: api.hookPolicy ?? "definition_only",
+      coverageStatus: api.coverageStatus ?? "defined",
+      callingConvention: api.callingConvention,
+      returnType: api.returnType,
+      errorSource: api.errorSource,
+      success: api.success ?? {},
+      failure: api.failure ?? {},
+      firstParameterIndex,
+      parameterCount: generatedParameters.length,
+      source: relativePath(record.filePath)
+    });
+
+    parameters.push(...generatedParameters);
+  }
+
+  const decodeAliases = [...metadataIndex.aliases]
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map((alias) => ({
+      name: alias.name,
+      kind: alias.kind,
+      preview: alias.preview,
+      readsTargetMemory: alias.readsTargetMemory,
+      maxPreviewBytes: alias.maxPreviewBytes,
+      enum: alias.enum ?? "",
+      flags: alias.flags ?? ""
+    }));
+
   return {
-    json: stableStringify(generatedIds),
-    header: buildGeneratedApiHeader(generatedIds)
+    schemaVersion: "0.1.0",
+    sources: {
+      definitions: definitionFiles,
+      metadata: metadataFiles
+    },
+    modules,
+    apis,
+    parameters,
+    decodeAliases
   };
 }
 
-export function checkGeneratedArtifacts(metadataIndex) {
+export function buildGeneratedApiMetadataHeader(decoderTables) {
+  const lines = [
+    "#pragma once",
+    "",
+    "#include <array>",
+    "#include <cstdint>",
+    "#include <string_view>",
+    "",
+    "namespace knmon",
+    "{",
+    "struct KnMonGeneratedModuleMetadata",
+    "{",
+    "    std::uint16_t Id;",
+    "    std::string_view Name;",
+    "    std::string_view Symbol;",
+    "};",
+    "",
+    "struct KnMonGeneratedApiMetadata",
+    "{",
+    "    std::uint16_t Id;",
+    "    std::uint16_t ModuleId;",
+    "    std::string_view ModuleName;",
+    "    std::string_view Name;",
+    "    std::string_view Symbol;",
+    "    std::string_view Family;",
+    "    std::string_view Category;",
+    "    std::string_view Risk;",
+    "    std::string_view HookPolicy;",
+    "    std::string_view CoverageStatus;",
+    "    std::string_view CallingConvention;",
+    "    std::string_view ReturnType;",
+    "    std::string_view ErrorSource;",
+    "    std::string_view SuccessJson;",
+    "    std::string_view FailureJson;",
+    "    std::uint16_t FirstParameterIndex;",
+    "    std::uint16_t ParameterCount;",
+    "};",
+    "",
+    "struct KnMonGeneratedParameterMetadata",
+    "{",
+    "    std::uint16_t ApiId;",
+    "    std::uint16_t Index;",
+    "    std::uint16_t AbsoluteIndex;",
+    "    std::string_view Name;",
+    "    std::string_view Type;",
+    "    std::string_view Direction;",
+    "    std::string_view Decode;",
+    "    std::string_view CaptureTiming;",
+    "    bool Nullable;",
+    "    std::uint32_t MaxBytes;",
+    "    std::string_view Enum;",
+    "    std::string_view Flags;",
+    "    std::string_view LengthFrom;",
+    "    std::int32_t LengthFromIndex;",
+    "    std::string_view LengthExpression;",
+    "};",
+    ""
+  ];
+
+  lines.push(`inline constexpr std::array<KnMonGeneratedModuleMetadata, ${decoderTables.modules.length}> KnMonGeneratedModules =`);
+  lines.push("{{");
+  for (const module of decoderTables.modules) {
+    lines.push("    {");
+    lines.push(`        ${module.id},`);
+    lines.push(`        ${cppString(module.name)},`);
+    lines.push(`        ${cppString(module.symbol)}`);
+    lines.push("    },");
+  }
+  lines.push("}};");
+  lines.push("");
+
+  lines.push(`inline constexpr std::array<KnMonGeneratedApiMetadata, ${decoderTables.apis.length}> KnMonGeneratedApis =`);
+  lines.push("{{");
+  for (const api of decoderTables.apis) {
+    lines.push("    {");
+    lines.push(`        ${api.id},`);
+    lines.push(`        ${api.moduleId},`);
+    lines.push(`        ${cppString(api.module)},`);
+    lines.push(`        ${cppString(api.name)},`);
+    lines.push(`        ${cppString(api.symbol)},`);
+    lines.push(`        ${cppString(api.family)},`);
+    lines.push(`        ${cppString(api.category)},`);
+    lines.push(`        ${cppString(api.risk)},`);
+    lines.push(`        ${cppString(api.hookPolicy)},`);
+    lines.push(`        ${cppString(api.coverageStatus)},`);
+    lines.push(`        ${cppString(api.callingConvention)},`);
+    lines.push(`        ${cppString(api.returnType)},`);
+    lines.push(`        ${cppString(api.errorSource)},`);
+    lines.push(`        ${cppString(stableJsonText(api.success))},`);
+    lines.push(`        ${cppString(stableJsonText(api.failure))},`);
+    lines.push(`        ${api.firstParameterIndex},`);
+    lines.push(`        ${api.parameterCount}`);
+    lines.push("    },");
+  }
+  lines.push("}};");
+  lines.push("");
+
+  lines.push(`inline constexpr std::array<KnMonGeneratedParameterMetadata, ${decoderTables.parameters.length}> KnMonGeneratedParameters =`);
+  lines.push("{{");
+  for (const parameter of decoderTables.parameters) {
+    lines.push("    {");
+    lines.push(`        ${parameter.apiId},`);
+    lines.push(`        ${parameter.index},`);
+    lines.push(`        ${parameter.absoluteIndex},`);
+    lines.push(`        ${cppString(parameter.name)},`);
+    lines.push(`        ${cppString(parameter.type)},`);
+    lines.push(`        ${cppString(parameter.direction)},`);
+    lines.push(`        ${cppString(parameter.decode)},`);
+    lines.push(`        ${cppString(parameter.captureTiming)},`);
+    lines.push(`        ${cppBool(parameter.nullable)},`);
+    lines.push(`        ${parameter.maxBytes},`);
+    lines.push(`        ${cppString(parameter.enum)},`);
+    lines.push(`        ${cppString(parameter.flags)},`);
+    lines.push(`        ${cppString(parameter.lengthFrom)},`);
+    lines.push(`        ${parameter.lengthFromIndex},`);
+    lines.push(`        ${cppString(parameter.lengthExpression)}`);
+    lines.push("    },");
+  }
+  lines.push("}};");
+  lines.push("");
+
+  lines.push(
+    "inline constexpr const KnMonGeneratedModuleMetadata* FindGeneratedModuleMetadata(std::uint16_t id)",
+    "{",
+    "    for (const auto& entry : KnMonGeneratedModules)",
+    "    {",
+    "        if (entry.Id == id)",
+    "        {",
+    "            return &entry;",
+    "        }",
+    "    }",
+    "",
+    "    return nullptr;",
+    "}",
+    "",
+    "inline constexpr const KnMonGeneratedApiMetadata* FindGeneratedApiMetadata(std::uint16_t id)",
+    "{",
+    "    for (const auto& entry : KnMonGeneratedApis)",
+    "    {",
+    "        if (entry.Id == id)",
+    "        {",
+    "            return &entry;",
+    "        }",
+    "    }",
+    "",
+    "    return nullptr;",
+    "}",
+    "",
+    "inline constexpr const KnMonGeneratedParameterMetadata* FindGeneratedParameterMetadata(std::uint16_t apiId, std::uint16_t index)",
+    "{",
+    "    const KnMonGeneratedApiMetadata* api = FindGeneratedApiMetadata(apiId);",
+    "    if (api == nullptr)",
+    "    {",
+    "        return nullptr;",
+    "    }",
+    "",
+    "    if (index >= api->ParameterCount)",
+    "    {",
+    "        return nullptr;",
+    "    }",
+    "",
+    "    const std::uint16_t absoluteIndex = static_cast<std::uint16_t>(api->FirstParameterIndex + index);",
+    "    if (absoluteIndex >= KnMonGeneratedParameters.size())",
+    "    {",
+    "        return nullptr;",
+    "    }",
+    "",
+    "    const KnMonGeneratedParameterMetadata& parameter = KnMonGeneratedParameters[absoluteIndex];",
+    "    if (parameter.ApiId != apiId || parameter.Index != index)",
+    "    {",
+    "        return nullptr;",
+    "    }",
+    "",
+    "    return &parameter;",
+    "}",
+    "}",
+    ""
+  );
+
+  return lines.join("\n");
+}
+
+export function expectedGeneratedArtifacts(apiDocuments, metadataIndex) {
+  const generatedIds = buildGeneratedIds(metadataIndex);
+  const decoderTables = buildGeneratedDecoderTables(apiDocuments, metadataIndex);
+  return {
+    json: stableStringify(generatedIds),
+    header: buildGeneratedApiHeader(generatedIds),
+    decoderJson: stableStringify(decoderTables),
+    metadataHeader: buildGeneratedApiMetadataHeader(decoderTables)
+  };
+}
+
+function checkGeneratedArtifact(errors, filePath, expectedText) {
+  if (!fs.existsSync(filePath)) {
+    errors.push(`${relativePath(filePath)} is missing; run npm run defs:generate`);
+    return;
+  }
+
+  const actual = fs.readFileSync(filePath, "utf8");
+  if (actual !== expectedText) {
+    errors.push(`${relativePath(filePath)} is stale; run npm run defs:generate`);
+  }
+}
+
+export function checkGeneratedArtifacts(apiDocuments, metadataIndex) {
   const errors = [];
-  const expected = expectedGeneratedArtifacts(metadataIndex);
+  const expected = expectedGeneratedArtifacts(apiDocuments, metadataIndex);
 
-  if (!fs.existsSync(generatedIdJsonPath)) {
-    errors.push(`${relativePath(generatedIdJsonPath)} is missing; run npm run defs:generate`);
-  } else {
-    const actual = fs.readFileSync(generatedIdJsonPath, "utf8");
-    if (actual !== expected.json) {
-      errors.push(`${relativePath(generatedIdJsonPath)} is stale; run npm run defs:generate`);
-    }
-  }
-
-  if (!fs.existsSync(generatedApiHeaderPath)) {
-    errors.push(`${relativePath(generatedApiHeaderPath)} is missing; run npm run defs:generate`);
-  } else {
-    const actual = fs.readFileSync(generatedApiHeaderPath, "utf8");
-    if (actual !== expected.header) {
-      errors.push(`${relativePath(generatedApiHeaderPath)} is stale; run npm run defs:generate`);
-    }
-  }
+  checkGeneratedArtifact(errors, generatedIdJsonPath, expected.json);
+  checkGeneratedArtifact(errors, generatedApiHeaderPath, expected.header);
+  checkGeneratedArtifact(errors, generatedDecoderJsonPath, expected.decoderJson);
+  checkGeneratedArtifact(errors, generatedApiMetadataHeaderPath, expected.metadataHeader);
 
   return errors;
 }
 
-export function writeGeneratedArtifacts(metadataIndex) {
-  const expected = expectedGeneratedArtifacts(metadataIndex);
+export function writeGeneratedArtifacts(apiDocuments, metadataIndex) {
+  const expected = expectedGeneratedArtifacts(apiDocuments, metadataIndex);
   ensureDirectoryForFile(generatedIdJsonPath);
   fs.writeFileSync(generatedIdJsonPath, expected.json, "utf8");
   ensureDirectoryForFile(generatedApiHeaderPath);
   fs.writeFileSync(generatedApiHeaderPath, expected.header, "utf8");
+  ensureDirectoryForFile(generatedDecoderJsonPath);
+  fs.writeFileSync(generatedDecoderJsonPath, expected.decoderJson, "utf8");
+  ensureDirectoryForFile(generatedApiMetadataHeaderPath);
+  fs.writeFileSync(generatedApiMetadataHeaderPath, expected.metadataHeader, "utf8");
 }
 
 export function decodeQualityForParameter(parameter, metadataIndex) {
@@ -848,7 +1264,7 @@ export function validateRepositoryDefinitions() {
     ...validateMetadataSemantics(metadataLoad.documents),
     ...apiLoad.errors,
     ...validateApiDefinitionSemantics(apiLoad.documents, metadataIndex, { requireIdAssignments: true }),
-    ...checkGeneratedArtifacts(metadataIndex)
+    ...checkGeneratedArtifacts(apiLoad.documents, metadataIndex)
   ];
 
   return {

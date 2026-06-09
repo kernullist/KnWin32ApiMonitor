@@ -23,6 +23,8 @@
     "preCallValue": { "type": "string" },
     "postCallValue": { "type": "string" },
     "decodedValue": { "type": "string" },
+    "decodeAlias": { "type": "string" },
+    "captureTiming": { "enum": ["pre", "post", "pre_post"] },
     "pointerAddress": { "type": "integer", "minimum": 0 },
     "decodeStatus": {
       "enum": [

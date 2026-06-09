@@ -44,7 +44,9 @@ Generated definition ID artifacts live under:
 
 ```text
 generated/definition-ids.json
+generated/definition-decoder-tables.json
 native/knmon-common/include/knmon/common/GeneratedApiIds.h
+native/knmon-common/include/knmon/common/GeneratedApiMetadata.h
 ```
 
 ## Current Required Fields
@@ -118,9 +120,10 @@ Allowed directions:
 7. `lengthFrom` parameter reference checks.
 8. Restricted `lengthExpression` parsing without `eval`, `Function`, or arbitrary JavaScript execution.
 9. Stable ID assignment checks for generated transport IDs.
-10. Positive and negative definition fixture checks.
-11. Rohitab XML importer fixture check.
-12. Definition coverage bucket check.
+10. Generated controller-side decoder table freshness checks.
+11. Positive and negative definition fixture checks.
+12. Rohitab XML importer fixture check.
+13. Definition coverage bucket check.
 
 The restricted `lengthExpression` grammar supports only:
 
@@ -151,10 +154,12 @@ Current File I/O decode metadata covers file access masks, file share masks, Cre
 
 ## Stable Transport IDs
 
-`definitions/metadata/id-assignments.json` is the stable assignment source for compact transport IDs. `npm run defs:generate` rewrites:
+`definitions/metadata/id-assignments.json` is the stable assignment source for compact transport IDs. API definition JSON files and decode metadata are also the source for controller-side decoder metadata. `npm run defs:generate` rewrites:
 
 1. `generated/definition-ids.json`
 2. `native/knmon-common/include/knmon/common/GeneratedApiIds.h`
+3. `generated/definition-decoder-tables.json`
+4. `native/knmon-common/include/knmon/common/GeneratedApiMetadata.h`
 
 Existing transport IDs are preserved:
 
@@ -174,7 +179,9 @@ Existing transport IDs are preserved:
    - `wininet.dll = 9`
    - `winhttp.dll = 10`
 
-The native agent and controller use generated compile-time enum constants through `GeneratedApiIds.h`; target hook fast paths do not parse definitions or metadata.
+The native agent and controller use generated compile-time enum constants through `GeneratedApiIds.h`. The controller also uses `GeneratedApiMetadata.h` for API/module names, API family/category/risk labels, argument names/types/directions, decode aliases, and capture timing. Target hook fast paths still do not parse definitions or metadata.
+
+`generated/definition-decoder-tables.json` is the deterministic JSON view for tooling. It contains module rows, API rows, flattened parameter rows, decode alias rows, and source file lists without wall-clock timestamps or local machine paths.
 
 ## File I/O, Loader, Resolver, And Wave 2 Metadata Coverage
 
@@ -243,6 +250,8 @@ The `NtCreateFile` event includes bounded snapshots for:
 `ObjectAttributes` decoding copies at most the bounded `UNICODE_STRING` length used by the agent and falls back to pointer evidence with `invalid_pointer`, `unreadable_memory`, or `truncated` status when needed.
 
 Current native API call records are written by the agent into a shared-memory binary ring, then normalized by the controller into the same `api_call` JSON shape outside the target process. Named-pipe JSON remains only for low-volume control and lifecycle messages.
+
+Controller-side normalization uses generated decoder metadata for descriptors. Per-API shared-memory slot interpretation remains explicit until a later hook ABI expansion adds generic per-argument payload mapping.
 
 Loader-aware Wave 1 records add `LoadLibraryW` evidence and post-load File I/O evidence from `knmon-dynamic-probe.dll`. Resolver records add `GetProcAddress` and `LdrGetProcedureAddress` evidence for the same dynamic probe export. The agent emits module inventory and IAT sweep status messages through the named pipe, but API call events remain shared-memory records.
 
@@ -386,8 +395,11 @@ Run:
 ```powershell
 npm run defs:generate
 npm run defs:validate
+npm run defs:decoder-tables
 npm run defs:coverage
 ```
+
+`defs:decoder-tables` verifies the generated decoder metadata artifact covers API IDs `1` through `90`, parameter rows, decode alias rows, and length-source resolution.
 
 `defs:coverage` prints a deterministic Markdown report grouped by module, family, risk, hook policy, coverage status, and decode quality. The report explicitly separates:
 

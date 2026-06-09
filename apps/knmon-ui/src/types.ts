@@ -79,6 +79,8 @@ export interface AgentApiArgument {
   postCallValue: string;
   decodedValue: string;
   decodeStatus: "decoded" | "partial" | "invalid_pointer" | "unreadable_memory" | "definition_missing" | "truncated";
+  decodeAlias?: string;
+  captureTiming?: "pre" | "post" | "pre_post";
 }
 
 export interface AgentApiCallEvent {
@@ -91,6 +93,11 @@ export interface AgentApiCallEvent {
   sequence: number;
   api: string;
   module: string;
+  apiFamily?: string;
+  apiCategory?: string;
+  apiRisk?: "low" | "medium" | "high" | "critical";
+  hookPolicy?: string;
+  coverageStatus?: string;
   process: string;
   returnValue: string;
   lastErrorCode: number;
@@ -161,6 +168,8 @@ export interface KnMonArgument {
   rawValue: string;
   decodedValue: string;
   decodeStatus: "decoded" | "partial" | "invalid_pointer" | "unreadable_memory" | "definition_missing" | "truncated";
+  decodeAlias?: string;
+  captureTiming?: "pre" | "post" | "pre_post";
 }
 
 export interface TraceError {
