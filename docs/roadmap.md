@@ -512,7 +512,7 @@ Next implementation focus:
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 
-Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, and Phase 11F foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, and cancellation-safe operation ownership for bounded attach/process-tree helper commands are implemented; persistent daemon supervision and threaded streaming collector sessions remain future work.
+Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, Phase 11F, and Phase 11G foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, cancellation-safe operation ownership for bounded attach/process-tree helper commands, and durable native session ownership readiness are implemented; persistent daemon supervision and full UI streaming collector sessions remain future work.
 
 Goal:
 
@@ -601,10 +601,22 @@ Current verified Phase 11F behavior:
 7. The selected-target UI renders active operation state, elapsed time, cancel availability, attach cancellation fields, and process-tree cancellation fields without claiming DLL unload or persistent live attach.
 8. `tools/native-smoke/cancellation-operation-state-smoke.ps1` verifies x64 attach cancellation cleanup, post-cancel reattach, and process-tree observe cancellation.
 
+Current verified Phase 11G behavior:
+
+1. `capture-result` and `process-tree-result` accept additive session ownership fields including `sessionId`, `sessionState`, owner/helper PID, timestamps, cancellation event name, streamed-record counters, stale reason, and recovery action.
+2. `knmon-native-helper.exe attach-session --pid <pid> --session-id <id> --operation-id <id>` emits JSONL `session_started` and `session_state` frames before final capture output.
+3. `ThreadedSharedTransportReader` provides a host-side drain thread over `SharedTransportReader`, preserving committed-sequence consumption and bounded stop/join behavior without target hook-path work.
+4. Safe session stop reuses `cancel-operation`, then the existing attach cleanup path requests `KnMonAgentStop`, drains transport/pipe evidence, and proves self-disable before reporting `sessionState=stopped`.
+5. Existing Phase 11D/11F reattach smokes continue to prove post-stop loaded-agent reuse after self-disable.
+6. `classify-session --session-record <path>` marks orphaned running host records as `stale` or `recovery_required` without target mutation.
+7. Tauri exposes native session list/stop commands, and the selected-target UI renders active session state, streamed record count, stale reason, and stop availability.
+8. `tools/native-smoke/threaded-collector-session-smoke.ps1` verifies threaded committed-record drain, JSONL running-state visibility, and safe stop cleanup.
+9. `tools/native-smoke/session-recovery-state-smoke.ps1` verifies stale and recovery-required classification without remote mutation.
+
 Next implementation focus:
 
-1. Promote the pull-based reader to a threaded streaming collector only after long-running session ownership, shutdown, and recovery contracts exist.
-2. Add persistent daemon supervision only after the bounded cancellation contract is extended to durable restart/recovery semantics.
+1. Promote the host-side threaded reader/session frames into full UI event streaming only after backpressure and replay chunk boundaries are specified.
+2. Add persistent daemon supervision only after the Phase 11G session contract is extended to durable restart/recovery semantics.
 3. Keep protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 
 ## Phase 12: Advanced UX

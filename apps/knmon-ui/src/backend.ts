@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { mockTargets } from "./mockData";
-import type { CaptureResult, CaptureSessionState, LaunchResult, NativeOperation, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
+import type { CaptureResult, CaptureSessionState, LaunchResult, NativeOperation, NativeSession, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
 
 function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -111,6 +111,24 @@ export async function cancelNativeOperation(operationId: string): Promise<Native
 
   return invoke<NativeOperation>("cancel_native_operation", {
     operationId
+  });
+}
+
+export async function listNativeSessions(): Promise<NativeSession[]> {
+  if (!isTauriRuntime()) {
+    return [];
+  }
+
+  return invoke<NativeSession[]>("list_native_sessions");
+}
+
+export async function stopNativeSession(sessionId: string): Promise<NativeSession> {
+  if (!isTauriRuntime()) {
+    throw new Error("Native session stop requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeSession>("stop_native_session", {
+    sessionId
   });
 }
 

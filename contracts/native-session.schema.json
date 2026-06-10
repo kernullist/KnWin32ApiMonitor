@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/native-session.schema.json",
+  "title": "KnMonNativeSession",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "sessionId",
+    "operationId",
+    "sessionKind",
+    "ownerProcessId",
+    "helperProcessId",
+    "targetProcessId",
+    "sessionState",
+    "startedUtc",
+    "updatedUtc",
+    "cancellationEventName",
+    "lastTransportSequence",
+    "recordsStreamed",
+    "staleReason",
+    "recoveryAction"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "sessionId": { "type": "string" },
+    "operationId": { "type": "string" },
+    "sessionKind": { "type": "string" },
+    "ownerProcessId": { "type": "integer", "minimum": 0 },
+    "helperProcessId": { "type": "integer", "minimum": 0 },
+    "targetProcessId": { "type": "integer", "minimum": 0 },
+    "sessionState": {
+      "enum": [
+        "created",
+        "starting",
+        "running",
+        "stop_requested",
+        "stopping_agent",
+        "draining",
+        "stopped",
+        "failed",
+        "stale",
+        "recovery_required"
+      ]
+    },
+    "startedUtc": { "type": "string" },
+    "updatedUtc": { "type": "string" },
+    "stoppedUtc": { "type": "string" },
+    "cancellationEventName": { "type": "string" },
+    "lastTransportSequence": { "type": "integer", "minimum": 0 },
+    "recordsStreamed": { "type": "integer", "minimum": 0 },
+    "staleReason": { "type": "string" },
+    "recoveryAction": { "type": "string" },
+    "shutdownEvidence": { "type": "string" },
+    "stopRequested": { "type": "boolean" },
+    "agentCleanupAttempted": { "type": "boolean" },
+    "agentCleanupSucceeded": { "type": "boolean" }
+  }
+}

@@ -27,17 +27,19 @@ import {
   captureSampleFileIoEvents,
   captureSampleFileIoSession,
   launchSampleEarlyBirdCapture,
+  listNativeSessions,
   listNativeTargetProcesses,
   listNativeOperations,
   listTargetProcesses,
   replayLastSampleSession,
   startBackendSession,
   stopBackendSession,
+  stopNativeSession,
   superviseProcessTree
 } from "./backend";
 import { apiTree, captureProfiles, createMockFileIoEvent, initialTraceEvents } from "./mockData";
 import { downloadJsonl, estimateSessionBytes } from "./session";
-import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, NativeOperation, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
+import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, NativeOperation, NativeSession, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
 
 type LeftTab = "targets" | "apis" | "profiles";
 type TraceMode = "flat" | "call-tree";
@@ -299,6 +301,10 @@ function isNativeOperationActive(operation: NativeOperation): boolean {
   return ["queued", "running", "cancel_requested", "stopping_agent", "draining"].includes(operation.state);
 }
 
+function isNativeSessionActive(session: NativeSession): boolean {
+  return ["created", "starting", "running", "stop_requested", "stopping_agent", "draining"].includes(session.sessionState);
+}
+
 function formatElapsedMs(value: number): string {
   return `${(value / 1000).toFixed(1)}s`;
 }
@@ -326,6 +332,7 @@ function App() {
   const [processTreeResult, setProcessTreeResult] = useState<ProcessTreeResult | null>(null);
   const [lastSession, setLastSession] = useState<SessionInfo | null>(null);
   const [nativeOperations, setNativeOperations] = useState<NativeOperation[]>([]);
+  const [nativeSessions, setNativeSessions] = useState<NativeSession[]>([]);
   const [outputEvents, setOutputEvents] = useState<AuditEvent[]>([
     makeAuditEvent("backend_ready", "mock_init", "Mock File I/O backend initialized.")
   ]);
@@ -424,36 +431,44 @@ function App() {
   }, [running]);
 
   useEffect(() => {
-    if (!nativeBusy && nativeOperations.every((operation) => !isNativeOperationActive(operation))) {
+    if (
+      !nativeBusy &&
+      nativeOperations.every((operation) => !isNativeOperationActive(operation)) &&
+      nativeSessions.every((session) => !isNativeSessionActive(session))
+    ) {
       return undefined;
     }
 
     let active = true;
 
-    const refreshOperations = async () => {
+    const refreshNativeOwnership = async () => {
       try {
-        const operations = await listNativeOperations();
+        const [operations, sessions] = await Promise.all([
+          listNativeOperations(),
+          listNativeSessions()
+        ]);
         if (active) {
           setNativeOperations(operations);
+          setNativeSessions(sessions);
         }
       } catch (error) {
         if (active) {
           const message = error instanceof Error ? error.message : String(error);
-          appendOutput([makeAuditEvent("operation_state_poll_failed", "list_native_operations", message)]);
+          appendOutput([makeAuditEvent("native_ownership_poll_failed", "list_native_sessions", message)]);
         }
       }
     };
 
-    void refreshOperations();
+    void refreshNativeOwnership();
     const timer = window.setInterval(() => {
-      void refreshOperations();
+      void refreshNativeOwnership();
     }, 500);
 
     return () => {
       active = false;
       window.clearInterval(timer);
     };
-  }, [nativeBusy, nativeOperations]);
+  }, [nativeBusy, nativeOperations, nativeSessions]);
 
   const filteredEvents = useMemo(() => {
     const normalized = filter.trim().toLowerCase();
@@ -481,7 +496,8 @@ function App() {
   const selectedTarget = selectedTargetPid === null ? null : targets.find((target) => target.pid === selectedTargetPid) ?? null;
   const targetBlockReason = targetEligibilityReason(selectedTarget, targetSource);
   const activeNativeOperation = nativeOperations.find(isNativeOperationActive) ?? null;
-  const canRunTargetAction = targetBlockReason === null && !nativeBusy && activeNativeOperation === null;
+  const activeNativeSession = nativeSessions.find(isNativeSessionActive) ?? null;
+  const canRunTargetAction = targetBlockReason === null && !nativeBusy && activeNativeOperation === null && activeNativeSession === null;
   const processTreeSummary = summarizeProcessTree(processTreeResult);
   const sessionBytes = estimateSessionBytes(events);
 
@@ -711,6 +727,26 @@ function App() {
     }
   }
 
+  async function handleStopNativeSession() {
+    if (!activeNativeSession) {
+      return;
+    }
+
+    try {
+      appendOutput([makeAuditEvent("session_stop_requested", "stop_native_session", activeNativeSession.sessionId)]);
+      const session = await stopNativeSession(activeNativeSession.sessionId);
+      setNativeSessions((current) => {
+        const remaining = current.filter((item) => item.sessionId !== session.sessionId);
+        return [session, ...remaining];
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("session_stop_failed", "stop_native_session", message)]);
+    } finally {
+      setInspectorTab("output");
+    }
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -830,6 +866,24 @@ function App() {
                       <Square size={13} />
                       <span>Cancel</span>
                     </button>
+                  </div>
+                ) : null}
+                {activeNativeSession ? (
+                  <div className="session-strip">
+                    <span>{activeNativeSession.sessionKind}</span>
+                    <strong>{activeNativeSession.sessionState}</strong>
+                    <span>{activeNativeSession.recordsStreamed} rec</span>
+                    <button
+                      type="button"
+                      className="tool-button"
+                      onClick={handleStopNativeSession}
+                      disabled={activeNativeSession.stopRequested}
+                      title={activeNativeSession.recoveryAction || "Stop native session"}
+                    >
+                      <Square size={13} />
+                      <span>Stop</span>
+                    </button>
+                    {activeNativeSession.staleReason ? <small>{activeNativeSession.staleReason}</small> : null}
                   </div>
                 ) : null}
 

@@ -35,6 +35,31 @@ export interface NativeOperation {
   durationMs: number;
 }
 
+export interface NativeSession {
+  schemaVersion: string;
+  sessionId: string;
+  operationId: string;
+  sessionKind: string;
+  ownerProcessId: number;
+  helperProcessId: number;
+  targetProcessId: number;
+  sessionState: "created" | "starting" | "running" | "stop_requested" | "stopping_agent" | "draining" | "stopped" | "failed" | "stale" | "recovery_required" | string;
+  startedUtc: string;
+  updatedUtc: string;
+  stoppedUtc: string;
+  cancellationEventName: string;
+  lastTransportSequence: number;
+  recordsStreamed: number;
+  staleReason: string;
+  recoveryAction: string;
+  shutdownEvidence: string;
+  stopRequested: boolean;
+  agentCleanupAttempted: boolean;
+  agentCleanupSucceeded: boolean;
+  elapsedMs: number;
+  durationMs: number;
+}
+
 export interface AuditEvent {
   schemaVersion: string;
   operationId: string;
@@ -122,6 +147,20 @@ export interface AgentApiCallEvent {
 export interface CaptureResult {
   schemaVersion: string;
   operationId: string;
+  sessionId?: string;
+  sessionState?: string;
+  sessionKind?: string;
+  ownerProcessId?: number;
+  helperProcessId?: number;
+  startedUtc?: string;
+  updatedUtc?: string;
+  stoppedUtc?: string;
+  cancellationEventName?: string;
+  lastTransportSequence?: number;
+  recordsStreamed?: number;
+  staleReason?: string;
+  recoveryAction?: string;
+  sessionShutdownEvidence?: string;
   success: boolean;
   backendMode: BackendMode;
   captureMode: string;
@@ -201,6 +240,19 @@ export interface ChildPolicyDecision {
 export interface ProcessTreeResult {
   schemaVersion: string;
   operationId: string;
+  sessionId?: string;
+  sessionState?: string;
+  sessionKind?: string;
+  ownerProcessId?: number;
+  helperProcessId?: number;
+  startedUtc?: string;
+  updatedUtc?: string;
+  stoppedUtc?: string;
+  cancellationEventName?: string;
+  lastTransportSequence?: number;
+  recordsStreamed?: number;
+  staleReason?: string;
+  recoveryAction?: string;
   success: boolean;
   backendMode: BackendMode;
   supervisionMode: "process-tree";

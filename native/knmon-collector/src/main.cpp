@@ -1,6 +1,9 @@
 #include <knmon/core/Controller.h>
 #include <knmon/collector/Collector.h>
 #include <knmon/collector/SharedTransportReader.h>
+#include <knmon/collector/ThreadedSharedTransportReader.h>
+
+#include <Windows.h>
 
 #include <algorithm>
 #include <cwchar>
@@ -157,6 +160,19 @@ std::string SequenceArrayJson(const std::vector<std::uint64_t>& sequences)
     }
     stream << "]";
     return stream.str();
+}
+
+void CommitSyntheticTransportRecord(
+    knmon::KnMonTransportHeader& header,
+    std::vector<knmon::KnMonTransportRecord>& records,
+    std::int64_t sequence)
+{
+    knmon::KnMonTransportRecord& record = records[sequence % header.Capacity];
+    record = MakeSyntheticTransportRecord(sequence);
+    MemoryBarrier();
+    record.State = static_cast<std::int32_t>(knmon::KnMonTransportRecordState::Committed);
+    InterlockedExchange64(&header.ProducerSequence, sequence + 1);
+    InterlockedExchange64(&header.HighWaterMark, sequence + 1);
 }
 
 int RunBackpressureSmoke(int argc, char** argv)
@@ -318,6 +334,133 @@ int RunSharedTransportReaderSmoke(int argc, char** argv)
 
     return success ? 0 : 1;
 }
+
+int RunThreadedSessionReaderSmoke(int argc, char** argv)
+{
+    std::size_t capacity = 8;
+    std::size_t recordCount = 6;
+    ParseSizeArgument(argc, argv, "--capacity", &capacity);
+    ParseSizeArgument(argc, argv, "--records", &recordCount);
+
+    capacity = std::min<std::size_t>(std::max<std::size_t>(capacity, knmon::KnMonTransportMinCapacity), knmon::KnMonTransportMaxCapacity);
+    recordCount = std::min(recordCount, capacity);
+
+    knmon::KnMonTransportHeader header;
+    header.Magic = knmon::KnMonTransportMagic;
+    header.AbiVersion = knmon::KnMonTransportAbiVersion;
+    header.HeaderSize = sizeof(knmon::KnMonTransportHeader);
+    header.Architecture = static_cast<std::uint32_t>(knmon::KnMonAgentArchitecture::X64);
+    header.Capacity = static_cast<std::uint32_t>(capacity);
+    header.RecordSize = sizeof(knmon::KnMonTransportRecord);
+    header.ProducerSequence = 0;
+    header.ConsumerSequence = 0;
+    header.DroppedEvents = 0;
+    header.HighWaterMark = 0;
+    wcsncpy_s(header.OperationId, L"threaded-session-smoke", _TRUNCATE);
+
+    std::vector<knmon::KnMonTransportRecord> records(capacity);
+    std::vector<std::uint64_t> consumedSequences;
+    std::vector<std::string> stateFrames;
+
+    knmon::ThreadedSharedTransportReaderConfig threadedConfig;
+    threadedConfig.ReaderConfig.ExpectedArchitecture = static_cast<std::uint32_t>(knmon::KnMonAgentArchitecture::X64);
+    threadedConfig.ReaderConfig.ExpectedOperationId = "threaded-session-smoke";
+    threadedConfig.ReaderConfig.MaxRecordsPerDrain = 2;
+    threadedConfig.PollIntervalMs = 10;
+
+    knmon::ThreadedSharedTransportReader reader(&header, records.data(), threadedConfig);
+    stateFrames.push_back("created");
+    const bool started = reader.Start([&consumedSequences](const knmon::KnMonTransportRecord& record)
+    {
+        consumedSequences.push_back(static_cast<std::uint64_t>(record.Sequence));
+        return true;
+    });
+    stateFrames.push_back(started ? "running" : "failed");
+
+    for (std::size_t index = 0; started && index < recordCount; ++index)
+    {
+        CommitSyntheticTransportRecord(header, records, static_cast<std::int64_t>(index));
+        Sleep(25);
+    }
+
+    const DWORD deadline = GetTickCount() + 5000;
+    while (consumedSequences.size() < recordCount && GetTickCount() < deadline)
+    {
+        Sleep(20);
+    }
+
+    reader.RequestStop("stop_requested");
+    stateFrames.push_back("stop_requested");
+    const bool joined = reader.Join(5000);
+    stateFrames.push_back(joined ? "stopped" : "failed");
+    const knmon::ThreadedSharedTransportReaderMetrics metrics = reader.SnapshotMetrics();
+
+    bool sequencesMatch = consumedSequences.size() == recordCount;
+    for (std::size_t index = 0; index < consumedSequences.size(); ++index)
+    {
+        if (consumedSequences[index] != index)
+        {
+            sequencesMatch = false;
+            break;
+        }
+    }
+
+    const bool success =
+        started &&
+        joined &&
+        !metrics.Running &&
+        metrics.StopRequested &&
+        metrics.HeaderValid &&
+        metrics.ValidationFailures == 0 &&
+        metrics.RecordsStreamed == recordCount &&
+        metrics.RecordsConsumed == recordCount &&
+        metrics.RecordsProduced == recordCount &&
+        metrics.LastTransportSequence == recordCount &&
+        metrics.ShutdownReason == "stop_requested" &&
+        sequencesMatch;
+
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"success\":" << (success ? "true" : "false") << ",";
+    stream << "\"operation\":\"smoke-threaded-session-reader\",";
+    stream << "\"sessionId\":\"threaded-session-smoke\",";
+    stream << "\"operationId\":\"threaded-session-smoke\",";
+    stream << "\"sessionState\":" << Q(joined ? "stopped" : "failed") << ",";
+    stream << "\"capacity\":" << capacity << ",";
+    stream << "\"recordsRequested\":" << recordCount << ",";
+    stream << "\"started\":" << (started ? "true" : "false") << ",";
+    stream << "\"joined\":" << (joined ? "true" : "false") << ",";
+    stream << "\"running\":" << (metrics.Running ? "true" : "false") << ",";
+    stream << "\"stopRequested\":" << (metrics.StopRequested ? "true" : "false") << ",";
+    stream << "\"headerValid\":" << (metrics.HeaderValid ? "true" : "false") << ",";
+    stream << "\"drainCalls\":" << metrics.DrainCalls << ",";
+    stream << "\"recordsStreamed\":" << metrics.RecordsStreamed << ",";
+    stream << "\"recordsProduced\":" << metrics.RecordsProduced << ",";
+    stream << "\"recordsConsumed\":" << metrics.RecordsConsumed << ",";
+    stream << "\"recordsDropped\":" << metrics.RecordsDropped << ",";
+    stream << "\"highWaterMark\":" << metrics.HighWaterMark << ",";
+    stream << "\"validationFailures\":" << metrics.ValidationFailures << ",";
+    stream << "\"lastTransportSequence\":" << metrics.LastTransportSequence << ",";
+    stream << "\"shutdownReason\":" << Q(metrics.ShutdownReason) << ",";
+    stream << "\"lastErrorMessage\":" << Q(metrics.LastErrorMessage) << ",";
+    stream << "\"stateFrames\":[";
+    for (std::size_t index = 0; index < stateFrames.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << Q(stateFrames[index]);
+    }
+    stream << "],";
+    stream << "\"consumedSequences\":" << SequenceArrayJson(consumedSequences) << ",";
+    stream << "\"message\":" << Q(success ? "Threaded shared transport session reader smoke passed." : "Threaded shared transport session reader smoke failed.");
+    stream << "}";
+    std::cout << stream.str() << "\n";
+
+    return success ? 0 : 1;
+}
 }
 
 int main(int argc, char** argv)
@@ -330,6 +473,11 @@ int main(int argc, char** argv)
     if (argc >= 2 && std::string(argv[1]) == "smoke-shared-transport-reader")
     {
         return RunSharedTransportReaderSmoke(argc, argv);
+    }
+
+    if (argc >= 2 && std::string(argv[1]) == "smoke-threaded-session-reader")
+    {
+        return RunThreadedSessionReaderSmoke(argc, argv);
     }
 
     knmon::Controller controller;
@@ -353,5 +501,6 @@ int main(int argc, char** argv)
     std::cout << "capture backend: mock-only safe MVP\n";
     std::cout << "collector smoke: smoke-backpressure --capacity 4 --events 10\n";
     std::cout << "collector smoke: smoke-shared-transport-reader --capacity 4 --records 3\n";
+    std::cout << "collector smoke: smoke-threaded-session-reader --capacity 8 --records 6\n";
     return error.Code == 0 ? 0 : 1;
 }

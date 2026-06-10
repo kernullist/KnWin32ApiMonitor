@@ -25,6 +25,33 @@
   "properties": {
     "schemaVersion": { "type": "string" },
     "operationId": { "type": "string" },
+    "sessionId": { "type": "string" },
+    "sessionState": {
+      "enum": [
+        "",
+        "created",
+        "starting",
+        "running",
+        "stop_requested",
+        "stopping_agent",
+        "draining",
+        "stopped",
+        "failed",
+        "stale",
+        "recovery_required"
+      ]
+    },
+    "sessionKind": { "type": "string" },
+    "ownerProcessId": { "type": "integer", "minimum": 0 },
+    "helperProcessId": { "type": "integer", "minimum": 0 },
+    "startedUtc": { "type": "string" },
+    "updatedUtc": { "type": "string" },
+    "stoppedUtc": { "type": "string" },
+    "cancellationEventName": { "type": "string" },
+    "lastTransportSequence": { "type": "integer", "minimum": 0 },
+    "recordsStreamed": { "type": "integer", "minimum": 0 },
+    "staleReason": { "type": "string" },
+    "recoveryAction": { "type": "string" },
     "success": { "type": "boolean" },
     "backendMode": { "enum": ["native-capture"] },
     "supervisionMode": { "const": "process-tree" },

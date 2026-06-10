@@ -14,6 +14,7 @@ target_include_directories(knmon-common INTERFACE
 add_library(knmon-collector-core STATIC
     knmon-collector/src/Collector.cpp
     knmon-collector/src/SharedTransportReader.cpp
+    knmon-collector/src/ThreadedSharedTransportReader.cpp
 )
 target_include_directories(knmon-collector-core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/knmon-collector/include

@@ -281,7 +281,12 @@ struct KnMonLaunchRequest
 struct KnMonAttachRequest
 {
     std::string OperationId;
+    std::string SessionId;
+    std::string SessionKind;
+    std::string StartedUtc;
     std::uint32_t ProcessId = 0;
+    std::uint32_t OwnerProcessId = 0;
+    std::uint32_t HelperProcessId = 0;
     std::string AgentPath;
     std::string CancellationEventName;
     std::uint32_t TimeoutMs = 5000;
@@ -293,7 +298,12 @@ struct KnMonAttachRequest
 struct KnMonProcessTreeRequest
 {
     std::string OperationId;
+    std::string SessionId;
+    std::string SessionKind;
+    std::string StartedUtc;
     std::uint32_t RootProcessId = 0;
+    std::uint32_t OwnerProcessId = 0;
+    std::uint32_t HelperProcessId = 0;
     std::string AgentPath;
     std::string CancellationEventName;
     std::uint32_t TimeoutMs = 7000;
@@ -340,6 +350,20 @@ struct KnMonCaptureResult
 {
     std::string SchemaVersion = "0.1.0";
     std::string OperationId;
+    std::string SessionId;
+    std::string SessionState;
+    std::string SessionKind;
+    std::uint32_t OwnerProcessId = 0;
+    std::uint32_t HelperProcessId = 0;
+    std::string StartedUtc;
+    std::string UpdatedUtc;
+    std::string StoppedUtc;
+    std::string CancellationEventName;
+    std::uint64_t LastTransportSequence = 0;
+    std::uint64_t RecordsStreamed = 0;
+    std::string StaleReason;
+    std::string RecoveryAction;
+    std::string SessionShutdownEvidence;
     bool Success = false;
     std::string BackendMode = "native-capture";
     std::string CaptureMode = "bounded-native-capture";
@@ -421,6 +445,19 @@ struct KnMonProcessTreeResult
 {
     std::string SchemaVersion = "0.1.0";
     std::string OperationId;
+    std::string SessionId;
+    std::string SessionState;
+    std::string SessionKind;
+    std::uint32_t OwnerProcessId = 0;
+    std::uint32_t HelperProcessId = 0;
+    std::string StartedUtc;
+    std::string UpdatedUtc;
+    std::string StoppedUtc;
+    std::string CancellationEventName;
+    std::uint64_t LastTransportSequence = 0;
+    std::uint64_t RecordsStreamed = 0;
+    std::string StaleReason;
+    std::string RecoveryAction;
     bool Success = false;
     std::string BackendMode = "native-capture";
     std::string SupervisionMode = "process-tree";

@@ -841,6 +841,20 @@ std::string ToJson(const knmon::KnMonCaptureResult& result)
     stream << "{";
     stream << "\"schemaVersion\":" << Q(result.SchemaVersion) << ",";
     stream << "\"operationId\":" << Q(result.OperationId) << ",";
+    stream << "\"sessionId\":" << Q(result.SessionId) << ",";
+    stream << "\"sessionState\":" << Q(result.SessionState) << ",";
+    stream << "\"sessionKind\":" << Q(result.SessionKind) << ",";
+    stream << "\"ownerProcessId\":" << result.OwnerProcessId << ",";
+    stream << "\"helperProcessId\":" << result.HelperProcessId << ",";
+    stream << "\"startedUtc\":" << Q(result.StartedUtc) << ",";
+    stream << "\"updatedUtc\":" << Q(result.UpdatedUtc) << ",";
+    stream << "\"stoppedUtc\":" << Q(result.StoppedUtc) << ",";
+    stream << "\"cancellationEventName\":" << Q(result.CancellationEventName) << ",";
+    stream << "\"lastTransportSequence\":" << result.LastTransportSequence << ",";
+    stream << "\"recordsStreamed\":" << result.RecordsStreamed << ",";
+    stream << "\"staleReason\":" << Q(result.StaleReason) << ",";
+    stream << "\"recoveryAction\":" << Q(result.RecoveryAction) << ",";
+    stream << "\"sessionShutdownEvidence\":" << Q(result.SessionShutdownEvidence) << ",";
     stream << "\"success\":" << (result.Success ? "true" : "false") << ",";
     stream << "\"backendMode\":" << Q(result.BackendMode) << ",";
     stream << "\"captureMode\":" << Q(result.CaptureMode) << ",";
@@ -961,6 +975,19 @@ std::string ToJson(const knmon::KnMonProcessTreeResult& result)
     stream << "{";
     stream << "\"schemaVersion\":" << Q(result.SchemaVersion) << ",";
     stream << "\"operationId\":" << Q(result.OperationId) << ",";
+    stream << "\"sessionId\":" << Q(result.SessionId) << ",";
+    stream << "\"sessionState\":" << Q(result.SessionState) << ",";
+    stream << "\"sessionKind\":" << Q(result.SessionKind) << ",";
+    stream << "\"ownerProcessId\":" << result.OwnerProcessId << ",";
+    stream << "\"helperProcessId\":" << result.HelperProcessId << ",";
+    stream << "\"startedUtc\":" << Q(result.StartedUtc) << ",";
+    stream << "\"updatedUtc\":" << Q(result.UpdatedUtc) << ",";
+    stream << "\"stoppedUtc\":" << Q(result.StoppedUtc) << ",";
+    stream << "\"cancellationEventName\":" << Q(result.CancellationEventName) << ",";
+    stream << "\"lastTransportSequence\":" << result.LastTransportSequence << ",";
+    stream << "\"recordsStreamed\":" << result.RecordsStreamed << ",";
+    stream << "\"staleReason\":" << Q(result.StaleReason) << ",";
+    stream << "\"recoveryAction\":" << Q(result.RecoveryAction) << ",";
     stream << "\"success\":" << (result.Success ? "true" : "false") << ",";
     stream << "\"backendMode\":" << Q(result.BackendMode) << ",";
     stream << "\"supervisionMode\":" << Q(result.SupervisionMode) << ",";
@@ -1035,6 +1062,30 @@ struct SessionInfo
     std::vector<std::string> ValidationErrors;
 };
 
+struct NativeSessionInfo
+{
+    std::string SchemaVersion = "0.1.0";
+    std::string SessionId;
+    std::string OperationId;
+    std::string SessionKind;
+    std::uint32_t OwnerProcessId = 0;
+    std::uint32_t HelperProcessId = 0;
+    std::uint32_t TargetProcessId = 0;
+    std::string SessionState;
+    std::string StartedUtc;
+    std::string UpdatedUtc;
+    std::string StoppedUtc;
+    std::string CancellationEventName;
+    std::uint64_t LastTransportSequence = 0;
+    std::uint64_t RecordsStreamed = 0;
+    std::string StaleReason;
+    std::string RecoveryAction;
+    std::string ShutdownEvidence;
+    bool StopRequested = false;
+    bool AgentCleanupAttempted = false;
+    bool AgentCleanupSucceeded = false;
+};
+
 std::string ToJson(const SessionInfo& session)
 {
     std::ostringstream stream;
@@ -1060,6 +1111,45 @@ std::string ToJson(const SessionInfo& session)
         stream << Q(session.ValidationErrors[index]);
     }
     stream << "]";
+    stream << "}";
+    return stream.str();
+}
+
+std::string ToJson(const NativeSessionInfo& session)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":" << Q(session.SchemaVersion) << ",";
+    stream << "\"sessionId\":" << Q(session.SessionId) << ",";
+    stream << "\"operationId\":" << Q(session.OperationId) << ",";
+    stream << "\"sessionKind\":" << Q(session.SessionKind) << ",";
+    stream << "\"ownerProcessId\":" << session.OwnerProcessId << ",";
+    stream << "\"helperProcessId\":" << session.HelperProcessId << ",";
+    stream << "\"targetProcessId\":" << session.TargetProcessId << ",";
+    stream << "\"sessionState\":" << Q(session.SessionState) << ",";
+    stream << "\"startedUtc\":" << Q(session.StartedUtc) << ",";
+    stream << "\"updatedUtc\":" << Q(session.UpdatedUtc) << ",";
+    stream << "\"stoppedUtc\":" << Q(session.StoppedUtc) << ",";
+    stream << "\"cancellationEventName\":" << Q(session.CancellationEventName) << ",";
+    stream << "\"lastTransportSequence\":" << session.LastTransportSequence << ",";
+    stream << "\"recordsStreamed\":" << session.RecordsStreamed << ",";
+    stream << "\"staleReason\":" << Q(session.StaleReason) << ",";
+    stream << "\"recoveryAction\":" << Q(session.RecoveryAction) << ",";
+    stream << "\"shutdownEvidence\":" << Q(session.ShutdownEvidence) << ",";
+    stream << "\"stopRequested\":" << (session.StopRequested ? "true" : "false") << ",";
+    stream << "\"agentCleanupAttempted\":" << (session.AgentCleanupAttempted ? "true" : "false") << ",";
+    stream << "\"agentCleanupSucceeded\":" << (session.AgentCleanupSucceeded ? "true" : "false");
+    stream << "}";
+    return stream.str();
+}
+
+std::string SessionFrameJson(const std::string& frameType, const NativeSessionInfo& session)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"frameType\":" << Q(frameType) << ",";
+    stream << "\"session\":" << ToJson(session);
     stream << "}";
     return stream.str();
 }
@@ -1544,6 +1634,18 @@ std::string OperationIdFromArgs(const std::vector<std::string>& args)
     return operationId;
 }
 
+std::string SessionIdFromArgs(const std::vector<std::string>& args, const std::string& operationId)
+{
+    std::string sessionId = GetOption(args, "--session-id");
+
+    if (sessionId.empty())
+    {
+        sessionId = "session-" + SanitizeFileName(operationId);
+    }
+
+    return sessionId;
+}
+
 std::string CancellationEventNameForOperation(const std::string& operationId)
 {
     return "Local\\KNMonCancel_" + SanitizeFileName(operationId);
@@ -1559,6 +1661,84 @@ std::string CancellationEventNameFromArgs(const std::vector<std::string>& args, 
     }
 
     return eventName;
+}
+
+bool IsProcessAlive(std::uint32_t processId)
+{
+    bool alive = false;
+    HANDLE processHandle = nullptr;
+
+    do
+    {
+        if (processId == 0)
+        {
+            break;
+        }
+
+        processHandle = OpenProcess(SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, FALSE, processId);
+        if (processHandle == nullptr)
+        {
+            break;
+        }
+
+        alive = WaitForSingleObject(processHandle, 0) == WAIT_TIMEOUT;
+    }
+    while (false);
+
+    if (processHandle != nullptr)
+    {
+        CloseHandle(processHandle);
+    }
+
+    return alive;
+}
+
+NativeSessionInfo BuildAttachSessionInfo(
+    const std::string& sessionId,
+    const std::string& operationId,
+    std::uint32_t targetProcessId,
+    const std::string& cancellationEventName,
+    const std::string& state,
+    const std::string& startedUtc)
+{
+    NativeSessionInfo session;
+    session.SessionId = sessionId;
+    session.OperationId = operationId;
+    session.SessionKind = "attach_capture";
+    session.OwnerProcessId = GetCurrentProcessId();
+    session.HelperProcessId = GetCurrentProcessId();
+    session.TargetProcessId = targetProcessId;
+    session.SessionState = state;
+    session.StartedUtc = startedUtc;
+    session.UpdatedUtc = NowUtc();
+    session.CancellationEventName = cancellationEventName;
+    return session;
+}
+
+NativeSessionInfo BuildSessionInfoFromCapture(const knmon::KnMonCaptureResult& result, const NativeSessionInfo& previous)
+{
+    NativeSessionInfo session = previous;
+    session.SessionState = result.SessionState.empty() ? (result.Success ? "stopped" : "failed") : result.SessionState;
+    session.UpdatedUtc = result.UpdatedUtc.empty() ? NowUtc() : result.UpdatedUtc;
+    session.StoppedUtc = result.StoppedUtc.empty() ? session.UpdatedUtc : result.StoppedUtc;
+    session.LastTransportSequence = result.LastTransportSequence;
+    session.RecordsStreamed = result.RecordsStreamed;
+    session.ShutdownEvidence = result.SessionShutdownEvidence;
+    session.StopRequested = result.CancelRequested || result.CancelObserved;
+    session.AgentCleanupAttempted = result.AgentCleanupAttempted;
+    session.AgentCleanupSucceeded = result.AgentCleanupSucceeded;
+
+    if (!result.Success && result.Operation != "operation_cancelled")
+    {
+        session.SessionState = "failed";
+    }
+
+    if (result.Operation == "operation_cancelled" && result.AgentCleanupSucceeded)
+    {
+        session.SessionState = "stopped";
+    }
+
+    return session;
 }
 
 knmon::KnMonChildPolicy ParseChildPolicy(const std::string& value)
@@ -1692,6 +1872,68 @@ std::string AttachCaptureJson(const std::vector<std::string>& args)
     return ToJson(result);
 }
 
+int AttachSessionCommand(const std::vector<std::string>& args)
+{
+    const auto helperDir = HelperDirectory();
+    const std::string defaultAgent = WideToUtf8((helperDir / DefaultAgentFileName()).wstring().c_str());
+    const std::string operationId = OperationIdFromArgs(args);
+    const std::string sessionId = SessionIdFromArgs(args, operationId);
+    const std::string startedUtc = NowUtc();
+    const std::string cancellationEventName = CancellationEventNameFromArgs(args, operationId);
+    const std::string pidOption = GetOption(args, "--pid");
+
+    knmon::KnMonAttachRequest request;
+    request.OperationId = operationId;
+    request.SessionId = sessionId;
+    request.SessionKind = "attach_capture";
+    request.StartedUtc = startedUtc;
+    request.ProcessId = pidOption == "self" ? GetCurrentProcessId() : GetUInt32Option(args, "--pid", 0);
+    request.OwnerProcessId = GetCurrentProcessId();
+    request.HelperProcessId = GetCurrentProcessId();
+    request.AgentPath = GetOption(args, "--agent");
+    request.CancellationEventName = cancellationEventName;
+    request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
+    request.DurationMs = GetUInt32Option(args, "--duration-ms", 3000);
+    request.Architecture = NativeHelperArchitecture();
+    request.InjectionMethod = knmon::KnMonInjectionMethod::RemoteLoadLibrary;
+
+    if (request.AgentPath.empty())
+    {
+        request.AgentPath = defaultAgent;
+    }
+
+    NativeSessionInfo session = BuildAttachSessionInfo(
+        sessionId,
+        operationId,
+        request.ProcessId,
+        cancellationEventName,
+        "starting",
+        startedUtc);
+
+    std::cout << SessionFrameJson("session_started", session) << "\n" << std::flush;
+    session.SessionState = "running";
+    session.UpdatedUtc = NowUtc();
+    std::cout << SessionFrameJson("session_state", session) << "\n" << std::flush;
+
+    knmon::Controller controller;
+    knmon::KnMonCaptureResult result = controller.AttachCapture(request);
+    session = BuildSessionInfoFromCapture(result, session);
+
+    const std::string finalFrame = session.SessionState == "failed" ? "session_failed" : "session_stopped";
+    std::cout << SessionFrameJson(finalFrame, session) << "\n";
+
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"frameType\":\"capture_result\",";
+    stream << "\"session\":" << ToJson(session) << ",";
+    stream << "\"captureResult\":" << ToJson(result);
+    stream << "}";
+    std::cout << stream.str() << "\n";
+
+    return 0;
+}
+
 std::string SuperviseTreeJson(const std::vector<std::string>& args)
 {
     const auto helperDir = HelperDirectory();
@@ -1716,6 +1958,90 @@ std::string SuperviseTreeJson(const std::vector<std::string>& args)
 
     knmon::Controller controller;
     return ToJson(controller.SuperviseProcessTree(request));
+}
+
+std::string ClassifySessionRecordJson(const std::vector<std::string>& args)
+{
+    const std::string sessionRecordPath = GetOption(args, "--session-record");
+    std::string record;
+    std::string readError;
+    NativeSessionInfo session;
+    bool success = false;
+    std::uint32_t win32ErrorCode = 0;
+    std::string message;
+
+    do
+    {
+        if (sessionRecordPath.empty())
+        {
+            win32ErrorCode = ERROR_INVALID_PARAMETER;
+            message = "Missing --session-record path.";
+            break;
+        }
+
+        if (!ReadTextFile(PathFromUtf8(sessionRecordPath), &record, &readError))
+        {
+            win32ErrorCode = ERROR_FILE_NOT_FOUND;
+            message = readError;
+            break;
+        }
+
+        session.SessionId = ExtractJsonString(record, "sessionId");
+        session.OperationId = ExtractJsonString(record, "operationId");
+        session.SessionKind = ExtractJsonString(record, "sessionKind");
+        session.SessionState = ExtractJsonString(record, "sessionState");
+        session.OwnerProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(record, "ownerProcessId"));
+        session.HelperProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(record, "helperProcessId"));
+        session.TargetProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(record, "targetProcessId"));
+        session.StartedUtc = ExtractJsonString(record, "startedUtc");
+        session.UpdatedUtc = NowUtc();
+        session.CancellationEventName = ExtractJsonString(record, "cancellationEventName");
+        session.LastTransportSequence = ExtractJsonUInt64(record, "lastTransportSequence");
+        session.RecordsStreamed = ExtractJsonUInt64(record, "recordsStreamed");
+
+        const bool runningState = session.SessionState == "running" || session.SessionState == "starting" || session.SessionState == "stop_requested";
+        const bool ownerAlive = IsProcessAlive(session.OwnerProcessId);
+        const bool helperAlive = IsProcessAlive(session.HelperProcessId);
+        const bool targetAlive = IsProcessAlive(session.TargetProcessId);
+
+        if (runningState && !ownerAlive && !helperAlive)
+        {
+            if (targetAlive)
+            {
+                session.SessionState = "recovery_required";
+                session.StaleReason = "owner_missing_target_alive";
+                session.RecoveryAction = "manual_same_bitness_cleanup_required";
+            }
+            else
+            {
+                session.SessionState = "stale";
+                session.StaleReason = "owner_missing_target_exited";
+                session.RecoveryAction = "none";
+            }
+        }
+        else
+        {
+            session.StaleReason = "owner_observed_or_terminal_state";
+            session.RecoveryAction = "none";
+        }
+
+        success = true;
+        message = "Session record classified without target mutation.";
+    }
+    while (false);
+
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"success\":" << (success ? "true" : "false") << ",";
+    stream << "\"backendMode\":\"native-capture\",";
+    stream << "\"operation\":\"classify_session_record\",";
+    stream << "\"win32ErrorCode\":" << win32ErrorCode << ",";
+    stream << "\"mutationAttempted\":false,";
+    stream << "\"session\":" << ToJson(session) << ",";
+    stream << "\"message\":" << Q(message);
+    stream << "}";
+    return stream.str();
 }
 
 std::string ReplaySessionCommandJson(const std::vector<std::string>& args)
@@ -1831,7 +2157,7 @@ void PrintUsage()
     std::cout << "{";
     std::cout << "\"schemaVersion\":\"0.1.0\",";
     std::cout << "\"success\":false,";
-    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | replay-session --session dir | validate-session --session dir\"";
+    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | replay-session --session dir | validate-session --session dir\"";
     std::cout << "}\n";
 }
 }
@@ -1874,6 +2200,11 @@ int wmain(int argc, wchar_t** argv)
         return 0;
     }
 
+    if (args[0] == "attach-session")
+    {
+        return AttachSessionCommand(args);
+    }
+
     if (args[0] == "supervise-tree")
     {
         std::cout << SuperviseTreeJson(args) << "\n";
@@ -1883,6 +2214,12 @@ int wmain(int argc, wchar_t** argv)
     if (args[0] == "cancel-operation")
     {
         std::cout << CancelOperationJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "classify-session")
+    {
+        std::cout << ClassifySessionRecordJson(args) << "\n";
         return 0;
     }
 

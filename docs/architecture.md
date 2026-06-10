@@ -6,7 +6,7 @@
 
 This document describes the current Phase 0/Phase 1 foundation and the controlled native-capture paths for `KN Win32 API Monitor`.
 
-The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, a Phase 11B helper-side process-tree supervision foundation for deterministic sample children, Phase 11C UI controls for bounded selected-target attach and process-tree supervision, a Phase 11D repeated attach state path for self-disabled loaded agents, a Phase 11E collector-core shared transport reader foundation, Phase 11F cancellation-safe operation ownership for bounded attach and process-tree helper commands, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, persistent attach daemons, threaded streaming collector sessions, or broad arbitrary target supervision.
+The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, a Phase 11B helper-side process-tree supervision foundation for deterministic sample children, Phase 11C UI controls for bounded selected-target attach and process-tree supervision, a Phase 11D repeated attach state path for self-disabled loaded agents, a Phase 11E collector-core shared transport reader foundation, Phase 11F cancellation-safe operation ownership for bounded attach and process-tree helper commands, Phase 11G durable native session ownership readiness with host-side threaded transport reading and stale session classification, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, persistent attach daemons, full live UI streaming sessions, or broad arbitrary target supervision.
 
 ## Layers
 
@@ -84,8 +84,10 @@ Current commands:
 11. `supervise_process_tree`
 12. `list_native_operations`
 13. `cancel_native_operation`
+14. `list_native_sessions`
+15. `stop_native_session`
 
-These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, bounded sample File I/O capture, bounded same-bitness selected-target attach, helper-side process-tree supervision, and cancellation-safe ownership for those bounded helper operations. The attach and process-tree UI controls call finite helper commands and return structured JSON; they do not create a persistent attached session, background daemon, or live detach controller.
+These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, bounded sample File I/O capture, bounded same-bitness selected-target attach, helper-side process-tree supervision, cancellation-safe ownership for those bounded helper operations, and host-side session state visibility. The attach and process-tree UI controls still call finite helper commands and return structured JSON; they do not create a persistent broad attached daemon or injected command channel.
 
 Future work:
 
@@ -108,9 +110,10 @@ Current responsibilities:
 7. Implement bounded same-bitness `attach-capture --pid` for already-running non-protected sample targets.
 8. Implement bounded helper-side `supervise-tree --pid` process-tree discovery and child policy evaluation.
 9. Implement cancellation checks and cleanup accounting for bounded attach and process-tree operations.
-10. Keep broad arbitrary attach, persistent daemon supervision, and UI-driven child auto-attach outside the current controller surface.
+10. Populate additive host-side session state fields for bounded attach and process-tree results.
+11. Keep broad arbitrary attach, persistent daemon supervision, and UI-driven child auto-attach outside the current controller surface.
 
-The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, bounded sample File I/O capture, Phase 11A attach, Phase 11B process-tree supervision, Phase 11D loaded-agent reattach state, Phase 11E collector-reader backed shared-memory drain, and Phase 11F named-event cancellation. The UI-visible Phase 11C/11F path uses the same helper JSON as the smoke scripts.
+The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, bounded sample File I/O capture, Phase 11A attach, Phase 11B process-tree supervision, Phase 11D loaded-agent reattach state, Phase 11E collector-reader backed shared-memory drain, Phase 11F named-event cancellation, and Phase 11G session-state evidence. The UI-visible Phase 11C/11F/11G path uses the same helper JSON as the smoke scripts.
 
 Future responsibilities:
 
@@ -118,7 +121,7 @@ Future responsibilities:
 2. Persistent long-running attach/detach sessions for selected targets.
 3. Supervise long-running agent lifecycle.
 4. Manage persistent child process auto-attach policy.
-5. Move the pull-based collector reader into a threaded streaming reader only after persistent session ownership is specified.
+5. Promote host-side threaded reader output to full UI event streaming after daemon ownership is reviewed.
 
 Current controlled launch behavior:
 
@@ -233,10 +236,9 @@ The shared transport reader smoke also does not launch, inject, attach, or consu
 
 Future behavior:
 
-1. Promote the pull-based collector reader into a threaded streaming reader only after persistent session ownership is specified.
+1. Stream threaded reader batches to Tauri/UI after persistent daemon ownership is reviewed.
 2. Write `.knapm` session chunks.
-3. Stream events to Tauri/UI.
-4. Add high-volume multi-threaded transport after the bounded policy stays stable.
+3. Add high-volume multi-threaded transport after the bounded policy stays stable.
 
 ## Agents
 
@@ -285,6 +287,14 @@ Current cancellation-safe operation behavior:
 4. `SuperviseProcessTree` checks cancellation between snapshots and before child attach. Child attach receives the same cancellation event name.
 5. Tauri tracks native operation state in an in-process registry and calls `cancel-operation` before any timeout fallback. Helper process kill is reserved as a last-resort timeout failure, not the normal cancellation path.
 
+Current durable native session readiness behavior:
+
+1. Capture and process-tree result contracts include additive host-owned session fields: `sessionId`, `sessionState`, `sessionKind`, owner/helper PID, timestamps, cancellation event name, streamed-record counters, stale reason, and recovery action.
+2. `attach-session` emits JSONL `session_started` and `session_state` frames before final capture output, so a host can observe ownership before command completion.
+3. `ThreadedSharedTransportReader` wraps `SharedTransportReader` with a host-side drain thread, bounded stop/join behavior, validation-failure accounting, consumed-record metrics, and shutdown reason.
+4. `classify-session --session-record <path>` classifies stale host-side records as `stale` or `recovery_required` without opening or mutating the target process for cleanup.
+5. Tauri exposes native session state and stop commands derived from the same named-event cancellation primitive; UI wording remains bounded and does not claim DLL unload or persistent live attach.
+
 Current same-bitness x64/x86 hook coverage:
 
 1. `CreateFileW`
@@ -311,7 +321,7 @@ Current loader-aware behavior:
 
 Current agent limitations:
 
-1. Hooks are installed only in repository-controlled sample launch flow or explicit same-bitness Phase 11A/11D/11F attach validation.
+1. Hooks are installed only in repository-controlled sample launch flow or explicit same-bitness Phase 11A/11D/11F/11G attach validation.
 2. Hook method is eligible-module IAT patching, not inline trampoline or EAT patching.
 3. API event transport is shared memory for the controlled sample path; named pipe remains for low-volume control and lifecycle messages.
 4. Shutdown cleanup is scoped to controlled sample launch or attach self-disable; persistent broad arbitrary detach remains unsupported.

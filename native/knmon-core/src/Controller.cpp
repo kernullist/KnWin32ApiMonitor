@@ -2787,6 +2787,8 @@ void ApplyTransportMetrics(KnMonCaptureResult& result, const SharedTransportDrai
     result.TransportRecordsConsumed = drainResult.RecordsConsumed;
     result.TransportDroppedEvents = drainResult.RecordsDropped;
     result.TransportHighWaterMark = drainResult.HighWaterMark;
+    result.LastTransportSequence = drainResult.RecordsConsumed;
+    result.RecordsStreamed = drainResult.RecordsConsumed;
     result.DroppedEvents = std::max(result.DroppedEvents, result.TransportDroppedEvents);
 }
 
@@ -4002,6 +4004,14 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
     KnMonCaptureResult result;
     const KnMonAgentArchitecture requestedArchitecture = RequestedArchitectureOrNative(request.Architecture);
     result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
+    result.SessionId = request.SessionId;
+    result.SessionState = request.SessionId.empty() ? "" : "running";
+    result.SessionKind = request.SessionKind.empty() ? "attach_capture" : request.SessionKind;
+    result.OwnerProcessId = request.OwnerProcessId;
+    result.HelperProcessId = request.HelperProcessId;
+    result.StartedUtc = request.StartedUtc;
+    result.UpdatedUtc = NowUtc();
+    result.CancellationEventName = request.CancellationEventName;
     result.AgentPath = request.AgentPath;
     result.AttachProcessId = request.ProcessId;
     result.TargetProcessId = request.ProcessId;
@@ -4071,6 +4081,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
             shutdownRestoredHooks = ExtractJsonUInt64(payload, "restoredHooks");
             shutdownFailedHooks = ExtractJsonUInt64(payload, "failedHooks");
             result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
+            result.SessionShutdownEvidence = payload;
             AddAudit(result, "agent_shutdown", "agent_event_read", payload);
             if (shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0)
             {
@@ -4624,6 +4635,8 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
             result.Subsystem = "knmon-core";
             result.Operation = "operation_cancelled";
             result.OperationState = "cancelled";
+            result.SessionState = result.SessionId.empty() ? result.SessionState : "stopped";
+            result.StoppedUtc = NowUtc();
             result.Message = "Attach capture cancelled after agent self-disable cleanup.";
             break;
         }
@@ -4679,6 +4692,8 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
         result.Subsystem = "knmon-core";
         result.Operation = "attach_capture";
         result.OperationState = "completed";
+        result.SessionState = result.SessionId.empty() ? result.SessionState : "stopped";
+        result.StoppedUtc = NowUtc();
         result.Message = "Controlled running-process attach capture completed with self-disable detach evidence.";
     }
     while (false);
@@ -4759,6 +4774,20 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
         result.OperationState = fatalError ? "failed" : "completed";
     }
 
+    if (!result.SessionId.empty())
+    {
+        result.UpdatedUtc = NowUtc();
+        if (result.SessionState.empty() || result.SessionState == "running")
+        {
+            result.SessionState = result.Success ? "stopped" : "failed";
+        }
+
+        if (result.StoppedUtc.empty() && (result.SessionState == "stopped" || result.SessionState == "failed"))
+        {
+            result.StoppedUtc = result.UpdatedUtc;
+        }
+    }
+
     return result;
 }
 
@@ -4766,6 +4795,14 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
 {
     KnMonProcessTreeResult result;
     result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
+    result.SessionId = request.SessionId;
+    result.SessionState = request.SessionId.empty() ? "" : "running";
+    result.SessionKind = request.SessionKind.empty() ? "process_tree_supervision" : request.SessionKind;
+    result.OwnerProcessId = request.OwnerProcessId;
+    result.HelperProcessId = request.HelperProcessId;
+    result.StartedUtc = request.StartedUtc;
+    result.UpdatedUtc = NowUtc();
+    result.CancellationEventName = request.CancellationEventName;
     result.RootProcessId = request.RootProcessId;
     result.DurationMs = request.DurationMs == 0 ? 3000 : request.DurationMs;
     result.ChildPolicy = ChildPolicyName(request.ChildPolicy);
@@ -5132,6 +5169,8 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
             result.Subsystem = "knmon-core";
             result.Operation = "operation_cancelled";
             result.OperationState = "cancelled";
+            result.SessionState = result.SessionId.empty() ? result.SessionState : "stopped";
+            result.StoppedUtc = NowUtc();
             result.Message = "Process-tree supervision cancelled before the bounded window completed.";
             break;
         }
@@ -5164,6 +5203,8 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
         result.Subsystem = "knmon-core";
         result.Operation = "supervise_tree";
         result.OperationState = "completed";
+        result.SessionState = result.SessionId.empty() ? result.SessionState : "stopped";
+        result.StoppedUtc = NowUtc();
         result.Message = "Process-tree supervision completed.";
         AddAudit(result, "process_tree_supervision_completed", "supervise_tree", "Process-tree supervision completed.");
     }
@@ -5191,6 +5232,20 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
     if (result.OperationState.empty() || (result.OperationState == "running" && !result.Success))
     {
         result.OperationState = fatalError ? "failed" : "completed";
+    }
+
+    if (!result.SessionId.empty())
+    {
+        result.UpdatedUtc = NowUtc();
+        if (result.SessionState.empty() || result.SessionState == "running")
+        {
+            result.SessionState = result.Success ? "stopped" : "failed";
+        }
+
+        if (result.StoppedUtc.empty() && (result.SessionState == "stopped" || result.SessionState == "failed"))
+        {
+            result.StoppedUtc = result.UpdatedUtc;
+        }
     }
 
     return result;

@@ -46,16 +46,54 @@ pub struct NativeOperation
     pub duration_ms: u32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeSession
+{
+    pub schema_version: String,
+    pub session_id: String,
+    pub operation_id: String,
+    pub session_kind: String,
+    pub owner_process_id: u32,
+    pub helper_process_id: u32,
+    pub target_process_id: u32,
+    pub session_state: String,
+    pub started_utc: String,
+    pub updated_utc: String,
+    pub stopped_utc: String,
+    pub cancellation_event_name: String,
+    pub last_transport_sequence: u64,
+    pub records_streamed: u64,
+    pub stale_reason: String,
+    pub recovery_action: String,
+    pub shutdown_evidence: String,
+    pub stop_requested: bool,
+    pub agent_cleanup_attempted: bool,
+    pub agent_cleanup_succeeded: bool,
+    pub elapsed_ms: u64,
+    pub duration_ms: u32,
+}
+
 #[derive(Debug, Clone)]
 struct NativeOperationRecord
 {
+    session_id: String,
     operation_id: String,
     operation_kind: String,
     target_process_id: u32,
     state: String,
     cancel_requested: bool,
     started_at: Instant,
+    finished_at_ms: u128,
     duration_ms: u32,
+    helper_process_id: u32,
+    last_transport_sequence: u64,
+    records_streamed: u64,
+    stale_reason: String,
+    recovery_action: String,
+    shutdown_evidence: String,
+    agent_cleanup_attempted: bool,
+    agent_cleanup_succeeded: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -194,6 +232,34 @@ pub struct CaptureResult
 {
     pub schema_version: String,
     pub operation_id: String,
+    #[serde(default)]
+    pub session_id: String,
+    #[serde(default)]
+    pub session_state: String,
+    #[serde(default)]
+    pub session_kind: String,
+    #[serde(default)]
+    pub owner_process_id: u32,
+    #[serde(default)]
+    pub helper_process_id: u32,
+    #[serde(default)]
+    pub started_utc: String,
+    #[serde(default)]
+    pub updated_utc: String,
+    #[serde(default)]
+    pub stopped_utc: String,
+    #[serde(default)]
+    pub cancellation_event_name: String,
+    #[serde(default)]
+    pub last_transport_sequence: u64,
+    #[serde(default)]
+    pub records_streamed: u64,
+    #[serde(default)]
+    pub stale_reason: String,
+    #[serde(default)]
+    pub recovery_action: String,
+    #[serde(default)]
+    pub session_shutdown_evidence: String,
     pub success: bool,
     pub backend_mode: String,
     pub capture_mode: String,
@@ -309,6 +375,32 @@ pub struct ProcessTreeResult
 {
     pub schema_version: String,
     pub operation_id: String,
+    #[serde(default)]
+    pub session_id: String,
+    #[serde(default)]
+    pub session_state: String,
+    #[serde(default)]
+    pub session_kind: String,
+    #[serde(default)]
+    pub owner_process_id: u32,
+    #[serde(default)]
+    pub helper_process_id: u32,
+    #[serde(default)]
+    pub started_utc: String,
+    #[serde(default)]
+    pub updated_utc: String,
+    #[serde(default)]
+    pub stopped_utc: String,
+    #[serde(default)]
+    pub cancellation_event_name: String,
+    #[serde(default)]
+    pub last_transport_sequence: u64,
+    #[serde(default)]
+    pub records_streamed: u64,
+    #[serde(default)]
+    pub stale_reason: String,
+    #[serde(default)]
+    pub recovery_action: String,
     pub success: bool,
     pub backend_mode: String,
     pub supervision_mode: String,
@@ -441,6 +533,47 @@ fn new_operation_id(prefix: &str, process_id: u32) -> String
     format!("{prefix}-{process_id}-{}", now_epoch_ms())
 }
 
+fn new_session_id(operation_id: &str) -> String
+{
+    format!("session-{operation_id}")
+}
+
+fn timestamp_label(epoch_ms: u128) -> String
+{
+    format!("epoch-ms:{epoch_ms}")
+}
+
+fn sanitize_event_part(value: &str) -> String
+{
+    let sanitized: String = value
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_'
+            {
+                ch
+            }
+            else
+            {
+                '-'
+            }
+        })
+        .collect();
+
+    if sanitized.is_empty()
+    {
+        "operation".to_string()
+    }
+    else
+    {
+        sanitized
+    }
+}
+
+fn cancellation_event_name(operation_id: &str) -> String
+{
+    format!("Local\\KNMonCancel_{}", sanitize_event_part(operation_id))
+}
+
 fn operation_view(record: &NativeOperationRecord) -> NativeOperation
 {
     NativeOperation
@@ -455,6 +588,61 @@ fn operation_view(record: &NativeOperationRecord) -> NativeOperation
     }
 }
 
+fn session_state_from_operation_state(state: &str) -> String
+{
+    match state {
+        "queued" => "created".to_string(),
+        "running" => "running".to_string(),
+        "cancel_requested" => "stop_requested".to_string(),
+        "stopping_agent" => "stopping_agent".to_string(),
+        "draining" => "draining".to_string(),
+        "completed" | "cancelled" => "stopped".to_string(),
+        "cleanup_failed" => "recovery_required".to_string(),
+        "failed" => "failed".to_string(),
+        other => other.to_string(),
+    }
+}
+
+fn session_view(record: &NativeOperationRecord) -> NativeSession
+{
+    let now_ms = now_epoch_ms();
+    let elapsed_ms = record.started_at.elapsed().as_millis() as u64;
+    let stopped_utc = if record.finished_at_ms == 0
+    {
+        String::new()
+    }
+    else
+    {
+        timestamp_label(record.finished_at_ms)
+    };
+
+    NativeSession
+    {
+        schema_version: "0.1.0".to_string(),
+        session_id: record.session_id.clone(),
+        operation_id: record.operation_id.clone(),
+        session_kind: record.operation_kind.clone(),
+        owner_process_id: std::process::id(),
+        helper_process_id: record.helper_process_id,
+        target_process_id: record.target_process_id,
+        session_state: session_state_from_operation_state(&record.state),
+        started_utc: timestamp_label(now_ms.saturating_sub(elapsed_ms as u128)),
+        updated_utc: timestamp_label(now_ms),
+        stopped_utc,
+        cancellation_event_name: cancellation_event_name(&record.operation_id),
+        last_transport_sequence: record.last_transport_sequence,
+        records_streamed: record.records_streamed,
+        stale_reason: record.stale_reason.clone(),
+        recovery_action: record.recovery_action.clone(),
+        shutdown_evidence: record.shutdown_evidence.clone(),
+        stop_requested: record.cancel_requested,
+        agent_cleanup_attempted: record.agent_cleanup_attempted,
+        agent_cleanup_succeeded: record.agent_cleanup_succeeded,
+        elapsed_ms,
+        duration_ms: record.duration_ms,
+    }
+}
+
 fn register_native_operation(operation_id: &str, operation_kind: &str, target_process_id: u32, duration_ms: u32)
 {
     let mut registry = operation_registry().lock().unwrap();
@@ -462,13 +650,23 @@ fn register_native_operation(operation_id: &str, operation_kind: &str, target_pr
         operation_id.to_string(),
         NativeOperationRecord
         {
+            session_id: new_session_id(operation_id),
             operation_id: operation_id.to_string(),
             operation_kind: operation_kind.to_string(),
             target_process_id,
             state: "running".to_string(),
             cancel_requested: false,
             started_at: Instant::now(),
+            finished_at_ms: 0,
             duration_ms,
+            helper_process_id: 0,
+            last_transport_sequence: 0,
+            records_streamed: 0,
+            stale_reason: String::new(),
+            recovery_action: String::new(),
+            shutdown_evidence: String::new(),
+            agent_cleanup_attempted: false,
+            agent_cleanup_succeeded: false,
         },
     );
 }
@@ -479,6 +677,51 @@ fn finish_native_operation(operation_id: &str, state: &str)
     if let Some(record) = registry.get_mut(operation_id)
     {
         record.state = state.to_string();
+        record.finished_at_ms = now_epoch_ms();
+    }
+}
+
+fn finish_native_operation_with_capture(operation_id: &str, state: &str, result: &CaptureResult)
+{
+    let mut registry = operation_registry().lock().unwrap();
+    if let Some(record) = registry.get_mut(operation_id)
+    {
+        record.state = state.to_string();
+        record.finished_at_ms = now_epoch_ms();
+        record.last_transport_sequence = result.last_transport_sequence;
+        record.records_streamed = result.records_streamed;
+        record.shutdown_evidence = result.session_shutdown_evidence.clone();
+        record.agent_cleanup_attempted = result.agent_cleanup_attempted;
+        record.agent_cleanup_succeeded = result.agent_cleanup_succeeded;
+        if result.operation_state == "cleanup_failed"
+        {
+            record.recovery_action = "manual_same_bitness_cleanup_required".to_string();
+        }
+    }
+}
+
+fn finish_native_operation_with_process_tree(operation_id: &str, state: &str, result: &ProcessTreeResult)
+{
+    let mut registry = operation_registry().lock().unwrap();
+    if let Some(record) = registry.get_mut(operation_id)
+    {
+        record.state = state.to_string();
+        record.finished_at_ms = now_epoch_ms();
+        record.last_transport_sequence = result.last_transport_sequence;
+        record.records_streamed = result.records_streamed;
+        if result.operation_state == "cleanup_failed"
+        {
+            record.recovery_action = "manual_same_bitness_cleanup_required".to_string();
+        }
+    }
+}
+
+fn mark_native_operation_helper_pid(operation_id: &str, helper_process_id: u32)
+{
+    let mut registry = operation_registry().lock().unwrap();
+    if let Some(record) = registry.get_mut(operation_id)
+    {
+        record.helper_process_id = helper_process_id;
     }
 }
 
@@ -488,6 +731,14 @@ pub fn native_operation_states() -> Vec<NativeOperation>
     let mut operations: Vec<NativeOperation> = registry.values().map(operation_view).collect();
     operations.sort_by(|left, right| left.operation_id.cmp(&right.operation_id));
     operations
+}
+
+pub fn native_session_states() -> Vec<NativeSession>
+{
+    let registry = operation_registry().lock().unwrap();
+    let mut sessions: Vec<NativeSession> = registry.values().map(session_view).collect();
+    sessions.sort_by(|left, right| left.session_id.cmp(&right.session_id));
+    sessions
 }
 
 pub fn cancel_native_operation(operation_id: String) -> Result<NativeOperation, String>
@@ -517,6 +768,37 @@ pub fn cancel_native_operation(operation_id: String) -> Result<NativeOperation, 
         .get(&operation_id)
         .map(operation_view)
         .ok_or_else(|| format!("operation not found after cancel: {operation_id}"))
+}
+
+pub fn stop_native_session(session_id: String) -> Result<NativeSession, String>
+{
+    let operation_id = {
+        let mut registry = operation_registry().lock().unwrap();
+        let record = registry
+            .values_mut()
+            .find(|record| record.session_id == session_id)
+            .ok_or_else(|| format!("session not found: {session_id}"))?;
+        record.cancel_requested = true;
+        record.state = "cancel_requested".to_string();
+        record.operation_id.clone()
+    };
+
+    let signal = signal_cancel_operation(&operation_id)?;
+    if !signal.success
+    {
+        return Err(format!(
+            "{} failed with {}: {}",
+            signal.operation,
+            signal.win32_error_code,
+            signal.message
+        ));
+    }
+
+    let registry = operation_registry().lock().unwrap();
+    registry
+        .get(&operation_id)
+        .map(session_view)
+        .ok_or_else(|| format!("session not found after stop: {session_id}"))
 }
 
 pub fn backend_status() -> &'static str
@@ -669,7 +951,7 @@ pub fn attach_target_process_capture(process_id: u32, duration_ms: u32) -> Resul
     {
         result.operation_state.as_str()
     };
-    finish_native_operation(&operation_id, operation_state);
+    finish_native_operation_with_capture(&operation_id, operation_state, &result);
     Ok(result)
 }
 
@@ -725,7 +1007,7 @@ pub fn supervise_process_tree(root_process_id: u32, duration_ms: u32, child_poli
     {
         result.operation_state.as_str()
     };
-    finish_native_operation(&operation_id, operation_state);
+    finish_native_operation_with_process_tree(&operation_id, operation_state, &result);
     Ok(result)
 }
 
@@ -813,6 +1095,11 @@ fn run_helper_args_with_timeout(args: &[String], timeout_ms: u32, operation_id: 
         .stderr(Stdio::piped())
         .spawn()
         .map_err(|error| format!("failed to run {}: {error}", helper_path.display()))?;
+
+    if let Some(id) = operation_id
+    {
+        mark_native_operation_helper_pid(id, child.id());
+    }
 
     let timeout = Duration::from_millis(timeout_ms as u64);
     let start = Instant::now();
