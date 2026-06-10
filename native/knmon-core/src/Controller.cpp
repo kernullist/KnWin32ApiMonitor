@@ -2,6 +2,7 @@
 
 #include <knmon/common/AttachConfig.h>
 #include <knmon/common/GeneratedApiMetadata.h>
+#include <knmon/collector/SharedTransportReader.h>
 
 #include <Windows.h>
 #include <TlHelp32.h>
@@ -2366,6 +2367,8 @@ struct SharedTransportSession
     KnMonTransportHeader* Header = nullptr;
     KnMonTransportRecord* Records = nullptr;
     std::wstring MappingName;
+    std::string OperationId;
+    KnMonAgentArchitecture Architecture = KnMonAgentArchitecture::Unknown;
     std::uint32_t Capacity = 0;
     std::uint64_t MappingSize = 0;
 };
@@ -2388,6 +2391,8 @@ void CloseSharedTransport(SharedTransportSession& transport)
     transport.Capacity = 0;
     transport.MappingSize = 0;
     transport.MappingName.clear();
+    transport.OperationId.clear();
+    transport.Architecture = KnMonAgentArchitecture::Unknown;
 }
 
 bool CreateSharedTransport(
@@ -2402,6 +2407,8 @@ bool CreateSharedTransport(
     {
         CloseSharedTransport(transport);
         transport.Capacity = TransportCapacityFromEnvironment();
+        transport.OperationId = operationId;
+        transport.Architecture = architecture;
         transport.MappingName = TransportMappingName(operationId);
         transport.MappingSize = sizeof(KnMonTransportHeader) + (static_cast<std::uint64_t>(transport.Capacity) * sizeof(KnMonTransportRecord));
         transport.MappingHandle = CreateFileMappingW(
@@ -2464,36 +2471,31 @@ bool CreateSharedTransport(
     return created;
 }
 
-std::uint64_t NonNegativeCounter(std::int64_t value)
+SharedTransportReader MakeSharedTransportReader(const SharedTransportSession& transport, std::uint32_t maxRecordsPerDrain = 0)
 {
-    return value < 0 ? 0 : static_cast<std::uint64_t>(value);
+    SharedTransportReaderConfig config;
+    config.ExpectedArchitecture = static_cast<std::uint32_t>(transport.Architecture);
+    config.ExpectedOperationId = transport.OperationId;
+    config.MaxRecordsPerDrain = maxRecordsPerDrain;
+
+    return SharedTransportReader(transport.Header, transport.Records, config);
 }
 
-std::int64_t ReadTransportCounter(volatile std::int64_t* value)
+void ApplyTransportMetrics(KnMonCaptureResult& result, const SharedTransportDrainResult& drainResult)
 {
-    std::int64_t result = 0;
-
-    if (value != nullptr)
-    {
-        result = InterlockedCompareExchange64(value, 0, 0);
-    }
-
-    return result;
+    result.TransportMode = "shared-memory";
+    result.TransportCapacity = drainResult.Capacity;
+    result.TransportRecordsProduced = drainResult.RecordsProduced;
+    result.TransportRecordsConsumed = drainResult.RecordsConsumed;
+    result.TransportDroppedEvents = drainResult.RecordsDropped;
+    result.TransportHighWaterMark = drainResult.HighWaterMark;
+    result.DroppedEvents = std::max(result.DroppedEvents, result.TransportDroppedEvents);
 }
 
 void UpdateTransportMetrics(KnMonCaptureResult& result, const SharedTransportSession& transport)
 {
-    result.TransportMode = "shared-memory";
-    result.TransportCapacity = transport.Capacity;
-
-    if (transport.Header != nullptr)
-    {
-        result.TransportRecordsProduced = NonNegativeCounter(ReadTransportCounter(&transport.Header->ProducerSequence));
-        result.TransportRecordsConsumed = NonNegativeCounter(ReadTransportCounter(&transport.Header->ConsumerSequence));
-        result.TransportDroppedEvents = NonNegativeCounter(ReadTransportCounter(&transport.Header->DroppedEvents));
-        result.TransportHighWaterMark = NonNegativeCounter(ReadTransportCounter(&transport.Header->HighWaterMark));
-        result.DroppedEvents = std::max(result.DroppedEvents, result.TransportDroppedEvents);
-    }
+    SharedTransportReader reader = MakeSharedTransportReader(transport);
+    ApplyTransportMetrics(result, reader.SnapshotMetrics());
 }
 
 void RecordHookOverhead(KnMonCaptureResult& result, std::uint64_t overheadUs)
@@ -2520,23 +2522,9 @@ void DrainSharedTransport(KnMonCaptureResult& result, SharedTransportSession& tr
         return;
     }
 
-    for (;;)
+    SharedTransportReader reader = MakeSharedTransportReader(transport);
+    SharedTransportDrainResult drainResult = reader.DrainAvailable([&result](const KnMonTransportRecord& record)
     {
-        const std::int64_t consumer = ReadTransportCounter(&transport.Header->ConsumerSequence);
-        const std::int64_t producer = ReadTransportCounter(&transport.Header->ProducerSequence);
-        if (consumer >= producer)
-        {
-            break;
-        }
-
-        KnMonTransportRecord& record = transport.Records[consumer % transport.Capacity];
-        if (
-            record.Sequence != consumer ||
-            record.State != static_cast<std::int32_t>(KnMonTransportRecordState::Committed))
-        {
-            break;
-        }
-
         const std::string payload = BuildTransportApiPayload(result, record);
         if (!payload.empty())
         {
@@ -2547,13 +2535,15 @@ void DrainSharedTransport(KnMonCaptureResult& result, SharedTransportSession& tr
             AddAudit(result, "api_call_received", "shared_memory_transport_read", message.RawPayload);
         }
 
-        record.State = static_cast<std::int32_t>(KnMonTransportRecordState::Free);
-        record.Sequence = -1;
-        MemoryBarrier();
-        InterlockedExchange64(&transport.Header->ConsumerSequence, consumer + 1);
+        return true;
+    });
+
+    if (!drainResult.HeaderValid)
+    {
+        AddAudit(result, "transport_reader_invalid", "shared_memory_transport_read", drainResult.ErrorMessage, ERROR_INVALID_DATA, "knmon-collector");
     }
 
-    UpdateTransportMetrics(result, transport);
+    ApplyTransportMetrics(result, drainResult);
 }
 
 std::wstring QuoteArgument(const std::wstring& value)

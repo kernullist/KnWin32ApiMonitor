@@ -512,7 +512,7 @@ Next implementation focus:
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 
-Status: Phase 11A, Phase 11B, and Phase 11C foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, and UI controls for selected native target attach/supervision are implemented; persistent daemon supervision and repeated same-process reattach remain future work.
+Status: Phase 11A, Phase 11B, Phase 11C, and Phase 11E foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, and the pull-based collector reader foundation for shared transport drain are implemented; persistent daemon supervision, threaded streaming collector sessions, and repeated same-process reattach remain future work.
 
 Goal:
 
@@ -568,12 +568,23 @@ Current verified Phase 11C behavior:
 7. Attach-supported child attach events map into the trace table with `process-tree` and child PID context tags.
 8. The UI does not claim persistent attach, safe DLL unload, cross-bitness attach, protected-process bypass, or broad arbitrary target support.
 
+Current verified Phase 11E behavior:
+
+1. `knmon-collector-core` provides a reusable `SharedTransportReader` for pull-based shared-memory transport drains.
+2. The reader validates header magic, ABI version, header size, record size, architecture, operation id, and capacity before consuming records.
+3. The reader consumes only committed records whose sequence matches the current consumer sequence.
+4. If the producer is ahead but the next record is not committed, the reader stops without skipping ahead or freeing the partial record.
+5. The reader supports bounded max-record drain calls for future incremental streaming.
+6. Controlled sample capture and `AttachCapture` use the reader boundary while the controller still owns process lifetime, pipe reads, stop/self-disable, and JSON normalization.
+7. Process-tree `attach-supported` child capture remains compatible through the existing `AttachCapture` path.
+8. `knmon-collector.exe smoke-shared-transport-reader` and `tools/native-smoke/shared-transport-reader-smoke.ps1` verify FIFO drain, partial commit stop behavior, bounded drain behavior, transport counters, and hook-overhead aggregation.
+
 Next implementation focus:
 
 1. Design repeated same-process attach after self-disable, including loaded-agent detection, deterministic already-running status, and a typed "already instrumented" state.
-2. Move attach and child-attach transport draining toward the collector reader before long-running attach sessions.
-3. Add persistent supervision state only after cancellation, lifecycle ownership, recovery behavior, and stale-agent detection are specified.
-4. Add UI-level cancellation/progress only after the bounded helper command model has a durable operation-state contract.
+2. Add persistent supervision state only after cancellation, lifecycle ownership, recovery behavior, and stale-agent detection are specified.
+3. Add UI-level cancellation/progress only after the bounded helper command model has a durable operation-state contract.
+4. Promote the pull-based reader to a threaded streaming collector only after long-running session ownership, shutdown, and recovery contracts exist.
 5. Keep protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 
 ## Phase 12: Advanced UX

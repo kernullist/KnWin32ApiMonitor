@@ -11,25 +11,33 @@ target_include_directories(knmon-common INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/knmon-common/include
 )
 
+add_library(knmon-collector-core STATIC
+    knmon-collector/src/Collector.cpp
+    knmon-collector/src/SharedTransportReader.cpp
+)
+target_include_directories(knmon-collector-core PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/knmon-collector/include
+)
+target_link_libraries(knmon-collector-core PUBLIC knmon-common)
+target_compile_definitions(knmon-collector-core PRIVATE
+    WIN32_LEAN_AND_MEAN
+    NOMINMAX
+)
+
 add_library(knmon-core STATIC
     knmon-core/src/Controller.cpp
 )
 target_include_directories(knmon-core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/knmon-core/include
 )
-target_link_libraries(knmon-core PUBLIC knmon-common)
+target_link_libraries(knmon-core
+    PUBLIC knmon-common
+    PRIVATE knmon-collector-core
+)
 target_compile_definitions(knmon-core PRIVATE
     WIN32_LEAN_AND_MEAN
     NOMINMAX
 )
-
-add_library(knmon-collector-core STATIC
-    knmon-collector/src/Collector.cpp
-)
-target_include_directories(knmon-collector-core PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/knmon-collector/include
-)
-target_link_libraries(knmon-collector-core PUBLIC knmon-common)
 
 add_executable(knmon-collector
     knmon-collector/src/main.cpp

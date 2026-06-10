@@ -6,7 +6,7 @@
 
 This document describes the current Phase 0/Phase 1 foundation and the controlled native-capture paths for `KN Win32 API Monitor`.
 
-The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, a Phase 11B helper-side process-tree supervision foundation for deterministic sample children, Phase 11C UI controls for bounded selected-target attach and process-tree supervision, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, persistent attach daemons, or broad arbitrary target supervision.
+The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, a Phase 11B helper-side process-tree supervision foundation for deterministic sample children, Phase 11C UI controls for bounded selected-target attach and process-tree supervision, a Phase 11E collector-core shared transport reader foundation, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, persistent attach daemons, threaded streaming collector sessions, or broad arbitrary target supervision.
 
 ## Layers
 
@@ -16,7 +16,7 @@ flowchart LR
     TAURI["src-tauri<br/>Tauri commands"]
     RUST["crates/knmon-tauri<br/>Rust command contract"]
     CORE["native/knmon-core<br/>C++20 controller"]
-    COL["native/knmon-collector<br/>bounded queue + smoke"]
+    COL["native/knmon-collector<br/>bounded queue + transport reader"]
     HELPER["knmon-native-helper<br/>JSON helper CLI"]
     SAMPLE["knmon-sample-fileio<br/>controlled target"]
     AGENT["knmon-agent32/64<br/>HELLO + IAT hooks + shutdown"]
@@ -115,7 +115,7 @@ Future responsibilities:
 2. Repeated attach/detach to selected targets.
 3. Supervise long-running agent lifecycle.
 4. Manage persistent child process auto-attach policy.
-5. Move the current shared-memory drain from the controller into a dedicated collector reader.
+5. Move the pull-based collector reader into a threaded streaming reader only after persistent session ownership is specified.
 
 Current controlled launch behavior:
 
@@ -190,7 +190,8 @@ Current shared-memory transport behavior:
 2. API hook fast paths do not serialize API JSON and do not write API events to the named pipe.
 3. The ring uses drop-newest overflow accounting when producer depth reaches capacity.
 4. `KNMON_TRANSPORT_CAPACITY` can force a smaller capacity for pressure smoke tests.
-5. The controller reconstructs current JSON-compatible trace rows after draining the binary records.
+5. A collector-core `SharedTransportReader` validates header fields, drains only committed sequence-matched records, advances the consumer sequence, marks consumed records free, and snapshots transport metrics.
+6. The controller owns bounded capture lifetime and JSON normalization, but controlled sample capture, attach capture, and process-tree child attach now call the reusable reader instead of duplicating record consumption logic.
 
 ## Collector
 
@@ -204,14 +205,27 @@ Current behavior:
 4. Provides a deterministic synthetic backpressure smoke path.
 5. Enforces a bounded queue with explicit `drop-newest` overflow policy.
 6. Tracks accepted, drained, dropped, queue depth, high-water mark, and backpressure activation counts.
+7. Provides a pull-based shared transport reader used by bounded controller capture paths.
+8. Provides a deterministic shared transport reader smoke path.
 
 Current smoke command:
 
 ```powershell
 build\native\Debug\knmon-collector.exe smoke-backpressure --capacity 4 --events 10
+build\native\Debug\knmon-collector.exe smoke-shared-transport-reader --capacity 4 --records 3
+build\native\Debug\knmon-collector.exe smoke-shared-transport-reader --capacity 4 --records 3 --partial
+build\native\Debug\knmon-collector.exe smoke-shared-transport-reader --capacity 4 --records 4 --max-drain 2
 ```
 
 This command does not launch, inject, attach, or consume process handles. It pushes synthetic normalized events into the collector, drains retained events, and emits machine-readable JSON. With capacity 4 and 10 events, retained sequences must stay FIFO as `1,2,3,4`, `droppedEvents` must be `6`, and `highWaterMark` must be `4`.
+
+The shared transport reader smoke also does not launch, inject, attach, or consume process handles. It constructs an in-process transport header and records, then verifies:
+
+1. FIFO committed-record consumption.
+2. Header validation for magic, ABI, sizes, architecture, operation id, and capacity.
+3. Stop-without-skip behavior when the producer is ahead but the next record is not committed.
+4. Bounded max-drain behavior.
+5. Produced, consumed, dropped, high-water mark, and hook-overhead metrics.
 
 Future behavior:
 
