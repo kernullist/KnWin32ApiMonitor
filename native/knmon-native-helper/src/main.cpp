@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -846,6 +847,8 @@ std::string ToJson(const knmon::KnMonCaptureResult& result)
     stream << "\"injectionMethod\":" << Q(result.InjectionMethod) << ",";
     stream << "\"targetPath\":" << Q(result.TargetPath) << ",";
     stream << "\"agentPath\":" << Q(result.AgentPath) << ",";
+    stream << "\"attachProcessId\":" << result.AttachProcessId << ",";
+    stream << "\"detachPolicy\":" << Q(result.DetachPolicy) << ",";
     stream << "\"targetProcessId\":" << result.TargetProcessId << ",";
     stream << "\"targetThreadId\":" << result.TargetThreadId << ",";
     stream << "\"architecture\":" << Q(result.Architecture) << ",";
@@ -966,11 +969,17 @@ std::string BuildManifestJson(
     const std::string& traceEventsFile)
 {
     std::ostringstream stream;
+    std::string source = "knmon-native-helper capture-sample";
+    if (result.CaptureMode == "bounded-native-attach")
+    {
+        source = "knmon-native-helper attach-capture";
+    }
+
     stream << "{";
     stream << "\"schemaVersion\":\"0.1.0\",";
     stream << "\"sessionId\":" << Q(session.SessionId) << ",";
     stream << "\"createdUtc\":" << Q(session.CreatedUtc) << ",";
-    stream << "\"source\":\"knmon-native-helper capture-sample\",";
+    stream << "\"source\":" << Q(source) << ",";
     stream << "\"backendMode\":" << Q(result.BackendMode) << ",";
     stream << "\"captureMode\":" << Q(result.CaptureMode) << ",";
     stream << "\"operationId\":" << Q(result.OperationId) << ",";
@@ -1379,6 +1388,32 @@ std::string GetOption(const std::vector<std::string>& args, const std::string& n
     return value;
 }
 
+std::uint32_t GetUInt32Option(const std::vector<std::string>& args, const std::string& name, std::uint32_t fallback)
+{
+    std::uint32_t value = fallback;
+    const std::string text = GetOption(args, name);
+
+    do
+    {
+        if (text.empty())
+        {
+            break;
+        }
+
+        char* end = nullptr;
+        const unsigned long parsed = std::strtoul(text.c_str(), &end, 10);
+        if (end == text.c_str() || (end != nullptr && *end != '\0') || parsed > 0xffffffffUL)
+        {
+            break;
+        }
+
+        value = static_cast<std::uint32_t>(parsed);
+    }
+    while (false);
+
+    return value;
+}
+
 std::string LaunchSampleJson(const std::vector<std::string>& args)
 {
     const auto helperDir = HelperDirectory();
@@ -1455,6 +1490,48 @@ std::string CaptureSampleJson(const std::vector<std::string>& args)
     return ToJson(result);
 }
 
+std::string AttachCaptureJson(const std::vector<std::string>& args)
+{
+    const auto helperDir = HelperDirectory();
+    const std::string defaultAgent = WideToUtf8((helperDir / DefaultAgentFileName()).wstring().c_str());
+
+    knmon::KnMonAttachRequest request;
+    request.OperationId = NewOperationId();
+    const std::string pidOption = GetOption(args, "--pid");
+    request.ProcessId = pidOption == "self" ? GetCurrentProcessId() : GetUInt32Option(args, "--pid", 0);
+    request.AgentPath = GetOption(args, "--agent");
+    request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
+    request.DurationMs = GetUInt32Option(args, "--duration-ms", 3000);
+    request.Architecture = NativeHelperArchitecture();
+    request.InjectionMethod = knmon::KnMonInjectionMethod::RemoteLoadLibrary;
+
+    if (request.AgentPath.empty())
+    {
+        request.AgentPath = defaultAgent;
+    }
+
+    knmon::Controller controller;
+    knmon::KnMonCaptureResult result = controller.AttachCapture(request);
+
+    const std::string sessionPath = GetOption(args, "--write-session");
+    if (!sessionPath.empty())
+    {
+        SessionInfo session = WriteSession(result, PathFromUtf8(sessionPath));
+        if (!session.Success)
+        {
+            result.Success = false;
+            result.Win32ErrorCode = session.Win32ErrorCode;
+            result.Subsystem = "knmon-native-helper";
+            result.Operation = "write_session";
+            result.Message = session.Message;
+        }
+
+        return CaptureResultWithSessionJson(result, session);
+    }
+
+    return ToJson(result);
+}
+
 std::string ReplaySessionCommandJson(const std::vector<std::string>& args)
 {
     const std::string sessionPath = GetOption(args, "--session");
@@ -1505,7 +1582,7 @@ void PrintUsage()
     std::cout << "{";
     std::cout << "\"schemaVersion\":\"0.1.0\",";
     std::cout << "\"success\":false,";
-    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | replay-session --session dir | validate-session --session dir\"";
+    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--write-session dir] | replay-session --session dir | validate-session --session dir\"";
     std::cout << "}\n";
 }
 }
@@ -1539,6 +1616,12 @@ int wmain(int argc, wchar_t** argv)
     if (args[0] == "capture-sample")
     {
         std::cout << CaptureSampleJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "attach-capture")
+    {
+        std::cout << AttachCaptureJson(args) << "\n";
         return 0;
     }
 

@@ -4,9 +4,9 @@
 
 ## Scope
 
-This document describes the current Phase 0/Phase 1 foundation and the first controlled native-capture path for `KN Win32 API Monitor`.
+This document describes the current Phase 0/Phase 1 foundation and the controlled native-capture paths for `KN Win32 API Monitor`.
 
-The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not attach to arbitrary already-running processes.
+The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, or broad arbitrary target supervision.
 
 ## Layers
 
@@ -59,7 +59,7 @@ Current backend modes:
 
 - `mock`: Browser/Vite mode and mock Tauri target list.
 - `native-enum`: Tauri command calls `knmon-native-helper.exe list-targets`.
-- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof, `capture-sample` for bounded controlled File I/O capture, `capture-sample --write-session` for persisted sessions, or `replay-session` for disk replay.
+- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof, `capture-sample` for bounded controlled File I/O capture, `capture-sample --write-session` for persisted sessions, or `replay-session` for disk replay. The helper CLI also exposes `attach-capture --pid` for Phase 11A native attach validation; UI controls for this path are still future work.
 
 ## Rust/Tauri Command Layer
 
@@ -80,7 +80,7 @@ Current commands:
 8. `capture_sample_fileio_session_events`
 9. `replay_last_sample_session`
 
-These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, and bounded sample File I/O capture without pretending that arbitrary attach exists.
+These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, and bounded sample File I/O capture. The native helper has a smoke-verified attach path, but the UI has not yet promoted it to persistent attach/detach controls.
 
 Future work:
 
@@ -100,14 +100,15 @@ Current responsibilities:
 4. Implement bounded controlled File I/O capture for the sample target.
 5. Select the same-bitness x86/x64 agent DLL for controlled launch.
 6. Run target/agent architecture preflight before remote mutation.
-7. Define arbitrary attach/detach/start/stop capture boundaries as not-implemented operations.
+7. Implement bounded same-bitness `attach-capture --pid` for already-running non-protected sample targets.
+8. Keep broad arbitrary attach, child process auto-attach, and persistent supervision outside the current controller surface.
 
-The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, and bounded sample File I/O capture.
+The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, and bounded sample File I/O capture. The same helper exposes Phase 11A attach smoke validation from the CLI.
 
 Future responsibilities:
 
 1. Launch suspended targets.
-2. Attach/detach to selected targets.
+2. Repeated attach/detach to selected targets.
 3. Supervise long-running agent lifecycle.
 4. Manage child process auto-attach policy.
 5. Move the current shared-memory drain from the controller into a dedicated collector reader.
@@ -143,6 +144,19 @@ Current bounded capture behavior:
 5. Return a structured `capture-result` JSON object to Rust/Tauri with transport mode, produced/consumed/dropped record counts, high-water mark, and min/average/max hook overhead metrics.
 6. Optionally write a session directory containing manifest, audit, raw agent event, and trace event files.
 7. Map `api_call` events into the existing UI trace table.
+
+Current running-process attach behavior:
+
+1. The sample target can run as `knmon-sample-fileio.exe --attach-loop --iterations N --delay-ms N` before the helper injects anything.
+2. `attach-capture --pid <pid>` queries process snapshot metadata, target architecture, protection state where detectable, agent DLL architecture, and required mutation-handle access before remote mutation.
+3. PID `0`, PID `4`, the helper process itself, missing targets, missing agents, agent/helper mismatch, and helper/target mismatch fail during preflight with typed operations.
+4. For supported same-bitness non-protected targets, the controller creates the named pipe and shared-memory transport before remote mutation.
+5. The controller writes the absolute agent path and a fixed-size `KnMonAttachConfigV1` structure into remote memory.
+6. Remote `LoadLibraryW` loads the same-bitness agent DLL.
+7. The controller resolves exported agent entrypoints by local export RVA plus remote module base, then calls `KnMonAgentInitialize` with the remote attach config.
+8. Attach configuration carries the operation id, named pipe, transport mapping name, attach mode, ABI version, and future reserved fields. It does not rely on target environment variables.
+9. The controller drains shared-memory API records for a bounded duration, calls `KnMonAgentStop`, waits for `agent_shutdown reason=self_disable`, and releases remote buffers when possible.
+10. Phase 11A detach means hooks restored and agent disabled. The DLL is intentionally not unloaded.
 
 Current shared-memory transport behavior:
 
@@ -187,7 +201,9 @@ Locations:
 - `native/knmon-agent32`
 - `native/knmon-agent64`
 
-`knmon-agent64` and `knmon-agent32` share one agent implementation source. Each starts a worker thread from `DllMain`, reads `KNMON_AGENT_PIPE`, `KNMON_OPERATION_ID`, and the optional required shared-memory transport mapping name, writes a versioned JSON HELLO payload with its actual architecture, inventories loaded modules from the PEB loader list, sweeps eligible non-agent non-system module IATs, and writes File I/O, loader, and resolver API records into shared memory.
+`knmon-agent64` and `knmon-agent32` share one agent implementation source. In controlled launch mode, each starts a worker thread from `DllMain`, reads `KNMON_AGENT_PIPE`, `KNMON_OPERATION_ID`, and the optional required shared-memory transport mapping name, writes a versioned JSON HELLO payload with its actual architecture, inventories loaded modules from the PEB loader list, sweeps eligible non-agent non-system module IATs, and writes File I/O, loader, resolver, and selected Wave 2 API records into shared memory.
+
+In attach mode, `DllMain` stores the module handle and disables thread-library callbacks but does not require launch-time environment variables. The controller calls `KnMonAgentInitialize(const KnMonAttachConfigV1*)` after remote `LoadLibraryW`; the initializer validates magic, struct size, ABI version, attach mode, required bounded strings, and transport requirements before starting the same worker exactly once. `KnMonAgentStop()` triggers the self-disable path used by bounded attach detach.
 
 Current lifecycle states:
 
@@ -208,7 +224,7 @@ Current `agent_shutdown` fields:
 5. `failedHooks`
 6. `droppedCount`
 
-`knmon-agent32` is built from the shared agent source in Win32 CMake builds and is limited to same-bitness controlled sample launches.
+`knmon-agent32` is built from the shared agent source in Win32 CMake builds and is limited to same-bitness controlled sample launches or same-bitness Phase 11A attach validation from the Win32 helper.
 
 Current same-bitness x64/x86 hook coverage:
 
@@ -236,10 +252,10 @@ Current loader-aware behavior:
 
 Current agent limitations:
 
-1. Hooks are installed only in the repository-controlled sample target flow.
+1. Hooks are installed only in repository-controlled sample launch flow or explicit same-bitness Phase 11A attach validation.
 2. Hook method is eligible-module IAT patching, not inline trampoline or EAT patching.
 3. API event transport is shared memory for the controlled sample path; named pipe remains for low-volume control and lifecycle messages.
-4. Shutdown cleanup is scoped to the controlled sample target lifecycle; arbitrary detach from already-running processes remains unsupported.
+4. Shutdown cleanup is scoped to controlled sample launch or attach self-disable; repeated same-process reattach and broad arbitrary detach remain unsupported.
 5. Cross-bitness injection is rejected during preflight.
 6. Calls made through resolver-returned function pointers are not automatically instrumented unless the later call path is also covered by an eligible IAT hook.
 
@@ -248,7 +264,7 @@ Future agent responsibilities:
 1. Capture richer call stack metadata when explicitly enabled.
 2. Support a dedicated collector reader for high-volume shared-memory transport.
 3. Expand loader-aware system DLL coverage beyond Wave 1.
-4. Add arbitrary attach/detach only after a separate review.
+4. Add persistent attach/detach supervision only after a separate review.
 
 `Launch Sample` still produces an `agent_loaded` row only. `Capture File I/O` produces real `api_call` rows from the controlled sample target.
 
@@ -261,7 +277,7 @@ Current helper session format:
 3. `agent-events.jsonl`
 4. `trace-events.jsonl`
 
-`capture-sample --write-session <dir>` writes the current bounded sample capture to disk. The writer stores raw audit events, raw agent messages, and trace-compatible rows separately so replay can be deterministic and avoid launching or injecting a target.
+`capture-sample --write-session <dir>` and `attach-capture --pid <pid> --write-session <dir>` write bounded captures to disk. The writer stores raw audit events, raw agent messages, and trace-compatible rows separately so replay can be deterministic and avoid launching or injecting a target.
 
 `validate-session --session <dir>` checks the manifest, required files, HELLO architecture/version evidence, dropped-event accounting event, shutdown lifecycle event, clean hook restore counts, and non-empty trace rows. `replay-session --session <dir>` validates first, then returns a `session-replay` result with the trace rows loaded from disk.
 
@@ -293,7 +309,7 @@ Current contract artifacts:
 18. `session-replay-result.schema.json`
 19. `collector-stats.schema.json`
 
-The TypeScript event model and C++ `Protocol.h` are aligned around these Phase 1 fields.
+The TypeScript event model and C++ `Protocol.h` are aligned around these fields, including `bounded-native-capture`, `bounded-native-attach`, `early-bird APC`, `remote LoadLibraryW`, `attachProcessId`, and `detachPolicy`.
 
 ## Definition System
 
@@ -330,7 +346,7 @@ Current export:
 - UI exports mock events to JSONL.
 - UI also exports captured native trace rows after bounded sample capture because they use the same trace model.
 - Each row includes `schemaVersion`.
-- The helper writes replayable sample sessions as manifest + JSONL files.
+- The helper writes replayable sample and attach sessions as manifest + JSONL files.
 - The UI can replay the last helper-written sample session into the trace table.
 
 Future session format:
@@ -342,7 +358,7 @@ Future session format:
 
 ## Safety Rules
 
-1. Do not add arbitrary already-running process injection until controlled launch and sample-agent capture are reviewed.
+1. Keep attach limited to explicit same-bitness, non-protected Phase 11A targets until broader target policy is reviewed.
 2. Keep mock and real backends behind the same UI-facing interface.
 3. Expose dropped event accounting in the UI from the start.
 4. Treat PPL/protected/unsupported processes as explicit limited states.

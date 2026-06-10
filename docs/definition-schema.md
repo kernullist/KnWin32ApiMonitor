@@ -40,6 +40,10 @@ contracts/
   session-replay-result.schema.json
 ```
 
+`capture-result.schema.json` currently accepts both `bounded-native-capture` with `early-bird APC` and `bounded-native-attach` with `remote LoadLibraryW`. Attach results may include `attachProcessId` and `detachPolicy`, with Phase 11A using `self-disable-no-unload`.
+
+`session-manifest.schema.json` accepts helper-written sessions from `knmon-native-helper capture-sample` and `knmon-native-helper attach-capture`, with capture modes `bounded-native-capture` and `bounded-native-attach`.
+
 Generated definition ID artifacts live under:
 
 ```text

@@ -12,6 +12,8 @@ const expectedFiles = {
 };
 
 const supportedArchitectures = new Set(["x86", "x64"]);
+const supportedSources = new Set(["knmon-native-helper capture-sample", "knmon-native-helper attach-capture"]);
+const supportedCaptureModes = new Set(["bounded-native-capture", "bounded-native-attach"]);
 
 function readJson(filePath, errors) {
   try {
@@ -85,8 +87,12 @@ function validateManifest(sessionPath, errors) {
     errors.push(`${label}: backendMode must be native-capture`);
   }
 
-  if (manifest.captureMode !== "bounded-native-capture") {
-    errors.push(`${label}: captureMode must be bounded-native-capture`);
+  if (!supportedSources.has(manifest.source)) {
+    errors.push(`${label}: source must be a supported native helper source`);
+  }
+
+  if (!supportedCaptureModes.has(manifest.captureMode)) {
+    errors.push(`${label}: captureMode must be a supported native capture mode`);
   }
 
   if (!manifest.files || typeof manifest.files !== "object") {

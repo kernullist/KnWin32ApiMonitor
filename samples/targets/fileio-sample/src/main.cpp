@@ -77,20 +77,41 @@ std::string HexNtStatus(NTSTATUS status)
     return stream.str();
 }
 
-bool HasSlowOption(int argc, wchar_t** argv)
+bool HasOption(int argc, wchar_t** argv, const wchar_t* name)
 {
-    bool slow = false;
+    bool found = false;
 
     for (int index = 1; index < argc; ++index)
     {
-        if (std::wstring(argv[index]) == L"--slow")
+        if (std::wstring(argv[index]) == name)
         {
-            slow = true;
+            found = true;
             break;
         }
     }
 
-    return slow;
+    return found;
+}
+
+int GetIntOption(int argc, wchar_t** argv, const wchar_t* name, int fallback)
+{
+    int value = fallback;
+
+    for (int index = 1; index + 1 < argc; ++index)
+    {
+        if (std::wstring(argv[index]) == name)
+        {
+            wchar_t* end = nullptr;
+            const long parsed = wcstol(argv[index + 1], &end, 10);
+            if (end != argv[index + 1] && end != nullptr && *end == L'\0')
+            {
+                value = static_cast<int>(parsed);
+            }
+            break;
+        }
+    }
+
+    return value;
 }
 
 void LogLastError(const char* operation)
@@ -750,6 +771,164 @@ bool RunWinsockProbe()
     return success;
 }
 
+bool RunAttachFileIoProbe(int iteration)
+{
+    bool success = false;
+    HANDLE fileHandle = INVALID_HANDLE_VALUE;
+    HANDLE ansiHandle = INVALID_HANDLE_VALUE;
+    const std::wstring path = BuildSamplePath();
+    char ansiPath[MAX_PATH] = {};
+    char tempPath[MAX_PATH] = {};
+    const char payload[] = "KNMon attach File I/O payload\n";
+    std::array<char, 128> readBuffer = {};
+
+    do
+    {
+        fileHandle = CreateFileW(
+            path.c_str(),
+            GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_READ | FILE_SHARE_DELETE,
+            nullptr,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr);
+
+        if (fileHandle == INVALID_HANDLE_VALUE)
+        {
+            LogLastError("CreateFileW(attach)");
+            break;
+        }
+
+        DWORD bytesWritten = 0;
+        if (!WriteFile(fileHandle, payload, static_cast<DWORD>(sizeof(payload) - 1), &bytesWritten, nullptr))
+        {
+            LogLastError("WriteFile(attach)");
+            break;
+        }
+
+        if (SetFilePointer(fileHandle, 0, nullptr, FILE_BEGIN) == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR)
+        {
+            LogLastError("SetFilePointer(attach)");
+            break;
+        }
+
+        DWORD bytesRead = 0;
+        if (!ReadFile(fileHandle, readBuffer.data(), static_cast<DWORD>(readBuffer.size() - 1), &bytesRead, nullptr))
+        {
+            LogLastError("ReadFile(attach)");
+            break;
+        }
+
+        if (!CloseHandle(fileHandle))
+        {
+            fileHandle = INVALID_HANDLE_VALUE;
+            LogLastError("CloseHandle(attach)");
+            break;
+        }
+        fileHandle = INVALID_HANDLE_VALUE;
+
+        if (!RunNtCreateFileProbe(path))
+        {
+            break;
+        }
+
+        const DWORD tempLength = GetTempPathA(static_cast<DWORD>(sizeof(tempPath)), tempPath);
+        if (tempLength == 0 || tempLength >= sizeof(tempPath))
+        {
+            strcpy_s(ansiPath, ".\\knmon-fileio-attach-sample-a.dat");
+        }
+        else
+        {
+            strcpy_s(ansiPath, tempPath);
+            strcat_s(ansiPath, "knmon-fileio-attach-sample-a.dat");
+        }
+
+        ansiHandle = CreateFileA(
+            ansiPath,
+            GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_READ | FILE_SHARE_DELETE,
+            nullptr,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr);
+
+        if (ansiHandle == INVALID_HANDLE_VALUE)
+        {
+            LogLastError("CreateFileA(attach)");
+            break;
+        }
+
+        if (!CloseHandle(ansiHandle))
+        {
+            ansiHandle = INVALID_HANDLE_VALUE;
+            LogLastError("CloseHandle(attach ansi)");
+            break;
+        }
+        ansiHandle = INVALID_HANDLE_VALUE;
+
+        DeleteFileW(path.c_str());
+        DeleteFileA(ansiPath);
+        std::cout << "attach loop iteration=" << iteration << " bytes_written=" << bytesWritten << " bytes_read=" << bytesRead << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (ansiHandle != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(ansiHandle);
+    }
+
+    if (fileHandle != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(fileHandle);
+    }
+
+    DeleteFileW(path.c_str());
+    if (ansiPath[0] != '\0')
+    {
+        DeleteFileA(ansiPath);
+    }
+
+    return success;
+}
+
+int RunAttachLoop(int iterations, int delayMs)
+{
+    int exitCode = 1;
+
+    if (iterations < 1)
+    {
+        iterations = 1;
+    }
+
+    if (delayMs < 1)
+    {
+        delayMs = 1;
+    }
+
+    do
+    {
+        std::cout << "knmon-sample-fileio attach-loop-ready pid=" << GetCurrentProcessId() << "\n" << std::flush;
+        Sleep(static_cast<DWORD>(delayMs));
+
+        for (int iteration = 0; iteration < iterations; ++iteration)
+        {
+            if (!RunAttachFileIoProbe(iteration))
+            {
+                break;
+            }
+
+            Sleep(static_cast<DWORD>(delayMs));
+        }
+
+        exitCode = 0;
+    }
+    while (false);
+
+    std::cout << "knmon-sample-fileio attach-loop-exiting code=" << exitCode << "\n";
+    return exitCode;
+}
+
 int RunFileIo(bool slow)
 {
     int exitCode = 1;
@@ -915,5 +1094,12 @@ int RunFileIo(bool slow)
 
 int wmain(int argc, wchar_t** argv)
 {
-    return RunFileIo(HasSlowOption(argc, argv));
+    if (HasOption(argc, argv, L"--attach-loop"))
+    {
+        return RunAttachLoop(
+            GetIntOption(argc, argv, L"--iterations", 16),
+            GetIntOption(argc, argv, L"--delay-ms", 250));
+    }
+
+    return RunFileIo(HasOption(argc, argv, L"--slow"));
 }

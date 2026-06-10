@@ -58,6 +58,7 @@ export interface LaunchResult {
   targetPath: string;
   agentPath: string;
   targetProcessId: number;
+  attachProcessId?: number;
   targetThreadId: number;
   architecture: string;
   win32ErrorCode: number;
@@ -126,6 +127,7 @@ export interface CaptureResult {
   subsystem: string;
   operation: string;
   message: string;
+  detachPolicy?: string;
   droppedEvents: number;
   transportMode: string;
   transportCapacity: number;

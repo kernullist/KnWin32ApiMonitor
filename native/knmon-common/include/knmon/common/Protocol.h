@@ -49,6 +49,7 @@ enum class KnMonInjectionMethod : std::uint32_t
 {
     None = 0,
     EarlyBirdApc = 1,
+    RemoteLoadLibrary = 2,
 };
 
 enum class KnMonAgentMessageType : std::uint32_t
@@ -250,6 +251,17 @@ struct KnMonLaunchRequest
     KnMonInjectionMethod InjectionMethod = KnMonInjectionMethod::EarlyBirdApc;
 };
 
+struct KnMonAttachRequest
+{
+    std::string OperationId;
+    std::uint32_t ProcessId = 0;
+    std::string AgentPath;
+    std::uint32_t TimeoutMs = 5000;
+    std::uint32_t DurationMs = 3000;
+    KnMonAgentArchitecture Architecture = KnMonAgentArchitecture::Unknown;
+    KnMonInjectionMethod InjectionMethod = KnMonInjectionMethod::RemoteLoadLibrary;
+};
+
 struct KnMonLaunchResult
 {
     std::string SchemaVersion = "0.1.0";
@@ -293,6 +305,8 @@ struct KnMonCaptureResult
     std::string InjectionMethod = "early-bird APC";
     std::string TargetPath;
     std::string AgentPath;
+    std::uint32_t AttachProcessId = 0;
+    std::string DetachPolicy;
     std::uint32_t TargetProcessId = 0;
     std::uint32_t TargetThreadId = 0;
     std::string Architecture;

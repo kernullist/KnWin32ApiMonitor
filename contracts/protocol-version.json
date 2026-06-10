@@ -6,11 +6,20 @@
   "schemaVersion": "0.1.0",
   "nativeCaptureFoundation": {
     "backendModes": ["mock", "native-enum", "native-capture"],
-    "injectionMethods": ["early-bird APC"],
+    "injectionMethods": ["early-bird APC", "remote LoadLibraryW"],
     "agentArchitectures": ["x64", "x86"],
-    "controlledLaunchOnly": true,
+    "controlledLaunchOnly": false,
     "sameBitnessOnly": true,
     "preflightChecks": ["target_binary", "agent_binary", "helper_architecture", "target_architecture", "agent_architecture"]
+  },
+  "runningProcessAttach": {
+    "captureMode": "bounded-native-attach",
+    "injectionMethod": "remote LoadLibraryW",
+    "attachConfigAbiVersion": 1,
+    "detachPolicy": "self-disable-no-unload",
+    "sameBitnessOnly": true,
+    "supportedTargets": ["non_protected_user_mode_process"],
+    "preflightChecks": ["target_process_exists", "target_architecture", "helper_target_architecture_match", "agent_architecture", "helper_agent_architecture_match", "protected_process_detection", "mutation_handle_access"]
   },
   "liveFileIoCapture": {
     "captureMode": "bounded-native-capture",
@@ -42,6 +51,7 @@
   },
   "sessionWriter": {
     "captureCommand": "capture-sample --write-session <dir>",
+    "attachCaptureCommand": "attach-capture --pid <pid> --write-session <dir>",
     "validationCommand": "validate-session --session <dir>",
     "replayCommand": "replay-session --session <dir>",
     "files": ["manifest.json", "audit.jsonl", "agent-events.jsonl", "trace-events.jsonl"],

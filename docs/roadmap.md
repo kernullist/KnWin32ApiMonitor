@@ -1,7 +1,7 @@
 # Roadmap
 
 작성일: 2026-06-08
-갱신일: 2026-06-09
+갱신일: 2026-06-10
 
 ## Product-Critical Priorities
 
@@ -512,6 +512,8 @@ Next implementation focus:
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 
+Status: Phase 11A implemented foundation for bounded same-bitness running-process attach. Full process-tree supervision remains future work.
+
 Goal:
 
 Move from repository-owned controlled launch to selected target monitoring without pretending protected-process bypass exists.
@@ -531,6 +533,26 @@ Exit criteria:
 1. Supported user-mode targets can be attached and detached repeatedly without stale hooks.
 2. Unsupported targets fail cleanly before risky mutation where detectable.
 3. Child process monitoring does not break target startup latency budgets.
+
+Current verified Phase 11A behavior:
+
+1. `knmon-native-helper.exe attach-capture --pid <pid>` attaches to an already-running repository sample target without relaunching it.
+2. x64 helper -> x64 target -> `knmon-agent64.dll` and Win32 helper -> x86 target -> `knmon-agent32.dll` paths are smoke-verified.
+3. Attach preflight rejects PID `0`, PID `4`, helper self, missing targets, missing agents, helper/agent architecture mismatch, and helper/target architecture mismatch before remote mutation.
+4. Protection/access checks run before remote mutation where the current user-mode helper can detect them.
+5. Supported attach uses remote `LoadLibraryW`; manual mapping, stealth loading, APC injection into arbitrary existing threads, cross-bitness attach, and protected-process bypass remain out of scope.
+6. The running target receives configuration through the versioned `KnMonAttachConfigV1` ABI and exported `KnMonAgentInitialize`; launch-time environment variables are not required for attach.
+7. API events use the existing shared-memory binary transport and preserve the current schema-compatible `api_call` event shape.
+8. `KnMonAgentStop` proves one-shot self-disable with `agent_shutdown reason=self_disable`, `restoredHooks=installedHooks`, and `failedHooks=0`.
+9. `capture-result` and session manifests distinguish attach through `captureMode=bounded-native-attach`, `injectionMethod=remote LoadLibraryW`, `attachProcessId`, and `detachPolicy=self-disable-no-unload`.
+
+Next implementation focus:
+
+1. Add process tree data model details and parent/child attach policy without increasing target startup latency.
+2. Add UI-level attach/detach controls with explicit target eligibility and audit output.
+3. Design repeated same-process attach after self-disable, including loaded-agent detection and deterministic already-running status.
+4. Move attach transport draining toward the collector reader before long-running attach sessions.
+5. Keep protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 
 ## Phase 12: Advanced UX
 

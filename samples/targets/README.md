@@ -21,4 +21,12 @@ It builds as `knmon-sample-fileio.exe` through the native CMake project and perf
 15. Call `WSAStartup`, `getaddrinfo("localhost", "80", ...)`, `socket`, `WSAGetLastError`, `closesocket`, `freeaddrinfo`, and `WSACleanup`.
 16. Attempt missing wide-char and ANSI paths for error coverage.
 
-The native helper uses this executable for controlled launch-time early-bird APC agent loading and bounded File I/O, loader, resolver, selected registry, selected advapi32 token query/privilege lookup, selected RPCRT4 binding, selected bcrypt CNG provider/RNG, selected crypt32 certificate-store/message-handle, selected WinHTTP session-handle, selected WinINet session-handle, and selected Winsock hook capture. Arbitrary already-running process injection remains out of scope.
+For Phase 11A attach smoke, the sample also supports:
+
+```powershell
+knmon-sample-fileio.exe --attach-loop --iterations 24 --delay-ms 150
+```
+
+This mode starts as a normal already-running process, prints `knmon-sample-fileio attach-loop-ready pid=<pid>` with an immediate stdout flush, then performs bounded deterministic File I/O probes long enough for `attach-capture --pid` to attach and collect events.
+
+The native helper uses this executable for controlled launch-time early-bird APC agent loading, bounded File I/O, loader, resolver, selected registry, selected advapi32 token query/privilege lookup, selected RPCRT4 binding, selected bcrypt CNG provider/RNG, selected crypt32 certificate-store/message-handle, selected WinHTTP session-handle, selected WinINet session-handle, selected Winsock hook capture, and same-bitness Phase 11A attach validation. Broad arbitrary process injection remains out of scope.

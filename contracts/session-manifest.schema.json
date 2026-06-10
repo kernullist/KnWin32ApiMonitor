@@ -21,9 +21,9 @@
     "schemaVersion": { "type": "string" },
     "sessionId": { "type": "string", "minLength": 1 },
     "createdUtc": { "type": "string" },
-    "source": { "enum": ["knmon-native-helper capture-sample"] },
+    "source": { "enum": ["knmon-native-helper capture-sample", "knmon-native-helper attach-capture"] },
     "backendMode": { "enum": ["native-capture"] },
-    "captureMode": { "enum": ["bounded-native-capture"] },
+    "captureMode": { "enum": ["bounded-native-capture", "bounded-native-attach"] },
     "operationId": { "type": "string" },
     "target": {
       "type": "object",

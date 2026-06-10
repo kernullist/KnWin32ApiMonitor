@@ -1,5 +1,6 @@
 #include <knmon/core/Controller.h>
 
+#include <knmon/common/AttachConfig.h>
 #include <knmon/common/GeneratedApiMetadata.h>
 
 #include <Windows.h>
@@ -7,6 +8,7 @@
 
 #include <array>
 #include <algorithm>
+#include <cwchar>
 #include <cstring>
 #include <filesystem>
 #include <iomanip>
@@ -326,6 +328,29 @@ struct BinaryArchitectureResult
     std::string Message;
 };
 
+void AddAudit(
+    KnMonLaunchResult& result,
+    const std::string& eventType,
+    const std::string& operation,
+    const std::string& message,
+    DWORD errorCode = 0,
+    const std::string& subsystem = "knmon-core");
+
+void AddAudit(
+    KnMonCaptureResult& result,
+    const std::string& eventType,
+    const std::string& operation,
+    const std::string& message,
+    DWORD errorCode = 0,
+    const std::string& subsystem = "knmon-core");
+
+void SetResultError(
+    KnMonCaptureResult& result,
+    DWORD errorCode,
+    const std::string& subsystem,
+    const std::string& operation,
+    const std::string& message);
+
 bool IsMissingFileError(DWORD errorCode)
 {
     return errorCode == ERROR_FILE_NOT_FOUND || errorCode == ERROR_PATH_NOT_FOUND;
@@ -456,13 +481,595 @@ BinaryArchitectureResult QueryBinaryArchitecture(const std::string& path, const 
     return result;
 }
 
+struct ProcessSnapshotInfo
+{
+    bool Found = false;
+    DWORD ProcessId = 0;
+    DWORD ParentProcessId = 0;
+    std::string ImageName;
+};
+
+struct ProcessArchitectureResult
+{
+    bool Success = false;
+    KnMonAgentArchitecture Architecture = KnMonAgentArchitecture::Unknown;
+    DWORD ErrorCode = 0;
+    std::string Operation;
+    std::string Message;
+};
+
+struct AttachPreflightResult
+{
+    bool Success = false;
+    HANDLE ProcessHandle = nullptr;
+    std::string TargetPath;
+    std::string TargetImageName;
+    DWORD ParentProcessId = 0;
+    KnMonAgentArchitecture TargetArchitecture = KnMonAgentArchitecture::Unknown;
+};
+
+bool FindProcessSnapshotInfo(DWORD processId, ProcessSnapshotInfo* info, DWORD* errorCode)
+{
+    bool found = false;
+    HANDLE snapshot = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        if (info != nullptr)
+        {
+            *info = {};
+        }
+
+        if (errorCode != nullptr)
+        {
+            *errorCode = 0;
+        }
+
+        snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if (snapshot == INVALID_HANDLE_VALUE)
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
+
+        PROCESSENTRY32W entry = {};
+        entry.dwSize = sizeof(entry);
+        if (!Process32FirstW(snapshot, &entry))
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
+
+        do
+        {
+            if (entry.th32ProcessID == processId)
+            {
+                if (info != nullptr)
+                {
+                    info->Found = true;
+                    info->ProcessId = entry.th32ProcessID;
+                    info->ParentProcessId = entry.th32ParentProcessID;
+                    info->ImageName = WideToUtf8(entry.szExeFile);
+                }
+
+                found = true;
+                break;
+            }
+        }
+        while (Process32NextW(snapshot, &entry));
+    }
+    while (false);
+
+    if (snapshot != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(snapshot);
+    }
+
+    return found;
+}
+
+ProcessArchitectureResult QueryProcessArchitectureFromHandle(HANDLE processHandle)
+{
+    ProcessArchitectureResult result;
+
+    do
+    {
+        if (processHandle == nullptr)
+        {
+            result.ErrorCode = ERROR_INVALID_HANDLE;
+            result.Operation = "target_process_open";
+            result.Message = "Target process handle is invalid.";
+            break;
+        }
+
+        HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
+        using IsWow64Process2Fn = BOOL(WINAPI*)(HANDLE, USHORT*, USHORT*);
+        auto isWow64Process2 = kernel32 == nullptr ? nullptr : reinterpret_cast<IsWow64Process2Fn>(GetProcAddress(kernel32, "IsWow64Process2"));
+        if (isWow64Process2 != nullptr)
+        {
+            USHORT processMachine = IMAGE_FILE_MACHINE_UNKNOWN;
+            USHORT nativeMachine = IMAGE_FILE_MACHINE_UNKNOWN;
+            if (!isWow64Process2(processHandle, &processMachine, &nativeMachine))
+            {
+                result.ErrorCode = GetLastError();
+                result.Operation = "target_architecture";
+                result.Message = "IsWow64Process2 failed during attach preflight: " + FormatWindowsError(result.ErrorCode);
+                break;
+            }
+
+            const WORD selectedMachine = processMachine == IMAGE_FILE_MACHINE_UNKNOWN ? nativeMachine : processMachine;
+            result.Architecture = ArchitectureFromMachine(selectedMachine);
+            if (result.Architecture == KnMonAgentArchitecture::Unknown)
+            {
+                result.ErrorCode = ERROR_NOT_SUPPORTED;
+                result.Operation = "unsupported_architecture";
+                result.Message = "Target process architecture is not supported.";
+                break;
+            }
+        }
+        else
+        {
+            BOOL isWow64 = FALSE;
+            if (!IsWow64Process(processHandle, &isWow64))
+            {
+                result.ErrorCode = GetLastError();
+                result.Operation = "target_architecture";
+                result.Message = "IsWow64Process failed during attach preflight: " + FormatWindowsError(result.ErrorCode);
+                break;
+            }
+
+#if defined(_WIN64)
+            result.Architecture = isWow64 ? KnMonAgentArchitecture::X86 : KnMonAgentArchitecture::X64;
+#else
+            result.Architecture = KnMonAgentArchitecture::X86;
+#endif
+        }
+
+        result.Success = true;
+        result.ErrorCode = 0;
+        result.Operation = "target_architecture";
+        result.Message = "Target process architecture is " + ArchitectureName(result.Architecture) + ".";
+    }
+    while (false);
+
+    return result;
+}
+
+bool QueryProcessProtection(HANDLE processHandle, bool* protectedProcess)
+{
+    bool queried = false;
+
+    do
+    {
+        if (protectedProcess != nullptr)
+        {
+            *protectedProcess = false;
+        }
+
+        if (processHandle == nullptr)
+        {
+            break;
+        }
+
+        HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+        if (ntdll == nullptr)
+        {
+            break;
+        }
+
+        using NtQueryInformationProcessFn = LONG(NTAPI*)(HANDLE, ULONG, PVOID, ULONG, PULONG);
+        auto ntQueryInformationProcess = reinterpret_cast<NtQueryInformationProcessFn>(GetProcAddress(ntdll, "NtQueryInformationProcess"));
+        if (ntQueryInformationProcess == nullptr)
+        {
+            break;
+        }
+
+        struct ProcessProtectionInfo
+        {
+            UCHAR Level;
+        };
+
+        ProcessProtectionInfo protection = {};
+        const LONG status = ntQueryInformationProcess(processHandle, 61, &protection, sizeof(protection), nullptr);
+        if (status < 0)
+        {
+            break;
+        }
+
+        if (protectedProcess != nullptr)
+        {
+            *protectedProcess = protection.Level != 0;
+        }
+
+        queried = true;
+    }
+    while (false);
+
+    return queried;
+}
+
+void SetAttachPreflightError(
+    KnMonCaptureResult& result,
+    DWORD errorCode,
+    const std::string& operation,
+    const std::string& message)
+{
+    SetResultError(result, errorCode, "knmon-core", operation, message);
+    AddAudit(result, "attach_preflight_failed", operation, message, errorCode, "knmon-core");
+}
+
+AttachPreflightResult RunAttachPreflight(
+    KnMonCaptureResult& result,
+    const KnMonAttachRequest& request,
+    KnMonAgentArchitecture requestedArchitecture)
+{
+    AttachPreflightResult preflight;
+    HANDLE queryHandle = nullptr;
+
+    do
+    {
+        AddAudit(result, "attach_preflight_started", "attach_preflight", "Running same-bitness attach preflight.");
+
+        if (request.ProcessId == 0 || request.ProcessId == 4)
+        {
+            SetAttachPreflightError(result, ERROR_NOT_SUPPORTED, "missing_target_process", "System idle and system process PIDs are not supported attach targets.");
+            break;
+        }
+
+        if (request.ProcessId == GetCurrentProcessId())
+        {
+            SetAttachPreflightError(result, ERROR_NOT_SUPPORTED, "missing_target_process", "The helper process cannot attach to itself.");
+            break;
+        }
+
+        ProcessSnapshotInfo snapshotInfo;
+        DWORD snapshotError = 0;
+        if (!FindProcessSnapshotInfo(request.ProcessId, &snapshotInfo, &snapshotError))
+        {
+            const DWORD errorCode = snapshotError == 0 ? ERROR_INVALID_PARAMETER : snapshotError;
+            SetAttachPreflightError(result, errorCode, "missing_target_process", "Target process was not found in the process snapshot.");
+            break;
+        }
+
+        const KnMonAgentArchitecture helperArchitecture = NativeHelperArchitecture();
+        if (requestedArchitecture == KnMonAgentArchitecture::Unknown || helperArchitecture == KnMonAgentArchitecture::Unknown)
+        {
+            SetAttachPreflightError(result, ERROR_NOT_SUPPORTED, "unsupported_architecture", "Requested or helper architecture is unknown.");
+            break;
+        }
+
+        if (requestedArchitecture != helperArchitecture)
+        {
+            const std::string message = "Requested architecture " + ArchitectureName(requestedArchitecture) + " does not match helper architecture " + ArchitectureName(helperArchitecture) + ". Cross-bitness attach is not supported.";
+            SetAttachPreflightError(result, ERROR_NOT_SUPPORTED, "helper_target_mismatch", message);
+            break;
+        }
+
+        BinaryArchitectureResult agentArchitecture = QueryBinaryArchitecture(request.AgentPath, "agent");
+        if (!agentArchitecture.Success)
+        {
+            SetAttachPreflightError(result, agentArchitecture.ErrorCode, agentArchitecture.Operation, agentArchitecture.Message);
+            break;
+        }
+
+        if (agentArchitecture.Architecture != requestedArchitecture)
+        {
+            const std::string message = "Agent architecture " + ArchitectureName(agentArchitecture.Architecture) + " does not match helper/target architecture " + ArchitectureName(requestedArchitecture) + ".";
+            SetAttachPreflightError(result, ERROR_NOT_SUPPORTED, "helper_agent_mismatch", message);
+            break;
+        }
+
+        queryHandle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, request.ProcessId);
+        if (queryHandle == nullptr)
+        {
+            const DWORD errorCode = GetLastError();
+            const std::string operation = errorCode == ERROR_ACCESS_DENIED ? "access_denied" : "target_process_open";
+            SetAttachPreflightError(result, errorCode, operation, "Failed to open target process for query: " + FormatWindowsError(errorCode));
+            break;
+        }
+
+        ProcessArchitectureResult targetArchitecture = QueryProcessArchitectureFromHandle(queryHandle);
+        if (!targetArchitecture.Success)
+        {
+            SetAttachPreflightError(result, targetArchitecture.ErrorCode, targetArchitecture.Operation, targetArchitecture.Message);
+            break;
+        }
+
+        if (targetArchitecture.Architecture != requestedArchitecture)
+        {
+            const std::string message = "Target architecture " + ArchitectureName(targetArchitecture.Architecture) + " does not match helper architecture " + ArchitectureName(requestedArchitecture) + ". Cross-bitness attach is not supported.";
+            SetAttachPreflightError(result, ERROR_NOT_SUPPORTED, "helper_target_mismatch", message);
+            break;
+        }
+
+        bool protectedProcess = false;
+        if (QueryProcessProtection(queryHandle, &protectedProcess) && protectedProcess)
+        {
+            SetAttachPreflightError(result, ERROR_ACCESS_DENIED, "protected_process", "Target process reports a protected-process protection level.");
+            break;
+        }
+
+        CloseHandle(queryHandle);
+        queryHandle = nullptr;
+
+        constexpr DWORD desiredAccess =
+            PROCESS_QUERY_LIMITED_INFORMATION |
+            PROCESS_QUERY_INFORMATION |
+            PROCESS_CREATE_THREAD |
+            PROCESS_VM_OPERATION |
+            PROCESS_VM_WRITE |
+            SYNCHRONIZE;
+
+        HANDLE processHandle = OpenProcess(desiredAccess, FALSE, request.ProcessId);
+        if (processHandle == nullptr)
+        {
+            const DWORD errorCode = GetLastError();
+            const std::string operation = errorCode == ERROR_ACCESS_DENIED ? "access_denied" : "target_process_open";
+            SetAttachPreflightError(result, errorCode, operation, "Failed to open target process for attach mutation: " + FormatWindowsError(errorCode));
+            break;
+        }
+
+        preflight.Success = true;
+        preflight.ProcessHandle = processHandle;
+        preflight.TargetPath = QueryProcessImagePath(request.ProcessId);
+        preflight.TargetImageName = snapshotInfo.ImageName;
+        preflight.ParentProcessId = snapshotInfo.ParentProcessId;
+        preflight.TargetArchitecture = targetArchitecture.Architecture;
+        AddAudit(result, "target_process_opened", "OpenProcess", "Target process opened for bounded same-bitness attach.");
+        AddAudit(result, "attach_preflight_passed", "attach_preflight", "Same-bitness running-process attach preflight passed.");
+    }
+    while (false);
+
+    if (queryHandle != nullptr)
+    {
+        CloseHandle(queryHandle);
+    }
+
+    return preflight;
+}
+
+bool CopyWideBounded(wchar_t* destination, std::size_t count, const std::wstring& value)
+{
+    bool copied = false;
+
+    do
+    {
+        if (destination == nullptr || count == 0 || value.size() + 1 > count)
+        {
+            break;
+        }
+
+        std::wmemset(destination, 0, count);
+        std::wmemcpy(destination, value.c_str(), value.size());
+        copied = true;
+    }
+    while (false);
+
+    return copied;
+}
+
+bool ResolveLoadedModuleExportRva(HMODULE moduleHandle, const char* exportName, std::uintptr_t* rva)
+{
+    bool resolved = false;
+
+    do
+    {
+        if (moduleHandle == nullptr || exportName == nullptr || rva == nullptr)
+        {
+            break;
+        }
+
+        FARPROC exportAddress = GetProcAddress(moduleHandle, exportName);
+        if (exportAddress == nullptr)
+        {
+            break;
+        }
+
+        *rva = reinterpret_cast<std::uintptr_t>(exportAddress) - reinterpret_cast<std::uintptr_t>(moduleHandle);
+        resolved = true;
+    }
+    while (false);
+
+    return resolved;
+}
+
+bool ResolveImageExportRva(const std::wstring& imagePath, const char* exportName, std::uintptr_t* rva, DWORD* errorCode)
+{
+    bool resolved = false;
+    HMODULE moduleHandle = nullptr;
+
+    do
+    {
+        if (errorCode != nullptr)
+        {
+            *errorCode = 0;
+        }
+
+        moduleHandle = LoadLibraryExW(imagePath.c_str(), nullptr, DONT_RESOLVE_DLL_REFERENCES);
+        if (moduleHandle == nullptr)
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
+
+        if (!ResolveLoadedModuleExportRva(moduleHandle, exportName, rva))
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = ERROR_PROC_NOT_FOUND;
+            }
+            break;
+        }
+
+        resolved = true;
+    }
+    while (false);
+
+    if (moduleHandle != nullptr)
+    {
+        FreeLibrary(moduleHandle);
+    }
+
+    return resolved;
+}
+
+bool FindRemoteModuleBase(DWORD processId, const std::wstring& moduleName, std::uintptr_t* moduleBase, DWORD* errorCode)
+{
+    bool found = false;
+    HANDLE snapshot = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        if (moduleBase != nullptr)
+        {
+            *moduleBase = 0;
+        }
+
+        if (errorCode != nullptr)
+        {
+            *errorCode = 0;
+        }
+
+        snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, processId);
+        if (snapshot == INVALID_HANDLE_VALUE)
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
+
+        MODULEENTRY32W entry = {};
+        entry.dwSize = sizeof(entry);
+        if (!Module32FirstW(snapshot, &entry))
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
+
+        do
+        {
+            if (_wcsicmp(entry.szModule, moduleName.c_str()) == 0)
+            {
+                if (moduleBase != nullptr)
+                {
+                    *moduleBase = reinterpret_cast<std::uintptr_t>(entry.modBaseAddr);
+                }
+
+                found = true;
+                break;
+            }
+        }
+        while (Module32NextW(snapshot, &entry));
+    }
+    while (false);
+
+    if (snapshot != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(snapshot);
+    }
+
+    return found;
+}
+
+bool WaitRemoteThread(
+    HANDLE processHandle,
+    void* remoteAddress,
+    void* remoteParameter,
+    DWORD timeoutMs,
+    DWORD* exitCode,
+    DWORD* errorCode)
+{
+    bool completed = false;
+    HANDLE threadHandle = nullptr;
+
+    do
+    {
+        if (exitCode != nullptr)
+        {
+            *exitCode = 0;
+        }
+
+        if (errorCode != nullptr)
+        {
+            *errorCode = 0;
+        }
+
+        threadHandle = CreateRemoteThread(
+            processHandle,
+            nullptr,
+            0,
+            reinterpret_cast<LPTHREAD_START_ROUTINE>(remoteAddress),
+            remoteParameter,
+            0,
+            nullptr);
+
+        if (threadHandle == nullptr)
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
+
+        const DWORD waitResult = WaitForSingleObject(threadHandle, timeoutMs);
+        if (waitResult != WAIT_OBJECT_0)
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = waitResult == WAIT_TIMEOUT ? WAIT_TIMEOUT : GetLastError();
+            }
+            break;
+        }
+
+        DWORD remoteExitCode = 0;
+        if (!GetExitCodeThread(threadHandle, &remoteExitCode))
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
+
+        if (exitCode != nullptr)
+        {
+            *exitCode = remoteExitCode;
+        }
+
+        completed = true;
+    }
+    while (false);
+
+    if (threadHandle != nullptr)
+    {
+        CloseHandle(threadHandle);
+    }
+
+    return completed;
+}
+
 void AddAudit(
     KnMonLaunchResult& result,
     const std::string& eventType,
     const std::string& operation,
     const std::string& message,
-    DWORD errorCode = 0,
-    const std::string& subsystem = "knmon-core")
+    DWORD errorCode,
+    const std::string& subsystem)
 {
     KnMonAuditEvent event;
     event.OperationId = result.OperationId;
@@ -481,8 +1088,8 @@ void AddAudit(
     const std::string& eventType,
     const std::string& operation,
     const std::string& message,
-    DWORD errorCode = 0,
-    const std::string& subsystem = "knmon-core")
+    DWORD errorCode,
+    const std::string& subsystem)
 {
     KnMonAuditEvent event;
     event.OperationId = result.OperationId;
@@ -2721,6 +3328,529 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
     if (processInfo.hProcess != nullptr)
     {
         CloseHandle(processInfo.hProcess);
+    }
+
+    return result;
+}
+
+KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) const
+{
+    KnMonCaptureResult result;
+    const KnMonAgentArchitecture requestedArchitecture = RequestedArchitectureOrNative(request.Architecture);
+    result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
+    result.AgentPath = request.AgentPath;
+    result.AttachProcessId = request.ProcessId;
+    result.TargetProcessId = request.ProcessId;
+    result.Architecture = ArchitectureName(requestedArchitecture);
+    result.CaptureMode = "bounded-native-attach";
+    result.InjectionMethod = "remote LoadLibraryW";
+    result.DetachPolicy = "self-disable-no-unload";
+
+    HANDLE pipeHandle = INVALID_HANDLE_VALUE;
+    HANDLE processHandle = nullptr;
+    SharedTransportSession transport;
+    void* remoteDllPath = nullptr;
+    void* remoteConfig = nullptr;
+    std::uintptr_t remoteAgentBase = 0;
+    std::uintptr_t remoteStopAddress = 0;
+    bool fatalError = false;
+    bool agentInitialized = false;
+    bool stopRequested = false;
+    bool agentShutdownReceived = false;
+    std::uint64_t hookInstalledCount = 0;
+    std::uint64_t shutdownInstalledHooks = 0;
+    std::uint64_t shutdownRestoredHooks = 0;
+    std::uint64_t shutdownFailedHooks = 0;
+    std::string shutdownReason;
+
+    auto consumePayload = [&](const std::string& payload)
+    {
+        KnMonAgentMessage message = BuildAgentMessage(result, payload);
+        result.AgentMessages.push_back(message);
+
+        if (message.MessageType == "agent_hello" || PayloadContains(payload, "\"eventType\":\"agent_hello_received\""))
+        {
+            result.Handshake = BuildHandshake(result, payload);
+            AddAudit(result, "agent_hello_received", "agent_event_read", payload);
+        }
+        else if (message.MessageType == "hook_installed")
+        {
+            ++hookInstalledCount;
+            AddAudit(result, "hook_installed", "agent_event_read", payload);
+        }
+        else if (message.MessageType == "hook_install_failed")
+        {
+            AddAudit(result, "hook_install_failed", "agent_event_read", payload, ERROR_HOOK_NOT_INSTALLED);
+        }
+        else if (message.MessageType == "api_call")
+        {
+            result.CapturedEvents.push_back(message);
+            AddAudit(result, "api_call_received", "agent_event_read", message.RawPayload);
+        }
+        else if (message.MessageType == "dropped_events")
+        {
+            result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
+            AddAudit(result, "dropped_events_reported", "agent_event_read", payload);
+        }
+        else if (message.MessageType == "agent_shutdown")
+        {
+            agentShutdownReceived = true;
+            shutdownReason = ExtractJsonString(payload, "reason");
+            shutdownInstalledHooks = ExtractJsonUInt64(payload, "installedHooks");
+            shutdownRestoredHooks = ExtractJsonUInt64(payload, "restoredHooks");
+            shutdownFailedHooks = ExtractJsonUInt64(payload, "failedHooks");
+            result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
+            AddAudit(result, "agent_shutdown", "agent_event_read", payload);
+            if (shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0)
+            {
+                AddAudit(result, "agent_self_disabled", "agent_shutdown", payload);
+            }
+            else
+            {
+                AddAudit(result, "detach_incomplete", "agent_shutdown", payload, ERROR_HOOK_NOT_INSTALLED);
+            }
+        }
+        else
+        {
+            AddAudit(result, "agent_message_received", "agent_event_read", payload);
+        }
+    };
+
+    do
+    {
+        if (request.InjectionMethod != KnMonInjectionMethod::RemoteLoadLibrary)
+        {
+            SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "injection_method_check", "Only remote LoadLibraryW attach is supported by attach-capture.");
+            fatalError = true;
+            break;
+        }
+
+        AttachPreflightResult preflight = RunAttachPreflight(result, request, requestedArchitecture);
+        if (!preflight.Success)
+        {
+            fatalError = true;
+            break;
+        }
+
+        processHandle = preflight.ProcessHandle;
+        result.TargetPath = preflight.TargetPath.empty() ? preflight.TargetImageName : preflight.TargetPath;
+
+        const std::wstring pipeName = L"\\\\.\\pipe\\knmon_agent_" + Utf8ToWide(result.OperationId);
+        pipeHandle = CreateNamedPipeW(
+            pipeName.c_str(),
+            PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
+            PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+            1,
+            65536,
+            65536,
+            request.TimeoutMs,
+            nullptr);
+
+        if (pipeHandle == INVALID_HANDLE_VALUE)
+        {
+            SetResultError(result, GetLastError(), "win32", "CreateNamedPipeW", "Failed to create attach agent event pipe.");
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "event_pipe_created", "CreateNamedPipeW", WideToUtf8(pipeName.c_str()));
+
+        DWORD transportError = 0;
+        if (!CreateSharedTransport(transport, result.OperationId, requestedArchitecture, &transportError))
+        {
+            SetResultError(result, transportError, "win32", "shared_memory_transport_create", "Failed to create attach shared-memory event transport.");
+            AddAudit(result, "transport_setup_failed", "shared_memory_transport_create", "Attach shared-memory event transport setup failed.", transportError, "win32");
+            fatalError = true;
+            break;
+        }
+
+        UpdateTransportMetrics(result, transport);
+        AddAudit(result, "attach_transport_created", "CreateFileMappingW", "Attach shared-memory event transport created.");
+
+        const std::wstring agentPath = Utf8ToWide(request.AgentPath);
+        const std::uint64_t remotePathSize = static_cast<std::uint64_t>((agentPath.size() + 1) * sizeof(wchar_t));
+        remoteDllPath = VirtualAllocEx(processHandle, nullptr, static_cast<SIZE_T>(remotePathSize), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+        if (remoteDllPath == nullptr)
+        {
+            SetResultError(result, GetLastError(), "win32", "remote_allocation_failed", "Failed to allocate remote agent path buffer.");
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "remote_agent_path_allocated", "VirtualAllocEx", "Remote agent path buffer allocated.");
+
+        SIZE_T bytesWritten = 0;
+        if (!WriteProcessMemory(processHandle, remoteDllPath, agentPath.c_str(), static_cast<SIZE_T>(remotePathSize), &bytesWritten))
+        {
+            SetResultError(result, GetLastError(), "win32", "remote_write_failed", "Failed to write agent path into target process.");
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "remote_agent_path_written", "WriteProcessMemory", "Agent DLL path written into target process.");
+
+        KnMonAttachConfigV1 attachConfig;
+        attachConfig.StructSize = static_cast<std::uint16_t>(sizeof(attachConfig));
+        if (
+            !CopyWideBounded(attachConfig.OperationId, std::size(attachConfig.OperationId), Utf8ToWide(result.OperationId)) ||
+            !CopyWideBounded(attachConfig.PipeName, std::size(attachConfig.PipeName), pipeName) ||
+            !CopyWideBounded(attachConfig.TransportName, std::size(attachConfig.TransportName), transport.MappingName))
+        {
+            SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "remote_initialize_failed", "Attach config strings exceed fixed ABI buffers.");
+            fatalError = true;
+            break;
+        }
+
+        remoteConfig = VirtualAllocEx(processHandle, nullptr, sizeof(attachConfig), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+        if (remoteConfig == nullptr)
+        {
+            SetResultError(result, GetLastError(), "win32", "remote_allocation_failed", "Failed to allocate remote attach config buffer.");
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "remote_config_allocated", "VirtualAllocEx", "Remote attach config buffer allocated.");
+
+        if (!WriteProcessMemory(processHandle, remoteConfig, &attachConfig, sizeof(attachConfig), &bytesWritten))
+        {
+            SetResultError(result, GetLastError(), "win32", "remote_write_failed", "Failed to write attach config into target process.");
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "remote_config_written", "WriteProcessMemory", "Attach config written into target process.");
+
+        std::uintptr_t remoteKernel32Base = 0;
+        DWORD moduleError = 0;
+        if (!FindRemoteModuleBase(request.ProcessId, L"kernel32.dll", &remoteKernel32Base, &moduleError))
+        {
+            SetResultError(result, moduleError == 0 ? ERROR_MOD_NOT_FOUND : moduleError, "win32", "remote_loadlibrary_failed", "Failed to find remote kernel32.dll module base.");
+            fatalError = true;
+            break;
+        }
+
+        HMODULE localKernel32 = GetModuleHandleW(L"kernel32.dll");
+        std::uintptr_t loadLibraryRva = 0;
+        if (!ResolveLoadedModuleExportRva(localKernel32, "LoadLibraryW", &loadLibraryRva))
+        {
+            SetResultError(result, GetLastError(), "win32", "remote_loadlibrary_failed", "Failed to resolve local LoadLibraryW RVA.");
+            fatalError = true;
+            break;
+        }
+
+        void* remoteLoadLibrary = reinterpret_cast<void*>(remoteKernel32Base + loadLibraryRva);
+        DWORD remoteExitCode = 0;
+        DWORD remoteError = 0;
+        AddAudit(result, "remote_loadlibrary_started", "CreateRemoteThread", "Remote LoadLibraryW thread starting.");
+        if (!WaitRemoteThread(processHandle, remoteLoadLibrary, remoteDllPath, request.TimeoutMs, &remoteExitCode, &remoteError))
+        {
+            SetResultError(result, remoteError, "win32", "remote_loadlibrary_failed", "Remote LoadLibraryW thread failed or timed out.");
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "remote_loadlibrary_completed", "CreateRemoteThread", "Remote LoadLibraryW thread completed.");
+
+        const std::wstring agentModuleName = std::filesystem::path(agentPath).filename().wstring();
+        for (int attempt = 0; attempt < 20 && remoteAgentBase == 0; ++attempt)
+        {
+            if (FindRemoteModuleBase(request.ProcessId, agentModuleName, &remoteAgentBase, &moduleError))
+            {
+                break;
+            }
+
+            Sleep(50);
+        }
+
+        if (remoteAgentBase == 0)
+        {
+            SetResultError(result, moduleError == 0 ? ERROR_MOD_NOT_FOUND : moduleError, "win32", "remote_loadlibrary_failed", "Agent module was not visible in the target after LoadLibraryW.");
+            fatalError = true;
+            break;
+        }
+
+        std::uintptr_t initializeRva = 0;
+        if (!ResolveImageExportRva(agentPath, "KnMonAgentInitialize", &initializeRva, &remoteError))
+        {
+            SetResultError(result, remoteError == 0 ? ERROR_PROC_NOT_FOUND : remoteError, "win32", "remote_export_missing", "Failed to resolve KnMonAgentInitialize export RVA.");
+            fatalError = true;
+            break;
+        }
+
+        std::uintptr_t stopRva = 0;
+        if (!ResolveImageExportRva(agentPath, "KnMonAgentStop", &stopRva, &remoteError))
+        {
+            SetResultError(result, remoteError == 0 ? ERROR_PROC_NOT_FOUND : remoteError, "win32", "remote_export_missing", "Failed to resolve KnMonAgentStop export RVA.");
+            fatalError = true;
+            break;
+        }
+
+        void* remoteInitialize = reinterpret_cast<void*>(remoteAgentBase + initializeRva);
+        remoteStopAddress = remoteAgentBase + stopRva;
+
+        AddAudit(result, "remote_agent_initialize_started", "CreateRemoteThread", "Remote KnMonAgentInitialize thread starting.");
+        if (!WaitRemoteThread(processHandle, remoteInitialize, remoteConfig, request.TimeoutMs, &remoteExitCode, &remoteError))
+        {
+            SetResultError(result, remoteError, "win32", "remote_initialize_failed", "Remote KnMonAgentInitialize thread failed or timed out.");
+            fatalError = true;
+            break;
+        }
+
+        if (remoteExitCode != static_cast<DWORD>(KnMonAgentControlStatus::Success))
+        {
+            std::ostringstream stream;
+            stream << "KnMonAgentInitialize returned status " << remoteExitCode << ".";
+            SetResultError(result, remoteExitCode, "knmon-agent", "remote_initialize_failed", stream.str());
+            fatalError = true;
+            break;
+        }
+
+        agentInitialized = true;
+        AddAudit(result, "remote_agent_initialize_completed", "CreateRemoteThread", "Remote KnMonAgentInitialize completed.");
+
+        DWORD pipeError = 0;
+        if (!WaitForPipeConnection(pipeHandle, request.TimeoutMs, &pipeError))
+        {
+            if (WaitForSingleObject(processHandle, 0) == WAIT_OBJECT_0)
+            {
+                DWORD exitCode = 0;
+                GetExitCodeProcess(processHandle, &exitCode);
+                std::ostringstream stream;
+                stream << "Target exited before attach agent event pipe connection. exitCode=" << exitCode;
+                SetResultError(result, exitCode == 0 ? ERROR_PROCESS_ABORTED : exitCode, "win32", "target_exited_early", stream.str());
+            }
+            else
+            {
+                SetResultError(result, pipeError, "win32", "handshake_timeout", "Attach agent event pipe connection timed out or failed.");
+            }
+
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "agent_pipe_connected", "agent_pipe_connect", "Attach agent event pipe connected.");
+        AddAudit(result, "attach_capture_started", "attach_capture", "Bounded attach capture started.");
+
+        const ULONGLONG captureDeadline = GetTickCount64() + static_cast<ULONGLONG>(request.DurationMs);
+        while (GetTickCount64() < captureDeadline)
+        {
+            DrainSharedTransport(result, transport);
+
+            std::string payload;
+            pipeError = 0;
+            if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError))
+            {
+                consumePayload(payload);
+                DrainSharedTransport(result, transport);
+                continue;
+            }
+
+            DrainSharedTransport(result, transport);
+            if (pipeError == ERROR_BROKEN_PIPE || pipeError == ERROR_HANDLE_EOF || pipeError == ERROR_NO_DATA)
+            {
+                AddAudit(result, "pipe_closed_without_shutdown", "agent_event_read", "Attach agent event pipe closed before explicit stop.", pipeError, "win32");
+                break;
+            }
+
+            if (pipeError != WAIT_TIMEOUT)
+            {
+                SetResultError(result, pipeError, "win32", "agent_event_read", "Attach agent event stream read failed.");
+                fatalError = true;
+                break;
+            }
+
+            if (WaitForSingleObject(processHandle, 0) == WAIT_OBJECT_0)
+            {
+                AddAudit(result, "target_exited_early", "attach_capture", "Target exited before attach duration elapsed.");
+                break;
+            }
+        }
+
+        if (fatalError)
+        {
+            break;
+        }
+
+        DrainSharedTransport(result, transport);
+        UpdateTransportMetrics(result, transport);
+        AddAudit(result, "attach_capture_completed", "attach_capture", "Bounded attach capture window completed.");
+
+        if (remoteStopAddress == 0)
+        {
+            SetResultError(result, ERROR_PROC_NOT_FOUND, "win32", "remote_export_missing", "Remote stop export address is missing.");
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "agent_stop_requested", "CreateRemoteThread", "Requesting attach agent self-disable.");
+        stopRequested = true;
+        if (!WaitRemoteThread(processHandle, reinterpret_cast<void*>(remoteStopAddress), nullptr, request.TimeoutMs, &remoteExitCode, &remoteError))
+        {
+            SetResultError(result, remoteError, "win32", "agent_stop_timeout", "Remote KnMonAgentStop thread failed or timed out.");
+            fatalError = true;
+            break;
+        }
+
+        if (remoteExitCode != static_cast<DWORD>(KnMonAgentControlStatus::Success))
+        {
+            std::ostringstream stream;
+            stream << "KnMonAgentStop returned status " << remoteExitCode << ".";
+            SetResultError(result, remoteExitCode, "knmon-agent", "detach_incomplete", stream.str());
+            fatalError = true;
+            break;
+        }
+
+        const ULONGLONG shutdownDeadline = GetTickCount64() + static_cast<ULONGLONG>(request.TimeoutMs);
+        while (!agentShutdownReceived && GetTickCount64() < shutdownDeadline)
+        {
+            DrainSharedTransport(result, transport);
+
+            std::string payload;
+            pipeError = 0;
+            if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError))
+            {
+                consumePayload(payload);
+                DrainSharedTransport(result, transport);
+                continue;
+            }
+
+            DrainSharedTransport(result, transport);
+            if (pipeError == ERROR_BROKEN_PIPE || pipeError == ERROR_HANDLE_EOF || pipeError == ERROR_NO_DATA)
+            {
+                AddAudit(result, agentShutdownReceived ? "pipe_closed_after_shutdown" : "pipe_closed_without_shutdown", "agent_event_read", "Attach agent event pipe closed.", pipeError, "win32");
+                break;
+            }
+
+            if (pipeError != WAIT_TIMEOUT)
+            {
+                SetResultError(result, pipeError, "win32", "agent_event_read", "Attach agent shutdown read failed.");
+                fatalError = true;
+                break;
+            }
+        }
+
+        DrainSharedTransport(result, transport);
+        UpdateTransportMetrics(result, transport);
+
+        if (fatalError)
+        {
+            break;
+        }
+
+        if (!result.Handshake.Received)
+        {
+            SetResultError(result, WAIT_TIMEOUT, "knmon-core", "agent_hello_required", "Attach agent HELLO was not received.");
+            fatalError = true;
+            break;
+        }
+
+        if (!ValidateHandshakeEvidence(result, requestedArchitecture))
+        {
+            fatalError = true;
+            break;
+        }
+
+        if (hookInstalledCount < ExpectedFileIoHookCount)
+        {
+            SetResultError(result, ERROR_HOOK_NOT_INSTALLED, "knmon-core", "hook_install_count_required", "Attach did not report the required stable File I/O hooks.");
+            fatalError = true;
+            break;
+        }
+
+        if (result.CapturedEvents.empty())
+        {
+            SetResultError(result, ERROR_NO_DATA, "knmon-core", "api_call_required", "Attach capture did not receive API events.");
+            fatalError = true;
+            break;
+        }
+
+        if (!agentShutdownReceived)
+        {
+            SetResultError(result, WAIT_TIMEOUT, "knmon-core", "agent_shutdown_required", "Attach agent shutdown lifecycle event was not received.");
+            fatalError = true;
+            break;
+        }
+
+        if (shutdownRestoredHooks < shutdownInstalledHooks || shutdownFailedHooks != 0)
+        {
+            SetResultError(result, ERROR_HOOK_NOT_INSTALLED, "knmon-core", "hook_uninstall_required", "Attach self-disable did not restore all installed hooks.");
+            fatalError = true;
+            break;
+        }
+
+        if (shutdownReason != "self_disable")
+        {
+            AddAudit(result, "detach_policy_note", "agent_shutdown", "Attach shutdown reason was " + shutdownReason + ".");
+        }
+
+        result.Success = true;
+        result.Win32ErrorCode = 0;
+        result.Subsystem = "knmon-core";
+        result.Operation = "attach_capture";
+        result.Message = "Controlled running-process attach capture completed with self-disable detach evidence.";
+    }
+    while (false);
+
+    if (agentInitialized && !stopRequested && !agentShutdownReceived && processHandle != nullptr && remoteStopAddress != 0)
+    {
+        DWORD stopExitCode = 0;
+        DWORD stopError = 0;
+        AddAudit(result, "agent_stop_requested", "CreateRemoteThread", "Requesting attach agent self-disable during cleanup.");
+        if (!WaitRemoteThread(processHandle, reinterpret_cast<void*>(remoteStopAddress), nullptr, request.TimeoutMs, &stopExitCode, &stopError))
+        {
+            AddAudit(result, "agent_stop_timeout", "CreateRemoteThread", "Cleanup stop request failed or timed out.", stopError, "win32");
+        }
+    }
+
+    if (remoteConfig != nullptr && processHandle != nullptr)
+    {
+        if (VirtualFreeEx(processHandle, remoteConfig, 0, MEM_RELEASE))
+        {
+            AddAudit(result, "remote_buffer_released", "VirtualFreeEx", "Remote attach config buffer released.");
+        }
+        else
+        {
+            AddAudit(result, "cleanup_partial_failure", "VirtualFreeEx", "Remote attach config buffer cleanup failed.", GetLastError(), "win32");
+        }
+    }
+
+    if (remoteDllPath != nullptr && processHandle != nullptr)
+    {
+        if (VirtualFreeEx(processHandle, remoteDllPath, 0, MEM_RELEASE))
+        {
+            AddAudit(result, "remote_buffer_released", "VirtualFreeEx", "Remote agent path buffer released.");
+        }
+        else
+        {
+            AddAudit(result, "cleanup_partial_failure", "VirtualFreeEx", "Remote agent path buffer cleanup failed.", GetLastError(), "win32");
+        }
+    }
+
+    if (pipeHandle != INVALID_HANDLE_VALUE)
+    {
+        DisconnectNamedPipe(pipeHandle);
+        CloseHandle(pipeHandle);
+    }
+
+    DrainSharedTransport(result, transport);
+    UpdateTransportMetrics(result, transport);
+    CloseSharedTransport(transport);
+
+    if (processHandle != nullptr)
+    {
+        CloseHandle(processHandle);
+    }
+
+    AddAudit(result, "attach_cleanup_completed", "handle_cleanup", "Attach controller cleanup completed.");
+
+    if (result.Operation.empty())
+    {
+        result.Operation = fatalError ? "attach_capture_failed" : "attach_capture";
+    }
+
+    if (result.Message.empty())
+    {
+        result.Message = fatalError ? "Controlled running-process attach capture failed." : "Controlled running-process attach capture finished.";
     }
 
     return result;

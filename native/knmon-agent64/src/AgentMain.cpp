@@ -1,3 +1,4 @@
+#include <knmon/common/AttachConfig.h>
 #include <knmon/common/Protocol.h>
 
 #include <WinSock2.h>
@@ -16,6 +17,7 @@
 #include <cstring>
 #include <iomanip>
 #include <intrin.h>
+#include <new>
 #include <sstream>
 #include <string>
 
@@ -195,6 +197,7 @@ NtCreateFileFn g_originalNtCreateFile = nullptr;
 LdrLoadDllFn g_originalLdrLoadDll = nullptr;
 LdrGetProcedureAddressFn g_originalLdrGetProcedureAddress = nullptr;
 std::wstring g_operationId;
+volatile LONG g_workerStarted = 0;
 
 enum class AgentLifecycleState : LONG
 {
@@ -224,6 +227,14 @@ struct HookLifecycleCounts
     int InstalledHooks = 0;
     int RestoredHooks = 0;
     int FailedHooks = 0;
+};
+
+struct AgentWorkerConfig
+{
+    std::wstring PipeName;
+    std::wstring TransportName;
+    std::wstring OperationId;
+    bool TransportRequired = false;
 };
 
 struct ModuleInfo
@@ -378,6 +389,98 @@ bool EnvEnabled(const wchar_t* name)
 {
     const std::wstring value = ReadEnv(name);
     return value == L"1" || value == L"true" || value == L"TRUE";
+}
+
+template <std::size_t Count>
+bool WideBufferTerminated(const wchar_t (&value)[Count])
+{
+    bool terminated = false;
+
+    for (std::size_t index = 0; index < Count; ++index)
+    {
+        if (value[index] == L'\0')
+        {
+            terminated = true;
+            break;
+        }
+    }
+
+    return terminated;
+}
+
+template <std::size_t Count>
+std::wstring WideBufferToString(const wchar_t (&value)[Count])
+{
+    std::wstring result;
+
+    for (std::size_t index = 0; index < Count && value[index] != L'\0'; ++index)
+    {
+        result.push_back(value[index]);
+    }
+
+    return result;
+}
+
+knmon::KnMonAgentControlStatus CopyAttachConfig(
+    const knmon::KnMonAttachConfigV1* config,
+    AgentWorkerConfig* workerConfig)
+{
+    knmon::KnMonAgentControlStatus status = knmon::KnMonAgentControlStatus::InvalidConfig;
+
+    do
+    {
+        if (config == nullptr || workerConfig == nullptr)
+        {
+            break;
+        }
+
+        if (config->Magic != knmon::KnMonAttachConfigMagic)
+        {
+            break;
+        }
+
+        if (config->AbiVersion != knmon::KnMonAttachConfigAbiVersion)
+        {
+            status = knmon::KnMonAgentControlStatus::UnsupportedAbi;
+            break;
+        }
+
+        if (config->StructSize < sizeof(knmon::KnMonAttachConfigV1))
+        {
+            status = knmon::KnMonAgentControlStatus::UnsupportedAbi;
+            break;
+        }
+
+        if (config->AttachMode != static_cast<std::uint32_t>(knmon::KnMonAttachMode::RunningProcess))
+        {
+            break;
+        }
+
+        if (
+            !WideBufferTerminated(config->OperationId) ||
+            !WideBufferTerminated(config->PipeName) ||
+            !WideBufferTerminated(config->TransportName))
+        {
+            break;
+        }
+
+        AgentWorkerConfig copied;
+        copied.OperationId = WideBufferToString(config->OperationId);
+        copied.PipeName = WideBufferToString(config->PipeName);
+        copied.TransportName = WideBufferToString(config->TransportName);
+        copied.TransportRequired = true;
+
+        if (copied.OperationId.empty() || copied.PipeName.empty() || copied.TransportName.empty())
+        {
+            break;
+        }
+
+        *workerConfig = copied;
+        status = knmon::KnMonAgentControlStatus::Success;
+    }
+    while (false);
+
+    return status;
 }
 
 std::string JsonEscape(const std::string& value)
@@ -5044,16 +5147,30 @@ void ShutdownAgent(const char* reason, AgentLifecycleState finalState)
     CloseAgentPipe();
 }
 
-DWORD WINAPI AgentWorker(void*)
+DWORD WINAPI AgentWorker(void* context)
 {
-    const std::wstring pipeName = ReadEnv(L"KNMON_AGENT_PIPE");
-    const std::wstring transportName = ReadEnv(L"KNMON_TRANSPORT_NAME");
-    const bool transportRequired = EnvEnabled(L"KNMON_TRANSPORT_REQUIRED");
-    g_operationId = ReadEnv(L"KNMON_OPERATION_ID");
+    auto* suppliedConfig = reinterpret_cast<AgentWorkerConfig*>(context);
+    AgentWorkerConfig runtimeConfig;
+
+    if (suppliedConfig != nullptr)
+    {
+        runtimeConfig = *suppliedConfig;
+        delete suppliedConfig;
+        suppliedConfig = nullptr;
+    }
+    else
+    {
+        runtimeConfig.PipeName = ReadEnv(L"KNMON_AGENT_PIPE");
+        runtimeConfig.TransportName = ReadEnv(L"KNMON_TRANSPORT_NAME");
+        runtimeConfig.OperationId = ReadEnv(L"KNMON_OPERATION_ID");
+        runtimeConfig.TransportRequired = EnvEnabled(L"KNMON_TRANSPORT_REQUIRED");
+    }
+
+    g_operationId = runtimeConfig.OperationId;
 
     do
     {
-        if (pipeName.empty())
+        if (runtimeConfig.PipeName.empty())
         {
             break;
         }
@@ -5062,7 +5179,7 @@ DWORD WINAPI AgentWorker(void*)
         for (int attempt = 0; attempt < 50; ++attempt)
         {
             pipeHandle = CreateFileW(
-                pipeName.c_str(),
+                runtimeConfig.PipeName.c_str(),
                 GENERIC_WRITE,
                 0,
                 nullptr,
@@ -5081,7 +5198,7 @@ DWORD WINAPI AgentWorker(void*)
             }
             else
             {
-                WaitNamedPipeW(pipeName.c_str(), 100);
+                WaitNamedPipeW(runtimeConfig.PipeName.c_str(), 100);
             }
         }
 
@@ -5096,7 +5213,7 @@ DWORD WINAPI AgentWorker(void*)
 
         SendHello();
 
-        if (transportRequired && !OpenTransport(transportName))
+        if (runtimeConfig.TransportRequired && !OpenTransport(runtimeConfig.TransportName))
         {
             SendHookStatus("knmon-transport", "shared_memory", false, "Required shared-memory transport could not be opened by the agent.");
             SendDroppedEvents();
@@ -5117,11 +5234,98 @@ DWORD WINAPI AgentWorker(void*)
 
     return 0;
 }
+
+knmon::KnMonAgentControlStatus StartAgentWorker(AgentWorkerConfig* config)
+{
+    knmon::KnMonAgentControlStatus status = knmon::KnMonAgentControlStatus::WorkerStartFailed;
+
+    do
+    {
+        if (InterlockedCompareExchange(&g_workerStarted, 1, 0) != 0)
+        {
+            status = knmon::KnMonAgentControlStatus::AlreadyRunning;
+            break;
+        }
+
+        HANDLE threadHandle = CreateThread(nullptr, 0, AgentWorker, config, 0, nullptr);
+        if (threadHandle == nullptr)
+        {
+            InterlockedExchange(&g_workerStarted, 0);
+            status = knmon::KnMonAgentControlStatus::WorkerStartFailed;
+            break;
+        }
+
+        CloseHandle(threadHandle);
+        status = knmon::KnMonAgentControlStatus::Success;
+    }
+    while (false);
+
+    if (status != knmon::KnMonAgentControlStatus::Success)
+    {
+        delete config;
+    }
+
+    return status;
+}
+
+bool LaunchEnvironmentConfigured()
+{
+    wchar_t value[2] = {};
+    const DWORD length = GetEnvironmentVariableW(L"KNMON_AGENT_PIPE", value, static_cast<DWORD>(std::size(value)));
+    return length > 0;
+}
 }
 
 extern "C" __declspec(dllexport) DWORD KnMonAgentVersion()
 {
     return 0x00020000;
+}
+
+#if defined(_M_IX86)
+#pragma comment(linker, "/EXPORT:KnMonAgentInitialize=_KnMonAgentInitialize@4")
+#pragma comment(linker, "/EXPORT:KnMonAgentStop=_KnMonAgentStop@0")
+#endif
+
+extern "C" __declspec(dllexport) DWORD WINAPI KnMonAgentInitialize(const knmon::KnMonAttachConfigV1* config)
+{
+    AgentWorkerConfig workerConfig;
+    knmon::KnMonAgentControlStatus status = CopyAttachConfig(config, &workerConfig);
+
+    if (status == knmon::KnMonAgentControlStatus::Success)
+    {
+        auto* heapConfig = new (std::nothrow) AgentWorkerConfig(workerConfig);
+        if (heapConfig == nullptr)
+        {
+            status = knmon::KnMonAgentControlStatus::WorkerStartFailed;
+        }
+        else
+        {
+            status = StartAgentWorker(heapConfig);
+        }
+    }
+
+    return static_cast<DWORD>(status);
+}
+
+extern "C" __declspec(dllexport) DWORD WINAPI KnMonAgentStop()
+{
+    knmon::KnMonAgentControlStatus status = knmon::KnMonAgentControlStatus::Success;
+    const AgentLifecycleState state = GetLifecycleState();
+
+    if (state == AgentLifecycleState::Starting && InterlockedCompareExchange(&g_workerStarted, 0, 0) == 0)
+    {
+        status = knmon::KnMonAgentControlStatus::NotRunning;
+    }
+    else if (state == AgentLifecycleState::Disabled || state == AgentLifecycleState::Failed)
+    {
+        status = knmon::KnMonAgentControlStatus::NotRunning;
+    }
+    else
+    {
+        ShutdownAgent("self_disable", AgentLifecycleState::Disabled);
+    }
+
+    return static_cast<DWORD>(status);
 }
 
 BOOL APIENTRY DllMain(HMODULE moduleHandle, DWORD reason, LPVOID reserved)
@@ -5132,10 +5336,9 @@ BOOL APIENTRY DllMain(HMODULE moduleHandle, DWORD reason, LPVOID reserved)
     {
         g_agentModule = moduleHandle;
         DisableThreadLibraryCalls(moduleHandle);
-        HANDLE threadHandle = CreateThread(nullptr, 0, AgentWorker, nullptr, 0, nullptr);
-        if (threadHandle != nullptr)
+        if (LaunchEnvironmentConfigured())
         {
-            CloseHandle(threadHandle);
+            (void)StartAgentWorker(nullptr);
         }
     }
     else if (reason == DLL_PROCESS_DETACH)
