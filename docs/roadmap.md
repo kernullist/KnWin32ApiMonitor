@@ -512,7 +512,7 @@ Next implementation focus:
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 
-Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, and Phase 11E foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, and the pull-based collector reader foundation for shared transport drain are implemented; persistent daemon supervision, threaded streaming collector sessions, and cancellation-safe operation ownership remain future work.
+Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, and Phase 11F foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, and cancellation-safe operation ownership for bounded attach/process-tree helper commands are implemented; persistent daemon supervision and threaded streaming collector sessions remain future work.
 
 Goal:
 
@@ -590,12 +590,22 @@ Current verified Phase 11E behavior:
 7. Process-tree `attach-supported` child capture remains compatible through the existing `AttachCapture` path.
 8. `knmon-collector.exe smoke-shared-transport-reader` and `tools/native-smoke/shared-transport-reader-smoke.ps1` verify FIFO drain, partial commit stop behavior, bounded drain behavior, transport counters, and hook-overhead aggregation.
 
+Current verified Phase 11F behavior:
+
+1. `attach-capture` and `supervise-tree` can run with explicit operation ids and local named cancellation events.
+2. `knmon-native-helper.exe cancel-operation --operation-id <id>` signals cancellation without killing the active helper or creating an injected command channel.
+3. `AttachCapture` observes cancellation during bounded attach, requests `KnMonAgentStop` after initialization, drains final transport/pipe evidence, and returns `operation=operation_cancelled`, `operationState=cancelled`, `win32ErrorCode=ERROR_CANCELLED`, and cleanup evidence when self-disable succeeds.
+4. Post-cancel attach to the same still-running target succeeds through Phase 11D `loaded_agent_reinitialize`, proving the target is not left permanently hooked.
+5. `SuperviseProcessTree` observes cancellation between snapshots and before child attach; child attach receives the same cancellation event name.
+6. Tauri tracks native operations in an operation registry, exposes operation state/cancel commands, and sends `cancel-operation` before any timeout fallback.
+7. The selected-target UI renders active operation state, elapsed time, cancel availability, attach cancellation fields, and process-tree cancellation fields without claiming DLL unload or persistent live attach.
+8. `tools/native-smoke/cancellation-operation-state-smoke.ps1` verifies x64 attach cancellation cleanup, post-cancel reattach, and process-tree observe cancellation.
+
 Next implementation focus:
 
-1. Add persistent supervision state only after cancellation, lifecycle ownership, recovery behavior, and stale-agent recovery policy are specified.
-2. Add UI-level cancellation/progress only after the bounded helper command model has a durable operation-state contract.
-3. Promote the pull-based reader to a threaded streaming collector only after long-running session ownership, shutdown, and recovery contracts exist.
-4. Keep protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
+1. Promote the pull-based reader to a threaded streaming collector only after long-running session ownership, shutdown, and recovery contracts exist.
+2. Add persistent daemon supervision only after the bounded cancellation contract is extended to durable restart/recovery semantics.
+3. Keep protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 
 ## Phase 12: Advanced UX
 

@@ -1,9 +1,11 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::process::Stdio;
+use std::sync::{Mutex, OnceLock};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub const PROTOCOL_MAJOR: u16 = 0;
 pub const PROTOCOL_MINOR: u16 = 1;
@@ -29,6 +31,43 @@ pub struct CaptureSessionState
     pub backend_mode: String,
     pub event_count: u64,
     pub dropped_events: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeOperation
+{
+    pub operation_id: String,
+    pub operation_kind: String,
+    pub target_process_id: u32,
+    pub state: String,
+    pub cancel_requested: bool,
+    pub elapsed_ms: u64,
+    pub duration_ms: u32,
+}
+
+#[derive(Debug, Clone)]
+struct NativeOperationRecord
+{
+    operation_id: String,
+    operation_kind: String,
+    target_process_id: u32,
+    state: String,
+    cancel_requested: bool,
+    started_at: Instant,
+    duration_ms: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CancellationSignalResult
+{
+    success: bool,
+    operation_id: String,
+    cancellation_event_name: String,
+    win32_error_code: u32,
+    operation: String,
+    message: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -174,6 +213,22 @@ pub struct CaptureResult
     pub operation: String,
     pub message: String,
     #[serde(default)]
+    pub cancel_requested: bool,
+    #[serde(default)]
+    pub cancel_observed: bool,
+    #[serde(default)]
+    pub cancel_stage: String,
+    #[serde(default)]
+    pub operation_state: String,
+    #[serde(default)]
+    pub agent_cleanup_attempted: bool,
+    #[serde(default)]
+    pub agent_cleanup_succeeded: bool,
+    #[serde(default)]
+    pub stale_agent_operation_id: String,
+    #[serde(default)]
+    pub stale_agent_state: String,
+    #[serde(default)]
     pub attach_state: String,
     #[serde(default)]
     pub attach_strategy: String,
@@ -265,6 +320,14 @@ pub struct ProcessTreeResult
     pub subsystem: String,
     pub operation: String,
     pub message: String,
+    #[serde(default)]
+    pub cancel_requested: bool,
+    #[serde(default)]
+    pub cancel_observed: bool,
+    #[serde(default)]
+    pub cancel_stage: String,
+    #[serde(default)]
+    pub operation_state: String,
     pub process_nodes: Vec<ProcessTreeNode>,
     pub policy_decisions: Vec<ChildPolicyDecision>,
     pub audit_events: Vec<AuditEvent>,
@@ -356,6 +419,104 @@ impl CaptureSessionState
             dropped_events: 0,
         }
     }
+}
+
+static NATIVE_OPERATIONS: OnceLock<Mutex<HashMap<String, NativeOperationRecord>>> = OnceLock::new();
+
+fn operation_registry() -> &'static Mutex<HashMap<String, NativeOperationRecord>>
+{
+    NATIVE_OPERATIONS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn now_epoch_ms() -> u128
+{
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_else(|_| Duration::from_millis(0))
+        .as_millis()
+}
+
+fn new_operation_id(prefix: &str, process_id: u32) -> String
+{
+    format!("{prefix}-{process_id}-{}", now_epoch_ms())
+}
+
+fn operation_view(record: &NativeOperationRecord) -> NativeOperation
+{
+    NativeOperation
+    {
+        operation_id: record.operation_id.clone(),
+        operation_kind: record.operation_kind.clone(),
+        target_process_id: record.target_process_id,
+        state: record.state.clone(),
+        cancel_requested: record.cancel_requested,
+        elapsed_ms: record.started_at.elapsed().as_millis() as u64,
+        duration_ms: record.duration_ms,
+    }
+}
+
+fn register_native_operation(operation_id: &str, operation_kind: &str, target_process_id: u32, duration_ms: u32)
+{
+    let mut registry = operation_registry().lock().unwrap();
+    registry.insert(
+        operation_id.to_string(),
+        NativeOperationRecord
+        {
+            operation_id: operation_id.to_string(),
+            operation_kind: operation_kind.to_string(),
+            target_process_id,
+            state: "running".to_string(),
+            cancel_requested: false,
+            started_at: Instant::now(),
+            duration_ms,
+        },
+    );
+}
+
+fn finish_native_operation(operation_id: &str, state: &str)
+{
+    let mut registry = operation_registry().lock().unwrap();
+    if let Some(record) = registry.get_mut(operation_id)
+    {
+        record.state = state.to_string();
+    }
+}
+
+pub fn native_operation_states() -> Vec<NativeOperation>
+{
+    let registry = operation_registry().lock().unwrap();
+    let mut operations: Vec<NativeOperation> = registry.values().map(operation_view).collect();
+    operations.sort_by(|left, right| left.operation_id.cmp(&right.operation_id));
+    operations
+}
+
+pub fn cancel_native_operation(operation_id: String) -> Result<NativeOperation, String>
+{
+    {
+        let mut registry = operation_registry().lock().unwrap();
+        let record = registry
+            .get_mut(&operation_id)
+            .ok_or_else(|| format!("operation not found: {operation_id}"))?;
+        record.cancel_requested = true;
+        record.state = "cancel_requested".to_string();
+    }
+
+    let signal = signal_cancel_operation(&operation_id)?;
+    if !signal.success
+    {
+        return Err(format!(
+            "{} failed with {}: {}",
+            signal.operation,
+            signal.win32_error_code,
+            signal.message
+        ));
+    }
+
+    let registry = operation_registry().lock().unwrap();
+    registry
+        .get(&operation_id)
+        .map(operation_view)
+        .ok_or_else(|| format!("operation not found after cancel: {operation_id}"))
 }
 
 pub fn backend_status() -> &'static str
@@ -469,7 +630,10 @@ pub fn attach_target_process_capture(process_id: u32, duration_ms: u32) -> Resul
     let duration = normalize_duration_ms(duration_ms);
     let helper_timeout = helper_inner_timeout_ms(duration);
     let command_timeout = helper_process_timeout_ms(duration);
-    let helper_output = run_helper_args_with_timeout(&[
+    let operation_id = new_operation_id("ui-attach", process_id);
+    register_native_operation(&operation_id, "attach_capture", process_id, duration);
+
+    let helper_output = match run_helper_args_with_timeout(&[
         "attach-capture".to_string(),
         "--pid".to_string(),
         process_id.to_string(),
@@ -477,9 +641,36 @@ pub fn attach_target_process_capture(process_id: u32, duration_ms: u32) -> Resul
         duration.to_string(),
         "--timeout-ms".to_string(),
         helper_timeout.to_string(),
-    ], command_timeout)?;
+        "--operation-id".to_string(),
+        operation_id.clone(),
+    ], command_timeout, Some(&operation_id))
+    {
+        Ok(output) => output,
+        Err(error) =>
+        {
+            finish_native_operation(&operation_id, "failed");
+            return Err(error);
+        }
+    };
 
-    parse_helper_json(&helper_output, "attach-capture")
+    let result: CaptureResult = parse_helper_json(&helper_output, "attach-capture")?;
+    let operation_state = if result.operation_state.is_empty()
+    {
+        if result.success
+        {
+            "completed"
+        }
+        else
+        {
+            "failed"
+        }
+    }
+    else
+    {
+        result.operation_state.as_str()
+    };
+    finish_native_operation(&operation_id, operation_state);
+    Ok(result)
 }
 
 pub fn supervise_process_tree(root_process_id: u32, duration_ms: u32, child_policy: String) -> Result<ProcessTreeResult, String>
@@ -493,7 +684,10 @@ pub fn supervise_process_tree(root_process_id: u32, duration_ms: u32, child_poli
     let duration = normalize_duration_ms(duration_ms);
     let helper_timeout = helper_inner_timeout_ms(duration);
     let command_timeout = helper_process_timeout_ms(duration);
-    let helper_output = run_helper_args_with_timeout(&[
+    let operation_id = new_operation_id("ui-tree", root_process_id);
+    register_native_operation(&operation_id, "process_tree_supervision", root_process_id, duration);
+
+    let helper_output = match run_helper_args_with_timeout(&[
         "supervise-tree".to_string(),
         "--pid".to_string(),
         root_process_id.to_string(),
@@ -503,9 +697,36 @@ pub fn supervise_process_tree(root_process_id: u32, duration_ms: u32, child_poli
         helper_timeout.to_string(),
         "--child-policy".to_string(),
         normalized_policy,
-    ], command_timeout)?;
+        "--operation-id".to_string(),
+        operation_id.clone(),
+    ], command_timeout, Some(&operation_id))
+    {
+        Ok(output) => output,
+        Err(error) =>
+        {
+            finish_native_operation(&operation_id, "failed");
+            return Err(error);
+        }
+    };
 
-    parse_helper_json(&helper_output, "supervise-tree")
+    let result: ProcessTreeResult = parse_helper_json(&helper_output, "supervise-tree")?;
+    let operation_state = if result.operation_state.is_empty()
+    {
+        if result.success
+        {
+            "completed"
+        }
+        else
+        {
+            "failed"
+        }
+    }
+    else
+    {
+        result.operation_state.as_str()
+    };
+    finish_native_operation(&operation_id, operation_state);
+    Ok(result)
 }
 
 fn parse_helper_json<T>(helper_output: &str, command_name: &str) -> Result<T, String>
@@ -554,7 +775,34 @@ fn run_helper_args(args: &[String]) -> Result<String, String>
     Ok(stdout)
 }
 
-fn run_helper_args_with_timeout(args: &[String], timeout_ms: u32) -> Result<String, String>
+fn signal_cancel_operation(operation_id: &str) -> Result<CancellationSignalResult, String>
+{
+    let helper_path = find_helper_path()
+        .ok_or_else(|| "knmon-native-helper.exe was not found. Run `npm run native:build` first.".to_string())?;
+
+    let output = Command::new(&helper_path)
+        .args(["cancel-operation", "--operation-id", operation_id])
+        .output()
+        .map_err(|error| format!("failed to run {} cancel-operation: {error}", helper_path.display()))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+
+    if !output.status.success()
+    {
+        return Err(format!(
+            "{} cancel-operation exited with {:?}; stderr={}; stdout={}",
+            helper_path.display(),
+            output.status.code(),
+            stderr,
+            stdout
+        ));
+    }
+
+    parse_helper_json(&stdout, "cancel-operation")
+}
+
+fn run_helper_args_with_timeout(args: &[String], timeout_ms: u32, operation_id: Option<&str>) -> Result<String, String>
 {
     let helper_path = find_helper_path()
         .ok_or_else(|| "knmon-native-helper.exe was not found. Run `npm run native:build` first.".to_string())?;
@@ -578,6 +826,39 @@ fn run_helper_args_with_timeout(args: &[String], timeout_ms: u32) -> Result<Stri
 
         if start.elapsed() >= timeout
         {
+            let mut cancel_note = String::new();
+            if let Some(id) = operation_id
+            {
+                match signal_cancel_operation(id)
+                {
+                    Ok(signal) =>
+                    {
+                        cancel_note = format!(" cancelSignal={} message={}", signal.success, signal.message);
+                    }
+                    Err(error) =>
+                    {
+                        cancel_note = format!(" cancelSignal=false message={error}");
+                    }
+                }
+
+                let grace_start = Instant::now();
+                let grace_timeout = Duration::from_millis(12_000);
+                while grace_start.elapsed() < grace_timeout
+                {
+                    if child.try_wait().map_err(|error| format!("failed to poll {} after cancel: {error}", helper_path.display()))?.is_some()
+                    {
+                        break;
+                    }
+
+                    thread::sleep(Duration::from_millis(25));
+                }
+
+                if child.try_wait().map_err(|error| format!("failed to poll {} after cancel grace: {error}", helper_path.display()))?.is_some()
+                {
+                    break;
+                }
+            }
+
             let _ = child.kill();
             let output = child
                 .wait_with_output()
@@ -586,11 +867,12 @@ fn run_helper_args_with_timeout(args: &[String], timeout_ms: u32) -> Result<Stri
             let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
 
             return Err(format!(
-                "{} timed out after {} ms; stderr={}; stdout={}",
+                "{} timed out after {} ms; stderr={}; stdout={};{}",
                 helper_path.display(),
                 timeout_ms,
                 stderr,
-                stdout
+                stdout,
+                cancel_note
             ));
         }
 

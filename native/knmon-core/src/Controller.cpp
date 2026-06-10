@@ -1272,6 +1272,92 @@ struct RemoteModuleInfo
     std::wstring Name;
 };
 
+struct CancellationContext
+{
+    HANDLE EventHandle = nullptr;
+    std::string EventName;
+};
+
+bool OpenCancellationContext(const std::string& eventName, CancellationContext* context, DWORD* errorCode)
+{
+    bool opened = false;
+
+    do
+    {
+        if (context != nullptr)
+        {
+            context->EventHandle = nullptr;
+            context->EventName = eventName;
+        }
+
+        if (errorCode != nullptr)
+        {
+            *errorCode = 0;
+        }
+
+        if (eventName.empty())
+        {
+            opened = true;
+            break;
+        }
+
+        const std::wstring wideName = Utf8ToWide(eventName);
+        if (wideName.empty())
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = ERROR_INVALID_PARAMETER;
+            }
+            break;
+        }
+
+        HANDLE eventHandle = CreateEventW(nullptr, TRUE, FALSE, wideName.c_str());
+        if (eventHandle == nullptr)
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
+
+        if (context != nullptr)
+        {
+            context->EventHandle = eventHandle;
+        }
+        else
+        {
+            CloseHandle(eventHandle);
+        }
+
+        opened = true;
+    }
+    while (false);
+
+    return opened;
+}
+
+void CloseCancellationContext(CancellationContext& context)
+{
+    if (context.EventHandle != nullptr)
+    {
+        CloseHandle(context.EventHandle);
+        context.EventHandle = nullptr;
+    }
+}
+
+bool IsCancellationRequested(const CancellationContext& context)
+{
+    bool requested = false;
+
+    if (context.EventHandle != nullptr)
+    {
+        requested = WaitForSingleObject(context.EventHandle, 0) == WAIT_OBJECT_0;
+    }
+
+    return requested;
+}
+
 bool FindRemoteModuleInfo(DWORD processId, const std::wstring& moduleName, RemoteModuleInfo* moduleInfo, DWORD* errorCode)
 {
     bool found = false;
@@ -3926,6 +4012,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
     result.AttachState = "not_loaded";
     result.AttachStrategy = "load_library_initialize";
     result.AgentAbiVersion = KnMonAgentStateAbiVersion;
+    result.OperationState = "running";
 
     HANDLE pipeHandle = INVALID_HANDLE_VALUE;
     HANDLE processHandle = nullptr;
@@ -3939,11 +4026,13 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
     bool agentInitialized = false;
     bool stopRequested = false;
     bool agentShutdownReceived = false;
+    bool cancellationLogged = false;
     std::uint64_t hookInstalledCount = 0;
     std::uint64_t shutdownInstalledHooks = 0;
     std::uint64_t shutdownRestoredHooks = 0;
     std::uint64_t shutdownFailedHooks = 0;
     std::string shutdownReason;
+    CancellationContext cancellationContext;
 
     auto consumePayload = [&](const std::string& payload)
     {
@@ -3998,8 +4087,55 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
         }
     };
 
+    auto observeCancellation = [&](const std::string& stage) -> bool
+    {
+        bool observed = false;
+
+        if (IsCancellationRequested(cancellationContext))
+        {
+            result.CancelRequested = true;
+            result.CancelObserved = true;
+            result.CancelStage = stage;
+            if (result.OperationState != "stopping_agent" && result.OperationState != "draining")
+            {
+                result.OperationState = "cancel_requested";
+            }
+
+            if (!cancellationLogged)
+            {
+                AddAudit(result, "operation_cancel_requested", stage, "Cancellation was requested for this bounded attach operation.");
+                cancellationLogged = true;
+            }
+
+            observed = true;
+        }
+
+        return observed;
+    };
+
     do
     {
+        DWORD cancellationError = 0;
+        if (!OpenCancellationContext(request.CancellationEventName, &cancellationContext, &cancellationError))
+        {
+            SetResultError(result, cancellationError == 0 ? ERROR_INVALID_PARAMETER : cancellationError, "win32", "operation_cancellation_setup", "Failed to create attach cancellation event.");
+            fatalError = true;
+            break;
+        }
+
+        if (!request.CancellationEventName.empty())
+        {
+            AddAudit(result, "operation_cancellation_ready", "CreateEventW", "Attach cancellation event is ready.");
+        }
+
+        if (observeCancellation("attach_preflight"))
+        {
+            SetResultError(result, ERROR_CANCELLED, "knmon-core", "operation_cancelled", "Attach capture was cancelled before remote mutation.");
+            result.OperationState = "cancelled";
+            fatalError = true;
+            break;
+        }
+
         if (request.InjectionMethod != KnMonInjectionMethod::RemoteLoadLibrary)
         {
             SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "injection_method_check", "Only remote LoadLibraryW attach is supported by attach-capture.");
@@ -4058,11 +4194,14 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
             const bool resettable = (agentState.Flags & KnMonAgentStateFlagResettable) != 0;
             const bool active = (agentState.Flags & KnMonAgentStateFlagActive) != 0;
             const bool busy = (agentState.Flags & KnMonAgentStateFlagBusy) != 0;
+            result.StaleAgentOperationId = WideToUtf8(agentState.OperationId);
+            result.StaleAgentState = AgentLifecycleStateName(agentState.LifecycleState);
             std::ostringstream stateMessage;
             stateMessage << "Loaded agent state lifecycle=" << AgentLifecycleStateName(agentState.LifecycleState)
                          << " resettable=" << (resettable ? "true" : "false")
                          << " active=" << (active ? "true" : "false")
-                         << " busy=" << (busy ? "true" : "false") << ".";
+                         << " busy=" << (busy ? "true" : "false")
+                         << " operationId=" << (result.StaleAgentOperationId.empty() ? "<empty>" : result.StaleAgentOperationId) << ".";
             AddAudit(result, "loaded_agent_state_queried", "KnMonAgentQueryState", stateMessage.str());
 
             if (agentState.LifecycleState == static_cast<std::uint32_t>(KnMonAgentLifecycleState::Disabled) && resettable)
@@ -4109,6 +4248,14 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
         else
         {
             AddAudit(result, "loaded_agent_not_found", "module_snapshot", "Expected agent DLL is not loaded; first attach will use LoadLibraryW.");
+        }
+
+        if (observeCancellation("attach_before_transport"))
+        {
+            SetResultError(result, ERROR_CANCELLED, "knmon-core", "operation_cancelled", "Attach capture was cancelled before transport setup.");
+            result.OperationState = "cancelled";
+            fatalError = true;
+            break;
         }
 
         const std::wstring pipeName = L"\\\\.\\pipe\\knmon_agent_" + Utf8ToWide(result.OperationId);
@@ -4201,6 +4348,14 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
 
         DWORD remoteExitCode = 0;
         DWORD remoteError = 0;
+        if (observeCancellation("attach_before_remote_load"))
+        {
+            SetResultError(result, ERROR_CANCELLED, "knmon-core", "operation_cancelled", "Attach capture was cancelled before remote agent load.");
+            result.OperationState = "cancelled";
+            fatalError = true;
+            break;
+        }
+
         if (!useLoadedAgent)
         {
             std::uintptr_t remoteKernel32Base = 0;
@@ -4262,6 +4417,11 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
             break;
         }
 
+        if (observeCancellation("attach_before_initialize"))
+        {
+            AddAudit(result, "operation_cancel_deferred", "attach_before_initialize", "Cancellation was observed after agent DLL load; initialization will continue so self-disable cleanup can run.");
+        }
+
         std::uintptr_t initializeRva = 0;
         if (!ResolveImageExportRva(agentPath, "KnMonAgentInitialize", &initializeRva, &remoteError))
         {
@@ -4301,6 +4461,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
 
         agentInitialized = true;
         AddAudit(result, "remote_agent_initialize_completed", "CreateRemoteThread", "Remote KnMonAgentInitialize completed.");
+        (void)observeCancellation("attach_after_initialize");
 
         DWORD pipeError = 0;
         if (!WaitForPipeConnection(pipeHandle, request.TimeoutMs, &pipeError))
@@ -4328,6 +4489,11 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
         const ULONGLONG captureDeadline = GetTickCount64() + static_cast<ULONGLONG>(request.DurationMs);
         while (GetTickCount64() < captureDeadline)
         {
+            if (observeCancellation("attach_capture"))
+            {
+                break;
+            }
+
             DrainSharedTransport(result, transport);
 
             std::string payload;
@@ -4367,7 +4533,15 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
 
         DrainSharedTransport(result, transport);
         UpdateTransportMetrics(result, transport);
-        AddAudit(result, "attach_capture_completed", "attach_capture", "Bounded attach capture window completed.");
+        if (result.CancelObserved)
+        {
+            AddAudit(result, "attach_capture_cancelled", "attach_capture", "Bounded attach capture cancellation observed; requesting self-disable cleanup.");
+            result.OperationState = "stopping_agent";
+        }
+        else
+        {
+            AddAudit(result, "attach_capture_completed", "attach_capture", "Bounded attach capture window completed.");
+        }
 
         if (remoteStopAddress == 0)
         {
@@ -4395,6 +4569,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
         }
 
         const ULONGLONG shutdownDeadline = GetTickCount64() + static_cast<ULONGLONG>(request.TimeoutMs);
+        result.OperationState = result.CancelObserved ? "draining" : result.OperationState;
         while (!agentShutdownReceived && GetTickCount64() < shutdownDeadline)
         {
             DrainSharedTransport(result, transport);
@@ -4428,6 +4603,28 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
 
         if (fatalError)
         {
+            break;
+        }
+
+        if (result.CancelObserved)
+        {
+            result.AgentCleanupAttempted = true;
+            result.AgentCleanupSucceeded = agentShutdownReceived && shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0;
+            if (!result.AgentCleanupSucceeded)
+            {
+                result.OperationState = "cleanup_failed";
+                SetResultError(result, ERROR_CANCELLED, "knmon-core", "cleanup_failed", "Attach capture cancellation cleanup did not prove self-disable.");
+                fatalError = true;
+                break;
+            }
+
+            result.Success = false;
+            result.Win32ErrorCode = ERROR_CANCELLED;
+            result.NtStatus = "0x00000000";
+            result.Subsystem = "knmon-core";
+            result.Operation = "operation_cancelled";
+            result.OperationState = "cancelled";
+            result.Message = "Attach capture cancelled after agent self-disable cleanup.";
             break;
         }
 
@@ -4481,6 +4678,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
         result.Win32ErrorCode = 0;
         result.Subsystem = "knmon-core";
         result.Operation = "attach_capture";
+        result.OperationState = "completed";
         result.Message = "Controlled running-process attach capture completed with self-disable detach evidence.";
     }
     while (false);
@@ -4489,10 +4687,18 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
     {
         DWORD stopExitCode = 0;
         DWORD stopError = 0;
+        result.AgentCleanupAttempted = true;
         AddAudit(result, "agent_stop_requested", "CreateRemoteThread", "Requesting attach agent self-disable during cleanup.");
         if (!WaitRemoteThread(processHandle, reinterpret_cast<void*>(remoteStopAddress), nullptr, request.TimeoutMs, &stopExitCode, &stopError))
         {
             AddAudit(result, "agent_stop_timeout", "CreateRemoteThread", "Cleanup stop request failed or timed out.", stopError, "win32");
+        }
+        else
+        {
+            if (stopExitCode == static_cast<DWORD>(KnMonAgentControlStatus::Success))
+            {
+                result.AgentCleanupSucceeded = true;
+            }
         }
     }
 
@@ -4535,6 +4741,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
         CloseHandle(processHandle);
     }
 
+    CloseCancellationContext(cancellationContext);
     AddAudit(result, "attach_cleanup_completed", "handle_cleanup", "Attach controller cleanup completed.");
 
     if (result.Operation.empty())
@@ -4545,6 +4752,11 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
     if (result.Message.empty())
     {
         result.Message = fatalError ? "Controlled running-process attach capture failed." : "Controlled running-process attach capture finished.";
+    }
+
+    if (result.OperationState.empty() || (result.OperationState == "running" && !result.Success))
+    {
+        result.OperationState = fatalError ? "failed" : "completed";
     }
 
     return result;
@@ -4558,11 +4770,37 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
     result.DurationMs = request.DurationMs == 0 ? 3000 : request.DurationMs;
     result.ChildPolicy = ChildPolicyName(request.ChildPolicy);
     result.NtStatus = "0x00000000";
+    result.OperationState = "running";
 
     bool fatalError = false;
+    bool cancellationLogged = false;
     std::vector<DWORD> evaluatedChildren;
     const KnMonAgentArchitecture requestedArchitecture = RequestedArchitectureOrNative(request.Architecture);
     const DWORD pollIntervalMs = request.PollIntervalMs < 10 ? 10 : request.PollIntervalMs;
+    CancellationContext cancellationContext;
+
+    auto observeCancellation = [&](const std::string& stage) -> bool
+    {
+        bool observed = false;
+
+        if (IsCancellationRequested(cancellationContext))
+        {
+            result.CancelRequested = true;
+            result.CancelObserved = true;
+            result.CancelStage = stage;
+            result.OperationState = "cancel_requested";
+
+            if (!cancellationLogged)
+            {
+                AddAudit(result, "operation_cancel_requested", stage, "Cancellation was requested for this process-tree supervision operation.");
+                cancellationLogged = true;
+            }
+
+            observed = true;
+        }
+
+        return observed;
+    };
 
     auto hasEvaluatedChild = [&evaluatedChildren](DWORD processId) -> bool
     {
@@ -4617,42 +4855,61 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
         return &result.ProcessNodes.back();
     };
 
-    auto evaluateAndMaybeAttach = [this, &result, &request, &evaluatedChildren](KnMonProcessTreeNode& node)
+    auto evaluateAndMaybeAttach = [this, &result, &request, &evaluatedChildren, &observeCancellation](KnMonProcessTreeNode& node)
     {
         KnMonChildPolicyDecision decision = EvaluateChildPolicy(result, node, request);
 
-        if (request.ChildPolicy == KnMonChildPolicy::AttachSupported && decision.Decision == ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachAllowed))
+        if (observeCancellation("process_tree_before_child_attach"))
         {
-            decision.MutationAttempted = true;
-            AddAudit(result, "child_attach_started", "attach_capture", "Starting Phase 11A attach for child pid " + std::to_string(node.ProcessId) + ".");
-
-            KnMonAttachRequest attachRequest;
-            attachRequest.OperationId = result.OperationId + "-child-" + std::to_string(node.ProcessId);
-            attachRequest.ProcessId = node.ProcessId;
-            attachRequest.AgentPath = request.AgentPath;
-            attachRequest.TimeoutMs = request.TimeoutMs;
-            attachRequest.DurationMs = request.DurationMs < 1500 ? request.DurationMs : 1500;
-            attachRequest.Architecture = request.Architecture;
-            attachRequest.InjectionMethod = KnMonInjectionMethod::RemoteLoadLibrary;
-
-            KnMonCaptureResult attachResult = AttachCapture(attachRequest);
-            decision.AttachSucceeded = attachResult.Success;
-            if (attachResult.Success)
-            {
-                decision.Reason = "Child attach completed through Phase 11A self-disable path.";
-                AddAudit(result, "child_attach_completed", "attach_capture", "Child pid " + std::to_string(node.ProcessId) + " attach completed.");
-            }
-            else
-            {
-                decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachFailed);
-                decision.Reason = "Child attach failed: " + attachResult.Operation + ": " + attachResult.Message;
-                AddAudit(result, "child_attach_failed", "attach_capture", decision.Reason, attachResult.Win32ErrorCode);
-                AddAudit(result, "child_attach_completed", "attach_capture", "Child pid " + std::to_string(node.ProcessId) + " attach completed with failure.", attachResult.Win32ErrorCode);
-            }
-
+            decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachSkipped);
+            decision.Reason = "Child attach skipped because cancellation was requested.";
             node.PolicyDecision = decision.Decision;
             node.Message = decision.Reason;
-            result.ChildAttachResults.push_back(attachResult);
+        }
+        else
+        {
+            if (request.ChildPolicy == KnMonChildPolicy::AttachSupported && decision.Decision == ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachAllowed))
+            {
+                decision.MutationAttempted = true;
+                AddAudit(result, "child_attach_started", "attach_capture", "Starting Phase 11A attach for child pid " + std::to_string(node.ProcessId) + ".");
+
+                KnMonAttachRequest attachRequest;
+                attachRequest.OperationId = result.OperationId + "-child-" + std::to_string(node.ProcessId);
+                attachRequest.ProcessId = node.ProcessId;
+                attachRequest.AgentPath = request.AgentPath;
+                attachRequest.TimeoutMs = request.TimeoutMs;
+                attachRequest.DurationMs = request.DurationMs < 1500 ? request.DurationMs : 1500;
+                attachRequest.Architecture = request.Architecture;
+                attachRequest.InjectionMethod = KnMonInjectionMethod::RemoteLoadLibrary;
+                attachRequest.CancellationEventName = request.CancellationEventName;
+
+                KnMonCaptureResult attachResult = AttachCapture(attachRequest);
+                if (attachResult.CancelObserved)
+                {
+                    result.CancelRequested = true;
+                    result.CancelObserved = true;
+                    result.CancelStage = "process_tree_child_attach";
+                    result.OperationState = "cancel_requested";
+                }
+
+                decision.AttachSucceeded = attachResult.Success;
+                if (attachResult.Success)
+                {
+                    decision.Reason = "Child attach completed through Phase 11A self-disable path.";
+                    AddAudit(result, "child_attach_completed", "attach_capture", "Child pid " + std::to_string(node.ProcessId) + " attach completed.");
+                }
+                else
+                {
+                    decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachFailed);
+                    decision.Reason = "Child attach failed: " + attachResult.Operation + ": " + attachResult.Message;
+                    AddAudit(result, "child_attach_failed", "attach_capture", decision.Reason, attachResult.Win32ErrorCode);
+                    AddAudit(result, "child_attach_completed", "attach_capture", "Child pid " + std::to_string(node.ProcessId) + " attach completed with failure.", attachResult.Win32ErrorCode);
+                }
+
+                node.PolicyDecision = decision.Decision;
+                node.Message = decision.Reason;
+                result.ChildAttachResults.push_back(attachResult);
+            }
         }
 
         result.PolicyDecisions.push_back(decision);
@@ -4661,7 +4918,28 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
 
     do
     {
+        DWORD cancellationError = 0;
+        if (!OpenCancellationContext(request.CancellationEventName, &cancellationContext, &cancellationError))
+        {
+            SetResultError(result, cancellationError == 0 ? ERROR_INVALID_PARAMETER : cancellationError, "win32", "operation_cancellation_setup", "Failed to create process-tree cancellation event.");
+            fatalError = true;
+            break;
+        }
+
+        if (!request.CancellationEventName.empty())
+        {
+            AddAudit(result, "operation_cancellation_ready", "CreateEventW", "Process-tree cancellation event is ready.");
+        }
+
         AddAudit(result, "process_tree_supervision_started", "supervise_tree", "Starting bounded process-tree supervision.");
+
+        if (observeCancellation("process_tree_preflight"))
+        {
+            SetResultError(result, ERROR_CANCELLED, "knmon-core", "operation_cancelled", "Process-tree supervision was cancelled before mutation.");
+            result.OperationState = "cancelled";
+            fatalError = true;
+            break;
+        }
 
         if (request.RootProcessId == 0 || request.RootProcessId == 4)
         {
@@ -4742,6 +5020,11 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
         const ULONGLONG startTick = GetTickCount64();
         while (GetTickCount64() - startTick < result.DurationMs)
         {
+            if (observeCancellation("process_tree_poll"))
+            {
+                break;
+            }
+
             std::vector<ProcessSnapshotInfo> currentSnapshot;
             DWORD currentSnapshotError = 0;
             if (!CollectProcessSnapshot(&currentSnapshot, &currentSnapshotError))
@@ -4776,6 +5059,12 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
                     if (!ProcessTreeHasNode(result.ProcessNodes, process.ParentProcessId))
                     {
                         continue;
+                    }
+
+                    if (observeCancellation("process_tree_before_child_discovery"))
+                    {
+                        addedNode = false;
+                        break;
                     }
 
                     KnMonProcessTreeNode* childNode = addNode(process, false, snapshotTime);
@@ -4815,11 +5104,35 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
             }
 
             const DWORD remaining = static_cast<DWORD>(result.DurationMs - elapsed);
-            Sleep(remaining < pollIntervalMs ? remaining : pollIntervalMs);
+            const DWORD sleepMs = remaining < pollIntervalMs ? remaining : pollIntervalMs;
+            if (cancellationContext.EventHandle != nullptr)
+            {
+                const DWORD waitResult = WaitForSingleObject(cancellationContext.EventHandle, sleepMs);
+                if (waitResult == WAIT_OBJECT_0)
+                {
+                    (void)observeCancellation("process_tree_sleep");
+                }
+            }
+            else
+            {
+                Sleep(sleepMs);
+            }
         }
 
         if (fatalError)
         {
+            break;
+        }
+
+        if (result.CancelObserved)
+        {
+            result.Success = false;
+            result.Win32ErrorCode = ERROR_CANCELLED;
+            result.NtStatus = "0x00000000";
+            result.Subsystem = "knmon-core";
+            result.Operation = "operation_cancelled";
+            result.OperationState = "cancelled";
+            result.Message = "Process-tree supervision cancelled before the bounded window completed.";
             break;
         }
 
@@ -4850,19 +5163,34 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
         result.Win32ErrorCode = 0;
         result.Subsystem = "knmon-core";
         result.Operation = "supervise_tree";
+        result.OperationState = "completed";
         result.Message = "Process-tree supervision completed.";
         AddAudit(result, "process_tree_supervision_completed", "supervise_tree", "Process-tree supervision completed.");
     }
     while (false);
 
-    if (!result.Success)
+    CloseCancellationContext(cancellationContext);
+
+    if (result.CancelObserved && result.Operation == "operation_cancelled")
     {
-        AddAudit(result, "process_tree_supervision_failed", result.Operation.empty() ? "supervise_tree" : result.Operation, result.Message.empty() ? "Process-tree supervision failed." : result.Message, result.Win32ErrorCode, result.Subsystem.empty() ? "knmon-core" : result.Subsystem);
+        AddAudit(result, "process_tree_supervision_cancelled", "operation_cancelled", result.Message, result.Win32ErrorCode, "knmon-core");
+    }
+    else
+    {
+        if (!result.Success)
+        {
+            AddAudit(result, "process_tree_supervision_failed", result.Operation.empty() ? "supervise_tree" : result.Operation, result.Message.empty() ? "Process-tree supervision failed." : result.Message, result.Win32ErrorCode, result.Subsystem.empty() ? "knmon-core" : result.Subsystem);
+        }
     }
 
     if (result.Message.empty())
     {
         result.Message = fatalError ? "Process-tree supervision failed." : "Process-tree supervision finished.";
+    }
+
+    if (result.OperationState.empty() || (result.OperationState == "running" && !result.Success))
+    {
+        result.OperationState = fatalError ? "failed" : "completed";
     }
 
     return result;

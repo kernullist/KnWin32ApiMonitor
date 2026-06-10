@@ -25,6 +25,16 @@ export interface CaptureSessionState {
   droppedEvents: number;
 }
 
+export interface NativeOperation {
+  operationId: string;
+  operationKind: "capture_sample" | "attach_capture" | "process_tree_supervision" | "agent_cleanup" | string;
+  targetProcessId: number;
+  state: "queued" | "running" | "cancel_requested" | "stopping_agent" | "draining" | "completed" | "failed" | "cancelled" | "cleanup_failed" | string;
+  cancelRequested: boolean;
+  elapsedMs: number;
+  durationMs: number;
+}
+
 export interface AuditEvent {
   schemaVersion: string;
   operationId: string;
@@ -128,6 +138,14 @@ export interface CaptureResult {
   operation: string;
   message: string;
   detachPolicy?: string;
+  cancelRequested?: boolean;
+  cancelObserved?: boolean;
+  cancelStage?: string;
+  operationState?: string;
+  agentCleanupAttempted?: boolean;
+  agentCleanupSucceeded?: boolean;
+  staleAgentOperationId?: string;
+  staleAgentState?: string;
   attachState?: string;
   attachStrategy?: string;
   loadedAgentDetected?: boolean;
@@ -194,6 +212,10 @@ export interface ProcessTreeResult {
   subsystem: string;
   operation: string;
   message: string;
+  cancelRequested?: boolean;
+  cancelObserved?: boolean;
+  cancelStage?: string;
+  operationState?: string;
   processNodes: ProcessTreeNode[];
   policyDecisions: ChildPolicyDecision[];
   auditEvents: AuditEvent[];

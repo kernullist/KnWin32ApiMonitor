@@ -864,6 +864,14 @@ std::string ToJson(const knmon::KnMonCaptureResult& result)
     stream << "\"subsystem\":" << Q(result.Subsystem) << ",";
     stream << "\"operation\":" << Q(result.Operation) << ",";
     stream << "\"message\":" << Q(result.Message) << ",";
+    stream << "\"cancelRequested\":" << (result.CancelRequested ? "true" : "false") << ",";
+    stream << "\"cancelObserved\":" << (result.CancelObserved ? "true" : "false") << ",";
+    stream << "\"cancelStage\":" << Q(result.CancelStage) << ",";
+    stream << "\"operationState\":" << Q(result.OperationState) << ",";
+    stream << "\"agentCleanupAttempted\":" << (result.AgentCleanupAttempted ? "true" : "false") << ",";
+    stream << "\"agentCleanupSucceeded\":" << (result.AgentCleanupSucceeded ? "true" : "false") << ",";
+    stream << "\"staleAgentOperationId\":" << Q(result.StaleAgentOperationId) << ",";
+    stream << "\"staleAgentState\":" << Q(result.StaleAgentState) << ",";
     stream << "\"droppedEvents\":" << result.DroppedEvents << ",";
     stream << "\"transportMode\":" << Q(result.TransportMode) << ",";
     stream << "\"transportCapacity\":" << result.TransportCapacity << ",";
@@ -964,6 +972,10 @@ std::string ToJson(const knmon::KnMonProcessTreeResult& result)
     stream << "\"subsystem\":" << Q(result.Subsystem) << ",";
     stream << "\"operation\":" << Q(result.Operation) << ",";
     stream << "\"message\":" << Q(result.Message) << ",";
+    stream << "\"cancelRequested\":" << (result.CancelRequested ? "true" : "false") << ",";
+    stream << "\"cancelObserved\":" << (result.CancelObserved ? "true" : "false") << ",";
+    stream << "\"cancelStage\":" << Q(result.CancelStage) << ",";
+    stream << "\"operationState\":" << Q(result.OperationState) << ",";
     stream << "\"processNodes\":[";
     for (std::size_t index = 0; index < result.ProcessNodes.size(); ++index)
     {
@@ -1520,6 +1532,35 @@ std::uint32_t GetUInt32Option(const std::vector<std::string>& args, const std::s
     return value;
 }
 
+std::string OperationIdFromArgs(const std::vector<std::string>& args)
+{
+    std::string operationId = GetOption(args, "--operation-id");
+
+    if (operationId.empty())
+    {
+        operationId = NewOperationId();
+    }
+
+    return operationId;
+}
+
+std::string CancellationEventNameForOperation(const std::string& operationId)
+{
+    return "Local\\KNMonCancel_" + SanitizeFileName(operationId);
+}
+
+std::string CancellationEventNameFromArgs(const std::vector<std::string>& args, const std::string& operationId)
+{
+    std::string eventName = GetOption(args, "--cancel-event");
+
+    if (eventName.empty())
+    {
+        eventName = CancellationEventNameForOperation(operationId);
+    }
+
+    return eventName;
+}
+
 knmon::KnMonChildPolicy ParseChildPolicy(const std::string& value)
 {
     knmon::KnMonChildPolicy policy = knmon::KnMonChildPolicy::Observe;
@@ -1614,10 +1655,11 @@ std::string AttachCaptureJson(const std::vector<std::string>& args)
     const std::string defaultAgent = WideToUtf8((helperDir / DefaultAgentFileName()).wstring().c_str());
 
     knmon::KnMonAttachRequest request;
-    request.OperationId = NewOperationId();
+    request.OperationId = OperationIdFromArgs(args);
     const std::string pidOption = GetOption(args, "--pid");
     request.ProcessId = pidOption == "self" ? GetCurrentProcessId() : GetUInt32Option(args, "--pid", 0);
     request.AgentPath = GetOption(args, "--agent");
+    request.CancellationEventName = CancellationEventNameFromArgs(args, request.OperationId);
     request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
     request.DurationMs = GetUInt32Option(args, "--duration-ms", 3000);
     request.Architecture = NativeHelperArchitecture();
@@ -1656,10 +1698,11 @@ std::string SuperviseTreeJson(const std::vector<std::string>& args)
     const std::string defaultAgent = WideToUtf8((helperDir / DefaultAgentFileName()).wstring().c_str());
 
     knmon::KnMonProcessTreeRequest request;
-    request.OperationId = NewOperationId();
+    request.OperationId = OperationIdFromArgs(args);
     const std::string pidOption = GetOption(args, "--pid");
     request.RootProcessId = pidOption == "self" ? GetCurrentProcessId() : GetUInt32Option(args, "--pid", 0);
     request.AgentPath = GetOption(args, "--agent");
+    request.CancellationEventName = CancellationEventNameFromArgs(args, request.OperationId);
     request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
     request.DurationMs = GetUInt32Option(args, "--duration-ms", 3000);
     request.PollIntervalMs = GetUInt32Option(args, "--poll-ms", 100);
@@ -1720,12 +1763,75 @@ std::string ValidateSessionCommandJson(const std::vector<std::string>& args)
     return ToJson(ValidateSessionDirectory(PathFromUtf8(sessionPath)));
 }
 
+std::string CancelOperationJson(const std::vector<std::string>& args)
+{
+    const std::string operationId = GetOption(args, "--operation-id");
+    const std::string eventName = operationId.empty() ? GetOption(args, "--cancel-event") : CancellationEventNameFromArgs(args, operationId);
+    bool success = false;
+    DWORD errorCode = 0;
+    std::string message;
+
+    do
+    {
+        if (operationId.empty() && eventName.empty())
+        {
+            errorCode = ERROR_INVALID_PARAMETER;
+            message = "Missing --operation-id or --cancel-event.";
+            break;
+        }
+
+        const std::wstring wideEventName = Utf8ToWide(eventName);
+        if (wideEventName.empty())
+        {
+            errorCode = ERROR_INVALID_PARAMETER;
+            message = "Cancellation event name is invalid.";
+            break;
+        }
+
+        HANDLE eventHandle = OpenEventW(EVENT_MODIFY_STATE, FALSE, wideEventName.c_str());
+        if (eventHandle == nullptr)
+        {
+            errorCode = GetLastError();
+            message = "Cancellation event is not available.";
+            break;
+        }
+
+        if (!SetEvent(eventHandle))
+        {
+            errorCode = GetLastError();
+            CloseHandle(eventHandle);
+            message = "Failed to signal cancellation event.";
+            break;
+        }
+
+        CloseHandle(eventHandle);
+        success = true;
+        message = "Cancellation signal set.";
+    }
+    while (false);
+
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"success\":" << (success ? "true" : "false") << ",";
+    stream << "\"backendMode\":\"native-capture\",";
+    stream << "\"operationId\":" << Q(operationId) << ",";
+    stream << "\"cancellationEventName\":" << Q(eventName) << ",";
+    stream << "\"win32ErrorCode\":" << errorCode << ",";
+    stream << "\"ntStatus\":\"0x00000000\",";
+    stream << "\"subsystem\":\"knmon-native-helper\",";
+    stream << "\"operation\":\"cancel_operation\",";
+    stream << "\"message\":" << Q(message);
+    stream << "}";
+    return stream.str();
+}
+
 void PrintUsage()
 {
     std::cout << "{";
     std::cout << "\"schemaVersion\":\"0.1.0\",";
     std::cout << "\"success\":false,";
-    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--write-session dir] | supervise-tree --pid pid [--duration-ms ms] [--child-policy observe|attach-supported] | replay-session --session dir | validate-session --session dir\"";
+    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | replay-session --session dir | validate-session --session dir\"";
     std::cout << "}\n";
 }
 }
@@ -1771,6 +1877,12 @@ int wmain(int argc, wchar_t** argv)
     if (args[0] == "supervise-tree")
     {
         std::cout << SuperviseTreeJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "cancel-operation")
+    {
+        std::cout << CancelOperationJson(args) << "\n";
         return 0;
     }
 

@@ -283,6 +283,7 @@ struct KnMonAttachRequest
     std::string OperationId;
     std::uint32_t ProcessId = 0;
     std::string AgentPath;
+    std::string CancellationEventName;
     std::uint32_t TimeoutMs = 5000;
     std::uint32_t DurationMs = 3000;
     KnMonAgentArchitecture Architecture = KnMonAgentArchitecture::Unknown;
@@ -294,6 +295,7 @@ struct KnMonProcessTreeRequest
     std::string OperationId;
     std::uint32_t RootProcessId = 0;
     std::string AgentPath;
+    std::string CancellationEventName;
     std::uint32_t TimeoutMs = 7000;
     std::uint32_t DurationMs = 3000;
     std::uint32_t PollIntervalMs = 100;
@@ -361,6 +363,14 @@ struct KnMonCaptureResult
     std::string Subsystem;
     std::string Operation;
     std::string Message;
+    bool CancelRequested = false;
+    bool CancelObserved = false;
+    std::string CancelStage;
+    std::string OperationState;
+    bool AgentCleanupAttempted = false;
+    bool AgentCleanupSucceeded = false;
+    std::string StaleAgentOperationId;
+    std::string StaleAgentState;
     std::uint64_t DroppedEvents = 0;
     std::string TransportMode = "named-pipe-json";
     std::uint64_t TransportCapacity = 0;
@@ -422,6 +432,10 @@ struct KnMonProcessTreeResult
     std::string Subsystem;
     std::string Operation;
     std::string Message;
+    bool CancelRequested = false;
+    bool CancelObserved = false;
+    std::string CancelStage;
+    std::string OperationState;
     std::vector<KnMonProcessTreeNode> ProcessNodes;
     std::vector<KnMonChildPolicyDecision> PolicyDecisions;
     std::vector<KnMonAuditEvent> AuditEvents;

@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { mockTargets } from "./mockData";
-import type { CaptureResult, CaptureSessionState, LaunchResult, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
+import type { CaptureResult, CaptureSessionState, LaunchResult, NativeOperation, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
 
 function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -93,6 +93,24 @@ export async function superviseProcessTree(pid: number, durationMs: number, chil
     rootPid: pid,
     durationMs,
     childPolicy
+  });
+}
+
+export async function listNativeOperations(): Promise<NativeOperation[]> {
+  if (!isTauriRuntime()) {
+    return [];
+  }
+
+  return invoke<NativeOperation[]>("list_native_operations");
+}
+
+export async function cancelNativeOperation(operationId: string): Promise<NativeOperation> {
+  if (!isTauriRuntime()) {
+    throw new Error("Native operation cancellation requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeOperation>("cancel_native_operation", {
+    operationId
   });
 }
 

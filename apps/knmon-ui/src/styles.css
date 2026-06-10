@@ -428,6 +428,35 @@ button:disabled {
   color: var(--warning);
 }
 
+.operation-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px 86px 86px;
+  gap: 5px;
+  align-items: center;
+  padding: 7px 8px;
+  border-top: 1px solid var(--border);
+  color: #273646;
+  background: #eef5fb;
+  font-size: 12px;
+}
+
+.operation-strip span,
+.operation-strip strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operation-strip strong {
+  color: var(--accent-strong);
+}
+
+.operation-strip .tool-button {
+  width: 100%;
+  min-width: 0;
+}
+
 .action-subpanel {
   display: grid;
   gap: 7px;

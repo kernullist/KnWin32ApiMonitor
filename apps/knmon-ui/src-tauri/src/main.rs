@@ -8,11 +8,14 @@ use knmon_tauri::{
     launch_sample_early_bird,
     mock_target_processes,
     native_target_processes,
+    native_operation_states,
     replay_last_session,
     supervise_process_tree as supervise_process_tree_backend,
+    cancel_native_operation as cancel_native_operation_backend,
     CaptureSessionState,
     CaptureResult,
     LaunchResult,
+    NativeOperation,
     ProcessTreeResult,
     SessionReplayResult,
     TargetProcess,
@@ -67,6 +70,18 @@ fn supervise_process_tree(root_pid: u32, duration_ms: u32, child_policy: String)
 }
 
 #[tauri::command]
+fn list_native_operations() -> Result<Vec<NativeOperation>, String>
+{
+    Ok(native_operation_states())
+}
+
+#[tauri::command]
+fn cancel_native_operation(operation_id: String) -> Result<NativeOperation, String>
+{
+    cancel_native_operation_backend(operation_id)
+}
+
+#[tauri::command]
 fn get_backend_status() -> Result<String, String>
 {
     Ok(backend_status().to_string())
@@ -96,6 +111,8 @@ fn main()
             replay_last_sample_session,
             attach_target_process_capture,
             supervise_process_tree,
+            list_native_operations,
+            cancel_native_operation,
             get_backend_status,
             start_mock_capture_session,
             stop_mock_capture_session

@@ -23,10 +23,12 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   attachTargetProcessCapture,
+  cancelNativeOperation,
   captureSampleFileIoEvents,
   captureSampleFileIoSession,
   launchSampleEarlyBirdCapture,
   listNativeTargetProcesses,
+  listNativeOperations,
   listTargetProcesses,
   replayLastSampleSession,
   startBackendSession,
@@ -35,7 +37,7 @@ import {
 } from "./backend";
 import { apiTree, captureProfiles, createMockFileIoEvent, initialTraceEvents } from "./mockData";
 import { downloadJsonl, estimateSessionBytes } from "./session";
-import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
+import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, NativeOperation, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
 
 type LeftTab = "targets" | "apis" | "profiles";
 type TraceMode = "flat" | "call-tree";
@@ -293,6 +295,14 @@ function summarizeProcessTree(result: ProcessTreeResult | null) {
   };
 }
 
+function isNativeOperationActive(operation: NativeOperation): boolean {
+  return ["queued", "running", "cancel_requested", "stopping_agent", "draining"].includes(operation.state);
+}
+
+function formatElapsedMs(value: number): string {
+  return `${(value / 1000).toFixed(1)}s`;
+}
+
 function App() {
   const [leftTab, setLeftTab] = useState<LeftTab>("targets");
   const [targetSource, setTargetSource] = useState<TargetSource>("mock");
@@ -315,6 +325,7 @@ function App() {
   const [attachResult, setAttachResult] = useState<CaptureResult | null>(null);
   const [processTreeResult, setProcessTreeResult] = useState<ProcessTreeResult | null>(null);
   const [lastSession, setLastSession] = useState<SessionInfo | null>(null);
+  const [nativeOperations, setNativeOperations] = useState<NativeOperation[]>([]);
   const [outputEvents, setOutputEvents] = useState<AuditEvent[]>([
     makeAuditEvent("backend_ready", "mock_init", "Mock File I/O backend initialized.")
   ]);
@@ -412,6 +423,38 @@ function App() {
     };
   }, [running]);
 
+  useEffect(() => {
+    if (!nativeBusy && nativeOperations.every((operation) => !isNativeOperationActive(operation))) {
+      return undefined;
+    }
+
+    let active = true;
+
+    const refreshOperations = async () => {
+      try {
+        const operations = await listNativeOperations();
+        if (active) {
+          setNativeOperations(operations);
+        }
+      } catch (error) {
+        if (active) {
+          const message = error instanceof Error ? error.message : String(error);
+          appendOutput([makeAuditEvent("operation_state_poll_failed", "list_native_operations", message)]);
+        }
+      }
+    };
+
+    void refreshOperations();
+    const timer = window.setInterval(() => {
+      void refreshOperations();
+    }, 500);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [nativeBusy, nativeOperations]);
+
   const filteredEvents = useMemo(() => {
     const normalized = filter.trim().toLowerCase();
 
@@ -437,7 +480,8 @@ function App() {
   const selectedEvent = events.find((event) => event.eventId === selectedEventId) ?? filteredEvents[0] ?? events[0];
   const selectedTarget = selectedTargetPid === null ? null : targets.find((target) => target.pid === selectedTargetPid) ?? null;
   const targetBlockReason = targetEligibilityReason(selectedTarget, targetSource);
-  const canRunTargetAction = targetBlockReason === null && !nativeBusy;
+  const activeNativeOperation = nativeOperations.find(isNativeOperationActive) ?? null;
+  const canRunTargetAction = targetBlockReason === null && !nativeBusy && activeNativeOperation === null;
   const processTreeSummary = summarizeProcessTree(processTreeResult);
   const sessionBytes = estimateSessionBytes(events);
 
@@ -647,6 +691,26 @@ function App() {
     }
   }
 
+  async function handleCancelNativeOperation() {
+    if (!activeNativeOperation) {
+      return;
+    }
+
+    try {
+      appendOutput([makeAuditEvent("operation_cancel_requested", "cancel_native_operation", activeNativeOperation.operationId)]);
+      const operation = await cancelNativeOperation(activeNativeOperation.operationId);
+      setNativeOperations((current) => {
+        const remaining = current.filter((item) => item.operationId !== operation.operationId);
+        return [operation, ...remaining];
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("operation_cancel_failed", "cancel_native_operation", message)]);
+    } finally {
+      setInspectorTab("output");
+    }
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -751,6 +815,23 @@ function App() {
                     {targetBlockReason ?? "same-bitness helper gate"}
                   </span>
                 </div>
+                {activeNativeOperation ? (
+                  <div className="operation-strip">
+                    <span>{activeNativeOperation.operationKind}</span>
+                    <strong>{activeNativeOperation.state}</strong>
+                    <span>{formatElapsedMs(activeNativeOperation.elapsedMs)} / {formatElapsedMs(activeNativeOperation.durationMs)}</span>
+                    <button
+                      type="button"
+                      className="tool-button"
+                      onClick={handleCancelNativeOperation}
+                      disabled={activeNativeOperation.cancelRequested}
+                      title="Cancel native operation"
+                    >
+                      <Square size={13} />
+                      <span>Cancel</span>
+                    </button>
+                  </div>
+                ) : null}
 
                 <div className="action-subpanel">
                   <div className="action-subtitle">
@@ -778,6 +859,7 @@ function App() {
                       <div>PID {attachResult.targetProcessId}; attachPid={attachResult.attachProcessId ?? 0}</div>
                       <div>{attachResult.captureMode}; {attachResult.injectionMethod}; {attachResult.detachPolicy || "self-disable-no-unload"}</div>
                       <div>state={attachResult.attachState || "not_loaded"}; strategy={attachResult.attachStrategy || "load_library_initialize"}; loaded={attachResult.loadedAgentDetected ? "yes" : "no"}</div>
+                      <div>op={attachResult.operationState || (attachResult.success ? "completed" : "failed")}; cancel={attachResult.cancelObserved ? attachResult.cancelStage || "observed" : "no"}; cleanup={attachResult.agentCleanupAttempted ? (attachResult.agentCleanupSucceeded ? "ok" : "failed") : "n/a"}</div>
                       <div>events={attachResult.capturedEvents.length}; dropped={attachResult.droppedEvents}; transport={attachResult.transportRecordsConsumed}/{attachResult.transportRecordsProduced}</div>
                       <div>{hookRestoreSummary(attachResult)}</div>
                       <div>{attachResult.operation}; subsystem={attachResult.subsystem}; win32={attachResult.win32ErrorCode}; {attachResult.message}</div>
@@ -817,6 +899,7 @@ function App() {
                   {processTreeResult ? (
                     <div className={processTreeResult.success ? "result-block success" : "result-block failure"}>
                       <div>root={processTreeResult.rootProcessId}; policy={processTreeResult.childPolicy}; duration={processTreeResult.durationMs}ms</div>
+                      <div>op={processTreeResult.operationState || (processTreeResult.success ? "completed" : "failed")}; cancel={processTreeResult.cancelObserved ? processTreeResult.cancelStage || "observed" : "no"}</div>
                       <div>children={processTreeSummary.childCount}; eligible={processTreeSummary.eligibleCount}; mutations={processTreeSummary.mutationAttemptedCount}</div>
                       <div>childAttach ok={processTreeSummary.attachSuccessCount}; fail={processTreeSummary.attachFailureCount}; events={processTreeSummary.capturedEventCount}; dropped={droppedCount}</div>
                       <div>{processTreeResult.operation}; subsystem={processTreeResult.subsystem}; win32={processTreeResult.win32ErrorCode}; {processTreeResult.message}</div>

@@ -79,6 +79,27 @@
     "subsystem": { "type": "string" },
     "operation": { "type": "string" },
     "message": { "type": "string" },
+    "cancelRequested": { "type": "boolean" },
+    "cancelObserved": { "type": "boolean" },
+    "cancelStage": { "type": "string" },
+    "operationState": {
+      "enum": [
+        "",
+        "queued",
+        "running",
+        "cancel_requested",
+        "stopping_agent",
+        "draining",
+        "completed",
+        "failed",
+        "cancelled",
+        "cleanup_failed"
+      ]
+    },
+    "agentCleanupAttempted": { "type": "boolean" },
+    "agentCleanupSucceeded": { "type": "boolean" },
+    "staleAgentOperationId": { "type": "string" },
+    "staleAgentState": { "type": "string" },
     "detachPolicy": { "type": "string" },
     "droppedEvents": { "type": "integer", "minimum": 0 },
     "transportMode": { "enum": ["named-pipe-json", "shared-memory"] },
