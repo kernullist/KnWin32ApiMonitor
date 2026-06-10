@@ -13,13 +13,19 @@ use knmon_tauri::{
     native_session_states,
     replay_last_session,
     replay_session_path as replay_session_path_backend,
+    native_daemon_sessions,
+    native_daemon_status as native_daemon_status_backend,
     start_streaming_attach_session as start_streaming_attach_session_backend,
+    start_daemon_if_needed as start_daemon_if_needed_backend,
+    start_daemon_supervised_session as start_daemon_supervised_session_backend,
     supervise_process_tree as supervise_process_tree_backend,
     cancel_native_operation as cancel_native_operation_backend,
+    stop_daemon_session as stop_daemon_session_backend,
     stop_native_session as stop_native_session_backend,
     CaptureSessionState,
     CaptureResult,
     LaunchResult,
+    NativeDaemonStatus,
     NativeOperation,
     NativeSession,
     NativeTraceBatch,
@@ -113,6 +119,36 @@ fn start_streaming_attach_session(pid: u32, duration_ms: u32) -> Result<NativeSe
 }
 
 #[tauri::command]
+fn start_daemon_if_needed() -> Result<NativeDaemonStatus, String>
+{
+    start_daemon_if_needed_backend()
+}
+
+#[tauri::command]
+fn native_daemon_status() -> Result<NativeDaemonStatus, String>
+{
+    native_daemon_status_backend()
+}
+
+#[tauri::command]
+fn list_daemon_sessions() -> Result<Vec<NativeSession>, String>
+{
+    native_daemon_sessions()
+}
+
+#[tauri::command]
+fn start_daemon_supervised_session(pid: u32, duration_ms: u32) -> Result<NativeSession, String>
+{
+    start_daemon_supervised_session_backend(pid, duration_ms)
+}
+
+#[tauri::command]
+fn stop_daemon_session(session_id: String) -> Result<NativeSession, String>
+{
+    stop_daemon_session_backend(session_id)
+}
+
+#[tauri::command]
 fn drain_native_trace_batches(session_id: String, after_batch_sequence: u64) -> Result<Vec<NativeTraceBatch>, String>
 {
     drain_native_trace_batches_backend(session_id, after_batch_sequence)
@@ -154,6 +190,11 @@ fn main()
             list_native_sessions,
             stop_native_session,
             start_streaming_attach_session,
+            start_daemon_if_needed,
+            native_daemon_status,
+            list_daemon_sessions,
+            start_daemon_supervised_session,
+            stop_daemon_session,
             drain_native_trace_batches,
             get_backend_status,
             start_mock_capture_session,

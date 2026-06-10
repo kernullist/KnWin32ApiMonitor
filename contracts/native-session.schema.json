@@ -60,6 +60,12 @@
     "agentCleanupSucceeded": { "type": "boolean" },
     "lastError": { "type": "string" },
     "elapsedMs": { "type": "integer", "minimum": 0 },
-    "durationMs": { "type": "integer", "minimum": 0 }
+    "durationMs": { "type": "integer", "minimum": 0 },
+    "daemonProcessId": { "type": "integer", "minimum": 0 },
+    "daemonInstanceId": { "type": "string" },
+    "daemonStartedUtc": { "type": "string" },
+    "daemonHeartbeatUtc": { "type": "string" },
+    "daemonControlEndpoint": { "type": "string" },
+    "knapmPath": { "type": "string" }
   }
 }

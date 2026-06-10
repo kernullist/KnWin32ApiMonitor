@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/native-daemon-status.schema.json",
+  "title": "KnMonNativeDaemonStatus",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "success",
+    "backendMode",
+    "operation",
+    "daemonState",
+    "daemonProcessId",
+    "daemonInstanceId",
+    "daemonStartedUtc",
+    "daemonHeartbeatUtc",
+    "controlEndpoint",
+    "runtimeDirectory",
+    "sessionCount",
+    "win32ErrorCode",
+    "message"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "success": { "type": "boolean" },
+    "backendMode": { "enum": ["native-capture"] },
+    "operation": {
+      "enum": [
+        "daemon_run",
+        "daemon_start",
+        "daemon_status",
+        "daemon_stop"
+      ]
+    },
+    "daemonState": {
+      "enum": [
+        "running",
+        "stopped",
+        "not_running",
+        "start_failed",
+        "stop_timeout"
+      ]
+    },
+    "daemonProcessId": { "type": "integer", "minimum": 0 },
+    "daemonInstanceId": { "type": "string" },
+    "daemonStartedUtc": { "type": "string" },
+    "daemonHeartbeatUtc": { "type": "string" },
+    "controlEndpoint": { "type": "string" },
+    "runtimeDirectory": { "type": "string" },
+    "sessionCount": { "type": "integer", "minimum": 0 },
+    "win32ErrorCode": { "type": "integer", "minimum": 0 },
+    "message": { "type": "string" }
+  }
+}

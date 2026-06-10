@@ -107,8 +107,39 @@
         "updatedUtc": { "type": "string" },
         "heartbeatUtc": { "type": "string" },
         "leaseTimeoutMs": { "type": "integer", "minimum": 1 },
-        "leaseExpiresUtc": { "type": "string" }
-      }
+        "leaseExpiresUtc": { "type": "string" },
+        "daemonProcessId": { "type": "integer", "minimum": 0 },
+        "daemonInstanceId": { "type": "string" },
+        "daemonStartedUtc": { "type": "string" },
+        "daemonHeartbeatUtc": { "type": "string" },
+        "controlEndpoint": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "ownerKind": { "const": "persistent-daemon" }
+            },
+            "required": ["ownerKind"]
+          },
+          "then": {
+            "required": [
+              "daemonProcessId",
+              "daemonInstanceId",
+              "daemonStartedUtc",
+              "daemonHeartbeatUtc",
+              "controlEndpoint"
+            ],
+            "properties": {
+              "daemonProcessId": { "type": "integer", "minimum": 1 },
+              "daemonInstanceId": { "type": "string", "minLength": 1 },
+              "daemonStartedUtc": { "type": "string", "minLength": 1 },
+              "daemonHeartbeatUtc": { "type": "string", "minLength": 1 },
+              "controlEndpoint": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      ]
     },
     "checkpoint": {
       "type": "object",

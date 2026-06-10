@@ -61,6 +61,29 @@ export interface NativeSession {
   lastError: string;
   elapsedMs: number;
   durationMs: number;
+  daemonProcessId: number;
+  daemonInstanceId: string;
+  daemonStartedUtc: string;
+  daemonHeartbeatUtc: string;
+  daemonControlEndpoint: string;
+  knapmPath: string;
+}
+
+export interface NativeDaemonStatus {
+  schemaVersion: string;
+  success: boolean;
+  backendMode: BackendMode;
+  operation: string;
+  daemonState: "running" | "stopped" | "not_running" | "start_failed" | "stop_timeout" | string;
+  daemonProcessId: number;
+  daemonInstanceId: string;
+  daemonStartedUtc: string;
+  daemonHeartbeatUtc: string;
+  controlEndpoint: string;
+  runtimeDirectory: string;
+  sessionCount: number;
+  win32ErrorCode: number;
+  message: string;
 }
 
 export interface AuditEvent {

@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { mockTargets } from "./mockData";
-import type { CaptureResult, CaptureSessionState, LaunchResult, NativeOperation, NativeSession, NativeTraceBatch, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
+import type { CaptureResult, CaptureSessionState, LaunchResult, NativeDaemonStatus, NativeOperation, NativeSession, NativeTraceBatch, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
 
 function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -150,6 +150,51 @@ export async function startStreamingAttachSession(pid: number, durationMs: numbe
   return invoke<NativeSession>("start_streaming_attach_session", {
     pid,
     durationMs
+  });
+}
+
+export async function startDaemonIfNeeded(): Promise<NativeDaemonStatus> {
+  if (!isTauriRuntime()) {
+    throw new Error("Daemon supervision requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeDaemonStatus>("start_daemon_if_needed");
+}
+
+export async function nativeDaemonStatus(): Promise<NativeDaemonStatus> {
+  if (!isTauriRuntime()) {
+    throw new Error("Daemon status requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeDaemonStatus>("native_daemon_status");
+}
+
+export async function listDaemonSessions(): Promise<NativeSession[]> {
+  if (!isTauriRuntime()) {
+    return [];
+  }
+
+  return invoke<NativeSession[]>("list_daemon_sessions");
+}
+
+export async function startDaemonSupervisedSession(pid: number, durationMs: number): Promise<NativeSession> {
+  if (!isTauriRuntime()) {
+    throw new Error("Daemon-supervised sessions require the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeSession>("start_daemon_supervised_session", {
+    pid,
+    durationMs
+  });
+}
+
+export async function stopDaemonSession(sessionId: string): Promise<NativeSession> {
+  if (!isTauriRuntime()) {
+    throw new Error("Daemon session stop requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeSession>("stop_daemon_session", {
+    sessionId
   });
 }
 

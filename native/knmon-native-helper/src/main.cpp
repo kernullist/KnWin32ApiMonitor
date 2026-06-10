@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace
@@ -328,6 +329,26 @@ std::filesystem::path HelperDirectory()
     return result;
 }
 
+std::filesystem::path CurrentExecutablePath()
+{
+    std::filesystem::path result;
+    wchar_t modulePath[MAX_PATH * 8] = {};
+
+    do
+    {
+        const DWORD length = GetModuleFileNameW(nullptr, modulePath, static_cast<DWORD>(std::size(modulePath)));
+        if (length == 0 || length >= std::size(modulePath))
+        {
+            break;
+        }
+
+        result = std::filesystem::path(modulePath);
+    }
+    while (false);
+
+    return result;
+}
+
 knmon::KnMonAgentArchitecture NativeHelperArchitecture()
 {
 #if defined(_WIN64)
@@ -357,6 +378,13 @@ std::string NewWriterInstanceId()
 {
     std::ostringstream stream;
     stream << "writer-" << GetCurrentProcessId() << "-" << GetTickCount64();
+    return stream.str();
+}
+
+std::string NewDaemonInstanceId()
+{
+    std::ostringstream stream;
+    stream << "daemon-" << GetCurrentProcessId() << "-" << GetTickCount64();
     return stream.str();
 }
 
@@ -1466,6 +1494,15 @@ struct NativeSessionInfo
     bool StopRequested = false;
     bool AgentCleanupAttempted = false;
     bool AgentCleanupSucceeded = false;
+    std::string LastError;
+    std::uint64_t ElapsedMs = 0;
+    std::uint32_t DurationMs = 0;
+    std::uint32_t DaemonProcessId = 0;
+    std::string DaemonInstanceId;
+    std::string DaemonStartedUtc;
+    std::string DaemonHeartbeatUtc;
+    std::string DaemonControlEndpoint;
+    std::string KnapmPath;
 };
 
 std::string ToJson(const SessionInfo& session)
@@ -1539,7 +1576,16 @@ std::string ToJson(const NativeSessionInfo& session)
     stream << "\"shutdownEvidence\":" << Q(session.ShutdownEvidence) << ",";
     stream << "\"stopRequested\":" << (session.StopRequested ? "true" : "false") << ",";
     stream << "\"agentCleanupAttempted\":" << (session.AgentCleanupAttempted ? "true" : "false") << ",";
-    stream << "\"agentCleanupSucceeded\":" << (session.AgentCleanupSucceeded ? "true" : "false");
+    stream << "\"agentCleanupSucceeded\":" << (session.AgentCleanupSucceeded ? "true" : "false") << ",";
+    stream << "\"lastError\":" << Q(session.LastError) << ",";
+    stream << "\"elapsedMs\":" << session.ElapsedMs << ",";
+    stream << "\"durationMs\":" << session.DurationMs << ",";
+    stream << "\"daemonProcessId\":" << session.DaemonProcessId << ",";
+    stream << "\"daemonInstanceId\":" << Q(session.DaemonInstanceId) << ",";
+    stream << "\"daemonStartedUtc\":" << Q(session.DaemonStartedUtc) << ",";
+    stream << "\"daemonHeartbeatUtc\":" << Q(session.DaemonHeartbeatUtc) << ",";
+    stream << "\"daemonControlEndpoint\":" << Q(session.DaemonControlEndpoint) << ",";
+    stream << "\"knapmPath\":" << Q(session.KnapmPath);
     stream << "}";
     return stream.str();
 }
@@ -1773,6 +1819,11 @@ struct KnapmOwnerInfo
     std::string HeartbeatUtc;
     std::uint64_t LeaseTimeoutMs = 15000;
     std::string LeaseExpiresUtc;
+    std::uint32_t DaemonProcessId = 0;
+    std::string DaemonInstanceId;
+    std::string DaemonStartedUtc;
+    std::string DaemonHeartbeatUtc;
+    std::string ControlEndpoint;
 };
 
 struct KnapmCheckpointInfo
@@ -1913,7 +1964,12 @@ std::string ToJson(const KnapmOwnerInfo& owner)
     stream << "\"updatedUtc\":" << Q(owner.UpdatedUtc) << ",";
     stream << "\"heartbeatUtc\":" << Q(owner.HeartbeatUtc) << ",";
     stream << "\"leaseTimeoutMs\":" << owner.LeaseTimeoutMs << ",";
-    stream << "\"leaseExpiresUtc\":" << Q(owner.LeaseExpiresUtc);
+    stream << "\"leaseExpiresUtc\":" << Q(owner.LeaseExpiresUtc) << ",";
+    stream << "\"daemonProcessId\":" << owner.DaemonProcessId << ",";
+    stream << "\"daemonInstanceId\":" << Q(owner.DaemonInstanceId) << ",";
+    stream << "\"daemonStartedUtc\":" << Q(owner.DaemonStartedUtc) << ",";
+    stream << "\"daemonHeartbeatUtc\":" << Q(owner.DaemonHeartbeatUtc) << ",";
+    stream << "\"controlEndpoint\":" << Q(owner.ControlEndpoint);
     stream << "}";
     return stream.str();
 }
@@ -2011,6 +2067,11 @@ struct KnapmSessionWriter
         Owner.UpdatedUtc = now;
         Owner.HeartbeatUtc = now;
         Owner.LeaseExpiresUtc = UtcAfterMilliseconds(Owner.LeaseTimeoutMs);
+        if (Owner.OwnerKind == "persistent-daemon")
+        {
+            Owner.DaemonHeartbeatUtc = now;
+            Session.DaemonHeartbeatUtc = now;
+        }
         Recovery.ClassifiedUtc = now;
     }
 
@@ -2057,7 +2118,7 @@ struct KnapmSessionWriter
             CreatedUtc = session.StartedUtc.empty() ? NowUtc() : session.StartedUtc;
             UpdatedUtc = NowUtc();
             WriterState = "writing";
-            Owner.OwnerKind = "bounded-helper";
+            Owner.OwnerKind = session.DaemonProcessId != 0 ? "persistent-daemon" : "bounded-helper";
             Owner.HostProcessId = session.OwnerProcessId;
             Owner.HelperProcessId = session.HelperProcessId;
             Owner.WriterProcessId = GetCurrentProcessId();
@@ -2065,6 +2126,11 @@ struct KnapmSessionWriter
             Owner.WriterGeneration = 1;
             Owner.StartedUtc = CreatedUtc;
             Owner.LeaseTimeoutMs = 15000;
+            Owner.DaemonProcessId = session.DaemonProcessId;
+            Owner.DaemonInstanceId = session.DaemonInstanceId;
+            Owner.DaemonStartedUtc = session.DaemonStartedUtc;
+            Owner.DaemonHeartbeatUtc = session.DaemonHeartbeatUtc;
+            Owner.ControlEndpoint = session.DaemonControlEndpoint;
             SetRecoveryState("owned", "owner_alive", "wait", false);
             TouchOwnership();
             RefreshCheckpoint();
@@ -2423,6 +2489,11 @@ KnapmOwnerInfo KnapmOwnerFromJson(const std::string& json)
     owner.HeartbeatUtc = ExtractJsonString(json, "heartbeatUtc");
     owner.LeaseTimeoutMs = ExtractJsonUInt64(json, "leaseTimeoutMs");
     owner.LeaseExpiresUtc = ExtractJsonString(json, "leaseExpiresUtc");
+    owner.DaemonProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "daemonProcessId"));
+    owner.DaemonInstanceId = ExtractJsonString(json, "daemonInstanceId");
+    owner.DaemonStartedUtc = ExtractJsonString(json, "daemonStartedUtc");
+    owner.DaemonHeartbeatUtc = ExtractJsonString(json, "daemonHeartbeatUtc");
+    owner.ControlEndpoint = ExtractJsonString(json, "controlEndpoint");
     return owner;
 }
 
@@ -2549,8 +2620,9 @@ void ClassifyKnapmSession(SessionInfo& session, const std::string& manifest)
     const KnapmRecoveryInfo recovery = KnapmRecoveryFromJson(recoveryObject);
 
     ULONGLONG parsedLease = 0;
+    const bool supportedOwnerKind = owner.OwnerKind == "bounded-helper" || owner.OwnerKind == "persistent-daemon";
     if (
-        owner.OwnerKind.empty() ||
+        !supportedOwnerKind ||
         owner.WriterInstanceId.empty() ||
         owner.HostProcessId == 0 ||
         owner.HelperProcessId == 0 ||
@@ -2563,6 +2635,20 @@ void ClassifyKnapmSession(SessionInfo& session, const std::string& manifest)
         !ParseUtcFileTime(owner.LeaseExpiresUtc, &parsedLease))
     {
         session.ValidationErrors.push_back("manifest owner metadata is incomplete or has an invalid lease.");
+        SetKnapmMalformedRecovery(session, "metadata_incomplete");
+        return;
+    }
+
+    if (
+        owner.OwnerKind == "persistent-daemon" &&
+        (
+            owner.DaemonProcessId == 0 ||
+            owner.DaemonInstanceId.empty() ||
+            owner.DaemonStartedUtc.empty() ||
+            owner.DaemonHeartbeatUtc.empty() ||
+            owner.ControlEndpoint.empty()))
+    {
+        session.ValidationErrors.push_back("manifest persistent daemon owner metadata is incomplete.");
         SetKnapmMalformedRecovery(session, "metadata_incomplete");
         return;
     }
@@ -3747,6 +3833,12 @@ int AttachSessionCommand(const std::vector<std::string>& args)
     const std::string cancellationEventName = CancellationEventNameFromArgs(args, operationId);
     const std::string pidOption = GetOption(args, "--pid");
     const std::string knapmPath = GetOption(args, "--write-knapm");
+    const std::string ownerKind = GetOption(args, "--owner-kind");
+    const bool daemonOwned = ownerKind == "persistent-daemon";
+    const std::uint32_t daemonProcessId = GetUInt32Option(args, "--daemon-process-id", 0);
+    const std::string daemonInstanceId = GetOption(args, "--daemon-instance-id");
+    const std::string daemonStartedUtc = GetOption(args, "--daemon-started-utc");
+    const std::string daemonControlEndpoint = GetOption(args, "--daemon-control-endpoint");
     const bool streamBatches = HasOption(args, "--stream-batches") || !knapmPath.empty();
     std::uint32_t batchSize = GetUInt32Option(args, "--batch-size", 64);
     const std::uint32_t batchIntervalMs = GetUInt32Option(args, "--batch-interval-ms", 100);
@@ -3764,7 +3856,7 @@ int AttachSessionCommand(const std::vector<std::string>& args)
     request.SessionKind = streamBatches ? "attach_capture_stream" : "attach_capture";
     request.StartedUtc = startedUtc;
     request.ProcessId = pidOption == "self" ? GetCurrentProcessId() : GetUInt32Option(args, "--pid", 0);
-    request.OwnerProcessId = GetCurrentProcessId();
+    request.OwnerProcessId = daemonOwned && daemonProcessId != 0 ? daemonProcessId : GetCurrentProcessId();
     request.HelperProcessId = GetCurrentProcessId();
     request.AgentPath = GetOption(args, "--agent");
     request.CancellationEventName = cancellationEventName;
@@ -3785,7 +3877,15 @@ int AttachSessionCommand(const std::vector<std::string>& args)
         cancellationEventName,
         "starting",
         startedUtc);
-    session.SessionKind = request.SessionKind;
+    session.SessionKind = daemonOwned ? "daemon_attach_capture_stream" : request.SessionKind;
+    session.OwnerProcessId = request.OwnerProcessId;
+    session.HelperProcessId = request.HelperProcessId;
+    session.DaemonProcessId = daemonOwned ? request.OwnerProcessId : 0;
+    session.DaemonInstanceId = daemonInstanceId;
+    session.DaemonStartedUtc = daemonStartedUtc;
+    session.DaemonHeartbeatUtc = daemonOwned ? NowUtc() : "";
+    session.DaemonControlEndpoint = daemonControlEndpoint;
+    session.KnapmPath = knapmPath;
 
     std::cout << SessionFrameJson("session_started", session) << "\n" << std::flush;
     session.SessionState = "running";
@@ -4076,12 +4176,1016 @@ std::string CancelOperationJson(const std::vector<std::string>& args)
     return stream.str();
 }
 
+struct DaemonStatusInfo
+{
+    bool Success = false;
+    std::string BackendMode = "native-capture";
+    std::string Operation = "daemon_status";
+    std::string DaemonState = "not_running";
+    std::uint32_t DaemonProcessId = 0;
+    std::string DaemonInstanceId;
+    std::string DaemonStartedUtc;
+    std::string DaemonHeartbeatUtc;
+    std::string ControlEndpoint;
+    std::string RuntimeDirectory;
+    std::uint64_t SessionCount = 0;
+    std::uint32_t Win32ErrorCode = 0;
+    std::string Message;
+};
+
+struct DaemonSessionRecord
+{
+    std::string SessionId;
+    std::string OperationId;
+    std::uint32_t TargetProcessId = 0;
+    std::uint32_t DaemonProcessId = 0;
+    std::string DaemonInstanceId;
+    std::string DaemonStartedUtc;
+    std::string DaemonControlEndpoint;
+    std::uint32_t SessionProcessId = 0;
+    std::string KnapmPath;
+    std::string CancellationEventName;
+    std::string StartedUtc;
+    std::uint32_t DurationMs = 0;
+};
+
+std::string ToJson(const DaemonStatusInfo& status)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"success\":" << (status.Success ? "true" : "false") << ",";
+    stream << "\"backendMode\":" << Q(status.BackendMode) << ",";
+    stream << "\"operation\":" << Q(status.Operation) << ",";
+    stream << "\"daemonState\":" << Q(status.DaemonState) << ",";
+    stream << "\"daemonProcessId\":" << status.DaemonProcessId << ",";
+    stream << "\"daemonInstanceId\":" << Q(status.DaemonInstanceId) << ",";
+    stream << "\"daemonStartedUtc\":" << Q(status.DaemonStartedUtc) << ",";
+    stream << "\"daemonHeartbeatUtc\":" << Q(status.DaemonHeartbeatUtc) << ",";
+    stream << "\"controlEndpoint\":" << Q(status.ControlEndpoint) << ",";
+    stream << "\"runtimeDirectory\":" << Q(status.RuntimeDirectory) << ",";
+    stream << "\"sessionCount\":" << status.SessionCount << ",";
+    stream << "\"win32ErrorCode\":" << status.Win32ErrorCode << ",";
+    stream << "\"message\":" << Q(status.Message);
+    stream << "}";
+    return stream.str();
+}
+
+std::string ToJson(const DaemonSessionRecord& record)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"sessionId\":" << Q(record.SessionId) << ",";
+    stream << "\"operationId\":" << Q(record.OperationId) << ",";
+    stream << "\"targetProcessId\":" << record.TargetProcessId << ",";
+    stream << "\"daemonProcessId\":" << record.DaemonProcessId << ",";
+    stream << "\"daemonInstanceId\":" << Q(record.DaemonInstanceId) << ",";
+    stream << "\"daemonStartedUtc\":" << Q(record.DaemonStartedUtc) << ",";
+    stream << "\"daemonControlEndpoint\":" << Q(record.DaemonControlEndpoint) << ",";
+    stream << "\"sessionProcessId\":" << record.SessionProcessId << ",";
+    stream << "\"knapmPath\":" << Q(record.KnapmPath) << ",";
+    stream << "\"cancellationEventName\":" << Q(record.CancellationEventName) << ",";
+    stream << "\"startedUtc\":" << Q(record.StartedUtc) << ",";
+    stream << "\"durationMs\":" << record.DurationMs;
+    stream << "}";
+    return stream.str();
+}
+
+std::filesystem::path DaemonRuntimeDirectoryFromArgs(const std::vector<std::string>& args)
+{
+    std::filesystem::path directory;
+    const std::string runtimeDir = GetOption(args, "--runtime-dir");
+
+    if (!runtimeDir.empty())
+    {
+        directory = PathFromUtf8(runtimeDir);
+    }
+    else
+    {
+        directory = std::filesystem::current_path() / L".tmp" / L"daemon";
+    }
+
+    std::error_code pathError;
+    const std::filesystem::path absolute = std::filesystem::absolute(directory, pathError);
+    if (!pathError)
+    {
+        directory = absolute;
+    }
+
+    return directory;
+}
+
+std::filesystem::path DaemonStatePath(const std::filesystem::path& runtimeDirectory)
+{
+    return runtimeDirectory / L"daemon-state.json";
+}
+
+std::filesystem::path DaemonStopFlagPath(const std::filesystem::path& runtimeDirectory)
+{
+    return runtimeDirectory / L"daemon-stop.flag";
+}
+
+std::filesystem::path DaemonSessionsDirectory(const std::filesystem::path& runtimeDirectory)
+{
+    return runtimeDirectory / L"sessions";
+}
+
+std::filesystem::path DaemonLogsDirectory(const std::filesystem::path& runtimeDirectory)
+{
+    return runtimeDirectory / L"logs";
+}
+
+std::filesystem::path DaemonSessionRecordPath(const std::filesystem::path& runtimeDirectory, const std::string& sessionId)
+{
+    return DaemonSessionsDirectory(runtimeDirectory) / PathFromUtf8(SanitizeFileName(sessionId) + ".json");
+}
+
+std::string DaemonControlEndpoint(const std::filesystem::path& runtimeDirectory)
+{
+    return "file-registry:" + PathToUtf8(runtimeDirectory);
+}
+
+std::uint64_t CountDaemonSessionRecords(const std::filesystem::path& runtimeDirectory)
+{
+    std::uint64_t count = 0;
+    std::error_code iterateError;
+    const std::filesystem::path sessionsDirectory = DaemonSessionsDirectory(runtimeDirectory);
+
+    if (!std::filesystem::exists(sessionsDirectory, iterateError))
+    {
+        return count;
+    }
+
+    for (const auto& entry : std::filesystem::directory_iterator(sessionsDirectory, iterateError))
+    {
+        if (iterateError)
+        {
+            break;
+        }
+
+        if (entry.is_regular_file() && entry.path().extension() == L".json")
+        {
+            ++count;
+        }
+    }
+
+    return count;
+}
+
+DaemonStatusInfo DaemonStatusFromJson(const std::string& json)
+{
+    DaemonStatusInfo status;
+    status.Success = ExtractJsonBool(json, "success");
+    status.BackendMode = ExtractJsonString(json, "backendMode");
+    status.Operation = ExtractJsonString(json, "operation");
+    status.DaemonState = ExtractJsonString(json, "daemonState");
+    status.DaemonProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "daemonProcessId"));
+    status.DaemonInstanceId = ExtractJsonString(json, "daemonInstanceId");
+    status.DaemonStartedUtc = ExtractJsonString(json, "daemonStartedUtc");
+    status.DaemonHeartbeatUtc = ExtractJsonString(json, "daemonHeartbeatUtc");
+    status.ControlEndpoint = ExtractJsonString(json, "controlEndpoint");
+    status.RuntimeDirectory = ExtractJsonString(json, "runtimeDirectory");
+    status.SessionCount = ExtractJsonUInt64(json, "sessionCount");
+    status.Win32ErrorCode = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "win32ErrorCode"));
+    status.Message = ExtractJsonString(json, "message");
+    return status;
+}
+
+DaemonSessionRecord DaemonSessionRecordFromJson(const std::string& json)
+{
+    DaemonSessionRecord record;
+    record.SessionId = ExtractJsonString(json, "sessionId");
+    record.OperationId = ExtractJsonString(json, "operationId");
+    record.TargetProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "targetProcessId"));
+    record.DaemonProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "daemonProcessId"));
+    record.DaemonInstanceId = ExtractJsonString(json, "daemonInstanceId");
+    record.DaemonStartedUtc = ExtractJsonString(json, "daemonStartedUtc");
+    record.DaemonControlEndpoint = ExtractJsonString(json, "daemonControlEndpoint");
+    record.SessionProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "sessionProcessId"));
+    record.KnapmPath = ExtractJsonString(json, "knapmPath");
+    record.CancellationEventName = ExtractJsonString(json, "cancellationEventName");
+    record.StartedUtc = ExtractJsonString(json, "startedUtc");
+    record.DurationMs = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "durationMs"));
+    return record;
+}
+
+DaemonStatusInfo ReadDaemonStatus(const std::filesystem::path& runtimeDirectory)
+{
+    DaemonStatusInfo status;
+    status.RuntimeDirectory = PathToUtf8(runtimeDirectory);
+    status.ControlEndpoint = DaemonControlEndpoint(runtimeDirectory);
+    status.SessionCount = CountDaemonSessionRecords(runtimeDirectory);
+
+    do
+    {
+        std::string text;
+        std::string readError;
+        if (!ReadTextFile(DaemonStatePath(runtimeDirectory), &text, &readError))
+        {
+            status.Success = false;
+            status.Win32ErrorCode = ERROR_FILE_NOT_FOUND;
+            status.Message = "Daemon state is not available.";
+            break;
+        }
+
+        status = DaemonStatusFromJson(text);
+        status.RuntimeDirectory = PathToUtf8(runtimeDirectory);
+        status.ControlEndpoint = DaemonControlEndpoint(runtimeDirectory);
+        status.SessionCount = CountDaemonSessionRecords(runtimeDirectory);
+        const bool alive = IsProcessAlive(status.DaemonProcessId);
+        status.Success = alive && status.DaemonState == "running";
+        if (!alive)
+        {
+            status.DaemonState = "not_running";
+            status.Win32ErrorCode = ERROR_PROCESS_ABORTED;
+            status.Message = "Daemon process is not alive.";
+        }
+    }
+    while (false);
+
+    return status;
+}
+
+bool WriteDaemonStatus(const std::filesystem::path& runtimeDirectory, const DaemonStatusInfo& status, std::string* error)
+{
+    return WriteTextFile(DaemonStatePath(runtimeDirectory), ToJson(status) + "\n", error);
+}
+
+bool WriteDaemonSessionRecord(const std::filesystem::path& runtimeDirectory, const DaemonSessionRecord& record, std::string* error)
+{
+    return WriteTextFile(DaemonSessionRecordPath(runtimeDirectory, record.SessionId), ToJson(record) + "\n", error);
+}
+
+bool ReadDaemonSessionRecord(const std::filesystem::path& runtimeDirectory, const std::string& sessionId, DaemonSessionRecord* record, std::string* error)
+{
+    bool read = false;
+
+    do
+    {
+        if (record == nullptr)
+        {
+            if (error != nullptr)
+            {
+                *error = "record output is null.";
+            }
+            break;
+        }
+
+        std::string text;
+        if (!ReadTextFile(DaemonSessionRecordPath(runtimeDirectory, sessionId), &text, error))
+        {
+            break;
+        }
+
+        *record = DaemonSessionRecordFromJson(text);
+        read = !record->SessionId.empty();
+        if (!read && error != nullptr)
+        {
+            *error = "session record is malformed.";
+        }
+    }
+    while (false);
+
+    return read;
+}
+
+std::wstring QuoteWindowsCommandArg(const std::wstring& value)
+{
+    if (value.empty())
+    {
+        return L"\"\"";
+    }
+
+    bool needsQuotes = false;
+    for (const wchar_t ch : value)
+    {
+        if (ch == L' ' || ch == L'\t' || ch == L'"')
+        {
+            needsQuotes = true;
+            break;
+        }
+    }
+
+    if (!needsQuotes)
+    {
+        return value;
+    }
+
+    std::wstring result = L"\"";
+    std::size_t backslashCount = 0;
+    for (const wchar_t ch : value)
+    {
+        if (ch == L'\\')
+        {
+            ++backslashCount;
+            continue;
+        }
+
+        if (ch == L'"')
+        {
+            result.append(backslashCount * 2 + 1, L'\\');
+            result.push_back(ch);
+            backslashCount = 0;
+            continue;
+        }
+
+        if (backslashCount != 0)
+        {
+            result.append(backslashCount, L'\\');
+            backslashCount = 0;
+        }
+
+        result.push_back(ch);
+    }
+
+    if (backslashCount != 0)
+    {
+        result.append(backslashCount * 2, L'\\');
+    }
+
+    result.push_back(L'"');
+    return result;
+}
+
+bool LaunchBackgroundHelper(
+    const std::vector<std::string>& args,
+    const std::filesystem::path& stdoutPath,
+    const std::filesystem::path& stderrPath,
+    std::uint32_t* processId,
+    std::string* error)
+{
+    bool launched = false;
+    PROCESS_INFORMATION processInfo = {};
+    (void)stdoutPath;
+    (void)stderrPath;
+
+    do
+    {
+        const std::filesystem::path executable = CurrentExecutablePath();
+        if (executable.empty())
+        {
+            if (error != nullptr)
+            {
+                *error = "current executable path is unavailable.";
+            }
+            break;
+        }
+
+        std::wstring commandLine = QuoteWindowsCommandArg(executable.wstring());
+        for (const std::string& arg : args)
+        {
+            commandLine.push_back(L' ');
+            commandLine += QuoteWindowsCommandArg(Utf8ToWide(arg));
+        }
+
+        std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
+        mutableCommandLine.push_back(L'\0');
+
+        STARTUPINFOW startupInfo = {};
+        startupInfo.cb = sizeof(startupInfo);
+
+        const BOOL created = CreateProcessW(
+            nullptr,
+            mutableCommandLine.data(),
+            nullptr,
+            nullptr,
+            FALSE,
+            CREATE_NO_WINDOW | DETACHED_PROCESS,
+            nullptr,
+            HelperDirectory().wstring().c_str(),
+            &startupInfo,
+            &processInfo);
+        if (!created)
+        {
+            if (error != nullptr)
+            {
+                *error = "CreateProcessW failed with " + std::to_string(GetLastError()) + ".";
+            }
+            break;
+        }
+
+        if (processId != nullptr)
+        {
+            *processId = processInfo.dwProcessId;
+        }
+        launched = true;
+    }
+    while (false);
+
+    if (processInfo.hThread != nullptr)
+    {
+        CloseHandle(processInfo.hThread);
+    }
+
+    if (processInfo.hProcess != nullptr)
+    {
+        CloseHandle(processInfo.hProcess);
+    }
+
+    return launched;
+}
+
+bool WaitForDaemonRunning(const std::filesystem::path& runtimeDirectory, DWORD timeoutMs, DaemonStatusInfo* status)
+{
+    const ULONGLONG start = GetTickCount64();
+    bool running = false;
+
+    do
+    {
+        DaemonStatusInfo current = ReadDaemonStatus(runtimeDirectory);
+        if (current.Success)
+        {
+            if (status != nullptr)
+            {
+                *status = current;
+            }
+            running = true;
+            break;
+        }
+
+        if (GetTickCount64() - start >= timeoutMs)
+        {
+            if (status != nullptr)
+            {
+                *status = current;
+            }
+            break;
+        }
+
+        Sleep(50);
+    }
+    while (true);
+
+    return running;
+}
+
+bool WaitForKnapmOwnerKind(const std::filesystem::path& knapmPath, const std::string& ownerKind, DWORD timeoutMs)
+{
+    const ULONGLONG start = GetTickCount64();
+    bool matched = false;
+
+    do
+    {
+        std::string manifest;
+        std::string readError;
+        if (ReadTextFile(KnapmChildPath(knapmPath, "manifest.json"), &manifest, &readError))
+        {
+            const std::string ownerObject = ExtractJsonObject(manifest, "owner");
+            if (ExtractJsonString(ownerObject, "ownerKind") == ownerKind)
+            {
+                matched = true;
+                break;
+            }
+        }
+
+        if (GetTickCount64() - start >= timeoutMs)
+        {
+            break;
+        }
+
+        Sleep(50);
+    }
+    while (true);
+
+    return matched;
+}
+
+NativeSessionInfo NativeSessionFromDaemonRecord(const DaemonSessionRecord& record)
+{
+    NativeSessionInfo session;
+    session.SessionId = record.SessionId;
+    session.OperationId = record.OperationId;
+    session.SessionKind = "daemon_attach_capture_stream";
+    session.OwnerProcessId = record.DaemonProcessId;
+    session.HelperProcessId = record.SessionProcessId;
+    session.TargetProcessId = record.TargetProcessId;
+    session.SessionState = IsProcessAlive(record.SessionProcessId) ? "running" : "recovery_required";
+    session.StartedUtc = record.StartedUtc;
+    session.UpdatedUtc = NowUtc();
+    session.CancellationEventName = record.CancellationEventName;
+    session.RecoveryAction = session.SessionState == "recovery_required" ? "manual_inspection" : "wait";
+    session.DaemonProcessId = record.DaemonProcessId;
+    session.DaemonInstanceId = record.DaemonInstanceId;
+    session.DaemonStartedUtc = record.DaemonStartedUtc;
+    session.DaemonHeartbeatUtc = NowUtc();
+    session.DaemonControlEndpoint = record.DaemonControlEndpoint;
+    session.KnapmPath = record.KnapmPath;
+    session.DurationMs = record.DurationMs;
+
+    do
+    {
+        if (record.KnapmPath.empty())
+        {
+            break;
+        }
+
+        std::string manifest;
+        std::string readError;
+        if (!ReadTextFile(KnapmChildPath(PathFromUtf8(record.KnapmPath), "manifest.json"), &manifest, &readError))
+        {
+            break;
+        }
+
+        const std::string sessionObject = ExtractJsonObject(manifest, "session");
+        if (sessionObject.empty())
+        {
+            break;
+        }
+
+        const std::string sessionState = ExtractJsonString(sessionObject, "sessionState");
+        if (!sessionState.empty())
+        {
+            session.SessionState = sessionState;
+        }
+
+        session.LastTransportSequence = ExtractJsonUInt64(sessionObject, "lastTransportSequence");
+        session.RecordsStreamed = ExtractJsonUInt64(sessionObject, "recordsStreamed");
+        session.TransportDroppedEvents = ExtractJsonUInt64(sessionObject, "transportDroppedEvents");
+        session.HostDroppedBatches = ExtractJsonUInt64(sessionObject, "hostDroppedBatches");
+        session.StopRequested = ExtractJsonBool(sessionObject, "stopRequested");
+        session.AgentCleanupAttempted = ExtractJsonBool(sessionObject, "agentCleanupAttempted");
+        session.AgentCleanupSucceeded = ExtractJsonBool(sessionObject, "agentCleanupSucceeded");
+        session.ShutdownEvidence = ExtractJsonString(sessionObject, "shutdownEvidence");
+        session.StoppedUtc = ExtractJsonString(sessionObject, "stoppedUtc");
+        session.DaemonHeartbeatUtc = ExtractJsonString(sessionObject, "daemonHeartbeatUtc");
+        if (session.DaemonHeartbeatUtc.empty())
+        {
+            session.DaemonHeartbeatUtc = NowUtc();
+        }
+
+        if (!IsProcessAlive(record.SessionProcessId) && session.SessionState != "stopped" && session.SessionState != "failed")
+        {
+            session.SessionState = "recovery_required";
+            session.StaleReason = "daemon_session_process_exited";
+            session.RecoveryAction = "manual_inspection";
+        }
+    }
+    while (false);
+
+    return session;
+}
+
+std::vector<DaemonSessionRecord> ReadAllDaemonSessionRecords(const std::filesystem::path& runtimeDirectory)
+{
+    std::vector<DaemonSessionRecord> records;
+    std::error_code iterateError;
+    const std::filesystem::path sessionsDirectory = DaemonSessionsDirectory(runtimeDirectory);
+
+    if (!std::filesystem::exists(sessionsDirectory, iterateError))
+    {
+        return records;
+    }
+
+    for (const auto& entry : std::filesystem::directory_iterator(sessionsDirectory, iterateError))
+    {
+        if (iterateError)
+        {
+            break;
+        }
+
+        if (!entry.is_regular_file() || entry.path().extension() != L".json")
+        {
+            continue;
+        }
+
+        std::string text;
+        std::string readError;
+        if (ReadTextFile(entry.path(), &text, &readError))
+        {
+            DaemonSessionRecord record = DaemonSessionRecordFromJson(text);
+            if (!record.SessionId.empty())
+            {
+                records.push_back(record);
+            }
+        }
+    }
+
+    return records;
+}
+
+DaemonStatusInfo StartDaemonIfNeeded(const std::filesystem::path& runtimeDirectory)
+{
+    DaemonStatusInfo status = ReadDaemonStatus(runtimeDirectory);
+
+    do
+    {
+        if (status.Success)
+        {
+            break;
+        }
+
+        std::error_code createError;
+        std::filesystem::create_directories(DaemonLogsDirectory(runtimeDirectory), createError);
+        std::filesystem::create_directories(DaemonSessionsDirectory(runtimeDirectory), createError);
+        std::filesystem::remove(DaemonStopFlagPath(runtimeDirectory), createError);
+
+        const std::string instanceId = NewDaemonInstanceId();
+        std::uint32_t daemonProcessId = 0;
+        std::string launchError;
+        const bool launched = LaunchBackgroundHelper(
+            {
+                "daemon-run",
+                "--runtime-dir",
+                PathToUtf8(runtimeDirectory),
+                "--daemon-instance-id",
+                instanceId
+            },
+            DaemonLogsDirectory(runtimeDirectory) / L"daemon.stdout.log",
+            DaemonLogsDirectory(runtimeDirectory) / L"daemon.stderr.log",
+            &daemonProcessId,
+            &launchError);
+        if (!launched)
+        {
+            status.Success = false;
+            status.DaemonState = "start_failed";
+            status.Win32ErrorCode = ERROR_PROCESS_ABORTED;
+            status.Message = launchError;
+            break;
+        }
+
+        if (!WaitForDaemonRunning(runtimeDirectory, 3000, &status))
+        {
+            status.Success = false;
+            status.DaemonState = "start_failed";
+            status.Win32ErrorCode = ERROR_TIMEOUT;
+            status.Message = "daemon_start_failed";
+            break;
+        }
+    }
+    while (false);
+
+    status.Operation = "daemon_start";
+    return status;
+}
+
+int DaemonRunCommand(const std::vector<std::string>& args)
+{
+    const std::filesystem::path runtimeDirectory = DaemonRuntimeDirectoryFromArgs(args);
+    const std::string daemonInstanceId = GetOption(args, "--daemon-instance-id").empty() ? NewDaemonInstanceId() : GetOption(args, "--daemon-instance-id");
+    const std::string startedUtc = NowUtc();
+
+    std::error_code createError;
+    std::filesystem::create_directories(DaemonLogsDirectory(runtimeDirectory), createError);
+    std::filesystem::create_directories(DaemonSessionsDirectory(runtimeDirectory), createError);
+
+    while (!std::filesystem::exists(DaemonStopFlagPath(runtimeDirectory)))
+    {
+        DaemonStatusInfo status;
+        status.Success = true;
+        status.Operation = "daemon_run";
+        status.DaemonState = "running";
+        status.DaemonProcessId = GetCurrentProcessId();
+        status.DaemonInstanceId = daemonInstanceId;
+        status.DaemonStartedUtc = startedUtc;
+        status.DaemonHeartbeatUtc = NowUtc();
+        status.ControlEndpoint = DaemonControlEndpoint(runtimeDirectory);
+        status.RuntimeDirectory = PathToUtf8(runtimeDirectory);
+        status.SessionCount = CountDaemonSessionRecords(runtimeDirectory);
+        status.Message = "Daemon heartbeat updated.";
+        std::string writeError;
+        WriteDaemonStatus(runtimeDirectory, status, &writeError);
+        Sleep(250);
+    }
+
+    DaemonStatusInfo stopped;
+    stopped.Success = false;
+    stopped.Operation = "daemon_run";
+    stopped.DaemonState = "stopped";
+    stopped.DaemonProcessId = GetCurrentProcessId();
+    stopped.DaemonInstanceId = daemonInstanceId;
+    stopped.DaemonStartedUtc = startedUtc;
+    stopped.DaemonHeartbeatUtc = NowUtc();
+    stopped.ControlEndpoint = DaemonControlEndpoint(runtimeDirectory);
+    stopped.RuntimeDirectory = PathToUtf8(runtimeDirectory);
+    stopped.SessionCount = CountDaemonSessionRecords(runtimeDirectory);
+    stopped.Message = "Daemon stopped.";
+    std::string writeError;
+    WriteDaemonStatus(runtimeDirectory, stopped, &writeError);
+    return 0;
+}
+
+std::string DaemonStartJson(const std::vector<std::string>& args)
+{
+    DaemonStatusInfo status = StartDaemonIfNeeded(DaemonRuntimeDirectoryFromArgs(args));
+    return ToJson(status);
+}
+
+std::string DaemonStatusJson(const std::vector<std::string>& args)
+{
+    DaemonStatusInfo status = ReadDaemonStatus(DaemonRuntimeDirectoryFromArgs(args));
+    status.Operation = "daemon_status";
+    return ToJson(status);
+}
+
+std::string DaemonListSessionsJson(const std::vector<std::string>& args)
+{
+    const std::filesystem::path runtimeDirectory = DaemonRuntimeDirectoryFromArgs(args);
+    DaemonStatusInfo status = ReadDaemonStatus(runtimeDirectory);
+    const auto records = ReadAllDaemonSessionRecords(runtimeDirectory);
+
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"success\":" << (status.Success ? "true" : "false") << ",";
+    stream << "\"backendMode\":\"native-capture\",";
+    stream << "\"operation\":\"daemon_list_sessions\",";
+    stream << "\"daemon\":" << ToJson(status) << ",";
+    stream << "\"sessions\":[";
+    for (std::size_t index = 0; index < records.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << ToJson(NativeSessionFromDaemonRecord(records[index]));
+    }
+    stream << "],";
+    stream << "\"message\":\"Daemon sessions listed.\"";
+    stream << "}";
+    return stream.str();
+}
+
+std::string DaemonStartSessionJson(const std::vector<std::string>& args)
+{
+    const std::filesystem::path runtimeDirectory = DaemonRuntimeDirectoryFromArgs(args);
+    DaemonStatusInfo status = StartDaemonIfNeeded(runtimeDirectory);
+    DaemonSessionRecord record;
+    NativeSessionInfo session;
+    bool success = false;
+    std::uint32_t win32ErrorCode = 0;
+    std::string message;
+
+    do
+    {
+        if (!status.Success)
+        {
+            win32ErrorCode = status.Win32ErrorCode == 0 ? ERROR_SERVICE_NOT_ACTIVE : status.Win32ErrorCode;
+            message = "daemon_not_running";
+            break;
+        }
+
+        const std::string pidOption = GetOption(args, "--pid");
+        const std::uint32_t targetProcessId = pidOption == "self" ? GetCurrentProcessId() : GetUInt32Option(args, "--pid", 0);
+        const std::string knapmPath = GetOption(args, "--write-knapm");
+        if (targetProcessId == 0 || knapmPath.empty())
+        {
+            win32ErrorCode = ERROR_INVALID_PARAMETER;
+            message = "Missing --pid or --write-knapm.";
+            break;
+        }
+
+        for (const DaemonSessionRecord& existing : ReadAllDaemonSessionRecords(runtimeDirectory))
+        {
+            NativeSessionInfo existingSession = NativeSessionFromDaemonRecord(existing);
+            if (existing.TargetProcessId == targetProcessId && IsProcessAlive(existing.SessionProcessId) && existingSession.SessionState != "stopped")
+            {
+                session = existingSession;
+                win32ErrorCode = ERROR_ALREADY_EXISTS;
+                message = "already_supervised";
+                break;
+            }
+        }
+
+        if (win32ErrorCode != 0)
+        {
+            break;
+        }
+
+        const std::uint32_t durationMs = GetUInt32Option(args, "--duration-ms", 30000);
+        const std::uint32_t timeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
+        const std::string operationId = OperationIdFromArgs(args);
+        const std::string sessionId = SessionIdFromArgs(args, operationId);
+        const std::string cancellationEventName = CancellationEventNameForOperation(operationId);
+
+        std::uint32_t sessionProcessId = 0;
+        std::string launchError;
+        std::vector<std::string> childArgs = {
+            "attach-session",
+            "--pid",
+            std::to_string(targetProcessId),
+            "--duration-ms",
+            std::to_string(durationMs),
+            "--timeout-ms",
+            std::to_string(timeoutMs),
+            "--operation-id",
+            operationId,
+            "--session-id",
+            sessionId,
+            "--stream-batches",
+            "--write-knapm",
+            knapmPath,
+            "--owner-kind",
+            "persistent-daemon",
+            "--daemon-process-id",
+            std::to_string(status.DaemonProcessId),
+            "--daemon-instance-id",
+            status.DaemonInstanceId,
+            "--daemon-started-utc",
+            status.DaemonStartedUtc,
+            "--daemon-control-endpoint",
+            status.ControlEndpoint
+        };
+
+        const bool launched = LaunchBackgroundHelper(
+            childArgs,
+            DaemonLogsDirectory(runtimeDirectory) / PathFromUtf8(SanitizeFileName(sessionId) + ".stdout.log"),
+            DaemonLogsDirectory(runtimeDirectory) / PathFromUtf8(SanitizeFileName(sessionId) + ".stderr.log"),
+            &sessionProcessId,
+            &launchError);
+        if (!launched)
+        {
+            win32ErrorCode = ERROR_PROCESS_ABORTED;
+            message = launchError.empty() ? "session_start_failed" : launchError;
+            break;
+        }
+
+        record.SessionId = sessionId;
+        record.OperationId = operationId;
+        record.TargetProcessId = targetProcessId;
+        record.DaemonProcessId = status.DaemonProcessId;
+        record.DaemonInstanceId = status.DaemonInstanceId;
+        record.DaemonStartedUtc = status.DaemonStartedUtc;
+        record.DaemonControlEndpoint = status.ControlEndpoint;
+        record.SessionProcessId = sessionProcessId;
+        record.KnapmPath = knapmPath;
+        record.CancellationEventName = cancellationEventName;
+        record.StartedUtc = NowUtc();
+        record.DurationMs = durationMs;
+
+        std::string writeError;
+        if (!WriteDaemonSessionRecord(runtimeDirectory, record, &writeError))
+        {
+            win32ErrorCode = ERROR_WRITE_FAULT;
+            message = writeError;
+            break;
+        }
+
+        if (!WaitForKnapmOwnerKind(PathFromUtf8(knapmPath), "persistent-daemon", 5000))
+        {
+            win32ErrorCode = ERROR_TIMEOUT;
+            message = "session_start_failed";
+            break;
+        }
+
+        session = NativeSessionFromDaemonRecord(record);
+        success = true;
+        message = "Daemon session started.";
+    }
+    while (false);
+
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"success\":" << (success ? "true" : "false") << ",";
+    stream << "\"backendMode\":\"native-capture\",";
+    stream << "\"operation\":\"daemon_start_session\",";
+    stream << "\"daemon\":" << ToJson(status) << ",";
+    stream << "\"session\":" << ToJson(session) << ",";
+    stream << "\"sessionProcessId\":" << record.SessionProcessId << ",";
+    stream << "\"knapmPath\":" << Q(record.KnapmPath) << ",";
+    stream << "\"win32ErrorCode\":" << win32ErrorCode << ",";
+    stream << "\"message\":" << Q(message);
+    stream << "}";
+    return stream.str();
+}
+
+std::string DaemonStopSessionJson(const std::vector<std::string>& args)
+{
+    const std::filesystem::path runtimeDirectory = DaemonRuntimeDirectoryFromArgs(args);
+    const std::string sessionId = GetOption(args, "--session-id");
+    DaemonStatusInfo status = ReadDaemonStatus(runtimeDirectory);
+    DaemonSessionRecord record;
+    NativeSessionInfo session;
+    bool success = false;
+    std::uint32_t win32ErrorCode = 0;
+    std::string message;
+
+    do
+    {
+        if (sessionId.empty())
+        {
+            win32ErrorCode = ERROR_INVALID_PARAMETER;
+            message = "session_not_found";
+            break;
+        }
+
+        std::string readError;
+        if (!ReadDaemonSessionRecord(runtimeDirectory, sessionId, &record, &readError))
+        {
+            win32ErrorCode = ERROR_FILE_NOT_FOUND;
+            message = "session_not_found";
+            break;
+        }
+
+        session = NativeSessionFromDaemonRecord(record);
+        if (session.SessionState == "stopped")
+        {
+            success = true;
+            message = "Daemon session already stopped.";
+            break;
+        }
+
+        const std::string eventName = record.CancellationEventName.empty() ? CancellationEventNameForOperation(record.OperationId) : record.CancellationEventName;
+        const std::wstring wideEventName = Utf8ToWide(eventName);
+        HANDLE eventHandle = OpenEventW(EVENT_MODIFY_STATE, FALSE, wideEventName.c_str());
+        if (eventHandle == nullptr)
+        {
+            win32ErrorCode = GetLastError();
+            message = "control_endpoint_unavailable";
+            break;
+        }
+
+        if (!SetEvent(eventHandle))
+        {
+            win32ErrorCode = GetLastError();
+            CloseHandle(eventHandle);
+            message = "control_endpoint_unavailable";
+            break;
+        }
+        CloseHandle(eventHandle);
+
+        const ULONGLONG start = GetTickCount64();
+        while (GetTickCount64() - start < 15000)
+        {
+            session = NativeSessionFromDaemonRecord(record);
+            if (session.SessionState == "stopped" || !IsProcessAlive(record.SessionProcessId))
+            {
+                break;
+            }
+
+            Sleep(100);
+        }
+
+        session = NativeSessionFromDaemonRecord(record);
+        if (session.SessionState == "stopped")
+        {
+            success = true;
+            message = "Daemon session stopped.";
+        }
+        else
+        {
+            win32ErrorCode = ERROR_TIMEOUT;
+            message = "stop_timeout";
+        }
+    }
+    while (false);
+
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"success\":" << (success ? "true" : "false") << ",";
+    stream << "\"backendMode\":\"native-capture\",";
+    stream << "\"operation\":\"daemon_stop_session\",";
+    stream << "\"daemon\":" << ToJson(status) << ",";
+    stream << "\"session\":" << ToJson(session) << ",";
+    stream << "\"win32ErrorCode\":" << win32ErrorCode << ",";
+    stream << "\"message\":" << Q(message);
+    stream << "}";
+    return stream.str();
+}
+
+std::string DaemonStopJson(const std::vector<std::string>& args)
+{
+    const std::filesystem::path runtimeDirectory = DaemonRuntimeDirectoryFromArgs(args);
+    const auto records = ReadAllDaemonSessionRecords(runtimeDirectory);
+    for (const DaemonSessionRecord& record : records)
+    {
+        std::vector<std::string> stopArgs = {
+            "daemon-stop-session",
+            "--runtime-dir",
+            PathToUtf8(runtimeDirectory),
+            "--session-id",
+            record.SessionId
+        };
+        DaemonStopSessionJson(stopArgs);
+    }
+
+    std::string writeError;
+    WriteTextFile(DaemonStopFlagPath(runtimeDirectory), "stop\n", &writeError);
+
+    DaemonStatusInfo status = ReadDaemonStatus(runtimeDirectory);
+    const ULONGLONG start = GetTickCount64();
+    while (IsProcessAlive(status.DaemonProcessId) && GetTickCount64() - start < 5000)
+    {
+        Sleep(100);
+    }
+
+    status = ReadDaemonStatus(runtimeDirectory);
+    status.Operation = "daemon_stop";
+    status.Success = !IsProcessAlive(status.DaemonProcessId);
+    status.DaemonState = status.Success ? "stopped" : "stop_timeout";
+    status.Win32ErrorCode = status.Success ? 0 : ERROR_TIMEOUT;
+    status.Message = status.Success ? "Daemon stopped." : "stop_timeout";
+    return ToJson(status);
+}
+
 void PrintUsage()
 {
     std::cout << "{";
     std::cout << "\"schemaVersion\":\"0.1.0\",";
     std::cout << "\"success\":false,";
-    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
+    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-start-session --pid pid --write-knapm path [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
     std::cout << "}\n";
 }
 }
@@ -4127,6 +5231,47 @@ int wmain(int argc, wchar_t** argv)
     if (args[0] == "attach-session")
     {
         return AttachSessionCommand(args);
+    }
+
+    if (args[0] == "daemon-run")
+    {
+        return DaemonRunCommand(args);
+    }
+
+    if (args[0] == "daemon-start")
+    {
+        std::cout << DaemonStartJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "daemon-status")
+    {
+        std::cout << DaemonStatusJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "daemon-start-session")
+    {
+        std::cout << DaemonStartSessionJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "daemon-list-sessions")
+    {
+        std::cout << DaemonListSessionsJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "daemon-stop-session")
+    {
+        std::cout << DaemonStopSessionJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "daemon-stop")
+    {
+        std::cout << DaemonStopJson(args) << "\n";
+        return 0;
     }
 
     if (args[0] == "supervise-tree")

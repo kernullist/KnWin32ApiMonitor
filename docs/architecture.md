@@ -6,7 +6,7 @@
 
 This document describes the current Phase 0/Phase 1 foundation and the controlled native-capture paths for `KN Win32 API Monitor`.
 
-The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, a Phase 11B helper-side process-tree supervision foundation for deterministic sample children, Phase 11C UI controls for bounded selected-target attach and process-tree supervision, a Phase 11D repeated attach state path for self-disabled loaded agents, a Phase 11E collector-core shared transport reader foundation, Phase 11F cancellation-safe operation ownership for bounded attach and process-tree helper commands, Phase 11G durable native session ownership readiness with host-side threaded transport reading and stale session classification, Phase 11H bounded UI streaming session batches, Phase 11I durable `.knapm` chunk writing and indexed replay, Phase 11J `.knapm` restart/recovery ownership classification, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, persistent attach daemons, unbounded arbitrary-target streaming, or broad arbitrary target supervision.
+The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, a Phase 11B helper-side process-tree supervision foundation for deterministic sample children, Phase 11C UI controls for bounded selected-target attach and process-tree supervision, a Phase 11D repeated attach state path for self-disabled loaded agents, a Phase 11E collector-core shared transport reader foundation, Phase 11F cancellation-safe operation ownership for bounded attach and process-tree helper commands, Phase 11G durable native session ownership readiness with host-side threaded transport reading and stale session classification, Phase 11H bounded UI streaming session batches, Phase 11I durable `.knapm` chunk writing and indexed replay, Phase 11J `.knapm` restart/recovery ownership classification, Phase 11K host-side persistent daemon supervision foundation, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, Windows service mode, automatic daemon crash recovery, unbounded arbitrary-target streaming, or broad arbitrary target supervision.
 
 ## Layers
 
@@ -54,13 +54,13 @@ Responsibilities:
 4. Maintain selected-event inspector state.
 5. Export the current event list as JSONL.
 6. Preserve the same event shape intended for future collector events.
-7. In Tauri desktop mode, select a native target and invoke bounded attach or process-tree helper commands with explicit eligibility and audit output.
+7. In Tauri desktop mode, select a native target and invoke bounded attach, daemon-supervised attach, or process-tree helper commands with explicit eligibility and audit output.
 
 Current backend modes:
 
 - `mock`: Browser/Vite mode and mock Tauri target list.
 - `native-enum`: Tauri command calls `knmon-native-helper.exe list-targets`.
-- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof, `capture-sample` for bounded controlled File I/O capture, `capture-sample --write-session` for persisted legacy sessions, `replay-session` for legacy or `.knapm` disk replay, `attach-capture --pid` for bounded selected-target attach, `attach-session --stream-batches` for bounded UI streaming attach sessions, `attach-session --stream-batches --write-knapm` for durable chunk writing, or `supervise-tree --pid` for process-tree observation/attach-supported policy evaluation.
+- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof, `capture-sample` for bounded controlled File I/O capture, `capture-sample --write-session` for persisted legacy sessions, `replay-session` for legacy or `.knapm` disk replay, `attach-capture --pid` for bounded selected-target attach, `attach-session --stream-batches` for bounded UI streaming attach sessions, `attach-session --stream-batches --write-knapm` for durable chunk writing, `daemon-start-session --write-knapm` for daemon-owned durable sessions, or `supervise-tree --pid` for process-tree observation/attach-supported policy evaluation.
 
 ## Rust/Tauri Command Layer
 
@@ -89,13 +89,18 @@ Current commands:
 16. `start_streaming_attach_session`
 17. `drain_native_trace_batches`
 18. `replay_session_path`
+19. `start_daemon_if_needed`
+20. `native_daemon_status`
+21. `list_daemon_sessions`
+22. `start_daemon_supervised_session`
+23. `stop_daemon_session`
 
-These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, bounded sample File I/O capture, bounded same-bitness selected-target attach, helper-side process-tree supervision, cancellation-safe ownership for those bounded helper operations, host-side session state visibility, bounded streaming trace batches for a selected same-bitness attach session, and replay by explicit session path. The attach and process-tree UI controls still use finite helper commands and local host-side registries; they do not create a persistent broad attached daemon or injected command channel.
+These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, bounded sample File I/O capture, bounded same-bitness selected-target attach, helper-side process-tree supervision, cancellation-safe ownership for bounded helper operations, host-side session state visibility, bounded streaming trace batches for a selected same-bitness attach session, daemon-owned durable `.knapm` session supervision, and replay by explicit session path. The daemon commands use a normal user-mode helper process and local file-registry control endpoint; they do not create a Windows service, injected command channel, cross-bitness broker, protected-process bypass, or automatic orphan repair path.
 
 Future work:
 
-1. Promote bounded streaming sessions into a persistent daemon only after the Phase 11J ownership/recovery contract remains stable.
-2. Add explicit command allowlists for persistent attach, detach, start, stop, and export.
+1. Harden daemon crash classification and stale registry cleanup before implementing automatic recovery.
+2. Add explicit command allowlists for future export/catalog operations.
 3. Preserve subsystem, operation, and native error codes in all failures.
 
 ## Native Controller
@@ -115,15 +120,15 @@ Current responsibilities:
 9. Implement cancellation checks and cleanup accounting for bounded attach and process-tree operations.
 10. Populate additive host-side session state fields for bounded attach and process-tree results.
 11. Emit bounded host-side trace batch callbacks for attach-session streaming without adding agent hook-path work.
-12. Keep broad arbitrary attach, persistent daemon supervision, and UI-driven child auto-attach outside the current controller surface.
+12. Keep broad arbitrary attach, Windows service mode, daemon crash recovery, and UI-driven child auto-attach outside the current controller surface.
 
-The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, bounded sample File I/O capture, Phase 11A attach, Phase 11B process-tree supervision, Phase 11D loaded-agent reattach state, Phase 11E collector-reader backed shared-memory drain, Phase 11F named-event cancellation, Phase 11G session-state evidence, Phase 11H streaming `trace_batch` frames, Phase 11I `.knapm` chunk persistence, and Phase 11J `.knapm` recovery classification. The UI-visible Phase 11C/11F/11G/11H path uses the same helper JSON/JSONL as the smoke scripts.
+The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, bounded sample File I/O capture, Phase 11A attach, Phase 11B process-tree supervision, Phase 11D loaded-agent reattach state, Phase 11E collector-reader backed shared-memory drain, Phase 11F named-event cancellation, Phase 11G session-state evidence, Phase 11H streaming `trace_batch` frames, Phase 11I `.knapm` chunk persistence, Phase 11J `.knapm` recovery classification, and Phase 11K daemon-owned session supervision. The UI-visible Phase 11C/11F/11G/11H/11K path uses the same helper JSON/JSONL as the smoke scripts.
 
 Future responsibilities:
 
 1. Launch suspended targets.
-2. Persistent long-running attach/detach sessions for selected targets.
-3. Supervise long-running agent lifecycle.
+2. Harden persistent daemon-owned sessions for selected targets.
+3. Classify daemon crash and orphaned agent states before any automatic repair.
 4. Manage persistent child process auto-attach policy.
 5. Promote host-side threaded reader output to full UI event streaming after daemon ownership is reviewed.
 
@@ -194,6 +199,7 @@ Current UI attach/supervision flow:
 6. The UI maps attach and child attach `capturedEvents` into the same trace table as sample capture, adding context tags such as `ui-attach`, `process-tree`, `target:<pid>`, or `child:<pid>`.
 7. The output inspector remains available even when a failed helper command produces zero trace rows, so audit and typed failure evidence are visible.
 8. The UI uses `self-disable-no-unload` wording, shows first-load vs loaded-agent reattach state, and does not leave an "attached/live" state after a bounded helper command completes.
+9. The UI can start a daemon-supervised session for a selected target, show daemon PID and `.knapm` path, and stop it through `daemon-stop-session` without adding a broad service manager.
 
 Current shared-memory transport behavior:
 
@@ -241,8 +247,8 @@ The shared transport reader smoke also does not launch, inject, attach, or consu
 Future behavior:
 
 1. Add high-volume multi-threaded transport after the bounded policy stays stable.
-2. Promote streaming sessions into a persistent daemon only after the Phase 11J ownership and recovery contract remains stable.
-3. Add zstd compression and metadata-database indexing after the inspectable `.knapm` contract stays stable.
+2. Harden daemon crash classification and stale registry cleanup before automatic writer recovery.
+3. Add zstd compression and metadata-database indexing after daemon-owned uncompressed `.knapm` validation stays stable.
 
 ## Agents
 
@@ -357,9 +363,9 @@ Current helper session formats:
 1. Legacy directory: `manifest.json`, `audit.jsonl`, `agent-events.jsonl`, and `trace-events.jsonl`.
 2. Directory-backed `.knapm`: `manifest.json`, `index.json`, `audit.jsonl`, `agent-events.jsonl`, and `chunks/trace-000NNN.jsonl`.
 
-`capture-sample --write-session <dir>` and `attach-capture --pid <pid> --write-session <dir>` write bounded captures to legacy session directories. `attach-session --stream-batches --write-knapm <path.knapm>` writes one trace-compatible chunk per non-empty `trace_batch` frame while the helper continues to emit JSONL frames to stdout.
+`capture-sample --write-session <dir>` and `attach-capture --pid <pid> --write-session <dir>` write bounded captures to legacy session directories. `attach-session --stream-batches --write-knapm <path.knapm>` writes one trace-compatible chunk per non-empty `trace_batch` frame while the helper continues to emit JSONL frames to stdout. `daemon-start-session --write-knapm <path.knapm>` starts a daemon-owned same-bitness attach session and writes the same `.knapm` format with `ownerKind=persistent-daemon`.
 
-`validate-session --session <dir-or-knapm>` auto-detects legacy vs `.knapm`. Legacy validation checks the manifest, required files, HELLO architecture/version evidence, dropped-event accounting event, shutdown lifecycle event, clean hook restore counts, and non-empty trace rows. `.knapm` validation checks manifest/index identity, chunk count, SHA-256, byte length, contiguous batch sequence, monotonic record ranges, finalized vs partial writer state, owner/checkpoint/recovery metadata, read-only finalized/owned/stale/recovery-required/legacy/malformed classification, and final counter consistency. `replay-session --session <dir-or-knapm>` validates first, then returns a `session-replay` result without launching, injecting, or mutating a target process.
+`validate-session --session <dir-or-knapm>` auto-detects legacy vs `.knapm`. Legacy validation checks the manifest, required files, HELLO architecture/version evidence, dropped-event accounting event, shutdown lifecycle event, clean hook restore counts, and non-empty trace rows. `.knapm` validation checks manifest/index identity, chunk count, SHA-256, byte length, contiguous batch sequence, monotonic record ranges, finalized vs partial writer state, owner/checkpoint/recovery metadata, daemon owner metadata where present, read-only finalized/owned/stale/recovery-required/legacy/malformed classification, and final counter consistency. `replay-session --session <dir-or-knapm>` validates first, then returns a `session-replay` result without launching, injecting, or mutating a target process.
 
 The default UI session path is `captures/latest-sample-fileio`. Generated session directories remain ignored by git; test fixtures live under `tests/fixtures/session`.
 
@@ -441,7 +447,7 @@ Future session work:
 
 - Metadata database for large replay catalogs.
 - Zstd event chunks.
-- Persistent daemon-owned session lifecycle and export tools built on the Phase 11J ownership contract.
+- Daemon crash hardening, stale registry cleanup, replay catalogs, and export tools built on the Phase 11K daemon-owned `.knapm` contract.
 
 ## Safety Rules
 

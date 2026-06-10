@@ -83,6 +83,69 @@ pub struct NativeSession
     pub elapsed_ms: u64,
     #[serde(default)]
     pub duration_ms: u32,
+    #[serde(default)]
+    pub daemon_process_id: u32,
+    #[serde(default)]
+    pub daemon_instance_id: String,
+    #[serde(default)]
+    pub daemon_started_utc: String,
+    #[serde(default)]
+    pub daemon_heartbeat_utc: String,
+    #[serde(default)]
+    pub daemon_control_endpoint: String,
+    #[serde(default)]
+    pub knapm_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeDaemonStatus
+{
+    pub schema_version: String,
+    pub success: bool,
+    pub backend_mode: String,
+    pub operation: String,
+    pub daemon_state: String,
+    pub daemon_process_id: u32,
+    pub daemon_instance_id: String,
+    pub daemon_started_utc: String,
+    pub daemon_heartbeat_utc: String,
+    pub control_endpoint: String,
+    pub runtime_directory: String,
+    pub session_count: u64,
+    pub win32_error_code: u32,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeDaemonSessionResult
+{
+    pub schema_version: String,
+    pub success: bool,
+    pub backend_mode: String,
+    pub operation: String,
+    pub daemon: NativeDaemonStatus,
+    pub session: NativeSession,
+    #[serde(default)]
+    pub session_process_id: u32,
+    #[serde(default)]
+    pub knapm_path: String,
+    pub win32_error_code: u32,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeDaemonSessionList
+{
+    pub schema_version: String,
+    pub success: bool,
+    pub backend_mode: String,
+    pub operation: String,
+    pub daemon: NativeDaemonStatus,
+    pub sessions: Vec<NativeSession>,
+    pub message: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -711,6 +774,12 @@ fn session_view(record: &NativeOperationRecord) -> NativeSession
         last_error: record.last_error.clone(),
         elapsed_ms,
         duration_ms: record.duration_ms,
+        daemon_process_id: 0,
+        daemon_instance_id: String::new(),
+        daemon_started_utc: String::new(),
+        daemon_heartbeat_utc: String::new(),
+        daemon_control_endpoint: String::new(),
+        knapm_path: String::new(),
     }
 }
 
@@ -1147,6 +1216,97 @@ pub fn start_streaming_attach_session(process_id: u32, duration_ms: u32) -> Resu
         .get(&operation_id)
         .map(session_view)
         .ok_or_else(|| format!("streaming session not found after start: {session_id}"))
+}
+
+pub fn start_daemon_if_needed() -> Result<NativeDaemonStatus, String>
+{
+    let helper_output = run_helper_args(&[
+        "daemon-start".to_string(),
+        "--runtime-dir".to_string(),
+        default_daemon_runtime_path().to_string_lossy().to_string(),
+    ])?;
+    let status: NativeDaemonStatus = parse_helper_json(&helper_output, "daemon-start")?;
+    if !status.success
+    {
+        return Err(format!("{} failed with {}: {}", status.operation, status.win32_error_code, status.message));
+    }
+
+    Ok(status)
+}
+
+pub fn native_daemon_status() -> Result<NativeDaemonStatus, String>
+{
+    let helper_output = run_helper_args(&[
+        "daemon-status".to_string(),
+        "--runtime-dir".to_string(),
+        default_daemon_runtime_path().to_string_lossy().to_string(),
+    ])?;
+    parse_helper_json(&helper_output, "daemon-status")
+}
+
+pub fn start_daemon_supervised_session(process_id: u32, duration_ms: u32) -> Result<NativeSession, String>
+{
+    let duration = normalize_duration_ms(duration_ms);
+    let helper_timeout = helper_inner_timeout_ms(duration);
+    let operation_id = new_operation_id("ui-daemon", process_id);
+    let session_id = new_session_id(&operation_id);
+    let session_path = default_daemon_session_path(&session_id);
+
+    let helper_output = run_helper_args(&[
+        "daemon-start-session".to_string(),
+        "--runtime-dir".to_string(),
+        default_daemon_runtime_path().to_string_lossy().to_string(),
+        "--pid".to_string(),
+        process_id.to_string(),
+        "--duration-ms".to_string(),
+        duration.to_string(),
+        "--timeout-ms".to_string(),
+        helper_timeout.to_string(),
+        "--operation-id".to_string(),
+        operation_id,
+        "--session-id".to_string(),
+        session_id,
+        "--write-knapm".to_string(),
+        session_path.to_string_lossy().to_string(),
+    ])?;
+
+    let result: NativeDaemonSessionResult = parse_helper_json(&helper_output, "daemon-start-session")?;
+    if !result.success
+    {
+        return Err(format!("{} failed with {}: {}", result.operation, result.win32_error_code, result.message));
+    }
+
+    Ok(result.session)
+}
+
+pub fn native_daemon_sessions() -> Result<Vec<NativeSession>, String>
+{
+    let helper_output = run_helper_args(&[
+        "daemon-list-sessions".to_string(),
+        "--runtime-dir".to_string(),
+        default_daemon_runtime_path().to_string_lossy().to_string(),
+    ])?;
+    let result: NativeDaemonSessionList = parse_helper_json(&helper_output, "daemon-list-sessions")?;
+    Ok(result.sessions)
+}
+
+pub fn stop_daemon_session(session_id: String) -> Result<NativeSession, String>
+{
+    let helper_output = run_helper_args(&[
+        "daemon-stop-session".to_string(),
+        "--runtime-dir".to_string(),
+        default_daemon_runtime_path().to_string_lossy().to_string(),
+        "--session-id".to_string(),
+        session_id,
+    ])?;
+
+    let result: NativeDaemonSessionResult = parse_helper_json(&helper_output, "daemon-stop-session")?;
+    if !result.success
+    {
+        return Err(format!("{} failed with {}: {}", result.operation, result.win32_error_code, result.message));
+    }
+
+    Ok(result.session)
 }
 
 pub fn drain_native_trace_batches(session_id: String, after_batch_sequence: u64) -> Result<Vec<NativeTraceBatch>, String>
@@ -1595,6 +1755,19 @@ fn repo_root_path() -> PathBuf
 fn default_session_path() -> PathBuf
 {
     repo_root_path().join("captures").join("latest-sample-fileio")
+}
+
+fn default_daemon_runtime_path() -> PathBuf
+{
+    repo_root_path().join("captures").join("daemon-runtime")
+}
+
+fn default_daemon_session_path(session_id: &str) -> PathBuf
+{
+    repo_root_path()
+        .join("captures")
+        .join("daemon-sessions")
+        .join(format!("{}.knapm", sanitize_event_part(session_id)))
 }
 
 fn find_helper_path() -> Option<PathBuf>

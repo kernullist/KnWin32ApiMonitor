@@ -28,14 +28,17 @@ import {
   captureSampleFileIoSession,
   drainNativeTraceBatches,
   launchSampleEarlyBirdCapture,
+  listDaemonSessions,
   listNativeSessions,
   listNativeTargetProcesses,
   listNativeOperations,
   listTargetProcesses,
   replayLastSampleSession,
   startBackendSession,
+  startDaemonSupervisedSession,
   startStreamingAttachSession,
   stopBackendSession,
+  stopDaemonSession,
   stopNativeSession,
   superviseProcessTree
 } from "./backend";
@@ -307,6 +310,10 @@ function isNativeSessionActive(session: NativeSession): boolean {
   return ["created", "starting", "running", "stop_requested", "stopping_agent", "draining"].includes(session.sessionState);
 }
 
+function isDaemonSession(session: NativeSession): boolean {
+  return session.sessionKind.startsWith("daemon_") || session.daemonProcessId > 0;
+}
+
 function formatElapsedMs(value: number): string {
   return `${(value / 1000).toFixed(1)}s`;
 }
@@ -460,13 +467,15 @@ function App() {
 
     const refreshNativeOwnership = async () => {
       try {
-        const [operations, sessions] = await Promise.all([
+        const [operations, sessions, daemonSessions] = await Promise.all([
           listNativeOperations(),
-          listNativeSessions()
+          listNativeSessions(),
+          listDaemonSessions()
         ]);
         if (active) {
           setNativeOperations(operations);
-          setNativeSessions(sessions);
+          const daemonIds = new Set(daemonSessions.map((session) => session.sessionId));
+          setNativeSessions([...daemonSessions, ...sessions.filter((session) => !daemonIds.has(session.sessionId))]);
         }
       } catch (error) {
         if (active) {
@@ -520,6 +529,10 @@ function App() {
 
   useEffect(() => {
     if (!activeNativeSession) {
+      return undefined;
+    }
+
+    if (isDaemonSession(activeNativeSession)) {
       return undefined;
     }
 
@@ -746,6 +759,32 @@ function App() {
     }
   }
 
+  async function handleStartDaemonSession() {
+    if (!selectedTarget || targetBlockReason) {
+      appendOutput([makeAuditEvent("daemon_session_blocked", "start_daemon_supervised_session", targetBlockReason ?? "No target selected.")]);
+      setInspectorTab("output");
+      return;
+    }
+
+    setNativeBusy(true);
+
+    try {
+      appendOutput([makeAuditEvent("daemon_session_requested", "start_daemon_supervised_session", `Daemon-supervised attach requested for PID ${selectedTarget.pid}.`)]);
+      const session = await startDaemonSupervisedSession(selectedTarget.pid, attachDurationMs);
+      setNativeSessions((current) => {
+        const remaining = current.filter((item) => item.sessionId !== session.sessionId);
+        return [session, ...remaining];
+      });
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("daemon_session_blocked", "start_daemon_supervised_session", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
   async function handleSuperviseSelectedTree() {
     if (!selectedTarget || targetBlockReason) {
       appendOutput([makeAuditEvent("process_tree_blocked", "supervise_process_tree", targetBlockReason ?? "No target selected.")]);
@@ -812,7 +851,9 @@ function App() {
 
     try {
       appendOutput([makeAuditEvent("session_stop_requested", "stop_native_session", activeNativeSession.sessionId)]);
-      const session = await stopNativeSession(activeNativeSession.sessionId);
+      const session = isDaemonSession(activeNativeSession)
+        ? await stopDaemonSession(activeNativeSession.sessionId)
+        : await stopNativeSession(activeNativeSession.sessionId);
       setNativeSessions((current) => {
         const remaining = current.filter((item) => item.sessionId !== session.sessionId);
         return [session, ...remaining];
@@ -964,6 +1005,8 @@ function App() {
                       <span>Stop</span>
                     </button>
                     {activeNativeSession.helperProcessId ? <small>helper {activeNativeSession.helperProcessId}</small> : null}
+                    {activeNativeSession.daemonProcessId ? <small>daemon {activeNativeSession.daemonProcessId}</small> : null}
+                    {activeNativeSession.knapmPath ? <small title={activeNativeSession.knapmPath}>{activeNativeSession.knapmPath}</small> : null}
                     {activeNativeSession.staleReason ? <small>{activeNativeSession.staleReason}</small> : null}
                     {activeNativeSession.lastError ? <small>{activeNativeSession.lastError}</small> : null}
                   </div>
@@ -992,6 +1035,10 @@ function App() {
                     <button type="button" className="tool-button" onClick={handleStartStreamingAttach} disabled={!canRunTargetAction}>
                       <Activity size={13} />
                       <span>Start Stream</span>
+                    </button>
+                    <button type="button" className="tool-button" onClick={handleStartDaemonSession} disabled={!canRunTargetAction}>
+                      <HardDrive size={13} />
+                      <span>Daemon</span>
                     </button>
                   </div>
                   {attachResult ? (

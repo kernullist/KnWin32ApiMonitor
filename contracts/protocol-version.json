@@ -79,7 +79,17 @@
     "knapmOwnerKinds": ["bounded-helper", "persistent-daemon"],
     "knapmRecoveryStates": ["none", "owned", "stale", "recovery_required", "recovered", "abandoned", "malformed", "legacy"],
     "knapmRecoveryActions": ["none", "wait", "replay_only", "recover_writer", "mark_abandoned", "manual_inspection"],
-    "knapmRecoveryBoundary": "Phase 11J classifies ownership and restart eligibility without target mutation; persistent daemon recovery remains future work",
+    "knapmRecoveryBoundary": "Phase 11J classifies ownership and restart eligibility without target mutation; daemon crash recovery remains future work",
+    "persistentDaemonFoundation": {
+      "phase": "11K",
+      "commands": ["daemon-start", "daemon-status", "daemon-start-session", "daemon-list-sessions", "daemon-stop-session", "daemon-stop"],
+      "ownerKind": "persistent-daemon",
+      "controlEndpoint": "file-registry",
+      "daemonStatusSchema": "native-daemon-status.schema.json",
+      "serviceMode": false,
+      "crashRecovery": false,
+      "sameBitnessOnly": true
+    },
     "replayCaptureMode": "session-replay",
     "controlledSampleOnly": true
   },

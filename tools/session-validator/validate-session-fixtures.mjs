@@ -330,6 +330,17 @@ function validateKnapmOwnership(manifest, manifestLabel, errors) {
     requireString(owner[field], `owner.${field}`, manifestLabel, errors);
   }
 
+  if (owner.ownerKind === "persistent-daemon") {
+    requireNumber(owner.daemonProcessId, "owner.daemonProcessId", manifestLabel, errors);
+    if (owner.daemonProcessId === 0) {
+      errors.push(`${manifestLabel}: owner.daemonProcessId must be greater than zero`);
+    }
+
+    for (const field of ["daemonInstanceId", "daemonStartedUtc", "daemonHeartbeatUtc", "controlEndpoint"]) {
+      requireString(owner[field], `owner.${field}`, manifestLabel, errors);
+    }
+  }
+
   for (const field of ["lastCommittedChunkSequence", "lastCommittedBatchSequence", "lastCommittedRecordSequence", "lastCommittedEventId"]) {
     requireNumber(checkpoint[field], `checkpoint.${field}`, manifestLabel, errors);
   }
@@ -661,7 +672,10 @@ const results = [
   validateKnapmFixture("knapm-stale-target-exited.knapm", true),
   validateKnapmFixture("knapm-recovery-required-owner-dead.knapm", true),
   validateKnapmFixture("knapm-lease-expired.knapm", true),
+  validateKnapmFixture("knapm-daemon-finalized.knapm", true),
+  validateKnapmFixture("knapm-daemon-running.knapm", true),
   validateKnapmFixture("knapm-malformed-owner.knapm", false),
+  validateKnapmFixture("knapm-malformed-daemon-owner.knapm", false),
   validateKnapmFixture("knapm-missing-index.knapm", false),
   validateKnapmFixture("knapm-missing-chunk.knapm", false),
   validateKnapmFixture("knapm-bad-hash.knapm", false),
