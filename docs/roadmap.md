@@ -512,7 +512,7 @@ Next implementation focus:
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 
-Status: Phase 11A, Phase 11B, Phase 11C, and Phase 11E foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, and the pull-based collector reader foundation for shared transport drain are implemented; persistent daemon supervision, threaded streaming collector sessions, and repeated same-process reattach remain future work.
+Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, and Phase 11E foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, and the pull-based collector reader foundation for shared transport drain are implemented; persistent daemon supervision, threaded streaming collector sessions, and cancellation-safe operation ownership remain future work.
 
 Goal:
 
@@ -566,7 +566,18 @@ Current verified Phase 11C behavior:
 5. `Supervise` invokes `supervise_process_tree`, which runs helper `supervise-tree --pid <pid> --duration-ms <ms> --child-policy observe|attach-supported` with a bounded wrapper timeout.
 6. Process-tree results render root PID, child policy, process nodes, policy decisions, mutation-attempt count, audit output, and child attach summaries.
 7. Attach-supported child attach events map into the trace table with `process-tree` and child PID context tags.
-8. The UI does not claim persistent attach, safe DLL unload, cross-bitness attach, protected-process bypass, or broad arbitrary target support.
+8. The UI renders attach state, attach strategy, and loaded-agent detection evidence without claiming persistent attach, safe DLL unload, cross-bitness attach, protected-process bypass, or broad arbitrary target support.
+
+Current verified Phase 11D behavior:
+
+1. `capture-result` includes additive attach evidence fields: `attachState`, `attachStrategy`, `loadedAgentDetected`, `loadedAgentModuleBase`, `loadedAgentPath`, `agentControlStatus`, and `agentAbiVersion`.
+2. `KnMonAgentQueryState` reports lifecycle, active/busy/resettable flags, hook lifecycle counts, dropped-event count, current operation id, packed agent version, and attach ABI version.
+3. First attach to an unloaded supported target reports `attachState=not_loaded` and `attachStrategy=load_library_initialize`.
+4. A second attach to the same still-running process after `self-disable-no-unload` detects the loaded disabled agent and reports `attachState=loaded_disabled`, `attachStrategy=loaded_agent_reinitialize`, and `loadedAgentDetected=true`.
+5. Loaded-agent reattach skips another `LoadLibraryW`, uses the loaded module base plus export RVA resolution, and passes a fresh operation id, named pipe, and shared-memory transport mapping to `KnMonAgentInitialize`.
+6. Active or busy loaded agents fail as `already_instrumented` before pipe/transport setup or remote mutation.
+7. Agent reinitialization is allowed only from disabled/resettable state after all installed hooks are restored and failed hook count is zero.
+8. `tools/native-smoke/repeated-attach-state-smoke.ps1` verifies x64/x86 repeated attach success and x64 active loaded-agent rejection.
 
 Current verified Phase 11E behavior:
 
@@ -581,11 +592,10 @@ Current verified Phase 11E behavior:
 
 Next implementation focus:
 
-1. Design repeated same-process attach after self-disable, including loaded-agent detection, deterministic already-running status, and a typed "already instrumented" state.
-2. Add persistent supervision state only after cancellation, lifecycle ownership, recovery behavior, and stale-agent detection are specified.
-3. Add UI-level cancellation/progress only after the bounded helper command model has a durable operation-state contract.
-4. Promote the pull-based reader to a threaded streaming collector only after long-running session ownership, shutdown, and recovery contracts exist.
-5. Keep protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
+1. Add persistent supervision state only after cancellation, lifecycle ownership, recovery behavior, and stale-agent recovery policy are specified.
+2. Add UI-level cancellation/progress only after the bounded helper command model has a durable operation-state contract.
+3. Promote the pull-based reader to a threaded streaming collector only after long-running session ownership, shutdown, and recovery contracts exist.
+4. Keep protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 
 ## Phase 12: Advanced UX
 

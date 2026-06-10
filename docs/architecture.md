@@ -6,7 +6,7 @@
 
 This document describes the current Phase 0/Phase 1 foundation and the controlled native-capture paths for `KN Win32 API Monitor`.
 
-The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, a Phase 11B helper-side process-tree supervision foundation for deterministic sample children, Phase 11C UI controls for bounded selected-target attach and process-tree supervision, a Phase 11E collector-core shared transport reader foundation, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, persistent attach daemons, threaded streaming collector sessions, or broad arbitrary target supervision.
+The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, a Phase 11B helper-side process-tree supervision foundation for deterministic sample children, Phase 11C UI controls for bounded selected-target attach and process-tree supervision, a Phase 11D repeated attach state path for self-disabled loaded agents, a Phase 11E collector-core shared transport reader foundation, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, persistent attach daemons, threaded streaming collector sessions, or broad arbitrary target supervision.
 
 ## Layers
 
@@ -107,12 +107,12 @@ Current responsibilities:
 8. Implement bounded helper-side `supervise-tree --pid` process-tree discovery and child policy evaluation.
 9. Keep broad arbitrary attach, persistent daemon supervision, and UI-driven child auto-attach outside the current controller surface.
 
-The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, bounded sample File I/O capture, Phase 11A attach, and Phase 11B process-tree supervision. The UI-visible Phase 11C path uses the same helper JSON as the smoke scripts.
+The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, bounded sample File I/O capture, Phase 11A attach, Phase 11B process-tree supervision, Phase 11D loaded-agent reattach state, and Phase 11E collector-reader backed shared-memory drain. The UI-visible Phase 11C path uses the same helper JSON as the smoke scripts.
 
 Future responsibilities:
 
 1. Launch suspended targets.
-2. Repeated attach/detach to selected targets.
+2. Persistent attach/detach operation ownership for selected targets.
 3. Supervise long-running agent lifecycle.
 4. Manage persistent child process auto-attach policy.
 5. Move the pull-based collector reader into a threaded streaming reader only after persistent session ownership is specified.
@@ -154,13 +154,14 @@ Current running-process attach behavior:
 1. The sample target can run as `knmon-sample-fileio.exe --attach-loop --iterations N --delay-ms N` before the helper injects anything.
 2. `attach-capture --pid <pid>` queries process snapshot metadata, target architecture, protection state where detectable, agent DLL architecture, and required mutation-handle access before remote mutation.
 3. PID `0`, PID `4`, the helper process itself, missing targets, missing agents, agent/helper mismatch, and helper/target mismatch fail during preflight with typed operations.
-4. For supported same-bitness non-protected targets, the controller creates the named pipe and shared-memory transport before remote mutation.
-5. The controller writes the absolute agent path and a fixed-size `KnMonAttachConfigV1` structure into remote memory.
-6. Remote `LoadLibraryW` loads the same-bitness agent DLL.
-7. The controller resolves exported agent entrypoints by local export RVA plus remote module base, then calls `KnMonAgentInitialize` with the remote attach config.
-8. Attach configuration carries the operation id, named pipe, transport mapping name, attach mode, ABI version, and future reserved fields. It does not rely on target environment variables.
-9. The controller drains shared-memory API records for a bounded duration, calls `KnMonAgentStop`, waits for `agent_shutdown reason=self_disable`, and releases remote buffers when possible.
-10. Phase 11A detach means hooks restored and agent disabled. The DLL is intentionally not unloaded.
+4. Before creating attach IPC for a supported same-bitness non-protected target, the controller checks the target module list for the expected agent DLL.
+5. If no agent DLL is loaded, the controller creates a fresh named pipe/shared-memory transport, writes the absolute agent path and `KnMonAttachConfigV1` into remote memory, and uses remote `LoadLibraryW` before calling `KnMonAgentInitialize`.
+6. If the agent DLL is already loaded, the controller resolves `KnMonAgentQueryState` by local export RVA plus remote module base, queries lifecycle/ABI/resettable evidence, and only reuses the loaded module when it reports a self-disabled resettable state.
+7. A loaded resettable agent gets a fresh operation id, named pipe, transport mapping, and attach config, then restarts through `KnMonAgentInitialize` without another blind `LoadLibraryW`.
+8. A loaded active or busy agent fails as `already_instrumented` before pipe/transport setup or remote mutation.
+9. Attach configuration carries the operation id, named pipe, transport mapping name, attach mode, ABI version, and future reserved fields. It does not rely on target environment variables.
+10. The controller drains shared-memory API records for a bounded duration, calls `KnMonAgentStop`, waits for `agent_shutdown reason=self_disable`, and releases remote buffers when possible.
+11. Detach means hooks restored and agent disabled. The DLL is intentionally not unloaded.
 
 Current process-tree supervision behavior:
 
@@ -179,10 +180,10 @@ Current UI attach/supervision flow:
 2. The selected-target panel shows source, PID, image, architecture, status, and an eligibility reason. Mutation-backed actions remain disabled unless the source is `Native`, status is `available`, and architecture is `x64` or `x86`.
 3. `Attach Capture` calls Tauri command `attach_target_process_capture(pid, durationMs)`, which runs `knmon-native-helper.exe attach-capture --pid <pid> --duration-ms <ms> --timeout-ms <bounded>`.
 4. `Supervise` calls Tauri command `supervise_process_tree(rootPid, durationMs, childPolicy)`, which runs `knmon-native-helper.exe supervise-tree --pid <pid> --duration-ms <ms> --child-policy observe|attach-supported --timeout-ms <bounded>`.
-5. Rust parses the helper stdout into typed `CaptureResult` or `ProcessTreeResult` and preserves transport metrics, subsystem, operation, Win32 code, audit events, process nodes, policy decisions, and embedded child attach results.
+5. Rust parses the helper stdout into typed `CaptureResult` or `ProcessTreeResult` and preserves attach state, attach strategy, loaded-agent evidence, transport metrics, subsystem, operation, Win32 code, audit events, process nodes, policy decisions, and embedded child attach results.
 6. The UI maps attach and child attach `capturedEvents` into the same trace table as sample capture, adding context tags such as `ui-attach`, `process-tree`, `target:<pid>`, or `child:<pid>`.
 7. The output inspector remains available even when a failed helper command produces zero trace rows, so audit and typed failure evidence are visible.
-8. The UI uses `self-disable-no-unload` wording and does not leave an "attached/live" state after a bounded helper command completes.
+8. The UI uses `self-disable-no-unload` wording, shows first-load vs loaded-agent reattach state, and does not leave an "attached/live" state after a bounded helper command completes.
 
 Current shared-memory transport behavior:
 
@@ -229,7 +230,7 @@ The shared transport reader smoke also does not launch, inject, attach, or consu
 
 Future behavior:
 
-1. Move the current controller-side shared-memory drain into a dedicated collector reader.
+1. Promote the pull-based collector reader into a threaded streaming reader only after persistent session ownership is specified.
 2. Write `.knapm` session chunks.
 3. Stream events to Tauri/UI.
 4. Add high-volume multi-threaded transport after the bounded policy stays stable.
@@ -243,7 +244,7 @@ Locations:
 
 `knmon-agent64` and `knmon-agent32` share one agent implementation source. In controlled launch mode, each starts a worker thread from `DllMain`, reads `KNMON_AGENT_PIPE`, `KNMON_OPERATION_ID`, and the optional required shared-memory transport mapping name, writes a versioned JSON HELLO payload with its actual architecture, inventories loaded modules from the PEB loader list, sweeps eligible non-agent non-system module IATs, and writes File I/O, loader, resolver, and selected Wave 2 API records into shared memory.
 
-In attach mode, `DllMain` stores the module handle and disables thread-library callbacks but does not require launch-time environment variables. The controller calls `KnMonAgentInitialize(const KnMonAttachConfigV1*)` after remote `LoadLibraryW`; the initializer validates magic, struct size, ABI version, attach mode, required bounded strings, and transport requirements before starting the same worker exactly once. `KnMonAgentStop()` triggers the self-disable path used by bounded attach detach.
+In attach mode, `DllMain` stores the module handle and disables thread-library callbacks but does not require launch-time environment variables. The controller calls `KnMonAgentInitialize(const KnMonAttachConfigV1*)` after remote `LoadLibraryW` for first attach, or after `KnMonAgentQueryState(KnMonAgentStateV1*)` proves an already-loaded agent is self-disabled and resettable. The initializer validates magic, struct size, ABI version, attach mode, required bounded strings, and transport requirements before starting the same worker. `KnMonAgentStop()` triggers the self-disable path used by bounded attach detach.
 
 Current lifecycle states:
 
@@ -264,7 +265,14 @@ Current `agent_shutdown` fields:
 5. `failedHooks`
 6. `droppedCount`
 
-`knmon-agent32` is built from the shared agent source in Win32 CMake builds and is limited to same-bitness controlled sample launches or same-bitness Phase 11A attach validation from the Win32 helper.
+`knmon-agent32` is built from the shared agent source in Win32 CMake builds and is limited to same-bitness controlled sample launches or same-bitness Phase 11A/11D attach validation from the Win32 helper.
+
+Current repeated attach state behavior:
+
+1. `KnMonAgentQueryState` reports lifecycle, worker-started state, hook-enabled state, resettable/active/busy flags, attach ABI version, packed agent version, hook counts, dropped-event count, and the current operation id.
+2. A disabled agent is resettable only when all installed hooks are restored and failed hook count is zero.
+3. Reinitialization clears previous hook records, dropped-event count, sequence count, pipe handle, transport mapping, and operation id before starting the worker again.
+4. Pipe writes do not force `FlushFileBuffers`, so remote `KnMonAgentStop` can return before the controller reads the shutdown message.
 
 Current same-bitness x64/x86 hook coverage:
 
@@ -292,10 +300,10 @@ Current loader-aware behavior:
 
 Current agent limitations:
 
-1. Hooks are installed only in repository-controlled sample launch flow or explicit same-bitness Phase 11A attach validation.
+1. Hooks are installed only in repository-controlled sample launch flow or explicit same-bitness Phase 11A/11D attach validation.
 2. Hook method is eligible-module IAT patching, not inline trampoline or EAT patching.
 3. API event transport is shared memory for the controlled sample path; named pipe remains for low-volume control and lifecycle messages.
-4. Shutdown cleanup is scoped to controlled sample launch or attach self-disable; repeated same-process reattach and broad arbitrary detach remain unsupported.
+4. Shutdown cleanup is scoped to controlled sample launch or attach self-disable; persistent broad arbitrary detach remains unsupported.
 5. Cross-bitness injection is rejected during preflight.
 6. Calls made through resolver-returned function pointers are not automatically instrumented unless the later call path is also covered by an eligible IAT hook.
 

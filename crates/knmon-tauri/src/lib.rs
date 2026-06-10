@@ -173,6 +173,20 @@ pub struct CaptureResult
     pub subsystem: String,
     pub operation: String,
     pub message: String,
+    #[serde(default)]
+    pub attach_state: String,
+    #[serde(default)]
+    pub attach_strategy: String,
+    #[serde(default)]
+    pub loaded_agent_detected: bool,
+    #[serde(default)]
+    pub loaded_agent_module_base: u64,
+    #[serde(default)]
+    pub loaded_agent_path: String,
+    #[serde(default)]
+    pub agent_control_status: u32,
+    #[serde(default)]
+    pub agent_abi_version: u32,
     pub dropped_events: u64,
     #[serde(default)]
     pub transport_mode: String,

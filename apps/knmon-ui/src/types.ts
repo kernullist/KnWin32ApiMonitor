@@ -128,6 +128,13 @@ export interface CaptureResult {
   operation: string;
   message: string;
   detachPolicy?: string;
+  attachState?: string;
+  attachStrategy?: string;
+  loadedAgentDetected?: boolean;
+  loadedAgentModuleBase?: number;
+  loadedAgentPath?: string;
+  agentControlStatus?: number;
+  agentAbiVersion?: number;
   droppedEvents: number;
   transportMode: string;
   transportCapacity: number;

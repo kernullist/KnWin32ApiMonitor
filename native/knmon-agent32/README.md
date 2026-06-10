@@ -8,7 +8,7 @@ Current behavior:
 2. Loaded by the Win32 `knmon-native-helper.exe` through controlled launch-time early-bird APC or Phase 11A remote `LoadLibraryW` attach.
 3. Supports only same-bitness x86 helper -> x86 target -> `knmon-agent32.dll` capture.
 4. Starts from launch-time environment configuration in `DllMain`, or from exported `KnMonAgentInitialize` with `KnMonAttachConfigV1` in attach mode.
-5. Exports `KnMonAgentStop` for Phase 11A self-disable/no-unload detach.
+5. Exports `KnMonAgentQueryState` for loaded-agent repeated attach detection and `KnMonAgentStop` for self-disable/no-unload detach.
 6. Sends a versioned HELLO JSON payload with `architecture = "x86"`.
 7. Inventories loaded modules from the PEB loader list.
 8. Installs IAT hooks in eligible non-agent non-system modules and suppresses duplicate import-slot patches.
@@ -16,13 +16,14 @@ Current behavior:
 10. Emits hook status, module inventory, IAT sweep status, dropped-event accounting, and `agent_shutdown` lifecycle evidence through the named pipe.
 11. Captures `NtCreateFile` from `ntdll.dll` with NTSTATUS return evidence and bounded `OBJECT_ATTRIBUTES` object-name decoding.
 12. Re-sweeps eligible modules after dynamic load and captures the controlled `knmon-dynamic-probe.dll` post-load File I/O path.
-13. Captures selected `advapi32.dll` registry open/create/query/set/delete/close calls with bounded key/value-name and small value-preview evidence.
-14. Captures selected `ws2_32.dll` Winsock startup, cleanup, socket create/close, address-resolution, address-info free, and error-query calls through IAT hooks, including explicit ordinal matching for common Winsock ordinal imports.
-15. Captures selected `rpcrt4.dll` RPC string-binding compose/from/free and binding-free calls with bounded local binding string evidence.
-16. Captures selected `bcrypt.dll` CNG provider open/close, algorithm-name property query, and RNG generation calls with handle/status/pointer/size evidence only.
-17. Captures selected `crypt32.dll` certificate-store and cryptographic-message open/close calls with handle/provider/encoding/flag/pointer evidence only.
-18. Captures selected `winhttp.dll` session open/close calls with user-agent, access-type, proxy pointer, handle, and status evidence only.
-19. Captures selected `wininet.dll` session open/close calls with user-agent, access-type, proxy pointer, handle, and status evidence only.
-20. Captures selected `advapi32.dll` token query and privilege lookup calls with `TOKEN_QUERY`, token handle, privilege name, and LUID evidence only.
+13. Supports repeated attach after self-disable by resetting restored hook bookkeeping only from a disabled/resettable lifecycle state.
+14. Captures selected `advapi32.dll` registry open/create/query/set/delete/close calls with bounded key/value-name and small value-preview evidence.
+15. Captures selected `ws2_32.dll` Winsock startup, cleanup, socket create/close, address-resolution, address-info free, and error-query calls through IAT hooks, including explicit ordinal matching for common Winsock ordinal imports.
+16. Captures selected `rpcrt4.dll` RPC string-binding compose/from/free and binding-free calls with bounded local binding string evidence.
+17. Captures selected `bcrypt.dll` CNG provider open/close, algorithm-name property query, and RNG generation calls with handle/status/pointer/size evidence only.
+18. Captures selected `crypt32.dll` certificate-store and cryptographic-message open/close calls with handle/provider/encoding/flag/pointer evidence only.
+19. Captures selected `winhttp.dll` session open/close calls with user-agent, access-type, proxy pointer, handle, and status evidence only.
+20. Captures selected `wininet.dll` session open/close calls with user-agent, access-type, proxy pointer, handle, and status evidence only.
+21. Captures selected `advapi32.dll` token query and privilege lookup calls with `TOKEN_QUERY`, token handle, privilege name, and LUID evidence only.
 
 The current API hook fast path does not serialize API JSON or write API events to the named pipe. The x86 path is intentionally scoped to the repository sample target launched or attached by a Win32 helper. It does not support cross-bitness injection, protected-process bypass, broad arbitrary process attach, manual mapping, stealth loading, returned-pointer instrumentation, inline trampoline hooks, registry enumeration hooks, token mutation/service-control hooks, RPC auth/endpoint inquiry hooks, bcrypt key/encrypt/decrypt/hash hooks, certificate-chain/query/decode hooks, WinHTTP connection/request/transfer/header hooks, WinINet connection/request/transfer/option hooks, token privilege array/SID/group/ACL/security descriptor/credential capture, certificate blob/private-key/message-payload capture, random/key/plaintext/ciphertext/IV/hash-input buffer capture, URL/header/body/cookie/credential/proxy-credential/payload capture, or high-volume Winsock payload hooks such as `send` and `recv`.

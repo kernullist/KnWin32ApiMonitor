@@ -47,6 +47,32 @@
     "targetProcessId": { "type": "integer", "minimum": 0 },
     "attachProcessId": { "type": "integer", "minimum": 0 },
     "targetThreadId": { "type": "integer", "minimum": 0 },
+    "attachState": {
+      "enum": [
+        "",
+        "not_loaded",
+        "loaded_disabled",
+        "loaded_active",
+        "loaded_busy",
+        "loaded_incompatible",
+        "loaded_unknown"
+      ]
+    },
+    "attachStrategy": {
+      "enum": [
+        "",
+        "load_library_initialize",
+        "loaded_agent_reinitialize",
+        "reject_already_active",
+        "reject_incompatible",
+        "reject_unknown"
+      ]
+    },
+    "loadedAgentDetected": { "type": "boolean" },
+    "loadedAgentModuleBase": { "type": "integer", "minimum": 0 },
+    "loadedAgentPath": { "type": "string" },
+    "agentControlStatus": { "type": "integer", "minimum": 0 },
+    "agentAbiVersion": { "type": "integer", "minimum": 0 },
     "architecture": { "enum": ["x86", "x64"] },
     "win32ErrorCode": { "type": "integer", "minimum": 0 },
     "ntStatus": { "type": "string" },

@@ -11,6 +11,7 @@
 #include <wininet.h>
 #include <winternl.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdio>
 #include <cstdint>
@@ -48,6 +49,7 @@
 namespace
 {
 constexpr const wchar_t* AgentVersion = L"0.2.0";
+constexpr DWORD AgentVersionPacked = 0x00020000;
 constexpr std::size_t MaxBufferPreviewBytes = 16;
 constexpr std::size_t MaxNtObjectNameBytes = 512;
 constexpr std::size_t MaxRegistryStringChars = 256;
@@ -325,6 +327,34 @@ const char* LifecycleStateName(AgentLifecycleState state)
     }
 
     return name;
+}
+
+std::uint32_t PublicLifecycleState(AgentLifecycleState state)
+{
+    std::uint32_t value = static_cast<std::uint32_t>(knmon::KnMonAgentLifecycleState::Unknown);
+
+    switch (state)
+    {
+    case AgentLifecycleState::Starting:
+        value = static_cast<std::uint32_t>(knmon::KnMonAgentLifecycleState::Starting);
+        break;
+    case AgentLifecycleState::Running:
+        value = static_cast<std::uint32_t>(knmon::KnMonAgentLifecycleState::Running);
+        break;
+    case AgentLifecycleState::Stopping:
+        value = static_cast<std::uint32_t>(knmon::KnMonAgentLifecycleState::Stopping);
+        break;
+    case AgentLifecycleState::Disabled:
+        value = static_cast<std::uint32_t>(knmon::KnMonAgentLifecycleState::Disabled);
+        break;
+    case AgentLifecycleState::Failed:
+        value = static_cast<std::uint32_t>(knmon::KnMonAgentLifecycleState::Failed);
+        break;
+    default:
+        break;
+    }
+
+    return value;
 }
 
 class HookReentryGuard
@@ -1662,7 +1692,6 @@ bool SendJson(const std::string& payload)
             break;
         }
 
-        FlushFileBuffers(g_pipeHandle);
         sent = bytesWritten == payload.size();
     }
     while (false);
@@ -5147,6 +5176,53 @@ void ShutdownAgent(const char* reason, AgentLifecycleState finalState)
     CloseAgentPipe();
 }
 
+bool DisabledAgentCanReinitialize(const HookLifecycleCounts& counts)
+{
+    return counts.FailedHooks == 0 && counts.InstalledHooks == counts.RestoredHooks;
+}
+
+bool ResetDisabledAgentForReinitialize()
+{
+    bool reset = false;
+
+    do
+    {
+        if (GetLifecycleState() != AgentLifecycleState::Disabled)
+        {
+            break;
+        }
+
+        const HookLifecycleCounts counts = SnapshotHookCounts();
+        if (!DisabledAgentCanReinitialize(counts))
+        {
+            break;
+        }
+
+        CloseTransport();
+        CloseAgentPipe();
+
+        AcquireSRWLockExclusive(&g_hookLock);
+        for (HookRecord& record : g_hookRecords)
+        {
+            record = {};
+        }
+        g_hookRecordCount = 0;
+        ReleaseSRWLockExclusive(&g_hookLock);
+
+        InterlockedExchange(&g_failedHooks, 0);
+        InterlockedExchange(&g_hooksEnabled, 0);
+        InterlockedExchange64(&g_droppedEvents, 0);
+        InterlockedExchange64(&g_sequence, 0);
+        g_operationId.clear();
+        InterlockedExchange(&g_workerStarted, 0);
+        SetLifecycleState(AgentLifecycleState::Starting);
+        reset = true;
+    }
+    while (false);
+
+    return reset;
+}
+
 DWORD WINAPI AgentWorker(void* context)
 {
     auto* suppliedConfig = reinterpret_cast<AgentWorkerConfig*>(context);
@@ -5241,6 +5317,26 @@ knmon::KnMonAgentControlStatus StartAgentWorker(AgentWorkerConfig* config)
 
     do
     {
+        const AgentLifecycleState state = GetLifecycleState();
+        if (state == AgentLifecycleState::Disabled)
+        {
+            if (!ResetDisabledAgentForReinitialize())
+            {
+                status = knmon::KnMonAgentControlStatus::InvalidState;
+                break;
+            }
+        }
+        else if (state == AgentLifecycleState::Running || state == AgentLifecycleState::Stopping)
+        {
+            status = knmon::KnMonAgentControlStatus::AlreadyRunning;
+            break;
+        }
+        else if (state == AgentLifecycleState::Failed)
+        {
+            status = knmon::KnMonAgentControlStatus::InvalidState;
+            break;
+        }
+
         if (InterlockedCompareExchange(&g_workerStarted, 1, 0) != 0)
         {
             status = knmon::KnMonAgentControlStatus::AlreadyRunning;
@@ -5251,6 +5347,7 @@ knmon::KnMonAgentControlStatus StartAgentWorker(AgentWorkerConfig* config)
         if (threadHandle == nullptr)
         {
             InterlockedExchange(&g_workerStarted, 0);
+            SetLifecycleState(AgentLifecycleState::Failed);
             status = knmon::KnMonAgentControlStatus::WorkerStartFailed;
             break;
         }
@@ -5274,17 +5371,108 @@ bool LaunchEnvironmentConfigured()
     const DWORD length = GetEnvironmentVariableW(L"KNMON_AGENT_PIPE", value, static_cast<DWORD>(std::size(value)));
     return length > 0;
 }
+
+void CopyCurrentOperationId(wchar_t* destination, std::size_t capacity)
+{
+    if (destination == nullptr || capacity == 0)
+    {
+        return;
+    }
+
+    const std::size_t count = std::min(capacity - 1, g_operationId.size());
+    for (std::size_t index = 0; index < count; ++index)
+    {
+        destination[index] = g_operationId[index];
+    }
+    destination[count] = L'\0';
+}
+
+void FillAgentState(knmon::KnMonAgentStateV1* state)
+{
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    const AgentLifecycleState lifecycle = GetLifecycleState();
+    const HookLifecycleCounts counts = SnapshotHookCounts();
+    const LONG workerStarted = InterlockedCompareExchange(&g_workerStarted, 0, 0);
+    const LONG hooksEnabled = InterlockedCompareExchange(&g_hooksEnabled, 0, 0);
+
+    knmon::KnMonAgentStateV1 output;
+    output.StructSize = static_cast<std::uint16_t>(sizeof(output));
+    output.LifecycleState = PublicLifecycleState(lifecycle);
+    output.WorkerStarted = workerStarted != 0 ? 1 : 0;
+    output.HooksEnabled = hooksEnabled != 0 ? 1 : 0;
+    output.AgentVersion = AgentVersionPacked;
+    output.InstalledHooks = static_cast<std::uint32_t>(std::max(counts.InstalledHooks, 0));
+    output.RestoredHooks = static_cast<std::uint32_t>(std::max(counts.RestoredHooks, 0));
+    output.FailedHooks = static_cast<std::uint32_t>(std::max(counts.FailedHooks, 0));
+    output.DroppedEvents = static_cast<std::uint64_t>(std::max<LONG64>(InterlockedCompareExchange64(&g_droppedEvents, 0, 0), 0));
+
+    if (lifecycle == AgentLifecycleState::Disabled && DisabledAgentCanReinitialize(counts))
+    {
+        output.Flags |= knmon::KnMonAgentStateFlagResettable;
+    }
+
+    if (lifecycle == AgentLifecycleState::Running || hooksEnabled != 0)
+    {
+        output.Flags |= knmon::KnMonAgentStateFlagActive;
+    }
+
+    if (
+        lifecycle == AgentLifecycleState::Starting ||
+        lifecycle == AgentLifecycleState::Stopping ||
+        (workerStarted != 0 && lifecycle != AgentLifecycleState::Disabled))
+    {
+        output.Flags |= knmon::KnMonAgentStateFlagBusy;
+    }
+
+    CopyCurrentOperationId(output.OperationId, std::size(output.OperationId));
+    *state = output;
+}
 }
 
 extern "C" __declspec(dllexport) DWORD KnMonAgentVersion()
 {
-    return 0x00020000;
+    return AgentVersionPacked;
 }
 
 #if defined(_M_IX86)
 #pragma comment(linker, "/EXPORT:KnMonAgentInitialize=_KnMonAgentInitialize@4")
 #pragma comment(linker, "/EXPORT:KnMonAgentStop=_KnMonAgentStop@0")
+#pragma comment(linker, "/EXPORT:KnMonAgentQueryState=_KnMonAgentQueryState@4")
 #endif
+
+extern "C" __declspec(dllexport) DWORD WINAPI KnMonAgentQueryState(knmon::KnMonAgentStateV1* state)
+{
+    knmon::KnMonAgentControlStatus status = knmon::KnMonAgentControlStatus::InvalidConfig;
+
+    do
+    {
+        if (state == nullptr)
+        {
+            break;
+        }
+
+        if (state->Magic != knmon::KnMonAgentStateMagic)
+        {
+            break;
+        }
+
+        if (state->AbiVersion != knmon::KnMonAgentStateAbiVersion || state->StructSize < sizeof(knmon::KnMonAgentStateV1))
+        {
+            status = knmon::KnMonAgentControlStatus::UnsupportedAbi;
+            break;
+        }
+
+        FillAgentState(state);
+        status = knmon::KnMonAgentControlStatus::Success;
+    }
+    while (false);
+
+    return static_cast<DWORD>(status);
+}
 
 extern "C" __declspec(dllexport) DWORD WINAPI KnMonAgentInitialize(const knmon::KnMonAttachConfigV1* config)
 {

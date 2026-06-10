@@ -346,6 +346,13 @@ struct KnMonCaptureResult
     std::string AgentPath;
     std::uint32_t AttachProcessId = 0;
     std::string DetachPolicy;
+    std::string AttachState;
+    std::string AttachStrategy;
+    bool LoadedAgentDetected = false;
+    std::uint64_t LoadedAgentModuleBase = 0;
+    std::string LoadedAgentPath;
+    std::uint32_t AgentControlStatus = 0;
+    std::uint32_t AgentAbiVersion = 0;
     std::uint32_t TargetProcessId = 0;
     std::uint32_t TargetThreadId = 0;
     std::string Architecture;

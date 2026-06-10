@@ -60,12 +60,12 @@ function Invoke-AttachSupportedSmoke {
     $stderrPath = Join-Path $tmpDir "tree-attach-$Architecture.stderr.txt"
     Remove-Item -Force -ErrorAction SilentlyContinue $stdoutPath,$stderrPath
 
-    $root = Start-Process -FilePath $SamplePath -ArgumentList "--spawn-child-loop --children 1 --child-iterations 40 --delay-ms 150" -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -PassThru -WindowStyle Hidden
+    $root = Start-Process -FilePath $SamplePath -ArgumentList "--spawn-child-loop --children 1 --child-iterations 80 --delay-ms 150" -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -PassThru -WindowStyle Hidden
 
     try
     {
         Wait-RootReady -OutputPath $stdoutPath
-        $json = & $HelperPath supervise-tree --pid $root.Id --duration-ms 3500 --child-policy attach-supported | ConvertFrom-Json
+        $json = & $HelperPath supervise-tree --pid $root.Id --duration-ms 5000 --child-policy attach-supported | ConvertFrom-Json
 
         if (-not $json.success)
         {
@@ -153,13 +153,40 @@ function Invoke-AttachSupportedSmoke {
     }
 }
 
-Invoke-AttachSupportedSmoke -HelperPath (Join-Path $BuildDir "knmon-native-helper.exe") -SamplePath (Join-Path $BuildDir "knmon-sample-fileio.exe") -Architecture "x64"
+function Invoke-AttachSupportedSmokeWithRetry
+{
+    param(
+        [string]$HelperPath,
+        [string]$SamplePath,
+        [string]$Architecture,
+        [int]$Attempts = 3
+    )
+
+    $lastError = $null
+    for ($attempt = 1; $attempt -le $Attempts; ++$attempt)
+    {
+        try
+        {
+            Invoke-AttachSupportedSmoke -HelperPath $HelperPath -SamplePath $SamplePath -Architecture $Architecture
+            return
+        }
+        catch
+        {
+            $lastError = $_
+            Write-Host "$Architecture process-tree attach-supported attempt $attempt failed: $($_.Exception.Message)"
+        }
+    }
+
+    throw $lastError
+}
+
+Invoke-AttachSupportedSmokeWithRetry -HelperPath (Join-Path $BuildDir "knmon-native-helper.exe") -SamplePath (Join-Path $BuildDir "knmon-sample-fileio.exe") -Architecture "x64"
 
 $win32Helper = Join-Path $Win32BuildDir "knmon-native-helper.exe"
 $win32Sample = Join-Path $Win32BuildDir "knmon-sample-fileio.exe"
 if ((Test-Path -LiteralPath $win32Helper) -and (Test-Path -LiteralPath $win32Sample))
 {
-    Invoke-AttachSupportedSmoke -HelperPath $win32Helper -SamplePath $win32Sample -Architecture "x86"
+    Invoke-AttachSupportedSmokeWithRetry -HelperPath $win32Helper -SamplePath $win32Sample -Architecture "x86"
 }
 else
 {

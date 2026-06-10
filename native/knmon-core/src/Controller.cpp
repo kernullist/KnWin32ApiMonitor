@@ -819,6 +819,7 @@ AttachPreflightResult RunAttachPreflight(
             PROCESS_QUERY_INFORMATION |
             PROCESS_CREATE_THREAD |
             PROCESS_VM_OPERATION |
+            PROCESS_VM_READ |
             PROCESS_VM_WRITE |
             SYNCHRONIZE;
 
@@ -1264,16 +1265,23 @@ bool ResolveImageExportRva(const std::wstring& imagePath, const char* exportName
     return resolved;
 }
 
-bool FindRemoteModuleBase(DWORD processId, const std::wstring& moduleName, std::uintptr_t* moduleBase, DWORD* errorCode)
+struct RemoteModuleInfo
+{
+    std::uintptr_t Base = 0;
+    std::wstring Path;
+    std::wstring Name;
+};
+
+bool FindRemoteModuleInfo(DWORD processId, const std::wstring& moduleName, RemoteModuleInfo* moduleInfo, DWORD* errorCode)
 {
     bool found = false;
     HANDLE snapshot = INVALID_HANDLE_VALUE;
 
     do
     {
-        if (moduleBase != nullptr)
+        if (moduleInfo != nullptr)
         {
-            *moduleBase = 0;
+            *moduleInfo = {};
         }
 
         if (errorCode != nullptr)
@@ -1306,9 +1314,11 @@ bool FindRemoteModuleBase(DWORD processId, const std::wstring& moduleName, std::
         {
             if (_wcsicmp(entry.szModule, moduleName.c_str()) == 0)
             {
-                if (moduleBase != nullptr)
+                if (moduleInfo != nullptr)
                 {
-                    *moduleBase = reinterpret_cast<std::uintptr_t>(entry.modBaseAddr);
+                    moduleInfo->Base = reinterpret_cast<std::uintptr_t>(entry.modBaseAddr);
+                    moduleInfo->Path = entry.szExePath;
+                    moduleInfo->Name = entry.szModule;
                 }
 
                 found = true;
@@ -1322,6 +1332,19 @@ bool FindRemoteModuleBase(DWORD processId, const std::wstring& moduleName, std::
     if (snapshot != INVALID_HANDLE_VALUE)
     {
         CloseHandle(snapshot);
+    }
+
+    return found;
+}
+
+bool FindRemoteModuleBase(DWORD processId, const std::wstring& moduleName, std::uintptr_t* moduleBase, DWORD* errorCode)
+{
+    RemoteModuleInfo moduleInfo;
+    const bool found = FindRemoteModuleInfo(processId, moduleName, &moduleInfo, errorCode);
+
+    if (moduleBase != nullptr)
+    {
+        *moduleBase = found ? moduleInfo.Base : 0;
     }
 
     return found;
@@ -1403,6 +1426,195 @@ bool WaitRemoteThread(
     }
 
     return completed;
+}
+
+std::string AgentControlStatusName(std::uint32_t status)
+{
+    std::string name = "unknown";
+
+    switch (static_cast<KnMonAgentControlStatus>(status))
+    {
+    case KnMonAgentControlStatus::Success:
+        name = "success";
+        break;
+    case KnMonAgentControlStatus::InvalidConfig:
+        name = "invalid_config";
+        break;
+    case KnMonAgentControlStatus::UnsupportedAbi:
+        name = "unsupported_abi";
+        break;
+    case KnMonAgentControlStatus::AlreadyRunning:
+        name = "already_running";
+        break;
+    case KnMonAgentControlStatus::WorkerStartFailed:
+        name = "worker_start_failed";
+        break;
+    case KnMonAgentControlStatus::NotRunning:
+        name = "not_running";
+        break;
+    case KnMonAgentControlStatus::InvalidState:
+        name = "invalid_state";
+        break;
+    default:
+        break;
+    }
+
+    return name;
+}
+
+std::string AgentLifecycleStateName(std::uint32_t state)
+{
+    std::string name = "unknown";
+
+    switch (static_cast<KnMonAgentLifecycleState>(state))
+    {
+    case KnMonAgentLifecycleState::Starting:
+        name = "starting";
+        break;
+    case KnMonAgentLifecycleState::Running:
+        name = "running";
+        break;
+    case KnMonAgentLifecycleState::Stopping:
+        name = "stopping";
+        break;
+    case KnMonAgentLifecycleState::Disabled:
+        name = "disabled";
+        break;
+    case KnMonAgentLifecycleState::Failed:
+        name = "failed";
+        break;
+    default:
+        break;
+    }
+
+    return name;
+}
+
+bool QueryRemoteAgentState(
+    HANDLE processHandle,
+    void* remoteQueryAddress,
+    DWORD timeoutMs,
+    KnMonAgentStateV1* state,
+    DWORD* controlStatus,
+    DWORD* errorCode,
+    std::string* message)
+{
+    bool queried = false;
+    void* remoteState = nullptr;
+
+    do
+    {
+        if (controlStatus != nullptr)
+        {
+            *controlStatus = 0;
+        }
+
+        if (errorCode != nullptr)
+        {
+            *errorCode = 0;
+        }
+
+        if (message != nullptr)
+        {
+            message->clear();
+        }
+
+        if (processHandle == nullptr || remoteQueryAddress == nullptr || state == nullptr)
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = ERROR_INVALID_PARAMETER;
+            }
+            break;
+        }
+
+        KnMonAgentStateV1 requestState;
+        requestState.StructSize = static_cast<std::uint16_t>(sizeof(requestState));
+
+        remoteState = VirtualAllocEx(processHandle, nullptr, sizeof(requestState), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+        if (remoteState == nullptr)
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
+
+        SIZE_T bytesWritten = 0;
+        if (!WriteProcessMemory(processHandle, remoteState, &requestState, sizeof(requestState), &bytesWritten) || bytesWritten != sizeof(requestState))
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
+
+        DWORD remoteExitCode = 0;
+        DWORD remoteError = 0;
+        if (!WaitRemoteThread(processHandle, remoteQueryAddress, remoteState, timeoutMs, &remoteExitCode, &remoteError))
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = remoteError == 0 ? ERROR_TIMEOUT : remoteError;
+            }
+            break;
+        }
+
+        if (controlStatus != nullptr)
+        {
+            *controlStatus = remoteExitCode;
+        }
+
+        if (remoteExitCode != static_cast<DWORD>(KnMonAgentControlStatus::Success))
+        {
+            if (message != nullptr)
+            {
+                *message = "KnMonAgentQueryState returned " + AgentControlStatusName(remoteExitCode) + ".";
+            }
+            break;
+        }
+
+        KnMonAgentStateV1 localState;
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(processHandle, remoteState, &localState, sizeof(localState), &bytesRead) || bytesRead != sizeof(localState))
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
+
+        if (
+            localState.Magic != KnMonAgentStateMagic ||
+            localState.AbiVersion != KnMonAgentStateAbiVersion ||
+            localState.StructSize < sizeof(KnMonAgentStateV1))
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = ERROR_INVALID_DATA;
+            }
+
+            if (message != nullptr)
+            {
+                *message = "Loaded agent state ABI validation failed.";
+            }
+            break;
+        }
+
+        *state = localState;
+        queried = true;
+    }
+    while (false);
+
+    if (remoteState != nullptr)
+    {
+        VirtualFreeEx(processHandle, remoteState, 0, MEM_RELEASE);
+    }
+
+    return queried;
 }
 
 void AddAudit(
@@ -3711,6 +3923,9 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
     result.CaptureMode = "bounded-native-attach";
     result.InjectionMethod = "remote LoadLibraryW";
     result.DetachPolicy = "self-disable-no-unload";
+    result.AttachState = "not_loaded";
+    result.AttachStrategy = "load_library_initialize";
+    result.AgentAbiVersion = KnMonAgentStateAbiVersion;
 
     HANDLE pipeHandle = INVALID_HANDLE_VALUE;
     HANDLE processHandle = nullptr;
@@ -3719,6 +3934,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
     void* remoteConfig = nullptr;
     std::uintptr_t remoteAgentBase = 0;
     std::uintptr_t remoteStopAddress = 0;
+    bool useLoadedAgent = false;
     bool fatalError = false;
     bool agentInitialized = false;
     bool stopRequested = false;
@@ -3801,6 +4017,100 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
         processHandle = preflight.ProcessHandle;
         result.TargetPath = preflight.TargetPath.empty() ? preflight.TargetImageName : preflight.TargetPath;
 
+        const std::wstring agentPath = Utf8ToWide(request.AgentPath);
+        const std::wstring agentModuleName = std::filesystem::path(agentPath).filename().wstring();
+        RemoteModuleInfo loadedAgentModule;
+        DWORD moduleError = 0;
+        if (FindRemoteModuleInfo(request.ProcessId, agentModuleName, &loadedAgentModule, &moduleError))
+        {
+            result.LoadedAgentDetected = true;
+            result.LoadedAgentModuleBase = static_cast<std::uint64_t>(loadedAgentModule.Base);
+            result.LoadedAgentPath = WideToUtf8(loadedAgentModule.Path.c_str());
+            AddAudit(result, "loaded_agent_detected", "module_snapshot", "Expected agent DLL is already loaded in the target process.");
+
+            std::uintptr_t queryStateRva = 0;
+            DWORD queryExportError = 0;
+            if (!ResolveImageExportRva(agentPath, "KnMonAgentQueryState", &queryStateRva, &queryExportError))
+            {
+                result.AttachState = "loaded_incompatible";
+                result.AttachStrategy = "reject_incompatible";
+                SetResultError(result, queryExportError == 0 ? ERROR_PROC_NOT_FOUND : queryExportError, "win32", "loaded_agent_incompatible", "Loaded agent does not export KnMonAgentQueryState.");
+                fatalError = true;
+                break;
+            }
+
+            KnMonAgentStateV1 agentState;
+            DWORD controlStatus = 0;
+            DWORD queryError = 0;
+            std::string queryMessage;
+            if (!QueryRemoteAgentState(processHandle, reinterpret_cast<void*>(loadedAgentModule.Base + queryStateRva), request.TimeoutMs, &agentState, &controlStatus, &queryError, &queryMessage))
+            {
+                result.AgentControlStatus = controlStatus;
+                result.AttachState = controlStatus == static_cast<DWORD>(KnMonAgentControlStatus::UnsupportedAbi) ? "loaded_incompatible" : "loaded_unknown";
+                result.AttachStrategy = controlStatus == static_cast<DWORD>(KnMonAgentControlStatus::UnsupportedAbi) ? "reject_incompatible" : "reject_unknown";
+                SetResultError(result, queryError == 0 ? controlStatus : queryError, "knmon-agent", "loaded_agent_state_query", queryMessage.empty() ? "Loaded agent state query failed." : queryMessage);
+                fatalError = true;
+                break;
+            }
+
+            result.AgentControlStatus = controlStatus;
+            result.AgentAbiVersion = agentState.AttachConfigAbiVersion;
+            const bool resettable = (agentState.Flags & KnMonAgentStateFlagResettable) != 0;
+            const bool active = (agentState.Flags & KnMonAgentStateFlagActive) != 0;
+            const bool busy = (agentState.Flags & KnMonAgentStateFlagBusy) != 0;
+            std::ostringstream stateMessage;
+            stateMessage << "Loaded agent state lifecycle=" << AgentLifecycleStateName(agentState.LifecycleState)
+                         << " resettable=" << (resettable ? "true" : "false")
+                         << " active=" << (active ? "true" : "false")
+                         << " busy=" << (busy ? "true" : "false") << ".";
+            AddAudit(result, "loaded_agent_state_queried", "KnMonAgentQueryState", stateMessage.str());
+
+            if (agentState.LifecycleState == static_cast<std::uint32_t>(KnMonAgentLifecycleState::Disabled) && resettable)
+            {
+                result.AttachState = "loaded_disabled";
+                result.AttachStrategy = "loaded_agent_reinitialize";
+                remoteAgentBase = loadedAgentModule.Base;
+                useLoadedAgent = true;
+                AddAudit(result, "attach_strategy_selected", "loaded_agent_reinitialize", "Reusing already-loaded self-disabled agent without another LoadLibraryW call.");
+            }
+            else if (active)
+            {
+                result.AttachState = "loaded_active";
+                result.AttachStrategy = "reject_already_active";
+                SetResultError(result, ERROR_BUSY, "knmon-agent", "already_instrumented", "Loaded agent is already active in the target process.");
+                fatalError = true;
+                break;
+            }
+            else if (busy)
+            {
+                result.AttachState = "loaded_busy";
+                result.AttachStrategy = "reject_already_active";
+                SetResultError(result, ERROR_BUSY, "knmon-agent", "already_instrumented", "Loaded agent is busy and cannot start another bounded attach.");
+                fatalError = true;
+                break;
+            }
+            else
+            {
+                result.AttachState = "loaded_incompatible";
+                result.AttachStrategy = "reject_incompatible";
+                SetResultError(result, ERROR_INVALID_DATA, "knmon-agent", "loaded_agent_incompatible", "Loaded agent is not in a resettable self-disabled state.");
+                fatalError = true;
+                break;
+            }
+        }
+        else if (moduleError != 0)
+        {
+            result.AttachState = "loaded_unknown";
+            result.AttachStrategy = "reject_unknown";
+            SetResultError(result, moduleError, "win32", "loaded_agent_scan_failed", "Failed to inspect target modules for loaded agent state.");
+            fatalError = true;
+            break;
+        }
+        else
+        {
+            AddAudit(result, "loaded_agent_not_found", "module_snapshot", "Expected agent DLL is not loaded; first attach will use LoadLibraryW.");
+        }
+
         const std::wstring pipeName = L"\\\\.\\pipe\\knmon_agent_" + Utf8ToWide(result.OperationId);
         pipeHandle = CreateNamedPipeW(
             pipeName.c_str(),
@@ -3833,27 +4143,29 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
         UpdateTransportMetrics(result, transport);
         AddAudit(result, "attach_transport_created", "CreateFileMappingW", "Attach shared-memory event transport created.");
 
-        const std::wstring agentPath = Utf8ToWide(request.AgentPath);
         const std::uint64_t remotePathSize = static_cast<std::uint64_t>((agentPath.size() + 1) * sizeof(wchar_t));
-        remoteDllPath = VirtualAllocEx(processHandle, nullptr, static_cast<SIZE_T>(remotePathSize), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-        if (remoteDllPath == nullptr)
+        if (!useLoadedAgent)
         {
-            SetResultError(result, GetLastError(), "win32", "remote_allocation_failed", "Failed to allocate remote agent path buffer.");
-            fatalError = true;
-            break;
+            remoteDllPath = VirtualAllocEx(processHandle, nullptr, static_cast<SIZE_T>(remotePathSize), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+            if (remoteDllPath == nullptr)
+            {
+                SetResultError(result, GetLastError(), "win32", "remote_allocation_failed", "Failed to allocate remote agent path buffer.");
+                fatalError = true;
+                break;
+            }
+
+            AddAudit(result, "remote_agent_path_allocated", "VirtualAllocEx", "Remote agent path buffer allocated.");
+
+            SIZE_T bytesWritten = 0;
+            if (!WriteProcessMemory(processHandle, remoteDllPath, agentPath.c_str(), static_cast<SIZE_T>(remotePathSize), &bytesWritten))
+            {
+                SetResultError(result, GetLastError(), "win32", "remote_write_failed", "Failed to write agent path into target process.");
+                fatalError = true;
+                break;
+            }
+
+            AddAudit(result, "remote_agent_path_written", "WriteProcessMemory", "Agent DLL path written into target process.");
         }
-
-        AddAudit(result, "remote_agent_path_allocated", "VirtualAllocEx", "Remote agent path buffer allocated.");
-
-        SIZE_T bytesWritten = 0;
-        if (!WriteProcessMemory(processHandle, remoteDllPath, agentPath.c_str(), static_cast<SIZE_T>(remotePathSize), &bytesWritten))
-        {
-            SetResultError(result, GetLastError(), "win32", "remote_write_failed", "Failed to write agent path into target process.");
-            fatalError = true;
-            break;
-        }
-
-        AddAudit(result, "remote_agent_path_written", "WriteProcessMemory", "Agent DLL path written into target process.");
 
         KnMonAttachConfigV1 attachConfig;
         attachConfig.StructSize = static_cast<std::uint16_t>(sizeof(attachConfig));
@@ -3877,6 +4189,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
 
         AddAudit(result, "remote_config_allocated", "VirtualAllocEx", "Remote attach config buffer allocated.");
 
+        SIZE_T bytesWritten = 0;
         if (!WriteProcessMemory(processHandle, remoteConfig, &attachConfig, sizeof(attachConfig), &bytesWritten))
         {
             SetResultError(result, GetLastError(), "win32", "remote_write_failed", "Failed to write attach config into target process.");
@@ -3886,51 +4199,65 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
 
         AddAudit(result, "remote_config_written", "WriteProcessMemory", "Attach config written into target process.");
 
-        std::uintptr_t remoteKernel32Base = 0;
-        DWORD moduleError = 0;
-        if (!FindRemoteModuleBase(request.ProcessId, L"kernel32.dll", &remoteKernel32Base, &moduleError))
-        {
-            SetResultError(result, moduleError == 0 ? ERROR_MOD_NOT_FOUND : moduleError, "win32", "remote_loadlibrary_failed", "Failed to find remote kernel32.dll module base.");
-            fatalError = true;
-            break;
-        }
-
-        HMODULE localKernel32 = GetModuleHandleW(L"kernel32.dll");
-        std::uintptr_t loadLibraryRva = 0;
-        if (!ResolveLoadedModuleExportRva(localKernel32, "LoadLibraryW", &loadLibraryRva))
-        {
-            SetResultError(result, GetLastError(), "win32", "remote_loadlibrary_failed", "Failed to resolve local LoadLibraryW RVA.");
-            fatalError = true;
-            break;
-        }
-
-        void* remoteLoadLibrary = reinterpret_cast<void*>(remoteKernel32Base + loadLibraryRva);
         DWORD remoteExitCode = 0;
         DWORD remoteError = 0;
-        AddAudit(result, "remote_loadlibrary_started", "CreateRemoteThread", "Remote LoadLibraryW thread starting.");
-        if (!WaitRemoteThread(processHandle, remoteLoadLibrary, remoteDllPath, request.TimeoutMs, &remoteExitCode, &remoteError))
+        if (!useLoadedAgent)
         {
-            SetResultError(result, remoteError, "win32", "remote_loadlibrary_failed", "Remote LoadLibraryW thread failed or timed out.");
-            fatalError = true;
-            break;
-        }
-
-        AddAudit(result, "remote_loadlibrary_completed", "CreateRemoteThread", "Remote LoadLibraryW thread completed.");
-
-        const std::wstring agentModuleName = std::filesystem::path(agentPath).filename().wstring();
-        for (int attempt = 0; attempt < 20 && remoteAgentBase == 0; ++attempt)
-        {
-            if (FindRemoteModuleBase(request.ProcessId, agentModuleName, &remoteAgentBase, &moduleError))
+            std::uintptr_t remoteKernel32Base = 0;
+            moduleError = 0;
+            if (!FindRemoteModuleBase(request.ProcessId, L"kernel32.dll", &remoteKernel32Base, &moduleError))
             {
+                SetResultError(result, moduleError == 0 ? ERROR_MOD_NOT_FOUND : moduleError, "win32", "remote_loadlibrary_failed", "Failed to find remote kernel32.dll module base.");
+                fatalError = true;
                 break;
             }
 
-            Sleep(50);
-        }
+            HMODULE localKernel32 = GetModuleHandleW(L"kernel32.dll");
+            std::uintptr_t loadLibraryRva = 0;
+            if (!ResolveLoadedModuleExportRva(localKernel32, "LoadLibraryW", &loadLibraryRva))
+            {
+                SetResultError(result, GetLastError(), "win32", "remote_loadlibrary_failed", "Failed to resolve local LoadLibraryW RVA.");
+                fatalError = true;
+                break;
+            }
 
-        if (remoteAgentBase == 0)
+            void* remoteLoadLibrary = reinterpret_cast<void*>(remoteKernel32Base + loadLibraryRva);
+            AddAudit(result, "remote_loadlibrary_started", "CreateRemoteThread", "Remote LoadLibraryW thread starting.");
+            if (!WaitRemoteThread(processHandle, remoteLoadLibrary, remoteDllPath, request.TimeoutMs, &remoteExitCode, &remoteError))
+            {
+                SetResultError(result, remoteError, "win32", "remote_loadlibrary_failed", "Remote LoadLibraryW thread failed or timed out.");
+                fatalError = true;
+                break;
+            }
+
+            AddAudit(result, "remote_loadlibrary_completed", "CreateRemoteThread", "Remote LoadLibraryW thread completed.");
+
+            for (int attempt = 0; attempt < 20 && remoteAgentBase == 0; ++attempt)
+            {
+                if (FindRemoteModuleBase(request.ProcessId, agentModuleName, &remoteAgentBase, &moduleError))
+                {
+                    break;
+                }
+
+                Sleep(50);
+            }
+
+            if (remoteAgentBase == 0)
+            {
+                SetResultError(result, moduleError == 0 ? ERROR_MOD_NOT_FOUND : moduleError, "win32", "remote_loadlibrary_failed", "Agent module was not visible in the target after LoadLibraryW.");
+                fatalError = true;
+                break;
+            }
+
+            result.AttachState = "not_loaded";
+            result.AttachStrategy = "load_library_initialize";
+            AddAudit(result, "attach_strategy_selected", "load_library_initialize", "Agent was loaded with remote LoadLibraryW before initialization.");
+        }
+        else if (remoteAgentBase == 0)
         {
-            SetResultError(result, moduleError == 0 ? ERROR_MOD_NOT_FOUND : moduleError, "win32", "remote_loadlibrary_failed", "Agent module was not visible in the target after LoadLibraryW.");
+            result.AttachState = "loaded_unknown";
+            result.AttachStrategy = "reject_unknown";
+            SetResultError(result, ERROR_MOD_NOT_FOUND, "win32", "loaded_agent_missing_base", "Loaded-agent reattach selected without a remote module base.");
             fatalError = true;
             break;
         }
@@ -3962,10 +4289,11 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
             break;
         }
 
+        result.AgentControlStatus = remoteExitCode;
         if (remoteExitCode != static_cast<DWORD>(KnMonAgentControlStatus::Success))
         {
             std::ostringstream stream;
-            stream << "KnMonAgentInitialize returned status " << remoteExitCode << ".";
+            stream << "KnMonAgentInitialize returned " << AgentControlStatusName(remoteExitCode) << " (" << remoteExitCode << ").";
             SetResultError(result, remoteExitCode, "knmon-agent", "remote_initialize_failed", stream.str());
             fatalError = true;
             break;

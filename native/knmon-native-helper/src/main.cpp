@@ -849,6 +849,13 @@ std::string ToJson(const knmon::KnMonCaptureResult& result)
     stream << "\"agentPath\":" << Q(result.AgentPath) << ",";
     stream << "\"attachProcessId\":" << result.AttachProcessId << ",";
     stream << "\"detachPolicy\":" << Q(result.DetachPolicy) << ",";
+    stream << "\"attachState\":" << Q(result.AttachState) << ",";
+    stream << "\"attachStrategy\":" << Q(result.AttachStrategy) << ",";
+    stream << "\"loadedAgentDetected\":" << (result.LoadedAgentDetected ? "true" : "false") << ",";
+    stream << "\"loadedAgentModuleBase\":" << result.LoadedAgentModuleBase << ",";
+    stream << "\"loadedAgentPath\":" << Q(result.LoadedAgentPath) << ",";
+    stream << "\"agentControlStatus\":" << result.AgentControlStatus << ",";
+    stream << "\"agentAbiVersion\":" << result.AgentAbiVersion << ",";
     stream << "\"targetProcessId\":" << result.TargetProcessId << ",";
     stream << "\"targetThreadId\":" << result.TargetThreadId << ",";
     stream << "\"architecture\":" << Q(result.Architecture) << ",";

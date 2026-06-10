@@ -777,6 +777,7 @@ function App() {
                     <div className={attachResult.success ? "result-block success" : "result-block failure"}>
                       <div>PID {attachResult.targetProcessId}; attachPid={attachResult.attachProcessId ?? 0}</div>
                       <div>{attachResult.captureMode}; {attachResult.injectionMethod}; {attachResult.detachPolicy || "self-disable-no-unload"}</div>
+                      <div>state={attachResult.attachState || "not_loaded"}; strategy={attachResult.attachStrategy || "load_library_initialize"}; loaded={attachResult.loadedAgentDetected ? "yes" : "no"}</div>
                       <div>events={attachResult.capturedEvents.length}; dropped={attachResult.droppedEvents}; transport={attachResult.transportRecordsConsumed}/{attachResult.transportRecordsProduced}</div>
                       <div>{hookRestoreSummary(attachResult)}</div>
                       <div>{attachResult.operation}; subsystem={attachResult.subsystem}; win32={attachResult.win32ErrorCode}; {attachResult.message}</div>
