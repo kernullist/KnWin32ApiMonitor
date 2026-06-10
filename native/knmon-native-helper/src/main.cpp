@@ -1078,6 +1078,8 @@ struct NativeSessionInfo
     std::string CancellationEventName;
     std::uint64_t LastTransportSequence = 0;
     std::uint64_t RecordsStreamed = 0;
+    std::uint64_t TransportDroppedEvents = 0;
+    std::uint64_t HostDroppedBatches = 0;
     std::string StaleReason;
     std::string RecoveryAction;
     std::string ShutdownEvidence;
@@ -1133,6 +1135,8 @@ std::string ToJson(const NativeSessionInfo& session)
     stream << "\"cancellationEventName\":" << Q(session.CancellationEventName) << ",";
     stream << "\"lastTransportSequence\":" << session.LastTransportSequence << ",";
     stream << "\"recordsStreamed\":" << session.RecordsStreamed << ",";
+    stream << "\"transportDroppedEvents\":" << session.TransportDroppedEvents << ",";
+    stream << "\"hostDroppedBatches\":" << session.HostDroppedBatches << ",";
     stream << "\"staleReason\":" << Q(session.StaleReason) << ",";
     stream << "\"recoveryAction\":" << Q(session.RecoveryAction) << ",";
     stream << "\"shutdownEvidence\":" << Q(session.ShutdownEvidence) << ",";
@@ -1150,6 +1154,35 @@ std::string SessionFrameJson(const std::string& frameType, const NativeSessionIn
     stream << "\"schemaVersion\":\"0.1.0\",";
     stream << "\"frameType\":" << Q(frameType) << ",";
     stream << "\"session\":" << ToJson(session);
+    stream << "}";
+    return stream.str();
+}
+
+std::string TraceBatchFrameJson(const knmon::KnMonTraceBatch& batch)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":" << Q(batch.SchemaVersion) << ",";
+    stream << "\"frameType\":\"trace_batch\",";
+    stream << "\"sessionId\":" << Q(batch.SessionId) << ",";
+    stream << "\"operationId\":" << Q(batch.OperationId) << ",";
+    stream << "\"batchSequence\":" << batch.BatchSequence << ",";
+    stream << "\"firstRecordSequence\":" << batch.FirstRecordSequence << ",";
+    stream << "\"lastRecordSequence\":" << batch.LastRecordSequence << ",";
+    stream << "\"eventCount\":" << batch.EventCount << ",";
+    stream << "\"droppedEvents\":" << batch.DroppedEvents << ",";
+    stream << "\"recordsStreamed\":" << batch.RecordsStreamed << ",";
+    stream << "\"hostDroppedBatches\":" << batch.HostDroppedBatches << ",";
+    stream << "\"events\":[";
+    for (std::size_t index = 0; index < batch.Events.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << ToJson(batch.Events[index]);
+    }
+    stream << "]";
     stream << "}";
     return stream.str();
 }
@@ -1596,6 +1629,22 @@ std::string GetOption(const std::vector<std::string>& args, const std::string& n
     return value;
 }
 
+bool HasOption(const std::vector<std::string>& args, const std::string& name)
+{
+    bool found = false;
+
+    for (const std::string& arg : args)
+    {
+        if (arg == name)
+        {
+            found = true;
+            break;
+        }
+    }
+
+    return found;
+}
+
 std::uint32_t GetUInt32Option(const std::vector<std::string>& args, const std::string& name, std::uint32_t fallback)
 {
     std::uint32_t value = fallback;
@@ -1723,6 +1772,7 @@ NativeSessionInfo BuildSessionInfoFromCapture(const knmon::KnMonCaptureResult& r
     session.StoppedUtc = result.StoppedUtc.empty() ? session.UpdatedUtc : result.StoppedUtc;
     session.LastTransportSequence = result.LastTransportSequence;
     session.RecordsStreamed = result.RecordsStreamed;
+    session.TransportDroppedEvents = result.TransportDroppedEvents;
     session.ShutdownEvidence = result.SessionShutdownEvidence;
     session.StopRequested = result.CancelRequested || result.CancelObserved;
     session.AgentCleanupAttempted = result.AgentCleanupAttempted;
@@ -1881,11 +1931,21 @@ int AttachSessionCommand(const std::vector<std::string>& args)
     const std::string startedUtc = NowUtc();
     const std::string cancellationEventName = CancellationEventNameFromArgs(args, operationId);
     const std::string pidOption = GetOption(args, "--pid");
+    const bool streamBatches = HasOption(args, "--stream-batches");
+    std::uint32_t batchSize = GetUInt32Option(args, "--batch-size", 64);
+    const std::uint32_t batchIntervalMs = GetUInt32Option(args, "--batch-interval-ms", 100);
+
+    if (batchSize == 0)
+    {
+        batchSize = 64;
+    }
+
+    (void)batchIntervalMs;
 
     knmon::KnMonAttachRequest request;
     request.OperationId = operationId;
     request.SessionId = sessionId;
-    request.SessionKind = "attach_capture";
+    request.SessionKind = streamBatches ? "attach_capture_stream" : "attach_capture";
     request.StartedUtc = startedUtc;
     request.ProcessId = pidOption == "self" ? GetCurrentProcessId() : GetUInt32Option(args, "--pid", 0);
     request.OwnerProcessId = GetCurrentProcessId();
@@ -1909,6 +1969,7 @@ int AttachSessionCommand(const std::vector<std::string>& args)
         cancellationEventName,
         "starting",
         startedUtc);
+    session.SessionKind = request.SessionKind;
 
     std::cout << SessionFrameJson("session_started", session) << "\n" << std::flush;
     session.SessionState = "running";
@@ -1916,7 +1977,33 @@ int AttachSessionCommand(const std::vector<std::string>& args)
     std::cout << SessionFrameJson("session_state", session) << "\n" << std::flush;
 
     knmon::Controller controller;
-    knmon::KnMonCaptureResult result = controller.AttachCapture(request);
+    knmon::KnMonCaptureStreamCallbacks callbacks;
+    callbacks.MaxRecordsPerBatch = batchSize;
+    callbacks.OnTraceBatch = [&](const knmon::KnMonTraceBatch& batch) -> bool
+    {
+        session.LastTransportSequence = batch.LastRecordSequence;
+        session.RecordsStreamed = batch.RecordsStreamed;
+        session.TransportDroppedEvents = batch.DroppedEvents;
+        session.HostDroppedBatches = batch.HostDroppedBatches;
+        session.UpdatedUtc = NowUtc();
+        std::cout << TraceBatchFrameJson(batch) << "\n" << std::flush;
+        return true;
+    };
+    callbacks.OnSessionFrame = [&](const std::string& frameType, const knmon::KnMonCaptureResult& partialResult)
+    {
+        session.SessionState = partialResult.SessionState.empty() ? session.SessionState : partialResult.SessionState;
+        session.LastTransportSequence = partialResult.LastTransportSequence;
+        session.RecordsStreamed = partialResult.RecordsStreamed;
+        session.TransportDroppedEvents = partialResult.TransportDroppedEvents;
+        session.StopRequested = partialResult.CancelRequested || partialResult.CancelObserved;
+        session.AgentCleanupAttempted = partialResult.AgentCleanupAttempted;
+        session.AgentCleanupSucceeded = partialResult.AgentCleanupSucceeded;
+        session.UpdatedUtc = partialResult.UpdatedUtc.empty() ? NowUtc() : partialResult.UpdatedUtc;
+        std::cout << SessionFrameJson(frameType, session) << "\n" << std::flush;
+    };
+
+    const knmon::KnMonCaptureStreamCallbacks* callbackPtr = streamBatches ? &callbacks : nullptr;
+    knmon::KnMonCaptureResult result = controller.AttachCapture(request, callbackPtr);
     session = BuildSessionInfoFromCapture(result, session);
 
     const std::string finalFrame = session.SessionState == "failed" ? "session_failed" : "session_stopped";
@@ -2157,7 +2244,7 @@ void PrintUsage()
     std::cout << "{";
     std::cout << "\"schemaVersion\":\"0.1.0\",";
     std::cout << "\"success\":false,";
-    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | replay-session --session dir | validate-session --session dir\"";
+    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | replay-session --session dir | validate-session --session dir\"";
     std::cout << "}\n";
 }
 }

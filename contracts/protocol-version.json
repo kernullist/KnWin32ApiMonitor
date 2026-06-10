@@ -71,6 +71,17 @@
     "replayCaptureMode": "session-replay",
     "controlledSampleOnly": true
   },
+  "nativeStreamingSession": {
+    "command": "attach-session --pid <pid> --stream-batches --batch-size <n> --batch-interval-ms <n>",
+    "frameTypes": ["session_started", "session_state", "trace_batch", "session_stopping", "session_stopped", "session_failed", "capture_result"],
+    "traceBatchSchema": "native-trace-batch.schema.json",
+    "sessionFrameSchema": "native-session-frame.schema.json",
+    "batchBoundary": "contiguous trace_batch batchSequence values",
+    "recordBoundary": "monotonic firstRecordSequence and lastRecordSequence for non-empty batches",
+    "hotPathPolicy": "host_side_batching_only",
+    "hostDropAccounting": "hostDroppedBatches is separate from target transport dropped records",
+    "nonGoals": ["persistent_daemon", "dll_unload", "cross_bitness_attach", "protected_process_bypass"]
+  },
   "collectorBackpressure": {
     "smokeCommand": "knmon-collector.exe smoke-backpressure --capacity 4 --events 10",
     "overflowPolicies": ["drop-newest"],

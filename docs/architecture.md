@@ -6,7 +6,7 @@
 
 This document describes the current Phase 0/Phase 1 foundation and the controlled native-capture paths for `KN Win32 API Monitor`.
 
-The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, a Phase 11B helper-side process-tree supervision foundation for deterministic sample children, Phase 11C UI controls for bounded selected-target attach and process-tree supervision, a Phase 11D repeated attach state path for self-disabled loaded agents, a Phase 11E collector-core shared transport reader foundation, Phase 11F cancellation-safe operation ownership for bounded attach and process-tree helper commands, Phase 11G durable native session ownership readiness with host-side threaded transport reading and stale session classification, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, persistent attach daemons, full live UI streaming sessions, or broad arbitrary target supervision.
+The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, a Phase 11B helper-side process-tree supervision foundation for deterministic sample children, Phase 11C UI controls for bounded selected-target attach and process-tree supervision, a Phase 11D repeated attach state path for self-disabled loaded agents, a Phase 11E collector-core shared transport reader foundation, Phase 11F cancellation-safe operation ownership for bounded attach and process-tree helper commands, Phase 11G durable native session ownership readiness with host-side threaded transport reading and stale session classification, Phase 11H bounded UI streaming session batches with replay chunk boundary metadata, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, persistent attach daemons, unbounded arbitrary-target streaming, or broad arbitrary target supervision.
 
 ## Layers
 
@@ -60,7 +60,7 @@ Current backend modes:
 
 - `mock`: Browser/Vite mode and mock Tauri target list.
 - `native-enum`: Tauri command calls `knmon-native-helper.exe list-targets`.
-- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof, `capture-sample` for bounded controlled File I/O capture, `capture-sample --write-session` for persisted sessions, `replay-session` for disk replay, `attach-capture --pid` for bounded selected-target attach, or `supervise-tree --pid` for process-tree observation/attach-supported policy evaluation.
+- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof, `capture-sample` for bounded controlled File I/O capture, `capture-sample --write-session` for persisted sessions, `replay-session` for disk replay, `attach-capture --pid` for bounded selected-target attach, `attach-session --stream-batches` for bounded UI streaming attach sessions, or `supervise-tree --pid` for process-tree observation/attach-supported policy evaluation.
 
 ## Rust/Tauri Command Layer
 
@@ -86,12 +86,14 @@ Current commands:
 13. `cancel_native_operation`
 14. `list_native_sessions`
 15. `stop_native_session`
+16. `start_streaming_attach_session`
+17. `drain_native_trace_batches`
 
-These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, bounded sample File I/O capture, bounded same-bitness selected-target attach, helper-side process-tree supervision, cancellation-safe ownership for those bounded helper operations, and host-side session state visibility. The attach and process-tree UI controls still call finite helper commands and return structured JSON; they do not create a persistent broad attached daemon or injected command channel.
+These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, bounded sample File I/O capture, bounded same-bitness selected-target attach, helper-side process-tree supervision, cancellation-safe ownership for those bounded helper operations, host-side session state visibility, and bounded streaming trace batches for a selected same-bitness attach session. The attach and process-tree UI controls still use finite helper commands and local host-side registries; they do not create a persistent broad attached daemon or injected command channel.
 
 Future work:
 
-1. Stream collector events to the UI.
+1. Promote bounded streaming sessions into a persistent daemon only after durable restart/recovery semantics are reviewed.
 2. Add explicit command allowlists for persistent attach, detach, start, stop, and export.
 3. Preserve subsystem, operation, and native error codes in all failures.
 
@@ -111,9 +113,10 @@ Current responsibilities:
 8. Implement bounded helper-side `supervise-tree --pid` process-tree discovery and child policy evaluation.
 9. Implement cancellation checks and cleanup accounting for bounded attach and process-tree operations.
 10. Populate additive host-side session state fields for bounded attach and process-tree results.
-11. Keep broad arbitrary attach, persistent daemon supervision, and UI-driven child auto-attach outside the current controller surface.
+11. Emit bounded host-side trace batch callbacks for attach-session streaming without adding agent hook-path work.
+12. Keep broad arbitrary attach, persistent daemon supervision, and UI-driven child auto-attach outside the current controller surface.
 
-The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, bounded sample File I/O capture, Phase 11A attach, Phase 11B process-tree supervision, Phase 11D loaded-agent reattach state, Phase 11E collector-reader backed shared-memory drain, Phase 11F named-event cancellation, and Phase 11G session-state evidence. The UI-visible Phase 11C/11F/11G path uses the same helper JSON as the smoke scripts.
+The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, bounded sample File I/O capture, Phase 11A attach, Phase 11B process-tree supervision, Phase 11D loaded-agent reattach state, Phase 11E collector-reader backed shared-memory drain, Phase 11F named-event cancellation, Phase 11G session-state evidence, and Phase 11H streaming `trace_batch` frames. The UI-visible Phase 11C/11F/11G/11H path uses the same helper JSON/JSONL as the smoke scripts.
 
 Future responsibilities:
 
@@ -236,9 +239,9 @@ The shared transport reader smoke also does not launch, inject, attach, or consu
 
 Future behavior:
 
-1. Stream threaded reader batches to Tauri/UI after persistent daemon ownership is reviewed.
-2. Write `.knapm` session chunks.
-3. Add high-volume multi-threaded transport after the bounded policy stays stable.
+1. Write `.knapm` session chunks from bounded `trace_batch` boundaries.
+2. Add high-volume multi-threaded transport after the bounded policy stays stable.
+3. Promote streaming sessions into a persistent daemon only after ownership and recovery semantics are reviewed.
 
 ## Agents
 
@@ -295,6 +298,15 @@ Current durable native session readiness behavior:
 4. `classify-session --session-record <path>` classifies stale host-side records as `stale` or `recovery_required` without opening or mutating the target process for cleanup.
 5. Tauri exposes native session state and stop commands derived from the same named-event cancellation primitive; UI wording remains bounded and does not claim DLL unload or persistent live attach.
 
+Current bounded UI streaming session behavior:
+
+1. `attach-session --stream-batches --batch-size <n> --batch-interval-ms <n>` emits JSONL `trace_batch` frames while the bounded attach is still running.
+2. Each `trace_batch` carries `sessionId`, `operationId`, `batchSequence`, `firstRecordSequence`, `lastRecordSequence`, `eventCount`, target transport dropped records, host dropped UI batch count, streamed-record count, and normalized API events.
+3. `batchSequence` is contiguous per session for emitted trace batches; record sequence ranges are monotonic for non-empty batches and are the current future replay chunk boundary.
+4. Tauri starts streaming attach sessions without waiting for final helper completion, stores recent batches in a bounded in-process queue, and exposes cursor-based batch reads to the UI.
+5. If the UI falls behind, Rust/Tauri drops the oldest host-side batches and increments `hostDroppedBatches`; this is separate from target transport dropped records.
+6. Stop still uses `cancel-operation`, and initialized sessions still rely on `KnMonAgentStop` plus `agent_shutdown reason=self_disable` evidence before final stopped state.
+
 Current same-bitness x64/x86 hook coverage:
 
 1. `CreateFileW`
@@ -321,7 +333,7 @@ Current loader-aware behavior:
 
 Current agent limitations:
 
-1. Hooks are installed only in repository-controlled sample launch flow or explicit same-bitness Phase 11A/11D/11F/11G attach validation.
+1. Hooks are installed only in repository-controlled sample launch flow or explicit same-bitness Phase 11A/11D/11F/11G/11H attach validation.
 2. Hook method is eligible-module IAT patching, not inline trampoline or EAT patching.
 3. API event transport is shared memory for the controlled sample path; named pipe remains for low-volume control and lifecycle messages.
 4. Shutdown cleanup is scoped to controlled sample launch or attach self-disable; persistent broad arbitrary detach remains unsupported.
@@ -379,8 +391,11 @@ Current contract artifacts:
 19. `collector-stats.schema.json`
 20. `process-tree-node.schema.json`
 21. `process-tree-result.schema.json`
+22. `native-session.schema.json`
+23. `native-trace-batch.schema.json`
+24. `native-session-frame.schema.json`
 
-The TypeScript event model and C++ `Protocol.h` are aligned around these fields, including `bounded-native-capture`, `bounded-native-attach`, `early-bird APC`, `remote LoadLibraryW`, `attachProcessId`, `detachPolicy`, `process-tree`, `observe`, `attach-supported`, child eligibility, and child policy decisions.
+The TypeScript event model and C++ `Protocol.h` are aligned around these fields, including `bounded-native-capture`, `bounded-native-attach`, `early-bird APC`, `remote LoadLibraryW`, `attachProcessId`, `detachPolicy`, `process-tree`, `observe`, `attach-supported`, child eligibility, child policy decisions, native session ownership, and bounded `trace_batch` streaming frames.
 
 ## Definition System
 

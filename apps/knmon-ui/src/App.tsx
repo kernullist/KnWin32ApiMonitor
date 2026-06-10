@@ -26,6 +26,7 @@ import {
   cancelNativeOperation,
   captureSampleFileIoEvents,
   captureSampleFileIoSession,
+  drainNativeTraceBatches,
   launchSampleEarlyBirdCapture,
   listNativeSessions,
   listNativeTargetProcesses,
@@ -33,13 +34,14 @@ import {
   listTargetProcesses,
   replayLastSampleSession,
   startBackendSession,
+  startStreamingAttachSession,
   stopBackendSession,
   stopNativeSession,
   superviseProcessTree
 } from "./backend";
 import { apiTree, captureProfiles, createMockFileIoEvent, initialTraceEvents } from "./mockData";
 import { downloadJsonl, estimateSessionBytes } from "./session";
-import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, NativeOperation, NativeSession, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
+import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, NativeOperation, NativeSession, NativeTraceBatch, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
 
 type LeftTab = "targets" | "apis" | "profiles";
 type TraceMode = "flat" | "call-tree";
@@ -337,6 +339,7 @@ function App() {
     makeAuditEvent("backend_ready", "mock_init", "Mock File I/O backend initialized.")
   ]);
   const nextEventId = useRef(initialTraceEvents.length + 1);
+  const streamBatchCursors = useRef<Record<string, number>>({});
 
   useEffect(() => {
     let active = true;
@@ -388,6 +391,20 @@ function App() {
     nextEventId.current += traceEvents.length;
     setEvents((current) => [...current, ...traceEvents].slice(-400));
     setSelectedEventId(traceEvents[traceEvents.length - 1].eventId);
+  }
+
+  function appendTraceBatches(batches: NativeTraceBatch[]) {
+    if (batches.length === 0) {
+      return;
+    }
+
+    batches.forEach((batch) => {
+      appendCapturedEvents(batch.events, ["ui-stream", `batch:${batch.batchSequence}`]);
+    });
+
+    const latest = batches[batches.length - 1];
+    setDroppedCount(latest.droppedEvents);
+    streamBatchCursors.current[latest.sessionId] = latest.batchSequence;
   }
 
   async function handleLoadMockTargets() {
@@ -500,6 +517,40 @@ function App() {
   const canRunTargetAction = targetBlockReason === null && !nativeBusy && activeNativeOperation === null && activeNativeSession === null;
   const processTreeSummary = summarizeProcessTree(processTreeResult);
   const sessionBytes = estimateSessionBytes(events);
+
+  useEffect(() => {
+    if (!activeNativeSession) {
+      return undefined;
+    }
+
+    let active = true;
+    const sessionId = activeNativeSession.sessionId;
+
+    const refreshTraceBatches = async () => {
+      const cursor = streamBatchCursors.current[sessionId] ?? 0;
+      try {
+        const batches = await drainNativeTraceBatches(sessionId, cursor);
+        if (active && batches.length > 0) {
+          appendTraceBatches(batches);
+        }
+      } catch (error) {
+        if (active) {
+          const message = error instanceof Error ? error.message : String(error);
+          appendOutput([makeAuditEvent("stream_batch_poll_failed", "drain_native_trace_batches", message)]);
+        }
+      }
+    };
+
+    void refreshTraceBatches();
+    const timer = window.setInterval(() => {
+      void refreshTraceBatches();
+    }, 350);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [activeNativeSession?.sessionId]);
 
   async function handleStartCapture() {
     await startBackendSession();
@@ -662,6 +713,33 @@ function App() {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       appendOutput([makeAuditEvent("attach_blocked", "attach_target_process_capture", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
+  async function handleStartStreamingAttach() {
+    if (!selectedTarget || targetBlockReason) {
+      appendOutput([makeAuditEvent("stream_attach_blocked", "start_streaming_attach_session", targetBlockReason ?? "No target selected.")]);
+      setInspectorTab("output");
+      return;
+    }
+
+    setNativeBusy(true);
+
+    try {
+      appendOutput([makeAuditEvent("stream_attach_requested", "start_streaming_attach_session", `Streaming attach requested for PID ${selectedTarget.pid}.`)]);
+      const session = await startStreamingAttachSession(selectedTarget.pid, attachDurationMs);
+      streamBatchCursors.current[session.sessionId] = 0;
+      setNativeSessions((current) => {
+        const remaining = current.filter((item) => item.sessionId !== session.sessionId);
+        return [session, ...remaining];
+      });
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("stream_attach_blocked", "start_streaming_attach_session", message)]);
       setInspectorTab("output");
     } finally {
       setNativeBusy(false);
@@ -873,6 +951,8 @@ function App() {
                     <span>{activeNativeSession.sessionKind}</span>
                     <strong>{activeNativeSession.sessionState}</strong>
                     <span>{activeNativeSession.recordsStreamed} rec</span>
+                    <span>{activeNativeSession.transportDroppedEvents} drop</span>
+                    <span>{activeNativeSession.hostDroppedBatches} ui-drop</span>
                     <button
                       type="button"
                       className="tool-button"
@@ -883,7 +963,9 @@ function App() {
                       <Square size={13} />
                       <span>Stop</span>
                     </button>
+                    {activeNativeSession.helperProcessId ? <small>helper {activeNativeSession.helperProcessId}</small> : null}
                     {activeNativeSession.staleReason ? <small>{activeNativeSession.staleReason}</small> : null}
+                    {activeNativeSession.lastError ? <small>{activeNativeSession.lastError}</small> : null}
                   </div>
                 ) : null}
 
@@ -892,7 +974,7 @@ function App() {
                     <Activity size={13} />
                     <span>Bounded Attach</span>
                   </div>
-                  <div className="action-controls">
+                  <div className="action-controls attach-controls">
                     <label htmlFor="attach-duration">Duration</label>
                     <input
                       id="attach-duration"
@@ -906,6 +988,10 @@ function App() {
                     <button type="button" className="tool-button primary" onClick={handleAttachSelectedTarget} disabled={!canRunTargetAction}>
                       <Play size={13} />
                       <span>Attach Capture</span>
+                    </button>
+                    <button type="button" className="tool-button" onClick={handleStartStreamingAttach} disabled={!canRunTargetAction}>
+                      <Activity size={13} />
+                      <span>Start Stream</span>
                     </button>
                   </div>
                   {attachResult ? (

@@ -17,6 +17,8 @@
     "cancellationEventName",
     "lastTransportSequence",
     "recordsStreamed",
+    "transportDroppedEvents",
+    "hostDroppedBatches",
     "staleReason",
     "recoveryAction"
   ],
@@ -48,11 +50,16 @@
     "cancellationEventName": { "type": "string" },
     "lastTransportSequence": { "type": "integer", "minimum": 0 },
     "recordsStreamed": { "type": "integer", "minimum": 0 },
+    "transportDroppedEvents": { "type": "integer", "minimum": 0 },
+    "hostDroppedBatches": { "type": "integer", "minimum": 0 },
     "staleReason": { "type": "string" },
     "recoveryAction": { "type": "string" },
     "shutdownEvidence": { "type": "string" },
     "stopRequested": { "type": "boolean" },
     "agentCleanupAttempted": { "type": "boolean" },
-    "agentCleanupSucceeded": { "type": "boolean" }
+    "agentCleanupSucceeded": { "type": "boolean" },
+    "lastError": { "type": "string" },
+    "elapsedMs": { "type": "integer", "minimum": 0 },
+    "durationMs": { "type": "integer", "minimum": 0 }
   }
 }

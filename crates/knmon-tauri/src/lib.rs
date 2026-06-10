@@ -1,8 +1,10 @@
+#![recursion_limit = "256"]
+
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
+use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::process::Stdio;
+use std::process::{Command, Stdio};
 use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -10,6 +12,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 pub const PROTOCOL_MAJOR: u16 = 0;
 pub const PROTOCOL_MINOR: u16 = 1;
 pub const PROTOCOL_PATCH: u16 = 0;
+const STREAM_BATCH_QUEUE_LIMIT: usize = 64;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -64,14 +67,40 @@ pub struct NativeSession
     pub cancellation_event_name: String,
     pub last_transport_sequence: u64,
     pub records_streamed: u64,
+    #[serde(default)]
+    pub transport_dropped_events: u64,
+    #[serde(default)]
+    pub host_dropped_batches: u64,
     pub stale_reason: String,
     pub recovery_action: String,
     pub shutdown_evidence: String,
     pub stop_requested: bool,
     pub agent_cleanup_attempted: bool,
     pub agent_cleanup_succeeded: bool,
+    #[serde(default)]
+    pub last_error: String,
+    #[serde(default)]
     pub elapsed_ms: u64,
+    #[serde(default)]
     pub duration_ms: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeTraceBatch
+{
+    pub schema_version: String,
+    pub frame_type: String,
+    pub session_id: String,
+    pub operation_id: String,
+    pub batch_sequence: u64,
+    pub first_record_sequence: u64,
+    pub last_record_sequence: u64,
+    pub event_count: u64,
+    pub dropped_events: u64,
+    pub records_streamed: u64,
+    pub host_dropped_batches: u64,
+    pub events: Vec<AgentApiCallEvent>,
 }
 
 #[derive(Debug, Clone)]
@@ -89,11 +118,16 @@ struct NativeOperationRecord
     helper_process_id: u32,
     last_transport_sequence: u64,
     records_streamed: u64,
+    transport_dropped_events: u64,
+    host_dropped_batches: u64,
+    last_batch_sequence: u64,
+    trace_batches: VecDeque<NativeTraceBatch>,
     stale_reason: String,
     recovery_action: String,
     shutdown_evidence: String,
     agent_cleanup_attempted: bool,
     agent_cleanup_succeeded: bool,
+    last_error: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -632,12 +666,15 @@ fn session_view(record: &NativeOperationRecord) -> NativeSession
         cancellation_event_name: cancellation_event_name(&record.operation_id),
         last_transport_sequence: record.last_transport_sequence,
         records_streamed: record.records_streamed,
+        transport_dropped_events: record.transport_dropped_events,
+        host_dropped_batches: record.host_dropped_batches,
         stale_reason: record.stale_reason.clone(),
         recovery_action: record.recovery_action.clone(),
         shutdown_evidence: record.shutdown_evidence.clone(),
         stop_requested: record.cancel_requested,
         agent_cleanup_attempted: record.agent_cleanup_attempted,
         agent_cleanup_succeeded: record.agent_cleanup_succeeded,
+        last_error: record.last_error.clone(),
         elapsed_ms,
         duration_ms: record.duration_ms,
     }
@@ -662,11 +699,16 @@ fn register_native_operation(operation_id: &str, operation_kind: &str, target_pr
             helper_process_id: 0,
             last_transport_sequence: 0,
             records_streamed: 0,
+            transport_dropped_events: 0,
+            host_dropped_batches: 0,
+            last_batch_sequence: 0,
+            trace_batches: VecDeque::new(),
             stale_reason: String::new(),
             recovery_action: String::new(),
             shutdown_evidence: String::new(),
             agent_cleanup_attempted: false,
             agent_cleanup_succeeded: false,
+            last_error: String::new(),
         },
     );
 }
@@ -690,6 +732,7 @@ fn finish_native_operation_with_capture(operation_id: &str, state: &str, result:
         record.finished_at_ms = now_epoch_ms();
         record.last_transport_sequence = result.last_transport_sequence;
         record.records_streamed = result.records_streamed;
+        record.transport_dropped_events = result.transport_dropped_events;
         record.shutdown_evidence = result.session_shutdown_evidence.clone();
         record.agent_cleanup_attempted = result.agent_cleanup_attempted;
         record.agent_cleanup_succeeded = result.agent_cleanup_succeeded;
@@ -723,6 +766,162 @@ fn mark_native_operation_helper_pid(operation_id: &str, helper_process_id: u32)
     {
         record.helper_process_id = helper_process_id;
     }
+}
+
+fn update_native_record_from_session(record: &mut NativeOperationRecord, session: &NativeSession)
+{
+    record.session_id = session.session_id.clone();
+    record.operation_id = session.operation_id.clone();
+    record.operation_kind = session.session_kind.clone();
+    record.target_process_id = session.target_process_id;
+    record.state = session.session_state.clone();
+    record.cancel_requested = session.stop_requested;
+    record.helper_process_id = session.helper_process_id;
+    record.last_transport_sequence = session.last_transport_sequence;
+    record.records_streamed = session.records_streamed;
+    record.transport_dropped_events = session.transport_dropped_events;
+    record.host_dropped_batches = session.host_dropped_batches.max(record.host_dropped_batches);
+    record.stale_reason = session.stale_reason.clone();
+    record.recovery_action = session.recovery_action.clone();
+    record.shutdown_evidence = session.shutdown_evidence.clone();
+    record.agent_cleanup_attempted = session.agent_cleanup_attempted;
+    record.agent_cleanup_succeeded = session.agent_cleanup_succeeded;
+    if session.session_state == "stopped" || session.session_state == "failed" || session.session_state == "stale" || session.session_state == "recovery_required"
+    {
+        record.finished_at_ms = now_epoch_ms();
+    }
+}
+
+fn push_native_trace_batch(operation_id: &str, mut batch: NativeTraceBatch)
+{
+    let mut registry = operation_registry().lock().unwrap();
+    if let Some(record) = registry.get_mut(operation_id)
+    {
+        while record.trace_batches.len() >= STREAM_BATCH_QUEUE_LIMIT
+        {
+            record.trace_batches.pop_front();
+            record.host_dropped_batches = record.host_dropped_batches.saturating_add(1);
+        }
+
+        batch.host_dropped_batches = record.host_dropped_batches;
+        record.last_batch_sequence = record.last_batch_sequence.max(batch.batch_sequence);
+        record.last_transport_sequence = batch.last_record_sequence;
+        record.records_streamed = batch.records_streamed;
+        record.transport_dropped_events = batch.dropped_events;
+        record.trace_batches.push_back(batch);
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StreamingFrameHeader
+{
+    frame_type: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StreamingSessionFrame
+{
+    frame_type: String,
+    session: NativeSession,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StreamingCaptureResultFrame
+{
+    session: NativeSession,
+    capture_result: CaptureResult,
+}
+
+fn update_streaming_error(operation_id: &str, state: &str, message: String)
+{
+    let mut registry = operation_registry().lock().unwrap();
+    if let Some(record) = registry.get_mut(operation_id)
+    {
+        record.state = state.to_string();
+        record.last_error = message;
+        record.finished_at_ms = now_epoch_ms();
+    }
+}
+
+fn process_streaming_frame_line(operation_id: &str, line: &str) -> Result<(), String>
+{
+    let header: StreamingFrameHeader = serde_json::from_str(line)
+        .map_err(|error| format!("failed to parse streaming frame header: {error}; line={line}"))?;
+
+    match header.frame_type.as_str() {
+        "trace_batch" =>
+        {
+            let batch: NativeTraceBatch = serde_json::from_str(line)
+                .map_err(|error| format!("failed to parse trace_batch frame: {error}; line={line}"))?;
+            push_native_trace_batch(operation_id, batch);
+        }
+        "session_started" | "session_state" | "session_stopping" | "session_stopped" | "session_failed" =>
+        {
+            let frame: StreamingSessionFrame = serde_json::from_str(line)
+                .map_err(|error| format!("failed to parse session frame: {error}; line={line}"))?;
+            let mut registry = operation_registry().lock().unwrap();
+            if let Some(record) = registry.get_mut(operation_id)
+            {
+                let state = if frame.frame_type == "session_stopping"
+                {
+                    "stop_requested".to_string()
+                }
+                else
+                {
+                    frame.session.session_state.clone()
+                };
+                update_native_record_from_session(record, &frame.session);
+                record.state = state;
+            }
+        }
+        "capture_result" =>
+        {
+            let frame: StreamingCaptureResultFrame = serde_json::from_str(line)
+                .map_err(|error| format!("failed to parse capture_result frame: {error}; line={line}"))?;
+            let operation_state = if frame.capture_result.operation_state.is_empty()
+            {
+                if frame.capture_result.success
+                {
+                    "completed".to_string()
+                }
+                else if frame.capture_result.operation == "operation_cancelled"
+                {
+                    "cancelled".to_string()
+                }
+                else
+                {
+                    "failed".to_string()
+                }
+            }
+            else
+            {
+                frame.capture_result.operation_state.clone()
+            };
+
+            let mut registry = operation_registry().lock().unwrap();
+            if let Some(record) = registry.get_mut(operation_id)
+            {
+                update_native_record_from_session(record, &frame.session);
+                record.state = operation_state;
+                record.finished_at_ms = now_epoch_ms();
+                record.last_transport_sequence = frame.capture_result.last_transport_sequence;
+                record.records_streamed = frame.capture_result.records_streamed;
+                record.transport_dropped_events = frame.capture_result.transport_dropped_events;
+                record.shutdown_evidence = frame.capture_result.session_shutdown_evidence;
+                record.agent_cleanup_attempted = frame.capture_result.agent_cleanup_attempted;
+                record.agent_cleanup_succeeded = frame.capture_result.agent_cleanup_succeeded;
+            }
+        }
+        other =>
+        {
+            return Err(format!("unsupported streaming frame type: {other}"));
+        }
+    }
+
+    Ok(())
 }
 
 pub fn native_operation_states() -> Vec<NativeOperation>
@@ -799,6 +998,137 @@ pub fn stop_native_session(session_id: String) -> Result<NativeSession, String>
         .get(&operation_id)
         .map(session_view)
         .ok_or_else(|| format!("session not found after stop: {session_id}"))
+}
+
+pub fn start_streaming_attach_session(process_id: u32, duration_ms: u32) -> Result<NativeSession, String>
+{
+    let duration = normalize_duration_ms(duration_ms);
+    let helper_timeout = helper_inner_timeout_ms(duration);
+    let operation_id = new_operation_id("ui-stream", process_id);
+    let session_id = new_session_id(&operation_id);
+    register_native_operation(&operation_id, "attach_capture_stream", process_id, duration);
+
+    let helper_path = find_helper_path()
+        .ok_or_else(|| "knmon-native-helper.exe was not found. Run `npm run native:build` first.".to_string())?;
+
+    let args = vec![
+        "attach-session".to_string(),
+        "--pid".to_string(),
+        process_id.to_string(),
+        "--duration-ms".to_string(),
+        duration.to_string(),
+        "--timeout-ms".to_string(),
+        helper_timeout.to_string(),
+        "--operation-id".to_string(),
+        operation_id.clone(),
+        "--session-id".to_string(),
+        session_id.clone(),
+        "--stream-batches".to_string(),
+        "--batch-size".to_string(),
+        "64".to_string(),
+        "--batch-interval-ms".to_string(),
+        "100".to_string(),
+    ];
+
+    let mut child = Command::new(&helper_path)
+        .args(&args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| format!("failed to run {} attach-session: {error}", helper_path.display()))?;
+
+    mark_native_operation_helper_pid(&operation_id, child.id());
+
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "failed to capture attach-session stdout".to_string())?;
+    let stderr = child.stderr.take();
+    let worker_operation_id = operation_id.clone();
+    thread::spawn(move ||
+    {
+        let stderr_thread = stderr.map(|mut pipe| {
+            thread::spawn(move ||
+            {
+                let mut text = String::new();
+                let _ = pipe.read_to_string(&mut text);
+                text
+            })
+        });
+
+        let reader = BufReader::new(stdout);
+        for line_result in reader.lines()
+        {
+            match line_result
+            {
+                Ok(line) =>
+                {
+                    let trimmed = line.trim();
+                    if trimmed.is_empty()
+                    {
+                        continue;
+                    }
+
+                    if let Err(error) = process_streaming_frame_line(&worker_operation_id, trimmed)
+                    {
+                        update_streaming_error(&worker_operation_id, "failed", error);
+                    }
+                }
+                Err(error) =>
+                {
+                    update_streaming_error(&worker_operation_id, "failed", format!("streaming stdout read failed: {error}"));
+                    break;
+                }
+            }
+        }
+
+        let status = child.wait();
+        let stderr_text = match stderr_thread
+        {
+            Some(handle) => handle.join().unwrap_or_default(),
+            None => String::new(),
+        };
+
+        match status
+        {
+            Ok(exit_status) =>
+            {
+                if !exit_status.success()
+                {
+                    update_streaming_error(
+                        &worker_operation_id,
+                        "failed",
+                        format!("attach-session exited with {:?}; stderr={}", exit_status.code(), stderr_text.trim()));
+                }
+            }
+            Err(error) =>
+            {
+                update_streaming_error(&worker_operation_id, "failed", format!("failed to wait for attach-session: {error}"));
+            }
+        }
+    });
+
+    let registry = operation_registry().lock().unwrap();
+    registry
+        .get(&operation_id)
+        .map(session_view)
+        .ok_or_else(|| format!("streaming session not found after start: {session_id}"))
+}
+
+pub fn drain_native_trace_batches(session_id: String, after_batch_sequence: u64) -> Result<Vec<NativeTraceBatch>, String>
+{
+    let registry = operation_registry().lock().unwrap();
+    let record = registry
+        .values()
+        .find(|record| record.session_id == session_id)
+        .ok_or_else(|| format!("session not found: {session_id}"))?;
+
+    Ok(record
+        .trace_batches
+        .iter()
+        .filter(|batch| batch.batch_sequence > after_batch_sequence)
+        .cloned()
+        .collect())
 }
 
 pub fn backend_status() -> &'static str
@@ -1236,4 +1566,211 @@ fn find_helper_path() -> Option<PathBuf>
     }
 
     candidates.into_iter().find(|candidate| candidate.is_file())
+}
+
+#[cfg(test)]
+mod tests
+{
+    use super::*;
+
+    fn test_operation_id(name: &str) -> String
+    {
+        format!("{name}-{}", now_epoch_ms())
+    }
+
+    fn test_event(operation_id: &str, sequence: u64) -> AgentApiCallEvent
+    {
+        AgentApiCallEvent
+        {
+            schema_version: "0.1.0".to_string(),
+            message_type: "api_call".to_string(),
+            operation_id: operation_id.to_string(),
+            pid: 100,
+            tid: 200,
+            timestamp_utc: "2026-06-10T00:00:00.000Z".to_string(),
+            sequence,
+            api: "CreateFileW".to_string(),
+            module: "kernel32.dll".to_string(),
+            api_family: Some("file_io".to_string()),
+            api_category: Some("file".to_string()),
+            api_risk: Some("low".to_string()),
+            hook_policy: Some("iat".to_string()),
+            coverage_status: Some("smoke_verified".to_string()),
+            process: "knmon-sample-fileio.exe".to_string(),
+            return_value: "0x1".to_string(),
+            last_error_code: 0,
+            last_error_message: String::new(),
+            duration_us: 10,
+            arguments: Vec::new(),
+            tags: vec!["fileio".to_string()],
+            stack: Vec::new(),
+            buffer_preview: String::new(),
+        }
+    }
+
+    fn test_batch(operation_id: &str, session_id: &str, batch_sequence: u64) -> NativeTraceBatch
+    {
+        NativeTraceBatch
+        {
+            schema_version: "0.1.0".to_string(),
+            frame_type: "trace_batch".to_string(),
+            session_id: session_id.to_string(),
+            operation_id: operation_id.to_string(),
+            batch_sequence,
+            first_record_sequence: batch_sequence,
+            last_record_sequence: batch_sequence,
+            event_count: 1,
+            dropped_events: 0,
+            records_streamed: batch_sequence,
+            host_dropped_batches: 0,
+            events: vec![test_event(operation_id, batch_sequence)],
+        }
+    }
+
+    #[test]
+    fn streaming_trace_batch_cursor_returns_only_new_batches()
+    {
+        let operation_id = test_operation_id("cursor");
+        let session_id = new_session_id(&operation_id);
+        register_native_operation(&operation_id, "attach_capture_stream", 1234, 1000);
+
+        let batch = test_batch(&operation_id, &session_id, 1);
+        let line = serde_json::to_string(&batch).unwrap();
+        process_streaming_frame_line(&operation_id, &line).unwrap();
+
+        let first = drain_native_trace_batches(session_id.clone(), 0).unwrap();
+        assert_eq!(first.len(), 1);
+        assert_eq!(first[0].batch_sequence, 1);
+
+        let second = drain_native_trace_batches(session_id, 1).unwrap();
+        assert!(second.is_empty());
+    }
+
+    #[test]
+    fn streaming_trace_batch_queue_accounts_host_drops()
+    {
+        let operation_id = test_operation_id("overflow");
+        let session_id = new_session_id(&operation_id);
+        register_native_operation(&operation_id, "attach_capture_stream", 5678, 1000);
+
+        for sequence in 1..=(STREAM_BATCH_QUEUE_LIMIT as u64 + 3)
+        {
+            push_native_trace_batch(&operation_id, test_batch(&operation_id, &session_id, sequence));
+        }
+
+        let batches = drain_native_trace_batches(session_id, 0).unwrap();
+        assert_eq!(batches.len(), STREAM_BATCH_QUEUE_LIMIT);
+        assert_eq!(batches[0].batch_sequence, 4);
+        assert_eq!(batches.last().unwrap().batch_sequence, STREAM_BATCH_QUEUE_LIMIT as u64 + 3);
+        assert_eq!(batches.last().unwrap().host_dropped_batches, 3);
+    }
+
+    #[test]
+    fn streaming_capture_result_frame_updates_session_cleanup_state()
+    {
+        let operation_id = test_operation_id("capture-result");
+        let session_id = new_session_id(&operation_id);
+        register_native_operation(&operation_id, "attach_capture_stream", 9012, 1000);
+
+        let frame = serde_json::json!({
+            "schemaVersion": "0.1.0",
+            "frameType": "capture_result",
+            "session": {
+                "schemaVersion": "0.1.0",
+                "sessionId": session_id,
+                "operationId": operation_id,
+                "sessionKind": "attach_capture_stream",
+                "ownerProcessId": 1,
+                "helperProcessId": 2,
+                "targetProcessId": 9012,
+                "sessionState": "stopped",
+                "startedUtc": "2026-06-10T00:00:00.000Z",
+                "updatedUtc": "2026-06-10T00:00:01.000Z",
+                "stoppedUtc": "2026-06-10T00:00:01.000Z",
+                "cancellationEventName": "Local\\\\KNMonCancel_test",
+                "lastTransportSequence": 7,
+                "recordsStreamed": 7,
+                "transportDroppedEvents": 0,
+                "hostDroppedBatches": 0,
+                "staleReason": "",
+                "recoveryAction": "",
+                "shutdownEvidence": "agent_shutdown",
+                "stopRequested": true,
+                "agentCleanupAttempted": true,
+                "agentCleanupSucceeded": true
+            },
+            "captureResult": {
+                "schemaVersion": "0.1.0",
+                "operationId": operation_id,
+                "sessionId": session_id,
+                "sessionState": "stopped",
+                "sessionKind": "attach_capture_stream",
+                "ownerProcessId": 1,
+                "helperProcessId": 2,
+                "startedUtc": "2026-06-10T00:00:00.000Z",
+                "updatedUtc": "2026-06-10T00:00:01.000Z",
+                "stoppedUtc": "2026-06-10T00:00:01.000Z",
+                "cancellationEventName": "Local\\\\KNMonCancel_test",
+                "lastTransportSequence": 7,
+                "recordsStreamed": 7,
+                "staleReason": "",
+                "recoveryAction": "",
+                "sessionShutdownEvidence": "agent_shutdown",
+                "success": false,
+                "backendMode": "native-capture",
+                "captureMode": "bounded-native-attach",
+                "injectionMethod": "remote LoadLibraryW",
+                "targetPath": "",
+                "agentPath": "",
+                "attachProcessId": 9012,
+                "detachPolicy": "self-disable-no-unload",
+                "targetProcessId": 9012,
+                "targetThreadId": 0,
+                "architecture": "x64",
+                "win32ErrorCode": 1223,
+                "ntStatus": "0x00000000",
+                "subsystem": "knmon-core",
+                "operation": "operation_cancelled",
+                "message": "cancelled",
+                "cancelRequested": true,
+                "cancelObserved": true,
+                "cancelStage": "attach_capture",
+                "operationState": "cancelled",
+                "agentCleanupAttempted": true,
+                "agentCleanupSucceeded": true,
+                "droppedEvents": 0,
+                "transportMode": "shared-memory",
+                "transportCapacity": 64,
+                "transportRecordsProduced": 7,
+                "transportRecordsConsumed": 7,
+                "transportDroppedEvents": 0,
+                "transportHighWaterMark": 2,
+                "hookOverheadMinUs": 1,
+                "hookOverheadAvgUs": 1,
+                "hookOverheadMaxUs": 1,
+                "handshake": {
+                    "received": true,
+                    "schemaVersion": "0.1.0",
+                    "operationId": operation_id,
+                    "processId": 9012,
+                    "threadId": 1,
+                    "architecture": "x64",
+                    "agentVersion": "0.1.0",
+                    "message": "ok",
+                    "rawPayload": "{}"
+                },
+                "auditEvents": [],
+                "agentMessages": [],
+                "capturedEvents": []
+            }
+        });
+
+        process_streaming_frame_line(&operation_id, &frame.to_string()).unwrap();
+        let sessions = native_session_states();
+        let session = sessions.iter().find(|item| item.operation_id == operation_id).unwrap();
+        assert_eq!(session.session_state, "stopped");
+        assert!(session.agent_cleanup_attempted);
+        assert!(session.agent_cleanup_succeeded);
+        assert_eq!(session.records_streamed, 7);
+    }
 }

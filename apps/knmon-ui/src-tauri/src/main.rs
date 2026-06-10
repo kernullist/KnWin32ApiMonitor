@@ -7,10 +7,12 @@ use knmon_tauri::{
     capture_sample_fileio_session,
     launch_sample_early_bird,
     mock_target_processes,
+    drain_native_trace_batches as drain_native_trace_batches_backend,
     native_target_processes,
     native_operation_states,
     native_session_states,
     replay_last_session,
+    start_streaming_attach_session as start_streaming_attach_session_backend,
     supervise_process_tree as supervise_process_tree_backend,
     cancel_native_operation as cancel_native_operation_backend,
     stop_native_session as stop_native_session_backend,
@@ -19,6 +21,7 @@ use knmon_tauri::{
     LaunchResult,
     NativeOperation,
     NativeSession,
+    NativeTraceBatch,
     ProcessTreeResult,
     SessionReplayResult,
     TargetProcess,
@@ -97,6 +100,18 @@ fn stop_native_session(session_id: String) -> Result<NativeSession, String>
 }
 
 #[tauri::command]
+fn start_streaming_attach_session(pid: u32, duration_ms: u32) -> Result<NativeSession, String>
+{
+    start_streaming_attach_session_backend(pid, duration_ms)
+}
+
+#[tauri::command]
+fn drain_native_trace_batches(session_id: String, after_batch_sequence: u64) -> Result<Vec<NativeTraceBatch>, String>
+{
+    drain_native_trace_batches_backend(session_id, after_batch_sequence)
+}
+
+#[tauri::command]
 fn get_backend_status() -> Result<String, String>
 {
     Ok(backend_status().to_string())
@@ -130,6 +145,8 @@ fn main()
             cancel_native_operation,
             list_native_sessions,
             stop_native_session,
+            start_streaming_attach_session,
+            drain_native_trace_batches,
             get_backend_status,
             start_mock_capture_session,
             stop_mock_capture_session

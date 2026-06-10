@@ -50,12 +50,15 @@ export interface NativeSession {
   cancellationEventName: string;
   lastTransportSequence: number;
   recordsStreamed: number;
+  transportDroppedEvents: number;
+  hostDroppedBatches: number;
   staleReason: string;
   recoveryAction: string;
   shutdownEvidence: string;
   stopRequested: boolean;
   agentCleanupAttempted: boolean;
   agentCleanupSucceeded: boolean;
+  lastError: string;
   elapsedMs: number;
   durationMs: number;
 }
@@ -142,6 +145,21 @@ export interface AgentApiCallEvent {
   tags: string[];
   stack: string[];
   bufferPreview: string;
+}
+
+export interface NativeTraceBatch {
+  schemaVersion: string;
+  frameType: "trace_batch";
+  sessionId: string;
+  operationId: string;
+  batchSequence: number;
+  firstRecordSequence: number;
+  lastRecordSequence: number;
+  eventCount: number;
+  droppedEvents: number;
+  recordsStreamed: number;
+  hostDroppedBatches: number;
+  events: AgentApiCallEvent[];
 }
 
 export interface CaptureResult {

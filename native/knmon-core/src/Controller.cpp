@@ -2815,15 +2815,24 @@ void RecordHookOverhead(KnMonCaptureResult& result, std::uint64_t overheadUs)
     result.HookOverheadAvgUs = ((result.HookOverheadAvgUs * (nextCount - 1)) + overheadUs) / nextCount;
 }
 
-void DrainSharedTransport(KnMonCaptureResult& result, SharedTransportSession& transport)
+void DrainSharedTransport(
+    KnMonCaptureResult& result,
+    SharedTransportSession& transport,
+    const KnMonCaptureStreamCallbacks* streamCallbacks,
+    std::uint64_t* batchSequence)
 {
     if (transport.Header == nullptr || transport.Records == nullptr || transport.Capacity == 0)
     {
         return;
     }
 
-    SharedTransportReader reader = MakeSharedTransportReader(transport);
-    SharedTransportDrainResult drainResult = reader.DrainAvailable([&result](const KnMonTransportRecord& record)
+    const std::uint32_t maxRecordsPerDrain = streamCallbacks == nullptr ? 0 : streamCallbacks->MaxRecordsPerBatch;
+    std::vector<KnMonAgentMessage> batchEvents;
+    std::uint64_t firstRecordSequence = 0;
+    std::uint64_t lastRecordSequence = 0;
+
+    SharedTransportReader reader = MakeSharedTransportReader(transport, maxRecordsPerDrain);
+    SharedTransportDrainResult drainResult = reader.DrainAvailable([&](const KnMonTransportRecord& record)
     {
         const std::string payload = BuildTransportApiPayload(result, record);
         if (!payload.empty())
@@ -2833,6 +2842,14 @@ void DrainSharedTransport(KnMonCaptureResult& result, SharedTransportSession& tr
             result.AgentMessages.push_back(message);
             result.CapturedEvents.push_back(message);
             AddAudit(result, "api_call_received", "shared_memory_transport_read", message.RawPayload);
+
+            if (batchEvents.empty())
+            {
+                firstRecordSequence = static_cast<std::uint64_t>(record.Sequence);
+            }
+
+            lastRecordSequence = static_cast<std::uint64_t>(record.Sequence);
+            batchEvents.push_back(message);
         }
 
         return true;
@@ -2844,6 +2861,45 @@ void DrainSharedTransport(KnMonCaptureResult& result, SharedTransportSession& tr
     }
 
     ApplyTransportMetrics(result, drainResult);
+
+    if (
+        streamCallbacks != nullptr &&
+        streamCallbacks->OnTraceBatch &&
+        batchSequence != nullptr &&
+        !batchEvents.empty())
+    {
+        ++(*batchSequence);
+
+        KnMonTraceBatch batch;
+        batch.SessionId = result.SessionId;
+        batch.OperationId = result.OperationId;
+        batch.BatchSequence = *batchSequence;
+        batch.FirstRecordSequence = firstRecordSequence;
+        batch.LastRecordSequence = lastRecordSequence;
+        batch.EventCount = static_cast<std::uint64_t>(batchEvents.size());
+        batch.DroppedEvents = result.TransportDroppedEvents;
+        batch.RecordsStreamed = result.RecordsStreamed;
+        batch.HostDroppedBatches = 0;
+        batch.Events = batchEvents;
+        (void)streamCallbacks->OnTraceBatch(batch);
+    }
+}
+
+void DrainSharedTransport(KnMonCaptureResult& result, SharedTransportSession& transport)
+{
+    DrainSharedTransport(result, transport, nullptr, nullptr);
+}
+
+void EmitCaptureStreamSessionFrame(
+    const KnMonCaptureStreamCallbacks* streamCallbacks,
+    const std::string& frameType,
+    KnMonCaptureResult& result)
+{
+    if (streamCallbacks != nullptr && streamCallbacks->OnSessionFrame)
+    {
+        result.UpdatedUtc = NowUtc();
+        streamCallbacks->OnSessionFrame(frameType, result);
+    }
 }
 
 std::wstring QuoteArgument(const std::wstring& value)
@@ -4001,6 +4057,11 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
 
 KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) const
 {
+    return AttachCapture(request, nullptr);
+}
+
+KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, const KnMonCaptureStreamCallbacks* streamCallbacks) const
+{
     KnMonCaptureResult result;
     const KnMonAgentArchitecture requestedArchitecture = RequestedArchitectureOrNative(request.Architecture);
     result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
@@ -4043,6 +4104,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
     std::uint64_t shutdownFailedHooks = 0;
     std::string shutdownReason;
     CancellationContext cancellationContext;
+    std::uint64_t streamBatchSequence = 0;
 
     auto consumePayload = [&](const std::string& payload)
     {
@@ -4505,18 +4567,18 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
                 break;
             }
 
-            DrainSharedTransport(result, transport);
+            DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
 
             std::string payload;
             pipeError = 0;
             if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError))
             {
                 consumePayload(payload);
-                DrainSharedTransport(result, transport);
+                DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
                 continue;
             }
 
-            DrainSharedTransport(result, transport);
+            DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
             if (pipeError == ERROR_BROKEN_PIPE || pipeError == ERROR_HANDLE_EOF || pipeError == ERROR_NO_DATA)
             {
                 AddAudit(result, "pipe_closed_without_shutdown", "agent_event_read", "Attach agent event pipe closed before explicit stop.", pipeError, "win32");
@@ -4542,17 +4604,22 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
             break;
         }
 
-        DrainSharedTransport(result, transport);
+        DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
         UpdateTransportMetrics(result, transport);
         if (result.CancelObserved)
         {
             AddAudit(result, "attach_capture_cancelled", "attach_capture", "Bounded attach capture cancellation observed; requesting self-disable cleanup.");
             result.OperationState = "stopping_agent";
+            result.SessionState = result.SessionId.empty() ? result.SessionState : "stopping_agent";
         }
         else
         {
             AddAudit(result, "attach_capture_completed", "attach_capture", "Bounded attach capture window completed.");
+            result.OperationState = "stopping_agent";
+            result.SessionState = result.SessionId.empty() ? result.SessionState : "stopping_agent";
         }
+
+        EmitCaptureStreamSessionFrame(streamCallbacks, "session_stopping", result);
 
         if (remoteStopAddress == 0)
         {
@@ -4583,18 +4650,18 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
         result.OperationState = result.CancelObserved ? "draining" : result.OperationState;
         while (!agentShutdownReceived && GetTickCount64() < shutdownDeadline)
         {
-            DrainSharedTransport(result, transport);
+            DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
 
             std::string payload;
             pipeError = 0;
             if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError))
             {
                 consumePayload(payload);
-                DrainSharedTransport(result, transport);
+                DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
                 continue;
             }
 
-            DrainSharedTransport(result, transport);
+            DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
             if (pipeError == ERROR_BROKEN_PIPE || pipeError == ERROR_HANDLE_EOF || pipeError == ERROR_NO_DATA)
             {
                 AddAudit(result, agentShutdownReceived ? "pipe_closed_after_shutdown" : "pipe_closed_without_shutdown", "agent_event_read", "Attach agent event pipe closed.", pipeError, "win32");
@@ -4609,7 +4676,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
             }
         }
 
-        DrainSharedTransport(result, transport);
+        DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
         UpdateTransportMetrics(result, transport);
 
         if (fatalError)
@@ -4747,7 +4814,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
         CloseHandle(pipeHandle);
     }
 
-    DrainSharedTransport(result, transport);
+    DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
     UpdateTransportMetrics(result, transport);
     CloseSharedTransport(transport);
 

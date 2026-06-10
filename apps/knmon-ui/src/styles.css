@@ -459,7 +459,7 @@ button:disabled {
 
 .session-strip {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 92px 64px 76px;
+  grid-template-columns: minmax(0, 1fr) 84px 78px;
   gap: 5px;
   align-items: center;
   padding: 7px 8px;
@@ -516,6 +516,10 @@ button:disabled {
 
 .action-controls.tree-controls {
   grid-template-columns: 62px 86px minmax(0, 1fr);
+}
+
+.action-controls.attach-controls .tool-button {
+  grid-column: 1 / -1;
 }
 
 .action-controls label {

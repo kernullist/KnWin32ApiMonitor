@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { mockTargets } from "./mockData";
-import type { CaptureResult, CaptureSessionState, LaunchResult, NativeOperation, NativeSession, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
+import type { CaptureResult, CaptureSessionState, LaunchResult, NativeOperation, NativeSession, NativeTraceBatch, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
 
 function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -129,6 +129,28 @@ export async function stopNativeSession(sessionId: string): Promise<NativeSessio
 
   return invoke<NativeSession>("stop_native_session", {
     sessionId
+  });
+}
+
+export async function startStreamingAttachSession(pid: number, durationMs: number): Promise<NativeSession> {
+  if (!isTauriRuntime()) {
+    throw new Error("Streaming attach sessions require the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeSession>("start_streaming_attach_session", {
+    pid,
+    durationMs
+  });
+}
+
+export async function drainNativeTraceBatches(sessionId: string, afterBatchSequence: number): Promise<NativeTraceBatch[]> {
+  if (!isTauriRuntime()) {
+    return [];
+  }
+
+  return invoke<NativeTraceBatch[]>("drain_native_trace_batches", {
+    sessionId,
+    afterBatchSequence
   });
 }
 

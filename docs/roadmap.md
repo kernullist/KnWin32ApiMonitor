@@ -512,7 +512,7 @@ Next implementation focus:
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 
-Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, Phase 11F, and Phase 11G foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, cancellation-safe operation ownership for bounded attach/process-tree helper commands, and durable native session ownership readiness are implemented; persistent daemon supervision and full UI streaming collector sessions remain future work.
+Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, Phase 11F, Phase 11G, and Phase 11H foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, cancellation-safe operation ownership for bounded attach/process-tree helper commands, durable native session ownership readiness, and bounded UI streaming trace batches are implemented; persistent daemon supervision, durable restart/recovery, and full `.knapm` replay chunk writing remain future work.
 
 Goal:
 
@@ -613,10 +613,22 @@ Current verified Phase 11G behavior:
 8. `tools/native-smoke/threaded-collector-session-smoke.ps1` verifies threaded committed-record drain, JSONL running-state visibility, and safe stop cleanup.
 9. `tools/native-smoke/session-recovery-state-smoke.ps1` verifies stale and recovery-required classification without remote mutation.
 
+Current verified Phase 11H behavior:
+
+1. `attach-session --stream-batches --batch-size <n> --batch-interval-ms <n>` emits bounded JSONL `trace_batch` frames before final helper completion.
+2. `trace_batch` frames carry `sessionId`, `operationId`, contiguous `batchSequence`, monotonic record sequence ranges, `eventCount`, target transport dropped records, host dropped UI batch count, streamed-record count, and normalized API events.
+3. The controller emits trace batches from the existing host-side shared-memory drain path without adding JSON, blocking I/O, UI logic, or heap-heavy work to the injected hook fast path.
+4. `session_stopping`, `session_stopped`, `session_failed`, and final `capture_result` frames preserve the Phase 11F cancellation and `KnMonAgentStop` cleanup contract.
+5. Tauri can start a streaming attach session without waiting for final helper completion, track helper/session ownership, and expose cursor-based batch reads from a bounded in-process queue.
+6. Tauri accounts for host-side dropped UI batches separately from target transport dropped records.
+7. The selected-target UI can start a stream, poll trace batches, append streamed API events to the existing trace table, display streamed records, target drops, host UI drops, helper PID, and stop availability.
+8. `contracts/native-trace-batch.schema.json` and `contracts/native-session-frame.schema.json` define the stream frame contract and future replay chunk boundary.
+9. `tools/native-smoke/streaming-session-ui-batch-smoke.ps1` verifies streaming state visibility, non-empty trace batches, monotonic batch/record sequences, safe cancellation, final counter consistency, and `agent_shutdown reason=self_disable`.
+
 Next implementation focus:
 
-1. Promote the host-side threaded reader/session frames into full UI event streaming only after backpressure and replay chunk boundaries are specified.
-2. Add persistent daemon supervision only after the Phase 11G session contract is extended to durable restart/recovery semantics.
+1. Add persistent daemon supervision only after the Phase 11H bounded stream contract is extended to durable restart/recovery semantics.
+2. Write `.knapm` session chunks from `trace_batch` boundaries and add indexed replay over those chunks.
 3. Keep protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 
 ## Phase 12: Advanced UX
