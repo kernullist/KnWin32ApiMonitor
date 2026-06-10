@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/process-tree-node.schema.json",
+  "title": "KnMonProcessTreeNode",
+  "type": "object",
+  "required": [
+    "processId",
+    "parentProcessId",
+    "isRoot",
+    "imageName",
+    "imagePath",
+    "architecture",
+    "firstSeenUtc",
+    "lastSeenUtc",
+    "isAlive",
+    "exited",
+    "eligibilityStatus",
+    "policyDecision",
+    "message"
+  ],
+  "properties": {
+    "processId": { "type": "integer", "minimum": 0 },
+    "parentProcessId": { "type": "integer", "minimum": 0 },
+    "isRoot": { "type": "boolean" },
+    "imageName": { "type": "string" },
+    "imagePath": { "type": "string" },
+    "architecture": { "type": "string" },
+    "firstSeenUtc": { "type": "string" },
+    "lastSeenUtc": { "type": "string" },
+    "isAlive": { "type": "boolean" },
+    "exited": { "type": "boolean" },
+    "eligibilityStatus": {
+      "enum": [
+        "eligible",
+        "missing",
+        "exited",
+        "unknown_architecture",
+        "helper_target_mismatch",
+        "access_denied",
+        "protected_process",
+        "unsupported"
+      ]
+    },
+    "policyDecision": {
+      "enum": [
+        "observe_only",
+        "attach_allowed",
+        "attach_skipped",
+        "attach_failed",
+        "unsupported"
+      ]
+    },
+    "message": { "type": "string" }
+  }
+}

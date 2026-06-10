@@ -58,7 +58,6 @@ export interface LaunchResult {
   targetPath: string;
   agentPath: string;
   targetProcessId: number;
-  attachProcessId?: number;
   targetThreadId: number;
   architecture: string;
   win32ErrorCode: number;
@@ -119,6 +118,7 @@ export interface CaptureResult {
   injectionMethod: string;
   targetPath: string;
   agentPath: string;
+  attachProcessId?: number;
   targetProcessId: number;
   targetThreadId: number;
   architecture: string;
@@ -143,6 +143,54 @@ export interface CaptureResult {
   agentMessages: unknown[];
   capturedEvents: AgentApiCallEvent[];
   session?: SessionInfo | null;
+}
+
+export interface ProcessTreeNode {
+  processId: number;
+  parentProcessId: number;
+  isRoot: boolean;
+  imageName: string;
+  imagePath: string;
+  architecture: string;
+  firstSeenUtc: string;
+  lastSeenUtc: string;
+  isAlive: boolean;
+  exited: boolean;
+  eligibilityStatus: "eligible" | "missing" | "exited" | "unknown_architecture" | "helper_target_mismatch" | "access_denied" | "protected_process" | "unsupported";
+  policyDecision: "observe_only" | "attach_allowed" | "attach_skipped" | "attach_failed" | "unsupported";
+  message: string;
+}
+
+export interface ChildPolicyDecision {
+  processId: number;
+  parentProcessId: number;
+  imageName: string;
+  architecture: string;
+  eligibilityStatus: ProcessTreeNode["eligibilityStatus"];
+  decision: ProcessTreeNode["policyDecision"];
+  mutationAttempted: boolean;
+  attachSucceeded: boolean;
+  reason: string;
+}
+
+export interface ProcessTreeResult {
+  schemaVersion: string;
+  operationId: string;
+  success: boolean;
+  backendMode: BackendMode;
+  supervisionMode: "process-tree";
+  rootProcessId: number;
+  durationMs: number;
+  childPolicy: "observe" | "attach-supported";
+  win32ErrorCode: number;
+  ntStatus: string;
+  subsystem: string;
+  operation: string;
+  message: string;
+  processNodes: ProcessTreeNode[];
+  policyDecisions: ChildPolicyDecision[];
+  auditEvents: AuditEvent[];
+  childAttachResults: CaptureResult[];
 }
 
 export interface SessionInfo {

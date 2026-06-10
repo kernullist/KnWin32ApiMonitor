@@ -29,4 +29,12 @@ knmon-sample-fileio.exe --attach-loop --iterations 24 --delay-ms 150
 
 This mode starts as a normal already-running process, prints `knmon-sample-fileio attach-loop-ready pid=<pid>` with an immediate stdout flush, then performs bounded deterministic File I/O probes long enough for `attach-capture --pid` to attach and collect events.
 
-The native helper uses this executable for controlled launch-time early-bird APC agent loading, bounded File I/O, loader, resolver, selected registry, selected advapi32 token query/privilege lookup, selected RPCRT4 binding, selected bcrypt CNG provider/RNG, selected crypt32 certificate-store/message-handle, selected WinHTTP session-handle, selected WinINet session-handle, selected Winsock hook capture, and same-bitness Phase 11A attach validation. Broad arbitrary process injection remains out of scope.
+For Phase 11B process-tree supervision smoke, the sample root supports:
+
+```powershell
+knmon-sample-fileio.exe --spawn-child-loop --children 1 --child-iterations 40 --delay-ms 150
+```
+
+This mode prints `knmon-sample-fileio tree-root-ready pid=<pid>` with an immediate stdout flush, starts child sample processes that run `--attach-loop`, prints `knmon-sample-fileio child-started pid=<pid>`, waits for children, and prints `tree-root-exiting`. The optional `--child-path <path>` argument lets smoke tests spawn a Win32 child from an x64 root to prove cross-bitness child skip before mutation.
+
+The native helper uses this executable for controlled launch-time early-bird APC agent loading, bounded File I/O, loader, resolver, selected registry, selected advapi32 token query/privilege lookup, selected RPCRT4 binding, selected bcrypt CNG provider/RNG, selected crypt32 certificate-store/message-handle, selected WinHTTP session-handle, selected WinINet session-handle, selected Winsock hook capture, same-bitness Phase 11A attach validation, and Phase 11B process-tree supervision validation. Broad arbitrary process injection remains out of scope.

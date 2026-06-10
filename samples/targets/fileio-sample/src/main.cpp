@@ -14,6 +14,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #ifndef NT_SUCCESS
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
@@ -107,6 +108,22 @@ int GetIntOption(int argc, wchar_t** argv, const wchar_t* name, int fallback)
             {
                 value = static_cast<int>(parsed);
             }
+            break;
+        }
+    }
+
+    return value;
+}
+
+std::wstring GetStringOption(int argc, wchar_t** argv, const wchar_t* name, const wchar_t* fallback)
+{
+    std::wstring value = fallback == nullptr ? L"" : fallback;
+
+    for (int index = 1; index + 1 < argc; ++index)
+    {
+        if (std::wstring(argv[index]) == name)
+        {
+            value = argv[index + 1];
             break;
         }
     }
@@ -929,6 +946,132 @@ int RunAttachLoop(int iterations, int delayMs)
     return exitCode;
 }
 
+std::wstring GetExecutablePath()
+{
+    std::array<wchar_t, MAX_PATH * 4> path = {};
+    std::wstring result;
+
+    const DWORD length = GetModuleFileNameW(nullptr, path.data(), static_cast<DWORD>(path.size()));
+    if (length > 0 && length < path.size())
+    {
+        result.assign(path.data(), length);
+    }
+
+    return result;
+}
+
+int RunSpawnChildLoop(int childCount, int childIterations, int delayMs, const std::wstring& requestedChildPath)
+{
+    int exitCode = 1;
+    std::vector<HANDLE> childHandles;
+    const std::wstring currentExecutablePath = GetExecutablePath();
+    const std::wstring childExecutablePath = requestedChildPath.empty() ? currentExecutablePath : requestedChildPath;
+
+    if (childCount < 1)
+    {
+        childCount = 1;
+    }
+
+    if (childCount > 4)
+    {
+        childCount = 4;
+    }
+
+    if (childIterations < 1)
+    {
+        childIterations = 1;
+    }
+
+    if (delayMs < 1)
+    {
+        delayMs = 1;
+    }
+
+    do
+    {
+        if (childExecutablePath.empty())
+        {
+            LogLastError("GetModuleFileNameW");
+            break;
+        }
+
+        std::cout << "knmon-sample-fileio tree-root-ready pid=" << GetCurrentProcessId() << "\n" << std::flush;
+        Sleep(static_cast<DWORD>(delayMs));
+
+        for (int index = 0; index < childCount; ++index)
+        {
+            std::wstring commandLine = L"\"";
+            commandLine += childExecutablePath;
+            commandLine += L"\" --attach-loop --iterations ";
+            commandLine += std::to_wstring(childIterations);
+            commandLine += L" --delay-ms ";
+            commandLine += std::to_wstring(delayMs);
+
+            std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
+            mutableCommandLine.push_back(L'\0');
+
+            STARTUPINFOW startupInfo = {};
+            PROCESS_INFORMATION processInfo = {};
+            startupInfo.cb = sizeof(startupInfo);
+
+            const BOOL created = CreateProcessW(
+                childExecutablePath.c_str(),
+                mutableCommandLine.data(),
+                nullptr,
+                nullptr,
+                FALSE,
+                CREATE_NO_WINDOW,
+                nullptr,
+                nullptr,
+                &startupInfo,
+                &processInfo);
+
+            if (!created)
+            {
+                LogLastError("CreateProcessW(child)");
+                break;
+            }
+
+            if (processInfo.hThread != nullptr)
+            {
+                CloseHandle(processInfo.hThread);
+            }
+
+            childHandles.push_back(processInfo.hProcess);
+            std::cout << "knmon-sample-fileio child-started pid=" << processInfo.dwProcessId << "\n" << std::flush;
+            Sleep(static_cast<DWORD>(delayMs));
+        }
+
+        if (static_cast<int>(childHandles.size()) != childCount)
+        {
+            break;
+        }
+
+        exitCode = 0;
+        for (HANDLE childHandle : childHandles)
+        {
+            const DWORD waitResult = WaitForSingleObject(childHandle, INFINITE);
+            DWORD childExitCode = 1;
+            if (waitResult != WAIT_OBJECT_0 || !GetExitCodeProcess(childHandle, &childExitCode) || childExitCode != 0)
+            {
+                exitCode = 1;
+            }
+        }
+    }
+    while (false);
+
+    for (HANDLE childHandle : childHandles)
+    {
+        if (childHandle != nullptr)
+        {
+            CloseHandle(childHandle);
+        }
+    }
+
+    std::cout << "knmon-sample-fileio tree-root-exiting code=" << exitCode << "\n" << std::flush;
+    return exitCode;
+}
+
 int RunFileIo(bool slow)
 {
     int exitCode = 1;
@@ -1099,6 +1242,15 @@ int wmain(int argc, wchar_t** argv)
         return RunAttachLoop(
             GetIntOption(argc, argv, L"--iterations", 16),
             GetIntOption(argc, argv, L"--delay-ms", 250));
+    }
+
+    if (HasOption(argc, argv, L"--spawn-child-loop"))
+    {
+        return RunSpawnChildLoop(
+            GetIntOption(argc, argv, L"--children", 1),
+            GetIntOption(argc, argv, L"--child-iterations", 24),
+            GetIntOption(argc, argv, L"--delay-ms", 150),
+            GetStringOption(argc, argv, L"--child-path", L""));
     }
 
     return RunFileIo(HasOption(argc, argv, L"--slow"));

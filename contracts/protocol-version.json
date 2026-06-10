@@ -21,6 +21,19 @@
     "supportedTargets": ["non_protected_user_mode_process"],
     "preflightChecks": ["target_process_exists", "target_architecture", "helper_target_architecture_match", "agent_architecture", "helper_agent_architecture_match", "protected_process_detection", "mutation_handle_access"]
   },
+  "processTreeSupervision": {
+    "supervisionMode": "process-tree",
+    "command": "supervise-tree --pid <pid> --duration-ms <ms> --child-policy <observe|attach-supported>",
+    "childPolicies": ["observe", "attach-supported"],
+    "eligibilityStatuses": ["eligible", "missing", "exited", "unknown_architecture", "helper_target_mismatch", "access_denied", "protected_process", "unsupported"],
+    "policyDecisions": ["observe_only", "attach_allowed", "attach_skipped", "attach_failed", "unsupported"],
+    "discoverySource": "Toolhelp process snapshots",
+    "observePolicy": "no_remote_mutation",
+    "attachSupportedPolicy": "reuse_phase_11a_attach_capture_for_same_bitness_repository_sample_children",
+    "sameBitnessOnly": true,
+    "supportedChildTargets": ["repository_sample_child_process"],
+    "nonGoals": ["persistent_daemon", "kernel_process_notifications", "cross_bitness_attach", "protected_process_bypass"]
+  },
   "liveFileIoCapture": {
     "captureMode": "bounded-native-capture",
     "hookMethod": "iat",

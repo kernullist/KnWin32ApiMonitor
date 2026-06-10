@@ -52,6 +52,33 @@ enum class KnMonInjectionMethod : std::uint32_t
     RemoteLoadLibrary = 2,
 };
 
+enum class KnMonChildPolicy : std::uint32_t
+{
+    Observe = 0,
+    AttachSupported = 1,
+};
+
+enum class KnMonProcessEligibility : std::uint32_t
+{
+    Eligible = 0,
+    Missing = 1,
+    Exited = 2,
+    UnknownArchitecture = 3,
+    HelperTargetMismatch = 4,
+    AccessDenied = 5,
+    ProtectedProcess = 6,
+    Unsupported = 7,
+};
+
+enum class KnMonProcessPolicyDecision : std::uint32_t
+{
+    ObserveOnly = 0,
+    AttachAllowed = 1,
+    AttachSkipped = 2,
+    AttachFailed = 3,
+    Unsupported = 4,
+};
+
 enum class KnMonAgentMessageType : std::uint32_t
 {
     Unknown = 0,
@@ -262,6 +289,18 @@ struct KnMonAttachRequest
     KnMonInjectionMethod InjectionMethod = KnMonInjectionMethod::RemoteLoadLibrary;
 };
 
+struct KnMonProcessTreeRequest
+{
+    std::string OperationId;
+    std::uint32_t RootProcessId = 0;
+    std::string AgentPath;
+    std::uint32_t TimeoutMs = 7000;
+    std::uint32_t DurationMs = 3000;
+    std::uint32_t PollIntervalMs = 100;
+    KnMonAgentArchitecture Architecture = KnMonAgentArchitecture::Unknown;
+    KnMonChildPolicy ChildPolicy = KnMonChildPolicy::Observe;
+};
+
 struct KnMonLaunchResult
 {
     std::string SchemaVersion = "0.1.0";
@@ -329,5 +368,56 @@ struct KnMonCaptureResult
     std::vector<KnMonAuditEvent> AuditEvents;
     std::vector<KnMonAgentMessage> AgentMessages;
     std::vector<KnMonAgentMessage> CapturedEvents;
+};
+
+struct KnMonChildPolicyDecision
+{
+    std::uint32_t ProcessId = 0;
+    std::uint32_t ParentProcessId = 0;
+    std::string ImageName;
+    std::string Architecture;
+    std::string EligibilityStatus;
+    std::string Decision;
+    bool MutationAttempted = false;
+    bool AttachSucceeded = false;
+    std::string Reason;
+};
+
+struct KnMonProcessTreeNode
+{
+    std::uint32_t ProcessId = 0;
+    std::uint32_t ParentProcessId = 0;
+    bool IsRoot = false;
+    std::string ImageName;
+    std::string ImagePath;
+    std::string Architecture;
+    std::string FirstSeenUtc;
+    std::string LastSeenUtc;
+    bool IsAlive = false;
+    bool Exited = false;
+    std::string EligibilityStatus;
+    std::string PolicyDecision;
+    std::string Message;
+};
+
+struct KnMonProcessTreeResult
+{
+    std::string SchemaVersion = "0.1.0";
+    std::string OperationId;
+    bool Success = false;
+    std::string BackendMode = "native-capture";
+    std::string SupervisionMode = "process-tree";
+    std::uint32_t RootProcessId = 0;
+    std::uint32_t DurationMs = 0;
+    std::string ChildPolicy;
+    std::uint32_t Win32ErrorCode = 0;
+    std::string NtStatus;
+    std::string Subsystem;
+    std::string Operation;
+    std::string Message;
+    std::vector<KnMonProcessTreeNode> ProcessNodes;
+    std::vector<KnMonChildPolicyDecision> PolicyDecisions;
+    std::vector<KnMonAuditEvent> AuditEvents;
+    std::vector<KnMonCaptureResult> ChildAttachResults;
 };
 }

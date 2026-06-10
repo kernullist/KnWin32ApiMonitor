@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/process-tree-result.schema.json",
+  "title": "KnMonProcessTreeResult",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "operationId",
+    "success",
+    "backendMode",
+    "supervisionMode",
+    "rootProcessId",
+    "durationMs",
+    "childPolicy",
+    "win32ErrorCode",
+    "ntStatus",
+    "subsystem",
+    "operation",
+    "message",
+    "processNodes",
+    "policyDecisions",
+    "auditEvents",
+    "childAttachResults"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "operationId": { "type": "string" },
+    "success": { "type": "boolean" },
+    "backendMode": { "enum": ["native-capture"] },
+    "supervisionMode": { "const": "process-tree" },
+    "rootProcessId": { "type": "integer", "minimum": 0 },
+    "durationMs": { "type": "integer", "minimum": 0 },
+    "childPolicy": { "enum": ["observe", "attach-supported"] },
+    "win32ErrorCode": { "type": "integer", "minimum": 0 },
+    "ntStatus": { "type": "string" },
+    "subsystem": { "type": "string" },
+    "operation": { "type": "string" },
+    "message": { "type": "string" },
+    "processNodes": {
+      "type": "array",
+      "items": { "$ref": "process-tree-node.schema.json" }
+    },
+    "policyDecisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "processId",
+          "parentProcessId",
+          "imageName",
+          "architecture",
+          "eligibilityStatus",
+          "decision",
+          "mutationAttempted",
+          "attachSucceeded",
+          "reason"
+        ],
+        "properties": {
+          "processId": { "type": "integer", "minimum": 0 },
+          "parentProcessId": { "type": "integer", "minimum": 0 },
+          "imageName": { "type": "string" },
+          "architecture": { "type": "string" },
+          "eligibilityStatus": {
+            "enum": [
+              "eligible",
+              "missing",
+              "exited",
+              "unknown_architecture",
+              "helper_target_mismatch",
+              "access_denied",
+              "protected_process",
+              "unsupported"
+            ]
+          },
+          "decision": {
+            "enum": [
+              "observe_only",
+              "attach_allowed",
+              "attach_skipped",
+              "attach_failed",
+              "unsupported"
+            ]
+          },
+          "mutationAttempted": { "type": "boolean" },
+          "attachSucceeded": { "type": "boolean" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "auditEvents": {
+      "type": "array",
+      "items": { "$ref": "audit-event.schema.json" }
+    },
+    "childAttachResults": {
+      "type": "array",
+      "items": { "$ref": "capture-result.schema.json" }
+    }
+  }
+}

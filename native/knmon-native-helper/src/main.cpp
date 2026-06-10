@@ -902,6 +902,105 @@ std::string ToJson(const knmon::KnMonCaptureResult& result)
     return stream.str();
 }
 
+std::string ToJson(const knmon::KnMonChildPolicyDecision& decision)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"processId\":" << decision.ProcessId << ",";
+    stream << "\"parentProcessId\":" << decision.ParentProcessId << ",";
+    stream << "\"imageName\":" << Q(decision.ImageName) << ",";
+    stream << "\"architecture\":" << Q(decision.Architecture) << ",";
+    stream << "\"eligibilityStatus\":" << Q(decision.EligibilityStatus) << ",";
+    stream << "\"decision\":" << Q(decision.Decision) << ",";
+    stream << "\"mutationAttempted\":" << (decision.MutationAttempted ? "true" : "false") << ",";
+    stream << "\"attachSucceeded\":" << (decision.AttachSucceeded ? "true" : "false") << ",";
+    stream << "\"reason\":" << Q(decision.Reason);
+    stream << "}";
+    return stream.str();
+}
+
+std::string ToJson(const knmon::KnMonProcessTreeNode& node)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"processId\":" << node.ProcessId << ",";
+    stream << "\"parentProcessId\":" << node.ParentProcessId << ",";
+    stream << "\"isRoot\":" << (node.IsRoot ? "true" : "false") << ",";
+    stream << "\"imageName\":" << Q(node.ImageName) << ",";
+    stream << "\"imagePath\":" << Q(node.ImagePath) << ",";
+    stream << "\"architecture\":" << Q(node.Architecture) << ",";
+    stream << "\"firstSeenUtc\":" << Q(node.FirstSeenUtc) << ",";
+    stream << "\"lastSeenUtc\":" << Q(node.LastSeenUtc) << ",";
+    stream << "\"isAlive\":" << (node.IsAlive ? "true" : "false") << ",";
+    stream << "\"exited\":" << (node.Exited ? "true" : "false") << ",";
+    stream << "\"eligibilityStatus\":" << Q(node.EligibilityStatus) << ",";
+    stream << "\"policyDecision\":" << Q(node.PolicyDecision) << ",";
+    stream << "\"message\":" << Q(node.Message);
+    stream << "}";
+    return stream.str();
+}
+
+std::string ToJson(const knmon::KnMonProcessTreeResult& result)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":" << Q(result.SchemaVersion) << ",";
+    stream << "\"operationId\":" << Q(result.OperationId) << ",";
+    stream << "\"success\":" << (result.Success ? "true" : "false") << ",";
+    stream << "\"backendMode\":" << Q(result.BackendMode) << ",";
+    stream << "\"supervisionMode\":" << Q(result.SupervisionMode) << ",";
+    stream << "\"rootProcessId\":" << result.RootProcessId << ",";
+    stream << "\"durationMs\":" << result.DurationMs << ",";
+    stream << "\"childPolicy\":" << Q(result.ChildPolicy) << ",";
+    stream << "\"win32ErrorCode\":" << result.Win32ErrorCode << ",";
+    stream << "\"ntStatus\":" << Q(result.NtStatus) << ",";
+    stream << "\"subsystem\":" << Q(result.Subsystem) << ",";
+    stream << "\"operation\":" << Q(result.Operation) << ",";
+    stream << "\"message\":" << Q(result.Message) << ",";
+    stream << "\"processNodes\":[";
+    for (std::size_t index = 0; index < result.ProcessNodes.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << ToJson(result.ProcessNodes[index]);
+    }
+    stream << "],";
+    stream << "\"policyDecisions\":[";
+    for (std::size_t index = 0; index < result.PolicyDecisions.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << ToJson(result.PolicyDecisions[index]);
+    }
+    stream << "],";
+    stream << "\"auditEvents\":[";
+    for (std::size_t index = 0; index < result.AuditEvents.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << ToJson(result.AuditEvents[index]);
+    }
+    stream << "],";
+    stream << "\"childAttachResults\":[";
+    for (std::size_t index = 0; index < result.ChildAttachResults.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << ToJson(result.ChildAttachResults[index]);
+    }
+    stream << "]";
+    stream << "}";
+    return stream.str();
+}
+
 struct SessionInfo
 {
     bool Success = false;
@@ -1414,6 +1513,18 @@ std::uint32_t GetUInt32Option(const std::vector<std::string>& args, const std::s
     return value;
 }
 
+knmon::KnMonChildPolicy ParseChildPolicy(const std::string& value)
+{
+    knmon::KnMonChildPolicy policy = knmon::KnMonChildPolicy::Observe;
+
+    if (value == "attach-supported")
+    {
+        policy = knmon::KnMonChildPolicy::AttachSupported;
+    }
+
+    return policy;
+}
+
 std::string LaunchSampleJson(const std::vector<std::string>& args)
 {
     const auto helperDir = HelperDirectory();
@@ -1532,6 +1643,31 @@ std::string AttachCaptureJson(const std::vector<std::string>& args)
     return ToJson(result);
 }
 
+std::string SuperviseTreeJson(const std::vector<std::string>& args)
+{
+    const auto helperDir = HelperDirectory();
+    const std::string defaultAgent = WideToUtf8((helperDir / DefaultAgentFileName()).wstring().c_str());
+
+    knmon::KnMonProcessTreeRequest request;
+    request.OperationId = NewOperationId();
+    const std::string pidOption = GetOption(args, "--pid");
+    request.RootProcessId = pidOption == "self" ? GetCurrentProcessId() : GetUInt32Option(args, "--pid", 0);
+    request.AgentPath = GetOption(args, "--agent");
+    request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
+    request.DurationMs = GetUInt32Option(args, "--duration-ms", 3000);
+    request.PollIntervalMs = GetUInt32Option(args, "--poll-ms", 100);
+    request.Architecture = NativeHelperArchitecture();
+    request.ChildPolicy = ParseChildPolicy(GetOption(args, "--child-policy"));
+
+    if (request.AgentPath.empty())
+    {
+        request.AgentPath = defaultAgent;
+    }
+
+    knmon::Controller controller;
+    return ToJson(controller.SuperviseProcessTree(request));
+}
+
 std::string ReplaySessionCommandJson(const std::vector<std::string>& args)
 {
     const std::string sessionPath = GetOption(args, "--session");
@@ -1582,7 +1718,7 @@ void PrintUsage()
     std::cout << "{";
     std::cout << "\"schemaVersion\":\"0.1.0\",";
     std::cout << "\"success\":false,";
-    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--write-session dir] | replay-session --session dir | validate-session --session dir\"";
+    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--write-session dir] | supervise-tree --pid pid [--duration-ms ms] [--child-policy observe|attach-supported] | replay-session --session dir | validate-session --session dir\"";
     std::cout << "}\n";
 }
 }
@@ -1622,6 +1758,12 @@ int wmain(int argc, wchar_t** argv)
     if (args[0] == "attach-capture")
     {
         std::cout << AttachCaptureJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "supervise-tree")
+    {
+        std::cout << SuperviseTreeJson(args) << "\n";
         return 0;
     }
 

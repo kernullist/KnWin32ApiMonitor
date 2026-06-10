@@ -6,7 +6,7 @@
 
 This document describes the current Phase 0/Phase 1 foundation and the controlled native-capture paths for `KN Win32 API Monitor`.
 
-The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, or broad arbitrary target supervision.
+The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, a Phase 11B helper-side process-tree supervision foundation for deterministic sample children, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, or broad arbitrary target supervision.
 
 ## Layers
 
@@ -59,7 +59,7 @@ Current backend modes:
 
 - `mock`: Browser/Vite mode and mock Tauri target list.
 - `native-enum`: Tauri command calls `knmon-native-helper.exe list-targets`.
-- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof, `capture-sample` for bounded controlled File I/O capture, `capture-sample --write-session` for persisted sessions, or `replay-session` for disk replay. The helper CLI also exposes `attach-capture --pid` for Phase 11A native attach validation; UI controls for this path are still future work.
+- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof, `capture-sample` for bounded controlled File I/O capture, `capture-sample --write-session` for persisted sessions, or `replay-session` for disk replay. The helper CLI also exposes `attach-capture --pid` for Phase 11A native attach validation and `supervise-tree --pid` for Phase 11B process-tree validation; UI controls for these paths are still future work.
 
 ## Rust/Tauri Command Layer
 
@@ -80,7 +80,7 @@ Current commands:
 8. `capture_sample_fileio_session_events`
 9. `replay_last_sample_session`
 
-These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, and bounded sample File I/O capture. The native helper has a smoke-verified attach path, but the UI has not yet promoted it to persistent attach/detach controls.
+These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, and bounded sample File I/O capture. The native helper has smoke-verified attach and process-tree supervision paths, but the UI has not yet promoted them to persistent attach/detach or child-policy controls.
 
 Future work:
 
@@ -101,9 +101,10 @@ Current responsibilities:
 5. Select the same-bitness x86/x64 agent DLL for controlled launch.
 6. Run target/agent architecture preflight before remote mutation.
 7. Implement bounded same-bitness `attach-capture --pid` for already-running non-protected sample targets.
-8. Keep broad arbitrary attach, child process auto-attach, and persistent supervision outside the current controller surface.
+8. Implement bounded helper-side `supervise-tree --pid` process-tree discovery and child policy evaluation.
+9. Keep broad arbitrary attach, persistent daemon supervision, and UI-driven child auto-attach outside the current controller surface.
 
-The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, and bounded sample File I/O capture. The same helper exposes Phase 11A attach smoke validation from the CLI.
+The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, and bounded sample File I/O capture. The same helper exposes Phase 11A attach and Phase 11B process-tree smoke validation from the CLI.
 
 Future responsibilities:
 
@@ -157,6 +158,17 @@ Current running-process attach behavior:
 8. Attach configuration carries the operation id, named pipe, transport mapping name, attach mode, ABI version, and future reserved fields. It does not rely on target environment variables.
 9. The controller drains shared-memory API records for a bounded duration, calls `KnMonAgentStop`, waits for `agent_shutdown reason=self_disable`, and releases remote buffers when possible.
 10. Phase 11A detach means hooks restored and agent disabled. The DLL is intentionally not unloaded.
+
+Current process-tree supervision behavior:
+
+1. The sample target can run as `knmon-sample-fileio.exe --spawn-child-loop --children N --child-iterations N --delay-ms N`.
+2. The root sample prints `tree-root-ready`, then starts deterministic child sample processes that run the existing attach loop.
+3. `supervise-tree --pid <root> --child-policy observe` validates the already-running root, polls Toolhelp process snapshots for a bounded duration, and records root/child nodes.
+4. Each node records PID, parent PID, image name/path, architecture, first/last seen timestamps, alive/exited state, eligibility, policy decision, and message.
+5. Observe policy evaluates children but never calls remote mutation APIs or `AttachCapture`.
+6. `--child-policy attach-supported` only attaches same-bitness repository sample children that pass eligibility checks, then embeds the existing Phase 11A `bounded-native-attach` result in `childAttachResults`.
+7. Cross-bitness, protected, access-denied, missing, exited, and unsupported children are classified as policy decisions before mutation.
+8. Process-tree supervision is controller/helper-side work. It does not add agent-side polling, hook-path JSON, or hook fast-path overhead.
 
 Current shared-memory transport behavior:
 
@@ -308,8 +320,10 @@ Current contract artifacts:
 17. `session-manifest.schema.json`
 18. `session-replay-result.schema.json`
 19. `collector-stats.schema.json`
+20. `process-tree-node.schema.json`
+21. `process-tree-result.schema.json`
 
-The TypeScript event model and C++ `Protocol.h` are aligned around these fields, including `bounded-native-capture`, `bounded-native-attach`, `early-bird APC`, `remote LoadLibraryW`, `attachProcessId`, and `detachPolicy`.
+The TypeScript event model and C++ `Protocol.h` are aligned around these fields, including `bounded-native-capture`, `bounded-native-attach`, `early-bird APC`, `remote LoadLibraryW`, `attachProcessId`, `detachPolicy`, `process-tree`, `observe`, `attach-supported`, child eligibility, and child policy decisions.
 
 ## Definition System
 
@@ -358,7 +372,7 @@ Future session format:
 
 ## Safety Rules
 
-1. Keep attach limited to explicit same-bitness, non-protected Phase 11A targets until broader target policy is reviewed.
+1. Keep attach limited to explicit same-bitness, non-protected Phase 11A targets and Phase 11B repository sample children until broader target policy is reviewed.
 2. Keep mock and real backends behind the same UI-facing interface.
 3. Expose dropped event accounting in the UI from the start.
 4. Treat PPL/protected/unsupported processes as explicit limited states.

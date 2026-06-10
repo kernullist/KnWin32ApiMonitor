@@ -13,6 +13,7 @@ public:
     KnMonLaunchResult LaunchWithEarlyBirdApc(const KnMonLaunchRequest& request) const;
     KnMonCaptureResult CaptureSampleFileIo(const KnMonLaunchRequest& request) const;
     KnMonCaptureResult AttachCapture(const KnMonAttachRequest& request) const;
+    KnMonProcessTreeResult SuperviseProcessTree(const KnMonProcessTreeRequest& request) const;
 
     KnMonError LaunchTarget(const std::string& imagePath) const;
     KnMonError AttachToTarget(std::uint32_t processId) const;

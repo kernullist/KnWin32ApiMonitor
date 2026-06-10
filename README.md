@@ -13,6 +13,7 @@ This repository is bootstrapping a new API Monitor inspired by Rohitab API Monit
 - Controlled launch-time early-bird APC agent load foundation for the repository sample target.
 - Bounded controlled File I/O capture from the repository sample target through same-bitness x64/x86 agent IAT hooks.
 - Controlled same-bitness running-process attach foundation for already-running non-protected sample targets through `attach-capture`.
+- Controller-side process-tree supervision foundation for deterministic sample child discovery and attach policy evaluation through `supervise-tree`.
 - Explicit controlled `NtCreateFile` capture from `ntdll.dll` with NTSTATUS return evidence.
 - Deterministic x64/x86 agent lifecycle telemetry with hook restore evidence on shutdown.
 - Same-bitness injection preflight for target/agent architecture and missing binary failures.
@@ -66,16 +67,18 @@ Implemented now:
 34. Controlled Wave 2 WinINet session-handle slice for `InternetOpenW` and `InternetCloseHandle`.
 35. Controlled Wave 2 advapi32 token query/privilege lookup slice for `OpenProcessToken` and `LookupPrivilegeValueW`.
 36. Phase 11A controlled same-bitness `attach-capture --pid` for already-running non-protected sample targets, using remote `LoadLibraryW`, explicit attach config ABI, shared-memory event transport, and self-disable/no-unload detach evidence.
+37. Phase 11B bounded `supervise-tree --pid` process-tree supervision for repository sample roots, with observe-only child discovery, attach-supported policy, x64/x86 smoke evidence, and cross-bitness child skip before mutation.
 
 Not implemented yet:
 
 1. Broad arbitrary process attach beyond the explicit Phase 11A same-bitness, non-protected `attach-capture` boundary.
 2. Continuous streaming capture for long-running targets.
-3. Broad Wave 2/3/4 system DLL hooks beyond the current Wave 1 foundation and selected Winsock, registry, advapi32 token query/privilege lookup, RPCRT4 binding, bcrypt CNG provider/RNG, crypt32 certificate-store/message-handle, WinHTTP session-handle, and WinINet session-handle slices.
-4. Breakpoint mutation.
-5. COM monitoring.
-6. Kernel-mode helper.
-7. Compressed `.knapm` container chunks and replay indexes.
+3. Persistent UI attach/detach controls and long-running process-tree daemon supervision.
+4. Broad Wave 2/3/4 system DLL hooks beyond the current Wave 1 foundation and selected Winsock, registry, advapi32 token query/privilege lookup, RPCRT4 binding, bcrypt CNG provider/RNG, crypt32 certificate-store/message-handle, WinHTTP session-handle, and WinINet session-handle slices.
+5. Breakpoint mutation.
+6. COM monitoring.
+7. Kernel-mode helper.
+8. Compressed `.knapm` container chunks and replay indexes.
 
 ## Current Native Capture Snapshot
 
@@ -99,6 +102,14 @@ The Phase 11A attach path is separate from launch-time early-bird configuration:
 3. The controller creates the named pipe and shared-memory transport, then uses remote `LoadLibraryW` only for a supported non-protected same-bitness target.
 4. The agent receives pipe and transport names through a versioned `KnMonAttachConfigV1` export call instead of relying on launch-time environment variables.
 5. Detach for Phase 11A means remote `KnMonAgentStop`, hook restore, dropped-event accounting, and `agent_shutdown reason=self_disable`; the DLL remains loaded by design.
+
+The Phase 11B process-tree path is controller/helper-side supervision:
+
+1. `knmon-sample-fileio.exe --spawn-child-loop` starts as an already-running root and creates deterministic child sample processes.
+2. `knmon-native-helper.exe supervise-tree --pid <pid> --child-policy observe` snapshots the root tree, records child metadata, and classifies attach eligibility without remote mutation.
+3. `--child-policy attach-supported` only attaches same-bitness repository sample children that pass policy evaluation, reusing the Phase 11A attach/self-disable path.
+4. Cross-bitness, protected, missing, access-denied, or unsupported children are reported as typed policy decisions before mutation.
+5. Process-tree discovery runs in the controller/helper path and does not add agent-side polling or hook fast-path work.
 
 Verified live hook coverage:
 
@@ -217,6 +228,7 @@ build\native\Debug\knmon-native-helper.exe list-targets
 build\native\Debug\knmon-native-helper.exe launch-sample
 build\native\Debug\knmon-native-helper.exe capture-sample
 build\native\Debug\knmon-native-helper.exe attach-capture --pid <pid> --duration-ms 3000
+build\native\Debug\knmon-native-helper.exe supervise-tree --pid <pid> --duration-ms 3000 --child-policy observe
 build\native\Debug\knmon-native-helper.exe capture-sample --write-session captures\latest-sample-fileio
 build\native\Debug\knmon-native-helper.exe validate-session --session captures\latest-sample-fileio
 build\native\Debug\knmon-native-helper.exe replay-session --session captures\latest-sample-fileio
@@ -239,6 +251,8 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave2-wininet-sessio
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\injection-preflight-negative-smoke.ps1
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\controlled-attach-capture-smoke.ps1
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\attach-preflight-negative-smoke.ps1
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\process-tree-supervision-smoke.ps1
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\process-tree-attach-supported-smoke.ps1
 build\native\Debug\knmon-collector.exe smoke-backpressure --capacity 4 --events 10
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\collector-backpressure-smoke.ps1
 ```
@@ -250,6 +264,8 @@ build\native-win32\Debug\knmon-native-helper.exe launch-sample
 build\native-win32\Debug\knmon-native-helper.exe capture-sample
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-smoke.ps1
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\controlled-attach-capture-smoke.ps1
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\process-tree-supervision-smoke.ps1
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\process-tree-attach-supported-smoke.ps1
 ```
 
 `launch-sample` creates `knmon-sample-fileio.exe` suspended, queues an early-bird APC to load the same-bitness agent DLL, resumes the primary thread, and waits for an agent HELLO handshake.
@@ -258,7 +274,9 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\controlled-attach-ca
 
 `attach-capture` attaches to an already-running same-bitness non-protected sample target, passes attach configuration through `KnMonAttachConfigV1`, uses the same shared-memory transport for API records, and detaches by self-disabling hooks without unloading the DLL.
 
-The repeated smoke script verifies five consecutive controlled x64 captures, the stable File I/O API set, zero dropped events, and hook restore counts. The `NtCreateFile` smoke verifies the `ntdll.dll` module, NTSTATUS return format, decoded sample object path, shared-memory transport mode, and clean hook restore. The shared-memory transport smoke verifies healthy x64 transport metrics and hook overhead. The shared-memory backpressure smoke forces a tiny ring capacity and verifies non-blocking dropped-event accounting. The loader-aware smokes verify PEB module inventory, eligible-module IAT sweep evidence, `LoadLibraryW` capture, dynamic-load re-hooking, and post-load `knmon-dynamic-probe.dll` API evidence. The resolver monitoring smoke verifies `GetProcAddress` and `LdrGetProcedureAddress` call visibility, resolver tags, bounded `KnMonDynamicProbe` argument evidence, and clean hook restore. The generated decoder tables smoke verifies generated metadata freshness plus controller-rendered API family/category and argument decode metadata. The Wave 2 registry smoke verifies the selected `advapi32.dll` HKCU registry API records, generated registry metadata, key/value evidence, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The Wave 2 advapi32 token query smoke verifies `OpenProcessToken` and `LookupPrivilegeValueW` records, generated security metadata, `TOKEN_QUERY`, token-handle, privilege-name, and LUID evidence, absence of token mutation/service-control/credential/byte-preview evidence, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The Wave 2 Winsock smoke verifies the selected `ws2_32.dll` bootstrap/address-resolution API records, generated network metadata, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The Wave 2 RPCRT4 smoke verifies the selected local RPC binding lifecycle records, generated RPC metadata, `ncalrpc`/`KNMonRpcSample` evidence, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The Wave 2 bcrypt smoke verifies selected CNG provider/RNG records, generated crypto metadata, `RNG`/`AlgorithmName` evidence, absence of generated random byte previews, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The Wave 2 crypt32 smoke verifies selected certificate-store/message-handle records, generated certificate/message metadata, memory-store provider and X509/PKCS7 encoding evidence, absence of certificate blob/private-key/message-payload previews, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The Wave 2 WinHTTP smoke verifies selected session open/close records, generated HTTP metadata, sample user-agent/no-proxy evidence, absence of URL/header/body/cookie/credential/proxy-credential/payload previews, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The Wave 2 WinINet smoke verifies selected session open/close records, generated internet metadata, sample user-agent/direct-access evidence, absence of URL/header/body/cookie/credential/proxy-credential/payload previews, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The x86 smoke verifies the same File I/O API set, loader evidence, resolver evidence, selected registry, advapi32 token query, Winsock, RPCRT4, bcrypt, crypt32, WinHTTP, and WinINet evidence, shared-memory transport, and hook lifecycle from a Win32 helper/target/agent build. The launch preflight negative smoke verifies missing target, missing agent, and available architecture mismatch failures before remote mutation. The attach smoke verifies x64 and x86 already-running sample attach, `remote LoadLibraryW`, `self-disable-no-unload`, zero healthy-path drops, required File I/O APIs, and hook restore evidence. The attach preflight negative smoke verifies missing PID, PID 0/4, helper self, missing agent, agent mismatch, and cross-bitness target mismatch cases before remote mutation.
+`supervise-tree` snapshots an already-running sample root's process tree, returns `processNodes`, `policyDecisions`, and audit events, and supports `observe` and `attach-supported` child policies. Observe policy never mutates children. Attach-supported policy only attaches same-bitness repository sample children and embeds the Phase 11A child attach result.
+
+The repeated smoke script verifies five consecutive controlled x64 captures, the stable File I/O API set, zero dropped events, and hook restore counts. The `NtCreateFile` smoke verifies the `ntdll.dll` module, NTSTATUS return format, decoded sample object path, shared-memory transport mode, and clean hook restore. The shared-memory transport smoke verifies healthy x64 transport metrics and hook overhead. The shared-memory backpressure smoke forces a tiny ring capacity and verifies non-blocking dropped-event accounting. The loader-aware smokes verify PEB module inventory, eligible-module IAT sweep evidence, `LoadLibraryW` capture, dynamic-load re-hooking, and post-load `knmon-dynamic-probe.dll` API evidence. The resolver monitoring smoke verifies `GetProcAddress` and `LdrGetProcedureAddress` call visibility, resolver tags, bounded `KnMonDynamicProbe` argument evidence, and clean hook restore. The generated decoder tables smoke verifies generated metadata freshness plus controller-rendered API family/category and argument decode metadata. The Wave 2 registry smoke verifies the selected `advapi32.dll` HKCU registry API records, generated registry metadata, key/value evidence, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The Wave 2 advapi32 token query smoke verifies `OpenProcessToken` and `LookupPrivilegeValueW` records, generated security metadata, `TOKEN_QUERY`, token-handle, privilege-name, and LUID evidence, absence of token mutation/service-control/credential/byte-preview evidence, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The Wave 2 Winsock smoke verifies the selected `ws2_32.dll` bootstrap/address-resolution API records, generated network metadata, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The Wave 2 RPCRT4 smoke verifies the selected local RPC binding lifecycle records, generated RPC metadata, `ncalrpc`/`KNMonRpcSample` evidence, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The Wave 2 bcrypt smoke verifies selected CNG provider/RNG records, generated crypto metadata, `RNG`/`AlgorithmName` evidence, absence of generated random byte previews, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The Wave 2 crypt32 smoke verifies selected certificate-store/message-handle records, generated certificate/message metadata, memory-store provider and X509/PKCS7 encoding evidence, absence of certificate blob/private-key/message-payload previews, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The Wave 2 WinHTTP smoke verifies selected session open/close records, generated HTTP metadata, sample user-agent/no-proxy evidence, absence of URL/header/body/cookie/credential/proxy-credential/payload previews, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The Wave 2 WinINet smoke verifies selected session open/close records, generated internet metadata, sample user-agent/direct-access evidence, absence of URL/header/body/cookie/credential/proxy-credential/payload previews, shared-memory transport, zero healthy-path drops, and clean hook lifecycle. The x86 smoke verifies the same File I/O API set, loader evidence, resolver evidence, selected registry, advapi32 token query, Winsock, RPCRT4, bcrypt, crypt32, WinHTTP, and WinINet evidence, shared-memory transport, and hook lifecycle from a Win32 helper/target/agent build. The launch preflight negative smoke verifies missing target, missing agent, and available architecture mismatch failures before remote mutation. The attach smoke verifies x64 and x86 already-running sample attach, `remote LoadLibraryW`, `self-disable-no-unload`, zero healthy-path drops, required File I/O APIs, and hook restore evidence. The attach preflight negative smoke verifies missing PID, PID 0/4, helper self, missing agent, agent mismatch, and cross-bitness target mismatch cases before remote mutation. The process-tree smoke verifies x64/x86 observe policy child discovery, missing/root PID failures, and cross-bitness child skip before mutation. The process-tree attach-supported smoke verifies x64/x86 child attach through Phase 11A, required File I/O APIs, zero drops, and self-disable hook restore.
 
 `capture-sample --write-session` persists the bounded capture into a replayable session directory. Session validation checks manifest architecture, HELLO architecture/version evidence, dropped-event accounting, shutdown hook restore counts, and trace rows before replay returns data from disk without relaunching the target.
 

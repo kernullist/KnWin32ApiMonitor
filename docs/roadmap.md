@@ -512,7 +512,7 @@ Next implementation focus:
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 
-Status: Phase 11A implemented foundation for bounded same-bitness running-process attach. Full process-tree supervision remains future work.
+Status: Phase 11A and Phase 11B implemented foundations. Bounded same-bitness running-process attach and helper-side process-tree supervision are smoke-verified; persistent UI controls, daemon supervision, and repeated same-process reattach remain future work.
 
 Goal:
 
@@ -546,12 +546,23 @@ Current verified Phase 11A behavior:
 8. `KnMonAgentStop` proves one-shot self-disable with `agent_shutdown reason=self_disable`, `restoredHooks=installedHooks`, and `failedHooks=0`.
 9. `capture-result` and session manifests distinguish attach through `captureMode=bounded-native-attach`, `injectionMethod=remote LoadLibraryW`, `attachProcessId`, and `detachPolicy=self-disable-no-unload`.
 
+Current verified Phase 11B behavior:
+
+1. `knmon-native-helper.exe supervise-tree --pid <pid> --child-policy observe` supervises an already-running sample root through bounded Toolhelp process snapshots.
+2. `knmon-sample-fileio.exe --spawn-child-loop` creates deterministic repository sample child processes that run the existing attach loop.
+3. Process-tree results include root/child nodes with PID, parent PID, image name/path, architecture, first/last seen timestamps, alive/exited state, eligibility, policy decision, and message.
+4. Observe policy classifies same-bitness repository sample children as `eligible` with `observe_only` and never emits attach mutation evidence.
+5. `attach-supported` policy reuses the Phase 11A `AttachCapture` path for same-bitness repository sample children and preserves `self-disable-no-unload` detach.
+6. x64 and x86 process-tree observe and attach-supported smokes are green.
+7. Cross-bitness child smoke verifies `helper_target_mismatch` and `mutationAttempted=false` before attach.
+8. Missing root, PID `0`, PID `4`, and helper self supervision failures are typed and audited.
+
 Next implementation focus:
 
-1. Add process tree data model details and parent/child attach policy without increasing target startup latency.
-2. Add UI-level attach/detach controls with explicit target eligibility and audit output.
-3. Design repeated same-process attach after self-disable, including loaded-agent detection and deterministic already-running status.
-4. Move attach transport draining toward the collector reader before long-running attach sessions.
+1. Add UI-level attach/detach and child-policy controls with explicit target eligibility and audit output.
+2. Design repeated same-process attach after self-disable, including loaded-agent detection and deterministic already-running status.
+3. Move attach and child-attach transport draining toward the collector reader before long-running attach sessions.
+4. Add persistent supervision state only after cancellation, lifecycle ownership, and recovery behavior are specified.
 5. Keep protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 
 ## Phase 12: Advanced UX

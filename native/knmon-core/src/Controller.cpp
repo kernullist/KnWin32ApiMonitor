@@ -344,8 +344,23 @@ void AddAudit(
     DWORD errorCode = 0,
     const std::string& subsystem = "knmon-core");
 
+void AddAudit(
+    KnMonProcessTreeResult& result,
+    const std::string& eventType,
+    const std::string& operation,
+    const std::string& message,
+    DWORD errorCode = 0,
+    const std::string& subsystem = "knmon-core");
+
 void SetResultError(
     KnMonCaptureResult& result,
+    DWORD errorCode,
+    const std::string& subsystem,
+    const std::string& operation,
+    const std::string& message);
+
+void SetResultError(
+    KnMonProcessTreeResult& result,
     DWORD errorCode,
     const std::string& subsystem,
     const std::string& operation,
@@ -834,6 +849,332 @@ AttachPreflightResult RunAttachPreflight(
     return preflight;
 }
 
+std::string ChildPolicyName(KnMonChildPolicy policy)
+{
+    std::string name = "observe";
+
+    if (policy == KnMonChildPolicy::AttachSupported)
+    {
+        name = "attach-supported";
+    }
+
+    return name;
+}
+
+std::string ProcessEligibilityName(KnMonProcessEligibility eligibility)
+{
+    std::string name = "unsupported";
+
+    switch (eligibility)
+    {
+    case KnMonProcessEligibility::Eligible:
+        name = "eligible";
+        break;
+    case KnMonProcessEligibility::Missing:
+        name = "missing";
+        break;
+    case KnMonProcessEligibility::Exited:
+        name = "exited";
+        break;
+    case KnMonProcessEligibility::UnknownArchitecture:
+        name = "unknown_architecture";
+        break;
+    case KnMonProcessEligibility::HelperTargetMismatch:
+        name = "helper_target_mismatch";
+        break;
+    case KnMonProcessEligibility::AccessDenied:
+        name = "access_denied";
+        break;
+    case KnMonProcessEligibility::ProtectedProcess:
+        name = "protected_process";
+        break;
+    case KnMonProcessEligibility::Unsupported:
+    default:
+        name = "unsupported";
+        break;
+    }
+
+    return name;
+}
+
+std::string ProcessPolicyDecisionName(KnMonProcessPolicyDecision decision)
+{
+    std::string name = "unsupported";
+
+    switch (decision)
+    {
+    case KnMonProcessPolicyDecision::ObserveOnly:
+        name = "observe_only";
+        break;
+    case KnMonProcessPolicyDecision::AttachAllowed:
+        name = "attach_allowed";
+        break;
+    case KnMonProcessPolicyDecision::AttachSkipped:
+        name = "attach_skipped";
+        break;
+    case KnMonProcessPolicyDecision::AttachFailed:
+        name = "attach_failed";
+        break;
+    case KnMonProcessPolicyDecision::Unsupported:
+    default:
+        name = "unsupported";
+        break;
+    }
+
+    return name;
+}
+
+bool IsRepositorySampleImage(const std::string& imageName)
+{
+    return _stricmp(imageName.c_str(), "knmon-sample-fileio.exe") == 0;
+}
+
+bool CollectProcessSnapshot(std::vector<ProcessSnapshotInfo>* processes, DWORD* errorCode)
+{
+    bool collected = false;
+    HANDLE snapshot = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        if (processes != nullptr)
+        {
+            processes->clear();
+        }
+
+        if (errorCode != nullptr)
+        {
+            *errorCode = 0;
+        }
+
+        snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if (snapshot == INVALID_HANDLE_VALUE)
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
+
+        PROCESSENTRY32W entry = {};
+        entry.dwSize = sizeof(entry);
+        if (!Process32FirstW(snapshot, &entry))
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
+
+        do
+        {
+            ProcessSnapshotInfo info;
+            info.Found = true;
+            info.ProcessId = entry.th32ProcessID;
+            info.ParentProcessId = entry.th32ParentProcessID;
+            info.ImageName = WideToUtf8(entry.szExeFile);
+            if (processes != nullptr)
+            {
+                processes->push_back(info);
+            }
+        }
+        while (Process32NextW(snapshot, &entry));
+
+        collected = true;
+    }
+    while (false);
+
+    if (snapshot != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(snapshot);
+    }
+
+    return collected;
+}
+
+const ProcessSnapshotInfo* FindSnapshotProcess(const std::vector<ProcessSnapshotInfo>& processes, DWORD processId)
+{
+    const ProcessSnapshotInfo* found = nullptr;
+
+    for (const auto& process : processes)
+    {
+        if (process.ProcessId == processId)
+        {
+            found = &process;
+            break;
+        }
+    }
+
+    return found;
+}
+
+KnMonProcessTreeNode* FindProcessTreeNode(std::vector<KnMonProcessTreeNode>& nodes, DWORD processId)
+{
+    KnMonProcessTreeNode* found = nullptr;
+
+    for (auto& node : nodes)
+    {
+        if (node.ProcessId == processId)
+        {
+            found = &node;
+            break;
+        }
+    }
+
+    return found;
+}
+
+bool ProcessTreeHasNode(const std::vector<KnMonProcessTreeNode>& nodes, DWORD processId)
+{
+    bool found = false;
+
+    for (const auto& node : nodes)
+    {
+        if (node.ProcessId == processId)
+        {
+            found = true;
+            break;
+        }
+    }
+
+    return found;
+}
+
+KnMonChildPolicyDecision EvaluateChildPolicy(
+    KnMonProcessTreeResult& result,
+    KnMonProcessTreeNode& node,
+    const KnMonProcessTreeRequest& request)
+{
+    KnMonChildPolicyDecision decision;
+    decision.ProcessId = node.ProcessId;
+    decision.ParentProcessId = node.ParentProcessId;
+    decision.ImageName = node.ImageName;
+    decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachSkipped);
+    decision.Reason = "Child process has not been evaluated.";
+
+    HANDLE processHandle = nullptr;
+
+    do
+    {
+        if (!node.IsAlive || node.Exited)
+        {
+            node.EligibilityStatus = ProcessEligibilityName(KnMonProcessEligibility::Exited);
+            decision.EligibilityStatus = node.EligibilityStatus;
+            decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachSkipped);
+            decision.Reason = "Child process exited before policy evaluation.";
+            break;
+        }
+
+        if (!IsRepositorySampleImage(node.ImageName))
+        {
+            node.EligibilityStatus = ProcessEligibilityName(KnMonProcessEligibility::Unsupported);
+            decision.EligibilityStatus = node.EligibilityStatus;
+            decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::Unsupported);
+            decision.Reason = "Only repository sample children are eligible for Phase 11B child attach policy.";
+            break;
+        }
+
+        processHandle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, node.ProcessId);
+        if (processHandle == nullptr)
+        {
+            const DWORD errorCode = GetLastError();
+            node.EligibilityStatus = ProcessEligibilityName(errorCode == ERROR_ACCESS_DENIED ? KnMonProcessEligibility::AccessDenied : KnMonProcessEligibility::Missing);
+            decision.EligibilityStatus = node.EligibilityStatus;
+            decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachSkipped);
+            decision.Reason = "Failed to open child process for policy query: " + FormatWindowsError(errorCode);
+            break;
+        }
+
+        ProcessArchitectureResult architecture = QueryProcessArchitectureFromHandle(processHandle);
+        if (!architecture.Success)
+        {
+            node.EligibilityStatus = ProcessEligibilityName(KnMonProcessEligibility::UnknownArchitecture);
+            decision.EligibilityStatus = node.EligibilityStatus;
+            decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachSkipped);
+            decision.Reason = architecture.Message;
+            break;
+        }
+
+        node.Architecture = ArchitectureName(architecture.Architecture);
+        decision.Architecture = node.Architecture;
+
+        const KnMonAgentArchitecture helperArchitecture = NativeHelperArchitecture();
+        if (helperArchitecture == KnMonAgentArchitecture::Unknown || architecture.Architecture == KnMonAgentArchitecture::Unknown)
+        {
+            node.EligibilityStatus = ProcessEligibilityName(KnMonProcessEligibility::UnknownArchitecture);
+            decision.EligibilityStatus = node.EligibilityStatus;
+            decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachSkipped);
+            decision.Reason = "Helper or child architecture is unknown.";
+            break;
+        }
+
+        if (helperArchitecture != architecture.Architecture)
+        {
+            node.EligibilityStatus = ProcessEligibilityName(KnMonProcessEligibility::HelperTargetMismatch);
+            decision.EligibilityStatus = node.EligibilityStatus;
+            decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachSkipped);
+            decision.Reason = "Child architecture does not match helper architecture.";
+            break;
+        }
+
+        bool protectedProcess = false;
+        if (QueryProcessProtection(processHandle, &protectedProcess) && protectedProcess)
+        {
+            node.EligibilityStatus = ProcessEligibilityName(KnMonProcessEligibility::ProtectedProcess);
+            decision.EligibilityStatus = node.EligibilityStatus;
+            decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachSkipped);
+            decision.Reason = "Child process reports a protected-process protection level.";
+            break;
+        }
+
+        BinaryArchitectureResult agentArchitecture = QueryBinaryArchitecture(request.AgentPath, "agent");
+        if (!agentArchitecture.Success)
+        {
+            node.EligibilityStatus = ProcessEligibilityName(agentArchitecture.Operation == "missing_agent" ? KnMonProcessEligibility::Missing : KnMonProcessEligibility::Unsupported);
+            decision.EligibilityStatus = node.EligibilityStatus;
+            decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachSkipped);
+            decision.Reason = agentArchitecture.Message;
+            break;
+        }
+
+        if (agentArchitecture.Architecture != architecture.Architecture)
+        {
+            node.EligibilityStatus = ProcessEligibilityName(KnMonProcessEligibility::HelperTargetMismatch);
+            decision.EligibilityStatus = node.EligibilityStatus;
+            decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachSkipped);
+            decision.Reason = "Agent architecture does not match child architecture.";
+            break;
+        }
+
+        node.EligibilityStatus = ProcessEligibilityName(KnMonProcessEligibility::Eligible);
+        decision.EligibilityStatus = node.EligibilityStatus;
+        decision.Decision = request.ChildPolicy == KnMonChildPolicy::Observe
+            ? ProcessPolicyDecisionName(KnMonProcessPolicyDecision::ObserveOnly)
+            : ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachAllowed);
+        decision.Reason = request.ChildPolicy == KnMonChildPolicy::Observe
+            ? "Observe policy classified the child as attachable without mutation."
+            : "Attach-supported policy allows Phase 11A attach for this child.";
+    }
+    while (false);
+
+    if (processHandle != nullptr)
+    {
+        CloseHandle(processHandle);
+    }
+
+    node.PolicyDecision = decision.Decision;
+    node.Message = decision.Reason;
+
+    AddAudit(
+        result,
+        "child_policy_evaluated",
+        "child_policy",
+        "Child pid " + std::to_string(node.ProcessId) + " eligibility=" + decision.EligibilityStatus + " decision=" + decision.Decision + ".");
+
+    return decision;
+}
+
 bool CopyWideBounded(wchar_t* destination, std::size_t count, const std::wstring& value)
 {
     bool copied = false;
@@ -1103,6 +1444,26 @@ void AddAudit(
     result.AuditEvents.push_back(event);
 }
 
+void AddAudit(
+    KnMonProcessTreeResult& result,
+    const std::string& eventType,
+    const std::string& operation,
+    const std::string& message,
+    DWORD errorCode,
+    const std::string& subsystem)
+{
+    KnMonAuditEvent event;
+    event.OperationId = result.OperationId;
+    event.EventType = eventType;
+    event.TimestampUtc = NowUtc();
+    event.Subsystem = subsystem;
+    event.Operation = operation;
+    event.Win32ErrorCode = errorCode;
+    event.NtStatus = "0x00000000";
+    event.Message = message;
+    result.AuditEvents.push_back(event);
+}
+
 void SetResultError(
     KnMonLaunchResult& result,
     DWORD errorCode,
@@ -1120,6 +1481,21 @@ void SetResultError(
 
 void SetResultError(
     KnMonCaptureResult& result,
+    DWORD errorCode,
+    const std::string& subsystem,
+    const std::string& operation,
+    const std::string& message)
+{
+    result.Success = false;
+    result.Win32ErrorCode = errorCode;
+    result.Subsystem = subsystem;
+    result.Operation = operation;
+    result.Message = message;
+    AddAudit(result, operation, operation, message, errorCode, subsystem);
+}
+
+void SetResultError(
+    KnMonProcessTreeResult& result,
     DWORD errorCode,
     const std::string& subsystem,
     const std::string& operation,
@@ -3851,6 +4227,324 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
     if (result.Message.empty())
     {
         result.Message = fatalError ? "Controlled running-process attach capture failed." : "Controlled running-process attach capture finished.";
+    }
+
+    return result;
+}
+
+KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRequest& request) const
+{
+    KnMonProcessTreeResult result;
+    result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
+    result.RootProcessId = request.RootProcessId;
+    result.DurationMs = request.DurationMs == 0 ? 3000 : request.DurationMs;
+    result.ChildPolicy = ChildPolicyName(request.ChildPolicy);
+    result.NtStatus = "0x00000000";
+
+    bool fatalError = false;
+    std::vector<DWORD> evaluatedChildren;
+    const KnMonAgentArchitecture requestedArchitecture = RequestedArchitectureOrNative(request.Architecture);
+    const DWORD pollIntervalMs = request.PollIntervalMs < 10 ? 10 : request.PollIntervalMs;
+
+    auto hasEvaluatedChild = [&evaluatedChildren](DWORD processId) -> bool
+    {
+        bool found = false;
+
+        for (const DWORD evaluatedProcessId : evaluatedChildren)
+        {
+            if (evaluatedProcessId == processId)
+            {
+                found = true;
+                break;
+            }
+        }
+
+        return found;
+    };
+
+    auto markExitedNodes = [&result](const std::vector<ProcessSnapshotInfo>& snapshot, const std::string& timestamp)
+    {
+        for (auto& node : result.ProcessNodes)
+        {
+            if (node.IsAlive && FindSnapshotProcess(snapshot, node.ProcessId) == nullptr)
+            {
+                node.IsAlive = false;
+                node.Exited = true;
+                node.LastSeenUtc = timestamp;
+                if (!node.IsRoot)
+                {
+                    AddAudit(result, "child_process_exited", "process_snapshot", "Child pid " + std::to_string(node.ProcessId) + " is no longer present in the process snapshot.");
+                }
+            }
+        }
+    };
+
+    auto addNode = [&result](const ProcessSnapshotInfo& process, bool isRoot, const std::string& timestamp) -> KnMonProcessTreeNode*
+    {
+        KnMonProcessTreeNode node;
+        node.ProcessId = process.ProcessId;
+        node.ParentProcessId = process.ParentProcessId;
+        node.IsRoot = isRoot;
+        node.ImageName = process.ImageName;
+        node.ImagePath = QueryProcessImagePath(process.ProcessId);
+        node.Architecture = QueryProcessArchitecture(process.ProcessId);
+        node.FirstSeenUtc = timestamp;
+        node.LastSeenUtc = timestamp;
+        node.IsAlive = true;
+        node.Exited = false;
+        node.EligibilityStatus = isRoot ? ProcessEligibilityName(KnMonProcessEligibility::Eligible) : ProcessEligibilityName(KnMonProcessEligibility::Unsupported);
+        node.PolicyDecision = isRoot ? ProcessPolicyDecisionName(KnMonProcessPolicyDecision::ObserveOnly) : ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachSkipped);
+        node.Message = isRoot ? "Root process validated for bounded supervision." : "Child process discovered and pending policy evaluation.";
+        result.ProcessNodes.push_back(node);
+        return &result.ProcessNodes.back();
+    };
+
+    auto evaluateAndMaybeAttach = [this, &result, &request, &evaluatedChildren](KnMonProcessTreeNode& node)
+    {
+        KnMonChildPolicyDecision decision = EvaluateChildPolicy(result, node, request);
+
+        if (request.ChildPolicy == KnMonChildPolicy::AttachSupported && decision.Decision == ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachAllowed))
+        {
+            decision.MutationAttempted = true;
+            AddAudit(result, "child_attach_started", "attach_capture", "Starting Phase 11A attach for child pid " + std::to_string(node.ProcessId) + ".");
+
+            KnMonAttachRequest attachRequest;
+            attachRequest.OperationId = result.OperationId + "-child-" + std::to_string(node.ProcessId);
+            attachRequest.ProcessId = node.ProcessId;
+            attachRequest.AgentPath = request.AgentPath;
+            attachRequest.TimeoutMs = request.TimeoutMs;
+            attachRequest.DurationMs = request.DurationMs < 1500 ? request.DurationMs : 1500;
+            attachRequest.Architecture = request.Architecture;
+            attachRequest.InjectionMethod = KnMonInjectionMethod::RemoteLoadLibrary;
+
+            KnMonCaptureResult attachResult = AttachCapture(attachRequest);
+            decision.AttachSucceeded = attachResult.Success;
+            if (attachResult.Success)
+            {
+                decision.Reason = "Child attach completed through Phase 11A self-disable path.";
+                AddAudit(result, "child_attach_completed", "attach_capture", "Child pid " + std::to_string(node.ProcessId) + " attach completed.");
+            }
+            else
+            {
+                decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachFailed);
+                decision.Reason = "Child attach failed: " + attachResult.Operation + ": " + attachResult.Message;
+                AddAudit(result, "child_attach_failed", "attach_capture", decision.Reason, attachResult.Win32ErrorCode);
+                AddAudit(result, "child_attach_completed", "attach_capture", "Child pid " + std::to_string(node.ProcessId) + " attach completed with failure.", attachResult.Win32ErrorCode);
+            }
+
+            node.PolicyDecision = decision.Decision;
+            node.Message = decision.Reason;
+            result.ChildAttachResults.push_back(attachResult);
+        }
+
+        result.PolicyDecisions.push_back(decision);
+        evaluatedChildren.push_back(node.ProcessId);
+    };
+
+    do
+    {
+        AddAudit(result, "process_tree_supervision_started", "supervise_tree", "Starting bounded process-tree supervision.");
+
+        if (request.RootProcessId == 0 || request.RootProcessId == 4)
+        {
+            SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "missing_root_process", "System idle and system process PIDs are not supported supervision roots.");
+            fatalError = true;
+            break;
+        }
+
+        if (request.RootProcessId == GetCurrentProcessId())
+        {
+            SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "missing_root_process", "The helper process cannot supervise itself as root.");
+            fatalError = true;
+            break;
+        }
+
+        if (requestedArchitecture == KnMonAgentArchitecture::Unknown)
+        {
+            SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "unsupported_architecture", "Requested or helper architecture is unknown.");
+            fatalError = true;
+            break;
+        }
+
+        std::vector<ProcessSnapshotInfo> snapshot;
+        DWORD snapshotError = 0;
+        if (!CollectProcessSnapshot(&snapshot, &snapshotError))
+        {
+            SetResultError(result, snapshotError == 0 ? ERROR_GEN_FAILURE : snapshotError, "win32", "snapshot_failed", "Failed to take initial process snapshot.");
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "process_snapshot_taken", "CreateToolhelp32Snapshot", "Initial process snapshot captured.");
+
+        const ProcessSnapshotInfo* rootSnapshot = FindSnapshotProcess(snapshot, request.RootProcessId);
+        if (rootSnapshot == nullptr)
+        {
+            SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "missing_root_process", "Root process was not found in the process snapshot.");
+            fatalError = true;
+            break;
+        }
+
+        HANDLE rootHandle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, request.RootProcessId);
+        if (rootHandle == nullptr)
+        {
+            const DWORD errorCode = GetLastError();
+            SetResultError(result, errorCode, "win32", errorCode == ERROR_ACCESS_DENIED ? "access_denied" : "missing_root_process", "Failed to open root process for query: " + FormatWindowsError(errorCode));
+            fatalError = true;
+            break;
+        }
+
+        ProcessArchitectureResult rootArchitecture = QueryProcessArchitectureFromHandle(rootHandle);
+        CloseHandle(rootHandle);
+        rootHandle = nullptr;
+
+        if (!rootArchitecture.Success)
+        {
+            SetResultError(result, rootArchitecture.ErrorCode, "knmon-core", rootArchitecture.Operation, rootArchitecture.Message);
+            fatalError = true;
+            break;
+        }
+
+        if (rootArchitecture.Architecture != requestedArchitecture)
+        {
+            SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "helper_target_mismatch", "Root architecture does not match helper architecture.");
+            fatalError = true;
+            break;
+        }
+
+        const std::string firstSeenUtc = NowUtc();
+        KnMonProcessTreeNode* rootNode = addNode(*rootSnapshot, true, firstSeenUtc);
+        if (rootNode != nullptr)
+        {
+            rootNode->Architecture = ArchitectureName(rootArchitecture.Architecture);
+        }
+
+        AddAudit(result, "root_process_validated", "supervise_tree", "Root process validated for bounded process-tree supervision.");
+
+        const ULONGLONG startTick = GetTickCount64();
+        while (GetTickCount64() - startTick < result.DurationMs)
+        {
+            std::vector<ProcessSnapshotInfo> currentSnapshot;
+            DWORD currentSnapshotError = 0;
+            if (!CollectProcessSnapshot(&currentSnapshot, &currentSnapshotError))
+            {
+                SetResultError(result, currentSnapshotError == 0 ? ERROR_GEN_FAILURE : currentSnapshotError, "win32", "snapshot_failed", "Failed to take process supervision snapshot.");
+                fatalError = true;
+                break;
+            }
+
+            AddAudit(result, "process_snapshot_taken", "CreateToolhelp32Snapshot", "Process supervision snapshot captured.");
+
+            const std::string snapshotTime = NowUtc();
+            if (FindSnapshotProcess(currentSnapshot, request.RootProcessId) == nullptr)
+            {
+                markExitedNodes(currentSnapshot, snapshotTime);
+                SetResultError(result, ERROR_PROCESS_ABORTED, "knmon-core", "root_exited_early", "Root process exited before supervision duration elapsed.");
+                fatalError = true;
+                break;
+            }
+
+            bool addedNode = true;
+            while (addedNode)
+            {
+                addedNode = false;
+                for (const auto& process : currentSnapshot)
+                {
+                    if (process.ProcessId == request.RootProcessId || ProcessTreeHasNode(result.ProcessNodes, process.ProcessId))
+                    {
+                        continue;
+                    }
+
+                    if (!ProcessTreeHasNode(result.ProcessNodes, process.ParentProcessId))
+                    {
+                        continue;
+                    }
+
+                    KnMonProcessTreeNode* childNode = addNode(process, false, snapshotTime);
+                    if (childNode != nullptr)
+                    {
+                        AddAudit(result, "child_process_discovered", "process_snapshot", "Discovered child pid " + std::to_string(childNode->ProcessId) + " parent=" + std::to_string(childNode->ParentProcessId) + ".");
+                        if (!hasEvaluatedChild(childNode->ProcessId))
+                        {
+                            evaluateAndMaybeAttach(*childNode);
+                        }
+                    }
+
+                    addedNode = true;
+                }
+            }
+
+            for (auto& node : result.ProcessNodes)
+            {
+                const ProcessSnapshotInfo* process = FindSnapshotProcess(currentSnapshot, node.ProcessId);
+                if (process != nullptr)
+                {
+                    node.IsAlive = true;
+                    node.LastSeenUtc = snapshotTime;
+                    if (node.ImagePath.empty())
+                    {
+                        node.ImagePath = QueryProcessImagePath(node.ProcessId);
+                    }
+                }
+            }
+
+            markExitedNodes(currentSnapshot, snapshotTime);
+
+            const ULONGLONG elapsed = GetTickCount64() - startTick;
+            if (elapsed >= result.DurationMs)
+            {
+                break;
+            }
+
+            const DWORD remaining = static_cast<DWORD>(result.DurationMs - elapsed);
+            Sleep(remaining < pollIntervalMs ? remaining : pollIntervalMs);
+        }
+
+        if (fatalError)
+        {
+            break;
+        }
+
+        std::vector<ProcessSnapshotInfo> finalSnapshot;
+        DWORD finalSnapshotError = 0;
+        if (CollectProcessSnapshot(&finalSnapshot, &finalSnapshotError))
+        {
+            markExitedNodes(finalSnapshot, NowUtc());
+        }
+
+        std::size_t childCount = 0;
+        for (const auto& node : result.ProcessNodes)
+        {
+            if (!node.IsRoot)
+            {
+                childCount += 1;
+            }
+        }
+
+        if (childCount == 0)
+        {
+            SetResultError(result, ERROR_NOT_FOUND, "knmon-core", "child_policy_failed", "No child process was discovered under the requested root.");
+            fatalError = true;
+            break;
+        }
+
+        result.Success = true;
+        result.Win32ErrorCode = 0;
+        result.Subsystem = "knmon-core";
+        result.Operation = "supervise_tree";
+        result.Message = "Process-tree supervision completed.";
+        AddAudit(result, "process_tree_supervision_completed", "supervise_tree", "Process-tree supervision completed.");
+    }
+    while (false);
+
+    if (!result.Success)
+    {
+        AddAudit(result, "process_tree_supervision_failed", result.Operation.empty() ? "supervise_tree" : result.Operation, result.Message.empty() ? "Process-tree supervision failed." : result.Message, result.Win32ErrorCode, result.Subsystem.empty() ? "knmon-core" : result.Subsystem);
+    }
+
+    if (result.Message.empty())
+    {
+        result.Message = fatalError ? "Process-tree supervision failed." : "Process-tree supervision finished.";
     }
 
     return result;

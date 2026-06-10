@@ -35,6 +35,8 @@ contracts/
   hook-status.schema.json
   capture-result.schema.json
   collector-stats.schema.json
+  process-tree-node.schema.json
+  process-tree-result.schema.json
   session-info.schema.json
   session-manifest.schema.json
   session-replay-result.schema.json
@@ -43,6 +45,8 @@ contracts/
 `capture-result.schema.json` currently accepts both `bounded-native-capture` with `early-bird APC` and `bounded-native-attach` with `remote LoadLibraryW`. Attach results may include `attachProcessId` and `detachPolicy`, with Phase 11A using `self-disable-no-unload`.
 
 `session-manifest.schema.json` accepts helper-written sessions from `knmon-native-helper capture-sample` and `knmon-native-helper attach-capture`, with capture modes `bounded-native-capture` and `bounded-native-attach`.
+
+`process-tree-node.schema.json` and `process-tree-result.schema.json` describe Phase 11B helper-side process-tree supervision. They cover root/child process metadata, child policies `observe` and `attach-supported`, eligibility states, policy decisions, audit events, and optional embedded Phase 11A child attach results.
 
 Generated definition ID artifacts live under:
 
