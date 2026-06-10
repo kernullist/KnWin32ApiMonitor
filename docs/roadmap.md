@@ -512,7 +512,7 @@ Next implementation focus:
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 
-Status: Phase 11A and Phase 11B implemented foundations. Bounded same-bitness running-process attach and helper-side process-tree supervision are smoke-verified; persistent UI controls, daemon supervision, and repeated same-process reattach remain future work.
+Status: Phase 11A, Phase 11B, and Phase 11C foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, and UI controls for selected native target attach/supervision are implemented; persistent daemon supervision and repeated same-process reattach remain future work.
 
 Goal:
 
@@ -557,12 +557,23 @@ Current verified Phase 11B behavior:
 7. Cross-bitness child smoke verifies `helper_target_mismatch` and `mutationAttempted=false` before attach.
 8. Missing root, PID `0`, PID `4`, and helper self supervision failures are typed and audited.
 
+Current verified Phase 11C behavior:
+
+1. The React/Tauri UI has a selected native target panel with PID, image, architecture, status, and explicit eligibility reason.
+2. `Attach Capture` invokes `attach_target_process_capture`, which runs helper `attach-capture --pid <pid> --duration-ms <ms>` with a bounded wrapper timeout.
+3. Attach results render target PID, attach PID, `bounded-native-attach`, `remote LoadLibraryW`, `self-disable-no-unload`, subsystem/operation/Win32/message, dropped counters, transport counters, and `agent_shutdown` hook restore evidence.
+4. Attach `capturedEvents` map into the existing trace table with `ui-attach` and target PID context tags.
+5. `Supervise` invokes `supervise_process_tree`, which runs helper `supervise-tree --pid <pid> --duration-ms <ms> --child-policy observe|attach-supported` with a bounded wrapper timeout.
+6. Process-tree results render root PID, child policy, process nodes, policy decisions, mutation-attempt count, audit output, and child attach summaries.
+7. Attach-supported child attach events map into the trace table with `process-tree` and child PID context tags.
+8. The UI does not claim persistent attach, safe DLL unload, cross-bitness attach, protected-process bypass, or broad arbitrary target support.
+
 Next implementation focus:
 
-1. Add UI-level attach/detach and child-policy controls with explicit target eligibility and audit output.
-2. Design repeated same-process attach after self-disable, including loaded-agent detection and deterministic already-running status.
-3. Move attach and child-attach transport draining toward the collector reader before long-running attach sessions.
-4. Add persistent supervision state only after cancellation, lifecycle ownership, and recovery behavior are specified.
+1. Design repeated same-process attach after self-disable, including loaded-agent detection, deterministic already-running status, and a typed "already instrumented" state.
+2. Move attach and child-attach transport draining toward the collector reader before long-running attach sessions.
+3. Add persistent supervision state only after cancellation, lifecycle ownership, recovery behavior, and stale-agent detection are specified.
+4. Add UI-level cancellation/progress only after the bounded helper command model has a durable operation-state contract.
 5. Keep protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 
 ## Phase 12: Advanced UX

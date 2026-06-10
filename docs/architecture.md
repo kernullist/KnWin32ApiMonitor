@@ -6,7 +6,7 @@
 
 This document describes the current Phase 0/Phase 1 foundation and the controlled native-capture paths for `KN Win32 API Monitor`.
 
-The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, a Phase 11B helper-side process-tree supervision foundation for deterministic sample children, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, or broad arbitrary target supervision.
+The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, a Phase 11B helper-side process-tree supervision foundation for deterministic sample children, Phase 11C UI controls for bounded selected-target attach and process-tree supervision, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, persistent attach daemons, or broad arbitrary target supervision.
 
 ## Layers
 
@@ -54,12 +54,13 @@ Responsibilities:
 4. Maintain selected-event inspector state.
 5. Export the current event list as JSONL.
 6. Preserve the same event shape intended for future collector events.
+7. In Tauri desktop mode, select a native target and invoke bounded attach or process-tree helper commands with explicit eligibility and audit output.
 
 Current backend modes:
 
 - `mock`: Browser/Vite mode and mock Tauri target list.
 - `native-enum`: Tauri command calls `knmon-native-helper.exe list-targets`.
-- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof, `capture-sample` for bounded controlled File I/O capture, `capture-sample --write-session` for persisted sessions, or `replay-session` for disk replay. The helper CLI also exposes `attach-capture --pid` for Phase 11A native attach validation and `supervise-tree --pid` for Phase 11B process-tree validation; UI controls for these paths are still future work.
+- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof, `capture-sample` for bounded controlled File I/O capture, `capture-sample --write-session` for persisted sessions, `replay-session` for disk replay, `attach-capture --pid` for bounded selected-target attach, or `supervise-tree --pid` for process-tree observation/attach-supported policy evaluation.
 
 ## Rust/Tauri Command Layer
 
@@ -79,13 +80,15 @@ Current commands:
 7. `capture_sample_fileio_events`
 8. `capture_sample_fileio_session_events`
 9. `replay_last_sample_session`
+10. `attach_target_process_capture`
+11. `supervise_process_tree`
 
-These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, and bounded sample File I/O capture. The native helper has smoke-verified attach and process-tree supervision paths, but the UI has not yet promoted them to persistent attach/detach or child-policy controls.
+These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, bounded sample File I/O capture, bounded same-bitness selected-target attach, and helper-side process-tree supervision. The attach and process-tree UI controls call finite helper commands and return structured JSON; they do not create a persistent attached session, background daemon, or live detach controller.
 
 Future work:
 
 1. Stream collector events to the UI.
-2. Add explicit command allowlists for attach, detach, start, stop, and export.
+2. Add explicit command allowlists for persistent attach, detach, start, stop, and export.
 3. Preserve subsystem, operation, and native error codes in all failures.
 
 ## Native Controller
@@ -104,14 +107,14 @@ Current responsibilities:
 8. Implement bounded helper-side `supervise-tree --pid` process-tree discovery and child policy evaluation.
 9. Keep broad arbitrary attach, persistent daemon supervision, and UI-driven child auto-attach outside the current controller surface.
 
-The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, and bounded sample File I/O capture. The same helper exposes Phase 11A attach and Phase 11B process-tree smoke validation from the CLI.
+The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, bounded sample File I/O capture, Phase 11A attach, and Phase 11B process-tree supervision. The UI-visible Phase 11C path uses the same helper JSON as the smoke scripts.
 
 Future responsibilities:
 
 1. Launch suspended targets.
 2. Repeated attach/detach to selected targets.
 3. Supervise long-running agent lifecycle.
-4. Manage child process auto-attach policy.
+4. Manage persistent child process auto-attach policy.
 5. Move the current shared-memory drain from the controller into a dedicated collector reader.
 
 Current controlled launch behavior:
@@ -169,6 +172,17 @@ Current process-tree supervision behavior:
 6. `--child-policy attach-supported` only attaches same-bitness repository sample children that pass eligibility checks, then embeds the existing Phase 11A `bounded-native-attach` result in `childAttachResults`.
 7. Cross-bitness, protected, access-denied, missing, exited, and unsupported children are classified as policy decisions before mutation.
 8. Process-tree supervision is controller/helper-side work. It does not add agent-side polling, hook-path JSON, or hook fast-path overhead.
+
+Current UI attach/supervision flow:
+
+1. The React target pane loads native targets through `list_native_target_processes` and keeps an explicit selected PID.
+2. The selected-target panel shows source, PID, image, architecture, status, and an eligibility reason. Mutation-backed actions remain disabled unless the source is `Native`, status is `available`, and architecture is `x64` or `x86`.
+3. `Attach Capture` calls Tauri command `attach_target_process_capture(pid, durationMs)`, which runs `knmon-native-helper.exe attach-capture --pid <pid> --duration-ms <ms> --timeout-ms <bounded>`.
+4. `Supervise` calls Tauri command `supervise_process_tree(rootPid, durationMs, childPolicy)`, which runs `knmon-native-helper.exe supervise-tree --pid <pid> --duration-ms <ms> --child-policy observe|attach-supported --timeout-ms <bounded>`.
+5. Rust parses the helper stdout into typed `CaptureResult` or `ProcessTreeResult` and preserves transport metrics, subsystem, operation, Win32 code, audit events, process nodes, policy decisions, and embedded child attach results.
+6. The UI maps attach and child attach `capturedEvents` into the same trace table as sample capture, adding context tags such as `ui-attach`, `process-tree`, `target:<pid>`, or `child:<pid>`.
+7. The output inspector remains available even when a failed helper command produces zero trace rows, so audit and typed failure evidence are visible.
+8. The UI uses `self-disable-no-unload` wording and does not leave an "attached/live" state after a bounded helper command completes.
 
 Current shared-memory transport behavior:
 

@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use knmon_tauri::{
+    attach_target_process_capture as attach_target_process_capture_backend,
     backend_status,
     capture_sample_fileio,
     capture_sample_fileio_session,
@@ -8,9 +9,11 @@ use knmon_tauri::{
     mock_target_processes,
     native_target_processes,
     replay_last_session,
+    supervise_process_tree as supervise_process_tree_backend,
     CaptureSessionState,
     CaptureResult,
     LaunchResult,
+    ProcessTreeResult,
     SessionReplayResult,
     TargetProcess,
 };
@@ -52,6 +55,18 @@ fn replay_last_sample_session() -> Result<SessionReplayResult, String>
 }
 
 #[tauri::command]
+fn attach_target_process_capture(pid: u32, duration_ms: u32) -> Result<CaptureResult, String>
+{
+    attach_target_process_capture_backend(pid, duration_ms)
+}
+
+#[tauri::command]
+fn supervise_process_tree(root_pid: u32, duration_ms: u32, child_policy: String) -> Result<ProcessTreeResult, String>
+{
+    supervise_process_tree_backend(root_pid, duration_ms, child_policy)
+}
+
+#[tauri::command]
 fn get_backend_status() -> Result<String, String>
 {
     Ok(backend_status().to_string())
@@ -79,6 +94,8 @@ fn main()
             capture_sample_fileio_events,
             capture_sample_fileio_session_events,
             replay_last_sample_session,
+            attach_target_process_capture,
+            supervise_process_tree,
             get_backend_status,
             start_mock_capture_session,
             stop_mock_capture_session

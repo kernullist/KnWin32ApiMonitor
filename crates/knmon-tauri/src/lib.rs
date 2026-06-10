@@ -1,6 +1,9 @@
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::process::Stdio;
+use std::thread;
+use std::time::{Duration, Instant};
 
 pub const PROTOCOL_MAJOR: u16 = 0;
 pub const PROTOCOL_MINOR: u16 = 1;
@@ -124,6 +127,16 @@ pub struct AgentApiCallEvent
     pub sequence: u64,
     pub api: String,
     pub module: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub api_family: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub api_category: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub api_risk: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hook_policy: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coverage_status: Option<String>,
     pub process: String,
     pub return_value: String,
     pub last_error_code: u32,
@@ -148,6 +161,10 @@ pub struct CaptureResult
     pub injection_method: String,
     pub target_path: String,
     pub agent_path: String,
+    #[serde(default)]
+    pub attach_process_id: u32,
+    #[serde(default)]
+    pub detach_policy: String,
     pub target_process_id: u32,
     pub target_thread_id: u32,
     pub architecture: String,
@@ -157,12 +174,87 @@ pub struct CaptureResult
     pub operation: String,
     pub message: String,
     pub dropped_events: u64,
+    #[serde(default)]
+    pub transport_mode: String,
+    #[serde(default)]
+    pub transport_capacity: u64,
+    #[serde(default)]
+    pub transport_records_produced: u64,
+    #[serde(default)]
+    pub transport_records_consumed: u64,
+    #[serde(default)]
+    pub transport_dropped_events: u64,
+    #[serde(default)]
+    pub transport_high_water_mark: u64,
+    #[serde(default)]
+    pub hook_overhead_min_us: u64,
+    #[serde(default)]
+    pub hook_overhead_avg_us: u64,
+    #[serde(default)]
+    pub hook_overhead_max_us: u64,
     pub handshake: AgentHandshake,
     pub audit_events: Vec<AuditEvent>,
     pub agent_messages: Vec<serde_json::Value>,
     pub captured_events: Vec<AgentApiCallEvent>,
     #[serde(default)]
     pub session: Option<SessionInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProcessTreeNode
+{
+    pub process_id: u32,
+    pub parent_process_id: u32,
+    pub is_root: bool,
+    pub image_name: String,
+    pub image_path: String,
+    pub architecture: String,
+    pub first_seen_utc: String,
+    pub last_seen_utc: String,
+    pub is_alive: bool,
+    pub exited: bool,
+    pub eligibility_status: String,
+    pub policy_decision: String,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChildPolicyDecision
+{
+    pub process_id: u32,
+    pub parent_process_id: u32,
+    pub image_name: String,
+    pub architecture: String,
+    pub eligibility_status: String,
+    pub decision: String,
+    pub mutation_attempted: bool,
+    pub attach_succeeded: bool,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProcessTreeResult
+{
+    pub schema_version: String,
+    pub operation_id: String,
+    pub success: bool,
+    pub backend_mode: String,
+    pub supervision_mode: String,
+    pub root_process_id: u32,
+    pub duration_ms: u32,
+    pub child_policy: String,
+    pub win32_error_code: u32,
+    pub nt_status: String,
+    pub subsystem: String,
+    pub operation: String,
+    pub message: String,
+    pub process_nodes: Vec<ProcessTreeNode>,
+    pub policy_decisions: Vec<ChildPolicyDecision>,
+    pub audit_events: Vec<AuditEvent>,
+    pub child_attach_results: Vec<CaptureResult>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -358,6 +450,58 @@ pub fn replay_last_session() -> Result<SessionReplayResult, String>
         .map_err(|error| format!("failed to parse session replay result: {error}; stdout={helper_output}"))
 }
 
+pub fn attach_target_process_capture(process_id: u32, duration_ms: u32) -> Result<CaptureResult, String>
+{
+    let duration = normalize_duration_ms(duration_ms);
+    let helper_timeout = helper_inner_timeout_ms(duration);
+    let command_timeout = helper_process_timeout_ms(duration);
+    let helper_output = run_helper_args_with_timeout(&[
+        "attach-capture".to_string(),
+        "--pid".to_string(),
+        process_id.to_string(),
+        "--duration-ms".to_string(),
+        duration.to_string(),
+        "--timeout-ms".to_string(),
+        helper_timeout.to_string(),
+    ], command_timeout)?;
+
+    parse_helper_json(&helper_output, "attach-capture")
+}
+
+pub fn supervise_process_tree(root_process_id: u32, duration_ms: u32, child_policy: String) -> Result<ProcessTreeResult, String>
+{
+    let normalized_policy = child_policy.trim().to_string();
+    if normalized_policy != "observe" && normalized_policy != "attach-supported"
+    {
+        return Err(format!("unsupported child policy: {normalized_policy}"));
+    }
+
+    let duration = normalize_duration_ms(duration_ms);
+    let helper_timeout = helper_inner_timeout_ms(duration);
+    let command_timeout = helper_process_timeout_ms(duration);
+    let helper_output = run_helper_args_with_timeout(&[
+        "supervise-tree".to_string(),
+        "--pid".to_string(),
+        root_process_id.to_string(),
+        "--duration-ms".to_string(),
+        duration.to_string(),
+        "--timeout-ms".to_string(),
+        helper_timeout.to_string(),
+        "--child-policy".to_string(),
+        normalized_policy,
+    ], command_timeout)?;
+
+    parse_helper_json(&helper_output, "supervise-tree")
+}
+
+fn parse_helper_json<T>(helper_output: &str, command_name: &str) -> Result<T, String>
+where
+    T: DeserializeOwned,
+{
+    serde_json::from_str(helper_output)
+        .map_err(|error| format!("failed to parse {command_name} result: {error}; stdout={helper_output}"))
+}
+
 fn run_helper<const N: usize>(args: [&str; N]) -> Result<String, String>
 {
     let owned_args: Vec<String> = args.iter().map(|value| value.to_string()).collect();
@@ -394,6 +538,90 @@ fn run_helper_args(args: &[String]) -> Result<String, String>
     }
 
     Ok(stdout)
+}
+
+fn run_helper_args_with_timeout(args: &[String], timeout_ms: u32) -> Result<String, String>
+{
+    let helper_path = find_helper_path()
+        .ok_or_else(|| "knmon-native-helper.exe was not found. Run `npm run native:build` first.".to_string())?;
+
+    let mut child = Command::new(&helper_path)
+        .args(args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| format!("failed to run {}: {error}", helper_path.display()))?;
+
+    let timeout = Duration::from_millis(timeout_ms as u64);
+    let start = Instant::now();
+
+    loop
+    {
+        if child.try_wait().map_err(|error| format!("failed to poll {}: {error}", helper_path.display()))?.is_some()
+        {
+            break;
+        }
+
+        if start.elapsed() >= timeout
+        {
+            let _ = child.kill();
+            let output = child
+                .wait_with_output()
+                .map_err(|error| format!("failed to collect timed out {}: {error}", helper_path.display()))?;
+            let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+
+            return Err(format!(
+                "{} timed out after {} ms; stderr={}; stdout={}",
+                helper_path.display(),
+                timeout_ms,
+                stderr,
+                stdout
+            ));
+        }
+
+        thread::sleep(Duration::from_millis(25));
+    }
+
+    let output = child
+        .wait_with_output()
+        .map_err(|error| format!("failed to collect {} output: {error}", helper_path.display()))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+
+    if !output.status.success()
+    {
+        return Err(format!(
+            "{} exited with {:?}; stderr={}; stdout={}",
+            helper_path.display(),
+            output.status.code(),
+            stderr,
+            stdout
+        ));
+    }
+
+    if stdout.is_empty()
+    {
+        return Err(format!("{} returned empty stdout; stderr={}", helper_path.display(), stderr));
+    }
+
+    Ok(stdout)
+}
+
+fn normalize_duration_ms(duration_ms: u32) -> u32
+{
+    duration_ms.clamp(250, 30_000)
+}
+
+fn helper_inner_timeout_ms(duration_ms: u32) -> u32
+{
+    duration_ms.saturating_add(7_000).clamp(7_000, 45_000)
+}
+
+fn helper_process_timeout_ms(duration_ms: u32) -> u32
+{
+    duration_ms.saturating_add(10_000).clamp(10_000, 60_000)
 }
 
 fn repo_root_path() -> PathBuf

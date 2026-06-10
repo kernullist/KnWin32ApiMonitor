@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { mockTargets } from "./mockData";
-import type { CaptureResult, CaptureSessionState, LaunchResult, SessionReplayResult, TargetProcess } from "./types";
+import type { CaptureResult, CaptureSessionState, LaunchResult, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
 
 function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -71,6 +71,29 @@ export async function replayLastSampleSession(): Promise<SessionReplayResult> {
   }
 
   return invoke<SessionReplayResult>("replay_last_sample_session");
+}
+
+export async function attachTargetProcessCapture(pid: number, durationMs: number): Promise<CaptureResult> {
+  if (!isTauriRuntime()) {
+    throw new Error("Bounded attach capture requires the Tauri desktop runtime and build/native/Debug/knmon-native-helper.exe.");
+  }
+
+  return invoke<CaptureResult>("attach_target_process_capture", {
+    pid,
+    durationMs
+  });
+}
+
+export async function superviseProcessTree(pid: number, durationMs: number, childPolicy: ProcessTreeResult["childPolicy"]): Promise<ProcessTreeResult> {
+  if (!isTauriRuntime()) {
+    throw new Error("Process-tree supervision requires the Tauri desktop runtime and build/native/Debug/knmon-native-helper.exe.");
+  }
+
+  return invoke<ProcessTreeResult>("supervise_process_tree", {
+    rootPid: pid,
+    durationMs,
+    childPolicy
+  });
 }
 
 export async function startBackendSession(): Promise<CaptureSessionState> {

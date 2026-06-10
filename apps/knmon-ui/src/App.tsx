@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  attachTargetProcessCapture,
   captureSampleFileIoEvents,
   captureSampleFileIoSession,
   launchSampleEarlyBirdCapture,
@@ -29,15 +30,17 @@ import {
   listTargetProcesses,
   replayLastSampleSession,
   startBackendSession,
-  stopBackendSession
+  stopBackendSession,
+  superviseProcessTree
 } from "./backend";
 import { apiTree, captureProfiles, createMockFileIoEvent, initialTraceEvents } from "./mockData";
 import { downloadJsonl, estimateSessionBytes } from "./session";
-import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
+import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
 
 type LeftTab = "targets" | "apis" | "profiles";
 type TraceMode = "flat" | "call-tree";
 type TargetSource = "mock" | "native";
+type ChildPolicy = ProcessTreeResult["childPolicy"];
 
 const inspectorTabs: Array<{ id: InspectorTab; label: string }> = [
   { id: "parameters", label: "Parameters" },
@@ -193,10 +196,108 @@ function createTraceEventFromAgentApiCall(event: AgentApiCallEvent, eventId: num
   };
 }
 
+function clampDurationMs(value: string | number, fallback: number): number {
+  const parsed = typeof value === "number" ? value : Number.parseInt(value, 10);
+
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(30000, Math.max(250, Math.trunc(parsed)));
+}
+
+function getRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+
+  return null;
+}
+
+function readNumberField(record: Record<string, unknown>, name: string): number | null {
+  const value = record[name];
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  return null;
+}
+
+function hookRestoreSummary(result: CaptureResult | null): string {
+  if (!result) {
+    return "not available";
+  }
+
+  const shutdown = result.agentMessages
+    .map((message) => getRecord(message))
+    .find((message) => message?.messageType === "agent_shutdown");
+
+  if (!shutdown) {
+    return "agent_shutdown not observed";
+  }
+
+  const restoredHooks = readNumberField(shutdown, "restoredHooks");
+  const installedHooks = readNumberField(shutdown, "installedHooks");
+  const failedHooks = readNumberField(shutdown, "failedHooks");
+  const reason = typeof shutdown.reason === "string" ? shutdown.reason : "self_disable";
+
+  if (restoredHooks === null || installedHooks === null || failedHooks === null) {
+    return `agent_shutdown reason=${reason}`;
+  }
+
+  return `agent_shutdown reason=${reason}; restored=${restoredHooks}/${installedHooks}; failed=${failedHooks}`;
+}
+
+function targetEligibilityReason(target: TargetProcess | null, source: TargetSource): string | null {
+  if (!target) {
+    return "Select a target row.";
+  }
+
+  if (source !== "native") {
+    return "Switch target source to Native.";
+  }
+
+  if (target.status !== "available") {
+    return `Target status is ${target.status}.`;
+  }
+
+  if (target.architecture !== "x64" && target.architecture !== "x86") {
+    return `Architecture ${target.architecture} is unsupported.`;
+  }
+
+  return null;
+}
+
+function summarizeProcessTree(result: ProcessTreeResult | null) {
+  const empty = {
+    childCount: 0,
+    eligibleCount: 0,
+    mutationAttemptedCount: 0,
+    attachSuccessCount: 0,
+    attachFailureCount: 0,
+    capturedEventCount: 0
+  };
+
+  if (!result) {
+    return empty;
+  }
+
+  return {
+    childCount: result.processNodes.filter((node) => !node.isRoot).length,
+    eligibleCount: result.policyDecisions.filter((decision) => decision.eligibilityStatus === "eligible").length,
+    mutationAttemptedCount: result.policyDecisions.filter((decision) => decision.mutationAttempted).length,
+    attachSuccessCount: result.childAttachResults.filter((capture) => capture.success).length,
+    attachFailureCount: result.childAttachResults.filter((capture) => !capture.success).length,
+    capturedEventCount: result.childAttachResults.reduce((total, capture) => total + capture.capturedEvents.length, 0)
+  };
+}
+
 function App() {
   const [leftTab, setLeftTab] = useState<LeftTab>("targets");
   const [targetSource, setTargetSource] = useState<TargetSource>("mock");
   const [targets, setTargets] = useState<TargetProcess[]>([]);
+  const [selectedTargetPid, setSelectedTargetPid] = useState<number | null>(null);
   const [backendMode, setBackendMode] = useState<BackendMode>("mock");
   const [events, setEvents] = useState<TraceEvent[]>(initialTraceEvents);
   const [selectedEventId, setSelectedEventId] = useState<number>(initialTraceEvents[0]?.eventId ?? 0);
@@ -206,8 +307,13 @@ function App() {
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("parameters");
   const [traceMode, setTraceMode] = useState<TraceMode>("flat");
   const [nativeBusy, setNativeBusy] = useState(false);
+  const [attachDurationMs, setAttachDurationMs] = useState(3000);
+  const [treeDurationMs, setTreeDurationMs] = useState(3000);
+  const [childPolicy, setChildPolicy] = useState<ChildPolicy>("observe");
   const [launchResult, setLaunchResult] = useState<LaunchResult | null>(null);
   const [captureResult, setCaptureResult] = useState<CaptureResult | null>(null);
+  const [attachResult, setAttachResult] = useState<CaptureResult | null>(null);
+  const [processTreeResult, setProcessTreeResult] = useState<ProcessTreeResult | null>(null);
   const [lastSession, setLastSession] = useState<SessionInfo | null>(null);
   const [outputEvents, setOutputEvents] = useState<AuditEvent[]>([
     makeAuditEvent("backend_ready", "mock_init", "Mock File I/O backend initialized.")
@@ -221,6 +327,7 @@ function App() {
       if (active) {
         setTargets(result.targets);
         setBackendMode(result.mode);
+        setSelectedTargetPid(null);
       }
     });
 
@@ -233,26 +340,54 @@ function App() {
     setOutputEvents((current) => [...eventsToAppend, ...current].slice(0, 80));
   }
 
+  function replaceTargets(nextTargets: TargetProcess[], nextSource: TargetSource, nextMode: BackendMode) {
+    setTargetSource(nextSource);
+    setTargets(nextTargets);
+    setBackendMode(nextMode);
+    setSelectedTargetPid((current) => {
+      if (current !== null && nextTargets.some((target) => target.pid === current)) {
+        return current;
+      }
+
+      return null;
+    });
+  }
+
+  function appendCapturedEvents(capturedEvents: AgentApiCallEvent[], contextTags: string[]) {
+    if (capturedEvents.length === 0) {
+      return;
+    }
+
+    const traceEvents = capturedEvents.map((event, index) => {
+      const traceEvent = createTraceEventFromAgentApiCall(event, nextEventId.current + index);
+
+      return {
+        ...traceEvent,
+        tags: Array.from(new Set([...traceEvent.tags, ...contextTags]))
+      };
+    });
+
+    nextEventId.current += traceEvents.length;
+    setEvents((current) => [...current, ...traceEvents].slice(-400));
+    setSelectedEventId(traceEvents[traceEvents.length - 1].eventId);
+  }
+
   async function handleLoadMockTargets() {
-    setTargetSource("mock");
     const result = await listTargetProcesses();
-    setTargets(result.targets);
-    setBackendMode(result.mode);
+    replaceTargets(result.targets, "mock", result.mode);
     appendOutput([makeAuditEvent("target_source_changed", "load_mock_targets", "Loaded mock target rows.")]);
   }
 
   async function handleLoadNativeTargets() {
     setNativeBusy(true);
-    setTargetSource("native");
 
     try {
       const result = await listNativeTargetProcesses();
-      setTargets(result.targets);
-      setBackendMode(result.mode);
+      replaceTargets(result.targets, "native", result.mode);
       appendOutput([makeAuditEvent("native_enum_completed", "list_native_target_processes", `Loaded ${result.targets.length} native target rows.`)]);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setBackendMode("mock");
+      replaceTargets([], "native", "mock");
       appendOutput([makeAuditEvent("native_enum_blocked", "list_native_target_processes", message)]);
       setInspectorTab("output");
     } finally {
@@ -300,6 +435,10 @@ function App() {
   }, [events, filter]);
 
   const selectedEvent = events.find((event) => event.eventId === selectedEventId) ?? filteredEvents[0] ?? events[0];
+  const selectedTarget = selectedTargetPid === null ? null : targets.find((target) => target.pid === selectedTargetPid) ?? null;
+  const targetBlockReason = targetEligibilityReason(selectedTarget, targetSource);
+  const canRunTargetAction = targetBlockReason === null && !nativeBusy;
+  const processTreeSummary = summarizeProcessTree(processTreeResult);
   const sessionBytes = estimateSessionBytes(events);
 
   async function handleStartCapture() {
@@ -355,10 +494,7 @@ function App() {
       appendOutput(result.auditEvents.length > 0 ? result.auditEvents : [makeAuditEvent("capture_result", result.operation, result.message, result.win32ErrorCode)]);
 
       if (result.capturedEvents.length > 0) {
-        const traceEvents = result.capturedEvents.map((event, index) => createTraceEventFromAgentApiCall(event, nextEventId.current + index));
-        nextEventId.current += traceEvents.length;
-        setEvents((current) => [...current, ...traceEvents].slice(-400));
-        setSelectedEventId(traceEvents[traceEvents.length - 1].eventId);
+        appendCapturedEvents(result.capturedEvents, ["sample-capture", `target:${result.targetProcessId}`]);
       }
 
       setInspectorTab("output");
@@ -396,10 +532,7 @@ function App() {
       appendOutput(result.auditEvents.length > 0 ? result.auditEvents : [makeAuditEvent("capture_result", result.operation, result.message, result.win32ErrorCode)]);
 
       if (result.capturedEvents.length > 0) {
-        const traceEvents = result.capturedEvents.map((event, index) => createTraceEventFromAgentApiCall(event, nextEventId.current + index));
-        nextEventId.current += traceEvents.length;
-        setEvents((current) => [...current, ...traceEvents].slice(-400));
-        setSelectedEventId(traceEvents[traceEvents.length - 1].eventId);
+        appendCapturedEvents(result.capturedEvents, ["sample-session", `target:${result.targetProcessId}`]);
       }
 
       setInspectorTab("output");
@@ -440,6 +573,74 @@ function App() {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       appendOutput([makeAuditEvent("session_replay_blocked", "replay_last_sample_session", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
+  async function handleAttachSelectedTarget() {
+    if (!selectedTarget || targetBlockReason) {
+      appendOutput([makeAuditEvent("attach_blocked", "attach_target_process_capture", targetBlockReason ?? "No target selected.")]);
+      setInspectorTab("output");
+      return;
+    }
+
+    setNativeBusy(true);
+    setAttachResult(null);
+
+    try {
+      appendOutput([makeAuditEvent("attach_requested", "attach_target_process_capture", `Bounded attach requested for PID ${selectedTarget.pid}.`)]);
+      const result = await attachTargetProcessCapture(selectedTarget.pid, attachDurationMs);
+      setAttachResult(result);
+      setCaptureResult(result);
+      setBackendMode(result.backendMode);
+      setDroppedCount(result.droppedEvents);
+      appendOutput(result.auditEvents.length > 0 ? result.auditEvents : [makeAuditEvent("attach_result", result.operation, result.message, result.win32ErrorCode)]);
+      appendCapturedEvents(result.capturedEvents, ["ui-attach", `target:${result.targetProcessId}`]);
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("attach_blocked", "attach_target_process_capture", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
+  async function handleSuperviseSelectedTree() {
+    if (!selectedTarget || targetBlockReason) {
+      appendOutput([makeAuditEvent("process_tree_blocked", "supervise_process_tree", targetBlockReason ?? "No target selected.")]);
+      setInspectorTab("output");
+      return;
+    }
+
+    setNativeBusy(true);
+    setProcessTreeResult(null);
+
+    try {
+      appendOutput([makeAuditEvent("process_tree_requested", "supervise_process_tree", `Supervision requested for PID ${selectedTarget.pid}; policy=${childPolicy}.`)]);
+      const result = await superviseProcessTree(selectedTarget.pid, treeDurationMs, childPolicy);
+      const childAuditEvents = result.childAttachResults.flatMap((capture) => capture.auditEvents);
+      const childDroppedEvents = result.childAttachResults.reduce((total, capture) => total + capture.droppedEvents, 0);
+
+      setProcessTreeResult(result);
+      setBackendMode(result.backendMode);
+      setDroppedCount(childDroppedEvents);
+      appendOutput(
+        result.auditEvents.length + childAuditEvents.length > 0
+          ? [...result.auditEvents, ...childAuditEvents]
+          : [makeAuditEvent("process_tree_result", result.operation, result.message, result.win32ErrorCode)]
+      );
+
+      result.childAttachResults.forEach((capture) => {
+        appendCapturedEvents(capture.capturedEvents, ["process-tree", `child:${capture.targetProcessId}`]);
+      });
+
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("process_tree_blocked", "supervise_process_tree", message)]);
       setInspectorTab("output");
     } finally {
       setNativeBusy(false);
@@ -514,8 +715,10 @@ function App() {
                 {targets.map((target) => (
                   <button
                     type="button"
-                    className={`process-row ${target.status === "unsupported" ? "muted" : ""}`}
+                    className={`process-row ${target.status === "unsupported" ? "muted" : ""} ${selectedTargetPid === target.pid ? "selected" : ""}`}
                     key={`${target.pid}-${target.imageName}`}
+                    aria-pressed={selectedTargetPid === target.pid}
+                    onClick={() => setSelectedTargetPid(target.pid)}
                   >
                     <span className="process-icon">{target.imageName.slice(0, 1).toUpperCase()}</span>
                     <span className="process-main">
@@ -528,6 +731,137 @@ function App() {
                     </span>
                   </button>
                 ))}
+              </div>
+              <div className="target-actions-panel">
+                <div className="section-title">
+                  <GitBranch size={14} />
+                  <span>Selected Target</span>
+                </div>
+                <div className="target-action-grid">
+                  <label>PID</label>
+                  <span>{selectedTarget?.pid ?? "none"}</span>
+                  <label>Image</label>
+                  <span>{selectedTarget?.imageName ?? "select a row"}</span>
+                  <label>Architecture</label>
+                  <span>{selectedTarget?.architecture ?? "unknown"}</span>
+                  <label>Status</label>
+                  <span>{selectedTarget?.status ?? "not selected"}</span>
+                  <label>Eligibility</label>
+                  <span className={targetBlockReason ? "eligibility-badge blocked" : "eligibility-badge ready"}>
+                    {targetBlockReason ?? "same-bitness helper gate"}
+                  </span>
+                </div>
+
+                <div className="action-subpanel">
+                  <div className="action-subtitle">
+                    <Activity size={13} />
+                    <span>Bounded Attach</span>
+                  </div>
+                  <div className="action-controls">
+                    <label htmlFor="attach-duration">Duration</label>
+                    <input
+                      id="attach-duration"
+                      type="number"
+                      min={250}
+                      max={30000}
+                      step={250}
+                      value={attachDurationMs}
+                      onChange={(event) => setAttachDurationMs(clampDurationMs(event.target.value, attachDurationMs))}
+                    />
+                    <button type="button" className="tool-button primary" onClick={handleAttachSelectedTarget} disabled={!canRunTargetAction}>
+                      <Play size={13} />
+                      <span>Attach Capture</span>
+                    </button>
+                  </div>
+                  {attachResult ? (
+                    <div className={attachResult.success ? "result-block success" : "result-block failure"}>
+                      <div>PID {attachResult.targetProcessId}; attachPid={attachResult.attachProcessId ?? 0}</div>
+                      <div>{attachResult.captureMode}; {attachResult.injectionMethod}; {attachResult.detachPolicy || "self-disable-no-unload"}</div>
+                      <div>events={attachResult.capturedEvents.length}; dropped={attachResult.droppedEvents}; transport={attachResult.transportRecordsConsumed}/{attachResult.transportRecordsProduced}</div>
+                      <div>{hookRestoreSummary(attachResult)}</div>
+                      <div>{attachResult.operation}; subsystem={attachResult.subsystem}; win32={attachResult.win32ErrorCode}; {attachResult.message}</div>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="action-subpanel">
+                  <div className="action-subtitle">
+                    <GitBranch size={13} />
+                    <span>Process Tree</span>
+                  </div>
+                  <div className="action-controls tree-controls">
+                    <label htmlFor="tree-duration">Duration</label>
+                    <input
+                      id="tree-duration"
+                      type="number"
+                      min={250}
+                      max={30000}
+                      step={250}
+                      value={treeDurationMs}
+                      onChange={(event) => setTreeDurationMs(clampDurationMs(event.target.value, treeDurationMs))}
+                    />
+                    <div className="policy-toggle" aria-label="Child attach policy">
+                      <button type="button" className={childPolicy === "observe" ? "active" : ""} onClick={() => setChildPolicy("observe")} disabled={nativeBusy}>
+                        Observe
+                      </button>
+                      <button type="button" className={childPolicy === "attach-supported" ? "active" : ""} onClick={() => setChildPolicy("attach-supported")} disabled={nativeBusy}>
+                        Attach supported
+                      </button>
+                    </div>
+                    <button type="button" className="tool-button primary" onClick={handleSuperviseSelectedTree} disabled={!canRunTargetAction}>
+                      <Play size={13} />
+                      <span>Supervise</span>
+                    </button>
+                  </div>
+                  {processTreeResult ? (
+                    <div className={processTreeResult.success ? "result-block success" : "result-block failure"}>
+                      <div>root={processTreeResult.rootProcessId}; policy={processTreeResult.childPolicy}; duration={processTreeResult.durationMs}ms</div>
+                      <div>children={processTreeSummary.childCount}; eligible={processTreeSummary.eligibleCount}; mutations={processTreeSummary.mutationAttemptedCount}</div>
+                      <div>childAttach ok={processTreeSummary.attachSuccessCount}; fail={processTreeSummary.attachFailureCount}; events={processTreeSummary.capturedEventCount}; dropped={droppedCount}</div>
+                      <div>{processTreeResult.operation}; subsystem={processTreeResult.subsystem}; win32={processTreeResult.win32ErrorCode}; {processTreeResult.message}</div>
+                    </div>
+                  ) : null}
+                  {processTreeResult ? (
+                    <div className="process-tree-table" aria-label="Process tree nodes">
+                      <div className="process-tree-row header">
+                        <span>PID</span>
+                        <span>Image</span>
+                        <span>Arch</span>
+                        <span>Decision</span>
+                      </div>
+                      {processTreeResult.processNodes.map((node) => (
+                        <div className="process-tree-row" key={`${node.processId}-${node.parentProcessId}`}>
+                          <span>{node.processId}</span>
+                          <span title={node.imagePath || node.imageName}>{node.imageName}</span>
+                          <span>{node.architecture}</span>
+                          <span title={`${node.eligibilityStatus}: ${node.message}`}>{node.policyDecision}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {processTreeResult && processTreeResult.policyDecisions.length > 0 ? (
+                    <div className="policy-decision-list" aria-label="Child policy decisions">
+                      {processTreeResult.policyDecisions.map((decision) => (
+                        <div className="policy-decision-row" key={`${decision.processId}-${decision.decision}`}>
+                          <span>{decision.processId}</span>
+                          <strong>{decision.decision}</strong>
+                          <small>{decision.mutationAttempted ? "mutation attempted" : "no mutation"}; {decision.reason}</small>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {processTreeResult && processTreeResult.childAttachResults.length > 0 ? (
+                    <div className="child-attach-list" aria-label="Child attach summaries">
+                      {processTreeResult.childAttachResults.map((capture) => (
+                        <div className="child-attach-row" key={`${capture.operationId}-${capture.targetProcessId}`}>
+                          <span>PID {capture.targetProcessId}</span>
+                          <strong>{capture.success ? "attach ok" : "attach failed"}</strong>
+                          <small>events={capture.capturedEvents.length}; dropped={capture.droppedEvents}; {hookRestoreSummary(capture)}</small>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               </div>
               <div className="controlled-launch">
                 <div className="section-title">
@@ -713,9 +1047,9 @@ function App() {
             </div>
 
             <div className="inspector-body">
-              {selectedEvent ? (
+              {selectedEvent || inspectorTab === "output" ? (
                 <>
-                  {inspectorTab === "parameters" ? (
+                  {selectedEvent && inspectorTab === "parameters" ? (
                     <table className="detail-table">
                       <thead>
                         <tr>
@@ -742,7 +1076,7 @@ function App() {
                     </table>
                   ) : null}
 
-                  {inspectorTab === "buffer" ? (
+                  {selectedEvent && inspectorTab === "buffer" ? (
                     <div className="buffer-view">
                       <div className="buffer-toolbar">
                         <HardDrive size={14} />
@@ -752,7 +1086,7 @@ function App() {
                     </div>
                   ) : null}
 
-                  {inspectorTab === "stack" ? (
+                  {selectedEvent && inspectorTab === "stack" ? (
                     <div className="stack-list">
                       {selectedEvent.stack.map((frame, index) => (
                         <div className="stack-row" key={frame}>
@@ -763,7 +1097,7 @@ function App() {
                     </div>
                   ) : null}
 
-                  {inspectorTab === "return" ? (
+                  {selectedEvent && inspectorTab === "return" ? (
                     <div className="return-grid">
                       <label>Return Value</label>
                       <code>{selectedEvent.returnValue}</code>
@@ -778,7 +1112,7 @@ function App() {
 
                   {inspectorTab === "output" ? (
                     <div className="output-log">
-                      <div><Braces size={14} /> schemaVersion={selectedEvent.schemaVersion}</div>
+                      <div><Braces size={14} /> schemaVersion={selectedEvent?.schemaVersion ?? "0.1.0"}</div>
                       <div><Filter size={14} /> backend={backendMode}; filter="{filter || "*"}"; mode={traceMode}</div>
                       <div><Database size={14} /> sessionBytes={formatBytes(sessionBytes)}; droppedEvents={droppedCount}</div>
                       {outputEvents.map((event) => (
