@@ -124,7 +124,7 @@ Current implementation notes:
 4. `replay-session --session <dir>` returns trace-compatible events without launching a target or loading an agent.
 5. The UI exposes `Capture And Save` and `Replay Last` for the default `captures/latest-sample-fileio` session.
 6. `knmon-collector.exe smoke-backpressure --capacity 4 --events 10` proves bounded synthetic collector intake, FIFO retention, drop-newest overflow, and dropped-event accounting.
-7. Phase 11I adds durable directory-backed `.knapm` session chunks and indexed replay for bounded streaming attach sessions; compressed chunks, metadata-database catalogs, and crash-tolerant daemon writers remain future work.
+7. Phase 11I adds durable directory-backed `.knapm` session chunks and indexed replay for bounded streaming attach sessions, and Phase 11J adds explicit `.knapm` restart/recovery ownership classification; compressed chunks, metadata-database catalogs, and actual crash-tolerant daemon writers remain future work.
 
 ## Phase 5: Safe Agent Harness
 
@@ -512,7 +512,7 @@ Next implementation focus:
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 
-Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, Phase 11F, Phase 11G, Phase 11H, and Phase 11I foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, cancellation-safe operation ownership for bounded attach/process-tree helper commands, durable native session ownership readiness, bounded UI streaming trace batches, and durable `.knapm` chunk replay are implemented; persistent daemon supervision, daemon restart/recovery, compressed chunks, and metadata-database replay catalogs remain future work.
+Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, Phase 11F, Phase 11G, Phase 11H, Phase 11I, and Phase 11J foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, cancellation-safe operation ownership for bounded attach/process-tree helper commands, durable native session ownership readiness, bounded UI streaming trace batches, durable `.knapm` chunk replay, and `.knapm` restart/recovery ownership classification are implemented; persistent daemon supervision, actual daemon restart/recovery, compressed chunks, and metadata-database replay catalogs remain future work.
 
 Goal:
 
@@ -637,9 +637,21 @@ Current verified Phase 11I behavior:
 8. `tools/session-validator/validate-session-fixtures.mjs` now covers valid `.knapm`, partial unfinalized `.knapm`, missing index, missing chunk, bad hash, non-contiguous batch sequence, and malformed trace event fixtures.
 9. `tools/native-smoke/knapm-streaming-replay-smoke.ps1` verifies live x64 streaming `.knapm` write, hash-checked validation, indexed replay, safe cancellation, final counter consistency, and `agent_shutdown reason=self_disable`.
 
+Current verified Phase 11J behavior:
+
+1. New `.knapm` manifests written by `attach-session --stream-batches --write-knapm` include additive `owner`, `checkpoint`, and `recovery` sections.
+2. `owner` records bounded-helper writer ownership, host/helper/writer PID, writer instance id, generation, heartbeat, lease timeout, and lease expiry.
+3. `checkpoint` records the last durable chunk, batch, record, event id, manifest update, index update, and index consistency flag.
+4. `recovery` records read-only classification state, reason, action, liveness booleans, lease expiry, and restart eligibility.
+5. `validate-session --session <path.knapm>` classifies finalized, owned, stale, recovery-required, legacy, and malformed sessions without target mutation.
+6. Phase 11I `.knapm` files without owner metadata remain valid as legacy-compatible sessions.
+7. `session-info.schema.json` exposes additive recovery fields for Tauri/UI consumers.
+8. `tools/session-validator/validate-session-fixtures.mjs` covers finalized owner metadata, legacy Phase 11I metadata, owned, stale, recovery-required, lease-expired, malformed owner, and all Phase 11I invalid fixture cases.
+9. `tools/native-smoke/knapm-recovery-ownership-smoke.ps1` verifies finalized/owned/stale/recovery-required/lease-expired classification and proves validation does not terminate the live target.
+
 Next implementation focus:
 
-1. Add persistent daemon supervision only after the Phase 11I `.knapm` contract is extended to explicit daemon restart/recovery ownership semantics.
+1. Add persistent daemon supervision only now that the Phase 11J `.knapm` contract has explicit restart/recovery ownership semantics.
 2. Add zstd compression and metadata-database replay catalogs only after the inspectable uncompressed `.knapm` contract remains stable.
 3. Keep protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 

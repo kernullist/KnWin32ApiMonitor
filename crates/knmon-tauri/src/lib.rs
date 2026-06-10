@@ -489,6 +489,24 @@ pub struct SessionInfo
     pub last_record_sequence: u64,
     #[serde(default)]
     pub writer_state: String,
+    #[serde(default)]
+    pub recovery_state: String,
+    #[serde(default)]
+    pub recovery_reason: String,
+    #[serde(default)]
+    pub recovery_action: String,
+    #[serde(default)]
+    pub owner_alive: bool,
+    #[serde(default)]
+    pub helper_alive: bool,
+    #[serde(default)]
+    pub writer_alive: bool,
+    #[serde(default)]
+    pub target_alive: bool,
+    #[serde(default)]
+    pub lease_expired: bool,
+    #[serde(default)]
+    pub restart_eligible: bool,
     pub win32_error_code: u32,
     pub message: String,
     pub validation_errors: Vec<String>,

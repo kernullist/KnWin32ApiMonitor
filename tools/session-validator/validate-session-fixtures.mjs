@@ -294,6 +294,85 @@ function isSafeKnapmChunkPath(filePath) {
   return typeof filePath === "string" && /^chunks\/trace-[0-9]{6}\.jsonl$/u.test(filePath);
 }
 
+const knapmRecoveryStates = new Set(["none", "owned", "stale", "recovery_required", "recovered", "abandoned", "malformed", "legacy"]);
+const knapmRecoveryActions = new Set(["none", "wait", "replay_only", "recover_writer", "mark_abandoned", "manual_inspection"]);
+
+function validateKnapmOwnership(manifest, manifestLabel, errors) {
+  const hasOwner = manifest.owner && typeof manifest.owner === "object";
+  const hasCheckpoint = manifest.checkpoint && typeof manifest.checkpoint === "object";
+  const hasRecovery = manifest.recovery && typeof manifest.recovery === "object";
+
+  if (!hasOwner && !hasCheckpoint && !hasRecovery) {
+    return;
+  }
+
+  if (!hasOwner || !hasCheckpoint || !hasRecovery) {
+    errors.push(`${manifestLabel}: owner, checkpoint, and recovery sections must appear together`);
+    return;
+  }
+
+  const owner = manifest.owner;
+  const checkpoint = manifest.checkpoint;
+  const recovery = manifest.recovery;
+
+  if (!["bounded-helper", "persistent-daemon"].includes(owner.ownerKind)) {
+    errors.push(`${manifestLabel}: owner.ownerKind is unsupported`);
+  }
+
+  for (const field of ["hostProcessId", "helperProcessId", "writerProcessId", "writerGeneration", "leaseTimeoutMs"]) {
+    requireNumber(owner[field], `owner.${field}`, manifestLabel, errors);
+    if (owner[field] === 0) {
+      errors.push(`${manifestLabel}: owner.${field} must be greater than zero`);
+    }
+  }
+
+  for (const field of ["writerInstanceId", "startedUtc", "updatedUtc", "heartbeatUtc", "leaseExpiresUtc"]) {
+    requireString(owner[field], `owner.${field}`, manifestLabel, errors);
+  }
+
+  for (const field of ["lastCommittedChunkSequence", "lastCommittedBatchSequence", "lastCommittedRecordSequence", "lastCommittedEventId"]) {
+    requireNumber(checkpoint[field], `checkpoint.${field}`, manifestLabel, errors);
+  }
+
+  for (const field of ["lastManifestUpdateUtc", "lastIndexUpdateUtc"]) {
+    requireString(checkpoint[field], `checkpoint.${field}`, manifestLabel, errors);
+  }
+
+  if (typeof checkpoint.indexConsistent !== "boolean") {
+    errors.push(`${manifestLabel}: checkpoint.indexConsistent must be boolean`);
+  }
+
+  if (checkpoint.lastCommittedChunkSequence !== manifest.chunkCount) {
+    errors.push(`${manifestLabel}: checkpoint.lastCommittedChunkSequence must match chunkCount`);
+  }
+
+  if (checkpoint.lastCommittedBatchSequence !== manifest.lastBatchSequence) {
+    errors.push(`${manifestLabel}: checkpoint.lastCommittedBatchSequence must match lastBatchSequence`);
+  }
+
+  if (checkpoint.lastCommittedRecordSequence !== manifest.lastRecordSequence) {
+    errors.push(`${manifestLabel}: checkpoint.lastCommittedRecordSequence must match lastRecordSequence`);
+  }
+
+  if (!knapmRecoveryStates.has(recovery.state)) {
+    errors.push(`${manifestLabel}: recovery.state is unsupported`);
+  }
+
+  requireString(recovery.reason, "recovery.reason", manifestLabel, errors);
+
+  if (!knapmRecoveryActions.has(recovery.action)) {
+    errors.push(`${manifestLabel}: recovery.action is unsupported`);
+  }
+
+  requireString(recovery.classifiedUtc, "recovery.classifiedUtc", manifestLabel, errors);
+
+  for (const field of ["ownerAlive", "helperAlive", "writerAlive", "targetAlive", "leaseExpired", "restartEligible"]) {
+    if (typeof recovery[field] !== "boolean") {
+      errors.push(`${manifestLabel}: recovery.${field} must be boolean`);
+    }
+  }
+}
+
 function validateKnapmFixture(name, expectedSuccess) {
   const sessionPath = path.join(fixtureRoot, name);
   const errors = [];
@@ -373,6 +452,8 @@ function validateKnapmFixture(name, expectedSuccess) {
       requireNumber(manifest.session.transportDroppedEvents, "session.transportDroppedEvents", manifestLabel, errors);
       requireNumber(manifest.session.hostDroppedBatches, "session.hostDroppedBatches", manifestLabel, errors);
     }
+
+    validateKnapmOwnership(manifest, manifestLabel, errors);
 
     const auditRows = readJsonl(path.join(sessionPath, "audit.jsonl"), errors);
     const agentRows = readJsonl(path.join(sessionPath, "agent-events.jsonl"), errors);
@@ -574,7 +655,13 @@ const results = [
   validateSessionFixture("valid-sample", true),
   validateSessionFixture("malformed-missing-session-id", false),
   validateKnapmFixture("valid-knapm.knapm", true),
+  validateKnapmFixture("valid-knapm-legacy.knapm", true),
   validateKnapmFixture("knapm-partial-unfinalized.knapm", true),
+  validateKnapmFixture("knapm-owned-unfinalized.knapm", true),
+  validateKnapmFixture("knapm-stale-target-exited.knapm", true),
+  validateKnapmFixture("knapm-recovery-required-owner-dead.knapm", true),
+  validateKnapmFixture("knapm-lease-expired.knapm", true),
+  validateKnapmFixture("knapm-malformed-owner.knapm", false),
   validateKnapmFixture("knapm-missing-index.knapm", false),
   validateKnapmFixture("knapm-missing-chunk.knapm", false),
   validateKnapmFixture("knapm-bad-hash.knapm", false),

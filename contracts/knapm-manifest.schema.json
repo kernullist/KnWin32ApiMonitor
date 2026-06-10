@@ -81,6 +81,83 @@
     "lastBatchSequence": { "type": "integer", "minimum": 0 },
     "lastRecordSequence": { "type": "integer", "minimum": 0 },
     "writerState": { "enum": ["created", "writing", "partial", "finalized", "failed", "stale", "recovery_required"] },
+    "owner": {
+      "type": "object",
+      "required": [
+        "ownerKind",
+        "hostProcessId",
+        "helperProcessId",
+        "writerProcessId",
+        "writerInstanceId",
+        "writerGeneration",
+        "startedUtc",
+        "updatedUtc",
+        "heartbeatUtc",
+        "leaseTimeoutMs",
+        "leaseExpiresUtc"
+      ],
+      "properties": {
+        "ownerKind": { "enum": ["bounded-helper", "persistent-daemon"] },
+        "hostProcessId": { "type": "integer", "minimum": 1 },
+        "helperProcessId": { "type": "integer", "minimum": 1 },
+        "writerProcessId": { "type": "integer", "minimum": 1 },
+        "writerInstanceId": { "type": "string", "minLength": 1 },
+        "writerGeneration": { "type": "integer", "minimum": 1 },
+        "startedUtc": { "type": "string" },
+        "updatedUtc": { "type": "string" },
+        "heartbeatUtc": { "type": "string" },
+        "leaseTimeoutMs": { "type": "integer", "minimum": 1 },
+        "leaseExpiresUtc": { "type": "string" }
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "required": [
+        "lastCommittedChunkSequence",
+        "lastCommittedBatchSequence",
+        "lastCommittedRecordSequence",
+        "lastCommittedEventId",
+        "lastManifestUpdateUtc",
+        "lastIndexUpdateUtc",
+        "indexConsistent"
+      ],
+      "properties": {
+        "lastCommittedChunkSequence": { "type": "integer", "minimum": 0 },
+        "lastCommittedBatchSequence": { "type": "integer", "minimum": 0 },
+        "lastCommittedRecordSequence": { "type": "integer", "minimum": 0 },
+        "lastCommittedEventId": { "type": "integer", "minimum": 0 },
+        "lastManifestUpdateUtc": { "type": "string" },
+        "lastIndexUpdateUtc": { "type": "string" },
+        "indexConsistent": { "type": "boolean" }
+      }
+    },
+    "recovery": {
+      "type": "object",
+      "required": [
+        "state",
+        "reason",
+        "action",
+        "classifiedUtc",
+        "ownerAlive",
+        "helperAlive",
+        "writerAlive",
+        "targetAlive",
+        "leaseExpired",
+        "restartEligible"
+      ],
+      "properties": {
+        "state": { "enum": ["none", "owned", "stale", "recovery_required", "recovered", "abandoned", "malformed", "legacy"] },
+        "reason": { "type": "string", "minLength": 1 },
+        "action": { "enum": ["none", "wait", "replay_only", "recover_writer", "mark_abandoned", "manual_inspection"] },
+        "classifiedUtc": { "type": "string" },
+        "ownerAlive": { "type": "boolean" },
+        "helperAlive": { "type": "boolean" },
+        "writerAlive": { "type": "boolean" },
+        "targetAlive": { "type": "boolean" },
+        "leaseExpired": { "type": "boolean" },
+        "restartEligible": { "type": "boolean" }
+      }
+    },
     "files": {
       "type": "object",
       "required": ["audit", "agentEvents", "index", "chunkDirectory"],

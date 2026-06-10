@@ -310,6 +310,15 @@ export interface SessionInfo {
   lastBatchSequence: number;
   lastRecordSequence: number;
   writerState: string;
+  recoveryState: string;
+  recoveryReason: string;
+  recoveryAction: string;
+  ownerAlive: boolean;
+  helperAlive: boolean;
+  writerAlive: boolean;
+  targetAlive: boolean;
+  leaseExpired: boolean;
+  restartEligible: boolean;
   win32ErrorCode: number;
   message: string;
   validationErrors: string[];

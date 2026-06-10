@@ -46,39 +46,5 @@
   "lastBatchSequence": 1,
   "lastRecordSequence": 1,
   "writerState": "finalized",
-  "owner": {
-    "ownerKind": "bounded-helper",
-    "hostProcessId": 1234,
-    "helperProcessId": 1234,
-    "writerProcessId": 1234,
-    "writerInstanceId": "writer-fixture-finalized",
-    "writerGeneration": 1,
-    "startedUtc": "2026-06-10T00:00:00.000Z",
-    "updatedUtc": "2026-06-10T00:00:01.000Z",
-    "heartbeatUtc": "2026-06-10T00:00:01.000Z",
-    "leaseTimeoutMs": 15000,
-    "leaseExpiresUtc": "2099-01-01T00:00:00.000Z"
-  },
-  "checkpoint": {
-    "lastCommittedChunkSequence": 1,
-    "lastCommittedBatchSequence": 1,
-    "lastCommittedRecordSequence": 1,
-    "lastCommittedEventId": 1,
-    "lastManifestUpdateUtc": "2026-06-10T00:00:01.000Z",
-    "lastIndexUpdateUtc": "2026-06-10T00:00:01.000Z",
-    "indexConsistent": true
-  },
-  "recovery": {
-    "state": "none",
-    "reason": "finalized",
-    "action": "none",
-    "classifiedUtc": "2026-06-10T00:00:01.000Z",
-    "ownerAlive": false,
-    "helperAlive": false,
-    "writerAlive": false,
-    "targetAlive": false,
-    "leaseExpired": false,
-    "restartEligible": false
-  },
   "files": { "audit": "audit.jsonl", "agentEvents": "agent-events.jsonl", "index": "index.json", "chunkDirectory": "chunks" }
 }

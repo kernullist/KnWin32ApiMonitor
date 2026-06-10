@@ -75,6 +75,11 @@
     "knapmCompression": ["none"],
     "knapmReservedCompression": ["zstd"],
     "knapmChunkBoundary": "one finalized chunk per non-empty trace_batch frame",
+    "knapmOwnershipSections": ["owner", "checkpoint", "recovery"],
+    "knapmOwnerKinds": ["bounded-helper", "persistent-daemon"],
+    "knapmRecoveryStates": ["none", "owned", "stale", "recovery_required", "recovered", "abandoned", "malformed", "legacy"],
+    "knapmRecoveryActions": ["none", "wait", "replay_only", "recover_writer", "mark_abandoned", "manual_inspection"],
+    "knapmRecoveryBoundary": "Phase 11J classifies ownership and restart eligibility without target mutation; persistent daemon recovery remains future work",
     "replayCaptureMode": "session-replay",
     "controlledSampleOnly": true
   },

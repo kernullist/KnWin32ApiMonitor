@@ -145,6 +145,163 @@ std::string NowUtc()
     return stream.str();
 }
 
+bool ParseDecimalField(const std::string& value, std::size_t offset, std::size_t length, WORD* output)
+{
+    bool parsed = false;
+
+    do
+    {
+        if (output == nullptr || offset + length > value.size())
+        {
+            break;
+        }
+
+        WORD number = 0;
+        bool digitsOnly = true;
+        for (std::size_t index = 0; index < length; ++index)
+        {
+            const char ch = value[offset + index];
+            if (ch < '0' || ch > '9')
+            {
+                digitsOnly = false;
+                break;
+            }
+
+            number = static_cast<WORD>((number * 10) + static_cast<WORD>(ch - '0'));
+        }
+
+        if (!digitsOnly)
+        {
+            break;
+        }
+
+        *output = number;
+        parsed = true;
+    }
+    while (false);
+
+    return parsed;
+}
+
+bool ParseUtcFileTime(const std::string& value, ULONGLONG* fileTimeValue)
+{
+    bool parsed = false;
+
+    do
+    {
+        if (fileTimeValue == nullptr)
+        {
+            break;
+        }
+
+        const bool hasMilliseconds = value.size() == 24 && value[19] == '.' && value[23] == 'Z';
+        const bool hasSecondsOnly = value.size() == 20 && value[19] == 'Z';
+        if (!hasMilliseconds && !hasSecondsOnly)
+        {
+            break;
+        }
+
+        if (value[4] != '-' || value[7] != '-' || value[10] != 'T' || value[13] != ':' || value[16] != ':')
+        {
+            break;
+        }
+
+        SYSTEMTIME time = {};
+        WORD milliseconds = 0;
+        if (
+            !ParseDecimalField(value, 0, 4, &time.wYear) ||
+            !ParseDecimalField(value, 5, 2, &time.wMonth) ||
+            !ParseDecimalField(value, 8, 2, &time.wDay) ||
+            !ParseDecimalField(value, 11, 2, &time.wHour) ||
+            !ParseDecimalField(value, 14, 2, &time.wMinute) ||
+            !ParseDecimalField(value, 17, 2, &time.wSecond))
+        {
+            break;
+        }
+
+        if (hasMilliseconds && !ParseDecimalField(value, 20, 3, &milliseconds))
+        {
+            break;
+        }
+
+        time.wMilliseconds = milliseconds;
+        FILETIME fileTime = {};
+        if (!SystemTimeToFileTime(&time, &fileTime))
+        {
+            break;
+        }
+
+        ULARGE_INTEGER integer = {};
+        integer.LowPart = fileTime.dwLowDateTime;
+        integer.HighPart = fileTime.dwHighDateTime;
+        *fileTimeValue = integer.QuadPart;
+        parsed = true;
+    }
+    while (false);
+
+    return parsed;
+}
+
+std::string FormatUtcFileTime(ULONGLONG fileTimeValue)
+{
+    ULARGE_INTEGER integer = {};
+    integer.QuadPart = fileTimeValue;
+
+    FILETIME fileTime = {};
+    fileTime.dwLowDateTime = integer.LowPart;
+    fileTime.dwHighDateTime = integer.HighPart;
+
+    SYSTEMTIME time = {};
+    FileTimeToSystemTime(&fileTime, &time);
+
+    std::ostringstream stream;
+    stream << std::setfill('0')
+           << std::setw(4) << time.wYear << "-"
+           << std::setw(2) << time.wMonth << "-"
+           << std::setw(2) << time.wDay << "T"
+           << std::setw(2) << time.wHour << ":"
+           << std::setw(2) << time.wMinute << ":"
+           << std::setw(2) << time.wSecond << "."
+           << std::setw(3) << time.wMilliseconds << "Z";
+    return stream.str();
+}
+
+std::string UtcAfterMilliseconds(std::uint64_t milliseconds)
+{
+    FILETIME now = {};
+    GetSystemTimeAsFileTime(&now);
+
+    ULARGE_INTEGER integer = {};
+    integer.LowPart = now.dwLowDateTime;
+    integer.HighPart = now.dwHighDateTime;
+    integer.QuadPart += milliseconds * 10000ULL;
+    return FormatUtcFileTime(integer.QuadPart);
+}
+
+bool IsUtcExpired(const std::string& utc)
+{
+    bool expired = false;
+
+    do
+    {
+        ULONGLONG deadline = 0;
+        if (!ParseUtcFileTime(utc, &deadline))
+        {
+            break;
+        }
+
+        FILETIME now = {};
+        GetSystemTimeAsFileTime(&now);
+        ULARGE_INTEGER current = {};
+        current.LowPart = now.dwLowDateTime;
+        current.HighPart = now.dwHighDateTime;
+        expired = current.QuadPart >= deadline;
+    }
+    while (false);
+
+    return expired;
+}
+
 std::string PathToUtf8(const std::filesystem::path& path)
 {
     return WideToUtf8(path.wstring().c_str());
@@ -193,6 +350,13 @@ std::string NewOperationId()
 {
     std::ostringstream stream;
     stream << "op-" << GetCurrentProcessId() << "-" << GetTickCount64();
+    return stream.str();
+}
+
+std::string NewWriterInstanceId()
+{
+    std::ostringstream stream;
+    stream << "writer-" << GetCurrentProcessId() << "-" << GetTickCount64();
     return stream.str();
 }
 
@@ -1264,6 +1428,15 @@ struct SessionInfo
     std::uint64_t LastBatchSequence = 0;
     std::uint64_t LastRecordSequence = 0;
     std::string WriterState;
+    std::string RecoveryState;
+    std::string RecoveryReason;
+    std::string RecoveryAction;
+    bool OwnerAlive = false;
+    bool HelperAlive = false;
+    bool WriterAlive = false;
+    bool TargetAlive = false;
+    bool LeaseExpired = false;
+    bool RestartEligible = false;
     std::uint32_t Win32ErrorCode = 0;
     std::string Message;
     std::vector<std::string> ValidationErrors;
@@ -1316,6 +1489,15 @@ std::string ToJson(const SessionInfo& session)
     stream << "\"lastBatchSequence\":" << session.LastBatchSequence << ",";
     stream << "\"lastRecordSequence\":" << session.LastRecordSequence << ",";
     stream << "\"writerState\":" << Q(session.WriterState) << ",";
+    stream << "\"recoveryState\":" << Q(session.RecoveryState) << ",";
+    stream << "\"recoveryReason\":" << Q(session.RecoveryReason) << ",";
+    stream << "\"recoveryAction\":" << Q(session.RecoveryAction) << ",";
+    stream << "\"ownerAlive\":" << (session.OwnerAlive ? "true" : "false") << ",";
+    stream << "\"helperAlive\":" << (session.HelperAlive ? "true" : "false") << ",";
+    stream << "\"writerAlive\":" << (session.WriterAlive ? "true" : "false") << ",";
+    stream << "\"targetAlive\":" << (session.TargetAlive ? "true" : "false") << ",";
+    stream << "\"leaseExpired\":" << (session.LeaseExpired ? "true" : "false") << ",";
+    stream << "\"restartEligible\":" << (session.RestartEligible ? "true" : "false") << ",";
     stream << "\"win32ErrorCode\":" << session.Win32ErrorCode << ",";
     stream << "\"message\":" << Q(session.Message) << ",";
     stream << "\"validationErrors\":[";
@@ -1578,6 +1760,46 @@ struct KnapmChunkInfo
     std::string Sha256;
 };
 
+struct KnapmOwnerInfo
+{
+    std::string OwnerKind = "bounded-helper";
+    std::uint32_t HostProcessId = 0;
+    std::uint32_t HelperProcessId = 0;
+    std::uint32_t WriterProcessId = 0;
+    std::string WriterInstanceId;
+    std::uint64_t WriterGeneration = 1;
+    std::string StartedUtc;
+    std::string UpdatedUtc;
+    std::string HeartbeatUtc;
+    std::uint64_t LeaseTimeoutMs = 15000;
+    std::string LeaseExpiresUtc;
+};
+
+struct KnapmCheckpointInfo
+{
+    std::uint64_t LastCommittedChunkSequence = 0;
+    std::uint64_t LastCommittedBatchSequence = 0;
+    std::uint64_t LastCommittedRecordSequence = 0;
+    std::uint64_t LastCommittedEventId = 0;
+    std::string LastManifestUpdateUtc;
+    std::string LastIndexUpdateUtc;
+    bool IndexConsistent = true;
+};
+
+struct KnapmRecoveryInfo
+{
+    std::string State = "owned";
+    std::string Reason = "owner_alive";
+    std::string Action = "wait";
+    std::string ClassifiedUtc;
+    bool OwnerAlive = true;
+    bool HelperAlive = true;
+    bool WriterAlive = true;
+    bool TargetAlive = true;
+    bool LeaseExpired = false;
+    bool RestartEligible = false;
+};
+
 std::string KnapmChunkFileName(std::uint64_t chunkSequence)
 {
     std::ostringstream stream;
@@ -1677,6 +1899,58 @@ bool IsSafeKnapmChunkPath(const std::string& relativePath)
     return safe;
 }
 
+std::string ToJson(const KnapmOwnerInfo& owner)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"ownerKind\":" << Q(owner.OwnerKind) << ",";
+    stream << "\"hostProcessId\":" << owner.HostProcessId << ",";
+    stream << "\"helperProcessId\":" << owner.HelperProcessId << ",";
+    stream << "\"writerProcessId\":" << owner.WriterProcessId << ",";
+    stream << "\"writerInstanceId\":" << Q(owner.WriterInstanceId) << ",";
+    stream << "\"writerGeneration\":" << owner.WriterGeneration << ",";
+    stream << "\"startedUtc\":" << Q(owner.StartedUtc) << ",";
+    stream << "\"updatedUtc\":" << Q(owner.UpdatedUtc) << ",";
+    stream << "\"heartbeatUtc\":" << Q(owner.HeartbeatUtc) << ",";
+    stream << "\"leaseTimeoutMs\":" << owner.LeaseTimeoutMs << ",";
+    stream << "\"leaseExpiresUtc\":" << Q(owner.LeaseExpiresUtc);
+    stream << "}";
+    return stream.str();
+}
+
+std::string ToJson(const KnapmCheckpointInfo& checkpoint)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"lastCommittedChunkSequence\":" << checkpoint.LastCommittedChunkSequence << ",";
+    stream << "\"lastCommittedBatchSequence\":" << checkpoint.LastCommittedBatchSequence << ",";
+    stream << "\"lastCommittedRecordSequence\":" << checkpoint.LastCommittedRecordSequence << ",";
+    stream << "\"lastCommittedEventId\":" << checkpoint.LastCommittedEventId << ",";
+    stream << "\"lastManifestUpdateUtc\":" << Q(checkpoint.LastManifestUpdateUtc) << ",";
+    stream << "\"lastIndexUpdateUtc\":" << Q(checkpoint.LastIndexUpdateUtc) << ",";
+    stream << "\"indexConsistent\":" << (checkpoint.IndexConsistent ? "true" : "false");
+    stream << "}";
+    return stream.str();
+}
+
+std::string ToJson(const KnapmRecoveryInfo& recovery)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"state\":" << Q(recovery.State) << ",";
+    stream << "\"reason\":" << Q(recovery.Reason) << ",";
+    stream << "\"action\":" << Q(recovery.Action) << ",";
+    stream << "\"classifiedUtc\":" << Q(recovery.ClassifiedUtc) << ",";
+    stream << "\"ownerAlive\":" << (recovery.OwnerAlive ? "true" : "false") << ",";
+    stream << "\"helperAlive\":" << (recovery.HelperAlive ? "true" : "false") << ",";
+    stream << "\"writerAlive\":" << (recovery.WriterAlive ? "true" : "false") << ",";
+    stream << "\"targetAlive\":" << (recovery.TargetAlive ? "true" : "false") << ",";
+    stream << "\"leaseExpired\":" << (recovery.LeaseExpired ? "true" : "false") << ",";
+    stream << "\"restartEligible\":" << (recovery.RestartEligible ? "true" : "false");
+    stream << "}";
+    return stream.str();
+}
+
 std::string ToJson(const KnapmChunkInfo& chunk)
 {
     std::ostringstream stream;
@@ -1708,6 +1982,9 @@ struct KnapmSessionWriter
     std::string UpdatedUtc;
     std::string FinalizedUtc;
     std::string WriterState = "created";
+    KnapmOwnerInfo Owner;
+    KnapmCheckpointInfo Checkpoint;
+    KnapmRecoveryInfo Recovery;
     NativeSessionInfo Session;
     std::string TargetPath;
     std::uint32_t TargetThreadId = 0;
@@ -1727,6 +2004,42 @@ struct KnapmSessionWriter
     bool Finalized = false;
     std::vector<KnapmChunkInfo> Chunks;
 
+    void TouchOwnership()
+    {
+        const std::string now = NowUtc();
+        UpdatedUtc = now;
+        Owner.UpdatedUtc = now;
+        Owner.HeartbeatUtc = now;
+        Owner.LeaseExpiresUtc = UtcAfterMilliseconds(Owner.LeaseTimeoutMs);
+        Recovery.ClassifiedUtc = now;
+    }
+
+    void RefreshCheckpoint()
+    {
+        Checkpoint.LastCommittedChunkSequence = static_cast<std::uint64_t>(Chunks.size());
+        Checkpoint.LastCommittedBatchSequence = LastBatchSequence;
+        Checkpoint.LastCommittedRecordSequence = LastRecordSequence;
+        Checkpoint.LastCommittedEventId = NextEventId > 1 ? NextEventId - 1 : 0;
+    }
+
+    void SetRecoveryState(
+        const std::string& state,
+        const std::string& reason,
+        const std::string& action,
+        bool restartEligible)
+    {
+        Recovery.State = state;
+        Recovery.Reason = reason;
+        Recovery.Action = action;
+        Recovery.OwnerAlive = true;
+        Recovery.HelperAlive = true;
+        Recovery.WriterAlive = true;
+        Recovery.TargetAlive = Session.TargetProcessId != 0;
+        Recovery.LeaseExpired = false;
+        Recovery.RestartEligible = restartEligible;
+        Recovery.ClassifiedUtc = NowUtc();
+    }
+
     bool Start(
         const std::filesystem::path& root,
         const NativeSessionInfo& session,
@@ -1744,6 +2057,17 @@ struct KnapmSessionWriter
             CreatedUtc = session.StartedUtc.empty() ? NowUtc() : session.StartedUtc;
             UpdatedUtc = NowUtc();
             WriterState = "writing";
+            Owner.OwnerKind = "bounded-helper";
+            Owner.HostProcessId = session.OwnerProcessId;
+            Owner.HelperProcessId = session.HelperProcessId;
+            Owner.WriterProcessId = GetCurrentProcessId();
+            Owner.WriterInstanceId = NewWriterInstanceId();
+            Owner.WriterGeneration = 1;
+            Owner.StartedUtc = CreatedUtc;
+            Owner.LeaseTimeoutMs = 15000;
+            SetRecoveryState("owned", "owner_alive", "wait", false);
+            TouchOwnership();
+            RefreshCheckpoint();
             AgentPath = request.AgentPath;
             Architecture = ArchitectureName(request.Architecture);
             if (!IsSupportedArchitecture(Architecture))
@@ -1764,6 +2088,7 @@ struct KnapmSessionWriter
                 break;
             }
 
+            Checkpoint.LastIndexUpdateUtc = NowUtc();
             if (!WriteIndex(&writeError))
             {
                 MarkFailed(writeError);
@@ -1791,13 +2116,19 @@ struct KnapmSessionWriter
         }
 
         Session = session;
-        UpdatedUtc = session.UpdatedUtc.empty() ? NowUtc() : session.UpdatedUtc;
+        TouchOwnership();
+        if (!session.UpdatedUtc.empty())
+        {
+            UpdatedUtc = session.UpdatedUtc;
+            Owner.UpdatedUtc = session.UpdatedUtc;
+        }
         TransportDroppedEvents = session.TransportDroppedEvents;
         HostDroppedBatches = session.HostDroppedBatches;
         if (Chunks.empty())
         {
             LastRecordSequence = session.LastTransportSequence;
         }
+        RefreshCheckpoint();
     }
 
     bool WriteBatch(const knmon::KnMonTraceBatch& batch)
@@ -1867,8 +2198,10 @@ struct KnapmSessionWriter
             DroppedEvents = batch.DroppedEvents;
             TransportDroppedEvents = batch.DroppedEvents;
             HostDroppedBatches = batch.HostDroppedBatches;
-            UpdatedUtc = NowUtc();
+            TouchOwnership();
+            RefreshCheckpoint();
 
+            Checkpoint.LastIndexUpdateUtc = NowUtc();
             if (!WriteIndex(&writeError))
             {
                 MarkFailed(writeError);
@@ -1939,8 +2272,22 @@ struct KnapmSessionWriter
         Finalized = !Failed && (session.SessionState == "stopped" || result.Success || result.Operation == "operation_cancelled");
         FinalizedUtc = Finalized ? NowUtc() : "";
         WriterState = Failed ? "failed" : (Finalized ? "finalized" : "partial");
-        UpdatedUtc = NowUtc();
+        if (Finalized)
+        {
+            SetRecoveryState("none", "finalized", "none", false);
+        }
+        else if (Failed)
+        {
+            SetRecoveryState("malformed", "writer_failed", "manual_inspection", false);
+        }
+        else
+        {
+            SetRecoveryState("owned", "owner_alive", "wait", false);
+        }
+        TouchOwnership();
+        RefreshCheckpoint();
 
+        Checkpoint.LastIndexUpdateUtc = NowUtc();
         if (!WriteIndex(&writeError))
         {
             MarkFailed(writeError);
@@ -1957,7 +2304,9 @@ struct KnapmSessionWriter
         Failed = true;
         WriterState = "failed";
         Error = error;
-        UpdatedUtc = NowUtc();
+        SetRecoveryState("malformed", "writer_failed", "manual_inspection", false);
+        TouchOwnership();
+        Checkpoint.IndexConsistent = false;
     }
 
     bool WriteIndex(std::string* error) const
@@ -1982,8 +2331,11 @@ struct KnapmSessionWriter
         return WriteTextFile(KnapmChildPath(Root, "index.json"), stream.str() + "\n", error);
     }
 
-    bool WriteManifest(std::string* error) const
+    bool WriteManifest(std::string* error)
     {
+        Checkpoint.LastManifestUpdateUtc = NowUtc();
+        RefreshCheckpoint();
+
         std::ostringstream stream;
         stream << "{";
         stream << "\"schemaVersion\":\"0.1.0\",";
@@ -2024,6 +2376,9 @@ struct KnapmSessionWriter
         stream << "\"lastBatchSequence\":" << LastBatchSequence << ",";
         stream << "\"lastRecordSequence\":" << LastRecordSequence << ",";
         stream << "\"writerState\":" << Q(WriterState) << ",";
+        stream << "\"owner\":" << ToJson(Owner) << ",";
+        stream << "\"checkpoint\":" << ToJson(Checkpoint) << ",";
+        stream << "\"recovery\":" << ToJson(Recovery) << ",";
         stream << "\"files\":{";
         stream << "\"audit\":\"audit.jsonl\",";
         stream << "\"agentEvents\":\"agent-events.jsonl\",";
@@ -2054,40 +2409,222 @@ KnapmChunkInfo KnapmChunkFromJson(const std::string& json)
     return chunk;
 }
 
-void ClassifyKnapmPartialSession(SessionInfo& session, const std::string& manifest)
+KnapmOwnerInfo KnapmOwnerFromJson(const std::string& json)
 {
-    if (session.Finalized)
+    KnapmOwnerInfo owner;
+    owner.OwnerKind = ExtractJsonString(json, "ownerKind");
+    owner.HostProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "hostProcessId"));
+    owner.HelperProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "helperProcessId"));
+    owner.WriterProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "writerProcessId"));
+    owner.WriterInstanceId = ExtractJsonString(json, "writerInstanceId");
+    owner.WriterGeneration = ExtractJsonUInt64(json, "writerGeneration");
+    owner.StartedUtc = ExtractJsonString(json, "startedUtc");
+    owner.UpdatedUtc = ExtractJsonString(json, "updatedUtc");
+    owner.HeartbeatUtc = ExtractJsonString(json, "heartbeatUtc");
+    owner.LeaseTimeoutMs = ExtractJsonUInt64(json, "leaseTimeoutMs");
+    owner.LeaseExpiresUtc = ExtractJsonString(json, "leaseExpiresUtc");
+    return owner;
+}
+
+KnapmCheckpointInfo KnapmCheckpointFromJson(const std::string& json)
+{
+    KnapmCheckpointInfo checkpoint;
+    checkpoint.LastCommittedChunkSequence = ExtractJsonUInt64(json, "lastCommittedChunkSequence");
+    checkpoint.LastCommittedBatchSequence = ExtractJsonUInt64(json, "lastCommittedBatchSequence");
+    checkpoint.LastCommittedRecordSequence = ExtractJsonUInt64(json, "lastCommittedRecordSequence");
+    checkpoint.LastCommittedEventId = ExtractJsonUInt64(json, "lastCommittedEventId");
+    checkpoint.LastManifestUpdateUtc = ExtractJsonString(json, "lastManifestUpdateUtc");
+    checkpoint.LastIndexUpdateUtc = ExtractJsonString(json, "lastIndexUpdateUtc");
+    checkpoint.IndexConsistent = ExtractJsonBool(json, "indexConsistent");
+    return checkpoint;
+}
+
+KnapmRecoveryInfo KnapmRecoveryFromJson(const std::string& json)
+{
+    KnapmRecoveryInfo recovery;
+    recovery.State = ExtractJsonString(json, "state");
+    recovery.Reason = ExtractJsonString(json, "reason");
+    recovery.Action = ExtractJsonString(json, "action");
+    recovery.ClassifiedUtc = ExtractJsonString(json, "classifiedUtc");
+    recovery.OwnerAlive = ExtractJsonBool(json, "ownerAlive");
+    recovery.HelperAlive = ExtractJsonBool(json, "helperAlive");
+    recovery.WriterAlive = ExtractJsonBool(json, "writerAlive");
+    recovery.TargetAlive = ExtractJsonBool(json, "targetAlive");
+    recovery.LeaseExpired = ExtractJsonBool(json, "leaseExpired");
+    recovery.RestartEligible = ExtractJsonBool(json, "restartEligible");
+    return recovery;
+}
+
+void SetKnapmSessionRecovery(
+    SessionInfo& session,
+    const std::string& state,
+    const std::string& reason,
+    const std::string& action,
+    bool ownerAlive,
+    bool helperAlive,
+    bool writerAlive,
+    bool targetAlive,
+    bool leaseExpired,
+    bool restartEligible)
+{
+    session.RecoveryState = state;
+    session.RecoveryReason = reason;
+    session.RecoveryAction = action;
+    session.OwnerAlive = ownerAlive;
+    session.HelperAlive = helperAlive;
+    session.WriterAlive = writerAlive;
+    session.TargetAlive = targetAlive;
+    session.LeaseExpired = leaseExpired;
+    session.RestartEligible = restartEligible;
+    if (state == "stale" || state == "recovery_required" || state == "malformed")
     {
+        session.WriterState = state;
+    }
+}
+
+void SetKnapmMalformedRecovery(SessionInfo& session, const std::string& reason)
+{
+    SetKnapmSessionRecovery(session, "malformed", reason, "manual_inspection", false, false, false, false, false, false);
+}
+
+void ClassifyKnapmSession(SessionInfo& session, const std::string& manifest)
+{
+    const std::string sessionObject = ExtractJsonObject(manifest, "session");
+    const std::string targetObject = ExtractJsonObject(manifest, "target");
+    const std::string ownerObject = ExtractJsonObject(manifest, "owner");
+    const std::string checkpointObject = ExtractJsonObject(manifest, "checkpoint");
+    const std::string recoveryObject = ExtractJsonObject(manifest, "recovery");
+    const std::uint32_t ownerProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(sessionObject, "ownerProcessId"));
+    const std::uint32_t helperProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(sessionObject, "helperProcessId"));
+    std::uint32_t targetProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(sessionObject, "targetProcessId"));
+    if (targetProcessId == 0)
+    {
+        targetProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(targetObject, "pid"));
+    }
+
+    const std::string state = ExtractJsonString(sessionObject, "sessionState");
+
+    if (ownerObject.empty())
+    {
+        if (session.Finalized)
+        {
+            SetKnapmSessionRecovery(session, "none", "finalized", "none", false, false, false, false, false, false);
+            return;
+        }
+
+        const bool legacyOwnerAlive = IsProcessAlive(ownerProcessId);
+        const bool legacyHelperAlive = IsProcessAlive(helperProcessId);
+        const bool legacyTargetAlive = IsProcessAlive(targetProcessId);
+        if (state == "stopped" || state == "failed" || state == "stale" || state == "recovery_required")
+        {
+            SetKnapmSessionRecovery(session, "legacy", "terminal_session_state", "none", legacyOwnerAlive, legacyHelperAlive, false, legacyTargetAlive, false, false);
+            return;
+        }
+
+        if (targetProcessId != 0 && !legacyTargetAlive)
+        {
+            SetKnapmSessionRecovery(session, "stale", "legacy_target_exited", "replay_only", legacyOwnerAlive, legacyHelperAlive, false, false, false, false);
+            return;
+        }
+
+        if (targetProcessId != 0 && legacyTargetAlive && ownerProcessId != 0 && helperProcessId != 0 && !legacyOwnerAlive && !legacyHelperAlive)
+        {
+            SetKnapmSessionRecovery(session, "recovery_required", "legacy_owner_dead_target_alive", "manual_inspection", false, false, false, true, false, false);
+            return;
+        }
+
+        SetKnapmSessionRecovery(session, "legacy", "metadata_incomplete", "manual_inspection", legacyOwnerAlive, legacyHelperAlive, false, legacyTargetAlive, false, false);
         return;
     }
 
-    const std::string sessionObject = ExtractJsonObject(manifest, "session");
-    const std::uint32_t ownerProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(sessionObject, "ownerProcessId"));
-    const std::uint32_t helperProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(sessionObject, "helperProcessId"));
-    const std::uint32_t targetProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(sessionObject, "targetProcessId"));
-    const std::string state = ExtractJsonString(sessionObject, "sessionState");
+    if (checkpointObject.empty() || recoveryObject.empty())
+    {
+        session.ValidationErrors.push_back("manifest owner metadata requires checkpoint and recovery sections.");
+        SetKnapmMalformedRecovery(session, "metadata_incomplete");
+        return;
+    }
+
+    const KnapmOwnerInfo owner = KnapmOwnerFromJson(ownerObject);
+    const KnapmCheckpointInfo checkpoint = KnapmCheckpointFromJson(checkpointObject);
+    const KnapmRecoveryInfo recovery = KnapmRecoveryFromJson(recoveryObject);
+
+    ULONGLONG parsedLease = 0;
+    if (
+        owner.OwnerKind.empty() ||
+        owner.WriterInstanceId.empty() ||
+        owner.HostProcessId == 0 ||
+        owner.HelperProcessId == 0 ||
+        owner.WriterProcessId == 0 ||
+        owner.LeaseTimeoutMs == 0 ||
+        owner.StartedUtc.empty() ||
+        owner.UpdatedUtc.empty() ||
+        owner.HeartbeatUtc.empty() ||
+        owner.LeaseExpiresUtc.empty() ||
+        !ParseUtcFileTime(owner.LeaseExpiresUtc, &parsedLease))
+    {
+        session.ValidationErrors.push_back("manifest owner metadata is incomplete or has an invalid lease.");
+        SetKnapmMalformedRecovery(session, "metadata_incomplete");
+        return;
+    }
+
+    if (checkpoint.LastCommittedChunkSequence != session.ChunkCount)
+    {
+        session.ValidationErrors.push_back("manifest checkpoint chunk sequence does not match chunkCount.");
+        SetKnapmMalformedRecovery(session, "checkpoint_mismatch");
+        return;
+    }
+
+    if (!checkpoint.IndexConsistent)
+    {
+        session.ValidationErrors.push_back("manifest checkpoint reports an inconsistent index.");
+        SetKnapmMalformedRecovery(session, "index_corrupt");
+        return;
+    }
+
+    if (recovery.State.empty() || recovery.Reason.empty() || recovery.Action.empty())
+    {
+        session.ValidationErrors.push_back("manifest recovery metadata is incomplete.");
+        SetKnapmMalformedRecovery(session, "metadata_incomplete");
+        return;
+    }
+
+    if (session.Finalized)
+    {
+        SetKnapmSessionRecovery(session, "none", "finalized", "none", false, false, false, false, false, false);
+        return;
+    }
 
     if (state == "stopped" || state == "failed" || state == "stale" || state == "recovery_required")
     {
+        SetKnapmSessionRecovery(session, recovery.State, "terminal_session_state", recovery.Action, recovery.OwnerAlive, recovery.HelperAlive, recovery.WriterAlive, recovery.TargetAlive, recovery.LeaseExpired, recovery.RestartEligible);
         return;
     }
 
-    if (targetProcessId != 0 && !IsProcessAlive(targetProcessId))
+    const bool ownerAlive = IsProcessAlive(owner.HostProcessId);
+    const bool helperAlive = IsProcessAlive(owner.HelperProcessId);
+    const bool writerAlive = IsProcessAlive(owner.WriterProcessId);
+    const bool targetAlive = IsProcessAlive(targetProcessId);
+    const bool leaseExpired = IsUtcExpired(owner.LeaseExpiresUtc);
+
+    if (targetProcessId != 0 && !targetAlive)
     {
-        session.WriterState = "stale";
+        SetKnapmSessionRecovery(session, "stale", "target_exited", "replay_only", ownerAlive, helperAlive, writerAlive, false, leaseExpired, false);
         return;
     }
 
-    if (
-        targetProcessId != 0 &&
-        IsProcessAlive(targetProcessId) &&
-        ownerProcessId != 0 &&
-        helperProcessId != 0 &&
-        !IsProcessAlive(ownerProcessId) &&
-        !IsProcessAlive(helperProcessId))
+    if (leaseExpired)
     {
-        session.WriterState = "recovery_required";
+        SetKnapmSessionRecovery(session, "recovery_required", "lease_expired", "recover_writer", ownerAlive, helperAlive, writerAlive, targetAlive, true, targetAlive);
+        return;
     }
+
+    if (targetProcessId != 0 && targetAlive && (!ownerAlive || !helperAlive || !writerAlive))
+    {
+        SetKnapmSessionRecovery(session, "recovery_required", "owner_dead_target_alive", "recover_writer", ownerAlive, helperAlive, writerAlive, true, false, true);
+        return;
+    }
+
+    SetKnapmSessionRecovery(session, "owned", "owner_alive", "wait", ownerAlive, helperAlive, writerAlive, targetAlive, false, false);
 }
 
 SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
@@ -2492,9 +3029,21 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
             session.ValidationErrors.push_back("finalized host drop counters disagree.");
         }
 
-        ClassifyKnapmPartialSession(session, manifest);
+        if (session.ValidationErrors.empty())
+        {
+            ClassifyKnapmSession(session, manifest);
+        }
+        else
+        {
+            SetKnapmMalformedRecovery(session, "index_corrupt");
+        }
     }
     while (false);
+
+    if (!session.ValidationErrors.empty() && session.RecoveryState.empty())
+    {
+        SetKnapmMalformedRecovery(session, "index_corrupt");
+    }
 
     session.Success = session.ValidationErrors.empty();
     session.Win32ErrorCode = session.Success ? 0 : ERROR_BAD_FORMAT;
