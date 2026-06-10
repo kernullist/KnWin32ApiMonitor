@@ -1,7 +1,9 @@
 #include <knmon/core/Controller.h>
 
 #include <Windows.h>
+#include <bcrypt.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -374,6 +376,100 @@ bool IsSupportedArchitecture(const std::string& value)
     return value == "x86" || value == "x64";
 }
 
+std::string ArchitectureName(knmon::KnMonAgentArchitecture architecture)
+{
+    std::string name = "unknown";
+
+    switch (architecture)
+    {
+    case knmon::KnMonAgentArchitecture::X86:
+        name = "x86";
+        break;
+    case knmon::KnMonAgentArchitecture::X64:
+        name = "x64";
+        break;
+    default:
+        break;
+    }
+
+    return name;
+}
+
+std::string HexBytes(const std::vector<unsigned char>& bytes)
+{
+    std::ostringstream stream;
+    stream << std::hex << std::setfill('0');
+
+    for (const unsigned char byte : bytes)
+    {
+        stream << std::setw(2) << static_cast<unsigned int>(byte);
+    }
+
+    return stream.str();
+}
+
+std::string Sha256Hex(const std::string& text)
+{
+    std::string result;
+    BCRYPT_ALG_HANDLE algorithm = nullptr;
+    BCRYPT_HASH_HANDLE hash = nullptr;
+    std::vector<unsigned char> hashObject;
+    std::vector<unsigned char> hashBytes;
+
+    do
+    {
+        if (BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_SHA256_ALGORITHM, nullptr, 0) < 0)
+        {
+            break;
+        }
+
+        DWORD objectLength = 0;
+        DWORD hashLength = 0;
+        DWORD returned = 0;
+        if (BCryptGetProperty(algorithm, BCRYPT_OBJECT_LENGTH, reinterpret_cast<PUCHAR>(&objectLength), sizeof(objectLength), &returned, 0) < 0)
+        {
+            break;
+        }
+
+        if (BCryptGetProperty(algorithm, BCRYPT_HASH_LENGTH, reinterpret_cast<PUCHAR>(&hashLength), sizeof(hashLength), &returned, 0) < 0)
+        {
+            break;
+        }
+
+        hashObject.resize(objectLength);
+        hashBytes.resize(hashLength);
+        if (BCryptCreateHash(algorithm, &hash, hashObject.data(), static_cast<ULONG>(hashObject.size()), nullptr, 0, 0) < 0)
+        {
+            break;
+        }
+
+        if (BCryptHashData(hash, reinterpret_cast<PUCHAR>(const_cast<char*>(text.data())), static_cast<ULONG>(text.size()), 0) < 0)
+        {
+            break;
+        }
+
+        if (BCryptFinishHash(hash, hashBytes.data(), static_cast<ULONG>(hashBytes.size()), 0) < 0)
+        {
+            break;
+        }
+
+        result = HexBytes(hashBytes);
+    }
+    while (false);
+
+    if (hash != nullptr)
+    {
+        BCryptDestroyHash(hash);
+    }
+
+    if (algorithm != nullptr)
+    {
+        BCryptCloseAlgorithmProvider(algorithm, 0);
+    }
+
+    return result;
+}
+
 std::string ExtractJsonString(const std::string& payload, const std::string& key)
 {
     std::string result;
@@ -453,6 +549,38 @@ std::string ExtractJsonString(const std::string& payload, const std::string& key
     return result;
 }
 
+bool ExtractJsonBool(const std::string& payload, const std::string& key)
+{
+    bool result = false;
+
+    do
+    {
+        const std::string quotedKey = "\"" + key + "\"";
+        std::size_t position = payload.find(quotedKey);
+        if (position == std::string::npos)
+        {
+            break;
+        }
+
+        position = payload.find(':', position + quotedKey.size());
+        if (position == std::string::npos)
+        {
+            break;
+        }
+
+        ++position;
+        while (position < payload.size() && payload[position] == ' ')
+        {
+            ++position;
+        }
+
+        result = payload.compare(position, 4, "true") == 0;
+    }
+    while (false);
+
+    return result;
+}
+
 std::uint64_t ExtractJsonUInt64(const std::string& payload, const std::string& key)
 {
     std::uint64_t result = 0;
@@ -500,6 +628,77 @@ std::uint64_t ExtractJsonUInt64(const std::string& payload, const std::string& k
     while (false);
 
     return result;
+}
+
+std::vector<std::string> SplitJsonObjectArray(const std::string& arrayText)
+{
+    std::vector<std::string> objects;
+    std::size_t position = 0;
+
+    while (position < arrayText.size())
+    {
+        while (position < arrayText.size() && arrayText[position] != '{')
+        {
+            ++position;
+        }
+
+        if (position >= arrayText.size())
+        {
+            break;
+        }
+
+        const std::size_t start = position;
+        int depth = 0;
+        bool inString = false;
+        bool escaped = false;
+        for (; position < arrayText.size(); ++position)
+        {
+            const char ch = arrayText[position];
+            if (inString)
+            {
+                if (escaped)
+                {
+                    escaped = false;
+                    continue;
+                }
+
+                if (ch == '\\')
+                {
+                    escaped = true;
+                    continue;
+                }
+
+                if (ch == '"')
+                {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (ch == '"')
+            {
+                inString = true;
+                continue;
+            }
+
+            if (ch == '{')
+            {
+                ++depth;
+            }
+            else if (ch == '}')
+            {
+                --depth;
+                if (depth == 0)
+                {
+                    objects.push_back(arrayText.substr(start, position - start + 1));
+                    ++position;
+                    break;
+                }
+            }
+        }
+    }
+
+    return objects;
 }
 
 std::string ExtractJsonObject(const std::string& payload, const std::string& key)
@@ -1050,13 +1249,21 @@ std::string ToJson(const knmon::KnMonProcessTreeResult& result)
 struct SessionInfo
 {
     bool Success = false;
+    std::string Format;
     std::string SessionId;
     std::string SessionPath;
     std::string CreatedUtc;
+    bool Finalized = false;
     std::uint64_t TraceEventCount = 0;
     std::uint64_t AgentEventCount = 0;
     std::uint64_t AuditEventCount = 0;
     std::uint64_t DroppedEvents = 0;
+    std::uint64_t TransportDroppedEvents = 0;
+    std::uint64_t HostDroppedBatches = 0;
+    std::uint64_t ChunkCount = 0;
+    std::uint64_t LastBatchSequence = 0;
+    std::uint64_t LastRecordSequence = 0;
+    std::string WriterState;
     std::uint32_t Win32ErrorCode = 0;
     std::string Message;
     std::vector<std::string> ValidationErrors;
@@ -1094,13 +1301,21 @@ std::string ToJson(const SessionInfo& session)
     stream << "{";
     stream << "\"schemaVersion\":\"0.1.0\",";
     stream << "\"success\":" << (session.Success ? "true" : "false") << ",";
+    stream << "\"format\":" << Q(session.Format) << ",";
     stream << "\"sessionId\":" << Q(session.SessionId) << ",";
     stream << "\"sessionPath\":" << Q(session.SessionPath) << ",";
     stream << "\"createdUtc\":" << Q(session.CreatedUtc) << ",";
+    stream << "\"finalized\":" << (session.Finalized ? "true" : "false") << ",";
     stream << "\"traceEventCount\":" << session.TraceEventCount << ",";
     stream << "\"agentEventCount\":" << session.AgentEventCount << ",";
     stream << "\"auditEventCount\":" << session.AuditEventCount << ",";
     stream << "\"droppedEvents\":" << session.DroppedEvents << ",";
+    stream << "\"transportDroppedEvents\":" << session.TransportDroppedEvents << ",";
+    stream << "\"hostDroppedBatches\":" << session.HostDroppedBatches << ",";
+    stream << "\"chunkCount\":" << session.ChunkCount << ",";
+    stream << "\"lastBatchSequence\":" << session.LastBatchSequence << ",";
+    stream << "\"lastRecordSequence\":" << session.LastRecordSequence << ",";
+    stream << "\"writerState\":" << Q(session.WriterState) << ",";
     stream << "\"win32ErrorCode\":" << session.Win32ErrorCode << ",";
     stream << "\"message\":" << Q(session.Message) << ",";
     stream << "\"validationErrors\":[";
@@ -1254,6 +1469,7 @@ std::string BuildManifestJson(
 SessionInfo WriteSession(const knmon::KnMonCaptureResult& result, const std::filesystem::path& sessionDirectory)
 {
     SessionInfo session;
+    session.Format = "legacy-jsonl";
     session.SessionId = SanitizeFileName(result.OperationId);
     session.SessionPath = PathToUtf8(sessionDirectory);
     session.CreatedUtc = NowUtc();
@@ -1332,17 +1548,1038 @@ SessionInfo WriteSession(const knmon::KnMonCaptureResult& result, const std::fil
         }
 
         session.Success = true;
+        session.Finalized = true;
         session.Win32ErrorCode = 0;
+        session.WriterState = "finalized";
         session.Message = "Session written.";
     }
     while (false);
 
+    if (!session.Success && session.WriterState.empty())
+    {
+        session.WriterState = "failed";
+    }
+
     return session;
+}
+
+struct KnapmChunkInfo
+{
+    std::uint64_t ChunkSequence = 0;
+    std::uint64_t BatchSequence = 0;
+    std::string File;
+    std::string Compression = "none";
+    std::uint64_t EventCount = 0;
+    std::uint64_t FirstRecordSequence = 0;
+    std::uint64_t LastRecordSequence = 0;
+    std::uint64_t FirstEventId = 0;
+    std::uint64_t LastEventId = 0;
+    std::uint64_t ByteLength = 0;
+    std::string Sha256;
+};
+
+std::string KnapmChunkFileName(std::uint64_t chunkSequence)
+{
+    std::ostringstream stream;
+    stream << "chunks/trace-" << std::setfill('0') << std::setw(6) << chunkSequence << ".jsonl";
+    return stream.str();
+}
+
+std::filesystem::path KnapmChildPath(const std::filesystem::path& root, const std::string& relativePath)
+{
+    std::filesystem::path result = root;
+    std::string component;
+
+    for (const char ch : relativePath)
+    {
+        if (ch == '/' || ch == '\\')
+        {
+            if (!component.empty())
+            {
+                result /= PathFromUtf8(component);
+                component.clear();
+            }
+        }
+        else
+        {
+            component.push_back(ch);
+        }
+    }
+
+    if (!component.empty())
+    {
+        result /= PathFromUtf8(component);
+    }
+
+    return result;
+}
+
+bool IsSafeKnapmChunkPath(const std::string& relativePath)
+{
+    bool safe = false;
+
+    do
+    {
+        if (relativePath.empty())
+        {
+            break;
+        }
+
+        if (relativePath.find('\\') != std::string::npos)
+        {
+            break;
+        }
+
+        std::string normalized = relativePath;
+        std::replace(normalized.begin(), normalized.end(), '\\', '/');
+        if (normalized.empty() || normalized.front() == '/' || normalized.find(':') != std::string::npos)
+        {
+            break;
+        }
+
+        const std::string prefix = "chunks/trace-";
+        const std::string suffix = ".jsonl";
+        if (normalized.rfind(prefix, 0) != 0)
+        {
+            break;
+        }
+
+        if (normalized.size() != prefix.size() + 6 + suffix.size())
+        {
+            break;
+        }
+
+        if (normalized.substr(normalized.size() - suffix.size()) != suffix)
+        {
+            break;
+        }
+
+        bool digitsOnly = true;
+        for (std::size_t index = prefix.size(); index < prefix.size() + 6; ++index)
+        {
+            const char ch = normalized[index];
+            if (ch < '0' || ch > '9')
+            {
+                digitsOnly = false;
+                break;
+            }
+        }
+
+        if (!digitsOnly)
+        {
+            break;
+        }
+
+        safe = true;
+    }
+    while (false);
+
+    return safe;
+}
+
+std::string ToJson(const KnapmChunkInfo& chunk)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"chunkSequence\":" << chunk.ChunkSequence << ",";
+    stream << "\"batchSequence\":" << chunk.BatchSequence << ",";
+    stream << "\"file\":" << Q(chunk.File) << ",";
+    stream << "\"compression\":" << Q(chunk.Compression) << ",";
+    stream << "\"eventCount\":" << chunk.EventCount << ",";
+    stream << "\"firstRecordSequence\":" << chunk.FirstRecordSequence << ",";
+    stream << "\"lastRecordSequence\":" << chunk.LastRecordSequence << ",";
+    stream << "\"firstEventId\":" << chunk.FirstEventId << ",";
+    stream << "\"lastEventId\":" << chunk.LastEventId << ",";
+    stream << "\"byteLength\":" << chunk.ByteLength << ",";
+    stream << "\"sha256\":" << Q(chunk.Sha256);
+    stream << "}";
+    return stream.str();
+}
+
+struct KnapmSessionWriter
+{
+    bool Enabled = false;
+    bool Failed = false;
+    std::filesystem::path Root;
+    std::string Error;
+    std::string SessionId;
+    std::string OperationId;
+    std::string CreatedUtc;
+    std::string UpdatedUtc;
+    std::string FinalizedUtc;
+    std::string WriterState = "created";
+    NativeSessionInfo Session;
+    std::string TargetPath;
+    std::uint32_t TargetThreadId = 0;
+    std::string Architecture;
+    std::string AgentPath;
+    std::string AgentVersion;
+    std::uint64_t DroppedEvents = 0;
+    std::uint64_t TransportDroppedEvents = 0;
+    std::uint64_t HostDroppedBatches = 0;
+    std::uint64_t TraceEventCount = 0;
+    std::uint64_t AgentEventCount = 0;
+    std::uint64_t AuditEventCount = 0;
+    std::uint64_t CapturedEventCount = 0;
+    std::uint64_t LastBatchSequence = 0;
+    std::uint64_t LastRecordSequence = 0;
+    std::uint64_t NextEventId = 1;
+    bool Finalized = false;
+    std::vector<KnapmChunkInfo> Chunks;
+
+    bool Start(
+        const std::filesystem::path& root,
+        const NativeSessionInfo& session,
+        const knmon::KnMonAttachRequest& request)
+    {
+        bool started = false;
+
+        do
+        {
+            Enabled = true;
+            Root = root;
+            Session = session;
+            SessionId = session.SessionId;
+            OperationId = session.OperationId;
+            CreatedUtc = session.StartedUtc.empty() ? NowUtc() : session.StartedUtc;
+            UpdatedUtc = NowUtc();
+            WriterState = "writing";
+            AgentPath = request.AgentPath;
+            Architecture = ArchitectureName(request.Architecture);
+            if (!IsSupportedArchitecture(Architecture))
+            {
+                Architecture = ArchitectureName(NativeHelperArchitecture());
+            }
+
+            std::string writeError;
+            if (!WriteTextFile(KnapmChildPath(Root, "audit.jsonl"), "", &writeError))
+            {
+                MarkFailed(writeError);
+                break;
+            }
+
+            if (!WriteTextFile(KnapmChildPath(Root, "agent-events.jsonl"), "", &writeError))
+            {
+                MarkFailed(writeError);
+                break;
+            }
+
+            if (!WriteIndex(&writeError))
+            {
+                MarkFailed(writeError);
+                break;
+            }
+
+            if (!WriteManifest(&writeError))
+            {
+                MarkFailed(writeError);
+                break;
+            }
+
+            started = true;
+        }
+        while (false);
+
+        return started;
+    }
+
+    void UpdateSession(const NativeSessionInfo& session)
+    {
+        if (!Enabled)
+        {
+            return;
+        }
+
+        Session = session;
+        UpdatedUtc = session.UpdatedUtc.empty() ? NowUtc() : session.UpdatedUtc;
+        TransportDroppedEvents = session.TransportDroppedEvents;
+        HostDroppedBatches = session.HostDroppedBatches;
+        if (Chunks.empty())
+        {
+            LastRecordSequence = session.LastTransportSequence;
+        }
+    }
+
+    bool WriteBatch(const knmon::KnMonTraceBatch& batch)
+    {
+        bool written = false;
+
+        do
+        {
+            if (!Enabled)
+            {
+                written = true;
+                break;
+            }
+
+            if (Failed)
+            {
+                break;
+            }
+
+            if (batch.Events.empty())
+            {
+                written = true;
+                break;
+            }
+
+            std::vector<std::string> lines;
+            std::uint64_t firstEventId = NextEventId;
+            for (const auto& event : batch.Events)
+            {
+                lines.push_back(BuildTraceEventJson(event, NextEventId));
+                ++NextEventId;
+            }
+
+            const std::uint64_t chunkSequence = static_cast<std::uint64_t>(Chunks.size()) + 1;
+            const std::string chunkFile = KnapmChunkFileName(chunkSequence);
+            const std::string chunkText = JoinJsonl(lines);
+            const std::string hash = Sha256Hex(chunkText);
+            if (hash.empty())
+            {
+                MarkFailed("sha256 failed for " + chunkFile);
+                break;
+            }
+
+            std::string writeError;
+            if (!WriteTextFile(KnapmChildPath(Root, chunkFile), chunkText, &writeError))
+            {
+                MarkFailed(writeError);
+                break;
+            }
+
+            KnapmChunkInfo chunk;
+            chunk.ChunkSequence = chunkSequence;
+            chunk.BatchSequence = batch.BatchSequence;
+            chunk.File = chunkFile;
+            chunk.EventCount = static_cast<std::uint64_t>(lines.size());
+            chunk.FirstRecordSequence = batch.FirstRecordSequence;
+            chunk.LastRecordSequence = batch.LastRecordSequence;
+            chunk.FirstEventId = firstEventId;
+            chunk.LastEventId = NextEventId - 1;
+            chunk.ByteLength = static_cast<std::uint64_t>(chunkText.size());
+            chunk.Sha256 = hash;
+            Chunks.push_back(chunk);
+
+            TraceEventCount += chunk.EventCount;
+            LastBatchSequence = batch.BatchSequence;
+            LastRecordSequence = batch.LastRecordSequence;
+            DroppedEvents = batch.DroppedEvents;
+            TransportDroppedEvents = batch.DroppedEvents;
+            HostDroppedBatches = batch.HostDroppedBatches;
+            UpdatedUtc = NowUtc();
+
+            if (!WriteIndex(&writeError))
+            {
+                MarkFailed(writeError);
+                break;
+            }
+
+            if (!WriteManifest(&writeError))
+            {
+                MarkFailed(writeError);
+                break;
+            }
+
+            written = true;
+        }
+        while (false);
+
+        return written;
+    }
+
+    void Finalize(const knmon::KnMonCaptureResult& result, const NativeSessionInfo& session)
+    {
+        if (!Enabled)
+        {
+            return;
+        }
+
+        UpdateSession(session);
+        TargetPath = result.TargetPath;
+        TargetThreadId = result.TargetThreadId;
+        Architecture = result.Architecture;
+        AgentPath = result.AgentPath;
+        AgentVersion = result.Handshake.AgentVersion;
+        DroppedEvents = result.DroppedEvents;
+        TransportDroppedEvents = result.TransportDroppedEvents;
+        HostDroppedBatches = session.HostDroppedBatches;
+        if (Chunks.empty())
+        {
+            LastRecordSequence = result.LastTransportSequence;
+        }
+        CapturedEventCount = static_cast<std::uint64_t>(result.CapturedEvents.size());
+
+        std::vector<std::string> auditLines;
+        for (const auto& event : result.AuditEvents)
+        {
+            auditLines.push_back(ToJson(event));
+        }
+
+        std::vector<std::string> agentLines;
+        for (const auto& message : result.AgentMessages)
+        {
+            agentLines.push_back(ToJson(message));
+        }
+
+        AuditEventCount = static_cast<std::uint64_t>(auditLines.size());
+        AgentEventCount = static_cast<std::uint64_t>(agentLines.size());
+
+        std::string writeError;
+        if (!WriteTextFile(KnapmChildPath(Root, "audit.jsonl"), JoinJsonl(auditLines), &writeError))
+        {
+            MarkFailed(writeError);
+        }
+
+        if (!WriteTextFile(KnapmChildPath(Root, "agent-events.jsonl"), JoinJsonl(agentLines), &writeError))
+        {
+            MarkFailed(writeError);
+        }
+
+        Finalized = !Failed && (session.SessionState == "stopped" || result.Success || result.Operation == "operation_cancelled");
+        FinalizedUtc = Finalized ? NowUtc() : "";
+        WriterState = Failed ? "failed" : (Finalized ? "finalized" : "partial");
+        UpdatedUtc = NowUtc();
+
+        if (!WriteIndex(&writeError))
+        {
+            MarkFailed(writeError);
+        }
+
+        if (!WriteManifest(&writeError))
+        {
+            MarkFailed(writeError);
+        }
+    }
+
+    void MarkFailed(const std::string& error)
+    {
+        Failed = true;
+        WriterState = "failed";
+        Error = error;
+        UpdatedUtc = NowUtc();
+    }
+
+    bool WriteIndex(std::string* error) const
+    {
+        std::ostringstream stream;
+        stream << "{";
+        stream << "\"schemaVersion\":\"0.1.0\",";
+        stream << "\"format\":\"knapm-index\",";
+        stream << "\"sessionId\":" << Q(SessionId) << ",";
+        stream << "\"operationId\":" << Q(OperationId) << ",";
+        stream << "\"chunks\":[";
+        for (std::size_t index = 0; index < Chunks.size(); ++index)
+        {
+            if (index != 0)
+            {
+                stream << ",";
+            }
+            stream << ToJson(Chunks[index]);
+        }
+        stream << "]";
+        stream << "}";
+        return WriteTextFile(KnapmChildPath(Root, "index.json"), stream.str() + "\n", error);
+    }
+
+    bool WriteManifest(std::string* error) const
+    {
+        std::ostringstream stream;
+        stream << "{";
+        stream << "\"schemaVersion\":\"0.1.0\",";
+        stream << "\"format\":\"knapm\",";
+        stream << "\"formatVersion\":\"1\",";
+        stream << "\"sessionId\":" << Q(SessionId) << ",";
+        stream << "\"operationId\":" << Q(OperationId) << ",";
+        stream << "\"createdUtc\":" << Q(CreatedUtc) << ",";
+        stream << "\"updatedUtc\":" << Q(UpdatedUtc) << ",";
+        stream << "\"finalizedUtc\":" << Q(FinalizedUtc) << ",";
+        stream << "\"finalized\":" << (Finalized ? "true" : "false") << ",";
+        stream << "\"source\":\"knmon-native-helper attach-session\",";
+        stream << "\"backendMode\":\"native-capture\",";
+        stream << "\"captureMode\":\"bounded-native-attach\",";
+        stream << "\"injectionMethod\":\"remote LoadLibraryW\",";
+        stream << "\"target\":{";
+        stream << "\"path\":" << Q(TargetPath) << ",";
+        stream << "\"pid\":" << Session.TargetProcessId << ",";
+        stream << "\"tid\":" << TargetThreadId << ",";
+        stream << "\"architecture\":" << Q(Architecture);
+        stream << "},";
+        stream << "\"agent\":{";
+        stream << "\"path\":" << Q(AgentPath) << ",";
+        stream << "\"architecture\":" << Q(Architecture) << ",";
+        stream << "\"version\":" << Q(AgentVersion);
+        stream << "},";
+        stream << "\"session\":" << ToJson(Session) << ",";
+        stream << "\"eventCounts\":{";
+        stream << "\"audit\":" << AuditEventCount << ",";
+        stream << "\"agentEvents\":" << AgentEventCount << ",";
+        stream << "\"traceEvents\":" << TraceEventCount << ",";
+        stream << "\"capturedEvents\":" << CapturedEventCount;
+        stream << "},";
+        stream << "\"droppedEvents\":" << DroppedEvents << ",";
+        stream << "\"transportDroppedEvents\":" << TransportDroppedEvents << ",";
+        stream << "\"hostDroppedBatches\":" << HostDroppedBatches << ",";
+        stream << "\"chunkCount\":" << Chunks.size() << ",";
+        stream << "\"lastBatchSequence\":" << LastBatchSequence << ",";
+        stream << "\"lastRecordSequence\":" << LastRecordSequence << ",";
+        stream << "\"writerState\":" << Q(WriterState) << ",";
+        stream << "\"files\":{";
+        stream << "\"audit\":\"audit.jsonl\",";
+        stream << "\"agentEvents\":\"agent-events.jsonl\",";
+        stream << "\"index\":\"index.json\",";
+        stream << "\"chunkDirectory\":\"chunks\"";
+        stream << "}";
+        stream << "}";
+        return WriteTextFile(KnapmChildPath(Root, "manifest.json"), stream.str() + "\n", error);
+    }
+};
+
+bool IsProcessAlive(std::uint32_t processId);
+
+KnapmChunkInfo KnapmChunkFromJson(const std::string& json)
+{
+    KnapmChunkInfo chunk;
+    chunk.ChunkSequence = ExtractJsonUInt64(json, "chunkSequence");
+    chunk.BatchSequence = ExtractJsonUInt64(json, "batchSequence");
+    chunk.File = ExtractJsonString(json, "file");
+    chunk.Compression = ExtractJsonString(json, "compression");
+    chunk.EventCount = ExtractJsonUInt64(json, "eventCount");
+    chunk.FirstRecordSequence = ExtractJsonUInt64(json, "firstRecordSequence");
+    chunk.LastRecordSequence = ExtractJsonUInt64(json, "lastRecordSequence");
+    chunk.FirstEventId = ExtractJsonUInt64(json, "firstEventId");
+    chunk.LastEventId = ExtractJsonUInt64(json, "lastEventId");
+    chunk.ByteLength = ExtractJsonUInt64(json, "byteLength");
+    chunk.Sha256 = ExtractJsonString(json, "sha256");
+    return chunk;
+}
+
+void ClassifyKnapmPartialSession(SessionInfo& session, const std::string& manifest)
+{
+    if (session.Finalized)
+    {
+        return;
+    }
+
+    const std::string sessionObject = ExtractJsonObject(manifest, "session");
+    const std::uint32_t ownerProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(sessionObject, "ownerProcessId"));
+    const std::uint32_t helperProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(sessionObject, "helperProcessId"));
+    const std::uint32_t targetProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(sessionObject, "targetProcessId"));
+    const std::string state = ExtractJsonString(sessionObject, "sessionState");
+
+    if (state == "stopped" || state == "failed" || state == "stale" || state == "recovery_required")
+    {
+        return;
+    }
+
+    if (targetProcessId != 0 && !IsProcessAlive(targetProcessId))
+    {
+        session.WriterState = "stale";
+        return;
+    }
+
+    if (
+        targetProcessId != 0 &&
+        IsProcessAlive(targetProcessId) &&
+        ownerProcessId != 0 &&
+        helperProcessId != 0 &&
+        !IsProcessAlive(ownerProcessId) &&
+        !IsProcessAlive(helperProcessId))
+    {
+        session.WriterState = "recovery_required";
+    }
+}
+
+SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
+{
+    SessionInfo session;
+    session.Format = "knapm";
+    session.SessionPath = PathToUtf8(sessionPath);
+
+    do
+    {
+        const std::filesystem::path manifestPath = KnapmChildPath(sessionPath, "manifest.json");
+        const std::filesystem::path indexPath = KnapmChildPath(sessionPath, "index.json");
+        const std::filesystem::path auditPath = KnapmChildPath(sessionPath, "audit.jsonl");
+        const std::filesystem::path agentPath = KnapmChildPath(sessionPath, "agent-events.jsonl");
+
+        std::string manifest;
+        std::string readError;
+        if (!ReadTextFile(manifestPath, &manifest, &readError))
+        {
+            session.ValidationErrors.push_back(readError);
+            break;
+        }
+
+        session.SessionId = ExtractJsonString(manifest, "sessionId");
+        session.CreatedUtc = ExtractJsonString(manifest, "createdUtc");
+        session.Finalized = ExtractJsonBool(manifest, "finalized");
+        session.DroppedEvents = ExtractJsonUInt64(manifest, "droppedEvents");
+        session.TransportDroppedEvents = ExtractJsonUInt64(manifest, "transportDroppedEvents");
+        session.HostDroppedBatches = ExtractJsonUInt64(manifest, "hostDroppedBatches");
+        session.ChunkCount = ExtractJsonUInt64(manifest, "chunkCount");
+        session.LastBatchSequence = ExtractJsonUInt64(manifest, "lastBatchSequence");
+        session.LastRecordSequence = ExtractJsonUInt64(manifest, "lastRecordSequence");
+        session.WriterState = ExtractJsonString(manifest, "writerState");
+        const std::uint64_t manifestLastBatchSequence = session.LastBatchSequence;
+        const std::uint64_t manifestLastRecordSequence = session.LastRecordSequence;
+
+        const std::string operationId = ExtractJsonString(manifest, "operationId");
+        const std::string finalizedUtc = ExtractJsonString(manifest, "finalizedUtc");
+        const std::string targetManifest = ExtractJsonObject(manifest, "target");
+        const std::string agentManifest = ExtractJsonObject(manifest, "agent");
+        const std::string eventCounts = ExtractJsonObject(manifest, "eventCounts");
+        const std::string sessionObject = ExtractJsonObject(manifest, "session");
+
+        if (ExtractJsonString(manifest, "schemaVersion") != "0.1.0")
+        {
+            session.ValidationErrors.push_back("manifest schemaVersion is missing or unsupported.");
+        }
+
+        if (ExtractJsonString(manifest, "format") != "knapm")
+        {
+            session.ValidationErrors.push_back("manifest format must be knapm.");
+        }
+
+        if (ExtractJsonString(manifest, "formatVersion").empty())
+        {
+            session.ValidationErrors.push_back("manifest formatVersion is missing.");
+        }
+
+        if (session.SessionId.empty())
+        {
+            session.ValidationErrors.push_back("manifest sessionId is missing.");
+        }
+
+        if (operationId.empty())
+        {
+            session.ValidationErrors.push_back("manifest operationId is missing.");
+        }
+
+        if (session.CreatedUtc.empty() || ExtractJsonString(manifest, "updatedUtc").empty())
+        {
+            session.ValidationErrors.push_back("manifest timestamps are missing.");
+        }
+
+        if (session.Finalized && finalizedUtc.empty())
+        {
+            session.ValidationErrors.push_back("finalized manifest must include finalizedUtc.");
+        }
+
+        if (ExtractJsonString(manifest, "source") != "knmon-native-helper attach-session")
+        {
+            session.ValidationErrors.push_back("manifest source must be knmon-native-helper attach-session.");
+        }
+
+        if (ExtractJsonString(manifest, "backendMode") != "native-capture")
+        {
+            session.ValidationErrors.push_back("manifest backendMode must be native-capture.");
+        }
+
+        if (ExtractJsonString(manifest, "captureMode") != "bounded-native-attach")
+        {
+            session.ValidationErrors.push_back("manifest captureMode must be bounded-native-attach.");
+        }
+
+        if (ExtractJsonString(manifest, "injectionMethod") != "remote LoadLibraryW")
+        {
+            session.ValidationErrors.push_back("manifest injectionMethod must be remote LoadLibraryW.");
+        }
+
+        const std::string targetArchitecture = ExtractJsonString(targetManifest, "architecture");
+        const std::string agentArchitecture = ExtractJsonString(agentManifest, "architecture");
+        if (!IsSupportedArchitecture(targetArchitecture))
+        {
+            session.ValidationErrors.push_back("manifest target architecture is missing or unsupported.");
+        }
+
+        if (!IsSupportedArchitecture(agentArchitecture))
+        {
+            session.ValidationErrors.push_back("manifest agent architecture is missing or unsupported.");
+        }
+
+        if (IsSupportedArchitecture(targetArchitecture) && IsSupportedArchitecture(agentArchitecture) && targetArchitecture != agentArchitecture)
+        {
+            session.ValidationErrors.push_back("manifest target and agent architecture must match.");
+        }
+
+        if (session.Finalized && ExtractJsonString(agentManifest, "version").empty())
+        {
+            session.ValidationErrors.push_back("finalized manifest agent version is missing.");
+        }
+
+        session.AuditEventCount = ExtractJsonUInt64(eventCounts, "audit");
+        session.AgentEventCount = ExtractJsonUInt64(eventCounts, "agentEvents");
+        session.TraceEventCount = ExtractJsonUInt64(eventCounts, "traceEvents");
+        const std::uint64_t capturedEventCount = ExtractJsonUInt64(eventCounts, "capturedEvents");
+        const std::uint64_t sessionRecordsStreamed = ExtractJsonUInt64(sessionObject, "recordsStreamed");
+        const std::uint64_t sessionLastTransport = ExtractJsonUInt64(sessionObject, "lastTransportSequence");
+        const std::uint64_t sessionTransportDrops = ExtractJsonUInt64(sessionObject, "transportDroppedEvents");
+        const std::uint64_t sessionHostDrops = ExtractJsonUInt64(sessionObject, "hostDroppedBatches");
+
+        std::string auditText;
+        if (!ReadTextFile(auditPath, &auditText, &readError))
+        {
+            session.ValidationErrors.push_back(readError);
+        }
+        else if (SplitJsonl(auditText).size() != session.AuditEventCount)
+        {
+            session.ValidationErrors.push_back("audit.jsonl count does not match manifest eventCounts.audit.");
+        }
+
+        std::string agentText;
+        if (!ReadTextFile(agentPath, &agentText, &readError))
+        {
+            session.ValidationErrors.push_back(readError);
+        }
+        else
+        {
+            const auto agentLines = SplitJsonl(agentText);
+            if (agentLines.size() != session.AgentEventCount)
+            {
+                session.ValidationErrors.push_back("agent-events.jsonl count does not match manifest eventCounts.agentEvents.");
+            }
+
+            if (session.Finalized)
+            {
+                bool hasHello = false;
+                bool hasDropped = false;
+                bool hasShutdown = false;
+                for (const auto& line : agentLines)
+                {
+                    hasHello = hasHello || PayloadContains(line, "\"messageType\":\"agent_hello\"");
+                    hasDropped = hasDropped || PayloadContains(line, "\"messageType\":\"dropped_events\"");
+                    if (PayloadContains(line, "\"messageType\":\"agent_shutdown\""))
+                    {
+                        hasShutdown = true;
+                        if (ExtractJsonString(line, "reason").empty())
+                        {
+                            session.ValidationErrors.push_back("finalized agent_shutdown reason is missing.");
+                        }
+
+                        if (!PayloadContains(line, "\"installedHooks\"") || !PayloadContains(line, "\"restoredHooks\"") || !PayloadContains(line, "\"failedHooks\""))
+                        {
+                            session.ValidationErrors.push_back("finalized agent_shutdown hook lifecycle counts are missing.");
+                        }
+
+                        const std::uint64_t installedHooks = ExtractJsonUInt64(line, "installedHooks");
+                        const std::uint64_t restoredHooks = ExtractJsonUInt64(line, "restoredHooks");
+                        const std::uint64_t failedHooks = ExtractJsonUInt64(line, "failedHooks");
+                        if (restoredHooks < installedHooks || failedHooks != 0)
+                        {
+                            session.ValidationErrors.push_back("finalized agent_shutdown reports unrestored or failed hooks.");
+                        }
+                    }
+                }
+
+                if (!hasHello)
+                {
+                    session.ValidationErrors.push_back("finalized agent-events.jsonl does not contain agent_hello.");
+                }
+
+                if (!hasDropped)
+                {
+                    session.ValidationErrors.push_back("finalized agent-events.jsonl does not contain dropped_events.");
+                }
+
+                if (!hasShutdown)
+                {
+                    session.ValidationErrors.push_back("finalized agent-events.jsonl does not contain agent_shutdown.");
+                }
+            }
+        }
+
+        std::string indexText;
+        if (!ReadTextFile(indexPath, &indexText, &readError))
+        {
+            session.ValidationErrors.push_back(readError);
+            break;
+        }
+
+        if (ExtractJsonString(indexText, "format") != "knapm-index")
+        {
+            session.ValidationErrors.push_back("index format must be knapm-index.");
+        }
+
+        if (ExtractJsonString(indexText, "sessionId") != session.SessionId)
+        {
+            session.ValidationErrors.push_back("index sessionId must match manifest sessionId.");
+        }
+
+        if (ExtractJsonString(indexText, "operationId") != operationId)
+        {
+            session.ValidationErrors.push_back("index operationId must match manifest operationId.");
+        }
+
+        const auto chunkObjects = SplitJsonObjectArray(ExtractJsonArray(indexText, "chunks"));
+        const std::uint64_t indexChunkCount = static_cast<std::uint64_t>(chunkObjects.size());
+        if (indexChunkCount != session.ChunkCount)
+        {
+            session.ValidationErrors.push_back("index chunk count does not match manifest chunkCount.");
+        }
+
+        std::uint64_t totalTraceEvents = 0;
+        std::uint64_t previousBatchSequence = 0;
+        std::uint64_t previousRecordSequence = 0;
+        bool hasPreviousRecordSequence = false;
+        std::uint64_t expectedChunkSequence = 1;
+        std::uint64_t indexedLastBatchSequence = 0;
+        std::uint64_t indexedLastRecordSequence = 0;
+        for (const auto& chunkJson : chunkObjects)
+        {
+            const std::size_t chunkErrorStart = session.ValidationErrors.size();
+            const KnapmChunkInfo chunk = KnapmChunkFromJson(chunkJson);
+            if (chunk.ChunkSequence != expectedChunkSequence)
+            {
+                session.ValidationErrors.push_back("index chunkSequence is not contiguous.");
+                break;
+            }
+
+            if (chunk.BatchSequence == 0)
+            {
+                session.ValidationErrors.push_back("index batchSequence is missing.");
+                break;
+            }
+
+            if (previousBatchSequence != 0 && chunk.BatchSequence != previousBatchSequence + 1)
+            {
+                session.ValidationErrors.push_back("index batchSequence is not contiguous.");
+                break;
+            }
+
+            if (chunk.EventCount == 0)
+            {
+                session.ValidationErrors.push_back("chunk eventCount must be non-zero.");
+                break;
+            }
+
+            if (chunk.LastRecordSequence < chunk.FirstRecordSequence)
+            {
+                session.ValidationErrors.push_back("chunk record sequence range is invalid.");
+                break;
+            }
+
+            if (hasPreviousRecordSequence && chunk.FirstRecordSequence <= previousRecordSequence)
+            {
+                session.ValidationErrors.push_back("chunk record sequence ranges are not monotonic.");
+                break;
+            }
+
+            if (chunk.Compression != "none")
+            {
+                session.ValidationErrors.push_back("chunk compression must be none in Phase 11I.");
+                break;
+            }
+
+            if (!IsSafeKnapmChunkPath(chunk.File))
+            {
+                session.ValidationErrors.push_back("chunk file path is not a safe KNAPM chunk path.");
+                break;
+            }
+
+            std::string chunkText;
+            if (!ReadTextFile(KnapmChildPath(sessionPath, chunk.File), &chunkText, &readError))
+            {
+                session.ValidationErrors.push_back(readError);
+                break;
+            }
+
+            if (chunk.ByteLength != chunkText.size())
+            {
+                session.ValidationErrors.push_back("chunk byteLength does not match file size.");
+                break;
+            }
+
+            const std::string hash = Sha256Hex(chunkText);
+            if (hash.empty() || hash != chunk.Sha256)
+            {
+                session.ValidationErrors.push_back("chunk sha256 does not match file content.");
+                break;
+            }
+
+            const auto traceLines = SplitJsonl(chunkText);
+            if (traceLines.size() != chunk.EventCount)
+            {
+                session.ValidationErrors.push_back("chunk eventCount does not match trace row count.");
+                break;
+            }
+
+            if (traceLines.empty())
+            {
+                session.ValidationErrors.push_back("chunk is empty.");
+                break;
+            }
+
+            const std::uint64_t firstEventId = ExtractJsonUInt64(traceLines.front(), "eventId");
+            const std::uint64_t lastEventId = ExtractJsonUInt64(traceLines.back(), "eventId");
+            if (firstEventId != chunk.FirstEventId || lastEventId != chunk.LastEventId)
+            {
+                session.ValidationErrors.push_back("chunk eventId range does not match index.");
+                break;
+            }
+
+            for (const auto& line : traceLines)
+            {
+                if (ExtractJsonString(line, "schemaVersion") != "0.1.0" || ExtractJsonString(line, "api").empty())
+                {
+                    session.ValidationErrors.push_back("chunk contains a malformed trace event.");
+                    break;
+                }
+            }
+
+            if (session.ValidationErrors.size() != chunkErrorStart)
+            {
+                break;
+            }
+
+            totalTraceEvents += chunk.EventCount;
+            previousBatchSequence = chunk.BatchSequence;
+            previousRecordSequence = chunk.LastRecordSequence;
+            hasPreviousRecordSequence = true;
+            indexedLastBatchSequence = chunk.BatchSequence;
+            indexedLastRecordSequence = chunk.LastRecordSequence;
+            ++expectedChunkSequence;
+        }
+
+        if (!chunkObjects.empty())
+        {
+            session.LastBatchSequence = indexedLastBatchSequence;
+            session.LastRecordSequence = indexedLastRecordSequence;
+        }
+
+        if (!chunkObjects.empty() && manifestLastBatchSequence != indexedLastBatchSequence)
+        {
+            session.ValidationErrors.push_back("manifest lastBatchSequence does not match indexed chunks.");
+        }
+
+        if (!chunkObjects.empty() && manifestLastRecordSequence != indexedLastRecordSequence)
+        {
+            session.ValidationErrors.push_back("manifest lastRecordSequence does not match indexed chunks.");
+        }
+
+        if (chunkObjects.empty() && manifestLastBatchSequence != 0)
+        {
+            session.ValidationErrors.push_back("empty index must have manifest lastBatchSequence set to zero.");
+        }
+
+        if (totalTraceEvents != session.TraceEventCount)
+        {
+            session.ValidationErrors.push_back("manifest trace event count does not match indexed chunks.");
+        }
+
+        if (session.Finalized && capturedEventCount != session.TraceEventCount)
+        {
+            session.ValidationErrors.push_back("finalized capturedEvents count does not match indexed trace count.");
+        }
+
+        if (session.Finalized && sessionRecordsStreamed != session.TraceEventCount)
+        {
+            session.ValidationErrors.push_back("finalized session recordsStreamed does not match indexed trace count.");
+        }
+
+        if (session.Finalized && sessionLastTransport != 0 && sessionLastTransport < session.LastRecordSequence)
+        {
+            session.ValidationErrors.push_back("finalized session lastTransportSequence is behind the last indexed record.");
+        }
+
+        if (session.Finalized && sessionTransportDrops != session.TransportDroppedEvents)
+        {
+            session.ValidationErrors.push_back("finalized transport drop counters disagree.");
+        }
+
+        if (session.Finalized && sessionHostDrops != session.HostDroppedBatches)
+        {
+            session.ValidationErrors.push_back("finalized host drop counters disagree.");
+        }
+
+        ClassifyKnapmPartialSession(session, manifest);
+    }
+    while (false);
+
+    session.Success = session.ValidationErrors.empty();
+    session.Win32ErrorCode = session.Success ? 0 : ERROR_BAD_FORMAT;
+    if (!session.Success)
+    {
+        session.Message = "KNAPM session validation failed.";
+    }
+    else if (session.Finalized)
+    {
+        session.Message = "KNAPM session validation passed.";
+    }
+    else
+    {
+        session.Message = "KNAPM partial session validation passed.";
+    }
+
+    return session;
+}
+
+std::vector<std::string> ReadKnapmTraceLines(const std::filesystem::path& sessionPath, const SessionInfo& validation)
+{
+    std::vector<std::string> traceLines;
+
+    do
+    {
+        if (!validation.Success)
+        {
+            break;
+        }
+
+        std::string indexText;
+        std::string readError;
+        if (!ReadTextFile(KnapmChildPath(sessionPath, "index.json"), &indexText, &readError))
+        {
+            break;
+        }
+
+        const auto chunkObjects = SplitJsonObjectArray(ExtractJsonArray(indexText, "chunks"));
+        for (const auto& chunkJson : chunkObjects)
+        {
+            const KnapmChunkInfo chunk = KnapmChunkFromJson(chunkJson);
+            std::string chunkText;
+            if (!ReadTextFile(KnapmChildPath(sessionPath, chunk.File), &chunkText, &readError))
+            {
+                traceLines.clear();
+                break;
+            }
+
+            const auto lines = SplitJsonl(chunkText);
+            traceLines.insert(traceLines.end(), lines.begin(), lines.end());
+        }
+    }
+    while (false);
+
+    return traceLines;
+}
+
+bool IsKnapmSessionPath(const std::filesystem::path& sessionPath)
+{
+    bool result = false;
+
+    do
+    {
+        if (sessionPath.extension() == L".knapm")
+        {
+            result = true;
+            break;
+        }
+
+        std::error_code error;
+        if (std::filesystem::exists(KnapmChildPath(sessionPath, "index.json"), error))
+        {
+            result = true;
+            break;
+        }
+    }
+    while (false);
+
+    return result;
 }
 
 SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirectory)
 {
     SessionInfo session;
+    session.Format = "legacy-jsonl";
     session.SessionPath = PathToUtf8(sessionDirectory);
 
     do
@@ -1543,21 +2780,37 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
     while (false);
 
     session.Success = session.ValidationErrors.empty();
+    session.Finalized = session.Success;
     session.Win32ErrorCode = session.Success ? 0 : ERROR_BAD_FORMAT;
+    session.WriterState = session.Success ? "finalized" : "failed";
     session.Message = session.Success ? "Session validation passed." : "Session validation failed.";
     return session;
 }
 
+SessionInfo ValidateSessionPath(const std::filesystem::path& sessionPath)
+{
+    if (IsKnapmSessionPath(sessionPath))
+    {
+        return ValidateKnapmSession(sessionPath);
+    }
+
+    return ValidateSessionDirectory(sessionPath);
+}
+
 std::string ReplaySessionJson(const std::filesystem::path& sessionDirectory)
 {
-    const SessionInfo validation = ValidateSessionDirectory(sessionDirectory);
+    const SessionInfo validation = ValidateSessionPath(sessionDirectory);
     std::string traceText;
     std::string readError;
     std::vector<std::string> traceLines;
 
     if (validation.Success)
     {
-        if (ReadTextFile(sessionDirectory / L"trace-events.jsonl", &traceText, &readError))
+        if (validation.Format == "knapm")
+        {
+            traceLines = ReadKnapmTraceLines(sessionDirectory, validation);
+        }
+        else if (ReadTextFile(sessionDirectory / L"trace-events.jsonl", &traceText, &readError))
         {
             traceLines = SplitJsonl(traceText);
         }
@@ -1570,7 +2823,20 @@ std::string ReplaySessionJson(const std::filesystem::path& sessionDirectory)
     stream << "\"backendMode\":\"native-capture\",";
     stream << "\"captureMode\":\"session-replay\",";
     stream << "\"session\":" << ToJson(validation) << ",";
-    stream << "\"message\":" << Q(validation.Success ? "Session replay loaded trace events without launching a target." : validation.Message) << ",";
+    stream << "\"message\":";
+    if (!validation.Success)
+    {
+        stream << Q(validation.Message);
+    }
+    else if (validation.Format == "knapm")
+    {
+        stream << Q("KNAPM session replay loaded indexed chunks without launching a target.");
+    }
+    else
+    {
+        stream << Q("Session replay loaded trace events without launching a target.");
+    }
+    stream << ",";
     stream << "\"traceEvents\":[";
     for (std::size_t index = 0; index < traceLines.size(); ++index)
     {
@@ -1931,7 +3197,8 @@ int AttachSessionCommand(const std::vector<std::string>& args)
     const std::string startedUtc = NowUtc();
     const std::string cancellationEventName = CancellationEventNameFromArgs(args, operationId);
     const std::string pidOption = GetOption(args, "--pid");
-    const bool streamBatches = HasOption(args, "--stream-batches");
+    const std::string knapmPath = GetOption(args, "--write-knapm");
+    const bool streamBatches = HasOption(args, "--stream-batches") || !knapmPath.empty();
     std::uint32_t batchSize = GetUInt32Option(args, "--batch-size", 64);
     const std::uint32_t batchIntervalMs = GetUInt32Option(args, "--batch-interval-ms", 100);
 
@@ -1976,6 +3243,16 @@ int AttachSessionCommand(const std::vector<std::string>& args)
     session.UpdatedUtc = NowUtc();
     std::cout << SessionFrameJson("session_state", session) << "\n" << std::flush;
 
+    KnapmSessionWriter knapmWriter;
+    if (!knapmPath.empty())
+    {
+        knapmWriter.Start(PathFromUtf8(knapmPath), session, request);
+        if (knapmWriter.Failed)
+        {
+            std::cerr << "KNAPM writer failed: " << knapmWriter.Error << "\n";
+        }
+    }
+
     knmon::Controller controller;
     knmon::KnMonCaptureStreamCallbacks callbacks;
     callbacks.MaxRecordsPerBatch = batchSize;
@@ -1987,6 +3264,11 @@ int AttachSessionCommand(const std::vector<std::string>& args)
         session.HostDroppedBatches = batch.HostDroppedBatches;
         session.UpdatedUtc = NowUtc();
         std::cout << TraceBatchFrameJson(batch) << "\n" << std::flush;
+        knapmWriter.UpdateSession(session);
+        if (!knapmWriter.WriteBatch(batch) && !knapmWriter.Error.empty())
+        {
+            std::cerr << "KNAPM writer failed: " << knapmWriter.Error << "\n";
+        }
         return true;
     };
     callbacks.OnSessionFrame = [&](const std::string& frameType, const knmon::KnMonCaptureResult& partialResult)
@@ -1999,12 +3281,18 @@ int AttachSessionCommand(const std::vector<std::string>& args)
         session.AgentCleanupAttempted = partialResult.AgentCleanupAttempted;
         session.AgentCleanupSucceeded = partialResult.AgentCleanupSucceeded;
         session.UpdatedUtc = partialResult.UpdatedUtc.empty() ? NowUtc() : partialResult.UpdatedUtc;
+        knapmWriter.UpdateSession(session);
         std::cout << SessionFrameJson(frameType, session) << "\n" << std::flush;
     };
 
     const knmon::KnMonCaptureStreamCallbacks* callbackPtr = streamBatches ? &callbacks : nullptr;
     knmon::KnMonCaptureResult result = controller.AttachCapture(request, callbackPtr);
     session = BuildSessionInfoFromCapture(result, session);
+    knapmWriter.Finalize(result, session);
+    if (knapmWriter.Failed && !knapmWriter.Error.empty())
+    {
+        std::cerr << "KNAPM writer failed: " << knapmWriter.Error << "\n";
+    }
 
     const std::string finalFrame = session.SessionState == "failed" ? "session_failed" : "session_stopped";
     std::cout << SessionFrameJson(finalFrame, session) << "\n";
@@ -2173,7 +3461,7 @@ std::string ValidateSessionCommandJson(const std::vector<std::string>& args)
         return ToJson(session);
     }
 
-    return ToJson(ValidateSessionDirectory(PathFromUtf8(sessionPath)));
+    return ToJson(ValidateSessionPath(PathFromUtf8(sessionPath)));
 }
 
 std::string CancelOperationJson(const std::vector<std::string>& args)
@@ -2244,7 +3532,7 @@ void PrintUsage()
     std::cout << "{";
     std::cout << "\"schemaVersion\":\"0.1.0\",";
     std::cout << "\"success\":false,";
-    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | replay-session --session dir | validate-session --session dir\"";
+    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
     std::cout << "}\n";
 }
 }

@@ -65,9 +65,16 @@
   "sessionWriter": {
     "captureCommand": "capture-sample --write-session <dir>",
     "attachCaptureCommand": "attach-capture --pid <pid> --write-session <dir>",
-    "validationCommand": "validate-session --session <dir>",
-    "replayCommand": "replay-session --session <dir>",
+    "streamingAttachKnapmCommand": "attach-session --pid <pid> --stream-batches --write-knapm <path.knapm>",
+    "validationCommand": "validate-session --session <dir-or-knapm>",
+    "replayCommand": "replay-session --session <dir-or-knapm>",
     "files": ["manifest.json", "audit.jsonl", "agent-events.jsonl", "trace-events.jsonl"],
+    "knapmFiles": ["manifest.json", "index.json", "audit.jsonl", "agent-events.jsonl", "chunks/trace-000001.jsonl"],
+    "knapmManifestSchema": "knapm-manifest.schema.json",
+    "knapmIndexSchema": "knapm-index.schema.json",
+    "knapmCompression": ["none"],
+    "knapmReservedCompression": ["zstd"],
+    "knapmChunkBoundary": "one finalized chunk per non-empty trace_batch frame",
     "replayCaptureMode": "session-replay",
     "controlledSampleOnly": true
   },

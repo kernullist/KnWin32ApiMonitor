@@ -73,6 +73,16 @@ export async function replayLastSampleSession(): Promise<SessionReplayResult> {
   return invoke<SessionReplayResult>("replay_last_sample_session");
 }
 
+export async function replaySessionPath(sessionPath: string): Promise<SessionReplayResult> {
+  if (!isTauriRuntime()) {
+    throw new Error("Session replay by path requires the Tauri desktop runtime.");
+  }
+
+  return invoke<SessionReplayResult>("replay_session_path", {
+    sessionPath
+  });
+}
+
 export async function attachTargetProcessCapture(pid: number, durationMs: number): Promise<CaptureResult> {
   if (!isTauriRuntime()) {
     throw new Error("Bounded attach capture requires the Tauri desktop runtime and build/native/Debug/knmon-native-helper.exe.");

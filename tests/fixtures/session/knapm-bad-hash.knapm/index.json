@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "0.1.0",
+  "format": "knapm-index",
+  "sessionId": "fixture-knapm-bad-hash",
+  "operationId": "fixture-knapm-op",
+  "chunks": [
+    {
+      "chunkSequence": 1,
+      "batchSequence": 1,
+      "file": "chunks/trace-000001.jsonl",
+      "compression": "none",
+      "eventCount": 1,
+      "firstRecordSequence": 1,
+      "lastRecordSequence": 1,
+      "firstEventId": 1,
+      "lastEventId": 1,
+      "byteLength": 275,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

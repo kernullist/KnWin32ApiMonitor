@@ -1,0 +1,2 @@
+# Keep hashed JSONL fixture chunks stable across Windows checkouts.
+tests/fixtures/session/**/*.jsonl text eol=lf

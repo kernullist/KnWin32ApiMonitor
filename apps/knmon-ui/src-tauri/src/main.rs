@@ -12,6 +12,7 @@ use knmon_tauri::{
     native_operation_states,
     native_session_states,
     replay_last_session,
+    replay_session_path as replay_session_path_backend,
     start_streaming_attach_session as start_streaming_attach_session_backend,
     supervise_process_tree as supervise_process_tree_backend,
     cancel_native_operation as cancel_native_operation_backend,
@@ -61,6 +62,12 @@ fn capture_sample_fileio_session_events() -> Result<CaptureResult, String>
 fn replay_last_sample_session() -> Result<SessionReplayResult, String>
 {
     replay_last_session()
+}
+
+#[tauri::command]
+fn replay_session_path(session_path: String) -> Result<SessionReplayResult, String>
+{
+    replay_session_path_backend(session_path)
 }
 
 #[tauri::command]
@@ -139,6 +146,7 @@ fn main()
             capture_sample_fileio_events,
             capture_sample_fileio_session_events,
             replay_last_sample_session,
+            replay_session_path,
             attach_target_process_capture,
             supervise_process_tree,
             list_native_operations,

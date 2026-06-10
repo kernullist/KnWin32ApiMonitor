@@ -1,0 +1,3 @@
+{"schemaVersion":"0.1.0","messageType":"agent_hello","operationId":"fixture-knapm-overlap-op","pid":1234,"tid":1235,"sequence":1,"timestampUtc":"2026-06-10T00:00:00Z","architecture":"x64","agentVersion":"0.1.0-fixture","message":"hello"}
+{"schemaVersion":"0.1.0","messageType":"dropped_events","operationId":"fixture-knapm-overlap-op","pid":1234,"tid":1235,"sequence":2,"timestampUtc":"2026-06-10T00:00:00Z","droppedCount":0,"message":"dropped events"}
+{"schemaVersion":"0.1.0","messageType":"agent_shutdown","operationId":"fixture-knapm-overlap-op","pid":1234,"tid":1235,"sequence":3,"timestampUtc":"2026-06-10T00:00:01Z","reason":"self_disable","lifecycleState":"stopped","installedHooks":1,"restoredHooks":1,"failedHooks":0,"droppedCount":0}

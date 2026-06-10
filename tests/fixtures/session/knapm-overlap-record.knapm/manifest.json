@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "0.1.0",
+  "format": "knapm",
+  "formatVersion": "1",
+  "sessionId": "fixture-knapm-overlap-record",
+  "operationId": "fixture-knapm-overlap-op",
+  "createdUtc": "2026-06-10T00:00:00Z",
+  "updatedUtc": "2026-06-10T00:00:01Z",
+  "finalizedUtc": "2026-06-10T00:00:01Z",
+  "finalized": true,
+  "source": "knmon-native-helper attach-session",
+  "backendMode": "native-capture",
+  "captureMode": "bounded-native-attach",
+  "injectionMethod": "remote LoadLibraryW",
+  "target": {
+    "path": "fixture.exe",
+    "pid": 1234,
+    "tid": 1235,
+    "architecture": "x64"
+  },
+  "agent": {
+    "path": "knmon-agent64.dll",
+    "architecture": "x64",
+    "version": "0.1.0-fixture"
+  },
+  "session": {
+    "schemaVersion": "0.1.0",
+    "sessionId": "fixture-knapm-overlap-record",
+    "operationId": "fixture-knapm-overlap-op",
+    "sessionKind": "attach_capture_stream",
+    "sessionState": "stopped",
+    "startedUtc": "2026-06-10T00:00:00Z",
+    "updatedUtc": "2026-06-10T00:00:01Z",
+    "ownerProcessId": 2222,
+    "helperProcessId": 2222,
+    "targetProcessId": 1234,
+    "recordsStreamed": 2,
+    "lastTransportSequence": 1,
+    "transportDroppedEvents": 0,
+    "hostDroppedBatches": 0,
+    "stopRequested": true,
+    "agentCleanupAttempted": true,
+    "agentCleanupSucceeded": true,
+    "sessionPath": "",
+    "format": "knapm",
+    "finalized": true,
+    "chunkCount": 2,
+    "lastBatchSequence": 2,
+    "lastRecordSequence": 0,
+    "writerState": "finalized"
+  },
+  "eventCounts": {
+    "audit": 1,
+    "agentEvents": 3,
+    "traceEvents": 2,
+    "capturedEvents": 2
+  },
+  "droppedEvents": 0,
+  "transportDroppedEvents": 0,
+  "hostDroppedBatches": 0,
+  "chunkCount": 2,
+  "lastBatchSequence": 2,
+  "lastRecordSequence": 0,
+  "writerState": "finalized",
+  "files": {
+    "audit": "audit.jsonl",
+    "agentEvents": "agent-events.jsonl",
+    "index": "index.json",
+    "chunkDirectory": "chunks"
+  }
+}

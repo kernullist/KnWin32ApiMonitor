@@ -40,11 +40,15 @@ contracts/
   session-info.schema.json
   session-manifest.schema.json
   session-replay-result.schema.json
+  knapm-manifest.schema.json
+  knapm-index.schema.json
 ```
 
 `capture-result.schema.json` currently accepts both `bounded-native-capture` with `early-bird APC` and `bounded-native-attach` with `remote LoadLibraryW`. Attach results may include `attachProcessId` and `detachPolicy`, with Phase 11A using `self-disable-no-unload`.
 
-`session-manifest.schema.json` accepts helper-written sessions from `knmon-native-helper capture-sample` and `knmon-native-helper attach-capture`, with capture modes `bounded-native-capture` and `bounded-native-attach`.
+`session-manifest.schema.json` accepts helper-written legacy sessions from `knmon-native-helper capture-sample` and `knmon-native-helper attach-capture`, with capture modes `bounded-native-capture` and `bounded-native-attach`.
+
+`knapm-manifest.schema.json` and `knapm-index.schema.json` describe the Phase 11I directory-backed `.knapm` format written by `attach-session --stream-batches --write-knapm`. The manifest preserves session ownership, finalization state, target/agent evidence, target-vs-host drop counters, chunk count, and last indexed record metadata. The index stores one chunk entry per non-empty `trace_batch` with byte length and SHA-256 evidence.
 
 `process-tree-node.schema.json` and `process-tree-result.schema.json` describe Phase 11B helper-side process-tree supervision. They cover root/child process metadata, child policies `observe` and `attach-supported`, eligibility states, policy decisions, audit events, and optional embedded Phase 11A child attach results.
 
@@ -336,22 +340,30 @@ The helper result and session manifest preserve architecture evidence from the s
 
 ## Session Contracts
 
-The current helper session format is a directory, not the future `.knapm` container.
+The current helper supports two durable session layouts.
 
-Required files:
+Legacy session directory files:
 
 1. `manifest.json`
 2. `audit.jsonl`
 3. `agent-events.jsonl`
 4. `trace-events.jsonl`
 
+Directory-backed `.knapm` files:
+
+1. `manifest.json`
+2. `index.json`
+3. `audit.jsonl`
+4. `agent-events.jsonl`
+5. `chunks/trace-000NNN.jsonl`
+
 `session-manifest.schema.json` describes the durable session metadata: source command, backend mode, capture mode, operation id, target, agent, event counts, dropped-event accounting, and file names.
 
-`session-info.schema.json` describes validation and writer status returned to the UI.
+`session-info.schema.json` describes validation and writer status returned to the UI. Additive Phase 11I fields include `format`, `finalized`, chunk count, last batch/record sequence, target transport drops, host dropped batches, and `writerState`.
 
 `session-replay-result.schema.json` wraps validated session metadata and replayed trace-compatible events. Replay must not launch the sample target or load an agent.
 
-Session validation requires `agent_shutdown` in `agent-events.jsonl` so hook restore evidence survives persistence and replay workflows.
+Finalized session validation requires `agent_shutdown` in `agent-events.jsonl` so hook restore evidence survives persistence and replay workflows. `.knapm` validation additionally checks index identity, chunk SHA-256, byte length, contiguous batch sequence, monotonic record ranges, malformed trace rows, and finalized vs partial state without target mutation.
 
 ## Collector Contracts
 

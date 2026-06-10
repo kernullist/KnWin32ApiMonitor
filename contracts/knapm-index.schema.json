@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/knapm-index.schema.json",
+  "title": "KnMonKnapmIndex",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "format",
+    "sessionId",
+    "operationId",
+    "chunks"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "format": { "const": "knapm-index" },
+    "sessionId": { "type": "string", "minLength": 1 },
+    "operationId": { "type": "string", "minLength": 1 },
+    "chunks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "chunkSequence",
+          "batchSequence",
+          "file",
+          "compression",
+          "eventCount",
+          "firstRecordSequence",
+          "lastRecordSequence",
+          "firstEventId",
+          "lastEventId",
+          "byteLength",
+          "sha256"
+        ],
+        "properties": {
+          "chunkSequence": { "type": "integer", "minimum": 1 },
+          "batchSequence": { "type": "integer", "minimum": 1 },
+          "file": { "type": "string", "pattern": "^chunks/trace-[0-9]{6}\\.jsonl$" },
+          "compression": { "enum": ["none", "zstd"] },
+          "eventCount": { "type": "integer", "minimum": 1 },
+          "firstRecordSequence": { "type": "integer", "minimum": 0 },
+          "lastRecordSequence": { "type": "integer", "minimum": 0 },
+          "firstEventId": { "type": "integer", "minimum": 1 },
+          "lastEventId": { "type": "integer", "minimum": 1 },
+          "byteLength": { "type": "integer", "minimum": 1 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1 @@
+{"schemaVersion":"0.1.0","eventId":2,"relativeTimeMs":20,"pid":1234,"tid":1235,"process":"fixture.exe","module":"kernel32.dll","api":"CloseHandle","arguments":[],"returnValue":"true","error":null,"durationUs":3,"tags":["fixture"],"stack":[],"bufferPreview":""}

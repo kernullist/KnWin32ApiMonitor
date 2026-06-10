@@ -466,13 +466,29 @@ pub struct SessionInfo
 {
     pub schema_version: String,
     pub success: bool,
+    #[serde(default)]
+    pub format: String,
     pub session_id: String,
     pub session_path: String,
     pub created_utc: String,
+    #[serde(default)]
+    pub finalized: bool,
     pub trace_event_count: u64,
     pub agent_event_count: u64,
     pub audit_event_count: u64,
     pub dropped_events: u64,
+    #[serde(default)]
+    pub transport_dropped_events: u64,
+    #[serde(default)]
+    pub host_dropped_batches: u64,
+    #[serde(default)]
+    pub chunk_count: u64,
+    #[serde(default)]
+    pub last_batch_sequence: u64,
+    #[serde(default)]
+    pub last_record_sequence: u64,
+    #[serde(default)]
+    pub writer_state: String,
     pub win32_error_code: u32,
     pub message: String,
     pub validation_errors: Vec<String>,
@@ -1227,6 +1243,11 @@ pub fn capture_sample_fileio_session() -> Result<CaptureResult, String>
 pub fn replay_last_session() -> Result<SessionReplayResult, String>
 {
     let session_path = default_session_path();
+    replay_session_at_path(session_path)
+}
+
+pub fn replay_session_at_path(session_path: PathBuf) -> Result<SessionReplayResult, String>
+{
     let helper_output = run_helper_args(&[
         "replay-session".to_string(),
         "--session".to_string(),
@@ -1235,6 +1256,16 @@ pub fn replay_last_session() -> Result<SessionReplayResult, String>
 
     serde_json::from_str(&helper_output)
         .map_err(|error| format!("failed to parse session replay result: {error}; stdout={helper_output}"))
+}
+
+pub fn replay_session_path(session_path: String) -> Result<SessionReplayResult, String>
+{
+    if session_path.trim().is_empty()
+    {
+        return Err("session path is empty".to_string());
+    }
+
+    replay_session_at_path(PathBuf::from(session_path))
 }
 
 pub fn attach_target_process_capture(process_id: u32, duration_ms: u32) -> Result<CaptureResult, String>

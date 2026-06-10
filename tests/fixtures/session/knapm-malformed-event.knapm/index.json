@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "0.1.0",
+  "format": "knapm-index",
+  "sessionId": "fixture-knapm-malformed",
+  "operationId": "fixture-knapm-op",
+  "chunks": [
+    {
+      "chunkSequence": 1,
+      "batchSequence": 1,
+      "file": "chunks/trace-000001.jsonl",
+      "compression": "none",
+      "eventCount": 1,
+      "firstRecordSequence": 1,
+      "lastRecordSequence": 1,
+      "firstEventId": 1,
+      "lastEventId": 1,
+      "byteLength": 255,
+      "sha256": "e363bf2992925f7190e1dc7fb108ddb4afcec56916a09fe97b8eb68c7c5c3186"
+    }
+  ]
+}

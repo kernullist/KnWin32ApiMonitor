@@ -295,13 +295,21 @@ export interface ProcessTreeResult {
 export interface SessionInfo {
   schemaVersion: string;
   success: boolean;
+  format: string;
   sessionId: string;
   sessionPath: string;
   createdUtc: string;
+  finalized: boolean;
   traceEventCount: number;
   agentEventCount: number;
   auditEventCount: number;
   droppedEvents: number;
+  transportDroppedEvents: number;
+  hostDroppedBatches: number;
+  chunkCount: number;
+  lastBatchSequence: number;
+  lastRecordSequence: number;
+  writerState: string;
   win32ErrorCode: number;
   message: string;
   validationErrors: string[];

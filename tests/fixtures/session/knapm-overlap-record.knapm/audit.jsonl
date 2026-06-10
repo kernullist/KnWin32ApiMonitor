@@ -1,0 +1,1 @@
+{"schemaVersion":"0.1.0","messageType":"audit","operationId":"fixture-knapm-overlap-op","pid":1234,"tid":1235,"sequence":1,"message":"fixture audit","timestampUtc":"2026-06-10T00:00:00Z","event":"capture_started","details":""}

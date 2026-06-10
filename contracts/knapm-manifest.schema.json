@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/knapm-manifest.schema.json",
+  "title": "KnMonKnapmManifest",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "format",
+    "formatVersion",
+    "sessionId",
+    "operationId",
+    "createdUtc",
+    "updatedUtc",
+    "finalizedUtc",
+    "finalized",
+    "source",
+    "backendMode",
+    "captureMode",
+    "injectionMethod",
+    "target",
+    "agent",
+    "session",
+    "eventCounts",
+    "droppedEvents",
+    "transportDroppedEvents",
+    "hostDroppedBatches",
+    "chunkCount",
+    "lastBatchSequence",
+    "lastRecordSequence",
+    "writerState",
+    "files"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "format": { "const": "knapm" },
+    "formatVersion": { "type": "string" },
+    "sessionId": { "type": "string", "minLength": 1 },
+    "operationId": { "type": "string", "minLength": 1 },
+    "createdUtc": { "type": "string" },
+    "updatedUtc": { "type": "string" },
+    "finalizedUtc": { "type": "string" },
+    "finalized": { "type": "boolean" },
+    "source": { "const": "knmon-native-helper attach-session" },
+    "backendMode": { "enum": ["native-capture"] },
+    "captureMode": { "enum": ["bounded-native-attach"] },
+    "injectionMethod": { "enum": ["remote LoadLibraryW"] },
+    "target": {
+      "type": "object",
+      "required": ["path", "pid", "tid", "architecture"],
+      "properties": {
+        "path": { "type": "string" },
+        "pid": { "type": "integer", "minimum": 0 },
+        "tid": { "type": "integer", "minimum": 0 },
+        "architecture": { "enum": ["x86", "x64"] }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "required": ["path", "architecture", "version"],
+      "properties": {
+        "path": { "type": "string" },
+        "architecture": { "enum": ["x86", "x64"] },
+        "version": { "type": "string" }
+      }
+    },
+    "session": { "$ref": "native-session.schema.json" },
+    "eventCounts": {
+      "type": "object",
+      "required": ["audit", "agentEvents", "traceEvents", "capturedEvents"],
+      "properties": {
+        "audit": { "type": "integer", "minimum": 0 },
+        "agentEvents": { "type": "integer", "minimum": 0 },
+        "traceEvents": { "type": "integer", "minimum": 0 },
+        "capturedEvents": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "droppedEvents": { "type": "integer", "minimum": 0 },
+    "transportDroppedEvents": { "type": "integer", "minimum": 0 },
+    "hostDroppedBatches": { "type": "integer", "minimum": 0 },
+    "chunkCount": { "type": "integer", "minimum": 0 },
+    "lastBatchSequence": { "type": "integer", "minimum": 0 },
+    "lastRecordSequence": { "type": "integer", "minimum": 0 },
+    "writerState": { "enum": ["created", "writing", "partial", "finalized", "failed", "stale", "recovery_required"] },
+    "files": {
+      "type": "object",
+      "required": ["audit", "agentEvents", "index", "chunkDirectory"],
+      "properties": {
+        "audit": { "const": "audit.jsonl" },
+        "agentEvents": { "const": "agent-events.jsonl" },
+        "index": { "const": "index.json" },
+        "chunkDirectory": { "const": "chunks" }
+      }
+    }
+  }
+}

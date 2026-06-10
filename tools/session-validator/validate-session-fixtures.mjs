@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import crypto from "node:crypto";
 import path from "node:path";
 import process from "node:process";
 
@@ -285,9 +286,302 @@ function validateSessionFixture(name, expectedSuccess) {
   return true;
 }
 
+function sha256(text) {
+  return crypto.createHash("sha256").update(text).digest("hex");
+}
+
+function isSafeKnapmChunkPath(filePath) {
+  return typeof filePath === "string" && /^chunks\/trace-[0-9]{6}\.jsonl$/u.test(filePath);
+}
+
+function validateKnapmFixture(name, expectedSuccess) {
+  const sessionPath = path.join(fixtureRoot, name);
+  const errors = [];
+  const manifestLabel = path.relative(repoRoot, path.join(sessionPath, "manifest.json"));
+  const manifest = readJson(path.join(sessionPath, "manifest.json"), errors);
+  const index = readJson(path.join(sessionPath, "index.json"), errors);
+
+  if (manifest) {
+    requireString(manifest.schemaVersion, "schemaVersion", manifestLabel, errors);
+    requireString(manifest.formatVersion, "formatVersion", manifestLabel, errors);
+    requireString(manifest.sessionId, "sessionId", manifestLabel, errors);
+    requireString(manifest.operationId, "operationId", manifestLabel, errors);
+    requireString(manifest.createdUtc, "createdUtc", manifestLabel, errors);
+    requireString(manifest.updatedUtc, "updatedUtc", manifestLabel, errors);
+    requireNumber(manifest.droppedEvents, "droppedEvents", manifestLabel, errors);
+    requireNumber(manifest.transportDroppedEvents, "transportDroppedEvents", manifestLabel, errors);
+    requireNumber(manifest.hostDroppedBatches, "hostDroppedBatches", manifestLabel, errors);
+    requireNumber(manifest.chunkCount, "chunkCount", manifestLabel, errors);
+    requireNumber(manifest.lastBatchSequence, "lastBatchSequence", manifestLabel, errors);
+    requireNumber(manifest.lastRecordSequence, "lastRecordSequence", manifestLabel, errors);
+    requireString(manifest.writerState, "writerState", manifestLabel, errors);
+
+    if (manifest.format !== "knapm") {
+      errors.push(`${manifestLabel}: format must be knapm`);
+    }
+
+    if (manifest.source !== "knmon-native-helper attach-session") {
+      errors.push(`${manifestLabel}: source must be knmon-native-helper attach-session`);
+    }
+
+    if (manifest.backendMode !== "native-capture") {
+      errors.push(`${manifestLabel}: backendMode must be native-capture`);
+    }
+
+    if (manifest.captureMode !== "bounded-native-attach") {
+      errors.push(`${manifestLabel}: captureMode must be bounded-native-attach`);
+    }
+
+    if (manifest.injectionMethod !== "remote LoadLibraryW") {
+      errors.push(`${manifestLabel}: injectionMethod must be remote LoadLibraryW`);
+    }
+
+    if (typeof manifest.finalized !== "boolean") {
+      errors.push(`${manifestLabel}: finalized must be boolean`);
+    }
+
+    if (manifest.finalized && (typeof manifest.finalizedUtc !== "string" || manifest.finalizedUtc.length === 0)) {
+      errors.push(`${manifestLabel}: finalizedUtc is required when finalized`);
+    }
+
+    if (!manifest.target || typeof manifest.target !== "object") {
+      errors.push(`${manifestLabel}: target block is missing`);
+    } else {
+      requireString(manifest.target.path, "target.path", manifestLabel, errors);
+      requireNumber(manifest.target.pid, "target.pid", manifestLabel, errors);
+      requireNumber(manifest.target.tid, "target.tid", manifestLabel, errors);
+      requireArchitecture(manifest.target.architecture, "target.architecture", manifestLabel, errors);
+    }
+
+    if (!manifest.agent || typeof manifest.agent !== "object") {
+      errors.push(`${manifestLabel}: agent block is missing`);
+    } else {
+      requireString(manifest.agent.path, "agent.path", manifestLabel, errors);
+      requireArchitecture(manifest.agent.architecture, "agent.architecture", manifestLabel, errors);
+      if (manifest.finalized) {
+        requireString(manifest.agent.version, "agent.version", manifestLabel, errors);
+      }
+    }
+
+    if (!manifest.session || typeof manifest.session !== "object") {
+      errors.push(`${manifestLabel}: session block is missing`);
+    } else {
+      requireString(manifest.session.sessionId, "session.sessionId", manifestLabel, errors);
+      requireString(manifest.session.operationId, "session.operationId", manifestLabel, errors);
+      requireNumber(manifest.session.recordsStreamed, "session.recordsStreamed", manifestLabel, errors);
+      requireNumber(manifest.session.lastTransportSequence, "session.lastTransportSequence", manifestLabel, errors);
+      requireNumber(manifest.session.transportDroppedEvents, "session.transportDroppedEvents", manifestLabel, errors);
+      requireNumber(manifest.session.hostDroppedBatches, "session.hostDroppedBatches", manifestLabel, errors);
+    }
+
+    const auditRows = readJsonl(path.join(sessionPath, "audit.jsonl"), errors);
+    const agentRows = readJsonl(path.join(sessionPath, "agent-events.jsonl"), errors);
+    if (manifest.eventCounts?.audit !== undefined && manifest.eventCounts.audit !== auditRows.length) {
+      errors.push(`${manifestLabel}: audit count must match audit.jsonl`);
+    }
+
+    if (manifest.eventCounts?.agentEvents !== undefined && manifest.eventCounts.agentEvents !== agentRows.length) {
+      errors.push(`${manifestLabel}: agentEvents count must match agent-events.jsonl`);
+    }
+
+    if (manifest.finalized) {
+      let hasHello = false;
+      let hasDropped = false;
+      let hasShutdown = false;
+      for (const [index, row] of agentRows.entries()) {
+        const rowLabel = `${path.relative(repoRoot, path.join(sessionPath, "agent-events.jsonl"))}:${index + 1}`;
+        hasHello = hasHello || row.messageType === "agent_hello";
+        hasDropped = hasDropped || row.messageType === "dropped_events";
+        if (row.messageType === "agent_shutdown") {
+          hasShutdown = true;
+          requireString(row.reason, "reason", rowLabel, errors);
+          requireNumber(row.installedHooks, "installedHooks", rowLabel, errors);
+          requireNumber(row.restoredHooks, "restoredHooks", rowLabel, errors);
+          requireNumber(row.failedHooks, "failedHooks", rowLabel, errors);
+          if (Number.isInteger(row.installedHooks) && Number.isInteger(row.restoredHooks) && row.restoredHooks < row.installedHooks) {
+            errors.push(`${rowLabel}: restoredHooks must be greater than or equal to installedHooks`);
+          }
+
+          if (row.failedHooks !== 0) {
+            errors.push(`${rowLabel}: failedHooks must be 0`);
+          }
+        }
+      }
+
+      if (!hasHello) {
+        errors.push(`${manifestLabel}: finalized agent events must contain agent_hello`);
+      }
+
+      if (!hasDropped) {
+        errors.push(`${manifestLabel}: finalized agent events must contain dropped_events`);
+      }
+
+      if (!hasShutdown) {
+        errors.push(`${manifestLabel}: finalized agent events must contain agent_shutdown`);
+      }
+    }
+  }
+
+  if (index) {
+    const indexLabel = path.relative(repoRoot, path.join(sessionPath, "index.json"));
+    if (index.format !== "knapm-index") {
+      errors.push(`${indexLabel}: format must be knapm-index`);
+    }
+
+    if (manifest?.sessionId && index.sessionId !== manifest.sessionId) {
+      errors.push(`${indexLabel}: sessionId must match manifest`);
+    }
+
+    if (manifest?.operationId && index.operationId !== manifest.operationId) {
+      errors.push(`${indexLabel}: operationId must match manifest`);
+    }
+
+    if (!Array.isArray(index.chunks)) {
+      errors.push(`${indexLabel}: chunks must be an array`);
+    } else {
+      if (manifest && index.chunks.length !== manifest.chunkCount) {
+        errors.push(`${indexLabel}: chunk count must match manifest`);
+      }
+
+      let expectedChunk = 1;
+      let previousBatch = 0;
+      let previousRecord = 0;
+      let hasPreviousRecord = false;
+      let traceCount = 0;
+      let indexedLastBatch = 0;
+      let indexedLastRecord = 0;
+      for (const chunk of index.chunks) {
+        const chunkLabel = `${indexLabel}:chunk${expectedChunk}`;
+        requireNumber(chunk.chunkSequence, "chunkSequence", chunkLabel, errors);
+        requireNumber(chunk.batchSequence, "batchSequence", chunkLabel, errors);
+        requireNumber(chunk.eventCount, "eventCount", chunkLabel, errors);
+        requireNumber(chunk.firstRecordSequence, "firstRecordSequence", chunkLabel, errors);
+        requireNumber(chunk.lastRecordSequence, "lastRecordSequence", chunkLabel, errors);
+        requireNumber(chunk.firstEventId, "firstEventId", chunkLabel, errors);
+        requireNumber(chunk.lastEventId, "lastEventId", chunkLabel, errors);
+        requireNumber(chunk.byteLength, "byteLength", chunkLabel, errors);
+        requireString(chunk.file, "file", chunkLabel, errors);
+        requireString(chunk.sha256, "sha256", chunkLabel, errors);
+
+        if (chunk.chunkSequence !== expectedChunk) {
+          errors.push(`${chunkLabel}: chunkSequence must be contiguous`);
+        }
+
+        if (previousBatch !== 0 && chunk.batchSequence !== previousBatch + 1) {
+          errors.push(`${chunkLabel}: batchSequence must be contiguous`);
+        }
+
+        if (hasPreviousRecord && chunk.firstRecordSequence <= previousRecord) {
+          errors.push(`${chunkLabel}: record ranges must be monotonic`);
+        }
+
+        if (chunk.compression !== "none") {
+          errors.push(`${chunkLabel}: compression must be none`);
+        }
+
+        const safeChunkPath = isSafeKnapmChunkPath(chunk.file);
+        if (!safeChunkPath) {
+          errors.push(`${chunkLabel}: file must match chunks/trace-NNNNNN.jsonl`);
+          expectedChunk += 1;
+          previousBatch = chunk.batchSequence;
+          previousRecord = chunk.lastRecordSequence;
+          hasPreviousRecord = true;
+          continue;
+        }
+
+        const chunkPath = path.join(sessionPath, chunk.file);
+        let chunkText = "";
+        try {
+          chunkText = fs.readFileSync(chunkPath, "utf8");
+        } catch (error) {
+          errors.push(`${path.relative(repoRoot, chunkPath)}: failed to read: ${error.message}`);
+          expectedChunk += 1;
+          previousBatch = chunk.batchSequence;
+          previousRecord = chunk.lastRecordSequence;
+          continue;
+        }
+
+        if (chunkText.length !== chunk.byteLength) {
+          errors.push(`${path.relative(repoRoot, chunkPath)}: byteLength mismatch`);
+        }
+
+        if (sha256(chunkText) !== chunk.sha256) {
+          errors.push(`${path.relative(repoRoot, chunkPath)}: sha256 mismatch`);
+        }
+
+        const rows = chunkText
+          .split(/\r?\n/u)
+          .filter((line) => line.trim().length > 0)
+          .map((line, index) => {
+            try {
+              return JSON.parse(line);
+            } catch (error) {
+              errors.push(`${path.relative(repoRoot, chunkPath)}:${index + 1}: failed to parse JSONL row: ${error.message}`);
+              return null;
+            }
+          })
+          .filter((row) => row !== null);
+
+        if (rows.length !== chunk.eventCount) {
+          errors.push(`${path.relative(repoRoot, chunkPath)}: eventCount mismatch`);
+        }
+
+        for (const [index, row] of rows.entries()) {
+          const rowLabel = `${path.relative(repoRoot, chunkPath)}:${index + 1}`;
+          requireString(row.schemaVersion, "schemaVersion", rowLabel, errors);
+          requireNumber(row.eventId, "eventId", rowLabel, errors);
+          requireString(row.api, "api", rowLabel, errors);
+        }
+
+        traceCount += rows.length;
+        expectedChunk += 1;
+        previousBatch = chunk.batchSequence;
+        previousRecord = chunk.lastRecordSequence;
+        hasPreviousRecord = true;
+        indexedLastBatch = chunk.batchSequence;
+        indexedLastRecord = chunk.lastRecordSequence;
+      }
+
+      if (manifest?.eventCounts?.traceEvents !== undefined && traceCount !== manifest.eventCounts.traceEvents) {
+        errors.push(`${indexLabel}: indexed trace count must match manifest`);
+      }
+
+      if (manifest && index.chunks.length > 0 && manifest.lastBatchSequence !== indexedLastBatch) {
+        errors.push(`${indexLabel}: indexed last batch must match manifest`);
+      }
+
+      if (manifest && index.chunks.length > 0 && manifest.lastRecordSequence !== indexedLastRecord) {
+        errors.push(`${indexLabel}: indexed last record must match manifest`);
+      }
+    }
+  }
+
+  const success = errors.length === 0;
+
+  if (success !== expectedSuccess) {
+    console.error(`KNAPM session fixture ${name} ${success ? "unexpectedly passed" : "unexpectedly failed"}.`);
+    for (const error of errors) {
+      console.error(`- ${error}`);
+    }
+    return false;
+  }
+
+  console.log(`KNAPM session fixture ${name}: ${success ? "valid" : "invalid as expected"}`);
+  return true;
+}
+
 const results = [
   validateSessionFixture("valid-sample", true),
-  validateSessionFixture("malformed-missing-session-id", false)
+  validateSessionFixture("malformed-missing-session-id", false),
+  validateKnapmFixture("valid-knapm.knapm", true),
+  validateKnapmFixture("knapm-partial-unfinalized.knapm", true),
+  validateKnapmFixture("knapm-missing-index.knapm", false),
+  validateKnapmFixture("knapm-missing-chunk.knapm", false),
+  validateKnapmFixture("knapm-bad-hash.knapm", false),
+  validateKnapmFixture("knapm-noncontiguous-batch.knapm", false),
+  validateKnapmFixture("knapm-overlap-record.knapm", false),
+  validateKnapmFixture("knapm-unsafe-chunk-path.knapm", false),
+  validateKnapmFixture("knapm-malformed-event.knapm", false)
 ];
 
 if (results.some((result) => !result)) {

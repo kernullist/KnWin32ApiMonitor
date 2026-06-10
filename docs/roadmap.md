@@ -124,7 +124,7 @@ Current implementation notes:
 4. `replay-session --session <dir>` returns trace-compatible events without launching a target or loading an agent.
 5. The UI exposes `Capture And Save` and `Replay Last` for the default `captures/latest-sample-fileio` session.
 6. `knmon-collector.exe smoke-backpressure --capacity 4 --events 10` proves bounded synthetic collector intake, FIFO retention, drop-newest overflow, and dropped-event accounting.
-7. Durable `.knapm` session chunks, replay indexing, and crash-tolerant high-volume writers remain future work.
+7. Phase 11I adds durable directory-backed `.knapm` session chunks and indexed replay for bounded streaming attach sessions; compressed chunks, metadata-database catalogs, and crash-tolerant daemon writers remain future work.
 
 ## Phase 5: Safe Agent Harness
 
@@ -512,7 +512,7 @@ Next implementation focus:
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 
-Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, Phase 11F, Phase 11G, and Phase 11H foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, cancellation-safe operation ownership for bounded attach/process-tree helper commands, durable native session ownership readiness, and bounded UI streaming trace batches are implemented; persistent daemon supervision, durable restart/recovery, and full `.knapm` replay chunk writing remain future work.
+Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, Phase 11F, Phase 11G, Phase 11H, and Phase 11I foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, cancellation-safe operation ownership for bounded attach/process-tree helper commands, durable native session ownership readiness, bounded UI streaming trace batches, and durable `.knapm` chunk replay are implemented; persistent daemon supervision, daemon restart/recovery, compressed chunks, and metadata-database replay catalogs remain future work.
 
 Goal:
 
@@ -625,10 +625,22 @@ Current verified Phase 11H behavior:
 8. `contracts/native-trace-batch.schema.json` and `contracts/native-session-frame.schema.json` define the stream frame contract and future replay chunk boundary.
 9. `tools/native-smoke/streaming-session-ui-batch-smoke.ps1` verifies streaming state visibility, non-empty trace batches, monotonic batch/record sequences, safe cancellation, final counter consistency, and `agent_shutdown reason=self_disable`.
 
+Current verified Phase 11I behavior:
+
+1. `attach-session --stream-batches --write-knapm <path.knapm>` writes an inspectable directory-backed `.knapm` container while preserving stdout JSONL streaming frames.
+2. Each non-empty `trace_batch` becomes one `chunks/trace-000NNN.jsonl` file with an `index.json` entry containing chunk sequence, batch sequence, record range, event-id range, byte length, compression marker, and SHA-256.
+3. `manifest.json` records format, finalization, session ownership, counters, target/agent evidence, writer state, chunk count, last batch sequence, and last indexed record sequence.
+4. `validate-session --session <path.knapm>` verifies manifest/index identity, chunk existence, byte length, SHA-256, contiguous batch sequence, monotonic record ranges, trace event shape, final counter consistency, and finalized vs partial writer state without target mutation.
+5. `replay-session --session <path.knapm>` validates first and then replays indexed trace chunks into the existing `session-replay` result shape without launching or injecting into a target.
+6. Legacy `manifest.json` + JSONL session directories remain compatible with the same validate/replay commands.
+7. `contracts/knapm-manifest.schema.json`, `contracts/knapm-index.schema.json`, and additive `session-info.schema.json` fields document the durable format.
+8. `tools/session-validator/validate-session-fixtures.mjs` now covers valid `.knapm`, partial unfinalized `.knapm`, missing index, missing chunk, bad hash, non-contiguous batch sequence, and malformed trace event fixtures.
+9. `tools/native-smoke/knapm-streaming-replay-smoke.ps1` verifies live x64 streaming `.knapm` write, hash-checked validation, indexed replay, safe cancellation, final counter consistency, and `agent_shutdown reason=self_disable`.
+
 Next implementation focus:
 
-1. Add persistent daemon supervision only after the Phase 11H bounded stream contract is extended to durable restart/recovery semantics.
-2. Write `.knapm` session chunks from `trace_batch` boundaries and add indexed replay over those chunks.
+1. Add persistent daemon supervision only after the Phase 11I `.knapm` contract is extended to explicit daemon restart/recovery ownership semantics.
+2. Add zstd compression and metadata-database replay catalogs only after the inspectable uncompressed `.knapm` contract remains stable.
 3. Keep protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 
 ## Phase 12: Advanced UX

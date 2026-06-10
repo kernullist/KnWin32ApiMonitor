@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "0.1.0",
+  "format": "knapm-index",
+  "sessionId": "fixture-knapm-noncontiguous",
+  "operationId": "fixture-knapm-op",
+  "chunks": [
+    {
+      "chunkSequence": 1,
+      "batchSequence": 1,
+      "file": "chunks/trace-000001.jsonl",
+      "compression": "none",
+      "eventCount": 1,
+      "firstRecordSequence": 1,
+      "lastRecordSequence": 1,
+      "firstEventId": 1,
+      "lastEventId": 1,
+      "byteLength": 275,
+      "sha256": "5faf6cad46b55100d8fcd3fa15ac77d90f9ee5bbf84e692f73031cfab50705ea"
+    },
+    {
+      "chunkSequence": 2,
+      "batchSequence": 3,
+      "file": "chunks/trace-000002.jsonl",
+      "compression": "none",
+      "eventCount": 1,
+      "firstRecordSequence": 2,
+      "lastRecordSequence": 2,
+      "firstEventId": 2,
+      "lastEventId": 2,
+      "byteLength": 261,
+      "sha256": "273d156ce5f5ba0a77b54e32299aa8d9c5637218606e81964a9802c17c6847bc"
+    }
+  ]
+}
