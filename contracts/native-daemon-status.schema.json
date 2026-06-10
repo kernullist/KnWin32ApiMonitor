@@ -36,6 +36,7 @@
         "running",
         "stopped",
         "not_running",
+        "stale",
         "start_failed",
         "stop_timeout"
       ]

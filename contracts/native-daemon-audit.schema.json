@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/native-daemon-audit.schema.json",
+  "title": "KnMonNativeDaemonAudit",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "success",
+    "backendMode",
+    "operation",
+    "daemon",
+    "sessions",
+    "pruneEligibleCount",
+    "dryRun",
+    "mutationAttempted",
+    "prunedSessionIds",
+    "win32ErrorCode",
+    "message"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "success": { "type": "boolean" },
+    "backendMode": { "enum": ["native-capture"] },
+    "operation": { "enum": ["daemon_audit", "daemon_prune_stale"] },
+    "daemon": { "$ref": "native-daemon-status.schema.json" },
+    "sessions": {
+      "type": "array",
+      "items": { "$ref": "native-session.schema.json" }
+    },
+    "pruneEligibleCount": { "type": "integer", "minimum": 0 },
+    "dryRun": { "type": "boolean" },
+    "mutationAttempted": { "type": "boolean" },
+    "prunedSessionIds": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "win32ErrorCode": { "type": "integer", "minimum": 0 },
+    "message": { "type": "string" }
+  }
+}

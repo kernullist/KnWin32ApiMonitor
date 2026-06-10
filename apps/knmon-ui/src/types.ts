@@ -67,6 +67,15 @@ export interface NativeSession {
   daemonHeartbeatUtc: string;
   daemonControlEndpoint: string;
   knapmPath: string;
+  daemonAlive: boolean;
+  sessionProcessAlive: boolean;
+  targetAlive: boolean;
+  knapmExists: boolean;
+  knapmValid: boolean;
+  recoveryState: string;
+  recoveryReason: string;
+  pruneEligible: boolean;
+  pruneReason: string;
 }
 
 export interface NativeDaemonStatus {
@@ -82,6 +91,21 @@ export interface NativeDaemonStatus {
   controlEndpoint: string;
   runtimeDirectory: string;
   sessionCount: number;
+  win32ErrorCode: number;
+  message: string;
+}
+
+export interface NativeDaemonAudit {
+  schemaVersion: string;
+  success: boolean;
+  backendMode: BackendMode;
+  operation: string;
+  daemon: NativeDaemonStatus;
+  sessions: NativeSession[];
+  pruneEligibleCount: number;
+  dryRun: boolean;
+  mutationAttempted: boolean;
+  prunedSessionIds: string[];
   win32ErrorCode: number;
   message: string;
 }

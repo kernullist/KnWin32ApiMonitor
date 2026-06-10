@@ -124,7 +124,7 @@ Current implementation notes:
 4. `replay-session --session <dir>` returns trace-compatible events without launching a target or loading an agent.
 5. The UI exposes `Capture And Save` and `Replay Last` for the default `captures/latest-sample-fileio` session.
 6. `knmon-collector.exe smoke-backpressure --capacity 4 --events 10` proves bounded synthetic collector intake, FIFO retention, drop-newest overflow, and dropped-event accounting.
-7. Phase 11I adds durable directory-backed `.knapm` session chunks and indexed replay for bounded streaming attach sessions, Phase 11J adds explicit `.knapm` restart/recovery ownership classification, and Phase 11K adds a host-side persistent daemon supervision foundation; compressed chunks, metadata-database catalogs, Windows service mode, and crash-tolerant daemon recovery remain future work.
+7. Phase 11I adds durable directory-backed `.knapm` session chunks and indexed replay for bounded streaming attach sessions, Phase 11J adds explicit `.knapm` restart/recovery ownership classification, Phase 11K adds a host-side persistent daemon supervision foundation, and Phase 11L hardens daemon audit/stale registry handling; compressed chunks, metadata-database catalogs, Windows service mode, and crash-tolerant daemon recovery remain future work.
 
 ## Phase 5: Safe Agent Harness
 
@@ -512,7 +512,7 @@ Next implementation focus:
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 
-Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, Phase 11F, Phase 11G, Phase 11H, Phase 11I, Phase 11J, and Phase 11K foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, cancellation-safe operation ownership for bounded attach/process-tree helper commands, durable native session ownership readiness, bounded UI streaming trace batches, durable `.knapm` chunk replay, `.knapm` restart/recovery ownership classification, and host-side persistent daemon-owned session supervision are implemented; Windows service mode, automatic daemon crash recovery, orphaned active-agent repair, compressed chunks, and metadata-database replay catalogs remain future work.
+Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, Phase 11F, Phase 11G, Phase 11H, Phase 11I, Phase 11J, Phase 11K, and Phase 11L foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, cancellation-safe operation ownership for bounded attach/process-tree helper commands, durable native session ownership readiness, bounded UI streaming trace batches, durable `.knapm` chunk replay, `.knapm` restart/recovery ownership classification, host-side persistent daemon-owned session supervision, and daemon audit/stale-registry hardening are implemented; Windows service mode, automatic daemon crash recovery, orphaned active-agent repair, compressed chunks, and metadata-database replay catalogs remain future work.
 
 Goal:
 
@@ -661,10 +661,23 @@ Current verified Phase 11K behavior:
 8. `contracts/native-daemon-status.schema.json`, `native-session.schema.json`, `knapm-manifest.schema.json`, and `protocol-version.json` document the Phase 11K daemon fields and command boundary.
 9. `tools/native-smoke/persistent-daemon-session-smoke.ps1` verifies daemon start, start-command return while daemon/session processes remain alive, streamed records, clean stop, hash-checked validation, replay, `persistent-daemon` owner metadata, and daemon shutdown.
 
+Current verified Phase 11L behavior:
+
+1. `knmon-native-helper.exe daemon-status --runtime-dir <dir>` reports `daemonState=stale` when a daemon state file exists but the recorded daemon PID is dead.
+2. `daemon-audit --runtime-dir <dir>` returns daemon status plus session audit fields for daemon/session/target liveness, `.knapm` existence/validation, recovery state/reason/action, and `pruneEligible`.
+3. `daemon-list-sessions` uses the same classifier and surfaces additive audit fields through `native-session.schema.json`.
+4. `daemon-prune-stale --runtime-dir <dir> --dry-run` reports only prune-eligible daemon registry records without mutation.
+5. `daemon-prune-stale --runtime-dir <dir>` deletes only stale daemon session record JSON files; it does not delete `.knapm` data, recover writers, unload agents, or mutate target processes.
+6. `daemon-start-session` rejects duplicate live target PID, live session id, live `.knapm` path, and stale registry conflicts before launching a new attach helper.
+7. Audit classifications cover `healthy`, `finalized`, `stale`, `daemon_crashed`, `writer_crashed`, `orphaned_agent_risk`, and `malformed`.
+8. Tauri exposes daemon audit/prune wrappers, and the selected-target UI can show daemon liveness, writer/target liveness, audit recovery state, and prune eligibility for daemon sessions.
+9. `tools/native-smoke/persistent-daemon-hardening-smoke.ps1` verifies healthy audit, duplicate rejection before mutation, stale daemon status, daemon crash classification, writer crash/orphan-risk evidence, dry-run/actual prune, active-record preservation, and finalized `.knapm` validate/replay after pruning.
+10. `tools/session-validator/validate-session-fixtures.mjs` covers deterministic daemon registry fixtures for valid stale registry and malformed registry records.
+
 Next implementation focus:
 
-1. Harden daemon supervision failure handling before adding crash recovery: duplicate session arbitration, stale daemon registry cleanup, daemon crash classification, and orphaned loaded-agent runbook evidence.
-2. Add zstd compression and metadata-database replay catalogs only after daemon-owned uncompressed `.knapm` validation remains stable.
+1. Add zstd compression and metadata-database replay catalogs now that daemon-owned uncompressed `.knapm` validation and registry hardening are stable.
+2. Keep automatic daemon crash recovery and orphaned active-agent repair behind a separate design review with explicit operator runbooks.
 3. Keep Windows service mode, protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 
 ## Phase 12: Advanced UX

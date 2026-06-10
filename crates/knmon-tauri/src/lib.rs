@@ -95,6 +95,24 @@ pub struct NativeSession
     pub daemon_control_endpoint: String,
     #[serde(default)]
     pub knapm_path: String,
+    #[serde(default)]
+    pub daemon_alive: bool,
+    #[serde(default)]
+    pub session_process_alive: bool,
+    #[serde(default)]
+    pub target_alive: bool,
+    #[serde(default)]
+    pub knapm_exists: bool,
+    #[serde(default)]
+    pub knapm_valid: bool,
+    #[serde(default)]
+    pub recovery_state: String,
+    #[serde(default)]
+    pub recovery_reason: String,
+    #[serde(default)]
+    pub prune_eligible: bool,
+    #[serde(default)]
+    pub prune_reason: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -145,6 +163,24 @@ pub struct NativeDaemonSessionList
     pub operation: String,
     pub daemon: NativeDaemonStatus,
     pub sessions: Vec<NativeSession>,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeDaemonAudit
+{
+    pub schema_version: String,
+    pub success: bool,
+    pub backend_mode: String,
+    pub operation: String,
+    pub daemon: NativeDaemonStatus,
+    pub sessions: Vec<NativeSession>,
+    pub prune_eligible_count: u64,
+    pub dry_run: bool,
+    pub mutation_attempted: bool,
+    pub pruned_session_ids: Vec<String>,
+    pub win32_error_code: u32,
     pub message: String,
 }
 
@@ -780,6 +816,15 @@ fn session_view(record: &NativeOperationRecord) -> NativeSession
         daemon_heartbeat_utc: String::new(),
         daemon_control_endpoint: String::new(),
         knapm_path: String::new(),
+        daemon_alive: false,
+        session_process_alive: false,
+        target_alive: false,
+        knapm_exists: false,
+        knapm_valid: false,
+        recovery_state: String::new(),
+        recovery_reason: String::new(),
+        prune_eligible: false,
+        prune_reason: String::new(),
     }
 }
 
@@ -1288,6 +1333,32 @@ pub fn native_daemon_sessions() -> Result<Vec<NativeSession>, String>
     ])?;
     let result: NativeDaemonSessionList = parse_helper_json(&helper_output, "daemon-list-sessions")?;
     Ok(result.sessions)
+}
+
+pub fn native_daemon_audit() -> Result<NativeDaemonAudit, String>
+{
+    let helper_output = run_helper_args(&[
+        "daemon-audit".to_string(),
+        "--runtime-dir".to_string(),
+        default_daemon_runtime_path().to_string_lossy().to_string(),
+    ])?;
+    parse_helper_json(&helper_output, "daemon-audit")
+}
+
+pub fn prune_stale_daemon_sessions(dry_run: bool) -> Result<NativeDaemonAudit, String>
+{
+    let mut args = vec![
+        "daemon-prune-stale".to_string(),
+        "--runtime-dir".to_string(),
+        default_daemon_runtime_path().to_string_lossy().to_string(),
+    ];
+    if dry_run
+    {
+        args.push("--dry-run".to_string());
+    }
+
+    let helper_output = run_helper_args(&args)?;
+    parse_helper_json(&helper_output, "daemon-prune-stale")
 }
 
 pub fn stop_daemon_session(session_id: String) -> Result<NativeSession, String>

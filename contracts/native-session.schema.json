@@ -66,6 +66,26 @@
     "daemonStartedUtc": { "type": "string" },
     "daemonHeartbeatUtc": { "type": "string" },
     "daemonControlEndpoint": { "type": "string" },
-    "knapmPath": { "type": "string" }
+    "knapmPath": { "type": "string" },
+    "daemonAlive": { "type": "boolean" },
+    "sessionProcessAlive": { "type": "boolean" },
+    "targetAlive": { "type": "boolean" },
+    "knapmExists": { "type": "boolean" },
+    "knapmValid": { "type": "boolean" },
+    "recoveryState": {
+      "enum": [
+        "",
+        "healthy",
+        "finalized",
+        "stale",
+        "daemon_crashed",
+        "writer_crashed",
+        "orphaned_agent_risk",
+        "malformed"
+      ]
+    },
+    "recoveryReason": { "type": "string" },
+    "pruneEligible": { "type": "boolean" },
+    "pruneReason": { "type": "string" }
   }
 }

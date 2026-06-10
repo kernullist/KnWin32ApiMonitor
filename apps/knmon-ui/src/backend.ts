@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { mockTargets } from "./mockData";
-import type { CaptureResult, CaptureSessionState, LaunchResult, NativeDaemonStatus, NativeOperation, NativeSession, NativeTraceBatch, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
+import type { CaptureResult, CaptureSessionState, LaunchResult, NativeDaemonAudit, NativeDaemonStatus, NativeOperation, NativeSession, NativeTraceBatch, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
 
 function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -175,6 +175,24 @@ export async function listDaemonSessions(): Promise<NativeSession[]> {
   }
 
   return invoke<NativeSession[]>("list_daemon_sessions");
+}
+
+export async function auditDaemonSessions(): Promise<NativeDaemonAudit> {
+  if (!isTauriRuntime()) {
+    throw new Error("Daemon audit requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeDaemonAudit>("audit_daemon_sessions");
+}
+
+export async function pruneStaleDaemonSessions(dryRun: boolean): Promise<NativeDaemonAudit> {
+  if (!isTauriRuntime()) {
+    throw new Error("Daemon stale registry pruning requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeDaemonAudit>("prune_stale_daemon_sessions", {
+    dryRun
+  });
 }
 
 export async function startDaemonSupervisedSession(pid: number, durationMs: number): Promise<NativeSession> {

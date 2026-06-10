@@ -5,6 +5,7 @@ import process from "node:process";
 
 const repoRoot = process.cwd();
 const fixtureRoot = path.join(repoRoot, "tests", "fixtures", "session");
+const daemonFixtureRoot = path.join(repoRoot, "tests", "fixtures", "daemon");
 
 const expectedFiles = {
   audit: "audit.jsonl",
@@ -662,6 +663,89 @@ function validateKnapmFixture(name, expectedSuccess) {
   return true;
 }
 
+function validateDaemonRegistryFixture(name, expectedSuccess) {
+  const errors = [];
+  const runtimePath = path.join(daemonFixtureRoot, name, "runtime");
+  const statePath = path.join(runtimePath, "daemon-state.json");
+  const sessionsPath = path.join(runtimePath, "sessions");
+  const label = path.relative(repoRoot, statePath);
+  const state = readJson(statePath, errors);
+
+  if (state) {
+    requireString(state.schemaVersion, "schemaVersion", label, errors);
+    requireString(state.backendMode, "backendMode", label, errors);
+    requireString(state.operation, "operation", label, errors);
+    requireString(state.daemonState, "daemonState", label, errors);
+    requireNumber(state.daemonProcessId, "daemonProcessId", label, errors);
+    requireString(state.daemonInstanceId, "daemonInstanceId", label, errors);
+    requireString(state.controlEndpoint, "controlEndpoint", label, errors);
+    requireString(state.runtimeDirectory, "runtimeDirectory", label, errors);
+    requireNumber(state.sessionCount, "sessionCount", label, errors);
+
+    if (state.backendMode !== "native-capture") {
+      errors.push(`${label}: backendMode must be native-capture`);
+    }
+
+    if (!["daemon_run", "daemon_status"].includes(state.operation)) {
+      errors.push(`${label}: operation must be daemon_run or daemon_status`);
+    }
+  }
+
+  let sessionFiles = [];
+  try {
+    sessionFiles = fs.readdirSync(sessionsPath).filter((file) => file.endsWith(".json"));
+  } catch (error) {
+    errors.push(`${path.relative(repoRoot, sessionsPath)}: failed to list sessions: ${error.message}`);
+  }
+
+  if (state && Number.isInteger(state.sessionCount) && state.sessionCount !== sessionFiles.length) {
+    errors.push(`${label}: sessionCount must match daemon session records`);
+  }
+
+  for (const file of sessionFiles) {
+    const recordPath = path.join(sessionsPath, file);
+    const recordLabel = path.relative(repoRoot, recordPath);
+    const record = readJson(recordPath, errors);
+    if (!record) {
+      continue;
+    }
+
+    requireString(record.schemaVersion, "schemaVersion", recordLabel, errors);
+    requireString(record.sessionId, "sessionId", recordLabel, errors);
+    requireString(record.operationId, "operationId", recordLabel, errors);
+    requireNumber(record.targetProcessId, "targetProcessId", recordLabel, errors);
+    requireNumber(record.daemonProcessId, "daemonProcessId", recordLabel, errors);
+    requireString(record.daemonInstanceId, "daemonInstanceId", recordLabel, errors);
+    requireString(record.daemonStartedUtc, "daemonStartedUtc", recordLabel, errors);
+    requireString(record.daemonControlEndpoint, "daemonControlEndpoint", recordLabel, errors);
+    requireNumber(record.sessionProcessId, "sessionProcessId", recordLabel, errors);
+    requireString(record.knapmPath, "knapmPath", recordLabel, errors);
+    requireString(record.cancellationEventName, "cancellationEventName", recordLabel, errors);
+    requireString(record.startedUtc, "startedUtc", recordLabel, errors);
+    requireNumber(record.durationMs, "durationMs", recordLabel, errors);
+
+    if (typeof record.knapmPath === "string" && record.knapmPath.length > 0) {
+      const referencedKnapm = path.resolve(repoRoot, record.knapmPath);
+      if (!fs.existsSync(referencedKnapm)) {
+        errors.push(`${recordLabel}: referenced knapmPath does not exist`);
+      }
+    }
+  }
+
+  const success = errors.length === 0;
+
+  if (success !== expectedSuccess) {
+    console.error(`Daemon registry fixture ${name} ${success ? "unexpectedly passed" : "unexpectedly failed"}.`);
+    for (const error of errors) {
+      console.error(`- ${error}`);
+    }
+    return false;
+  }
+
+  console.log(`Daemon registry fixture ${name}: ${success ? "valid" : "invalid as expected"}`);
+  return true;
+}
+
 const results = [
   validateSessionFixture("valid-sample", true),
   validateSessionFixture("malformed-missing-session-id", false),
@@ -682,7 +766,9 @@ const results = [
   validateKnapmFixture("knapm-noncontiguous-batch.knapm", false),
   validateKnapmFixture("knapm-overlap-record.knapm", false),
   validateKnapmFixture("knapm-unsafe-chunk-path.knapm", false),
-  validateKnapmFixture("knapm-malformed-event.knapm", false)
+  validateKnapmFixture("knapm-malformed-event.knapm", false),
+  validateDaemonRegistryFixture("valid-stale-registry", true),
+  validateDaemonRegistryFixture("malformed-registry", false)
 ];
 
 if (results.some((result) => !result)) {

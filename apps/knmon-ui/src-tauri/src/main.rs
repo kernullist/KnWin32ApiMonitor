@@ -13,8 +13,10 @@ use knmon_tauri::{
     native_session_states,
     replay_last_session,
     replay_session_path as replay_session_path_backend,
+    native_daemon_audit as native_daemon_audit_backend,
     native_daemon_sessions,
     native_daemon_status as native_daemon_status_backend,
+    prune_stale_daemon_sessions as prune_stale_daemon_sessions_backend,
     start_streaming_attach_session as start_streaming_attach_session_backend,
     start_daemon_if_needed as start_daemon_if_needed_backend,
     start_daemon_supervised_session as start_daemon_supervised_session_backend,
@@ -25,6 +27,7 @@ use knmon_tauri::{
     CaptureSessionState,
     CaptureResult,
     LaunchResult,
+    NativeDaemonAudit,
     NativeDaemonStatus,
     NativeOperation,
     NativeSession,
@@ -137,6 +140,18 @@ fn list_daemon_sessions() -> Result<Vec<NativeSession>, String>
 }
 
 #[tauri::command]
+fn audit_daemon_sessions() -> Result<NativeDaemonAudit, String>
+{
+    native_daemon_audit_backend()
+}
+
+#[tauri::command]
+fn prune_stale_daemon_sessions(dry_run: bool) -> Result<NativeDaemonAudit, String>
+{
+    prune_stale_daemon_sessions_backend(dry_run)
+}
+
+#[tauri::command]
 fn start_daemon_supervised_session(pid: u32, duration_ms: u32) -> Result<NativeSession, String>
 {
     start_daemon_supervised_session_backend(pid, duration_ms)
@@ -193,6 +208,8 @@ fn main()
             start_daemon_if_needed,
             native_daemon_status,
             list_daemon_sessions,
+            audit_daemon_sessions,
+            prune_stale_daemon_sessions,
             start_daemon_supervised_session,
             stop_daemon_session,
             drain_native_trace_batches,

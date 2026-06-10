@@ -1006,6 +1006,9 @@ function App() {
                     </button>
                     {activeNativeSession.helperProcessId ? <small>helper {activeNativeSession.helperProcessId}</small> : null}
                     {activeNativeSession.daemonProcessId ? <small>daemon {activeNativeSession.daemonProcessId}</small> : null}
+                    {activeNativeSession.recoveryState ? <small>{activeNativeSession.recoveryState}/{activeNativeSession.recoveryReason || "n/a"}</small> : null}
+                    {activeNativeSession.pruneEligible ? <small>prune {activeNativeSession.pruneReason || "eligible"}</small> : null}
+                    {activeNativeSession.daemonProcessId ? <small>alive d={activeNativeSession.daemonAlive ? "yes" : "no"} w={activeNativeSession.sessionProcessAlive ? "yes" : "no"} t={activeNativeSession.targetAlive ? "yes" : "no"}</small> : null}
                     {activeNativeSession.knapmPath ? <small title={activeNativeSession.knapmPath}>{activeNativeSession.knapmPath}</small> : null}
                     {activeNativeSession.staleReason ? <small>{activeNativeSession.staleReason}</small> : null}
                     {activeNativeSession.lastError ? <small>{activeNativeSession.lastError}</small> : null}

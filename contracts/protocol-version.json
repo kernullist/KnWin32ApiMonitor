@@ -81,11 +81,15 @@
     "knapmRecoveryActions": ["none", "wait", "replay_only", "recover_writer", "mark_abandoned", "manual_inspection"],
     "knapmRecoveryBoundary": "Phase 11J classifies ownership and restart eligibility without target mutation; daemon crash recovery remains future work",
     "persistentDaemonFoundation": {
-      "phase": "11K",
-      "commands": ["daemon-start", "daemon-status", "daemon-start-session", "daemon-list-sessions", "daemon-stop-session", "daemon-stop"],
+      "phase": "11L",
+      "commands": ["daemon-start", "daemon-status", "daemon-audit", "daemon-prune-stale", "daemon-start-session", "daemon-list-sessions", "daemon-stop-session", "daemon-stop"],
       "ownerKind": "persistent-daemon",
       "controlEndpoint": "file-registry",
       "daemonStatusSchema": "native-daemon-status.schema.json",
+      "daemonAuditSchema": "native-daemon-audit.schema.json",
+      "auditStates": ["healthy", "finalized", "stale", "daemon_crashed", "writer_crashed", "orphaned_agent_risk", "malformed"],
+      "duplicateStartRejections": ["already_supervised", "session_id_in_use", "knapm_path_in_use", "stale_registry_requires_prune"],
+      "staleRegistryPruneBoundary": "daemon-prune-stale removes only daemon registry records classified pruneEligible; it does not delete .knapm data, recover writers, unload agents, or mutate target processes",
       "serviceMode": false,
       "crashRecovery": false,
       "sameBitnessOnly": true

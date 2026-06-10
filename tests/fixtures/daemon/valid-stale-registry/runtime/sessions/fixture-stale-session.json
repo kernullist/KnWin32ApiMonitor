@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "0.1.0",
+  "sessionId": "fixture-stale-session",
+  "operationId": "fixture-stale-operation",
+  "targetProcessId": 999998,
+  "daemonProcessId": 999996,
+  "daemonInstanceId": "fixture-daemon-stale",
+  "daemonStartedUtc": "2026-06-10T00:00:00.000Z",
+  "daemonControlEndpoint": "file-registry:tests/fixtures/daemon/valid-stale-registry/runtime",
+  "sessionProcessId": 999997,
+  "knapmPath": "tests/fixtures/session/knapm-stale-target-exited.knapm",
+  "cancellationEventName": "Local\\KNMonCancel_fixture_stale_operation",
+  "startedUtc": "2026-06-10T00:00:00.000Z",
+  "durationMs": 30000
+}
