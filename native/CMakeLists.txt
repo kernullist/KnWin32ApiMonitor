@@ -102,6 +102,7 @@ target_link_libraries(knmon-sample-fileio PRIVATE winhttp)
 target_link_libraries(knmon-sample-fileio PRIVATE wininet)
 target_link_libraries(knmon-sample-fileio PRIVATE user32)
 target_link_libraries(knmon-sample-fileio PRIVATE gdi32)
+target_link_libraries(knmon-sample-fileio PRIVATE psapi)
 target_compile_definitions(knmon-sample-fileio PRIVATE
     WIN32_LEAN_AND_MEAN
     NOMINMAX

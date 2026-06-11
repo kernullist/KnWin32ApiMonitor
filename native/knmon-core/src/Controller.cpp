@@ -2560,6 +2560,69 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "HDC", "hdc", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture));
         payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
         break;
+    case KnMonTransportApiId::EnumProcessModules:
+    {
+        const std::string process = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string moduleArrayPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string neededBytesPointer = HexPointerValue(record.Values64[2], result.Architecture);
+        const std::string firstModule = HexPointerValue(record.Values64[3], result.Architecture);
+        const std::string moduleArrayDecoded = record.Values32[3] == 0 ? moduleArrayPointer : "firstModule=" + firstModule;
+        const std::string neededBytes = record.Values32[2] == 0 ? neededBytesPointer : std::to_string(record.Values32[1]);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hProcess", "in", process, process, process) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "HMODULE*", "lphModule", "out", moduleArrayPointer, moduleArrayDecoded, moduleArrayDecoded) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "DWORD", "cb", "in", std::to_string(record.Values32[0]), std::to_string(record.Values32[0]), std::to_string(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "LPDWORD", "lpcbNeeded", "out", neededBytesPointer, neededBytes, neededBytes);
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::GetModuleInformation:
+    {
+        const std::string process = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string module = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string moduleInfoPointer = HexPointerValue(record.Values64[2], result.Architecture);
+        std::string moduleInfoDecoded = moduleInfoPointer;
+        if (record.Values32[2] != 0)
+        {
+            std::ostringstream decoded;
+            decoded << "base=" << HexPointerValue(record.Values64[3], result.Architecture)
+                    << ",size=" << record.Values32[1]
+                    << ",entry=" << HexPointerValue(record.Values64[4], result.Architecture);
+            moduleInfoDecoded = decoded.str();
+        }
+
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hProcess", "in", process, process, process) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "HMODULE", "hModule", "in", module, module, module) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "LPMODULEINFO", "lpmodinfo", "out", moduleInfoPointer, moduleInfoDecoded, moduleInfoDecoded) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "DWORD", "cb", "in", std::to_string(record.Values32[0]), std::to_string(record.Values32[0]), std::to_string(record.Values32[0]));
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::GetModuleBaseNameW:
+    {
+        const std::string process = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string module = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string baseNamePointer = HexPointerValue(record.Values64[2], result.Architecture);
+        const std::string baseName = text0.empty() ? baseNamePointer : text0;
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hProcess", "in", process, process, process) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "HMODULE", "hModule", "in", module, module, module) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "LPWSTR", "lpBaseName", "out", baseNamePointer, baseName, baseName, DecodeStatusName(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "DWORD", "nSize", "in", std::to_string(record.Values32[0]), std::to_string(record.Values32[0]), std::to_string(record.Values32[0]));
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::GetModuleFileNameExW:
+    {
+        const std::string process = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string module = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string fileNamePointer = HexPointerValue(record.Values64[2], result.Architecture);
+        const std::string fileName = text0.empty() ? fileNamePointer : text0;
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hProcess", "in", process, process, process) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "HMODULE", "hModule", "in", module, module, module) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "LPWSTR", "lpFilename", "out", fileNamePointer, fileName, fileName, DecodeStatusName(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "DWORD", "nSize", "in", std::to_string(record.Values32[0]), std::to_string(record.Values32[0]), std::to_string(record.Values32[0]));
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::RpcStringBindingComposeW:
     {
         const std::string objUuidPointer = HexPointerValue(record.Values64[0], result.Architecture);

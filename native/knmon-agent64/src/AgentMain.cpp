@@ -4,6 +4,10 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
+#ifndef PSAPI_VERSION
+#define PSAPI_VERSION 1
+#endif
+#include <psapi.h>
 #include <bcrypt.h>
 #include <rpc.h>
 #include <wincrypt.h>
@@ -123,6 +127,10 @@ using GetWindowThreadProcessIdFn = DWORD(WINAPI*)(HWND, LPDWORD);
 using CreateCompatibleDCFn = HDC(WINAPI*)(HDC);
 using GetDeviceCapsFn = int(WINAPI*)(HDC, int);
 using DeleteDCFn = BOOL(WINAPI*)(HDC);
+using EnumProcessModulesFn = BOOL(WINAPI*)(HANDLE, HMODULE*, DWORD, LPDWORD);
+using GetModuleInformationFn = BOOL(WINAPI*)(HANDLE, HMODULE, LPMODULEINFO, DWORD);
+using GetModuleBaseNameWFn = DWORD(WINAPI*)(HANDLE, HMODULE, LPWSTR, DWORD);
+using GetModuleFileNameExWFn = DWORD(WINAPI*)(HANDLE, HMODULE, LPWSTR, DWORD);
 using RpcStringBindingComposeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR*);
 using RpcBindingFromStringBindingWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_BINDING_HANDLE*);
 using RpcStringFreeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR*);
@@ -198,6 +206,10 @@ GetWindowThreadProcessIdFn g_originalGetWindowThreadProcessId = nullptr;
 CreateCompatibleDCFn g_originalCreateCompatibleDC = nullptr;
 GetDeviceCapsFn g_originalGetDeviceCaps = nullptr;
 DeleteDCFn g_originalDeleteDC = nullptr;
+EnumProcessModulesFn g_originalEnumProcessModules = nullptr;
+GetModuleInformationFn g_originalGetModuleInformation = nullptr;
+GetModuleBaseNameWFn g_originalGetModuleBaseNameW = nullptr;
+GetModuleFileNameExWFn g_originalGetModuleFileNameExW = nullptr;
 RpcStringBindingComposeWFn g_originalRpcStringBindingComposeW = nullptr;
 RpcBindingFromStringBindingWFn g_originalRpcBindingFromStringBindingW = nullptr;
 RpcStringFreeWFn g_originalRpcStringFreeW = nullptr;
@@ -291,7 +303,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 51;
+constexpr std::size_t HookDefinitionCount = 55;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1526,6 +1538,10 @@ std::uint16_t ModuleId(const char* moduleName)
     else if (_stricmp(moduleName, "gdi32.dll") == 0)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Gdi32);
+    }
+    else if (_stricmp(moduleName, "psapi.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Psapi);
     }
 
     return result;
@@ -2920,6 +2936,141 @@ void EmitDeleteDCEvent(
     }
 }
 
+void EmitEnumProcessModulesEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE process,
+    HMODULE* modules,
+    DWORD requestedBytes,
+    LPDWORD neededBytes)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::EnumProcessModules, "psapi.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(process));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(modules));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(neededBytes));
+        record->Values32[0] = requestedBytes;
+
+        DWORD localNeededBytes = 0;
+        if (result != FALSE && ReadCurrentProcessValue(neededBytes, &localNeededBytes))
+        {
+            record->Values32[1] = localNeededBytes;
+            record->Values32[2] = 1;
+        }
+
+        HMODULE firstModule = nullptr;
+        if (result != FALSE && requestedBytes >= sizeof(HMODULE) && ReadCurrentProcessValue(modules, &firstModule))
+        {
+            record->Values64[3] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(firstModule));
+            record->Values32[3] = 1;
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetModuleInformationEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE process,
+    HMODULE module,
+    LPMODULEINFO moduleInfo,
+    DWORD requestedBytes)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetModuleInformation, "psapi.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(process));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(module));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(moduleInfo));
+        record->Values32[0] = requestedBytes;
+
+        MODULEINFO localModuleInfo = {};
+        if (result != FALSE && ReadCurrentProcessValue(moduleInfo, &localModuleInfo))
+        {
+            record->Values64[3] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(localModuleInfo.lpBaseOfDll));
+            record->Values64[4] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(localModuleInfo.EntryPoint));
+            record->Values32[1] = localModuleInfo.SizeOfImage;
+            record->Values32[2] = 1;
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetModuleBaseNameWEvent(
+    DWORD result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE process,
+    HMODULE module,
+    LPWSTR baseName,
+    DWORD sizeChars)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetModuleBaseNameW, "psapi.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(result);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(process));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(module));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(baseName));
+        record->Values32[0] = sizeChars;
+        if (result != 0)
+        {
+            record->Values32[1] = CopyWidePointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), baseName);
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetModuleFileNameExWEvent(
+    DWORD result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE process,
+    HMODULE module,
+    LPWSTR fileName,
+    DWORD sizeChars)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetModuleFileNameExW, "psapi.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(result);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(process));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(module));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(fileName));
+        record->Values32[0] = sizeChars;
+        if (result != 0)
+        {
+            record->Values32[1] = CopyWidePointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), fileName);
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 std::uint32_t CopyRpcWideStringText(char* destination, std::uint32_t* length, std::size_t capacity, RPC_WSTR source)
 {
     return CopyWidePointerText(destination, length, capacity, reinterpret_cast<const wchar_t*>(source));
@@ -3512,6 +3663,10 @@ DWORD WINAPI HookedGetWindowThreadProcessId(HWND window, LPDWORD processId);
 HDC WINAPI HookedCreateCompatibleDC(HDC dc);
 int WINAPI HookedGetDeviceCaps(HDC dc, int index);
 BOOL WINAPI HookedDeleteDC(HDC dc);
+BOOL WINAPI HookedEnumProcessModules(HANDLE process, HMODULE* modules, DWORD requestedBytes, LPDWORD neededBytes);
+BOOL WINAPI HookedGetModuleInformation(HANDLE process, HMODULE module, LPMODULEINFO moduleInfo, DWORD requestedBytes);
+DWORD WINAPI HookedGetModuleBaseNameW(HANDLE process, HMODULE module, LPWSTR baseName, DWORD sizeChars);
+DWORD WINAPI HookedGetModuleFileNameExW(HANDLE process, HMODULE module, LPWSTR fileName, DWORD sizeChars);
 RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR protSeq, RPC_WSTR networkAddr, RPC_WSTR endpoint, RPC_WSTR options, RPC_WSTR* stringBinding);
 RPC_STATUS RPC_ENTRY HookedRpcBindingFromStringBindingW(RPC_WSTR stringBinding, RPC_BINDING_HANDLE* binding);
 RPC_STATUS RPC_ENTRY HookedRpcStringFreeW(RPC_WSTR* string);
@@ -3570,6 +3725,10 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "gdi32.dll", "CreateCompatibleDC", reinterpret_cast<void*>(HookedCreateCompatibleDC), reinterpret_cast<void**>(&g_originalCreateCompatibleDC), false, true, false, 0, 0 },
         HookDefinition { "gdi32.dll", "GetDeviceCaps", reinterpret_cast<void*>(HookedGetDeviceCaps), reinterpret_cast<void**>(&g_originalGetDeviceCaps), false, true, false, 0, 0 },
         HookDefinition { "gdi32.dll", "DeleteDC", reinterpret_cast<void*>(HookedDeleteDC), reinterpret_cast<void**>(&g_originalDeleteDC), false, true, false, 0, 0 },
+        HookDefinition { "psapi.dll", "EnumProcessModules", reinterpret_cast<void*>(HookedEnumProcessModules), reinterpret_cast<void**>(&g_originalEnumProcessModules), false, true, false, 0, 0 },
+        HookDefinition { "psapi.dll", "GetModuleInformation", reinterpret_cast<void*>(HookedGetModuleInformation), reinterpret_cast<void**>(&g_originalGetModuleInformation), false, true, false, 0, 0 },
+        HookDefinition { "psapi.dll", "GetModuleBaseNameW", reinterpret_cast<void*>(HookedGetModuleBaseNameW), reinterpret_cast<void**>(&g_originalGetModuleBaseNameW), false, true, false, 0, 0 },
+        HookDefinition { "psapi.dll", "GetModuleFileNameExW", reinterpret_cast<void*>(HookedGetModuleFileNameExW), reinterpret_cast<void**>(&g_originalGetModuleFileNameExW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringBindingComposeW", reinterpret_cast<void*>(HookedRpcStringBindingComposeW), reinterpret_cast<void**>(&g_originalRpcStringBindingComposeW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcBindingFromStringBindingW", reinterpret_cast<void*>(HookedRpcBindingFromStringBindingW), reinterpret_cast<void**>(&g_originalRpcBindingFromStringBindingW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringFreeW", reinterpret_cast<void*>(HookedRpcStringFreeW), reinterpret_cast<void**>(&g_originalRpcStringFreeW), false, true, false, 0, 0 },
@@ -5189,6 +5348,130 @@ BOOL WINAPI HookedDeleteDC(HDC dc)
     if (HooksEnabled())
     {
         EmitDeleteDCEvent(result, eventError, start, end, dc);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedEnumProcessModules(HANDLE process, HMODULE* modules, DWORD requestedBytes, LPDWORD neededBytes)
+{
+    if (g_inHook || !HooksEnabled() || g_originalEnumProcessModules == nullptr)
+    {
+        if (g_originalEnumProcessModules == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalEnumProcessModules(process, modules, requestedBytes, neededBytes);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalEnumProcessModules(process, modules, requestedBytes, neededBytes);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FALSE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitEnumProcessModulesEvent(result, eventError, start, end, process, modules, requestedBytes, neededBytes);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedGetModuleInformation(HANDLE process, HMODULE module, LPMODULEINFO moduleInfo, DWORD requestedBytes)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetModuleInformation == nullptr)
+    {
+        if (g_originalGetModuleInformation == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalGetModuleInformation(process, module, moduleInfo, requestedBytes);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalGetModuleInformation(process, module, moduleInfo, requestedBytes);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FALSE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitGetModuleInformationEvent(result, eventError, start, end, process, module, moduleInfo, requestedBytes);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+DWORD WINAPI HookedGetModuleBaseNameW(HANDLE process, HMODULE module, LPWSTR baseName, DWORD sizeChars)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetModuleBaseNameW == nullptr)
+    {
+        if (g_originalGetModuleBaseNameW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return 0;
+        }
+
+        return g_originalGetModuleBaseNameW(process, module, baseName, sizeChars);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const DWORD result = g_originalGetModuleBaseNameW(process, module, baseName, sizeChars);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == 0 ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitGetModuleBaseNameWEvent(result, eventError, start, end, process, module, baseName, sizeChars);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+DWORD WINAPI HookedGetModuleFileNameExW(HANDLE process, HMODULE module, LPWSTR fileName, DWORD sizeChars)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetModuleFileNameExW == nullptr)
+    {
+        if (g_originalGetModuleFileNameExW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return 0;
+        }
+
+        return g_originalGetModuleFileNameExW(process, module, fileName, sizeChars);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const DWORD result = g_originalGetModuleFileNameExW(process, module, fileName, sizeChars);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == 0 ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitGetModuleFileNameExWEvent(result, eventError, start, end, process, module, fileName, sizeChars);
     }
 
     SetLastError(lastError);

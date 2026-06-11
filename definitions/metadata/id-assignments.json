@@ -13,7 +13,8 @@
     { "id": 9, "name": "wininet.dll", "symbol": "Wininet" },
     { "id": 10, "name": "winhttp.dll", "symbol": "Winhttp" },
     { "id": 11, "name": "user32.dll", "symbol": "User32" },
-    { "id": 12, "name": "gdi32.dll", "symbol": "Gdi32" }
+    { "id": 12, "name": "gdi32.dll", "symbol": "Gdi32" },
+    { "id": 13, "name": "psapi.dll", "symbol": "Psapi" }
   ],
   "apis": [
     { "id": 1, "module": "kernel32.dll", "name": "CreateFileW", "symbol": "CreateFileW" },
@@ -112,6 +113,10 @@
     { "id": 94, "module": "user32.dll", "name": "GetWindowThreadProcessId", "symbol": "GetWindowThreadProcessId" },
     { "id": 95, "module": "gdi32.dll", "name": "CreateCompatibleDC", "symbol": "CreateCompatibleDC" },
     { "id": 96, "module": "gdi32.dll", "name": "GetDeviceCaps", "symbol": "GetDeviceCaps" },
-    { "id": 97, "module": "gdi32.dll", "name": "DeleteDC", "symbol": "DeleteDC" }
+    { "id": 97, "module": "gdi32.dll", "name": "DeleteDC", "symbol": "DeleteDC" },
+    { "id": 98, "module": "psapi.dll", "name": "EnumProcessModules", "symbol": "EnumProcessModules" },
+    { "id": 99, "module": "psapi.dll", "name": "GetModuleInformation", "symbol": "GetModuleInformation" },
+    { "id": 100, "module": "psapi.dll", "name": "GetModuleBaseNameW", "symbol": "GetModuleBaseNameW" },
+    { "id": 101, "module": "psapi.dll", "name": "GetModuleFileNameExW", "symbol": "GetModuleFileNameExW" }
   ]
 }

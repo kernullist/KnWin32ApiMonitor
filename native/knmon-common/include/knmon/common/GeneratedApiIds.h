@@ -104,6 +104,10 @@ enum class KnMonTransportApiId : std::uint16_t
     CreateCompatibleDC = 95,
     GetDeviceCaps = 96,
     DeleteDC = 97,
+    EnumProcessModules = 98,
+    GetModuleInformation = 99,
+    GetModuleBaseNameW = 100,
+    GetModuleFileNameExW = 101,
 };
 
 enum class KnMonTransportModuleId : std::uint16_t
@@ -121,5 +125,6 @@ enum class KnMonTransportModuleId : std::uint16_t
     Winhttp = 10,
     User32 = 11,
     Gdi32 = 12,
+    Psapi = 13,
 };
 }

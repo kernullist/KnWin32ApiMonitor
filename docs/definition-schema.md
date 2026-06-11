@@ -24,6 +24,7 @@ definitions/
   win32/file-io.json
   win32/gdi32.json
   win32/loader.json
+  win32/psapi.json
   win32/rpcrt4.json
   win32/resolver.json
   win32/user32.json
@@ -173,7 +174,7 @@ Decode aliases are centralized in `definitions/metadata/decode-aliases.json`. Ea
 
 Enum values live in `definitions/metadata/enums.json`; flag values live in `definitions/metadata/flags.json`. Numeric values may be decimal or hex strings and are normalized by tooling for validation/reporting.
 
-Current File I/O decode metadata covers file access masks, file share masks, CreateFile creation disposition, NT file disposition, File flags/attributes, NT create options, and LoadLibrary flags. Wave 2 metadata also registers generic aliases for registry handles and value buffers, access masks, CNG handles, certificate contexts, RPC bindings, socket handles, internet handles, sockaddr/addrinfo objects, token privileges, service status records, and pointer buffers used by controller-side decoders. Phase 13B adds low-payload HWND/HDC handle aliases and integer system-metric/device-capability index aliases.
+Current File I/O decode metadata covers file access masks, file share masks, CreateFile creation disposition, NT file disposition, File flags/attributes, NT create options, and LoadLibrary flags. Wave 2 metadata also registers generic aliases for registry handles and value buffers, access masks, CNG handles, certificate contexts, RPC bindings, socket handles, internet handles, sockaddr/addrinfo objects, token privileges, service status records, and pointer buffers used by controller-side decoders. Phase 13B adds low-payload HWND/HDC handle aliases and integer system-metric/device-capability index aliases. Phase 13C adds `module_handle_array_pointer` and `module_info_pointer` aliases for bounded PSAPI module-query metadata.
 
 ## Stable Transport IDs
 
@@ -191,7 +192,8 @@ Existing transport IDs are preserved:
 3. Resolver API IDs `12` through `13`.
 4. Wave 2 API IDs `14` through `90`, with selected registry, token query/privilege lookup, bcrypt CNG provider/RNG, crypt32 certificate-store/message-handle, RPCRT4 binding, Winsock, WinHTTP session, and WinINet session IDs promoted from definition-only to smoke-verified IAT coverage.
 5. Phase 13B Wave 3 API IDs `91` through `97`, with selected User32 system/window metadata and GDI32 DC metadata APIs promoted directly to smoke-verified IAT coverage.
-6. Module IDs:
+6. Phase 13C Wave 3 API IDs `98` through `101`, with selected PSAPI module-query APIs promoted directly to smoke-verified IAT coverage.
+7. Module IDs:
    - `kernel32.dll = 1`
    - `ntdll.dll = 2`
    - `kernelbase.dll = 3`
@@ -204,6 +206,7 @@ Existing transport IDs are preserved:
    - `winhttp.dll = 10`
    - `user32.dll = 11`
    - `gdi32.dll = 12`
+   - `psapi.dll = 13`
 
 The native agent and controller use generated compile-time enum constants through `GeneratedApiIds.h`. The controller also uses `GeneratedApiMetadata.h` for API/module names, API family/category/risk labels, argument names/types/directions, decode aliases, and capture timing. Target hook fast paths still do not parse definitions or metadata.
 
@@ -264,11 +267,20 @@ Phase 13B adds seven smoke-verified Wave 3 APIs across:
 
 These records capture only metric/capability indexes and results, HWND/HDC handle values, and window thread/process numeric evidence. They do not capture window text, screenshots, pixels, bitmaps/DIBs, clipboard, keyboard/mouse input, message hooks, credentials, or arbitrary payload previews.
 
-The current definition coverage report totals 97 APIs:
+Phase 13C adds four smoke-verified Wave 3 APIs in `psapi.dll`:
+
+1. `EnumProcessModules`
+2. `GetModuleInformation`
+3. `GetModuleBaseNameW`
+4. `GetModuleFileNameExW`
+
+These records capture only process/module handles, module-array requested/needed byte counts, one bounded first-module handle sample, `MODULEINFO` base address/image size/entry point numeric fields, and bounded module base-name/file-path strings. They do not copy module memory bytes, parse PE headers/sections/import/export/resource/relocation/debug data, read module files, compute hashes, verify signatures, dump full module lists, or emit arbitrary buffer previews.
+
+The current definition coverage report totals 101 APIs:
 
 1. `definition_only`: 46
 2. `hooked`: 4
-3. `smoke_verified`: 47
+3. `smoke_verified`: 51
 
 `NtCreateFile` is captured as a controlled `ntdll.dll` IAT hook in the repository sample target. The native event keeps `returnValue` as the NTSTATUS hex string. For compatibility with the existing trace error model, `lastErrorCode` remains `0` on NT success and a mapped Win32 error on NT failure.
 
@@ -286,7 +298,7 @@ The `NtCreateFile` event includes bounded snapshots for:
 
 Current native API call records are written by the agent into a shared-memory binary ring, then normalized by the controller into the same `api_call` JSON shape outside the target process. Named-pipe JSON remains only for low-volume control and lifecycle messages.
 
-Controller-side normalization uses generated decoder metadata for descriptors. Per-API shared-memory slot interpretation remains explicit. The selected registry, token query/privilege lookup, bcrypt CNG provider/RNG, crypt32 certificate-store/message-handle, RPCRT4 binding, Winsock, WinHTTP session, and WinINet session slices use the existing fixed transport record slots. The token query slice records current-process `TOKEN_QUERY`, token handle, privilege name, and LUID numeric evidence only; it does not capture token privilege arrays, SID/group/ACL/security descriptor data, credentials, service-control data, or token mutation calls such as `AdjustTokenPrivileges`. The bcrypt slice records provider handles, algorithm/property names, status, pointer, and size evidence only; it does not copy random, key, plaintext, ciphertext, IV, or hash input bytes. The crypt32 slice records certificate-store/message handles, provider ID or bounded provider text, encoding/flag values, and pointer evidence only; it does not copy certificate blobs, private keys, cryptographic message payloads, random bytes, keys, plaintext, ciphertext, IVs, or hash input bytes. The WinHTTP session slice records user-agent/access-type/proxy pointer evidence, session handles, and return/status values only; it does not make network requests or copy URLs, headers, bodies, cookies, credentials, proxy credentials, or payload bytes. The WinINet session slice records user-agent/access-type/proxy pointer evidence, session handles, and return/status values only; it does not make network requests or copy URLs, headers, bodies, cookies, credentials, proxy credentials, or payload bytes. High-volume network payload hooks remain deferred until a later hook ABI expansion and overhead review.
+Controller-side normalization uses generated decoder metadata for descriptors. Per-API shared-memory slot interpretation remains explicit. The selected registry, token query/privilege lookup, bcrypt CNG provider/RNG, crypt32 certificate-store/message-handle, RPCRT4 binding, Winsock, WinHTTP session, WinINet session, User32/GDI32 metadata, and PSAPI module-query slices use the existing fixed transport record slots. The token query slice records current-process `TOKEN_QUERY`, token handle, privilege name, and LUID numeric evidence only; it does not capture token privilege arrays, SID/group/ACL/security descriptor data, credentials, service-control data, or token mutation calls such as `AdjustTokenPrivileges`. The bcrypt slice records provider handles, algorithm/property names, status, pointer, and size evidence only; it does not copy random, key, plaintext, ciphertext, IV, or hash input bytes. The crypt32 slice records certificate-store/message handles, provider ID or bounded provider text, encoding/flag values, and pointer evidence only; it does not copy certificate blobs, private keys, cryptographic message payloads, random bytes, keys, plaintext, ciphertext, IVs, or hash input bytes. The WinHTTP session slice records user-agent/access-type/proxy pointer evidence, session handles, and return/status values only; it does not make network requests or copy URLs, headers, bodies, cookies, credentials, proxy credentials, or payload bytes. The WinINet session slice records user-agent/access-type/proxy pointer evidence, session handles, and return/status values only; it does not make network requests or copy URLs, headers, bodies, cookies, credentials, proxy credentials, or payload bytes. The PSAPI slice records bounded module-query metadata only; it does not copy module memory bytes, parse PE metadata, read files, hash modules, verify signatures, or dump complete module lists. High-volume network payload hooks and module-memory/PE payload capture remain deferred until a later hook ABI expansion and overhead review.
 
 Loader-aware Wave 1 records add `LoadLibraryW` evidence and post-load File I/O evidence from `knmon-dynamic-probe.dll`. Resolver records add `GetProcAddress` and `LdrGetProcedureAddress` evidence for the same dynamic probe export. The agent emits module inventory and IAT sweep status messages through the named pipe, but API call events remain shared-memory records.
 
@@ -449,7 +461,7 @@ npm run defs:decoder-tables
 npm run defs:coverage
 ```
 
-`defs:decoder-tables` verifies the generated decoder metadata artifact covers API IDs `1` through `97`, parameter rows, decode alias rows, and length-source resolution.
+`defs:decoder-tables` verifies the generated decoder metadata artifact covers API IDs `1` through `101`, parameter rows, decode alias rows, and length-source resolution.
 
 `defs:coverage` prints a deterministic Markdown report grouped by module, family, risk, hook policy, coverage status, and decode quality. The report explicitly separates:
 

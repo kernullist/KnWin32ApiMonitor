@@ -1,6 +1,10 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
+#ifndef PSAPI_VERSION
+#define PSAPI_VERSION 1
+#endif
+#include <psapi.h>
 #include <bcrypt.h>
 #include <rpc.h>
 #include <wincrypt.h>
@@ -770,6 +774,71 @@ bool RunUserGdiProbe()
     return success;
 }
 
+bool RunPsapiModuleQueryProbe()
+{
+    bool success = false;
+    std::array<HMODULE, 8> modules = {};
+    MODULEINFO moduleInfo = {};
+    std::array<wchar_t, MAX_PATH> baseName = {};
+    std::array<wchar_t, MAX_PATH * 2> modulePath = {};
+    DWORD neededBytes = 0;
+    HANDLE process = GetCurrentProcess();
+
+    do
+    {
+        const DWORD requestedBytes = static_cast<DWORD>(modules.size() * sizeof(HMODULE));
+        if (!EnumProcessModules(process, modules.data(), requestedBytes, &neededBytes))
+        {
+            LogLastError("EnumProcessModules");
+            break;
+        }
+
+        if (neededBytes < sizeof(HMODULE) || modules[0] == nullptr)
+        {
+            std::cout << "EnumProcessModules returned no module evidence\n";
+            break;
+        }
+
+        HMODULE selectedModule = modules[0];
+        if (!GetModuleInformation(process, selectedModule, &moduleInfo, sizeof(moduleInfo)))
+        {
+            LogLastError("GetModuleInformation");
+            break;
+        }
+
+        const DWORD baseNameChars = GetModuleBaseNameW(
+            process,
+            selectedModule,
+            baseName.data(),
+            static_cast<DWORD>(baseName.size()));
+        if (baseNameChars == 0)
+        {
+            LogLastError("GetModuleBaseNameW");
+            break;
+        }
+
+        const DWORD pathChars = GetModuleFileNameExW(
+            process,
+            selectedModule,
+            modulePath.data(),
+            static_cast<DWORD>(modulePath.size()));
+        if (pathChars == 0)
+        {
+            LogLastError("GetModuleFileNameExW");
+            break;
+        }
+
+        std::cout << "psapi module query roundtrip modules_bytes=" << neededBytes
+                  << " image_size=" << moduleInfo.SizeOfImage
+                  << " base_chars=" << baseNameChars
+                  << " path_chars=" << pathChars << "\n";
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
 bool RunWinsockProbe()
 {
     bool success = false;
@@ -1230,6 +1299,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunUserGdiProbe())
+        {
+            break;
+        }
+
+        if (!RunPsapiModuleQueryProbe())
         {
             break;
         }

@@ -581,6 +581,30 @@
       "module": "gdi32.dll",
       "name": "DeleteDC",
       "symbol": "DeleteDC"
+    },
+    {
+      "id": 98,
+      "module": "psapi.dll",
+      "name": "EnumProcessModules",
+      "symbol": "EnumProcessModules"
+    },
+    {
+      "id": 99,
+      "module": "psapi.dll",
+      "name": "GetModuleInformation",
+      "symbol": "GetModuleInformation"
+    },
+    {
+      "id": 100,
+      "module": "psapi.dll",
+      "name": "GetModuleBaseNameW",
+      "symbol": "GetModuleBaseNameW"
+    },
+    {
+      "id": 101,
+      "module": "psapi.dll",
+      "name": "GetModuleFileNameExW",
+      "symbol": "GetModuleFileNameExW"
     }
   ],
   "modules": [
@@ -643,6 +667,11 @@
       "id": 12,
       "name": "gdi32.dll",
       "symbol": "Gdi32"
+    },
+    {
+      "id": 13,
+      "name": "psapi.dll",
+      "symbol": "Psapi"
     }
   ],
   "schemaVersion": "0.1.0",

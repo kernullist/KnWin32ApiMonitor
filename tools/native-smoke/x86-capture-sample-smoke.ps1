@@ -41,6 +41,10 @@ $requiredApis = @(
     "CreateCompatibleDC",
     "GetDeviceCaps",
     "DeleteDC",
+    "EnumProcessModules",
+    "GetModuleInformation",
+    "GetModuleBaseNameW",
+    "GetModuleFileNameExW",
     "RpcStringBindingComposeW",
     "RpcBindingFromStringBindingW",
     "RpcStringFreeW",
@@ -477,6 +481,66 @@ $uiGdiArgs = @($result.capturedEvents | Where-Object { $_.module -in @("user32.d
 if ($uiGdiArgs -cmatch "GetWindowText|WM_GETTEXT|Clipboard|CF_|Screenshot|ScreenCapture|DIB|Bitmap|Keyboard|Mouse|Password|Credential|Authorization|Cookie|BEGIN CERTIFICATE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 UI/GDI events appear to expose text, pixel, clipboard, input, credential, or byte-preview evidence: $uiGdiArgs"
+}
+
+$moduleEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "module" })
+if ($moduleEvents.Count -lt 4)
+{
+    throw "x86 capture did not include the selected PSAPI module-query API family slice."
+}
+
+$enumModules = @($moduleEvents | Where-Object { $_.api -eq "EnumProcessModules" } | Select-Object -First 1)
+if ($enumModules.Count -ne 1 -or $enumModules[0].module -ne "psapi.dll" -or $enumModules[0].hookPolicy -ne "iat" -or $enumModules[0].coverageStatus -ne "smoke_verified" -or $enumModules[0].returnValue -ne "1")
+{
+    throw "x86 EnumProcessModules metadata or return evidence mismatch."
+}
+
+$enumArgs = ($enumModules[0].arguments | ConvertTo-Json -Depth 8)
+if ($enumArgs -notmatch "module_handle_array_pointer" -or $enumArgs -notmatch "firstModule=0x" -or $enumArgs -notmatch "dword_pointer")
+{
+    throw "x86 EnumProcessModules arguments did not include bounded module handle/count evidence: $enumArgs"
+}
+
+$moduleInfo = @($moduleEvents | Where-Object { $_.api -eq "GetModuleInformation" } | Select-Object -First 1)
+if ($moduleInfo.Count -ne 1 -or $moduleInfo[0].module -ne "psapi.dll" -or $moduleInfo[0].apiCategory -ne "process_module_information" -or $moduleInfo[0].returnValue -ne "1")
+{
+    throw "x86 GetModuleInformation metadata or return evidence mismatch."
+}
+
+$moduleInfoArgs = ($moduleInfo[0].arguments | ConvertTo-Json -Depth 8)
+if ($moduleInfoArgs -notmatch "module_info_pointer" -or $moduleInfoArgs -notmatch "base=0x" -or $moduleInfoArgs -notmatch "size=[1-9][0-9]*" -or $moduleInfoArgs -notmatch "entry=0x")
+{
+    throw "x86 GetModuleInformation arguments did not include MODULEINFO numeric evidence: $moduleInfoArgs"
+}
+
+$moduleBaseName = @($moduleEvents | Where-Object { $_.api -eq "GetModuleBaseNameW" } | Select-Object -First 1)
+if ($moduleBaseName.Count -ne 1 -or $moduleBaseName[0].apiCategory -ne "process_module_base_name" -or $moduleBaseName[0].returnValue -notmatch "^[1-9][0-9]*$")
+{
+    throw "x86 GetModuleBaseNameW metadata or return evidence mismatch."
+}
+
+$moduleBaseNameArgs = ($moduleBaseName[0].arguments | ConvertTo-Json -Depth 8)
+if ($moduleBaseNameArgs -notmatch "knmon-sample-fileio\.exe")
+{
+    throw "x86 GetModuleBaseNameW arguments did not include sample module name evidence: $moduleBaseNameArgs"
+}
+
+$moduleFileName = @($moduleEvents | Where-Object { $_.api -eq "GetModuleFileNameExW" } | Select-Object -First 1)
+if ($moduleFileName.Count -ne 1 -or $moduleFileName[0].apiCategory -ne "process_module_file_name" -or $moduleFileName[0].returnValue -notmatch "^[1-9][0-9]*$")
+{
+    throw "x86 GetModuleFileNameExW metadata or return evidence mismatch."
+}
+
+$moduleFileNameArgs = ($moduleFileName[0].arguments | ConvertTo-Json -Depth 8)
+if ($moduleFileNameArgs -notmatch "knmon-sample-fileio\.exe")
+{
+    throw "x86 GetModuleFileNameExW arguments did not include sample module path evidence: $moduleFileNameArgs"
+}
+
+$moduleArgs = @($moduleEvents | ForEach-Object { $_.arguments } | ConvertTo-Json -Depth 8)
+if ($moduleArgs -cmatch "BEGIN CERTIFICATE|PRIVATE KEY|Authorization|Cookie|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|Authenticode|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 PSAPI module-query events appear to expose PE, module-memory, file-content, hash, signature, credential, or byte-preview evidence: $moduleArgs"
 }
 
 $rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })
