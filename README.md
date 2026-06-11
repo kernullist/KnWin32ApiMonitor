@@ -83,6 +83,7 @@ Implemented now:
 46. Phase 11K host-side persistent daemon supervision foundation, including `daemon-start`, `daemon-start-session`, `daemon-list-sessions`, `daemon-stop-session`, `persistent-daemon` `.knapm` owner metadata, Tauri daemon controls, and smoke-proven clean stop/validate/replay.
 47. Phase 11L daemon supervision hardening, including read-only `daemon-audit`, stale registry `daemon-prune-stale`, duplicate target/session/path arbitration before attach mutation, daemon-crash/writer-crash/orphan-risk classification, additive Tauri/UI audit fields, and stale daemon status visibility.
 48. Phase 11M `.knapm` compression and host-side replay catalog support, including `--knapm-compression none|zstd`, zstd raw-block frame validation/replay, stored and uncompressed chunk integrity metadata, read-only catalog build/query, catalog missing-row pruning, Tauri catalog wrappers, UI catalog visibility, and regression smoke coverage.
+49. Phase 12A catalog-backed replay UX and virtualized trace rendering, including catalog rebuild/query/state-target-limit filters, missing-row dry-run/prune controls, explicit per-row `.knapm` replay by path, replay source/status output, and bounded DOM trace rows while preserving full-session JSONL export.
 
 Not implemented yet:
 
@@ -201,7 +202,8 @@ The Phase 11M compression and catalog path keeps replay target-free:
 4. `catalog-sessions --root <dir> --catalog <path>` builds a JSON replay catalog from disk metadata and validation only.
 5. `catalog-query --catalog <path>` filters catalog rows by validation/recovery/writer state and target PID or image text.
 6. `catalog-remove-missing --catalog <path> [--dry-run]` removes only missing catalog rows; it does not delete `.knapm` data, recover writers, unload agents, launch targets, or attach to targets.
-7. Tauri exposes catalog wrappers, and the UI can refresh catalog summary rows beside the session controls.
+7. Tauri exposes catalog wrappers, and the UI can rebuild/query/prune the catalog, inspect catalog rows, and replay an explicit `.knapm` row by path without target mutation.
+8. The trace table uses a local virtual row window so large replay sessions keep the DOM bounded while export and inspector state continue to use the full event set.
 
 Verified live hook coverage:
 
@@ -411,6 +413,12 @@ Validate collector fixtures and native smoke output:
 
 ```powershell
 npm run collector:validate
+```
+
+Validate UI trace virtualization:
+
+```powershell
+npm run ui:validate
 ```
 
 Run available verification:

@@ -686,17 +686,27 @@ Current verified Phase 11M behavior:
 8. `catalog-sessions --root <dir> [--catalog <path>] [--rebuild]` builds a deterministic JSON replay catalog from disk metadata and validation results.
 9. `catalog-query --catalog <path> [--limit n] [--state state] [--target pid-or-text]` filters catalog rows without touching session directories.
 10. `catalog-remove-missing --catalog <path> [--dry-run]` removes only missing catalog rows; it does not delete `.knapm` data, recover writers, unload agents, launch targets, or attach to targets.
-11. Tauri exposes catalog build/query/remove wrappers, and the UI can refresh a compact catalog summary beside the session controls.
+11. Tauri exposes catalog build/query/remove wrappers, and the UI can browse catalog rows, filter by state/target/limit, prune missing catalog rows, and replay an explicit `.knapm` path.
 12. `contracts/knapm-manifest.schema.json`, `contracts/knapm-index.schema.json`, `contracts/session-info.schema.json`, `contracts/session-catalog.schema.json`, and `protocol-version.json` document the compression/catalog contract.
 13. `tools/session-validator/validate-session-fixtures.mjs` covers valid zstd, corrupt zstd frame, bad uncompressed hash, and unsupported compression fixtures.
 14. `tools/native-smoke/knapm-compression-catalog-smoke.ps1` verifies live zstd attach, daemon-owned zstd sessions, validate/replay, catalog build/query, dry-run missing detection, and actual missing-row pruning without deleting active `.knapm` data.
 
+Current verified Phase 12A behavior:
+
+1. The React UI has a catalog-backed replay browser that surfaces path, target image/PID, session id, validation status, recovery state, compression, event count, byte totals, and last validation UTC.
+2. Catalog controls can rebuild, query by state/target/limit, dry-run missing-row removal, and apply missing-row pruning through the existing Tauri wrappers.
+3. Catalog row replay is explicit: selecting a row only records UI selection, while `Replay` calls `replay_session_path` for that row and records replay source/status/path in output.
+4. Missing, corrupt, invalid, or empty replay results clear stale trace selection and report output events instead of leaving an old replay visible as current data.
+5. The trace table uses a local virtual row-window helper so DOM row count stays bounded while display filters, row selection, inspector tabs, and full-session JSONL export continue to use the full event array.
+6. `tools/ui-validator/validate-virtual-trace-window.mjs` covers empty, top, middle, and clamped-bottom virtual trace window calculations and is included in `npm run verify`.
+
 Next implementation focus:
 
-1. Start Phase 12 with catalog-backed replay UX and high-event trace virtualization so large `.knapm` sessions stay usable without increasing target-side overhead.
-2. Keep database-backed catalog indexing behind a separate scale review after the JSON catalog and replay picker contract are stable.
-3. Keep automatic daemon crash recovery and orphaned active-agent repair behind a separate design review with explicit operator runbooks.
-4. Keep Windows service mode, protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
+1. Continue Phase 12 with a query builder and error-focused view over the existing trace model before adding heavier replay indexing.
+2. Add thread and timeline views after query/error UX proves useful on high-event `.knapm` replay sessions.
+3. Keep database-backed catalog indexing behind a separate scale review after the JSON catalog and replay picker contract are stable.
+4. Keep automatic daemon crash recovery and orphaned active-agent repair behind a separate design review with explicit operator runbooks.
+5. Keep Windows service mode, protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 
 ## Phase 12: Advanced UX
 

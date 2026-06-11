@@ -34,7 +34,10 @@ import {
   listNativeTargetProcesses,
   listNativeOperations,
   listTargetProcesses,
+  queryNativeSessionCatalog,
+  removeMissingNativeSessionCatalogEntries,
   replayLastSampleSession,
+  replaySessionPath,
   startBackendSession,
   startDaemonSupervisedSession,
   startStreamingAttachSession,
@@ -45,7 +48,8 @@ import {
 } from "./backend";
 import { apiTree, captureProfiles, createMockFileIoEvent, initialTraceEvents } from "./mockData";
 import { downloadJsonl, estimateSessionBytes } from "./session";
-import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, NativeOperation, NativeSession, NativeSessionCatalog, NativeTraceBatch, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
+import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, NativeOperation, NativeSession, NativeSessionCatalog, NativeSessionCatalogRow, NativeTraceBatch, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
+import { computeVirtualTraceWindow } from "./virtualTrace";
 
 type LeftTab = "targets" | "apis" | "profiles";
 type TraceMode = "flat" | "call-tree";
@@ -59,6 +63,13 @@ const inspectorTabs: Array<{ id: InspectorTab; label: string }> = [
   { id: "return", label: "Return/Error" },
   { id: "output", label: "Output" }
 ];
+
+const traceRowHeight = 27;
+const traceOverscanRows = 6;
+
+type ReplaySource =
+  | { kind: "sample"; label: string; path: string; validationStatus: string }
+  | { kind: "catalog"; label: string; path: string; validationStatus: string };
 
 function formatBytes(value: number): string {
   if (value < 1024) {
@@ -319,6 +330,14 @@ function formatElapsedMs(value: number): string {
   return `${(value / 1000).toFixed(1)}s`;
 }
 
+function nextTraceEventId(events: TraceEvent[]): number {
+  return events.reduce((maximum, event) => Math.max(maximum, event.eventId), 0) + 1;
+}
+
+function catalogRowLabel(row: NativeSessionCatalogRow): string {
+  return row.targetImage || row.sessionId || fileNameFromPath(row.path);
+}
+
 function App() {
   const [leftTab, setLeftTab] = useState<LeftTab>("targets");
   const [targetSource, setTargetSource] = useState<TargetSource>("mock");
@@ -344,11 +363,19 @@ function App() {
   const [nativeOperations, setNativeOperations] = useState<NativeOperation[]>([]);
   const [nativeSessions, setNativeSessions] = useState<NativeSession[]>([]);
   const [sessionCatalog, setSessionCatalog] = useState<NativeSessionCatalog | null>(null);
+  const [catalogStateFilter, setCatalogStateFilter] = useState("all");
+  const [catalogTargetFilter, setCatalogTargetFilter] = useState("");
+  const [catalogLimit, setCatalogLimit] = useState(50);
+  const [selectedCatalogPath, setSelectedCatalogPath] = useState("");
+  const [replaySource, setReplaySource] = useState<ReplaySource | null>(null);
+  const [traceScrollTop, setTraceScrollTop] = useState(0);
+  const [traceViewportHeight, setTraceViewportHeight] = useState(0);
   const [outputEvents, setOutputEvents] = useState<AuditEvent[]>([
     makeAuditEvent("backend_ready", "mock_init", "Mock File I/O backend initialized.")
   ]);
   const nextEventId = useRef(initialTraceEvents.length + 1);
   const streamBatchCursors = useRef<Record<string, number>>({});
+  const traceScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -366,8 +393,38 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const element = traceScrollRef.current;
+    if (!element) {
+      return undefined;
+    }
+
+    const updateViewportHeight = () => {
+      setTraceViewportHeight(element.clientHeight);
+    };
+
+    updateViewportHeight();
+    const observer = new ResizeObserver(updateViewportHeight);
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   function appendOutput(eventsToAppend: AuditEvent[]) {
     setOutputEvents((current) => [...eventsToAppend, ...current].slice(0, 80));
+  }
+
+  function applySessionCatalog(catalog: NativeSessionCatalog) {
+    setSessionCatalog(catalog);
+    setSelectedCatalogPath((current) => {
+      if (current && catalog.sessions.some((row) => row.path === current)) {
+        return current;
+      }
+
+      return catalog.sessions[0]?.path ?? "";
+    });
   }
 
   function replaceTargets(nextTargets: TargetProcess[], nextSource: TargetSource, nextMode: BackendMode) {
@@ -520,14 +577,62 @@ function App() {
     });
   }, [events, filter]);
 
-  const selectedEvent = events.find((event) => event.eventId === selectedEventId) ?? filteredEvents[0] ?? events[0];
+  const selectedTraceIndex = useMemo(
+    () => filteredEvents.findIndex((event) => event.eventId === selectedEventId),
+    [filteredEvents, selectedEventId]
+  );
+  const selectedEvent = selectedTraceIndex >= 0
+    ? filteredEvents[selectedTraceIndex]
+    : filteredEvents[0] ?? events.find((event) => event.eventId === selectedEventId) ?? events[0];
   const selectedTarget = selectedTargetPid === null ? null : targets.find((target) => target.pid === selectedTargetPid) ?? null;
   const targetBlockReason = targetEligibilityReason(selectedTarget, targetSource);
   const activeNativeOperation = nativeOperations.find(isNativeOperationActive) ?? null;
   const activeNativeSession = nativeSessions.find(isNativeSessionActive) ?? null;
   const canRunTargetAction = targetBlockReason === null && !nativeBusy && activeNativeOperation === null && activeNativeSession === null;
   const processTreeSummary = summarizeProcessTree(processTreeResult);
-  const sessionBytes = estimateSessionBytes(events);
+  const sessionBytes = useMemo(() => estimateSessionBytes(events), [events]);
+  const selectedCatalogRow = sessionCatalog?.sessions.find((row) => row.path === selectedCatalogPath) ?? null;
+  const virtualTraceWindow = useMemo(() => {
+    return computeVirtualTraceWindow({
+      itemCount: filteredEvents.length,
+      rowHeight: traceRowHeight,
+      viewportHeight: Math.max(0, traceViewportHeight - traceRowHeight),
+      scrollTop: Math.max(0, traceScrollTop - traceRowHeight),
+      overscan: traceOverscanRows
+    });
+  }, [filteredEvents.length, traceScrollTop, traceViewportHeight]);
+  const visibleTraceEvents = useMemo(
+    () => filteredEvents.slice(virtualTraceWindow.startIndex, virtualTraceWindow.endIndex),
+    [filteredEvents, virtualTraceWindow.startIndex, virtualTraceWindow.endIndex]
+  );
+
+  useEffect(() => {
+    const element = traceScrollRef.current;
+    if (element) {
+      element.scrollTop = 0;
+    }
+
+    setTraceScrollTop(0);
+  }, [filter, traceMode]);
+
+  useEffect(() => {
+    const element = traceScrollRef.current;
+    if (!element || selectedTraceIndex < 0) {
+      return;
+    }
+
+    const selectedTop = traceRowHeight + selectedTraceIndex * traceRowHeight;
+    const selectedBottom = selectedTop + traceRowHeight;
+    if (selectedTop < element.scrollTop) {
+      element.scrollTop = selectedTop;
+      setTraceScrollTop(selectedTop);
+    }
+    else if (selectedBottom > element.scrollTop + element.clientHeight) {
+      const nextScrollTop = Math.max(0, selectedBottom - element.clientHeight);
+      element.scrollTop = nextScrollTop;
+      setTraceScrollTop(nextScrollTop);
+    }
+  }, [selectedTraceIndex, filteredEvents.length]);
 
   useEffect(() => {
     if (!activeNativeSession) {
@@ -581,6 +686,7 @@ function App() {
     setRunning(false);
     setEvents([]);
     setSelectedEventId(0);
+    setReplaySource(null);
     nextEventId.current = 1;
   }
 
@@ -689,15 +795,23 @@ function App() {
         )
       ]);
 
-      if (result.traceEvents.length > 0) {
-        setEvents(result.traceEvents);
-        nextEventId.current = result.traceEvents.length + 1;
-        setSelectedEventId(result.traceEvents[result.traceEvents.length - 1].eventId);
-      }
+      setEvents(result.traceEvents);
+      nextEventId.current = nextTraceEventId(result.traceEvents);
+      setSelectedEventId(result.traceEvents[result.traceEvents.length - 1]?.eventId ?? 0);
+      setReplaySource({
+        kind: "sample",
+        label: result.session.sessionId || "latest-sample-fileio",
+        path: result.session.sessionPath,
+        validationStatus: result.session.success ? "valid" : "invalid"
+      });
 
       setInspectorTab("output");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      setEvents([]);
+      setSelectedEventId(0);
+      nextEventId.current = 1;
+      setReplaySource(null);
       appendOutput([makeAuditEvent("session_replay_blocked", "replay_last_sample_session", message)]);
       setInspectorTab("output");
     } finally {
@@ -711,7 +825,7 @@ function App() {
     try {
       appendOutput([makeAuditEvent("session_catalog_requested", "catalog_native_sessions", "Session catalog refresh requested from UI.")]);
       const catalog = await catalogNativeSessions();
-      setSessionCatalog(catalog);
+      applySessionCatalog(catalog);
       appendOutput([
         makeAuditEvent(
           catalog.success ? "session_catalog_refreshed" : "session_catalog_failed",
@@ -723,6 +837,101 @@ function App() {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       appendOutput([makeAuditEvent("session_catalog_blocked", "catalog_native_sessions", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
+  async function handleQuerySessionCatalog() {
+    setNativeBusy(true);
+
+    try {
+      const queryState = catalogStateFilter === "all" ? "" : catalogStateFilter;
+      appendOutput([makeAuditEvent("session_catalog_query_requested", "query_native_session_catalog", `state=${catalogStateFilter}; target=${catalogTargetFilter || "*"}; limit=${catalogLimit}`)]);
+      const catalog = await queryNativeSessionCatalog(catalogLimit, queryState, catalogTargetFilter.trim());
+      applySessionCatalog(catalog);
+      appendOutput([
+        makeAuditEvent(
+          catalog.success ? "session_catalog_queried" : "session_catalog_query_failed",
+          "query_native_session_catalog",
+          `${catalog.message}; sessions=${catalog.sessionCount}; valid=${catalog.validSessionCount}; invalid=${catalog.invalidSessionCount}; stored=${formatBytes(catalog.storedBytes)}`
+        )
+      ]);
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("session_catalog_query_blocked", "query_native_session_catalog", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
+  async function handleRemoveMissingCatalogEntries(dryRun: boolean) {
+    setNativeBusy(true);
+
+    try {
+      appendOutput([makeAuditEvent("session_catalog_prune_requested", "remove_missing_native_session_catalog_entries", dryRun ? "Dry-run missing-row prune requested from UI." : "Missing-row prune requested from UI.")]);
+      const catalog = await removeMissingNativeSessionCatalogEntries(dryRun);
+      applySessionCatalog(catalog);
+      appendOutput([
+        makeAuditEvent(
+          catalog.success ? "session_catalog_pruned" : "session_catalog_prune_failed",
+          "remove_missing_native_session_catalog_entries",
+          `${catalog.message}; dryRun=${catalog.dryRun}; mutation=${catalog.mutationAttempted}; missing=${catalog.missingSessionPaths.length}; sessions=${catalog.sessionCount}`
+        )
+      ]);
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("session_catalog_prune_blocked", "remove_missing_native_session_catalog_entries", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
+  async function handleReplayCatalogRow(row: NativeSessionCatalogRow) {
+    setNativeBusy(true);
+    setSelectedCatalogPath(row.path);
+
+    try {
+      appendOutput([makeAuditEvent("session_catalog_replay_requested", "replay_session_path", `Catalog replay requested for ${row.path}.`)]);
+      const result = await replaySessionPath(row.path);
+      setBackendMode(result.backendMode);
+      setLastSession(result.session);
+      setDroppedCount(result.session.droppedEvents);
+      setEvents(result.traceEvents);
+      nextEventId.current = nextTraceEventId(result.traceEvents);
+      setSelectedEventId(result.traceEvents[result.traceEvents.length - 1]?.eventId ?? 0);
+      setReplaySource({
+        kind: "catalog",
+        label: catalogRowLabel(row),
+        path: row.path,
+        validationStatus: row.validationStatus
+      });
+      appendOutput([
+        makeAuditEvent(
+          result.success ? "session_catalog_replayed" : "session_catalog_replay_failed",
+          "replay_session_path",
+          `${result.message}; path=${row.path}; traceEvents=${result.traceEvents.length}; dropped=${result.session.droppedEvents}; validation=${row.validationStatus}`,
+          result.session.win32ErrorCode
+        )
+      ]);
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setEvents([]);
+      setSelectedEventId(0);
+      nextEventId.current = 1;
+      setReplaySource({
+        kind: "catalog",
+        label: catalogRowLabel(row),
+        path: row.path,
+        validationStatus: row.validationStatus
+      });
+      appendOutput([makeAuditEvent("session_catalog_replay_blocked", "replay_session_path", message)]);
       setInspectorTab("output");
     } finally {
       setNativeBusy(false);
@@ -1211,7 +1420,7 @@ function App() {
                   </button>
                   <button type="button" className="tool-button" onClick={handleRefreshSessionCatalog} disabled={nativeBusy}>
                     <RefreshCcw size={14} />
-                    <span>Catalog</span>
+                    <span>Build Catalog</span>
                   </button>
                   <button type="button" className="tool-button" disabled title="Bounded sample capture owns target lifetime for this milestone; persistent terminate control is not implemented yet.">
                     <Square size={13} />
@@ -1233,26 +1442,97 @@ function App() {
                     session {lastSession.sessionId || "latest-sample-fileio"} / events={lastSession.traceEventCount} / {lastSession.message}
                   </div>
                 ) : null}
-                {sessionCatalog ? (
-                  <div className="catalog-strip">
-                    <div>
-                      <Database size={14} />
-                      <strong>{sessionCatalog.sessionCount} sessions</strong>
-                      <span>{sessionCatalog.validSessionCount} valid</span>
-                      <span>{sessionCatalog.invalidSessionCount} invalid</span>
-                      <span>{formatBytes(sessionCatalog.storedBytes)} stored</span>
-                    </div>
-                    {sessionCatalog.sessions.slice(0, 3).map((row) => (
-                      <div className="catalog-row" key={row.contentIdentity || row.path} title={row.path}>
-                        <span>{row.targetImage || fileNameFromPath(row.path)}</span>
-                        <strong>{row.validationStatus}</strong>
-                        <span>{row.compression || "none"}</span>
-                        <span>{row.traceEventCount} ev</span>
-                        <small>{row.recoveryState || row.writerState || "n/a"}</small>
-                      </div>
-                    ))}
+                <div className="catalog-browser">
+                  <div className="catalog-summary">
+                    <Database size={14} />
+                    <strong>{sessionCatalog ? `${sessionCatalog.sessionCount} sessions` : "Catalog"}</strong>
+                    <span>{sessionCatalog ? `${sessionCatalog.validSessionCount} valid` : "not loaded"}</span>
+                    <span>{sessionCatalog ? `${sessionCatalog.invalidSessionCount} invalid` : "0 invalid"}</span>
+                    <span>{sessionCatalog ? `${formatBytes(sessionCatalog.storedBytes)} stored` : "0 B stored"}</span>
                   </div>
-                ) : null}
+                  <div className="catalog-controls">
+                    <label htmlFor="catalog-state">State</label>
+                    <select
+                      id="catalog-state"
+                      value={catalogStateFilter}
+                      onChange={(event) => setCatalogStateFilter(event.target.value)}
+                    >
+                      <option value="all">All</option>
+                      <option value="valid">Valid</option>
+                      <option value="invalid">Invalid</option>
+                      <option value="finalized">Finalized</option>
+                      <option value="partial">Partial</option>
+                      <option value="failed">Failed</option>
+                      <option value="stale">Stale</option>
+                      <option value="recovery_required">Recovery</option>
+                      <option value="malformed">Malformed</option>
+                    </select>
+                    <label htmlFor="catalog-target">Target</label>
+                    <input
+                      id="catalog-target"
+                      type="search"
+                      value={catalogTargetFilter}
+                      onChange={(event) => setCatalogTargetFilter(event.target.value)}
+                      placeholder="pid or image"
+                    />
+                    <label htmlFor="catalog-limit">Limit</label>
+                    <input
+                      id="catalog-limit"
+                      type="number"
+                      min={1}
+                      max={5000}
+                      value={catalogLimit}
+                      onChange={(event) => setCatalogLimit(Math.min(5000, Math.max(1, Number.parseInt(event.target.value, 10) || 1)))}
+                    />
+                    <button type="button" className="tool-button" onClick={handleRefreshSessionCatalog} disabled={nativeBusy}>
+                      <RefreshCcw size={13} />
+                      <span>Rebuild</span>
+                    </button>
+                    <button type="button" className="tool-button" onClick={handleQuerySessionCatalog} disabled={nativeBusy}>
+                      <Search size={13} />
+                      <span>Query</span>
+                    </button>
+                    <button type="button" className="tool-button" onClick={() => handleRemoveMissingCatalogEntries(true)} disabled={nativeBusy}>
+                      <Trash2 size={13} />
+                      <span>Dry</span>
+                    </button>
+                    <button type="button" className="tool-button danger" onClick={() => handleRemoveMissingCatalogEntries(false)} disabled={nativeBusy}>
+                      <Trash2 size={13} />
+                      <span>Prune</span>
+                    </button>
+                  </div>
+                  {sessionCatalog && sessionCatalog.sessions.length > 0 ? (
+                    <div className="catalog-row-list" aria-label="Replay catalog rows">
+                      {sessionCatalog.sessions.map((row) => (
+                        <div className={selectedCatalogPath === row.path ? "catalog-browser-row selected" : "catalog-browser-row"} key={row.contentIdentity || row.path}>
+                          <button type="button" className="catalog-row-main" title={row.path} onClick={() => setSelectedCatalogPath(row.path)}>
+                            <strong>{catalogRowLabel(row)}</strong>
+                            <span>PID {row.targetProcessId || "n/a"} / {row.targetArchitecture || "unknown"}</span>
+                            <span>{row.sessionId || "session n/a"}</span>
+                            <span>{row.validationStatus}</span>
+                            <span>{row.recoveryState || row.writerState || "n/a"}</span>
+                            <span>{row.compression || "none"}</span>
+                            <span>{row.traceEventCount} ev</span>
+                            <span>{formatBytes(row.storedBytes)} / {formatBytes(row.uncompressedBytes)}</span>
+                            <span>{row.lastValidatedUtc || "not validated"}</span>
+                            <small>{row.path}</small>
+                          </button>
+                          <button type="button" className="tool-button" onClick={() => handleReplayCatalogRow(row)} disabled={nativeBusy}>
+                            <FolderOpen size={13} />
+                            <span>Replay</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="catalog-empty">No catalog rows loaded.</div>
+                  )}
+                  {selectedCatalogRow ? (
+                    <div className="catalog-selected" title={selectedCatalogRow.path}>
+                      selected {catalogRowLabel(selectedCatalogRow)} / {selectedCatalogRow.validationStatus} / {selectedCatalogRow.recoveryState || selectedCatalogRow.writerState || "n/a"}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </section>
           ) : null}
@@ -1307,10 +1587,19 @@ function App() {
                 <span>Call Tree</span>
               </button>
             </div>
+            <div className="trace-stats">
+              <span>{filteredEvents.length}/{events.length} rows</span>
+              <span>DOM {visibleTraceEvents.length}</span>
+              {replaySource ? <span title={replaySource.path}>Replay {replaySource.label} / {replaySource.validationStatus}</span> : null}
+            </div>
           </div>
 
-          <div className="trace-table-wrap">
-            <table className="trace-table">
+          <div
+            className="trace-table-wrap"
+            ref={traceScrollRef}
+            onScroll={(event) => setTraceScrollTop(event.currentTarget.scrollTop)}
+          >
+            <table className="trace-table trace-table-head">
               <thead>
                 <tr>
                   <th>#</th>
@@ -1326,34 +1615,41 @@ function App() {
                   <th>Tags</th>
                 </tr>
               </thead>
-              <tbody>
-                {filteredEvents.map((event) => (
-                  <tr
+            </table>
+            <div className="trace-virtual-body" style={{ height: virtualTraceWindow.totalHeight }}>
+              <div className="trace-virtual-window" style={{ transform: `translateY(${virtualTraceWindow.offsetTop}px)` }}>
+                {visibleTraceEvents.map((event, index) => (
+                  <button
+                    type="button"
                     key={event.eventId}
-                    className={selectedEvent?.eventId === event.eventId ? "selected" : ""}
+                    className={[
+                      "trace-virtual-row",
+                      selectedEvent?.eventId === event.eventId ? "selected" : "",
+                      (virtualTraceWindow.startIndex + index) % 2 === 1 ? "alt" : ""
+                    ].filter(Boolean).join(" ")}
+                    style={{ height: traceRowHeight }}
                     onClick={() => setSelectedEventId(event.eventId)}
                   >
-                    <td>{event.eventId}</td>
-                    <td>{(event.relativeTimeMs / 1000).toFixed(3)}s</td>
-                    <td>{event.pid}</td>
-                    <td>{event.tid}</td>
-                    <td>{event.module}</td>
-                    <td className="api-cell">{event.api}</td>
-                    <td className="args-cell">{compactArgs(event)}</td>
-                    <td>{event.returnValue}</td>
-                    <td className={event.error ? "error-cell" : ""}>{event.error ? `${event.error.code} = ${event.error.message}` : ""}</td>
-                    <td>{event.durationUs} us</td>
-                    <td>
-                      <div className="tag-list">
-                        {event.tags.map((tag) => (
-                          <span key={tag}>{tag}</span>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
+                    <span>{event.eventId}</span>
+                    <span>{(event.relativeTimeMs / 1000).toFixed(3)}s</span>
+                    <span>{event.pid}</span>
+                    <span>{event.tid}</span>
+                    <span>{event.module}</span>
+                    <span className="api-cell">{event.api}</span>
+                    <span className="args-cell">{compactArgs(event)}</span>
+                    <span>{event.returnValue}</span>
+                    <span className={event.error ? "error-cell" : ""}>{event.error ? `${event.error.code} = ${event.error.message}` : ""}</span>
+                    <span>{event.durationUs} us</span>
+                    <span className="tag-list">
+                      {event.tags.map((tag) => (
+                        <span key={tag}>{tag}</span>
+                      ))}
+                    </span>
+                  </button>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
+            {filteredEvents.length === 0 ? <div className="trace-empty">No trace events match the current filter.</div> : null}
           </div>
 
           <div className="inspector">
@@ -1439,6 +1735,7 @@ function App() {
                       <div><Braces size={14} /> schemaVersion={selectedEvent?.schemaVersion ?? "0.1.0"}</div>
                       <div><Filter size={14} /> backend={backendMode}; filter="{filter || "*"}"; mode={traceMode}</div>
                       <div><Database size={14} /> sessionBytes={formatBytes(sessionBytes)}; droppedEvents={droppedCount}</div>
+                      {replaySource ? <div><FolderOpen size={14} /> replay={replaySource.kind}; status={replaySource.validationStatus}; path={replaySource.path}</div> : null}
                       {outputEvents.map((event) => (
                         <div key={`${event.timestampUtc}-${event.eventType}-${event.message}`}>
                           <Activity size={14} />
