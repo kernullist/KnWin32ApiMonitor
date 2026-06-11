@@ -713,6 +713,30 @@
       "module": "kernel32.dll",
       "name": "VirtualQuery",
       "symbol": "VirtualQuery"
+    },
+    {
+      "id": 120,
+      "module": "kernel32.dll",
+      "name": "CreateThread",
+      "symbol": "CreateThread"
+    },
+    {
+      "id": 121,
+      "module": "kernel32.dll",
+      "name": "OpenThread",
+      "symbol": "OpenThread"
+    },
+    {
+      "id": 122,
+      "module": "kernel32.dll",
+      "name": "WaitForSingleObject",
+      "symbol": "WaitForSingleObject"
+    },
+    {
+      "id": 123,
+      "module": "kernel32.dll",
+      "name": "GetExitCodeThread",
+      "symbol": "GetExitCodeThread"
     }
   ],
   "modules": [

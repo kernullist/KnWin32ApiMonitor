@@ -16,6 +16,10 @@ $requiredApis = @(
     "VirtualFree",
     "VirtualProtect",
     "VirtualQuery",
+    "CreateThread",
+    "OpenThread",
+    "WaitForSingleObject",
+    "GetExitCodeThread",
     "GetProcAddress",
     "LdrGetProcedureAddress",
     "RegOpenKeyExW",
@@ -1039,6 +1043,169 @@ $memoryPayload = $memoryEvents | ConvertTo-Json -Depth 12
 if ($memoryPayload -cmatch "VirtualAllocEx|VirtualFreeEx|VirtualProtectEx|ReadProcessMemory|WriteProcessMemory|CreateRemoteThread|QueueUserAPC|NtMapViewOfSection|MapViewOfFile|SECTION_|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 KERNEL32 memory events appear to expose remote-memory, injection, file/PE/hash, credential, or byte-preview evidence: $memoryPayload"
+}
+
+$threadEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "thread" })
+if ($threadEvents.Count -lt 4)
+{
+    throw "x86 capture did not include the selected KERNEL32 thread lifecycle API slice."
+}
+
+$openThread = @($threadEvents | Where-Object { $_.api -eq "OpenThread" } | Select-Object -First 1)
+if ($openThread.Count -ne 1 -or
+    $openThread[0].module -ne "kernel32.dll" -or
+    $openThread[0].apiCategory -ne "thread_open" -or
+    $openThread[0].hookPolicy -ne "iat" -or
+    $openThread[0].coverageStatus -ne "smoke_verified" -or
+    $openThread[0].returnValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 OpenThread metadata or return evidence mismatch."
+}
+
+$desiredAccessArg = @($openThread[0].arguments | Where-Object { $_.name -eq "dwDesiredAccess" } | Select-Object -First 1)
+$inheritHandleArg = @($openThread[0].arguments | Where-Object { $_.name -eq "bInheritHandle" } | Select-Object -First 1)
+$threadIdArg = @($openThread[0].arguments | Where-Object { $_.name -eq "dwThreadId" } | Select-Object -First 1)
+if ($desiredAccessArg.Count -ne 1 -or
+    $desiredAccessArg[0].decodeAlias -ne "thread_access_flags" -or
+    $desiredAccessArg[0].decodedValue -notmatch "THREAD_QUERY_LIMITED_INFORMATION" -or
+    $desiredAccessArg[0].decodedValue -notmatch "SYNCHRONIZE" -or
+    $inheritHandleArg.Count -ne 1 -or
+    $inheritHandleArg[0].decodeAlias -ne "dword_value" -or
+    $inheritHandleArg[0].decodedValue -ne "FALSE" -or
+    $threadIdArg.Count -ne 1 -or
+    $threadIdArg[0].decodeAlias -ne "dword_value" -or
+    $threadIdArg[0].postCallValue -notmatch "^[1-9][0-9]*$")
+{
+    throw "x86 OpenThread did not include expected thread access metadata: $($openThread[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$threadId = $threadIdArg[0].postCallValue
+$createThread = @($threadEvents | Where-Object {
+    if ($_.api -ne "CreateThread")
+    {
+        $false
+    }
+    else
+    {
+        $argument = @($_.arguments | Where-Object { $_.name -eq "lpThreadId" } | Select-Object -First 1)
+        $argument.Count -eq 1 -and $argument[0].postCallValue -eq $threadId
+    }
+} | Select-Object -First 1)
+if ($createThread.Count -ne 1 -or
+    $createThread[0].module -ne "kernel32.dll" -or
+    $createThread[0].apiCategory -ne "thread_create" -or
+    $createThread[0].returnValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 CreateThread metadata or return evidence mismatch for thread ID $threadId."
+}
+
+$threadAttributesArg = @($createThread[0].arguments | Where-Object { $_.name -eq "lpThreadAttributes" } | Select-Object -First 1)
+$stackSizeArg = @($createThread[0].arguments | Where-Object { $_.name -eq "dwStackSize" } | Select-Object -First 1)
+$startAddressArg = @($createThread[0].arguments | Where-Object { $_.name -eq "lpStartAddress" } | Select-Object -First 1)
+$parameterArg = @($createThread[0].arguments | Where-Object { $_.name -eq "lpParameter" } | Select-Object -First 1)
+$creationFlagsArg = @($createThread[0].arguments | Where-Object { $_.name -eq "dwCreationFlags" } | Select-Object -First 1)
+$threadIdOutArg = @($createThread[0].arguments | Where-Object { $_.name -eq "lpThreadId" } | Select-Object -First 1)
+if ($threadAttributesArg.Count -ne 1 -or
+    $threadAttributesArg[0].decodeAlias -ne "security_attributes" -or
+    $stackSizeArg.Count -ne 1 -or
+    $stackSizeArg[0].decodeAlias -ne "byte_count" -or
+    $startAddressArg.Count -ne 1 -or
+    $startAddressArg[0].decodeAlias -ne "thread_start_routine_pointer" -or
+    $startAddressArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $parameterArg.Count -ne 1 -or
+    $parameterArg[0].decodeAlias -ne "pointer" -or
+    $parameterArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $creationFlagsArg.Count -ne 1 -or
+    $creationFlagsArg[0].decodeAlias -ne "thread_creation_flags" -or
+    $creationFlagsArg[0].decodedValue -notmatch "none" -or
+    $threadIdOutArg.Count -ne 1 -or
+    $threadIdOutArg[0].decodeAlias -ne "thread_id_pointer" -or
+    $threadIdOutArg[0].captureTiming -ne "post" -or
+    $threadIdOutArg[0].decodeStatus -ne "decoded" -or
+    $threadIdOutArg[0].postCallValue -ne $threadId -or
+    $threadIdOutArg[0].decodedValue -notmatch "value=$threadId")
+{
+    throw "x86 CreateThread did not include expected thread creation metadata: $($createThread[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$waitThread = @($threadEvents | Where-Object {
+    if ($_.api -ne "WaitForSingleObject" -or $_.returnValue -notmatch "WAIT_OBJECT_0")
+    {
+        $false
+    }
+    else
+    {
+        $argument = @($_.arguments | Where-Object { $_.name -eq "hHandle" } | Select-Object -First 1)
+        $argument.Count -eq 1 -and $argument[0].rawValue -eq $createThread[0].returnValue
+    }
+} | Select-Object -First 1)
+if ($waitThread.Count -ne 1 -or
+    $waitThread[0].module -ne "kernel32.dll" -or
+    $waitThread[0].apiCategory -ne "thread_wait")
+{
+    throw "x86 WaitForSingleObject metadata or handle evidence mismatch."
+}
+
+$waitHandleArg = @($waitThread[0].arguments | Where-Object { $_.name -eq "hHandle" } | Select-Object -First 1)
+$timeoutArg = @($waitThread[0].arguments | Where-Object { $_.name -eq "dwMilliseconds" } | Select-Object -First 1)
+if ($waitHandleArg.Count -ne 1 -or
+    $waitHandleArg[0].decodeAlias -ne "handle" -or
+    $timeoutArg.Count -ne 1 -or
+    $timeoutArg[0].decodeAlias -ne "wait_timeout_ms" -or
+    $timeoutArg[0].decodedValue -notmatch "INFINITE")
+{
+    throw "x86 WaitForSingleObject did not include expected wait metadata: $($waitThread[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$exitThread = @($threadEvents | Where-Object {
+    if ($_.api -ne "GetExitCodeThread" -or $_.returnValue -ne "TRUE")
+    {
+        $false
+    }
+    else
+    {
+        $handleArgument = @($_.arguments | Where-Object { $_.name -eq "hThread" } | Select-Object -First 1)
+        $exitArgument = @($_.arguments | Where-Object { $_.name -eq "lpExitCode" } | Select-Object -First 1)
+        $handleArgument.Count -eq 1 -and
+            $exitArgument.Count -eq 1 -and
+            $handleArgument[0].rawValue -eq $createThread[0].returnValue -and
+            $exitArgument[0].postCallValue -eq "42"
+    }
+} | Select-Object -First 1)
+if ($exitThread.Count -ne 1 -or
+    $exitThread[0].module -ne "kernel32.dll" -or
+    $exitThread[0].apiCategory -ne "thread_exit_code")
+{
+    throw "x86 GetExitCodeThread metadata or return evidence mismatch."
+}
+
+$exitHandleArg = @($exitThread[0].arguments | Where-Object { $_.name -eq "hThread" } | Select-Object -First 1)
+$exitCodeArg = @($exitThread[0].arguments | Where-Object { $_.name -eq "lpExitCode" } | Select-Object -First 1)
+if ($exitHandleArg.Count -ne 1 -or
+    $exitHandleArg[0].decodeAlias -ne "handle" -or
+    $exitCodeArg.Count -ne 1 -or
+    $exitCodeArg[0].decodeAlias -ne "thread_exit_code_pointer" -or
+    $exitCodeArg[0].captureTiming -ne "post" -or
+    $exitCodeArg[0].decodeStatus -ne "decoded" -or
+    $exitCodeArg[0].postCallValue -ne "42" -or
+    $exitCodeArg[0].decodedValue -notmatch "value=42" -or
+    $exitCodeArg[0].decodedValue -notmatch "0x0000002a")
+{
+    throw "x86 GetExitCodeThread did not include decoded exit-code metadata: $($exitThread[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+foreach ($threadEvent in $threadEvents)
+{
+    if (-not [string]::IsNullOrEmpty($threadEvent.bufferPreview))
+    {
+        throw "x86 thread lifecycle event exposed bufferPreview: $($threadEvent | ConvertTo-Json -Depth 8)"
+    }
+}
+
+$threadPayload = $threadEvents | ConvertTo-Json -Depth 12
+if ($threadPayload -cmatch "CreateRemoteThread|QueueUserAPC|NtQueueApcThread|SuspendThread|ResumeThread|GetThreadContext|SetThreadContext|TerminateThread|CONTEXT|Eip|Rip|Rsp|CallStack|StackTrace|StackWalk|StackFrame|Disassembly|VirtualAllocEx|WriteProcessMemory|ReadProcessMemory|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 KERNEL32 thread lifecycle events appear to expose remote-thread, APC, context, stack, injection, PE/file/hash, credential, or byte-preview evidence: $threadPayload"
 }
 
 $rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })

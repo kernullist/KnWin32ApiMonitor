@@ -1347,6 +1347,90 @@ bool RunMemoryProtectionProbe()
     return success;
 }
 
+DWORD WINAPI ThreadLifecycleProbeThreadProc(LPVOID parameter)
+{
+    DWORD* value = static_cast<DWORD*>(parameter);
+    if (value != nullptr)
+    {
+        *value = 0x2A;
+    }
+
+    return 0x2A;
+}
+
+bool RunThreadLifecycleProbe()
+{
+    bool success = false;
+    HANDLE threadHandle = nullptr;
+    HANDLE openedThread = nullptr;
+    DWORD threadId = 0;
+    DWORD exitCode = 0;
+    DWORD threadValue = 0;
+
+    do
+    {
+        threadHandle = CreateThread(nullptr, 0, ThreadLifecycleProbeThreadProc, &threadValue, 0, &threadId);
+        if (threadHandle == nullptr)
+        {
+            LogLastError("CreateThread(thread)");
+            break;
+        }
+
+        if (threadId == 0)
+        {
+            std::cout << "CreateThread returned zero thread id\n";
+            break;
+        }
+
+        openedThread = OpenThread(THREAD_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, FALSE, threadId);
+        if (openedThread == nullptr)
+        {
+            LogLastError("OpenThread(thread)");
+            break;
+        }
+
+        const DWORD waitResult = WaitForSingleObject(threadHandle, INFINITE);
+        if (waitResult != WAIT_OBJECT_0)
+        {
+            std::cout << "WaitForSingleObject(thread) returned 0x"
+                      << std::hex << waitResult << std::dec << "\n";
+            break;
+        }
+
+        if (!GetExitCodeThread(threadHandle, &exitCode))
+        {
+            LogLastError("GetExitCodeThread(thread)");
+            break;
+        }
+
+        if (exitCode != 0x2A || threadValue != 0x2A)
+        {
+            std::cout << "thread lifecycle mismatch exit=0x"
+                      << std::hex << exitCode
+                      << " value=0x" << threadValue
+                      << std::dec << "\n";
+            break;
+        }
+
+        std::cout << "thread lifecycle roundtrip tid=" << threadId
+                  << " exit=0x" << std::hex << exitCode << std::dec << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (openedThread != nullptr)
+    {
+        CloseHandle(openedThread);
+    }
+
+    if (threadHandle != nullptr)
+    {
+        CloseHandle(threadHandle);
+    }
+
+    return success;
+}
+
 bool RunWinsockProbe()
 {
     bool success = false;
@@ -1837,6 +1921,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunMemoryProtectionProbe())
+        {
+            break;
+        }
+
+        if (!RunThreadLifecycleProbe())
         {
             break;
         }

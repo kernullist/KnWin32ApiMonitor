@@ -164,6 +164,34 @@
         { "name": "COINIT_DISABLE_OLE1DDE", "value": "0x00000004" },
         { "name": "COINIT_SPEED_OVER_MEMORY", "value": "0x00000008" }
       ]
+    },
+    {
+      "name": "thread_access_flags",
+      "values": [
+        { "name": "THREAD_TERMINATE", "value": "0x00000001" },
+        { "name": "THREAD_SUSPEND_RESUME", "value": "0x00000002" },
+        { "name": "THREAD_GET_CONTEXT", "value": "0x00000008" },
+        { "name": "THREAD_SET_CONTEXT", "value": "0x00000010" },
+        { "name": "THREAD_SET_INFORMATION", "value": "0x00000020" },
+        { "name": "THREAD_QUERY_INFORMATION", "value": "0x00000040" },
+        { "name": "THREAD_SET_THREAD_TOKEN", "value": "0x00000080" },
+        { "name": "THREAD_IMPERSONATE", "value": "0x00000100" },
+        { "name": "THREAD_DIRECT_IMPERSONATION", "value": "0x00000200" },
+        { "name": "THREAD_SET_LIMITED_INFORMATION", "value": "0x00000400" },
+        { "name": "THREAD_QUERY_LIMITED_INFORMATION", "value": "0x00000800" },
+        { "name": "DELETE", "value": "0x00010000" },
+        { "name": "READ_CONTROL", "value": "0x00020000" },
+        { "name": "WRITE_DAC", "value": "0x00040000" },
+        { "name": "WRITE_OWNER", "value": "0x00080000" },
+        { "name": "SYNCHRONIZE", "value": "0x00100000" }
+      ]
+    },
+    {
+      "name": "thread_creation_flags",
+      "values": [
+        { "name": "CREATE_SUSPENDED", "value": "0x00000004" },
+        { "name": "STACK_SIZE_PARAM_IS_A_RESERVATION", "value": "0x00010000" }
+      ]
     }
   ]
 }

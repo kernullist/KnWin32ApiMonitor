@@ -134,6 +134,10 @@ using VirtualAllocFn = LPVOID(WINAPI*)(LPVOID, SIZE_T, DWORD, DWORD);
 using VirtualFreeFn = BOOL(WINAPI*)(LPVOID, SIZE_T, DWORD);
 using VirtualProtectFn = BOOL(WINAPI*)(LPVOID, SIZE_T, DWORD, PDWORD);
 using VirtualQueryFn = SIZE_T(WINAPI*)(LPCVOID, PMEMORY_BASIC_INFORMATION, SIZE_T);
+using CreateThreadFn = HANDLE(WINAPI*)(LPSECURITY_ATTRIBUTES, SIZE_T, LPTHREAD_START_ROUTINE, LPVOID, DWORD, LPDWORD);
+using OpenThreadFn = HANDLE(WINAPI*)(DWORD, BOOL, DWORD);
+using WaitForSingleObjectFn = DWORD(WINAPI*)(HANDLE, DWORD);
+using GetExitCodeThreadFn = BOOL(WINAPI*)(HANDLE, LPDWORD);
 using LoadLibraryWFn = HMODULE(WINAPI*)(LPCWSTR);
 using LoadLibraryAFn = HMODULE(WINAPI*)(LPCSTR);
 using LoadLibraryExWFn = HMODULE(WINAPI*)(LPCWSTR, HANDLE, DWORD);
@@ -232,6 +236,10 @@ VirtualAllocFn g_originalVirtualAlloc = nullptr;
 VirtualFreeFn g_originalVirtualFree = nullptr;
 VirtualProtectFn g_originalVirtualProtect = nullptr;
 VirtualQueryFn g_originalVirtualQuery = nullptr;
+CreateThreadFn g_originalCreateThread = nullptr;
+OpenThreadFn g_originalOpenThread = nullptr;
+WaitForSingleObjectFn g_originalWaitForSingleObject = nullptr;
+GetExitCodeThreadFn g_originalGetExitCodeThread = nullptr;
 LoadLibraryWFn g_originalLoadLibraryW = nullptr;
 LoadLibraryAFn g_originalLoadLibraryA = nullptr;
 LoadLibraryExWFn g_originalLoadLibraryExW = nullptr;
@@ -376,7 +384,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 74;
+constexpr std::size_t HookDefinitionCount = 78;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -2224,6 +2232,142 @@ void EmitVirtualQueryEvent(
         record->Values32[2] = localInfo.State;
         record->Values32[3] = localInfo.Protect;
         record->Values32[4] = localInfo.Type;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitCreateThreadEvent(
+    HANDLE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPSECURITY_ATTRIBUTES threadAttributes,
+    SIZE_T stackSize,
+    LPTHREAD_START_ROUTINE startAddress,
+    LPVOID parameter,
+    DWORD creationFlags,
+    LPDWORD threadId)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        DWORD threadIdValue = 0;
+        std::uint32_t threadIdStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+
+        if (result != nullptr)
+        {
+            if (threadId == nullptr)
+            {
+                threadIdStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+            }
+            else if (ReadCurrentProcessValue(threadId, &threadIdValue))
+            {
+                threadIdStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+            }
+            else
+            {
+                threadIdStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            }
+        }
+
+        FillTransportCommon(record, knmon::KnMonTransportApiId::CreateThread, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(threadAttributes));
+        record->Values64[1] = static_cast<std::uint64_t>(stackSize);
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(startAddress));
+        record->Values64[3] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(parameter));
+        record->Values64[4] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(threadId));
+        record->Values32[0] = creationFlags;
+        record->Values32[1] = threadIdStatus;
+        record->Values32[2] = threadIdValue;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitOpenThreadEvent(
+    HANDLE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    DWORD desiredAccess,
+    BOOL inheritHandle,
+    DWORD threadId)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::OpenThread, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values32[0] = desiredAccess;
+        record->Values32[1] = inheritHandle ? 1U : 0U;
+        record->Values32[2] = threadId;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitWaitForSingleObjectEvent(
+    DWORD result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE handle,
+    DWORD milliseconds)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::WaitForSingleObject, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(handle));
+        record->Values32[0] = milliseconds;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetExitCodeThreadEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE thread,
+    LPDWORD exitCode)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        DWORD exitCodeValue = 0;
+        std::uint32_t exitCodeStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+
+        if (result != FALSE)
+        {
+            if (exitCode == nullptr)
+            {
+                exitCodeStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            }
+            else if (ReadCurrentProcessValue(exitCode, &exitCodeValue))
+            {
+                exitCodeStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+            }
+            else
+            {
+                exitCodeStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            }
+        }
+
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetExitCodeThread, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result ? 1 : 0;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(thread));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(exitCode));
+        record->Values32[0] = exitCodeStatus;
+        record->Values32[1] = exitCodeValue;
         CommitTransportRecord(record, overheadStart);
     }
 }
@@ -4790,6 +4934,10 @@ LPVOID WINAPI HookedVirtualAlloc(LPVOID address, SIZE_T size, DWORD allocationTy
 BOOL WINAPI HookedVirtualFree(LPVOID address, SIZE_T size, DWORD freeType);
 BOOL WINAPI HookedVirtualProtect(LPVOID address, SIZE_T size, DWORD newProtect, PDWORD oldProtect);
 SIZE_T WINAPI HookedVirtualQuery(LPCVOID address, PMEMORY_BASIC_INFORMATION buffer, SIZE_T length);
+HANDLE WINAPI HookedCreateThread(LPSECURITY_ATTRIBUTES threadAttributes, SIZE_T stackSize, LPTHREAD_START_ROUTINE startAddress, LPVOID parameter, DWORD creationFlags, LPDWORD threadId);
+HANDLE WINAPI HookedOpenThread(DWORD desiredAccess, BOOL inheritHandle, DWORD threadId);
+DWORD WINAPI HookedWaitForSingleObject(HANDLE handle, DWORD milliseconds);
+BOOL WINAPI HookedGetExitCodeThread(HANDLE thread, LPDWORD exitCode);
 HMODULE WINAPI HookedLoadLibraryW(LPCWSTR fileName);
 HMODULE WINAPI HookedLoadLibraryA(LPCSTR fileName);
 HMODULE WINAPI HookedLoadLibraryExW(LPCWSTR fileName, HANDLE file, DWORD flags);
@@ -4868,6 +5016,10 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "kernel32.dll", "VirtualFree", reinterpret_cast<void*>(HookedVirtualFree), reinterpret_cast<void**>(&g_originalVirtualFree), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "VirtualProtect", reinterpret_cast<void*>(HookedVirtualProtect), reinterpret_cast<void**>(&g_originalVirtualProtect), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "VirtualQuery", reinterpret_cast<void*>(HookedVirtualQuery), reinterpret_cast<void**>(&g_originalVirtualQuery), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "CreateThread", reinterpret_cast<void*>(HookedCreateThread), reinterpret_cast<void**>(&g_originalCreateThread), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "OpenThread", reinterpret_cast<void*>(HookedOpenThread), reinterpret_cast<void**>(&g_originalOpenThread), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "WaitForSingleObject", reinterpret_cast<void*>(HookedWaitForSingleObject), reinterpret_cast<void**>(&g_originalWaitForSingleObject), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "GetExitCodeThread", reinterpret_cast<void*>(HookedGetExitCodeThread), reinterpret_cast<void**>(&g_originalGetExitCodeThread), false, true, false, 0, 0 },
         HookDefinition { "ntdll.dll", "NtCreateFile", reinterpret_cast<void*>(HookedNtCreateFile), reinterpret_cast<void**>(&g_originalNtCreateFile), true, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "LoadLibraryW", reinterpret_cast<void*>(HookedLoadLibraryW), reinterpret_cast<void**>(&g_originalLoadLibraryW), false, true, true, 0, 0 },
         HookDefinition { "kernel32.dll", "LoadLibraryA", reinterpret_cast<void*>(HookedLoadLibraryA), reinterpret_cast<void**>(&g_originalLoadLibraryA), false, true, true, 0, 0 },
@@ -5547,6 +5699,136 @@ SIZE_T WINAPI HookedVirtualQuery(LPCVOID address, PMEMORY_BASIC_INFORMATION buff
     if (HooksEnabled())
     {
         EmitVirtualQueryEvent(result, eventError, start, end, address, buffer, length);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HANDLE WINAPI HookedCreateThread(
+    LPSECURITY_ATTRIBUTES threadAttributes,
+    SIZE_T stackSize,
+    LPTHREAD_START_ROUTINE startAddress,
+    LPVOID parameter,
+    DWORD creationFlags,
+    LPDWORD threadId)
+{
+    if (g_inHook || !HooksEnabled() || g_originalCreateThread == nullptr)
+    {
+        if (g_originalCreateThread == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalCreateThread(threadAttributes, stackSize, startAddress, parameter, creationFlags, threadId);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HANDLE result = g_originalCreateThread(threadAttributes, stackSize, startAddress, parameter, creationFlags, threadId);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitCreateThreadEvent(result, eventError, start, end, threadAttributes, stackSize, startAddress, parameter, creationFlags, threadId);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HANDLE WINAPI HookedOpenThread(DWORD desiredAccess, BOOL inheritHandle, DWORD threadId)
+{
+    if (g_inHook || !HooksEnabled() || g_originalOpenThread == nullptr)
+    {
+        if (g_originalOpenThread == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalOpenThread(desiredAccess, inheritHandle, threadId);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HANDLE result = g_originalOpenThread(desiredAccess, inheritHandle, threadId);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitOpenThreadEvent(result, eventError, start, end, desiredAccess, inheritHandle, threadId);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+DWORD WINAPI HookedWaitForSingleObject(HANDLE handle, DWORD milliseconds)
+{
+    if (g_inHook || !HooksEnabled() || g_originalWaitForSingleObject == nullptr)
+    {
+        if (g_originalWaitForSingleObject == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return WAIT_FAILED;
+        }
+
+        return g_originalWaitForSingleObject(handle, milliseconds);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    DWORD result = g_originalWaitForSingleObject(handle, milliseconds);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == WAIT_FAILED ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitWaitForSingleObjectEvent(result, eventError, start, end, handle, milliseconds);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedGetExitCodeThread(HANDLE thread, LPDWORD exitCode)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetExitCodeThread == nullptr)
+    {
+        if (g_originalGetExitCodeThread == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalGetExitCodeThread(thread, exitCode);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    BOOL result = g_originalGetExitCodeThread(thread, exitCode);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitGetExitCodeThreadEvent(result, eventError, start, end, thread, exitCode);
     }
 
     SetLastError(lastError);

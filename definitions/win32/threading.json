@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "threading",
+  "description": "Wave 3 low-payload current-process thread lifecycle and wait metadata hooks.",
+  "apis": [
+    {
+      "module": "KERNEL32.dll",
+      "name": "CreateThread",
+      "family": "thread",
+      "category": "thread_create",
+      "risk": "medium",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HANDLE",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "lpThreadAttributes", "type": "LPSECURITY_ATTRIBUTES", "direction": "in", "decode": "security_attributes", "nullable": true },
+        { "name": "dwStackSize", "type": "SIZE_T", "direction": "in", "decode": "byte_count" },
+        { "name": "lpStartAddress", "type": "LPTHREAD_START_ROUTINE", "direction": "in", "decode": "thread_start_routine_pointer" },
+        { "name": "lpParameter", "type": "LPVOID", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "dwCreationFlags", "type": "DWORD", "direction": "in", "decode": "thread_creation_flags", "flags": "thread_creation_flags" },
+        { "name": "lpThreadId", "type": "LPDWORD", "direction": "out", "decode": "thread_id_pointer", "nullable": true, "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "OpenThread",
+      "family": "thread",
+      "category": "thread_open",
+      "risk": "medium",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HANDLE",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "dwDesiredAccess", "type": "DWORD", "direction": "in", "decode": "thread_access_flags", "flags": "thread_access_flags" },
+        { "name": "bInheritHandle", "type": "BOOL", "direction": "in", "decode": "dword_value" },
+        { "name": "dwThreadId", "type": "DWORD", "direction": "in", "decode": "dword_value" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "WaitForSingleObject",
+      "family": "thread",
+      "category": "thread_wait",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "DWORD",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "0xFFFFFFFF" },
+      "failure": { "returnEqual": "0xFFFFFFFF" },
+      "parameters": [
+        { "name": "hHandle", "type": "HANDLE", "direction": "in", "decode": "handle" },
+        { "name": "dwMilliseconds", "type": "DWORD", "direction": "in", "decode": "wait_timeout_ms" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "GetExitCodeThread",
+      "family": "thread",
+      "category": "thread_exit_code",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": 0 },
+      "failure": { "returnEqual": 0 },
+      "parameters": [
+        { "name": "hThread", "type": "HANDLE", "direction": "in", "decode": "handle" },
+        { "name": "lpExitCode", "type": "LPDWORD", "direction": "out", "decode": "thread_exit_code_pointer", "captureTiming": "post" }
+      ]
+    }
+  ]
+}

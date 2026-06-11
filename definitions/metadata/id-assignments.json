@@ -139,6 +139,10 @@
     { "id": 116, "module": "kernel32.dll", "name": "VirtualAlloc", "symbol": "VirtualAlloc" },
     { "id": 117, "module": "kernel32.dll", "name": "VirtualFree", "symbol": "VirtualFree" },
     { "id": 118, "module": "kernel32.dll", "name": "VirtualProtect", "symbol": "VirtualProtect" },
-    { "id": 119, "module": "kernel32.dll", "name": "VirtualQuery", "symbol": "VirtualQuery" }
+    { "id": 119, "module": "kernel32.dll", "name": "VirtualQuery", "symbol": "VirtualQuery" },
+    { "id": 120, "module": "kernel32.dll", "name": "CreateThread", "symbol": "CreateThread" },
+    { "id": 121, "module": "kernel32.dll", "name": "OpenThread", "symbol": "OpenThread" },
+    { "id": 122, "module": "kernel32.dll", "name": "WaitForSingleObject", "symbol": "WaitForSingleObject" },
+    { "id": 123, "module": "kernel32.dll", "name": "GetExitCodeThread", "symbol": "GetExitCodeThread" }
   ]
 }

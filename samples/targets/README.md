@@ -2,7 +2,7 @@
 
 `fileio-sample` is the first controlled native-capture target.
 
-It builds as `knmon-sample-fileio.exe` through the native CMake project and performs deterministic File I/O plus small local registry, advapi32 token query/privilege lookup, RPCRT4, bcrypt CNG, crypt32 certificate/message-handle, WinHTTP session, WinINet session, OLE32 COM lifecycle/GUID helper, COMBASE-backed WinRT lifecycle, KERNEL32 memory protection, and Winsock probes:
+It builds as `knmon-sample-fileio.exe` through the native CMake project and performs deterministic File I/O plus small local registry, advapi32 token query/privilege lookup, RPCRT4, bcrypt CNG, crypt32 certificate/message-handle, WinHTTP session, WinINet session, OLE32 COM lifecycle/GUID helper, COMBASE-backed WinRT lifecycle, KERNEL32 memory protection, KERNEL32 current-process thread lifecycle, and Winsock probes:
 
 1. Create/open a temp file.
 2. Write a small payload.
@@ -21,8 +21,9 @@ It builds as `knmon-sample-fileio.exe` through the native CMake project and perf
 15. Run an OLE32 COM lifecycle/GUID helper probe on a dedicated thread without COM activation or object inspection.
 16. Run a COMBASE-backed WinRT lifecycle probe on a dedicated thread with `RoInitialize(RO_INIT_MULTITHREADED)`, `RoGetApartmentIdentifier`, and balanced `RoUninitialize`, without activation factories, HSTRINGs, or runtime class names.
 17. Reserve and commit a small current-process memory region with `VirtualAlloc`, change the first page to read-only with `VirtualProtect`, query `MEMORY_BASIC_INFORMATION` with `VirtualQuery`, and release the region with `VirtualFree` without copying memory contents.
-18. Call `WSAStartup`, `getaddrinfo("localhost", "80", ...)`, `socket`, `WSAGetLastError`, `closesocket`, `freeaddrinfo`, and `WSACleanup`.
-19. Attempt missing wide-char and ANSI paths for error coverage.
+18. Create a current-process thread with `CreateThread`, open it with `OpenThread(THREAD_QUERY_LIMITED_INFORMATION | SYNCHRONIZE)`, wait for `WAIT_OBJECT_0`, read exit code `0x2A` with `GetExitCodeThread`, and close both handles without remote thread, APC, context, suspend/resume, termination, or stack inspection APIs.
+19. Call `WSAStartup`, `getaddrinfo("localhost", "80", ...)`, `socket`, `WSAGetLastError`, `closesocket`, `freeaddrinfo`, and `WSACleanup`.
+20. Attempt missing wide-char and ANSI paths for error coverage.
 
 For Phase 11A attach smoke, the sample also supports:
 
@@ -40,4 +41,4 @@ knmon-sample-fileio.exe --spawn-child-loop --children 1 --child-iterations 40 --
 
 This mode prints `knmon-sample-fileio tree-root-ready pid=<pid>` with an immediate stdout flush, starts child sample processes that run `--attach-loop`, prints `knmon-sample-fileio child-started pid=<pid>`, waits for children, and prints `tree-root-exiting`. The optional `--child-path <path>` argument lets smoke tests spawn a Win32 child from an x64 root to prove cross-bitness child skip before mutation.
 
-The native helper uses this executable for controlled launch-time early-bird APC agent loading, bounded File I/O, loader, resolver, selected registry, selected advapi32 token query/privilege lookup, selected RPCRT4 binding and UUID helper, selected bcrypt CNG provider/RNG, selected crypt32 certificate-store/message-handle, selected WinHTTP session-handle, selected WinINet session-handle, selected Winsock hook capture, selected OLE32 COM lifecycle/GUID helper capture, selected COMBASE-backed WinRT lifecycle capture, selected KERNEL32 memory protection capture, same-bitness Phase 11A attach validation, and Phase 11B process-tree supervision validation. Broad arbitrary process injection remains out of scope.
+The native helper uses this executable for controlled launch-time early-bird APC agent loading, bounded File I/O, loader, resolver, selected registry, selected advapi32 token query/privilege lookup, selected RPCRT4 binding and UUID helper, selected bcrypt CNG provider/RNG, selected crypt32 certificate-store/message-handle, selected WinHTTP session-handle, selected WinINet session-handle, selected Winsock hook capture, selected OLE32 COM lifecycle/GUID helper capture, selected COMBASE-backed WinRT lifecycle capture, selected KERNEL32 memory protection capture, selected KERNEL32 thread lifecycle capture, same-bitness Phase 11A attach validation, and Phase 11B process-tree supervision validation. Broad arbitrary process injection remains out of scope.

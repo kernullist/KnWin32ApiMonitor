@@ -126,6 +126,10 @@ enum class KnMonTransportApiId : std::uint16_t
     VirtualFree = 117,
     VirtualProtect = 118,
     VirtualQuery = 119,
+    CreateThread = 120,
+    OpenThread = 121,
+    WaitForSingleObject = 122,
+    GetExitCodeThread = 123,
 };
 
 enum class KnMonTransportModuleId : std::uint16_t

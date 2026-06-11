@@ -2263,6 +2263,92 @@ std::string MemoryTypeText(std::uint32_t value)
     return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
 }
 
+std::string DwordDecimalHexText(std::uint32_t value)
+{
+    return std::to_string(value) + " (" + HexDwordValue(value) + ")";
+}
+
+std::string BoolText(std::uint32_t value)
+{
+    return value == 0 ? "FALSE" : "TRUE";
+}
+
+std::string ThreadAccessFlagsText(std::uint32_t value)
+{
+    static constexpr FlagName Flags[] =
+    {
+        { 0x00000001U, "THREAD_TERMINATE" },
+        { 0x00000002U, "THREAD_SUSPEND_RESUME" },
+        { 0x00000008U, "THREAD_GET_CONTEXT" },
+        { 0x00000010U, "THREAD_SET_CONTEXT" },
+        { 0x00000020U, "THREAD_SET_INFORMATION" },
+        { 0x00000040U, "THREAD_QUERY_INFORMATION" },
+        { 0x00000080U, "THREAD_SET_THREAD_TOKEN" },
+        { 0x00000100U, "THREAD_IMPERSONATE" },
+        { 0x00000200U, "THREAD_DIRECT_IMPERSONATION" },
+        { 0x00000400U, "THREAD_SET_LIMITED_INFORMATION" },
+        { 0x00000800U, "THREAD_QUERY_LIMITED_INFORMATION" },
+        { 0x00010000U, "DELETE" },
+        { 0x00020000U, "READ_CONTROL" },
+        { 0x00040000U, "WRITE_DAC" },
+        { 0x00080000U, "WRITE_OWNER" },
+        { 0x00100000U, "SYNCHRONIZE" },
+    };
+
+    return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
+}
+
+std::string ThreadCreationFlagsText(std::uint32_t value)
+{
+    static constexpr FlagName Flags[] =
+    {
+        { 0x00000004U, "CREATE_SUSPENDED" },
+        { 0x00010000U, "STACK_SIZE_PARAM_IS_A_RESERVATION" },
+    };
+
+    return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
+}
+
+std::string WaitTimeoutText(std::uint32_t value)
+{
+    if (value == 0xFFFFFFFFU)
+    {
+        return HexDwordValue(value) + " (INFINITE)";
+    }
+
+    return DwordDecimalHexText(value);
+}
+
+std::string WaitResultText(std::uint32_t value)
+{
+    std::ostringstream stream;
+
+    stream << HexDwordValue(value);
+    stream << " (";
+
+    switch (value)
+    {
+    case 0x00000000U:
+        stream << "WAIT_OBJECT_0";
+        break;
+    case 0x00000080U:
+        stream << "WAIT_ABANDONED";
+        break;
+    case 0x00000102U:
+        stream << "WAIT_TIMEOUT";
+        break;
+    case 0xFFFFFFFFU:
+        stream << "WAIT_FAILED";
+        break;
+    default:
+        stream << "unknown";
+        break;
+    }
+
+    stream << ")";
+    return stream.str();
+}
+
 std::string SignedIntValue(std::uint64_t value)
 {
     return std::to_string(static_cast<std::int32_t>(static_cast<std::uint32_t>(value)));
@@ -2603,6 +2689,59 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 1, "PMEMORY_BASIC_INFORMATION", "lpBuffer", "out", bufferPointer, bufferValue, bufferValue, DecodeStatusName(record.Values32[0])) << ",";
         args << ArgumentJsonFromMetadata(record.ApiId, 2, "SIZE_T", "dwLength", "in", std::to_string(record.Values64[2]), std::to_string(record.Values64[2]), std::to_string(record.Values64[2]));
         payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::CreateThread:
+    {
+        const std::string attributesPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string startPointer = HexPointerValue(record.Values64[2], result.Architecture);
+        const std::string parameterPointer = HexPointerValue(record.Values64[3], result.Architecture);
+        const std::string threadIdPointer = HexPointerValue(record.Values64[4], result.Architecture);
+        const bool threadIdDecoded = static_cast<KnMonDecodeStatus>(record.Values32[1]) == KnMonDecodeStatus::Decoded;
+        const std::string threadIdValue = DwordDecimalHexText(record.Values32[2]);
+        const std::string threadIdPost = threadIdDecoded ? std::to_string(record.Values32[2]) : threadIdPointer;
+        const std::string threadIdDecodedValue = threadIdDecoded ?
+            ("value=" + threadIdValue) :
+            (DecodeStatusName(record.Values32[1]) + ";pointer=" + threadIdPointer);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPSECURITY_ATTRIBUTES", "lpThreadAttributes", "in", attributesPointer, attributesPointer, attributesPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "SIZE_T", "dwStackSize", "in", std::to_string(record.Values64[1]), std::to_string(record.Values64[1]), std::to_string(record.Values64[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "LPTHREAD_START_ROUTINE", "lpStartAddress", "in", startPointer, startPointer, startPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "LPVOID", "lpParameter", "in", parameterPointer, parameterPointer, parameterPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 4, "DWORD", "dwCreationFlags", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), ThreadCreationFlagsText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 5, "LPDWORD", "lpThreadId", "out", threadIdPointer, threadIdPost, threadIdDecodedValue, DecodeStatusName(record.Values32[1]));
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::OpenThread:
+    {
+        const std::string threadIdValue = DwordDecimalHexText(record.Values32[2]);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "DWORD", "dwDesiredAccess", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), ThreadAccessFlagsText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "BOOL", "bInheritHandle", "in", std::to_string(record.Values32[1]), std::to_string(record.Values32[1]), BoolText(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "DWORD", "dwThreadId", "in", std::to_string(record.Values32[2]), std::to_string(record.Values32[2]), threadIdValue);
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::WaitForSingleObject:
+    {
+        const std::string handlePointer = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hHandle", "in", handlePointer, handlePointer, handlePointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "dwMilliseconds", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), WaitTimeoutText(record.Values32[0]));
+        payload = ApiCallPayload(result, record, WaitResultText(static_cast<std::uint32_t>(record.ReturnValue)), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::GetExitCodeThread:
+    {
+        const std::string threadPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string exitCodePointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const bool exitCodeDecoded = static_cast<KnMonDecodeStatus>(record.Values32[0]) == KnMonDecodeStatus::Decoded;
+        const std::string exitCodeValue = DwordDecimalHexText(record.Values32[1]);
+        const std::string exitCodePost = exitCodeDecoded ? std::to_string(record.Values32[1]) : exitCodePointer;
+        const std::string exitCodeDecodedValue = exitCodeDecoded ?
+            ("value=" + exitCodeValue) :
+            (DecodeStatusName(record.Values32[0]) + ";pointer=" + exitCodePointer);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hThread", "in", threadPointer, threadPointer, threadPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPDWORD", "lpExitCode", "out", exitCodePointer, exitCodePost, exitCodeDecodedValue, DecodeStatusName(record.Values32[0]));
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
         break;
     }
     case KnMonTransportApiId::NtCreateFile:
