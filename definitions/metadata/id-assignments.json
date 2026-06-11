@@ -15,7 +15,8 @@
     { "id": 11, "name": "user32.dll", "symbol": "User32" },
     { "id": 12, "name": "gdi32.dll", "symbol": "Gdi32" },
     { "id": 13, "name": "psapi.dll", "symbol": "Psapi" },
-    { "id": 14, "name": "version.dll", "symbol": "Version" }
+    { "id": 14, "name": "version.dll", "symbol": "Version" },
+    { "id": 15, "name": "shell32.dll", "symbol": "Shell32" }
   ],
   "apis": [
     { "id": 1, "module": "kernel32.dll", "name": "CreateFileW", "symbol": "CreateFileW" },
@@ -121,6 +122,8 @@
     { "id": 101, "module": "psapi.dll", "name": "GetModuleFileNameExW", "symbol": "GetModuleFileNameExW" },
     { "id": 102, "module": "version.dll", "name": "GetFileVersionInfoSizeW", "symbol": "GetFileVersionInfoSizeW" },
     { "id": 103, "module": "version.dll", "name": "GetFileVersionInfoW", "symbol": "GetFileVersionInfoW" },
-    { "id": 104, "module": "version.dll", "name": "VerQueryValueW", "symbol": "VerQueryValueW" }
+    { "id": 104, "module": "version.dll", "name": "VerQueryValueW", "symbol": "VerQueryValueW" },
+    { "id": 105, "module": "shell32.dll", "name": "SHGetKnownFolderPath", "symbol": "SHGetKnownFolderPath" },
+    { "id": 106, "module": "shell32.dll", "name": "SHGetSpecialFolderPathW", "symbol": "SHGetSpecialFolderPathW" }
   ]
 }

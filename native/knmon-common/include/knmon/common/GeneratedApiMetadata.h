@@ -53,7 +53,7 @@ struct KnMonGeneratedParameterMetadata
     std::string_view LengthExpression;
 };
 
-inline constexpr std::array<KnMonGeneratedModuleMetadata, 14> KnMonGeneratedModules =
+inline constexpr std::array<KnMonGeneratedModuleMetadata, 15> KnMonGeneratedModules =
 {{
     {
         1,
@@ -125,9 +125,14 @@ inline constexpr std::array<KnMonGeneratedModuleMetadata, 14> KnMonGeneratedModu
         "version.dll",
         "Version"
     },
+    {
+        15,
+        "shell32.dll",
+        "Shell32"
+    },
 }};
 
-inline constexpr std::array<KnMonGeneratedApiMetadata, 104> KnMonGeneratedApis =
+inline constexpr std::array<KnMonGeneratedApiMetadata, 106> KnMonGeneratedApis =
 {{
     {
         1,
@@ -2105,9 +2110,47 @@ inline constexpr std::array<KnMonGeneratedApiMetadata, 104> KnMonGeneratedApis =
         410,
         4
     },
+    {
+        105,
+        15,
+        "shell32.dll",
+        "SHGetKnownFolderPath",
+        "SHGetKnownFolderPath",
+        "shell",
+        "known_folder_path_query",
+        "low",
+        "iat",
+        "smoke_verified",
+        "stdcall",
+        "HRESULT",
+        "HRESULT",
+        "{\"returnEqual\":\"S_OK\"}",
+        "{\"returnNotEqual\":\"S_OK\"}",
+        414,
+        4
+    },
+    {
+        106,
+        15,
+        "shell32.dll",
+        "SHGetSpecialFolderPathW",
+        "SHGetSpecialFolderPathW",
+        "shell",
+        "special_folder_path_query",
+        "low",
+        "iat",
+        "smoke_verified",
+        "stdcall",
+        "BOOL",
+        "GetLastError",
+        "{\"returnNotEqual\":\"FALSE\"}",
+        "{\"returnEqual\":\"FALSE\"}",
+        418,
+        4
+    },
 }};
 
-inline constexpr std::array<KnMonGeneratedParameterMetadata, 414> KnMonGeneratedParameters =
+inline constexpr std::array<KnMonGeneratedParameterMetadata, 422> KnMonGeneratedParameters =
 {{
     {
         1,
@@ -9141,6 +9184,142 @@ inline constexpr std::array<KnMonGeneratedParameterMetadata, 414> KnMonGenerated
         "post",
         true,
         4,
+        "",
+        "",
+        "",
+        -1,
+        ""
+    },
+    {
+        105,
+        0,
+        414,
+        "rfid",
+        "REFKNOWNFOLDERID",
+        "in",
+        "known_folder_id_pointer",
+        "pre",
+        false,
+        16,
+        "",
+        "",
+        "",
+        -1,
+        ""
+    },
+    {
+        105,
+        1,
+        415,
+        "dwFlags",
+        "DWORD",
+        "in",
+        "dword_value",
+        "pre",
+        false,
+        0,
+        "",
+        "",
+        "",
+        -1,
+        ""
+    },
+    {
+        105,
+        2,
+        416,
+        "hToken",
+        "HANDLE",
+        "in",
+        "handle",
+        "pre",
+        true,
+        0,
+        "",
+        "",
+        "",
+        -1,
+        ""
+    },
+    {
+        105,
+        3,
+        417,
+        "ppszPath",
+        "PWSTR*",
+        "out",
+        "shell_folder_path_pointer_pointer",
+        "post",
+        true,
+        8,
+        "",
+        "",
+        "",
+        -1,
+        ""
+    },
+    {
+        106,
+        0,
+        418,
+        "hwnd",
+        "HWND",
+        "in",
+        "hwnd_handle",
+        "pre",
+        true,
+        0,
+        "",
+        "",
+        "",
+        -1,
+        ""
+    },
+    {
+        106,
+        1,
+        419,
+        "pszPath",
+        "LPWSTR",
+        "out",
+        "shell_folder_path_pointer",
+        "post",
+        true,
+        512,
+        "",
+        "",
+        "",
+        -1,
+        ""
+    },
+    {
+        106,
+        2,
+        420,
+        "csidl",
+        "int",
+        "in",
+        "csidl_value",
+        "pre",
+        false,
+        0,
+        "",
+        "",
+        "",
+        -1,
+        ""
+    },
+    {
+        106,
+        3,
+        421,
+        "fCreate",
+        "BOOL",
+        "in",
+        "dword_value",
+        "pre",
+        false,
+        0,
         "",
         "",
         "",

@@ -48,6 +48,8 @@ $requiredApis = @(
     "GetFileVersionInfoSizeW",
     "GetFileVersionInfoW",
     "VerQueryValueW",
+    "SHGetKnownFolderPath",
+    "SHGetSpecialFolderPathW",
     "RpcStringBindingComposeW",
     "RpcBindingFromStringBindingW",
     "RpcStringFreeW",
@@ -622,6 +624,157 @@ $versionArgs = @($resourceEvents | ForEach-Object { $_.arguments } | ConvertTo-J
 if ($versionArgs -cmatch "CompanyName|ProductName|FileDescription|OriginalFilename|StringFileInfo|VS_VERSION_INFO|BEGIN CERTIFICATE|PRIVATE KEY|Authorization|Cookie|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|Authenticode|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 version resource events appear to expose raw resource, PE, file-content, hash, signature, string-table, credential, or byte-preview evidence: $versionArgs"
+}
+
+$shellEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "shell" })
+if ($shellEvents.Count -lt 8)
+{
+    throw "x86 capture did not include the selected Shell known-folder API family slice."
+}
+
+$knownFolderPath = @($shellEvents | Where-Object { $_.api -eq "SHGetKnownFolderPath" })
+if ($knownFolderPath.Count -lt 4)
+{
+    throw "x86 capture did not include allowlisted and non-allowlisted SHGetKnownFolderPath evidence."
+}
+
+foreach ($event in $knownFolderPath)
+{
+    if ($event.module -ne "shell32.dll" -or $event.apiCategory -ne "known_folder_path_query" -or $event.hookPolicy -ne "iat" -or $event.coverageStatus -ne "smoke_verified")
+    {
+        throw "x86 SHGetKnownFolderPath metadata mismatch."
+    }
+
+    $knownArgs = ($event.arguments | ConvertTo-Json -Depth 8)
+    if ($knownArgs -notmatch "known_folder_id_pointer" -or $knownArgs -notmatch "shell_folder_path_pointer_pointer")
+    {
+        throw "x86 SHGetKnownFolderPath arguments did not include GUID/path-pointer metadata: $knownArgs"
+    }
+}
+
+$knownWindows = @($knownFolderPath | Where-Object {
+    $arg = @($_.arguments | Where-Object { $_.name -eq "rfid" } | Select-Object -First 1)
+    $arg.Count -eq 1 -and $arg[0].decodedValue -match "FOLDERID_Windows"
+} | Select-Object -First 1)
+$knownSystem = @($knownFolderPath | Where-Object {
+    $arg = @($_.arguments | Where-Object { $_.name -eq "rfid" } | Select-Object -First 1)
+    $arg.Count -eq 1 -and $arg[0].decodedValue -match "FOLDERID_System"
+} | Select-Object -First 1)
+$knownProgramFiles = @($knownFolderPath | Where-Object {
+    $arg = @($_.arguments | Where-Object { $_.name -eq "rfid" } | Select-Object -First 1)
+    $arg.Count -eq 1 -and $arg[0].decodedValue -match "FOLDERID_ProgramFiles"
+} | Select-Object -First 1)
+$knownFonts = @($knownFolderPath | Where-Object {
+    $arg = @($_.arguments | Where-Object { $_.name -eq "rfid" } | Select-Object -First 1)
+    $arg.Count -eq 1 -and $arg[0].decodedValue -match "FOLDERID_Fonts"
+} | Select-Object -First 1)
+
+if ($knownWindows.Count -ne 1 -or $knownSystem.Count -ne 1 -or $knownProgramFiles.Count -ne 1 -or $knownFonts.Count -ne 1)
+{
+    throw "x86 SHGetKnownFolderPath did not include all expected folder IDs."
+}
+
+$knownWindowsPath = @($knownWindows[0].arguments | Where-Object { $_.name -eq "ppszPath" } | Select-Object -First 1)
+$knownSystemPath = @($knownSystem[0].arguments | Where-Object { $_.name -eq "ppszPath" } | Select-Object -First 1)
+$knownProgramFilesPath = @($knownProgramFiles[0].arguments | Where-Object { $_.name -eq "ppszPath" } | Select-Object -First 1)
+$knownFontsPath = @($knownFonts[0].arguments | Where-Object { $_.name -eq "ppszPath" } | Select-Object -First 1)
+
+if ($knownWindowsPath.Count -ne 1 -or $knownWindowsPath[0].decodedValue -notmatch "(?i)status=decoded_safe_path;.*path=[A-Z]:\\WINDOWS$")
+{
+    throw "x86 FOLDERID_Windows did not include allowlisted path evidence: $($knownWindowsPath | ConvertTo-Json -Depth 8)"
+}
+
+if ($knownSystemPath.Count -ne 1 -or $knownSystemPath[0].decodedValue -notmatch "(?i)status=decoded_safe_path;.*path=[A-Z]:\\WINDOWS\\system32$")
+{
+    throw "x86 FOLDERID_System did not include allowlisted path evidence: $($knownSystemPath | ConvertTo-Json -Depth 8)"
+}
+
+if ($knownProgramFilesPath.Count -ne 1 -or $knownProgramFilesPath[0].decodedValue -notmatch "(?i)status=decoded_safe_path;.*path=[A-Z]:\\Program Files(?: \(x86\))?$")
+{
+    throw "x86 FOLDERID_ProgramFiles did not include allowlisted path evidence: $($knownProgramFilesPath | ConvertTo-Json -Depth 8)"
+}
+
+if ($knownFontsPath.Count -ne 1 -or $knownFontsPath[0].decodedValue -notmatch "status=non_allowlisted_no_path" -or $knownFontsPath[0].decodedValue -match "path=")
+{
+    throw "x86 FOLDERID_Fonts should not expose a returned path: $($knownFontsPath | ConvertTo-Json -Depth 8)"
+}
+
+$specialFolderPath = @($shellEvents | Where-Object { $_.api -eq "SHGetSpecialFolderPathW" })
+if ($specialFolderPath.Count -lt 4)
+{
+    throw "x86 capture did not include allowlisted and non-allowlisted SHGetSpecialFolderPathW evidence."
+}
+
+foreach ($event in $specialFolderPath)
+{
+    if ($event.module -ne "shell32.dll" -or $event.apiCategory -ne "special_folder_path_query" -or $event.returnValue -ne "1" -or $event.hookPolicy -ne "iat" -or $event.coverageStatus -ne "smoke_verified")
+    {
+        throw "x86 SHGetSpecialFolderPathW metadata or return evidence mismatch."
+    }
+
+    $specialArgs = ($event.arguments | ConvertTo-Json -Depth 8)
+    if ($specialArgs -notmatch "csidl_value" -or $specialArgs -notmatch "shell_folder_path_pointer" -or $specialArgs -notmatch '"fCreate"')
+    {
+        throw "x86 SHGetSpecialFolderPathW arguments did not include CSIDL/path metadata: $specialArgs"
+    }
+}
+
+$specialWindows = @($specialFolderPath | Where-Object {
+    $arg = @($_.arguments | Where-Object { $_.name -eq "csidl" } | Select-Object -First 1)
+    $arg.Count -eq 1 -and $arg[0].decodedValue -match "CSIDL_WINDOWS"
+} | Select-Object -First 1)
+$specialSystem = @($specialFolderPath | Where-Object {
+    $arg = @($_.arguments | Where-Object { $_.name -eq "csidl" } | Select-Object -First 1)
+    $arg.Count -eq 1 -and $arg[0].decodedValue -match "CSIDL_SYSTEM"
+} | Select-Object -First 1)
+$specialProgramFiles = @($specialFolderPath | Where-Object {
+    $arg = @($_.arguments | Where-Object { $_.name -eq "csidl" } | Select-Object -First 1)
+    $arg.Count -eq 1 -and $arg[0].decodedValue -match "CSIDL_PROGRAM_FILES"
+} | Select-Object -First 1)
+$specialFonts = @($specialFolderPath | Where-Object {
+    $arg = @($_.arguments | Where-Object { $_.name -eq "csidl" } | Select-Object -First 1)
+    $arg.Count -eq 1 -and $arg[0].decodedValue -match "CSIDL_FONTS"
+} | Select-Object -First 1)
+
+if ($specialWindows.Count -ne 1 -or $specialSystem.Count -ne 1 -or $specialProgramFiles.Count -ne 1 -or $specialFonts.Count -ne 1)
+{
+    throw "x86 SHGetSpecialFolderPathW did not include all expected CSIDL values."
+}
+
+$specialWindowsPath = @($specialWindows[0].arguments | Where-Object { $_.name -eq "pszPath" } | Select-Object -First 1)
+$specialSystemPath = @($specialSystem[0].arguments | Where-Object { $_.name -eq "pszPath" } | Select-Object -First 1)
+$specialProgramFilesPath = @($specialProgramFiles[0].arguments | Where-Object { $_.name -eq "pszPath" } | Select-Object -First 1)
+$specialFontsPath = @($specialFonts[0].arguments | Where-Object { $_.name -eq "pszPath" } | Select-Object -First 1)
+
+if ($specialWindowsPath.Count -ne 1 -or $specialWindowsPath[0].decodedValue -notmatch "(?i)status=decoded_safe_path;.*path=[A-Z]:\\WINDOWS$")
+{
+    throw "x86 CSIDL_WINDOWS did not include allowlisted path evidence: $($specialWindowsPath | ConvertTo-Json -Depth 8)"
+}
+
+if ($specialSystemPath.Count -ne 1 -or $specialSystemPath[0].decodedValue -notmatch "(?i)status=decoded_safe_path;.*path=[A-Z]:\\WINDOWS\\system32$")
+{
+    throw "x86 CSIDL_SYSTEM did not include allowlisted path evidence: $($specialSystemPath | ConvertTo-Json -Depth 8)"
+}
+
+if ($specialProgramFilesPath.Count -ne 1 -or $specialProgramFilesPath[0].decodedValue -notmatch "(?i)status=decoded_safe_path;.*path=[A-Z]:\\Program Files(?: \(x86\))?$")
+{
+    throw "x86 CSIDL_PROGRAM_FILES did not include allowlisted path evidence: $($specialProgramFilesPath | ConvertTo-Json -Depth 8)"
+}
+
+if ($specialFontsPath.Count -ne 1 -or $specialFontsPath[0].decodedValue -notmatch "status=non_allowlisted_no_path" -or $specialFontsPath[0].decodedValue -match "path=")
+{
+    throw "x86 CSIDL_FONTS should not expose a returned path: $($specialFontsPath | ConvertTo-Json -Depth 8)"
+}
+
+$shellArgs = @($shellEvents | ForEach-Object { $_.arguments } | ConvertTo-Json -Depth 8)
+if ($shellArgs -cmatch "Users\\\\|AppData|Downloads|Desktop|Documents|Recent|Startup|SendTo|OneDrive|ShellExecute|SHFileOperation|SHGetFileInfo|PIDL|ITEMIDLIST|PropertyStore|CommandLine|Environment|BEGIN CERTIFICATE|PRIVATE KEY|Authorization|Cookie|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 Shell events appear to expose user paths, shell payloads, credentials, PE/file/hash data, or byte-preview evidence: $shellArgs"
+}
+
+if ($shellArgs -cmatch "path=[^`"]*Fonts")
+{
+    throw "x86 non-allowlisted Font queries exposed a path: $shellArgs"
 }
 
 $rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })

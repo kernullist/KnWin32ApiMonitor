@@ -111,6 +111,8 @@ enum class KnMonTransportApiId : std::uint16_t
     GetFileVersionInfoSizeW = 102,
     GetFileVersionInfoW = 103,
     VerQueryValueW = 104,
+    SHGetKnownFolderPath = 105,
+    SHGetSpecialFolderPathW = 106,
 };
 
 enum class KnMonTransportModuleId : std::uint16_t
@@ -130,5 +132,6 @@ enum class KnMonTransportModuleId : std::uint16_t
     Gdi32 = 12,
     Psapi = 13,
     Version = 14,
+    Shell32 = 15,
 };
 }

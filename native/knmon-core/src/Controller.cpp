@@ -2021,6 +2021,33 @@ std::string HexNtStatusValue(std::uint32_t value)
     return HexFixed(value, 8);
 }
 
+std::string HexHResultValue(std::uint32_t value)
+{
+    return HexFixed(value, 8);
+}
+
+std::string ShellFolderPathStatusName(std::uint32_t value)
+{
+    std::string result = "none";
+
+    switch (value)
+    {
+    case 1:
+        result = "decoded_safe_path";
+        break;
+    case 2:
+        result = "non_allowlisted_no_path";
+        break;
+    case 3:
+        result = "decode_failed";
+        break;
+    default:
+        break;
+    }
+
+    return result;
+}
+
 std::string SignedIntValue(std::uint64_t value)
 {
     return std::to_string(static_cast<std::int32_t>(static_cast<std::uint32_t>(value)));
@@ -2673,6 +2700,48 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPCWSTR", "lpSubBlock", "in", subBlockPointer, subBlockPointer, subBlock, DecodeStatusName(record.Values32[2])) << ",";
         args << ArgumentJsonFromMetadata(record.ApiId, 2, "LPVOID*", "lplpBuffer", "out", valuePointerPointer, valuePointer, valueDecoded) << ",";
         args << ArgumentJsonFromMetadata(record.ApiId, 3, "PUINT", "puLen", "out", lengthPointer, lengthValue, lengthValue);
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::SHGetKnownFolderPath:
+    {
+        const std::string knownFolderPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string tokenHandle = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string pathPointerPointer = HexPointerValue(record.Values64[2], result.Architecture);
+        const std::string pathPointer = HexPointerValue(record.Values64[3], result.Architecture);
+        const std::string knownFolder = text0.empty() ? knownFolderPointer : text0;
+        const std::string status = ShellFolderPathStatusName(record.Values32[2]);
+        std::string pathDecoded = "status=" + status + ";pointer=" + pathPointer;
+        if (record.Values32[2] == 1 && !text1.empty())
+        {
+            pathDecoded += ";path=" + text1;
+        }
+
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "REFKNOWNFOLDERID", "rfid", "in", knownFolderPointer, knownFolderPointer, knownFolder, DecodeStatusName(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "dwFlags", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "HANDLE", "hToken", "in", tokenHandle, tokenHandle, tokenHandle) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "PWSTR*", "ppszPath", "out", pathPointerPointer, pathPointer, pathDecoded, DecodeStatusName(record.Values32[3]));
+        payload = ApiCallPayload(result, record, HexHResultValue(record.ReturnCode), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::SHGetSpecialFolderPathW:
+    {
+        const std::string windowHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string pathPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string csidlRaw = SignedIntValue32(record.Values32[0]);
+        const std::string csidlDecoded = text0.empty() ? csidlRaw : text0;
+        const std::string createValue = record.Values32[1] == 0 ? "FALSE" : "TRUE";
+        const std::string status = ShellFolderPathStatusName(record.Values32[3]);
+        std::string pathDecoded = "status=" + status + ";pointer=" + pathPointer;
+        if (record.Values32[3] == 1 && !text1.empty())
+        {
+            pathDecoded += ";path=" + text1;
+        }
+
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HWND", "hwnd", "in", windowHandle, windowHandle, windowHandle) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPWSTR", "pszPath", "out", pathPointer, pathPointer, pathDecoded, DecodeStatusName(record.Values32[4])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "int", "csidl", "in", csidlRaw, csidlRaw, csidlDecoded) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "BOOL", "fCreate", "in", createValue, createValue, createValue);
         payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
         break;
     }

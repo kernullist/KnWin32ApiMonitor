@@ -2481,6 +2481,54 @@
         "returnNotEqual": "FALSE"
       },
       "symbol": "VerQueryValueW"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "known_folder_path_query",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "HRESULT",
+      "failure": {
+        "returnNotEqual": "S_OK"
+      },
+      "family": "shell",
+      "firstParameterIndex": 414,
+      "hookPolicy": "iat",
+      "id": 105,
+      "module": "shell32.dll",
+      "moduleId": 15,
+      "name": "SHGetKnownFolderPath",
+      "parameterCount": 4,
+      "returnType": "HRESULT",
+      "risk": "low",
+      "source": "definitions/win32/shell32.json",
+      "success": {
+        "returnEqual": "S_OK"
+      },
+      "symbol": "SHGetKnownFolderPath"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "special_folder_path_query",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "GetLastError",
+      "failure": {
+        "returnEqual": "FALSE"
+      },
+      "family": "shell",
+      "firstParameterIndex": 418,
+      "hookPolicy": "iat",
+      "id": 106,
+      "module": "shell32.dll",
+      "moduleId": 15,
+      "name": "SHGetSpecialFolderPathW",
+      "parameterCount": 4,
+      "returnType": "BOOL",
+      "risk": "low",
+      "source": "definitions/win32/shell32.json",
+      "success": {
+        "returnNotEqual": "FALSE"
+      },
+      "symbol": "SHGetSpecialFolderPathW"
     }
   ],
   "decodeAliases": [
@@ -2582,6 +2630,15 @@
       "name": "crypt_blob",
       "preview": "crypt_blob",
       "readsTargetMemory": true
+    },
+    {
+      "enum": "",
+      "flags": "",
+      "kind": "count",
+      "maxPreviewBytes": 0,
+      "name": "csidl_value",
+      "preview": "csidl_value",
+      "readsTargetMemory": false
     },
     {
       "enum": "",
@@ -2716,6 +2773,15 @@
       "maxPreviewBytes": 16,
       "name": "io_status_block",
       "preview": "io_status_block",
+      "readsTargetMemory": true
+    },
+    {
+      "enum": "",
+      "flags": "",
+      "kind": "object",
+      "maxPreviewBytes": 16,
+      "name": "known_folder_id_pointer",
+      "preview": "known_folder_id",
       "readsTargetMemory": true
     },
     {
@@ -2878,6 +2944,24 @@
       "maxPreviewBytes": 128,
       "name": "service_status",
       "preview": "service_status",
+      "readsTargetMemory": true
+    },
+    {
+      "enum": "",
+      "flags": "",
+      "kind": "pointer",
+      "maxPreviewBytes": 512,
+      "name": "shell_folder_path_pointer",
+      "preview": "shell_folder_path_pointer",
+      "readsTargetMemory": true
+    },
+    {
+      "enum": "",
+      "flags": "",
+      "kind": "pointer",
+      "maxPreviewBytes": 8,
+      "name": "shell_folder_path_pointer_pointer",
+      "preview": "shell_folder_path_pointer_pointer",
       "readsTargetMemory": true
     },
     {
@@ -3050,6 +3134,11 @@
       "id": 14,
       "name": "version.dll",
       "symbol": "Version"
+    },
+    {
+      "id": 15,
+      "name": "shell32.dll",
+      "symbol": "Shell32"
     }
   ],
   "parameters": [
@@ -10090,6 +10179,142 @@
       "name": "puLen",
       "nullable": true,
       "type": "PUINT"
+    },
+    {
+      "absoluteIndex": 414,
+      "apiId": 105,
+      "captureTiming": "pre",
+      "decode": "known_folder_id_pointer",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 16,
+      "name": "rfid",
+      "nullable": false,
+      "type": "REFKNOWNFOLDERID"
+    },
+    {
+      "absoluteIndex": 415,
+      "apiId": 105,
+      "captureTiming": "pre",
+      "decode": "dword_value",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 1,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "dwFlags",
+      "nullable": false,
+      "type": "DWORD"
+    },
+    {
+      "absoluteIndex": 416,
+      "apiId": 105,
+      "captureTiming": "pre",
+      "decode": "handle",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 2,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "hToken",
+      "nullable": true,
+      "type": "HANDLE"
+    },
+    {
+      "absoluteIndex": 417,
+      "apiId": 105,
+      "captureTiming": "post",
+      "decode": "shell_folder_path_pointer_pointer",
+      "direction": "out",
+      "enum": "",
+      "flags": "",
+      "index": 3,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 8,
+      "name": "ppszPath",
+      "nullable": true,
+      "type": "PWSTR*"
+    },
+    {
+      "absoluteIndex": 418,
+      "apiId": 106,
+      "captureTiming": "pre",
+      "decode": "hwnd_handle",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "hwnd",
+      "nullable": true,
+      "type": "HWND"
+    },
+    {
+      "absoluteIndex": 419,
+      "apiId": 106,
+      "captureTiming": "post",
+      "decode": "shell_folder_path_pointer",
+      "direction": "out",
+      "enum": "",
+      "flags": "",
+      "index": 1,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 512,
+      "name": "pszPath",
+      "nullable": true,
+      "type": "LPWSTR"
+    },
+    {
+      "absoluteIndex": 420,
+      "apiId": 106,
+      "captureTiming": "pre",
+      "decode": "csidl_value",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 2,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "csidl",
+      "nullable": false,
+      "type": "int"
+    },
+    {
+      "absoluteIndex": 421,
+      "apiId": 106,
+      "captureTiming": "pre",
+      "decode": "dword_value",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 3,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "fCreate",
+      "nullable": false,
+      "type": "BOOL"
     }
   ],
   "schemaVersion": "0.1.0",
@@ -10104,6 +10329,7 @@
       "definitions/win32/psapi.json",
       "definitions/win32/resolver.json",
       "definitions/win32/rpcrt4.json",
+      "definitions/win32/shell32.json",
       "definitions/win32/user32.json",
       "definitions/win32/version.json",
       "definitions/win32/winhttp.json",

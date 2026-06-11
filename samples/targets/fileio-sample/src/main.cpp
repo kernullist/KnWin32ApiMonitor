@@ -7,6 +7,7 @@
 #include <psapi.h>
 #include <bcrypt.h>
 #include <rpc.h>
+#include <shlobj.h>
 #include <wincrypt.h>
 #include <winver.h>
 #include <winhttp.h>
@@ -17,6 +18,7 @@
 
 #include <array>
 #include <cstring>
+#include <cwchar>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -47,6 +49,11 @@ extern "C" NTSYSAPI NTSTATUS NTAPI LdrGetProcedureAddress(
 
 namespace
 {
+constexpr GUID SampleFolderIdWindows = { 0xf38bf404, 0x1d43, 0x42f2, { 0x93, 0x05, 0x67, 0xde, 0x0b, 0x28, 0xfc, 0x23 } };
+constexpr GUID SampleFolderIdSystem = { 0x1ac14e77, 0x02e7, 0x4e5d, { 0xb7, 0x44, 0x2e, 0xb1, 0xae, 0x51, 0x98, 0xb7 } };
+constexpr GUID SampleFolderIdProgramFiles = { 0x905e63b6, 0xc1bf, 0x494e, { 0xb2, 0x9c, 0x65, 0xb7, 0x32, 0xd3, 0xd2, 0x1a } };
+constexpr GUID SampleFolderIdFonts = { 0xfd228cb7, 0xae11, 0x4ae3, { 0x86, 0x4c, 0x16, 0xf3, 0x91, 0x0a, 0xb8, 0xfe } };
+
 std::wstring BuildSamplePath()
 {
     std::array<wchar_t, MAX_PATH> tempPath = {};
@@ -82,6 +89,17 @@ std::string HexNtStatus(NTSTATUS status)
            << std::setfill('0')
            << std::setw(8)
            << static_cast<unsigned long>(status);
+    return stream.str();
+}
+
+std::string HexHResult(HRESULT result)
+{
+    std::ostringstream stream;
+    stream << "0x"
+           << std::hex
+           << std::setfill('0')
+           << std::setw(8)
+           << static_cast<unsigned long>(static_cast<unsigned int>(result));
     return stream.str();
 }
 
@@ -932,6 +950,125 @@ bool RunVersionResourceProbe()
     return success;
 }
 
+bool QueryKnownFolderPath(REFKNOWNFOLDERID folderId, const char* label, bool requirePath)
+{
+    bool success = false;
+    PWSTR folderPath = nullptr;
+
+    do
+    {
+        const HRESULT result = SHGetKnownFolderPath(folderId, 0, nullptr, &folderPath);
+        if (FAILED(result))
+        {
+            std::cout << "SHGetKnownFolderPath(" << label << ") failed with " << HexHResult(result) << "\n";
+            break;
+        }
+
+        if (folderPath == nullptr)
+        {
+            std::cout << "SHGetKnownFolderPath(" << label << ") returned null path\n";
+            break;
+        }
+
+        if (requirePath && std::wcslen(folderPath) == 0)
+        {
+            std::cout << "SHGetKnownFolderPath(" << label << ") returned empty path\n";
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    if (folderPath != nullptr)
+    {
+        CoTaskMemFree(folderPath);
+    }
+
+    return success;
+}
+
+bool QuerySpecialFolderPath(int csidl, const char* label, bool requirePath)
+{
+    bool success = false;
+    std::array<wchar_t, MAX_PATH> folderPath = {};
+
+    do
+    {
+        if (!SHGetSpecialFolderPathW(nullptr, folderPath.data(), csidl, FALSE))
+        {
+            const std::string operation = std::string("SHGetSpecialFolderPathW(") + label + ")";
+            LogLastError(operation.c_str());
+            break;
+        }
+
+        if (requirePath && folderPath[0] == L'\0')
+        {
+            std::cout << "SHGetSpecialFolderPathW(" << label << ") returned empty path\n";
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
+bool RunShellKnownFolderProbe()
+{
+    bool success = false;
+
+    do
+    {
+        if (!QueryKnownFolderPath(SampleFolderIdWindows, "Windows", true))
+        {
+            break;
+        }
+
+        if (!QueryKnownFolderPath(SampleFolderIdSystem, "System", true))
+        {
+            break;
+        }
+
+        if (!QueryKnownFolderPath(SampleFolderIdProgramFiles, "ProgramFiles", true))
+        {
+            break;
+        }
+
+        if (!QueryKnownFolderPath(SampleFolderIdFonts, "Fonts", true))
+        {
+            break;
+        }
+
+        if (!QuerySpecialFolderPath(CSIDL_WINDOWS, "Windows", true))
+        {
+            break;
+        }
+
+        if (!QuerySpecialFolderPath(CSIDL_SYSTEM, "System", true))
+        {
+            break;
+        }
+
+        if (!QuerySpecialFolderPath(CSIDL_PROGRAM_FILES, "ProgramFiles", true))
+        {
+            break;
+        }
+
+        if (!QuerySpecialFolderPath(CSIDL_FONTS, "Fonts", true))
+        {
+            break;
+        }
+
+        std::cout << "shell known folder roundtrip known=4 special=4\n";
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
 bool RunWinsockProbe()
 {
     bool success = false;
@@ -1402,6 +1539,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunVersionResourceProbe())
+        {
+            break;
+        }
+
+        if (!RunShellKnownFolderProbe())
         {
             break;
         }

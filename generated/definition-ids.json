@@ -623,6 +623,18 @@
       "module": "version.dll",
       "name": "VerQueryValueW",
       "symbol": "VerQueryValueW"
+    },
+    {
+      "id": 105,
+      "module": "shell32.dll",
+      "name": "SHGetKnownFolderPath",
+      "symbol": "SHGetKnownFolderPath"
+    },
+    {
+      "id": 106,
+      "module": "shell32.dll",
+      "name": "SHGetSpecialFolderPathW",
+      "symbol": "SHGetSpecialFolderPathW"
     }
   ],
   "modules": [
@@ -695,6 +707,11 @@
       "id": 14,
       "name": "version.dll",
       "symbol": "Version"
+    },
+    {
+      "id": 15,
+      "name": "shell32.dll",
+      "symbol": "Shell32"
     }
   ],
   "schemaVersion": "0.1.0",

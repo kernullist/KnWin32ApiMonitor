@@ -471,13 +471,17 @@ Current verified behavior:
    - `GetFileVersionInfoW`
    - `VerQueryValueW`
 32. Version records render generated metadata, bounded path/size/pointer evidence, root fixed-file-info numeric fields, and first translation language/codepage evidence outside the target process. They intentionally do not capture raw version resource bytes, arbitrary string-table values, PE/resource table dumps, file contents, hashes, signatures, credentials, or arbitrary payload previews.
-33. `WS2_32.dll` ordinal imports for the selected Winsock APIs are matched only through explicit hook-definition ordinals; broad ordinal patching remains out of scope.
+33. The Phase 13E Wave 3 live slice captures selected low-payload `shell32.dll` known-folder metadata APIs through the same shared-memory transport:
+   - `SHGetKnownFolderPath`
+   - `SHGetSpecialFolderPathW`
+34. Shell known-folder records render generated metadata, known-folder GUID/CSIDL, flag, handle, pointer, return/timing, allowlist status, and returned paths only for Windows/System/ProgramFiles queries outside the target process. Non-allowlisted successful queries emit `non_allowlisted_no_path` without returned path strings. They intentionally do not capture ShellExecute/process-launch evidence, PIDLs, Shell namespace item data, arbitrary file metadata, user-profile/AppData/Desktop/Documents/Downloads paths, command lines, environment variables, directory listings, file contents, credentials, or arbitrary payload previews.
+35. `WS2_32.dll` ordinal imports for the selected Winsock APIs are matched only through explicit hook-definition ordinals; broad ordinal patching remains out of scope.
 
 Next implementation focus:
 
-1. Keep the selected Winsock, registry, advapi32 token query/privilege lookup, RPCRT4 binding, bcrypt CNG provider/RNG, crypt32 certificate-store/message-handle, WinHTTP session-handle, WinINet session-handle, User32/GDI32 metadata, PSAPI module-query, and Version resource metadata slices under shared-memory backpressure and hook-overhead gates.
+1. Keep the selected Winsock, registry, advapi32 token query/privilege lookup, RPCRT4 binding, bcrypt CNG provider/RNG, crypt32 certificate-store/message-handle, WinHTTP session-handle, WinINet session-handle, User32/GDI32 metadata, PSAPI module-query, Version resource metadata, and Shell known-folder metadata slices under shared-memory backpressure and hook-overhead gates.
 2. Design payload-heavy network hooks (`send`, `recv`, `sendto`, `recvfrom`) and WinHTTP/WinINet connection, request, transfer, option, header, cookie, credential, and body capture separately before enabling buffer capture at scale.
-3. Stage the next Wave 3 DLL/API family only after deterministic smoke evidence and transport-budget checks exist; prefer another low-volume shell metadata or handle/lifecycle slice before payload-heavy or secret-bearing APIs.
+3. Stage the next Wave 3 DLL/API family only after deterministic smoke evidence and transport-budget checks exist; prefer a low-volume handle/lifecycle or explicitly reviewed COM/OLE metadata slice before payload-heavy or secret-bearing APIs.
 4. Keep returned-pointer instrumentation as a separate reviewed design item.
 
 ## Phase 10: Definition System V1
@@ -514,14 +518,14 @@ Current verified behavior:
 9. Restricted buffer length expression validation rejects unsupported tokens and unknown parameter identifiers without arbitrary code execution.
 10. The Rohitab XML importer prototype converts a small local XML fixture into deterministic draft definition JSON and marks unknown decodes as `unresolved`.
 11. `npm run defs:coverage` reports by DLL, family, risk, hook policy, coverage status, and decode quality.
-12. Wave 2 metadata is committed for `advapi32.dll`, `bcrypt.dll`, `crypt32.dll`, `rpcrt4.dll`, `ws2_32.dll`, `wininet.dll`, and `winhttp.dll`; Phase 13B adds Wave 3 metadata for `user32.dll` and `gdi32.dll`; Phase 13C adds Wave 3 metadata for `psapi.dll`; Phase 13D adds Wave 3 metadata for `version.dll`.
-13. Stable generated IDs now cover 14 modules and 104 APIs, with Wave 2 API IDs `14` through `90`, Phase 13B Wave 3 API IDs `91` through `97`, Phase 13C PSAPI API IDs `98` through `101`, and Phase 13D Version API IDs `102` through `104`.
-14. The coverage report currently totals 46 `definition_only`, 4 `hooked`, and 54 `smoke_verified` APIs.
+12. Wave 2 metadata is committed for `advapi32.dll`, `bcrypt.dll`, `crypt32.dll`, `rpcrt4.dll`, `ws2_32.dll`, `wininet.dll`, and `winhttp.dll`; Phase 13B adds Wave 3 metadata for `user32.dll` and `gdi32.dll`; Phase 13C adds Wave 3 metadata for `psapi.dll`; Phase 13D adds Wave 3 metadata for `version.dll`; Phase 13E adds Wave 3 metadata for `shell32.dll`.
+13. Stable generated IDs now cover 15 modules and 106 APIs, with Wave 2 API IDs `14` through `90`, Phase 13B Wave 3 API IDs `91` through `97`, Phase 13C PSAPI API IDs `98` through `101`, Phase 13D Version API IDs `102` through `104`, and Phase 13E Shell API IDs `105` through `106`.
+14. The coverage report currently totals 46 `definition_only`, 4 `hooked`, and 56 `smoke_verified` APIs.
 15. `npm run defs:generate` emits deterministic controller-side decoder metadata:
    - `generated/definition-decoder-tables.json`
    - `native/knmon-common/include/knmon/common/GeneratedApiMetadata.h`
 16. The controller uses generated metadata for API/module names, family/category tags, argument names/types/directions, decode aliases, and capture timing while preserving explicit per-API shared-memory slot interpretation.
-17. The selected `advapi32.dll` registry slice, selected `advapi32.dll` token query/privilege lookup slice, `bcrypt.dll` CNG provider/RNG slice, `crypt32.dll` certificate-store/message-handle slice, `rpcrt4.dll` local binding slice, `ws2_32.dll` Winsock slice, `winhttp.dll` session-handle slice, `wininet.dll` session-handle slice, Phase 13B `user32.dll`/`gdi32.dll` metadata slice, Phase 13C `psapi.dll` module-query slice, and Phase 13D `version.dll` resource metadata slice are marked `iat` and `smoke_verified`; unimplemented Wave 2 APIs remain `definition_only`.
+17. The selected `advapi32.dll` registry slice, selected `advapi32.dll` token query/privilege lookup slice, `bcrypt.dll` CNG provider/RNG slice, `crypt32.dll` certificate-store/message-handle slice, `rpcrt4.dll` local binding slice, `ws2_32.dll` Winsock slice, `winhttp.dll` session-handle slice, `wininet.dll` session-handle slice, Phase 13B `user32.dll`/`gdi32.dll` metadata slice, Phase 13C `psapi.dll` module-query slice, Phase 13D `version.dll` resource metadata slice, and Phase 13E `shell32.dll` known-folder metadata slice are marked `iat` and `smoke_verified`; unimplemented Wave 2 APIs remain `definition_only`.
 
 Next implementation focus:
 
@@ -532,7 +536,7 @@ Next implementation focus:
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 
-Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, Phase 11F, Phase 11G, Phase 11H, Phase 11I, Phase 11J, Phase 11K, Phase 11L, Phase 11M, Phase 13A, Phase 13B, Phase 13C, and Phase 13D foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, cancellation-safe operation ownership for bounded attach/process-tree helper commands, durable native session ownership readiness, bounded UI streaming trace batches, durable `.knapm` chunk replay, `.knapm` restart/recovery ownership classification, host-side persistent daemon-owned session supervision, daemon audit/stale-registry hardening, zstd `.knapm` chunks, host-side JSON replay catalogs, host-side database-backed catalog indexing, low-payload User32/GDI32 metadata coverage, low-payload PSAPI module-query coverage, and low-payload Version resource metadata coverage are implemented; Windows service mode, automatic daemon crash recovery, orphaned active-agent repair, event-level trace payload indexing, UI/GDI payload capture, module memory/PE/file/hash/signature payload capture, and raw resource/string-table capture remain future work or non-goals until reviewed.
+Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, Phase 11F, Phase 11G, Phase 11H, Phase 11I, Phase 11J, Phase 11K, Phase 11L, Phase 11M, Phase 13A, Phase 13B, Phase 13C, Phase 13D, and Phase 13E foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, cancellation-safe operation ownership for bounded attach/process-tree helper commands, durable native session ownership readiness, bounded UI streaming trace batches, durable `.knapm` chunk replay, `.knapm` restart/recovery ownership classification, host-side persistent daemon-owned session supervision, daemon audit/stale-registry hardening, zstd `.knapm` chunks, host-side JSON replay catalogs, host-side database-backed catalog indexing, low-payload User32/GDI32 metadata coverage, low-payload PSAPI module-query coverage, low-payload Version resource metadata coverage, and allowlisted Shell known-folder metadata coverage are implemented; Windows service mode, automatic daemon crash recovery, orphaned active-agent repair, event-level trace payload indexing, UI/GDI payload capture, module memory/PE/file/hash/signature payload capture, raw resource/string-table capture, and Shell execution/namespace/file-metadata/user-folder payload capture remain future work or non-goals until reviewed.
 
 Goal:
 
@@ -754,6 +758,17 @@ Current verified Phase 13D behavior:
 7. `tools/native-smoke/wave3-version-resource-smoke.ps1` verifies shared-memory `api_call` records for all selected APIs, generated resource metadata, path/size/pointer evidence, fixed-file-info numeric evidence, translation language/codepage evidence, zero healthy-path transport drops, `restoredHooks=installedHooks`, `failedHooks=0`, and absence of raw-resource/string-table/PE/file/hash/signature/credential/byte-preview payload evidence.
 8. The optional x86 smoke expectation now includes the same selected Version resource metadata slice after a Win32 helper/target/agent build.
 
+Current verified Phase 13E behavior:
+
+1. `definitions/win32/shell32.json` adds two low-payload Wave 3 Shell known-folder API definitions with stable generated IDs `105` through `106`.
+2. Generated metadata now covers `shell32.dll = 15` plus `known_folder_id_pointer`, `csidl_value`, `shell_folder_path_pointer`, and `shell_folder_path_pointer_pointer` decode aliases.
+3. The sample links `shell32.lib` and `ole32.lib`, imports `SHGetKnownFolderPath` and `SHGetSpecialFolderPathW` from `shell32.dll`, and uses `CoTaskMemFree` only to release `SHGetKnownFolderPath` output buffers.
+4. The agent installs IAT hooks for the selected Shell APIs through the existing eligible-module sweep and dynamic re-sweep path.
+5. Hook fast paths stay on fixed-size shared-memory records and do not serialize JSON, write API events to the named pipe, allocate heap-heavy payloads, capture stacks, walk PIDLs, query Shell namespaces, execute shell verbs, read files, expand environment variables, capture command lines, or copy arbitrary path buffers.
+6. The controlled sample queries allowlisted `FOLDERID_Windows`, `FOLDERID_System`, `FOLDERID_ProgramFiles`, `CSIDL_WINDOWS`, `CSIDL_SYSTEM`, and `CSIDL_PROGRAM_FILES`, plus non-allowlisted Fonts queries to prove `non_allowlisted_no_path` suppression without printing or capturing returned Fonts paths.
+7. `tools/native-smoke/wave3-shell-known-folder-smoke.ps1` verifies shared-memory `api_call` records for all selected APIs, generated Shell metadata, GUID/CSIDL/flag/handle/pointer evidence, allowlisted Windows/System/ProgramFiles path evidence, non-allowlisted path suppression, zero healthy-path transport drops, `restoredHooks=installedHooks`, `failedHooks=0`, and absence of user-folder/AppData/command-line/environment/ShellExecute/PIDL/file-content/credential/byte-preview payload evidence.
+8. The optional x86 smoke expectation now includes the same selected Shell known-folder metadata slice after a Win32 helper/target/agent build.
+
 Current verified Phase 12A behavior:
 
 1. The React UI has a catalog-backed replay browser that surfaces path, target image/PID, session id, validation status, recovery state, compression, event count, byte totals, and last validation UTC.
@@ -797,7 +812,7 @@ Current verified Phase 12D behavior:
 Next implementation focus:
 
 1. Resume small, low-volume system DLL coverage waves only when each slice has deterministic smoke evidence, generated metadata, and transport/hook-overhead gates.
-2. Prefer a low-payload shell metadata or other handle/lifecycle slice before payload-heavy network, crypto key material, certificate chain decode, service-control, token mutation, RPC auth/endpoint work, UI/GDI payload capture, raw resource capture, or module memory/PE payload capture.
+2. Prefer a low-payload handle/lifecycle or explicitly reviewed COM/OLE metadata slice before payload-heavy network, crypto key material, certificate chain decode, service-control, token mutation, RPC auth/endpoint work, UI/GDI payload capture, raw resource capture, Shell payload capture, or module memory/PE payload capture.
 3. Keep automatic daemon crash recovery, orphaned active-agent repair, event-level replay indexing, and full-text trace search behind separate design reviews with explicit operator runbooks.
 4. Keep Windows service mode, protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 

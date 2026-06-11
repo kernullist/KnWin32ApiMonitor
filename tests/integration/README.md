@@ -18,8 +18,9 @@ Current verification gates include:
 12. Wave 3 User32/GDI32 metadata smoke through `tools\native-smoke\wave3-user32-gdi32-smoke.ps1`.
 13. Wave 3 PSAPI module-query smoke through `tools\native-smoke\wave3-psapi-module-query-smoke.ps1`.
 14. Wave 3 Version resource smoke through `tools\native-smoke\wave3-version-resource-smoke.ps1`.
-15. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
-16. Collector fixture and native smoke validation through `npm run collector:validate`.
+15. Wave 3 Shell known-folder smoke through `tools\native-smoke\wave3-shell-known-folder-smoke.ps1`.
+16. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
+17. Collector fixture and native smoke validation through `npm run collector:validate`.
 
 Run repeated lifecycle smoke:
 
@@ -101,6 +102,14 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave3-version-resour
 
 The Version smoke verifies selected file version size/load/query calls, generated resource metadata, kernel32 path/size evidence, fixed file/product version fields, translation language/codepage evidence, shared-memory transport mode, zero dropped events, clean hook restore, and no raw resource, string-table, PE, file-content, hash, signature, credential, or byte-preview payload evidence.
 
+Run Wave 3 Shell known-folder smoke:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave3-shell-known-folder-smoke.ps1
+```
+
+The Shell smoke verifies selected known-folder and special-folder calls, generated Shell metadata, GUID/CSIDL/flag/handle/pointer evidence, allowlisted Windows/System/ProgramFiles path evidence, non-allowlisted path suppression, shared-memory transport mode, zero dropped events, clean hook restore, and no user-folder, AppData, command-line, environment, ShellExecute, PIDL, file-content, credential, or byte-preview payload evidence.
+
 Run optional Win32/x86 capture smoke:
 
 ```powershell
@@ -109,7 +118,7 @@ cmake --build build/native-win32 --config Debug
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-smoke.ps1
 ```
 
-The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence, selected User32/GDI32 evidence, selected PSAPI module-query evidence, selected Version resource evidence, zero dropped events, and clean hook restore.
+The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence, selected User32/GDI32 evidence, selected PSAPI module-query evidence, selected Version resource evidence, selected Shell known-folder evidence, zero dropped events, and clean hook restore.
 
 Run collector backpressure smoke:
 

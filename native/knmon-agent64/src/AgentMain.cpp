@@ -10,6 +10,7 @@
 #include <psapi.h>
 #include <bcrypt.h>
 #include <rpc.h>
+#include <shlobj.h>
 #include <wincrypt.h>
 #include <winver.h>
 #include <winhttp.h>
@@ -97,6 +98,26 @@ struct VersionTranslation
     WORD CodePage;
 };
 
+struct KnownFolderIdentity
+{
+    const char* Name;
+    std::uint32_t Code;
+    bool AllowPath;
+};
+
+enum class ShellFolderPathStatus : std::uint32_t
+{
+    None = 0,
+    DecodedSafePath = 1,
+    NonAllowlistedNoPath = 2,
+    DecodeFailed = 3,
+};
+
+constexpr GUID FolderIdWindows = { 0xf38bf404, 0x1d43, 0x42f2, { 0x93, 0x05, 0x67, 0xde, 0x0b, 0x28, 0xfc, 0x23 } };
+constexpr GUID FolderIdSystem = { 0x1ac14e77, 0x02e7, 0x4e5d, { 0xb7, 0x44, 0x2e, 0xb1, 0xae, 0x51, 0x98, 0xb7 } };
+constexpr GUID FolderIdProgramFiles = { 0x905e63b6, 0xc1bf, 0x494e, { 0xb2, 0x9c, 0x65, 0xb7, 0x32, 0xd3, 0xd2, 0x1a } };
+constexpr GUID FolderIdFonts = { 0xfd228cb7, 0xae11, 0x4ae3, { 0x86, 0x4c, 0x16, 0xf3, 0x91, 0x0a, 0xb8, 0xfe } };
+
 using CreateFileWFn = HANDLE(WINAPI*)(LPCWSTR, DWORD, DWORD, LPSECURITY_ATTRIBUTES, DWORD, DWORD, HANDLE);
 using CreateFileAFn = HANDLE(WINAPI*)(LPCSTR, DWORD, DWORD, LPSECURITY_ATTRIBUTES, DWORD, DWORD, HANDLE);
 using ReadFileFn = BOOL(WINAPI*)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
@@ -141,6 +162,8 @@ using GetModuleFileNameExWFn = DWORD(WINAPI*)(HANDLE, HMODULE, LPWSTR, DWORD);
 using GetFileVersionInfoSizeWFn = DWORD(WINAPI*)(LPCWSTR, LPDWORD);
 using GetFileVersionInfoWFn = BOOL(WINAPI*)(LPCWSTR, DWORD, DWORD, LPVOID);
 using VerQueryValueWFn = BOOL(WINAPI*)(LPCVOID, LPCWSTR, LPVOID*, PUINT);
+using SHGetKnownFolderPathFn = HRESULT(WINAPI*)(REFKNOWNFOLDERID, DWORD, HANDLE, PWSTR*);
+using SHGetSpecialFolderPathWFn = BOOL(WINAPI*)(HWND, LPWSTR, int, BOOL);
 using RpcStringBindingComposeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR*);
 using RpcBindingFromStringBindingWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_BINDING_HANDLE*);
 using RpcStringFreeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR*);
@@ -223,6 +246,8 @@ GetModuleFileNameExWFn g_originalGetModuleFileNameExW = nullptr;
 GetFileVersionInfoSizeWFn g_originalGetFileVersionInfoSizeW = nullptr;
 GetFileVersionInfoWFn g_originalGetFileVersionInfoW = nullptr;
 VerQueryValueWFn g_originalVerQueryValueW = nullptr;
+SHGetKnownFolderPathFn g_originalSHGetKnownFolderPath = nullptr;
+SHGetSpecialFolderPathWFn g_originalSHGetSpecialFolderPathW = nullptr;
 RpcStringBindingComposeWFn g_originalRpcStringBindingComposeW = nullptr;
 RpcBindingFromStringBindingWFn g_originalRpcBindingFromStringBindingW = nullptr;
 RpcStringFreeWFn g_originalRpcStringFreeW = nullptr;
@@ -316,7 +341,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 58;
+constexpr std::size_t HookDefinitionCount = 60;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1559,6 +1584,10 @@ std::uint16_t ModuleId(const char* moduleName)
     else if (_stricmp(moduleName, "version.dll") == 0)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Version);
+    }
+    else if (_stricmp(moduleName, "shell32.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Shell32);
     }
 
     return result;
@@ -3149,6 +3178,155 @@ void FormatTranslationText(knmon::KnMonTransportRecord* record, const VersionTra
     }
 }
 
+bool GuidEquals(const GUID& left, const GUID& right)
+{
+    return left.Data1 == right.Data1 &&
+        left.Data2 == right.Data2 &&
+        left.Data3 == right.Data3 &&
+        std::memcmp(left.Data4, right.Data4, sizeof(left.Data4)) == 0;
+}
+
+KnownFolderIdentity ClassifyKnownFolderId(const GUID& value)
+{
+    KnownFolderIdentity result = { "UNKNOWN", 0, false };
+
+    if (GuidEquals(value, FolderIdWindows))
+    {
+        result = { "FOLDERID_Windows", 1, true };
+    }
+    else if (GuidEquals(value, FolderIdSystem))
+    {
+        result = { "FOLDERID_System", 2, true };
+    }
+    else if (GuidEquals(value, FolderIdProgramFiles))
+    {
+        result = { "FOLDERID_ProgramFiles", 3, true };
+    }
+    else if (GuidEquals(value, FolderIdFonts))
+    {
+        result = { "FOLDERID_Fonts", 4, false };
+    }
+
+    return result;
+}
+
+int BaseCsidlValue(int csidl)
+{
+    return csidl & 0x00ff;
+}
+
+KnownFolderIdentity ClassifyCsidlValue(int csidl)
+{
+    KnownFolderIdentity result = { "CSIDL_UNKNOWN", 0, false };
+    const int baseCsidl = BaseCsidlValue(csidl);
+
+    switch (baseCsidl)
+    {
+    case CSIDL_WINDOWS:
+        result = { "CSIDL_WINDOWS", 1, true };
+        break;
+    case CSIDL_SYSTEM:
+        result = { "CSIDL_SYSTEM", 2, true };
+        break;
+    case CSIDL_PROGRAM_FILES:
+        result = { "CSIDL_PROGRAM_FILES", 3, true };
+        break;
+    case CSIDL_FONTS:
+        result = { "CSIDL_FONTS", 4, false };
+        break;
+    default:
+        break;
+    }
+
+    return result;
+}
+
+const char* ShellFolderPathStatusText(std::uint32_t value)
+{
+    const char* result = "none";
+
+    switch (static_cast<ShellFolderPathStatus>(value))
+    {
+    case ShellFolderPathStatus::DecodedSafePath:
+        result = "decoded_safe_path";
+        break;
+    case ShellFolderPathStatus::NonAllowlistedNoPath:
+        result = "non_allowlisted_no_path";
+        break;
+    case ShellFolderPathStatus::DecodeFailed:
+        result = "decode_failed";
+        break;
+    case ShellFolderPathStatus::None:
+    default:
+        result = "none";
+        break;
+    }
+
+    return result;
+}
+
+void FormatGuidText(char* destination, std::uint32_t* length, std::size_t capacity, const GUID& value, const char* name)
+{
+    if (length != nullptr)
+    {
+        *length = 0;
+    }
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            break;
+        }
+
+        destination[0] = '\0';
+        const int written = std::snprintf(
+            destination,
+            capacity,
+            "%s={%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}",
+            name == nullptr ? "GUID" : name,
+            static_cast<unsigned long>(value.Data1),
+            static_cast<unsigned int>(value.Data2),
+            static_cast<unsigned int>(value.Data3),
+            static_cast<unsigned int>(value.Data4[0]),
+            static_cast<unsigned int>(value.Data4[1]),
+            static_cast<unsigned int>(value.Data4[2]),
+            static_cast<unsigned int>(value.Data4[3]),
+            static_cast<unsigned int>(value.Data4[4]),
+            static_cast<unsigned int>(value.Data4[5]),
+            static_cast<unsigned int>(value.Data4[6]),
+            static_cast<unsigned int>(value.Data4[7]));
+        SetFormattedTextLength(destination, length, capacity, written);
+    }
+    while (false);
+}
+
+void FormatCsidlText(char* destination, std::uint32_t* length, std::size_t capacity, int csidl, const char* name)
+{
+    if (length != nullptr)
+    {
+        *length = 0;
+    }
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            break;
+        }
+
+        destination[0] = '\0';
+        const int written = std::snprintf(
+            destination,
+            capacity,
+            "%s(%d)",
+            name == nullptr ? "CSIDL_UNKNOWN" : name,
+            BaseCsidlValue(csidl));
+        SetFormattedTextLength(destination, length, capacity, written);
+    }
+    while (false);
+}
+
 void EmitGetFileVersionInfoSizeWEvent(
     DWORD result,
     DWORD errorCode,
@@ -3265,6 +3443,103 @@ void EmitVerQueryValueWEvent(
                 record->Values32[6] = translation.CodePage;
                 FormatTranslationText(record, translation);
             }
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitSHGetKnownFolderPathEvent(
+    HRESULT result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    REFKNOWNFOLDERID knownFolderId,
+    DWORD flags,
+    HANDLE token,
+    PWSTR* path)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        const KnownFolderIdentity identity = ClassifyKnownFolderId(knownFolderId);
+        FillTransportCommon(record, knmon::KnMonTransportApiId::SHGetKnownFolderPath, "shell32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->ReturnCode = static_cast<std::uint32_t>(result);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(&knownFolderId));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(token));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(path));
+        record->Values32[0] = flags;
+        record->Values32[1] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+        record->Values32[2] = static_cast<std::uint32_t>(ShellFolderPathStatus::None);
+        record->Values32[3] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+        record->Values32[4] = identity.Code;
+        FormatGuidText(record->Text0, &record->Text0Length, sizeof(record->Text0), knownFolderId, identity.Name);
+
+        PWSTR localPath = nullptr;
+        if (SUCCEEDED(result) && ReadCurrentProcessValue(path, &localPath))
+        {
+            record->Values64[3] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(localPath));
+        }
+
+        if (SUCCEEDED(result) && identity.AllowPath && record->Values64[3] != 0)
+        {
+            const std::uint32_t pathStatus = CopyWidePointerText(record->Text1, &record->Text1Length, sizeof(record->Text1), localPath);
+            record->Values32[3] = pathStatus;
+            record->Values32[2] = pathStatus == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded) ?
+                static_cast<std::uint32_t>(ShellFolderPathStatus::DecodedSafePath) :
+                static_cast<std::uint32_t>(ShellFolderPathStatus::DecodeFailed);
+        }
+        else if (!identity.AllowPath)
+        {
+            record->Values32[2] = static_cast<std::uint32_t>(ShellFolderPathStatus::NonAllowlistedNoPath);
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitSHGetSpecialFolderPathWEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HWND window,
+    LPWSTR path,
+    int csidl,
+    BOOL create)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        const KnownFolderIdentity identity = ClassifyCsidlValue(csidl);
+        FillTransportCommon(record, knmon::KnMonTransportApiId::SHGetSpecialFolderPathW, "shell32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(window));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(path));
+        record->Values32[0] = static_cast<std::uint32_t>(csidl);
+        record->Values32[1] = static_cast<std::uint32_t>(create);
+        record->Values32[2] = static_cast<std::uint32_t>(BaseCsidlValue(csidl));
+        record->Values32[3] = static_cast<std::uint32_t>(ShellFolderPathStatus::None);
+        record->Values32[4] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+        record->Values32[5] = identity.Code;
+        FormatCsidlText(record->Text0, &record->Text0Length, sizeof(record->Text0), csidl, identity.Name);
+
+        if (result != FALSE && identity.AllowPath)
+        {
+            const std::uint32_t pathStatus = CopyWidePointerText(record->Text1, &record->Text1Length, sizeof(record->Text1), path);
+            record->Values32[4] = pathStatus;
+            record->Values32[3] = pathStatus == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded) ?
+                static_cast<std::uint32_t>(ShellFolderPathStatus::DecodedSafePath) :
+                static_cast<std::uint32_t>(ShellFolderPathStatus::DecodeFailed);
+        }
+        else if (!identity.AllowPath)
+        {
+            record->Values32[3] = static_cast<std::uint32_t>(ShellFolderPathStatus::NonAllowlistedNoPath);
         }
 
         CommitTransportRecord(record, overheadStart);
@@ -3870,6 +4145,8 @@ DWORD WINAPI HookedGetModuleFileNameExW(HANDLE process, HMODULE module, LPWSTR f
 DWORD WINAPI HookedGetFileVersionInfoSizeW(LPCWSTR fileName, LPDWORD handle);
 BOOL WINAPI HookedGetFileVersionInfoW(LPCWSTR fileName, DWORD handle, DWORD length, LPVOID data);
 BOOL WINAPI HookedVerQueryValueW(LPCVOID block, LPCWSTR subBlock, LPVOID* value, PUINT length);
+HRESULT WINAPI HookedSHGetKnownFolderPath(REFKNOWNFOLDERID knownFolderId, DWORD flags, HANDLE token, PWSTR* path);
+BOOL WINAPI HookedSHGetSpecialFolderPathW(HWND window, LPWSTR path, int csidl, BOOL create);
 RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR protSeq, RPC_WSTR networkAddr, RPC_WSTR endpoint, RPC_WSTR options, RPC_WSTR* stringBinding);
 RPC_STATUS RPC_ENTRY HookedRpcBindingFromStringBindingW(RPC_WSTR stringBinding, RPC_BINDING_HANDLE* binding);
 RPC_STATUS RPC_ENTRY HookedRpcStringFreeW(RPC_WSTR* string);
@@ -3935,6 +4212,8 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "version.dll", "GetFileVersionInfoSizeW", reinterpret_cast<void*>(HookedGetFileVersionInfoSizeW), reinterpret_cast<void**>(&g_originalGetFileVersionInfoSizeW), false, true, false, 0, 0 },
         HookDefinition { "version.dll", "GetFileVersionInfoW", reinterpret_cast<void*>(HookedGetFileVersionInfoW), reinterpret_cast<void**>(&g_originalGetFileVersionInfoW), false, true, false, 0, 0 },
         HookDefinition { "version.dll", "VerQueryValueW", reinterpret_cast<void*>(HookedVerQueryValueW), reinterpret_cast<void**>(&g_originalVerQueryValueW), false, true, false, 0, 0 },
+        HookDefinition { "shell32.dll", "SHGetKnownFolderPath", reinterpret_cast<void*>(HookedSHGetKnownFolderPath), reinterpret_cast<void**>(&g_originalSHGetKnownFolderPath), false, true, false, 0, 0 },
+        HookDefinition { "shell32.dll", "SHGetSpecialFolderPathW", reinterpret_cast<void*>(HookedSHGetSpecialFolderPathW), reinterpret_cast<void**>(&g_originalSHGetSpecialFolderPathW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringBindingComposeW", reinterpret_cast<void*>(HookedRpcStringBindingComposeW), reinterpret_cast<void**>(&g_originalRpcStringBindingComposeW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcBindingFromStringBindingW", reinterpret_cast<void*>(HookedRpcBindingFromStringBindingW), reinterpret_cast<void**>(&g_originalRpcBindingFromStringBindingW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringFreeW", reinterpret_cast<void*>(HookedRpcStringFreeW), reinterpret_cast<void**>(&g_originalRpcStringFreeW), false, true, false, 0, 0 },
@@ -5771,6 +6050,67 @@ BOOL WINAPI HookedVerQueryValueW(LPCVOID block, LPCWSTR subBlock, LPVOID* value,
     if (HooksEnabled())
     {
         EmitVerQueryValueWEvent(result, eventError, start, end, block, subBlock, value, length);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HRESULT WINAPI HookedSHGetKnownFolderPath(REFKNOWNFOLDERID knownFolderId, DWORD flags, HANDLE token, PWSTR* path)
+{
+    if (g_inHook || !HooksEnabled() || g_originalSHGetKnownFolderPath == nullptr)
+    {
+        if (g_originalSHGetKnownFolderPath == nullptr)
+        {
+            return HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND);
+        }
+
+        return g_originalSHGetKnownFolderPath(knownFolderId, flags, token, path);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const HRESULT result = g_originalSHGetKnownFolderPath(knownFolderId, flags, token, path);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = FAILED(result) ? static_cast<DWORD>(result) : 0;
+    if (HooksEnabled())
+    {
+        EmitSHGetKnownFolderPathEvent(result, eventError, start, end, knownFolderId, flags, token, path);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedSHGetSpecialFolderPathW(HWND window, LPWSTR path, int csidl, BOOL create)
+{
+    if (g_inHook || !HooksEnabled() || g_originalSHGetSpecialFolderPathW == nullptr)
+    {
+        if (g_originalSHGetSpecialFolderPathW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalSHGetSpecialFolderPathW(window, path, csidl, create);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalSHGetSpecialFolderPathW(window, path, csidl, create);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FALSE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitSHGetSpecialFolderPathWEvent(result, eventError, start, end, window, path, csidl, create);
     }
 
     SetLastError(lastError);
