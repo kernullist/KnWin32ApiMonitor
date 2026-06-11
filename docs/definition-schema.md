@@ -6,7 +6,7 @@
 
 API definitions describe how raw API calls should be decoded into useful analyst-facing values.
 
-Definition System V1 uses JSON definitions for API metadata plus JSON metadata registries for decode aliases, enum/flag values, and stable transport IDs. Rohitab-style XML import now exists as a prototype fixture tool for generating draft definitions; large imported API dumps remain out of scope.
+Definition System V1 uses JSON definitions for API metadata plus JSON metadata registries for decode aliases, enum/flag values, and stable transport IDs. Rohitab-style XML import now exists as a prototype fixture tool for generating draft definitions; large imported API dumps remain out of scope. UI validation now also covers trace virtualization, structured query helpers, thread/timeline grouping helpers, and rule-based highlight helpers.
 
 ## Location
 

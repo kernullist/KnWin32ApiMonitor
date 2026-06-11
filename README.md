@@ -86,6 +86,7 @@ Implemented now:
 49. Phase 12A catalog-backed replay UX and virtualized trace rendering, including catalog rebuild/query/state-target-limit filters, missing-row dry-run/prune controls, explicit per-row `.knapm` replay by path, replay source/status output, and bounded DOM trace rows while preserving full-session JSONL export.
 50. Phase 12B trace query builder and error-focused view, including structured all/any query clauses over trace fields, invalid-clause handling, error/decode/slow-call issue groups, click-to-filter issue triage, and focused UI query validator coverage.
 51. Phase 12C thread and timeline views, including deterministic UI-side thread grouping, time-bucket timeline summaries, click-to-query narrowing, relative-time query clauses, representative samples, bounded summary DOM, and focused trace-view validator coverage.
+52. Phase 12D rule-based trace highlighting, including deterministic built-in highlight rules for error returns, decode failures, slow calls, coverage hints, and metadata quality, bounded rule summaries, row severity markers, selected-event rule reasons, click-to-query narrowing, and focused highlight validator coverage.
 
 Not implemented yet:
 
@@ -208,6 +209,7 @@ The Phase 11M compression and catalog path keeps replay target-free:
 8. The trace table uses a local virtual row window so large replay sessions keep the DOM bounded while export and inspector state continue to use the full event set.
 9. Structured query and error-focused views run only over the existing UI-side trace model; they add no target process overhead and do not change helper, agent, transport, or `.knapm` contracts.
 10. Thread and timeline views reuse the same UI-side trace model and query predicates; they do not add helper calls, target work, or replay-format changes.
+11. Rule-based highlighting is computed from the current in-memory trace array and slow-call threshold; it adds no helper calls, target work, injected-agent work, or replay-format changes.
 
 Verified live hook coverage:
 
@@ -419,7 +421,7 @@ Validate collector fixtures and native smoke output:
 npm run collector:validate
 ```
 
-Validate UI trace virtualization, query helpers, and trace views:
+Validate UI trace virtualization, query helpers, trace views, and highlight rules:
 
 ```powershell
 npm run ui:validate

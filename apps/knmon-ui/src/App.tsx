@@ -60,6 +60,8 @@ import {
   traceQueryOperatorOptions
 } from "./traceQuery";
 import type { TraceIssueGroup, TraceQueryClause, TraceQueryField, TraceQueryMatchMode, TraceQueryOperator } from "./traceQuery";
+import { buildTraceHighlightState } from "./traceHighlights";
+import type { TraceHighlightSummary } from "./traceHighlights";
 import { buildTraceThreadGroups, buildTraceTimeline } from "./traceViews";
 import type { TraceThreadGroup, TraceTimelineBucket } from "./traceViews";
 import { computeVirtualTraceWindow } from "./virtualTrace";
@@ -363,6 +365,7 @@ function App() {
   const [traceQueryMatchMode, setTraceQueryMatchMode] = useState<TraceQueryMatchMode>("all");
   const [traceQueryClauses, setTraceQueryClauses] = useState<TraceQueryClause[]>([]);
   const [durationThresholdUs, setDurationThresholdUs] = useState(100);
+  const [highlightingEnabled, setHighlightingEnabled] = useState(true);
   const [running, setRunning] = useState(false);
   const [droppedCount, setDroppedCount] = useState(0);
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("parameters");
@@ -500,6 +503,23 @@ function App() {
     setSelectedEventId(bucket.eventIds[0] ?? 0);
     setInspectorTab(bucket.errorCount > 0 ? "return" : "parameters");
     appendOutput([makeAuditEvent("trace_timeline_filter_applied", "trace_timeline_view", `${formatElapsedMs(bucket.startRelativeTimeMs)}-${formatElapsedMs(bucket.endRelativeTimeMs)}; events=${bucket.eventCount}`)]);
+  }
+
+  function handleApplyHighlightSummary(summary: TraceHighlightSummary) {
+    if (summary.count === 0) {
+      return;
+    }
+
+    if (summary.clauses.length > 0) {
+      const nextClauses = summary.clauses.map((clause) => createTraceQueryClause(clause));
+      setTraceQueryMatchMode(summary.matchMode);
+      setTraceQueryClauses(nextClauses);
+      setFilter("");
+    }
+
+    setSelectedEventId(summary.eventIds[0] ?? 0);
+    setInspectorTab(summary.severity === "critical" ? "return" : "parameters");
+    appendOutput([makeAuditEvent("trace_highlight_filter_applied", "trace_highlight_rules", `${summary.label}; severity=${summary.severity}; events=${summary.count}; clauses=${summary.clauses.length}`)]);
   }
 
   function applySessionCatalog(catalog: NativeSessionCatalog) {
@@ -673,6 +693,14 @@ function App() {
     () => timelineView.buckets.slice(0, 48),
     [timelineView]
   );
+  const traceHighlightState = useMemo(
+    () => buildTraceHighlightState(events, durationThresholdUs),
+    [events, durationThresholdUs]
+  );
+  const visibleHighlightSummaries = useMemo(
+    () => traceHighlightState.summaries.slice(0, 8),
+    [traceHighlightState]
+  );
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
       return matchesFreeTextFilter(event, filter) && compiledTraceQuery.matches(event);
@@ -686,6 +714,9 @@ function App() {
   const selectedEvent = selectedTraceIndex >= 0
     ? filteredEvents[selectedTraceIndex]
     : filteredEvents[0] ?? events.find((event) => event.eventId === selectedEventId) ?? events[0];
+  const selectedEventHighlight = selectedEvent
+    ? traceHighlightState.eventHighlightsById.get(selectedEvent.eventId) ?? null
+    : null;
   const selectedTarget = selectedTargetPid === null ? null : targets.find((target) => target.pid === selectedTargetPid) ?? null;
   const targetBlockReason = targetEligibilityReason(selectedTarget, targetSource);
   const activeNativeOperation = nativeOperations.find(isNativeOperationActive) ?? null;
@@ -1706,6 +1737,7 @@ function App() {
               <span>DOM {visibleTraceEvents.length}</span>
               {compiledTraceQuery.activeClauseCount > 0 ? <span>{compiledTraceQuery.activeClauseCount} query</span> : null}
               {compiledTraceQuery.invalidClauses.length > 0 ? <span>{compiledTraceQuery.invalidClauses.length} invalid</span> : null}
+              {traceHighlightState.eventHighlights.length > 0 ? <span>{traceHighlightState.eventHighlights.length} highlighted</span> : null}
               {replaySource ? <span title={replaySource.path}>Replay {replaySource.label} / {replaySource.validationStatus}</span> : null}
             </div>
           </div>
@@ -1775,6 +1807,40 @@ function App() {
             ) : (
               <div className="query-empty">No structured clauses.</div>
             )}
+            <div className="highlight-panel">
+              <div className="highlight-toolbar">
+                <div className="query-title">
+                  <CircleDot size={14} />
+                  <strong>Highlight Rules</strong>
+                  <span>{traceHighlightState.eventHighlights.length} events; {visibleHighlightSummaries.length} rules</span>
+                </div>
+                <label className="highlight-toggle">
+                  <input
+                    type="checkbox"
+                    checked={highlightingEnabled}
+                    onChange={(event) => setHighlightingEnabled(event.target.checked)}
+                  />
+                  <span>Enabled</span>
+                </label>
+              </div>
+              <div className="highlight-summary-list">
+                {visibleHighlightSummaries.map((summary) => (
+                  <button
+                    type="button"
+                    className={`highlight-rule-card ${summary.severity}`}
+                    key={summary.id}
+                    disabled={summary.count === 0}
+                    onClick={() => handleApplyHighlightSummary(summary)}
+                  >
+                    <span>{summary.severity}</span>
+                    <strong>{summary.label}</strong>
+                    <em>{summary.count}</em>
+                    <small>{summary.detail}</small>
+                    <small>{summary.samples.length > 0 ? summary.samples.map((sample) => `#${sample.eventId} ${sample.module || "n/a"}!${sample.api || "n/a"} ${sample.reason}`).join("; ") : "no matches"}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
             {traceMode === "errors" ? (
               <div className="issue-panel">
                 <div className="issue-toolbar">
@@ -1931,35 +1997,43 @@ function App() {
             </table>
             <div className="trace-virtual-body" style={{ height: virtualTraceWindow.totalHeight }}>
               <div className="trace-virtual-window" style={{ transform: `translateY(${virtualTraceWindow.offsetTop}px)` }}>
-                {visibleTraceEvents.map((event, index) => (
-                  <button
-                    type="button"
-                    key={event.eventId}
-                    className={[
-                      "trace-virtual-row",
-                      selectedEvent?.eventId === event.eventId ? "selected" : "",
-                      (virtualTraceWindow.startIndex + index) % 2 === 1 ? "alt" : ""
-                    ].filter(Boolean).join(" ")}
-                    style={{ height: traceRowHeight }}
-                    onClick={() => setSelectedEventId(event.eventId)}
-                  >
-                    <span>{event.eventId}</span>
-                    <span>{(event.relativeTimeMs / 1000).toFixed(3)}s</span>
-                    <span>{event.pid}</span>
-                    <span>{event.tid}</span>
-                    <span>{event.module}</span>
-                    <span className="api-cell">{event.api}</span>
-                    <span className="args-cell">{compactArgs(event)}</span>
-                    <span>{event.returnValue}</span>
-                    <span className={event.error ? "error-cell" : ""}>{event.error ? `${event.error.code} = ${event.error.message}` : ""}</span>
-                    <span>{event.durationUs} us</span>
-                    <span className="tag-list">
-                      {event.tags.map((tag) => (
-                        <span key={tag}>{tag}</span>
-                      ))}
-                    </span>
-                  </button>
-                ))}
+                {visibleTraceEvents.map((event, index) => {
+                  const eventHighlight = traceHighlightState.eventHighlightsById.get(event.eventId) ?? null;
+
+                  return (
+                    <button
+                      type="button"
+                      key={event.eventId}
+                      className={[
+                        "trace-virtual-row",
+                        selectedEvent?.eventId === event.eventId ? "selected" : "",
+                        (virtualTraceWindow.startIndex + index) % 2 === 1 ? "alt" : "",
+                        highlightingEnabled && eventHighlight ? `highlight-${eventHighlight.highestSeverity}` : ""
+                      ].filter(Boolean).join(" ")}
+                      style={{ height: traceRowHeight }}
+                      onClick={() => setSelectedEventId(event.eventId)}
+                    >
+                      <span>{event.eventId}</span>
+                      <span>{(event.relativeTimeMs / 1000).toFixed(3)}s</span>
+                      <span>{event.pid}</span>
+                      <span>{event.tid}</span>
+                      <span>{event.module}</span>
+                      <span className="api-cell">{event.api}</span>
+                      <span className="args-cell">{compactArgs(event)}</span>
+                      <span>{event.returnValue}</span>
+                      <span className={event.error ? "error-cell" : ""}>{event.error ? `${event.error.code} = ${event.error.message}` : ""}</span>
+                      <span>{event.durationUs} us</span>
+                      <span className="tag-list">
+                        {highlightingEnabled && eventHighlight ? eventHighlight.matches.slice(0, 2).map((match) => (
+                          <span className={`highlight-badge ${match.severity}`} key={`${event.eventId}-${match.ruleId}`}>{match.label}</span>
+                        )) : null}
+                        {event.tags.map((tag) => (
+                          <span key={tag}>{tag}</span>
+                        ))}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
             {filteredEvents.length === 0 ? <div className="trace-empty">No trace events match the current filter or query.</div> : null}
@@ -1982,6 +2056,24 @@ function App() {
             <div className="inspector-body">
               {selectedEvent || inspectorTab === "output" ? (
                 <>
+                  {selectedEvent && selectedEventHighlight ? (
+                    <div className="highlight-inspector">
+                      <div className="highlight-inspector-title">
+                        <CircleDot size={14} />
+                        <strong>Matched Rules</strong>
+                        <span>{selectedEventHighlight.matches.length}</span>
+                      </div>
+                      <div className="highlight-inspector-list">
+                        {selectedEventHighlight.matches.map((match) => (
+                          <div className={`highlight-inspector-rule ${match.severity}`} key={`${selectedEvent.eventId}-${match.ruleId}`}>
+                            <span>{match.severity}</span>
+                            <strong>{match.label}</strong>
+                            <small>{match.reason}</small>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   {selectedEvent && inspectorTab === "parameters" ? (
                     <table className="detail-table">
                       <thead>
@@ -2048,6 +2140,7 @@ function App() {
                       <div><Braces size={14} /> schemaVersion={selectedEvent?.schemaVersion ?? "0.1.0"}</div>
                       <div><Filter size={14} /> backend={backendMode}; filter="{filter || "*"}"; mode={traceMode}</div>
                       <div><Filter size={14} /> queryMode={traceQueryMatchMode}; activeClauses={compiledTraceQuery.activeClauseCount}; invalidClauses={compiledTraceQuery.invalidClauses.length}; filteredRows={filteredEvents.length}</div>
+                      <div><CircleDot size={14} /> highlighting={highlightingEnabled ? "enabled" : "disabled"}; highlightedRows={traceHighlightState.eventHighlights.length}</div>
                       <div><Database size={14} /> sessionBytes={formatBytes(sessionBytes)}; droppedEvents={droppedCount}</div>
                       {replaySource ? <div><FolderOpen size={14} /> replay={replaySource.kind}; status={replaySource.validationStatus}; path={replaySource.path}</div> : null}
                       {outputEvents.map((event) => (

@@ -720,11 +720,22 @@ Current verified Phase 12C behavior:
 6. Summary panels keep bounded DOM rows while the main trace table remains virtualized and full-session JSONL export remains based on the complete event array.
 7. `tools/ui-validator/validate-trace-views.mjs` covers empty sessions, single-event sessions, multiple threads, error/decode/slow metrics, deterministic bucket sizing, and query clauses and is included in `npm run ui:validate`.
 
+Current verified Phase 12D behavior:
+
+1. The React UI has a bounded `Highlight Rules` summary over the current in-memory trace events, with a global row-highlighting toggle.
+2. `apps/knmon-ui/src/traceHighlights.ts` builds deterministic event highlight matches, event-id lookup maps, per-rule summaries, severity ordering, representative samples, and query clauses without new dependencies.
+3. Built-in rules identify error returns, argument decode failures, slow calls using the current threshold, high-signal API-family coverage hints, and missing/unknown module or API metadata.
+4. Flat trace rows keep the existing virtualized row window while adding compact severity markers and rule badges for highlighted events.
+5. The selected-event inspector shows matched rule labels, severities, and reasons before the normal parameter/buffer/stack/return/output tab content.
+6. Clicking a non-empty rule summary selects a representative event and narrows through existing structured query clauses when the rule can be represented by the current query model.
+7. Highlighting is UI-side only; it does not add helper calls, target work, injected-agent work, transport changes, or `.knapm` schema changes.
+8. `tools/ui-validator/validate-trace-highlights.mjs` covers empty sessions, no-match sessions, error/decode/slow/metadata/coverage matches, multiple rules on one event, severity ordering, threshold changes, summary counts, and generated query clauses and is included in `npm run ui:validate`.
+
 Next implementation focus:
 
-1. Continue Phase 12 with rule-based highlighting now that query, error, thread, and timeline grouping semantics are stable.
-2. Keep database-backed catalog indexing behind a separate scale review after the JSON catalog and replay picker contract are stable.
-3. Keep automatic daemon crash recovery and orphaned active-agent repair behind a separate design review with explicit operator runbooks.
+1. Treat the Phase 12 UX foundation as implemented and review database-backed replay/catalog indexing as the next scale-oriented host-side milestone.
+2. Keep automatic daemon crash recovery and orphaned active-agent repair behind a separate design review with explicit operator runbooks.
+3. Keep new API coverage waves behind shared-memory backpressure, hook-overhead, and deterministic smoke gates.
 4. Keep Windows service mode, protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 
 ## Phase 12: Advanced UX
