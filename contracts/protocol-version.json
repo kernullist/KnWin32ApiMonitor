@@ -72,8 +72,14 @@
     "catalogCommands": [
       "catalog-sessions --root <dir> [--catalog <path>] [--rebuild]",
       "catalog-query --catalog <path> [--limit n] [--state state] [--target pid-or-text]",
-      "catalog-remove-missing --catalog <path> [--dry-run]"
+      "catalog-remove-missing --catalog <path> [--dry-run]",
+      "catalog-index-build --root <dir> --database <path> [--rebuild]",
+      "catalog-index-query --database <path> [--limit n] [--state state] [--target pid-or-text]",
+      "catalog-index-remove-missing --database <path> [--dry-run]"
     ],
+    "catalogIndexBackend": "winsqlite3",
+    "catalogIndexSchemaVersion": 1,
+    "catalogIndexBoundary": "Phase 13A stores host-side .knapm metadata rows only; raw trace payload indexing and target mutation are out of scope.",
     "files": ["manifest.json", "audit.jsonl", "agent-events.jsonl", "trace-events.jsonl"],
     "knapmFiles": ["manifest.json", "index.json", "audit.jsonl", "agent-events.jsonl", "chunks/trace-000001.jsonl", "chunks/trace-000001.jsonl.zst"],
     "knapmManifestSchema": "knapm-manifest.schema.json",

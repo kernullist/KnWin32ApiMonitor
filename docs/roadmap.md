@@ -1,7 +1,7 @@
 # Roadmap
 
 작성일: 2026-06-08
-갱신일: 2026-06-10
+갱신일: 2026-06-11
 
 ## Product-Critical Priorities
 
@@ -124,7 +124,7 @@ Current implementation notes:
 4. `replay-session --session <dir>` returns trace-compatible events without launching a target or loading an agent.
 5. The UI exposes `Capture And Save` and `Replay Last` for the default `captures/latest-sample-fileio` session.
 6. `knmon-collector.exe smoke-backpressure --capacity 4 --events 10` proves bounded synthetic collector intake, FIFO retention, drop-newest overflow, and dropped-event accounting.
-7. Phase 11I adds durable directory-backed `.knapm` session chunks and indexed replay for bounded streaming attach sessions, Phase 11J adds explicit `.knapm` restart/recovery ownership classification, Phase 11K adds a host-side persistent daemon supervision foundation, Phase 11L hardens daemon audit/stale registry handling, and Phase 11M adds zstd `.knapm` chunks plus host-side JSON replay catalogs; metadata-database indexing, Windows service mode, and crash-tolerant daemon recovery remain future work.
+7. Phase 11I adds durable directory-backed `.knapm` session chunks and indexed replay for bounded streaming attach sessions, Phase 11J adds explicit `.knapm` restart/recovery ownership classification, Phase 11K adds a host-side persistent daemon supervision foundation, Phase 11L hardens daemon audit/stale registry handling, Phase 11M adds zstd `.knapm` chunks plus host-side JSON replay catalogs, and Phase 13A adds a host-side database-backed catalog index; Windows service mode, event-level replay indexing, and crash-tolerant daemon recovery remain future work.
 
 ## Phase 5: Safe Agent Harness
 
@@ -512,7 +512,7 @@ Next implementation focus:
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 
-Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, Phase 11F, Phase 11G, Phase 11H, Phase 11I, Phase 11J, Phase 11K, Phase 11L, and Phase 11M foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, cancellation-safe operation ownership for bounded attach/process-tree helper commands, durable native session ownership readiness, bounded UI streaming trace batches, durable `.knapm` chunk replay, `.knapm` restart/recovery ownership classification, host-side persistent daemon-owned session supervision, daemon audit/stale-registry hardening, zstd `.knapm` chunks, and host-side JSON replay catalogs are implemented; Windows service mode, automatic daemon crash recovery, orphaned active-agent repair, and database-backed large replay indexing remain future work.
+Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, Phase 11F, Phase 11G, Phase 11H, Phase 11I, Phase 11J, Phase 11K, Phase 11L, Phase 11M, and Phase 13A foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, cancellation-safe operation ownership for bounded attach/process-tree helper commands, durable native session ownership readiness, bounded UI streaming trace batches, durable `.knapm` chunk replay, `.knapm` restart/recovery ownership classification, host-side persistent daemon-owned session supervision, daemon audit/stale-registry hardening, zstd `.knapm` chunks, host-side JSON replay catalogs, and host-side database-backed catalog indexing are implemented; Windows service mode, automatic daemon crash recovery, orphaned active-agent repair, and event-level trace payload indexing remain future work.
 
 Goal:
 
@@ -691,6 +691,17 @@ Current verified Phase 11M behavior:
 13. `tools/session-validator/validate-session-fixtures.mjs` covers valid zstd, corrupt zstd frame, bad uncompressed hash, and unsupported compression fixtures.
 14. `tools/native-smoke/knapm-compression-catalog-smoke.ps1` verifies live zstd attach, daemon-owned zstd sessions, validate/replay, catalog build/query, dry-run missing detection, and actual missing-row pruning without deleting active `.knapm` data.
 
+Current verified Phase 13A behavior:
+
+1. `catalog-index-build --root <dir> --database <path> [--rebuild]` builds a versioned `winsqlite3` catalog index from `.knapm` session metadata and validation results.
+2. The database stores rows equivalent to `NativeSessionCatalogRow`, including target identity, owner/recovery/writer state, counters, compression totals, validation status, content identity, and stale identity metadata.
+3. Existing JSON catalog commands remain compatible; database-backed output uses the same catalog JSON shape with additive `databasePath`, `indexBackend`, `indexSchemaVersion`, and `staleIdentityCount` fields.
+4. `catalog-index-query --database <path> [--limit n] [--state state] [--target pid-or-text]` filters DB rows without touching session directories.
+5. `catalog-index-remove-missing --database <path> [--dry-run]` reports or removes only missing DB rows. It does not delete `.knapm` data, recover writers, unload agents, launch targets, attach to targets, or mutate target processes.
+6. Tauri exposes DB index build/query/remove wrappers, and the UI adds compact DB index controls while preserving explicit replay-by-path behavior.
+7. `contracts/session-catalog.schema.json` and `protocol-version.json` document the Phase 13A commands and additive DB metadata.
+8. `tools/native-smoke/catalog-index-smoke.ps1` verifies empty roots, valid/invalid sessions, state filters, target PID/text filters, limit behavior, dry-run missing detection, DB-row removal, malformed DB rejection, unsupported schema rejection, and no `.knapm` data deletion.
+
 Current verified Phase 12A behavior:
 
 1. The React UI has a catalog-backed replay browser that surfaces path, target image/PID, session id, validation status, recovery state, compression, event count, byte totals, and last validation UTC.
@@ -733,9 +744,9 @@ Current verified Phase 12D behavior:
 
 Next implementation focus:
 
-1. Treat the Phase 12 UX foundation as implemented and review database-backed replay/catalog indexing as the next scale-oriented host-side milestone.
-2. Keep automatic daemon crash recovery and orphaned active-agent repair behind a separate design review with explicit operator runbooks.
-3. Keep new API coverage waves behind shared-memory backpressure, hook-overhead, and deterministic smoke gates.
+1. Resume small, low-volume system DLL coverage waves only when each slice has deterministic smoke evidence, generated metadata, and transport/hook-overhead gates.
+2. Prefer a low-payload UI/GDI/Shell lifecycle or metadata API slice before payload-heavy network, crypto key material, certificate chain decode, service-control, token mutation, or RPC auth/endpoint work.
+3. Keep automatic daemon crash recovery, orphaned active-agent repair, event-level replay indexing, and full-text trace search behind separate design reviews with explicit operator runbooks.
 4. Keep Windows service mode, protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 
 ## Phase 12: Advanced UX

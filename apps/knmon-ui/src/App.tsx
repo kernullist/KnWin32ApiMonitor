@@ -25,6 +25,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   attachTargetProcessCapture,
+  buildNativeSessionCatalogIndex,
   cancelNativeOperation,
   catalogNativeSessions,
   captureSampleFileIoEvents,
@@ -37,6 +38,8 @@ import {
   listNativeOperations,
   listTargetProcesses,
   queryNativeSessionCatalog,
+  queryNativeSessionCatalogIndex,
+  removeMissingNativeSessionCatalogIndexEntries,
   removeMissingNativeSessionCatalogEntries,
   replayLastSampleSession,
   replaySessionPath,
@@ -1025,6 +1028,79 @@ function App() {
     }
   }
 
+  async function handleBuildSessionCatalogIndex(rebuild: boolean) {
+    setNativeBusy(true);
+
+    try {
+      appendOutput([makeAuditEvent("session_catalog_index_requested", "build_native_session_catalog_index", rebuild ? "Catalog DB index rebuild requested from UI." : "Catalog DB index build requested from UI.")]);
+      const catalog = await buildNativeSessionCatalogIndex(rebuild);
+      applySessionCatalog(catalog);
+      appendOutput([
+        makeAuditEvent(
+          catalog.success ? "session_catalog_index_built" : "session_catalog_index_failed",
+          "build_native_session_catalog_index",
+          `${catalog.message}; db=${catalog.databasePath || "n/a"}; backend=${catalog.indexBackend || "n/a"}; schema=${catalog.indexSchemaVersion ?? 0}; sessions=${catalog.sessionCount}; stale=${catalog.staleIdentityCount ?? 0}`
+        )
+      ]);
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("session_catalog_index_blocked", "build_native_session_catalog_index", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
+  async function handleQuerySessionCatalogIndex() {
+    setNativeBusy(true);
+
+    try {
+      const queryState = catalogStateFilter === "all" ? "" : catalogStateFilter;
+      appendOutput([makeAuditEvent("session_catalog_index_query_requested", "query_native_session_catalog_index", `state=${catalogStateFilter}; target=${catalogTargetFilter || "*"}; limit=${catalogLimit}`)]);
+      const catalog = await queryNativeSessionCatalogIndex(catalogLimit, queryState, catalogTargetFilter.trim());
+      applySessionCatalog(catalog);
+      appendOutput([
+        makeAuditEvent(
+          catalog.success ? "session_catalog_index_queried" : "session_catalog_index_query_failed",
+          "query_native_session_catalog_index",
+          `${catalog.message}; db=${catalog.databasePath || "n/a"}; sessions=${catalog.sessionCount}; valid=${catalog.validSessionCount}; invalid=${catalog.invalidSessionCount}; stale=${catalog.staleIdentityCount ?? 0}`
+        )
+      ]);
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("session_catalog_index_query_blocked", "query_native_session_catalog_index", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
+  async function handleRemoveMissingCatalogIndexEntries(dryRun: boolean) {
+    setNativeBusy(true);
+
+    try {
+      appendOutput([makeAuditEvent("session_catalog_index_prune_requested", "remove_missing_native_session_catalog_index_entries", dryRun ? "Dry-run DB missing-row prune requested from UI." : "DB missing-row prune requested from UI.")]);
+      const catalog = await removeMissingNativeSessionCatalogIndexEntries(dryRun);
+      applySessionCatalog(catalog);
+      appendOutput([
+        makeAuditEvent(
+          catalog.success ? "session_catalog_index_pruned" : "session_catalog_index_prune_failed",
+          "remove_missing_native_session_catalog_index_entries",
+          `${catalog.message}; dryRun=${catalog.dryRun}; mutation=${catalog.mutationAttempted}; missing=${catalog.missingSessionPaths.length}; sessions=${catalog.sessionCount}`
+        )
+      ]);
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("session_catalog_index_prune_blocked", "remove_missing_native_session_catalog_index_entries", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
   async function handleReplayCatalogRow(row: NativeSessionCatalogRow) {
     setNativeBusy(true);
     setSelectedCatalogPath(row.path);
@@ -1582,6 +1658,7 @@ function App() {
                     <span>{sessionCatalog ? `${sessionCatalog.validSessionCount} valid` : "not loaded"}</span>
                     <span>{sessionCatalog ? `${sessionCatalog.invalidSessionCount} invalid` : "0 invalid"}</span>
                     <span>{sessionCatalog ? `${formatBytes(sessionCatalog.storedBytes)} stored` : "0 B stored"}</span>
+                    <span>{sessionCatalog?.databasePath ? `DB ${sessionCatalog.indexBackend || "index"}` : "JSON catalog"}</span>
                   </div>
                   <div className="catalog-controls">
                     <label htmlFor="catalog-state">State</label>
@@ -1634,6 +1711,34 @@ function App() {
                       <span>Prune</span>
                     </button>
                   </div>
+                  <div className="catalog-index-controls">
+                    <span>Index</span>
+                    <button type="button" className="tool-button" onClick={() => handleBuildSessionCatalogIndex(false)} disabled={nativeBusy}>
+                      <Database size={13} />
+                      <span>Build DB</span>
+                    </button>
+                    <button type="button" className="tool-button" onClick={() => handleBuildSessionCatalogIndex(true)} disabled={nativeBusy}>
+                      <RefreshCcw size={13} />
+                      <span>Rebuild DB</span>
+                    </button>
+                    <button type="button" className="tool-button" onClick={handleQuerySessionCatalogIndex} disabled={nativeBusy}>
+                      <Search size={13} />
+                      <span>Query DB</span>
+                    </button>
+                    <button type="button" className="tool-button" onClick={() => handleRemoveMissingCatalogIndexEntries(true)} disabled={nativeBusy}>
+                      <Trash2 size={13} />
+                      <span>Dry DB</span>
+                    </button>
+                    <button type="button" className="tool-button danger" onClick={() => handleRemoveMissingCatalogIndexEntries(false)} disabled={nativeBusy}>
+                      <Trash2 size={13} />
+                      <span>Prune DB</span>
+                    </button>
+                  </div>
+                  {sessionCatalog?.databasePath ? (
+                    <div className="catalog-selected" title={sessionCatalog.databasePath}>
+                      index {sessionCatalog.indexSchemaVersion ?? 0} / stale identity {sessionCatalog.staleIdentityCount ?? 0} / {sessionCatalog.databasePath}
+                    </div>
+                  ) : null}
                   {sessionCatalog && sessionCatalog.sessions.length > 0 ? (
                     <div className="catalog-row-list" aria-label="Replay catalog rows">
                       {sessionCatalog.sessions.map((row) => (

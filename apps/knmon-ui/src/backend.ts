@@ -225,6 +225,38 @@ export async function removeMissingNativeSessionCatalogEntries(dryRun: boolean):
   });
 }
 
+export async function buildNativeSessionCatalogIndex(rebuild: boolean): Promise<NativeSessionCatalog> {
+  if (!isTauriRuntime()) {
+    throw new Error("Session catalog index requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeSessionCatalog>("build_native_session_catalog_index", {
+    rebuild
+  });
+}
+
+export async function queryNativeSessionCatalogIndex(limit: number, state: string, target: string): Promise<NativeSessionCatalog> {
+  if (!isTauriRuntime()) {
+    throw new Error("Session catalog index query requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeSessionCatalog>("query_native_session_catalog_index", {
+    limit,
+    state,
+    target
+  });
+}
+
+export async function removeMissingNativeSessionCatalogIndexEntries(dryRun: boolean): Promise<NativeSessionCatalog> {
+  if (!isTauriRuntime()) {
+    throw new Error("Session catalog index pruning requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeSessionCatalog>("remove_missing_native_session_catalog_index_entries", {
+    dryRun
+  });
+}
+
 export async function startDaemonSupervisedSession(pid: number, durationMs: number): Promise<NativeSession> {
   if (!isTauriRuntime()) {
     throw new Error("Daemon-supervised sessions require the Tauri desktop runtime.");

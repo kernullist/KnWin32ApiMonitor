@@ -52,7 +52,7 @@ target_compile_definitions(knmon-collector PRIVATE
 add_executable(knmon-native-helper
     knmon-native-helper/src/main.cpp
 )
-target_link_libraries(knmon-native-helper PRIVATE knmon-core bcrypt)
+target_link_libraries(knmon-native-helper PRIVATE knmon-core bcrypt winsqlite3)
 target_compile_definitions(knmon-native-helper PRIVATE
     WIN32_LEAN_AND_MEAN
     NOMINMAX

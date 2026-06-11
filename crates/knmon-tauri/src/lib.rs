@@ -230,6 +230,14 @@ pub struct NativeSessionCatalog
     pub success: bool,
     pub root_path: String,
     pub catalog_path: String,
+    #[serde(default)]
+    pub database_path: String,
+    #[serde(default)]
+    pub index_backend: String,
+    #[serde(default)]
+    pub index_schema_version: u32,
+    #[serde(default)]
+    pub stale_identity_count: u64,
     pub session_count: u64,
     pub valid_session_count: u64,
     pub invalid_session_count: u64,
@@ -1506,6 +1514,97 @@ pub fn remove_missing_native_session_catalog_entries(dry_run: bool) -> Result<Na
     Ok(result)
 }
 
+pub fn build_native_session_catalog_index(rebuild: bool) -> Result<NativeSessionCatalog, String>
+{
+    let root_path = repo_root_path().join("captures");
+    let database_path = default_session_catalog_index_path();
+    let mut args = vec![
+        "catalog-index-build".to_string(),
+        "--root".to_string(),
+        root_path.to_string_lossy().to_string(),
+        "--database".to_string(),
+        database_path.to_string_lossy().to_string(),
+    ];
+    if rebuild
+    {
+        args.push("--rebuild".to_string());
+    }
+
+    let helper_output = run_helper_args(&args)?;
+    let result: NativeSessionCatalog = parse_helper_json(&helper_output, "catalog-index-build")?;
+    if !result.success
+    {
+        return Err(result.message);
+    }
+
+    Ok(result)
+}
+
+pub fn query_native_session_catalog_index(limit: u32, state: String, target: String) -> Result<NativeSessionCatalog, String>
+{
+    let database_path = default_session_catalog_index_path();
+    if !database_path.is_file()
+    {
+        let _ = build_native_session_catalog_index(true)?;
+    }
+
+    let mut args = vec![
+        "catalog-index-query".to_string(),
+        "--database".to_string(),
+        database_path.to_string_lossy().to_string(),
+        "--limit".to_string(),
+        limit.to_string(),
+    ];
+    if !state.trim().is_empty()
+    {
+        args.push("--state".to_string());
+        args.push(state);
+    }
+
+    if !target.trim().is_empty()
+    {
+        args.push("--target".to_string());
+        args.push(target);
+    }
+
+    let helper_output = run_helper_args(&args)?;
+    let result: NativeSessionCatalog = parse_helper_json(&helper_output, "catalog-index-query")?;
+    if !result.success
+    {
+        return Err(result.message);
+    }
+
+    Ok(result)
+}
+
+pub fn remove_missing_native_session_catalog_index_entries(dry_run: bool) -> Result<NativeSessionCatalog, String>
+{
+    let database_path = default_session_catalog_index_path();
+    if !database_path.is_file()
+    {
+        let _ = build_native_session_catalog_index(true)?;
+    }
+
+    let mut args = vec![
+        "catalog-index-remove-missing".to_string(),
+        "--database".to_string(),
+        database_path.to_string_lossy().to_string(),
+    ];
+    if dry_run
+    {
+        args.push("--dry-run".to_string());
+    }
+
+    let helper_output = run_helper_args(&args)?;
+    let result: NativeSessionCatalog = parse_helper_json(&helper_output, "catalog-index-remove-missing")?;
+    if !result.success
+    {
+        return Err(result.message);
+    }
+
+    Ok(result)
+}
+
 pub fn stop_daemon_session(session_id: String) -> Result<NativeSession, String>
 {
     let helper_output = run_helper_args(&[
@@ -1981,6 +2080,11 @@ fn default_daemon_runtime_path() -> PathBuf
 fn default_session_catalog_path() -> PathBuf
 {
     repo_root_path().join("captures").join("session-catalog.json")
+}
+
+fn default_session_catalog_index_path() -> PathBuf
+{
+    repo_root_path().join("captures").join("session-catalog.db")
 }
 
 fn default_daemon_session_path(session_id: &str) -> PathBuf

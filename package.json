@@ -14,6 +14,7 @@
     "tauri:build": "npm --workspace apps/knmon-ui run tauri:build",
     "native:configure": "cmake -S native -B build/native",
     "native:build": "cmake --build build/native --config Debug",
+    "catalog-index:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/catalog-index-smoke.ps1",
     "defs:generate": "node tools/def-validator/generate-definition-ids.mjs --write",
     "defs:coverage": "node tools/def-validator/report-definition-coverage.mjs",
     "defs:decoder-tables": "node tools/def-validator/validate-generated-decoder-tables.mjs",

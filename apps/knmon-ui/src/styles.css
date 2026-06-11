@@ -728,7 +728,7 @@ button:disabled {
 
 .catalog-summary {
   display: grid;
-  grid-template-columns: 16px minmax(0, 1fr) auto auto auto;
+  grid-template-columns: 16px minmax(0, 1fr) repeat(4, auto);
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -760,6 +760,22 @@ button:disabled {
 }
 
 .catalog-controls .tool-button {
+  min-width: 0;
+}
+
+.catalog-index-controls {
+  display: grid;
+  grid-template-columns: 44px repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  align-items: center;
+}
+
+.catalog-index-controls > span {
+  color: #344456;
+  font-weight: 650;
+}
+
+.catalog-index-controls .tool-button {
   min-width: 0;
 }
 

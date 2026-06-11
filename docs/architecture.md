@@ -6,7 +6,7 @@
 
 This document describes the current Phase 0/Phase 1 foundation and the controlled native-capture paths for `KN Win32 API Monitor`.
 
-The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, a Phase 11B helper-side process-tree supervision foundation for deterministic sample children, Phase 11C UI controls for bounded selected-target attach and process-tree supervision, a Phase 11D repeated attach state path for self-disabled loaded agents, a Phase 11E collector-core shared transport reader foundation, Phase 11F cancellation-safe operation ownership for bounded attach and process-tree helper commands, Phase 11G durable native session ownership readiness with host-side threaded transport reading and stale session classification, Phase 11H bounded UI streaming session batches, Phase 11I durable `.knapm` chunk writing and indexed replay, Phase 11J `.knapm` restart/recovery ownership classification, Phase 11K host-side persistent daemon supervision foundation, Phase 11L daemon audit/stale-registry hardening, Phase 11M zstd `.knapm` chunks plus host-side JSON replay catalogs, Phase 12A catalog-backed replay UX plus virtualized trace rendering, Phase 12B UI-side structured trace query and error-focused analysis, Phase 12C UI-side thread/timeline analysis, Phase 12D UI-side rule-based trace highlighting, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, Windows service mode, automatic daemon crash recovery, unbounded arbitrary-target streaming, broad arbitrary target supervision, or large-scale database-backed replay indexing.
+The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, a Phase 11A same-bitness running-process attach path for non-protected sample targets, a Phase 11B helper-side process-tree supervision foundation for deterministic sample children, Phase 11C UI controls for bounded selected-target attach and process-tree supervision, a Phase 11D repeated attach state path for self-disabled loaded agents, a Phase 11E collector-core shared transport reader foundation, Phase 11F cancellation-safe operation ownership for bounded attach and process-tree helper commands, Phase 11G durable native session ownership readiness with host-side threaded transport reading and stale session classification, Phase 11H bounded UI streaming session batches, Phase 11I durable `.knapm` chunk writing and indexed replay, Phase 11J `.knapm` restart/recovery ownership classification, Phase 11K host-side persistent daemon supervision foundation, Phase 11L daemon audit/stale-registry hardening, Phase 11M zstd `.knapm` chunks plus host-side JSON replay catalogs, Phase 12A catalog-backed replay UX plus virtualized trace rendering, Phase 12B UI-side structured trace query and error-focused analysis, Phase 12C UI-side thread/timeline analysis, Phase 12D UI-side rule-based trace highlighting, Phase 13A host-side `winsqlite3` replay catalog indexing, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay. It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, Windows service mode, automatic daemon crash recovery, unbounded arbitrary-target streaming, broad arbitrary target supervision, or event-level trace payload indexing.
 
 ## Layers
 
@@ -21,6 +21,7 @@ flowchart LR
     SAMPLE["knmon-sample-fileio<br/>controlled target"]
     AGENT["knmon-agent32/64<br/>HELLO + IAT hooks + shutdown"]
     SESSION["captures/.knapm<br/>manifest + JSONL/zstd chunks"]
+    CATIDX["captures/session-catalog.db<br/>winsqlite metadata index"]
     DEF["definitions<br/>API decode metadata + ID metadata"]
     GEN["generated<br/>definition ID artifacts"]
     CONTRACT["contracts<br/>JSON schemas"]
@@ -35,6 +36,8 @@ flowchart LR
     CORE --> COL
     HELPER --> SESSION
     SESSION --> HELPER
+    HELPER --> CATIDX
+    CATIDX --> HELPER
     DEF --> GEN
     GEN --> CORE
     DEF --> UI
@@ -60,7 +63,7 @@ Current backend modes:
 
 - `mock`: Browser/Vite mode and mock Tauri target list.
 - `native-enum`: Tauri command calls `knmon-native-helper.exe list-targets`.
-- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof, `capture-sample` for bounded controlled File I/O capture, `capture-sample --write-session` for persisted legacy sessions, `replay-session` for legacy or `.knapm` disk replay, `attach-capture --pid` for bounded selected-target attach, `attach-session --stream-batches` for bounded UI streaming attach sessions, `attach-session --stream-batches --write-knapm [--knapm-compression none|zstd]` for durable chunk writing, `daemon-start-session --write-knapm [--knapm-compression none|zstd]` for daemon-owned durable sessions, `catalog-sessions`/`catalog-query`/`catalog-remove-missing` for host-side replay catalog management, `daemon-audit`/`daemon-prune-stale` for daemon registry inspection and stale cleanup, or `supervise-tree --pid` for process-tree observation/attach-supported policy evaluation.
+- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof, `capture-sample` for bounded controlled File I/O capture, `capture-sample --write-session` for persisted legacy sessions, `replay-session` for legacy or `.knapm` disk replay, `attach-capture --pid` for bounded selected-target attach, `attach-session --stream-batches` for bounded UI streaming attach sessions, `attach-session --stream-batches --write-knapm [--knapm-compression none|zstd]` for durable chunk writing, `daemon-start-session --write-knapm [--knapm-compression none|zstd]` for daemon-owned durable sessions, `catalog-sessions`/`catalog-query`/`catalog-remove-missing` for host-side JSON replay catalog management, `catalog-index-build`/`catalog-index-query`/`catalog-index-remove-missing` for host-side database-backed catalog indexing, `daemon-audit`/`daemon-prune-stale` for daemon registry inspection and stale cleanup, or `supervise-tree --pid` for process-tree observation/attach-supported policy evaluation.
 
 ## Rust/Tauri Command Layer
 
@@ -99,8 +102,11 @@ Current commands:
 26. `catalog_native_sessions`
 27. `query_native_session_catalog`
 28. `remove_missing_native_session_catalog_entries`
+29. `build_native_session_catalog_index`
+30. `query_native_session_catalog_index`
+31. `remove_missing_native_session_catalog_index_entries`
 
-These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, bounded sample File I/O capture, bounded same-bitness selected-target attach, helper-side process-tree supervision, cancellation-safe ownership for bounded helper operations, host-side session state visibility, bounded streaming trace batches for a selected same-bitness attach session, daemon-owned durable `.knapm` session supervision, compressed chunk validation/replay, read-only replay catalog build/query, read-only daemon audit, stale registry pruning, and replay by explicit session path. The daemon and catalog commands use a normal user-mode helper process and local files; the Phase 12A UI calls only these existing host-side catalog/replay commands for replay browsing. They do not create a Windows service, injected command channel, cross-bitness broker, protected-process bypass, automatic writer recovery, orphan repair path, or target mutation during replay/catalog operations.
+These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, bounded sample File I/O capture, bounded same-bitness selected-target attach, helper-side process-tree supervision, cancellation-safe ownership for bounded helper operations, host-side session state visibility, bounded streaming trace batches for a selected same-bitness attach session, daemon-owned durable `.knapm` session supervision, compressed chunk validation/replay, read-only replay catalog build/query, database-backed catalog index build/query/prune, read-only daemon audit, stale registry pruning, and replay by explicit session path. The daemon and catalog commands use a normal user-mode helper process and local files; the Phase 12A UI calls only these existing host-side catalog/replay commands for replay browsing, and Phase 13A adds only host-side `winsqlite3` metadata indexing over `.knapm` rows. They do not create a Windows service, injected command channel, cross-bitness broker, protected-process bypass, automatic writer recovery, orphan repair path, or target mutation during replay/catalog/index operations.
 
 Current daemon hardening boundary:
 
@@ -384,8 +390,11 @@ Catalog commands remain host-side and file-only:
 1. `catalog-sessions --root <dir> [--catalog <path>] [--rebuild]` discovers `.knapm` directories, validates them from disk, and writes a JSON catalog when requested.
 2. `catalog-query --catalog <path> [--limit n] [--state state] [--target pid-or-text]` filters stored catalog rows without touching session directories.
 3. `catalog-remove-missing --catalog <path> [--dry-run]` removes only catalog rows whose session path no longer exists; it never deletes `.knapm` data, launches targets, or injects agents.
+4. `catalog-index-build --root <dir> --database <path> [--rebuild]` builds a versioned `winsqlite3` metadata cache from `.knapm` validation results.
+5. `catalog-index-query --database <path> [--limit n] [--state state] [--target pid-or-text]` filters database rows without touching session directories.
+6. `catalog-index-remove-missing --database <path> [--dry-run]` reports or removes only missing database rows; it never deletes `.knapm` data, launches targets, injects agents, recovers writers, or unloads agents.
 
-The default UI session path is `captures/latest-sample-fileio`. Generated session directories remain ignored by git; test fixtures live under `tests/fixtures/session`.
+The default UI session path is `captures/latest-sample-fileio`, the JSON catalog path is `captures/session-catalog.json`, and the default catalog index path is `captures/session-catalog.db`. Generated session directories and catalog indexes remain ignored by git; test fixtures live under `tests/fixtures/session`.
 
 ## Protocol Contracts
 
@@ -423,7 +432,7 @@ Current contract artifacts:
 28. `native-daemon-audit.schema.json`
 29. `session-catalog.schema.json`
 
-The TypeScript event model and C++ `Protocol.h` are aligned around these fields, including `bounded-native-capture`, `bounded-native-attach`, `early-bird APC`, `remote LoadLibraryW`, `attachProcessId`, `detachPolicy`, `process-tree`, `observe`, `attach-supported`, child eligibility, child policy decisions, native session ownership, bounded `trace_batch` streaming frames, `.knapm` indexed replay metadata, `.knapm` compression metadata, `.knapm` recovery classification metadata, replay catalog rows, and daemon audit/prune state.
+The TypeScript event model and C++ `Protocol.h` are aligned around these fields, including `bounded-native-capture`, `bounded-native-attach`, `early-bird APC`, `remote LoadLibraryW`, `attachProcessId`, `detachPolicy`, `process-tree`, `observe`, `attach-supported`, child eligibility, child policy decisions, native session ownership, bounded `trace_batch` streaming frames, `.knapm` indexed replay metadata, `.knapm` compression metadata, `.knapm` recovery classification metadata, replay catalog rows, additive catalog index metadata, and daemon audit/prune state.
 
 ## Definition System
 
@@ -462,7 +471,7 @@ Current export:
 - Each row includes `schemaVersion`.
 - The helper writes replayable sample and attach sessions as manifest + JSONL files.
 - The helper can also write bounded streaming attach sessions as directory-backed `.knapm` chunks with `index.json`, optional zstd raw-block chunk frames, owner metadata, checkpoint metadata, and recovery classification metadata.
-- The UI can replay the last helper-written sample session into the trace table, Tauri exposes replay by explicit session path for `.knapm`, and the UI can rebuild/query/prune a host-side replay catalog before explicitly replaying a selected row.
+- The UI can replay the last helper-written sample session into the trace table, Tauri exposes replay by explicit session path for `.knapm`, and the UI can rebuild/query/prune either a JSON replay catalog or the `winsqlite3` catalog index before explicitly replaying a selected row.
 - The trace table renders a virtual row window for large sessions; filtering, inspector selection, output logging, and JSONL export continue to operate against the full in-memory event set.
 - The query builder and error-focused view compile UI-only predicates over the existing trace event array, group error/decode/slow-call evidence, and reuse the current selected-event/inspector state without helper, agent, transport, or replay-format changes.
 - Thread and timeline views group the same in-memory trace event array by PID/TID/process and deterministic relative-time buckets, then narrow through the existing query/selection path without helper, agent, transport, or replay-format changes.
@@ -470,7 +479,7 @@ Current export:
 
 Future session work:
 
-- Database-backed indexing for very large replay catalogs.
+- Event-level trace payload indexing and full-text replay search after a separate storage and privacy review.
 - Automatic daemon crash recovery and export tools built on the Phase 11M daemon-owned `.knapm` and catalog contract.
 
 ## Safety Rules

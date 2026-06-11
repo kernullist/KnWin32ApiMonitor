@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include <bcrypt.h>
+#include <winsqlite/winsqlite3.h>
 
 #include <algorithm>
 #include <cstdlib>
@@ -4167,12 +4168,16 @@ std::string KnapmCatalogJson(
     const std::string& message,
     bool dryRun,
     bool mutationAttempted,
-    const std::vector<std::string>& missingSessionPaths)
+    const std::vector<std::string>& missingSessionPaths,
+    const std::string& databasePath = "",
+    const std::string& indexBackend = "",
+    std::uint32_t indexSchemaVersion = 0)
 {
     std::uint64_t validCount = 0;
     std::uint64_t invalidCount = 0;
     std::uint64_t storedBytes = 0;
     std::uint64_t uncompressedBytes = 0;
+    std::uint64_t staleIdentityCount = 0;
     for (const KnapmCatalogRow& row : rows)
     {
         if (row.ValidationSuccess)
@@ -4186,6 +4191,10 @@ std::string KnapmCatalogJson(
 
         storedBytes += row.StoredBytes;
         uncompressedBytes += row.UncompressedBytes;
+        if (row.StaleIdentity)
+        {
+            ++staleIdentityCount;
+        }
     }
 
     std::ostringstream stream;
@@ -4203,6 +4212,13 @@ std::string KnapmCatalogJson(
     stream << "\"invalidSessionCount\":" << invalidCount << ",";
     stream << "\"storedBytes\":" << storedBytes << ",";
     stream << "\"uncompressedBytes\":" << uncompressedBytes << ",";
+    if (!databasePath.empty())
+    {
+        stream << "\"databasePath\":" << Q(databasePath) << ",";
+        stream << "\"indexBackend\":" << Q(indexBackend.empty() ? "winsqlite3" : indexBackend) << ",";
+        stream << "\"indexSchemaVersion\":" << indexSchemaVersion << ",";
+        stream << "\"staleIdentityCount\":" << staleIdentityCount << ",";
+    }
     stream << "\"dryRun\":" << (dryRun ? "true" : "false") << ",";
     stream << "\"mutationAttempted\":" << (mutationAttempted ? "true" : "false") << ",";
     stream << "\"missingSessionPaths\":[";
@@ -4335,6 +4351,1023 @@ std::vector<KnapmCatalogRow> KnapmCatalogRowsFromJson(const std::string& json)
     }
 
     return rows;
+}
+
+constexpr std::uint32_t CatalogIndexSchemaVersion = 1;
+
+struct SqliteStatement
+{
+    sqlite3_stmt* Statement = nullptr;
+
+    ~SqliteStatement()
+    {
+        if (Statement != nullptr)
+        {
+            sqlite3_finalize(Statement);
+            Statement = nullptr;
+        }
+    }
+};
+
+std::string SqliteError(sqlite3* database)
+{
+    return database == nullptr ? "sqlite database unavailable." : sqlite3_errmsg(database);
+}
+
+bool ExecSql(sqlite3* database, const std::string& sql, std::string* error)
+{
+    bool success = false;
+    char* sqliteError = nullptr;
+
+    do
+    {
+        if (database == nullptr)
+        {
+            if (error != nullptr)
+            {
+                *error = "sqlite database unavailable.";
+            }
+            break;
+        }
+
+        const int rc = sqlite3_exec(database, sql.c_str(), nullptr, nullptr, &sqliteError);
+        if (rc != SQLITE_OK)
+        {
+            if (error != nullptr)
+            {
+                *error = sqliteError != nullptr ? sqliteError : SqliteError(database);
+            }
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    if (sqliteError != nullptr)
+    {
+        sqlite3_free(sqliteError);
+    }
+
+    return success;
+}
+
+bool PrepareSql(sqlite3* database, const std::string& sql, SqliteStatement* statement, std::string* error)
+{
+    bool success = false;
+
+    do
+    {
+        if (database == nullptr || statement == nullptr)
+        {
+            if (error != nullptr)
+            {
+                *error = "sqlite statement preparation received invalid arguments.";
+            }
+            break;
+        }
+
+        const int rc = sqlite3_prepare_v2(database, sql.c_str(), -1, &statement->Statement, nullptr);
+        if (rc != SQLITE_OK)
+        {
+            if (error != nullptr)
+            {
+                *error = SqliteError(database);
+            }
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
+bool BindText(sqlite3_stmt* statement, int index, const std::string& value, std::string* error)
+{
+    const int rc = sqlite3_bind_text(statement, index, value.c_str(), -1, SQLITE_TRANSIENT);
+    if (rc != SQLITE_OK && error != nullptr)
+    {
+        *error = "sqlite bind text failed.";
+    }
+
+    return rc == SQLITE_OK;
+}
+
+bool BindUInt64(sqlite3_stmt* statement, int index, std::uint64_t value, std::string* error)
+{
+    const int rc = sqlite3_bind_int64(statement, index, static_cast<sqlite3_int64>(value));
+    if (rc != SQLITE_OK && error != nullptr)
+    {
+        *error = "sqlite bind integer failed.";
+    }
+
+    return rc == SQLITE_OK;
+}
+
+std::string ColumnText(sqlite3_stmt* statement, int index)
+{
+    const unsigned char* text = sqlite3_column_text(statement, index);
+    return text == nullptr ? "" : reinterpret_cast<const char*>(text);
+}
+
+std::uint64_t ColumnUInt64(sqlite3_stmt* statement, int index)
+{
+    const sqlite3_int64 value = sqlite3_column_int64(statement, index);
+    return value < 0 ? 0 : static_cast<std::uint64_t>(value);
+}
+
+bool ColumnBool(sqlite3_stmt* statement, int index)
+{
+    return sqlite3_column_int(statement, index) != 0;
+}
+
+bool OpenCatalogIndexDatabase(
+    const std::filesystem::path& databasePath,
+    int flags,
+    sqlite3** database,
+    std::string* error)
+{
+    bool success = false;
+
+    do
+    {
+        if (database == nullptr)
+        {
+            if (error != nullptr)
+            {
+                *error = "database output pointer is null.";
+            }
+            break;
+        }
+
+        *database = nullptr;
+        if ((flags & SQLITE_OPEN_CREATE) != 0)
+        {
+            std::error_code createError;
+            const std::filesystem::path parent = databasePath.parent_path();
+            if (!parent.empty())
+            {
+                std::filesystem::create_directories(parent, createError);
+                if (createError)
+                {
+                    if (error != nullptr)
+                    {
+                        *error = "create_directories failed for " + PathToUtf8(parent) + ": " + createError.message();
+                    }
+                    break;
+                }
+            }
+        }
+
+        const std::string databasePathUtf8 = PathToUtf8(databasePath);
+        const int rc = sqlite3_open_v2(databasePathUtf8.c_str(), database, flags, nullptr);
+        if (rc != SQLITE_OK)
+        {
+            if (error != nullptr)
+            {
+                *error = *database == nullptr ? "sqlite open failed." : SqliteError(*database);
+            }
+            if (*database != nullptr)
+            {
+                sqlite3_close(*database);
+                *database = nullptr;
+            }
+            break;
+        }
+
+        sqlite3_busy_timeout(*database, 3000);
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
+std::string ReadCatalogIndexMetadata(sqlite3* database, const std::string& key, bool* found, std::string* error)
+{
+    std::string value;
+    bool localFound = false;
+
+    do
+    {
+        SqliteStatement statement;
+        if (!PrepareSql(database, "SELECT value FROM metadata WHERE key = ?;", &statement, error))
+        {
+            break;
+        }
+
+        if (!BindText(statement.Statement, 1, key, error))
+        {
+            break;
+        }
+
+        const int rc = sqlite3_step(statement.Statement);
+        if (rc == SQLITE_ROW)
+        {
+            value = ColumnText(statement.Statement, 0);
+            localFound = true;
+        }
+        else if (rc != SQLITE_DONE && error != nullptr)
+        {
+            *error = SqliteError(database);
+        }
+    }
+    while (false);
+
+    if (found != nullptr)
+    {
+        *found = localFound;
+    }
+
+    return value;
+}
+
+bool SetCatalogIndexMetadata(sqlite3* database, const std::string& key, const std::string& value, std::string* error)
+{
+    bool success = false;
+
+    do
+    {
+        SqliteStatement statement;
+        if (!PrepareSql(database, "INSERT OR REPLACE INTO metadata(key, value) VALUES(?, ?);", &statement, error))
+        {
+            break;
+        }
+
+        if (!BindText(statement.Statement, 1, key, error) || !BindText(statement.Statement, 2, value, error))
+        {
+            break;
+        }
+
+        const int rc = sqlite3_step(statement.Statement);
+        if (rc != SQLITE_DONE)
+        {
+            if (error != nullptr)
+            {
+                *error = SqliteError(database);
+            }
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
+bool EnsureCatalogIndexSchema(sqlite3* database, std::string* error)
+{
+    bool success = false;
+
+    do
+    {
+        if (!ExecSql(database, "PRAGMA foreign_keys = ON;", error))
+        {
+            break;
+        }
+
+        if (!ExecSql(
+            database,
+            "CREATE TABLE IF NOT EXISTS metadata("
+            "key TEXT PRIMARY KEY NOT NULL,"
+            "value TEXT NOT NULL"
+            ");",
+            error))
+        {
+            break;
+        }
+
+        bool found = false;
+        const std::string schemaVersion = ReadCatalogIndexMetadata(database, "schema_version", &found, error);
+        if (found && schemaVersion != std::to_string(CatalogIndexSchemaVersion))
+        {
+            if (error != nullptr)
+            {
+                *error = "unsupported catalog index schema version " + schemaVersion + ".";
+            }
+            break;
+        }
+
+        if (!ExecSql(
+            database,
+            "CREATE TABLE IF NOT EXISTS sessions("
+            "path TEXT PRIMARY KEY NOT NULL,"
+            "format TEXT NOT NULL,"
+            "session_id TEXT NOT NULL,"
+            "operation_id TEXT NOT NULL,"
+            "target_process_id INTEGER NOT NULL,"
+            "target_image TEXT NOT NULL,"
+            "target_path TEXT NOT NULL,"
+            "target_architecture TEXT NOT NULL,"
+            "owner_kind TEXT NOT NULL,"
+            "daemon_instance_id TEXT NOT NULL,"
+            "writer_state TEXT NOT NULL,"
+            "finalized INTEGER NOT NULL,"
+            "recovery_state TEXT NOT NULL,"
+            "recovery_reason TEXT NOT NULL,"
+            "recovery_action TEXT NOT NULL,"
+            "chunk_count INTEGER NOT NULL,"
+            "trace_event_count INTEGER NOT NULL,"
+            "last_batch_sequence INTEGER NOT NULL,"
+            "last_record_sequence INTEGER NOT NULL,"
+            "compression TEXT NOT NULL,"
+            "stored_bytes INTEGER NOT NULL,"
+            "uncompressed_bytes INTEGER NOT NULL,"
+            "validation_success INTEGER NOT NULL,"
+            "validation_error_count INTEGER NOT NULL,"
+            "validation_status TEXT NOT NULL,"
+            "last_validated_utc TEXT NOT NULL,"
+            "content_identity TEXT NOT NULL,"
+            "stale_identity INTEGER NOT NULL"
+            ");",
+            error))
+        {
+            break;
+        }
+
+        if (!ExecSql(database, "CREATE INDEX IF NOT EXISTS idx_sessions_state ON sessions(validation_status, recovery_state, writer_state);", error))
+        {
+            break;
+        }
+        if (!ExecSql(database, "CREATE INDEX IF NOT EXISTS idx_sessions_target_pid ON sessions(target_process_id);", error))
+        {
+            break;
+        }
+        if (!ExecSql(database, "CREATE INDEX IF NOT EXISTS idx_sessions_target_text ON sessions(target_image, target_path);", error))
+        {
+            break;
+        }
+        if (!SetCatalogIndexMetadata(database, "schema_version", std::to_string(CatalogIndexSchemaVersion), error))
+        {
+            break;
+        }
+        if (!ExecSql(database, "PRAGMA user_version = 1;", error))
+        {
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
+bool ValidateCatalogIndexSchema(sqlite3* database, std::string* error)
+{
+    bool success = false;
+
+    do
+    {
+        bool found = false;
+        const std::string schemaVersion = ReadCatalogIndexMetadata(database, "schema_version", &found, error);
+        if (!found)
+        {
+            if (error != nullptr && error->empty())
+            {
+                *error = "catalog index schema metadata is missing.";
+            }
+            break;
+        }
+
+        if (schemaVersion != std::to_string(CatalogIndexSchemaVersion))
+        {
+            if (error != nullptr)
+            {
+                *error = "unsupported catalog index schema version " + schemaVersion + ".";
+            }
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
+std::string CatalogRowsContentIdentity(const std::vector<KnapmCatalogRow>& rows)
+{
+    std::ostringstream stream;
+    for (const KnapmCatalogRow& row : rows)
+    {
+        stream << row.ContentIdentity << "\n";
+    }
+
+    return Sha256Hex(stream.str());
+}
+
+bool InsertCatalogIndexRow(sqlite3* database, const KnapmCatalogRow& row, std::string* error)
+{
+    bool success = false;
+
+    do
+    {
+        SqliteStatement statement;
+        if (!PrepareSql(
+            database,
+            "INSERT OR REPLACE INTO sessions("
+            "path,format,session_id,operation_id,target_process_id,target_image,target_path,target_architecture,"
+            "owner_kind,daemon_instance_id,writer_state,finalized,recovery_state,recovery_reason,recovery_action,"
+            "chunk_count,trace_event_count,last_batch_sequence,last_record_sequence,compression,stored_bytes,"
+            "uncompressed_bytes,validation_success,validation_error_count,validation_status,last_validated_utc,"
+            "content_identity,stale_identity"
+            ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);",
+            &statement,
+            error))
+        {
+            break;
+        }
+
+        int index = 1;
+        if (!BindText(statement.Statement, index++, row.SessionPath, error) ||
+            !BindText(statement.Statement, index++, row.Format, error) ||
+            !BindText(statement.Statement, index++, row.SessionId, error) ||
+            !BindText(statement.Statement, index++, row.OperationId, error) ||
+            !BindUInt64(statement.Statement, index++, row.TargetProcessId, error) ||
+            !BindText(statement.Statement, index++, row.TargetImage, error) ||
+            !BindText(statement.Statement, index++, row.TargetPath, error) ||
+            !BindText(statement.Statement, index++, row.TargetArchitecture, error) ||
+            !BindText(statement.Statement, index++, row.OwnerKind, error) ||
+            !BindText(statement.Statement, index++, row.DaemonInstanceId, error) ||
+            !BindText(statement.Statement, index++, row.WriterState, error) ||
+            !BindUInt64(statement.Statement, index++, row.Finalized ? 1 : 0, error) ||
+            !BindText(statement.Statement, index++, row.RecoveryState, error) ||
+            !BindText(statement.Statement, index++, row.RecoveryReason, error) ||
+            !BindText(statement.Statement, index++, row.RecoveryAction, error) ||
+            !BindUInt64(statement.Statement, index++, row.ChunkCount, error) ||
+            !BindUInt64(statement.Statement, index++, row.TraceEventCount, error) ||
+            !BindUInt64(statement.Statement, index++, row.LastBatchSequence, error) ||
+            !BindUInt64(statement.Statement, index++, row.LastRecordSequence, error) ||
+            !BindText(statement.Statement, index++, row.Compression, error) ||
+            !BindUInt64(statement.Statement, index++, row.StoredBytes, error) ||
+            !BindUInt64(statement.Statement, index++, row.UncompressedBytes, error) ||
+            !BindUInt64(statement.Statement, index++, row.ValidationSuccess ? 1 : 0, error) ||
+            !BindUInt64(statement.Statement, index++, row.ValidationErrorCount, error) ||
+            !BindText(statement.Statement, index++, row.ValidationStatus, error) ||
+            !BindText(statement.Statement, index++, row.LastValidatedUtc, error) ||
+            !BindText(statement.Statement, index++, row.ContentIdentity, error) ||
+            !BindUInt64(statement.Statement, index++, row.StaleIdentity ? 1 : 0, error))
+        {
+            break;
+        }
+
+        const int rc = sqlite3_step(statement.Statement);
+        if (rc != SQLITE_DONE)
+        {
+            if (error != nullptr)
+            {
+                *error = SqliteError(database);
+            }
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
+const char* CatalogIndexSelectColumns()
+{
+    return
+        "path,format,session_id,operation_id,target_process_id,target_image,target_path,target_architecture,"
+        "owner_kind,daemon_instance_id,writer_state,finalized,recovery_state,recovery_reason,recovery_action,"
+        "chunk_count,trace_event_count,last_batch_sequence,last_record_sequence,compression,stored_bytes,"
+        "uncompressed_bytes,validation_success,validation_error_count,validation_status,last_validated_utc,"
+        "content_identity,stale_identity";
+}
+
+KnapmCatalogRow CatalogRowFromStatement(sqlite3_stmt* statement)
+{
+    KnapmCatalogRow row;
+    int index = 0;
+    row.SessionPath = ColumnText(statement, index++);
+    row.Format = ColumnText(statement, index++);
+    row.SessionId = ColumnText(statement, index++);
+    row.OperationId = ColumnText(statement, index++);
+    row.TargetProcessId = static_cast<std::uint32_t>(ColumnUInt64(statement, index++));
+    row.TargetImage = ColumnText(statement, index++);
+    row.TargetPath = ColumnText(statement, index++);
+    row.TargetArchitecture = ColumnText(statement, index++);
+    row.OwnerKind = ColumnText(statement, index++);
+    row.DaemonInstanceId = ColumnText(statement, index++);
+    row.WriterState = ColumnText(statement, index++);
+    row.Finalized = ColumnBool(statement, index++);
+    row.RecoveryState = ColumnText(statement, index++);
+    row.RecoveryReason = ColumnText(statement, index++);
+    row.RecoveryAction = ColumnText(statement, index++);
+    row.ChunkCount = ColumnUInt64(statement, index++);
+    row.TraceEventCount = ColumnUInt64(statement, index++);
+    row.LastBatchSequence = ColumnUInt64(statement, index++);
+    row.LastRecordSequence = ColumnUInt64(statement, index++);
+    row.Compression = ColumnText(statement, index++);
+    row.StoredBytes = ColumnUInt64(statement, index++);
+    row.UncompressedBytes = ColumnUInt64(statement, index++);
+    row.ValidationSuccess = ColumnBool(statement, index++);
+    row.ValidationErrorCount = ColumnUInt64(statement, index++);
+    row.ValidationStatus = ColumnText(statement, index++);
+    row.LastValidatedUtc = ColumnText(statement, index++);
+    row.ContentIdentity = ColumnText(statement, index++);
+    row.StaleIdentity = ColumnBool(statement, index++);
+    return row;
+}
+
+bool TryParseCatalogTargetPid(const std::string& target, std::uint32_t* pid)
+{
+    bool parsed = false;
+
+    do
+    {
+        if (pid == nullptr || target.empty())
+        {
+            break;
+        }
+
+        char* end = nullptr;
+        const unsigned long value = std::strtoul(target.c_str(), &end, 10);
+        if (end == target.c_str() || end == nullptr || *end != '\0' || value > 0xffffffffUL)
+        {
+            break;
+        }
+
+        *pid = static_cast<std::uint32_t>(value);
+        parsed = true;
+    }
+    while (false);
+
+    return parsed;
+}
+
+bool QueryCatalogIndexRows(
+    sqlite3* database,
+    const std::string& state,
+    const std::string& target,
+    std::uint32_t limit,
+    std::vector<KnapmCatalogRow>* rows,
+    std::string* error)
+{
+    bool success = false;
+
+    do
+    {
+        if (rows == nullptr)
+        {
+            if (error != nullptr)
+            {
+                *error = "catalog query rows output is null.";
+            }
+            break;
+        }
+
+        std::string sql = std::string("SELECT ") + CatalogIndexSelectColumns() + " FROM sessions";
+        std::vector<std::string> predicates;
+        std::uint32_t targetPid = 0;
+        const bool hasState = !state.empty();
+        const bool hasTargetPid = TryParseCatalogTargetPid(target, &targetPid);
+        const bool hasTargetText = !target.empty() && !hasTargetPid;
+
+        if (hasState)
+        {
+            predicates.push_back("(validation_status = ? OR recovery_state = ? OR writer_state = ?)");
+        }
+        if (hasTargetPid)
+        {
+            predicates.push_back("target_process_id = ?");
+        }
+        else if (hasTargetText)
+        {
+            predicates.push_back("(instr(lower(target_image), ?) > 0 OR instr(lower(target_path), ?) > 0)");
+        }
+
+        if (!predicates.empty())
+        {
+            sql += " WHERE ";
+            for (std::size_t index = 0; index < predicates.size(); ++index)
+            {
+                if (index != 0)
+                {
+                    sql += " AND ";
+                }
+                sql += predicates[index];
+            }
+        }
+
+        sql += " ORDER BY last_validated_utc DESC, path ASC";
+        if (limit != 0)
+        {
+            sql += " LIMIT ?";
+        }
+        sql += ";";
+
+        SqliteStatement statement;
+        if (!PrepareSql(database, sql, &statement, error))
+        {
+            break;
+        }
+
+        int bindIndex = 1;
+        if (hasState)
+        {
+            if (!BindText(statement.Statement, bindIndex++, state, error) ||
+                !BindText(statement.Statement, bindIndex++, state, error) ||
+                !BindText(statement.Statement, bindIndex++, state, error))
+            {
+                break;
+            }
+        }
+        if (hasTargetPid)
+        {
+            if (!BindUInt64(statement.Statement, bindIndex++, targetPid, error))
+            {
+                break;
+            }
+        }
+        else if (hasTargetText)
+        {
+            const std::string needle = LowerAsciiPathKey(target);
+            if (!BindText(statement.Statement, bindIndex++, needle, error) ||
+                !BindText(statement.Statement, bindIndex++, needle, error))
+            {
+                break;
+            }
+        }
+        if (limit != 0 && !BindUInt64(statement.Statement, bindIndex++, limit, error))
+        {
+            break;
+        }
+
+        while (true)
+        {
+            const int rc = sqlite3_step(statement.Statement);
+            if (rc == SQLITE_ROW)
+            {
+                rows->push_back(CatalogRowFromStatement(statement.Statement));
+                continue;
+            }
+            if (rc == SQLITE_DONE)
+            {
+                success = true;
+            }
+            else if (error != nullptr)
+            {
+                *error = SqliteError(database);
+            }
+            break;
+        }
+    }
+    while (false);
+
+    return success;
+}
+
+std::string CatalogIndexBuildJson(const std::vector<std::string>& args)
+{
+    const std::string rootOption = GetOption(args, "--root");
+    const std::string databaseOption = GetOption(args, "--database");
+    const bool rebuild = HasOption(args, "--rebuild");
+    std::vector<KnapmCatalogRow> rows;
+    sqlite3* database = nullptr;
+    std::string error;
+
+    do
+    {
+        if (rootOption.empty())
+        {
+            return KnapmCatalogJson("catalog-index-build", "", databaseOption, rows, false, "missing --root.", false, false, {}, databaseOption, "winsqlite3", CatalogIndexSchemaVersion);
+        }
+        if (databaseOption.empty())
+        {
+            return KnapmCatalogJson("catalog-index-build", rootOption, "", rows, false, "missing --database.", false, false, {}, databaseOption, "winsqlite3", CatalogIndexSchemaVersion);
+        }
+
+        const std::filesystem::path rootPath = PathFromUtf8(rootOption);
+        std::error_code rootError;
+        if (!std::filesystem::exists(rootPath, rootError))
+        {
+            return KnapmCatalogJson("catalog-index-build", rootOption, databaseOption, rows, false, "root does not exist.", false, false, {}, databaseOption, "winsqlite3", CatalogIndexSchemaVersion);
+        }
+
+        const auto sessionPaths = DiscoverKnapmSessionPaths(rootPath);
+        for (const std::filesystem::path& sessionPath : sessionPaths)
+        {
+            rows.push_back(BuildKnapmCatalogRow(sessionPath));
+        }
+
+        if (!OpenCatalogIndexDatabase(PathFromUtf8(databaseOption), SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, &database, &error))
+        {
+            break;
+        }
+        if (!EnsureCatalogIndexSchema(database, &error))
+        {
+            break;
+        }
+
+        bool rootFound = false;
+        const std::string existingRoot = ReadCatalogIndexMetadata(database, "root_path", &rootFound, &error);
+        if (rootFound && existingRoot != rootOption && !rebuild)
+        {
+            error = "catalog index root mismatch; rebuild required.";
+            break;
+        }
+
+        if (!ExecSql(database, "BEGIN IMMEDIATE TRANSACTION;", &error))
+        {
+            break;
+        }
+
+        bool transactionActive = true;
+        bool transactionSuccess = false;
+        do
+        {
+            if (rebuild && !ExecSql(database, "DELETE FROM sessions;", &error))
+            {
+                break;
+            }
+
+            for (const KnapmCatalogRow& row : rows)
+            {
+                if (!InsertCatalogIndexRow(database, row, &error))
+                {
+                    break;
+                }
+            }
+            if (!error.empty())
+            {
+                break;
+            }
+
+            const std::string buildTimeUtc = NowUtc();
+            if (!SetCatalogIndexMetadata(database, "schema_version", std::to_string(CatalogIndexSchemaVersion), &error) ||
+                !SetCatalogIndexMetadata(database, "format", "knapm-session-catalog-index", &error) ||
+                !SetCatalogIndexMetadata(database, "root_path", rootOption, &error) ||
+                !SetCatalogIndexMetadata(database, "build_time_utc", buildTimeUtc, &error) ||
+                !SetCatalogIndexMetadata(database, "content_identity", CatalogRowsContentIdentity(rows), &error) ||
+                !SetCatalogIndexMetadata(database, "session_count", std::to_string(rows.size()), &error))
+            {
+                break;
+            }
+
+            if (!ExecSql(database, "COMMIT;", &error))
+            {
+                transactionActive = false;
+                break;
+            }
+
+            transactionActive = false;
+            transactionSuccess = true;
+        }
+        while (false);
+
+        if (transactionActive)
+        {
+            std::string rollbackError;
+            ExecSql(database, "ROLLBACK;", &rollbackError);
+        }
+
+        if (!transactionSuccess)
+        {
+            break;
+        }
+    }
+    while (false);
+
+    if (database != nullptr)
+    {
+        sqlite3_close(database);
+        database = nullptr;
+    }
+
+    if (!error.empty())
+    {
+        return KnapmCatalogJson("catalog-index-build", rootOption, databaseOption, rows, false, error, false, true, {}, databaseOption, "winsqlite3", CatalogIndexSchemaVersion);
+    }
+
+    return KnapmCatalogJson("catalog-index-build", rootOption, databaseOption, rows, true, "Catalog index built.", false, true, {}, databaseOption, "winsqlite3", CatalogIndexSchemaVersion);
+}
+
+std::string CatalogIndexQueryJson(const std::vector<std::string>& args)
+{
+    const std::string databaseOption = GetOption(args, "--database");
+    const std::string state = GetOption(args, "--state");
+    const std::string target = GetOption(args, "--target");
+    const std::uint32_t limit = GetUInt32Option(args, "--limit", 100);
+    std::vector<KnapmCatalogRow> rows;
+    sqlite3* database = nullptr;
+    std::string error;
+    std::string rootPath;
+
+    do
+    {
+        if (databaseOption.empty())
+        {
+            return KnapmCatalogJson("catalog-index-query", "", "", rows, false, "missing --database.", false, false, {}, databaseOption, "winsqlite3", CatalogIndexSchemaVersion);
+        }
+
+        if (!OpenCatalogIndexDatabase(PathFromUtf8(databaseOption), SQLITE_OPEN_READONLY, &database, &error))
+        {
+            break;
+        }
+        if (!ValidateCatalogIndexSchema(database, &error))
+        {
+            break;
+        }
+
+        bool rootFound = false;
+        rootPath = ReadCatalogIndexMetadata(database, "root_path", &rootFound, &error);
+        if (!rootFound)
+        {
+            rootPath.clear();
+        }
+
+        if (!QueryCatalogIndexRows(database, state, target, limit, &rows, &error))
+        {
+            break;
+        }
+    }
+    while (false);
+
+    if (database != nullptr)
+    {
+        sqlite3_close(database);
+        database = nullptr;
+    }
+
+    if (!error.empty())
+    {
+        return KnapmCatalogJson("catalog-index-query", rootPath, databaseOption, rows, false, error, false, false, {}, databaseOption, "winsqlite3", CatalogIndexSchemaVersion);
+    }
+
+    return KnapmCatalogJson("catalog-index-query", rootPath, databaseOption, rows, true, "Catalog index query completed.", false, false, {}, databaseOption, "winsqlite3", CatalogIndexSchemaVersion);
+}
+
+bool DeleteCatalogIndexRow(sqlite3* database, const std::string& path, std::string* error)
+{
+    bool success = false;
+
+    do
+    {
+        SqliteStatement statement;
+        if (!PrepareSql(database, "DELETE FROM sessions WHERE path = ?;", &statement, error))
+        {
+            break;
+        }
+        if (!BindText(statement.Statement, 1, path, error))
+        {
+            break;
+        }
+
+        const int rc = sqlite3_step(statement.Statement);
+        if (rc != SQLITE_DONE)
+        {
+            if (error != nullptr)
+            {
+                *error = SqliteError(database);
+            }
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
+std::string CatalogIndexRemoveMissingJson(const std::vector<std::string>& args)
+{
+    const std::string databaseOption = GetOption(args, "--database");
+    const bool dryRun = HasOption(args, "--dry-run");
+    std::vector<KnapmCatalogRow> rows;
+    std::vector<KnapmCatalogRow> keptRows;
+    std::vector<std::string> missingSessionPaths;
+    sqlite3* database = nullptr;
+    std::string error;
+    std::string rootPath;
+
+    do
+    {
+        if (databaseOption.empty())
+        {
+            return KnapmCatalogJson("catalog-index-remove-missing", "", "", rows, false, "missing --database.", dryRun, false, {}, databaseOption, "winsqlite3", CatalogIndexSchemaVersion);
+        }
+
+        if (!OpenCatalogIndexDatabase(PathFromUtf8(databaseOption), SQLITE_OPEN_READWRITE, &database, &error))
+        {
+            break;
+        }
+        if (!ValidateCatalogIndexSchema(database, &error))
+        {
+            break;
+        }
+
+        bool rootFound = false;
+        rootPath = ReadCatalogIndexMetadata(database, "root_path", &rootFound, &error);
+        if (!rootFound)
+        {
+            rootPath.clear();
+        }
+
+        if (!QueryCatalogIndexRows(database, "", "", 0, &rows, &error))
+        {
+            break;
+        }
+
+        for (const KnapmCatalogRow& row : rows)
+        {
+            std::error_code existsError;
+            if (row.SessionPath.empty() || !std::filesystem::exists(PathFromUtf8(row.SessionPath), existsError))
+            {
+                missingSessionPaths.push_back(row.SessionPath);
+                continue;
+            }
+
+            keptRows.push_back(row);
+        }
+
+        if (!dryRun)
+        {
+            if (!ExecSql(database, "BEGIN IMMEDIATE TRANSACTION;", &error))
+            {
+                break;
+            }
+
+            bool transactionActive = true;
+            bool transactionSuccess = false;
+            do
+            {
+                for (const std::string& path : missingSessionPaths)
+                {
+                    if (!DeleteCatalogIndexRow(database, path, &error))
+                    {
+                        break;
+                    }
+                }
+                if (!error.empty())
+                {
+                    break;
+                }
+
+                if (!SetCatalogIndexMetadata(database, "session_count", std::to_string(keptRows.size()), &error) ||
+                    !SetCatalogIndexMetadata(database, "content_identity", CatalogRowsContentIdentity(keptRows), &error) ||
+                    !SetCatalogIndexMetadata(database, "build_time_utc", NowUtc(), &error))
+                {
+                    break;
+                }
+
+                if (!ExecSql(database, "COMMIT;", &error))
+                {
+                    transactionActive = false;
+                    break;
+                }
+
+                transactionActive = false;
+                transactionSuccess = true;
+            }
+            while (false);
+
+            if (transactionActive)
+            {
+                std::string rollbackError;
+                ExecSql(database, "ROLLBACK;", &rollbackError);
+            }
+
+            if (!transactionSuccess)
+            {
+                break;
+            }
+        }
+    }
+    while (false);
+
+    if (database != nullptr)
+    {
+        sqlite3_close(database);
+        database = nullptr;
+    }
+
+    if (!error.empty())
+    {
+        return KnapmCatalogJson("catalog-index-remove-missing", rootPath, databaseOption, rows, false, error, dryRun, !dryRun, missingSessionPaths, databaseOption, "winsqlite3", CatalogIndexSchemaVersion);
+    }
+
+    return KnapmCatalogJson(
+        "catalog-index-remove-missing",
+        rootPath,
+        databaseOption,
+        dryRun ? rows : keptRows,
+        true,
+        dryRun ? "Missing catalog index rows identified." : "Missing catalog index rows removed.",
+        dryRun,
+        !dryRun,
+        missingSessionPaths,
+        databaseOption,
+        "winsqlite3",
+        CatalogIndexSchemaVersion);
 }
 
 bool CatalogRowMatchesState(const KnapmCatalogRow& row, const std::string& state)
@@ -6506,7 +7539,7 @@ void PrintUsage()
     std::cout << "{";
     std::cout << "\"schemaVersion\":\"0.1.0\",";
     std::cout << "\"success\":false,";
-    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] [--knapm-compression none|zstd] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-audit [--runtime-dir dir] | daemon-prune-stale [--runtime-dir dir] [--dry-run] | daemon-start-session --pid pid --write-knapm path [--knapm-compression none|zstd] [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | catalog-sessions --root dir [--catalog path] [--rebuild] | catalog-query --catalog path [--limit n] [--state state] [--target pid-or-text] | catalog-remove-missing --catalog path [--dry-run] | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
+    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] [--knapm-compression none|zstd] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-audit [--runtime-dir dir] | daemon-prune-stale [--runtime-dir dir] [--dry-run] | daemon-start-session --pid pid --write-knapm path [--knapm-compression none|zstd] [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | catalog-sessions --root dir [--catalog path] [--rebuild] | catalog-query --catalog path [--limit n] [--state state] [--target pid-or-text] | catalog-remove-missing --catalog path [--dry-run] | catalog-index-build --root dir --database path [--rebuild] | catalog-index-query --database path [--limit n] [--state state] [--target pid-or-text] | catalog-index-remove-missing --database path [--dry-run] | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
     std::cout << "}\n";
 }
 }
@@ -6640,6 +7673,24 @@ int wmain(int argc, wchar_t** argv)
     if (args[0] == "catalog-remove-missing")
     {
         std::cout << CatalogRemoveMissingJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "catalog-index-build")
+    {
+        std::cout << CatalogIndexBuildJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "catalog-index-query")
+    {
+        std::cout << CatalogIndexQueryJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "catalog-index-remove-missing")
+    {
+        std::cout << CatalogIndexRemoveMissingJson(args) << "\n";
         return 0;
     }
 

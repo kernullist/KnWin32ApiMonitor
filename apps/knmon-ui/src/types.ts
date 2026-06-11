@@ -150,6 +150,10 @@ export interface NativeSessionCatalog {
   success: boolean;
   rootPath: string;
   catalogPath: string;
+  databasePath?: string;
+  indexBackend?: string;
+  indexSchemaVersion?: number;
+  staleIdentityCount?: number;
   sessionCount: number;
   validSessionCount: number;
   invalidSessionCount: number;

@@ -3,6 +3,7 @@
 use knmon_tauri::{
     attach_target_process_capture as attach_target_process_capture_backend,
     backend_status,
+    build_native_session_catalog_index as build_native_session_catalog_index_backend,
     capture_sample_fileio,
     capture_sample_fileio_session,
     catalog_native_sessions as catalog_native_sessions_backend,
@@ -19,7 +20,9 @@ use knmon_tauri::{
     native_daemon_status as native_daemon_status_backend,
     prune_stale_daemon_sessions as prune_stale_daemon_sessions_backend,
     query_native_session_catalog as query_native_session_catalog_backend,
+    query_native_session_catalog_index as query_native_session_catalog_index_backend,
     remove_missing_native_session_catalog_entries as remove_missing_native_session_catalog_entries_backend,
+    remove_missing_native_session_catalog_index_entries as remove_missing_native_session_catalog_index_entries_backend,
     start_streaming_attach_session as start_streaming_attach_session_backend,
     start_daemon_if_needed as start_daemon_if_needed_backend,
     start_daemon_supervised_session as start_daemon_supervised_session_backend,
@@ -174,6 +177,30 @@ fn remove_missing_native_session_catalog_entries(dry_run: bool) -> Result<Native
 }
 
 #[tauri::command]
+fn build_native_session_catalog_index(rebuild: bool) -> Result<NativeSessionCatalog, String>
+{
+    build_native_session_catalog_index_backend(rebuild)
+}
+
+#[tauri::command]
+fn query_native_session_catalog_index(
+    limit: u32,
+    state: String,
+    target: String,
+) -> Result<NativeSessionCatalog, String>
+{
+    query_native_session_catalog_index_backend(limit, state, target)
+}
+
+#[tauri::command]
+fn remove_missing_native_session_catalog_index_entries(
+    dry_run: bool,
+) -> Result<NativeSessionCatalog, String>
+{
+    remove_missing_native_session_catalog_index_entries_backend(dry_run)
+}
+
+#[tauri::command]
 fn start_daemon_supervised_session(pid: u32, duration_ms: u32) -> Result<NativeSession, String>
 {
     start_daemon_supervised_session_backend(pid, duration_ms)
@@ -235,6 +262,9 @@ fn main()
             catalog_native_sessions,
             query_native_session_catalog,
             remove_missing_native_session_catalog_entries,
+            build_native_session_catalog_index,
+            query_native_session_catalog_index,
+            remove_missing_native_session_catalog_index_entries,
             start_daemon_supervised_session,
             stop_daemon_session,
             drain_native_trace_batches,
