@@ -16,7 +16,8 @@
     { "id": 12, "name": "gdi32.dll", "symbol": "Gdi32" },
     { "id": 13, "name": "psapi.dll", "symbol": "Psapi" },
     { "id": 14, "name": "version.dll", "symbol": "Version" },
-    { "id": 15, "name": "shell32.dll", "symbol": "Shell32" }
+    { "id": 15, "name": "shell32.dll", "symbol": "Shell32" },
+    { "id": 16, "name": "ole32.dll", "symbol": "Ole32" }
   ],
   "apis": [
     { "id": 1, "module": "kernel32.dll", "name": "CreateFileW", "symbol": "CreateFileW" },
@@ -124,6 +125,10 @@
     { "id": 103, "module": "version.dll", "name": "GetFileVersionInfoW", "symbol": "GetFileVersionInfoW" },
     { "id": 104, "module": "version.dll", "name": "VerQueryValueW", "symbol": "VerQueryValueW" },
     { "id": 105, "module": "shell32.dll", "name": "SHGetKnownFolderPath", "symbol": "SHGetKnownFolderPath" },
-    { "id": 106, "module": "shell32.dll", "name": "SHGetSpecialFolderPathW", "symbol": "SHGetSpecialFolderPathW" }
+    { "id": 106, "module": "shell32.dll", "name": "SHGetSpecialFolderPathW", "symbol": "SHGetSpecialFolderPathW" },
+    { "id": 107, "module": "ole32.dll", "name": "CoInitializeEx", "symbol": "CoInitializeEx" },
+    { "id": 108, "module": "ole32.dll", "name": "CoUninitialize", "symbol": "CoUninitialize" },
+    { "id": 109, "module": "ole32.dll", "name": "CoCreateGuid", "symbol": "CoCreateGuid" },
+    { "id": 110, "module": "ole32.dll", "name": "StringFromGUID2", "symbol": "StringFromGUID2" }
   ]
 }

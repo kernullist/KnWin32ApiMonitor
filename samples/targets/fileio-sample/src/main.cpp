@@ -6,6 +6,7 @@
 #endif
 #include <psapi.h>
 #include <bcrypt.h>
+#include <objbase.h>
 #include <rpc.h>
 #include <shlobj.h>
 #include <wincrypt.h>
@@ -1069,6 +1070,92 @@ bool RunShellKnownFolderProbe()
     return success;
 }
 
+DWORD WINAPI Ole32ComLifecycleThreadProc(LPVOID)
+{
+    bool success = false;
+    bool initialized = false;
+    GUID guid = {};
+    std::array<wchar_t, 64> guidString = {};
+
+    do
+    {
+        const HRESULT initResult = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+        if (FAILED(initResult))
+        {
+            std::cout << "CoInitializeEx failed with " << HexHResult(initResult) << "\n";
+            break;
+        }
+
+        initialized = true;
+
+        const HRESULT guidResult = CoCreateGuid(&guid);
+        if (FAILED(guidResult))
+        {
+            std::cout << "CoCreateGuid failed with " << HexHResult(guidResult) << "\n";
+            break;
+        }
+
+        const int guidChars = StringFromGUID2(guid, guidString.data(), static_cast<int>(guidString.size()));
+        if (guidChars <= 0)
+        {
+            std::cout << "StringFromGUID2 failed chars=" << guidChars << "\n";
+            break;
+        }
+
+        std::cout << "ole32 com lifecycle roundtrip chars=" << guidChars
+                  << " init=" << HexHResult(initResult) << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (initialized)
+    {
+        CoUninitialize();
+    }
+
+    return success ? 0 : 1;
+}
+
+bool RunOle32ComLifecycleProbe()
+{
+    bool success = false;
+    HANDLE threadHandle = nullptr;
+
+    do
+    {
+        threadHandle = CreateThread(nullptr, 0, Ole32ComLifecycleThreadProc, nullptr, 0, nullptr);
+        if (threadHandle == nullptr)
+        {
+            LogLastError("CreateThread(ole32)");
+            break;
+        }
+
+        const DWORD waitResult = WaitForSingleObject(threadHandle, INFINITE);
+        if (waitResult != WAIT_OBJECT_0)
+        {
+            LogLastError("WaitForSingleObject(ole32)");
+            break;
+        }
+
+        DWORD exitCode = 1;
+        if (!GetExitCodeThread(threadHandle, &exitCode))
+        {
+            LogLastError("GetExitCodeThread(ole32)");
+            break;
+        }
+
+        success = exitCode == 0;
+    }
+    while (false);
+
+    if (threadHandle != nullptr)
+    {
+        CloseHandle(threadHandle);
+    }
+
+    return success;
+}
+
 bool RunWinsockProbe()
 {
     bool success = false;
@@ -1539,6 +1626,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunVersionResourceProbe())
+        {
+            break;
+        }
+
+        if (!RunOle32ComLifecycleProbe())
         {
             break;
         }

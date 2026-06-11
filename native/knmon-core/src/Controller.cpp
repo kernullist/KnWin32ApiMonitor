@@ -2048,6 +2048,74 @@ std::string ShellFolderPathStatusName(std::uint32_t value)
     return result;
 }
 
+std::string ComInitFlagsText(std::uint32_t value)
+{
+    std::ostringstream stream;
+    std::uint32_t remaining = value;
+    bool hasName = false;
+
+    stream << HexDwordValue(value);
+    stream << " (";
+
+    if (value == 0)
+    {
+        stream << "COINIT_MULTITHREADED";
+        hasName = true;
+    }
+    else
+    {
+        if ((value & 0x00000002U) != 0)
+        {
+            stream << "COINIT_APARTMENTTHREADED";
+            remaining &= ~0x00000002U;
+            hasName = true;
+        }
+
+        if ((value & 0x00000004U) != 0)
+        {
+            if (hasName)
+            {
+                stream << "|";
+            }
+
+            stream << "COINIT_DISABLE_OLE1DDE";
+            remaining &= ~0x00000004U;
+            hasName = true;
+        }
+
+        if ((value & 0x00000008U) != 0)
+        {
+            if (hasName)
+            {
+                stream << "|";
+            }
+
+            stream << "COINIT_SPEED_OVER_MEMORY";
+            remaining &= ~0x00000008U;
+            hasName = true;
+        }
+
+        if (remaining != 0)
+        {
+            if (hasName)
+            {
+                stream << "|";
+            }
+
+            stream << "unknown=" << HexDwordValue(remaining);
+            hasName = true;
+        }
+    }
+
+    if (!hasName)
+    {
+        stream << "none";
+    }
+
+    stream << ")";
+    return stream.str();
+}
+
 std::string SignedIntValue(std::uint64_t value)
 {
     return std::to_string(static_cast<std::int32_t>(static_cast<std::uint32_t>(value)));
@@ -2743,6 +2811,39 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 2, "int", "csidl", "in", csidlRaw, csidlRaw, csidlDecoded) << ",";
         args << ArgumentJsonFromMetadata(record.ApiId, 3, "BOOL", "fCreate", "in", createValue, createValue, createValue);
         payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::CoInitializeEx:
+    {
+        const std::string reservedPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string initFlags = ComInitFlagsText(record.Values32[0]);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPVOID", "pvReserved", "in", reservedPointer, reservedPointer, reservedPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "dwCoInit", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), initFlags);
+        payload = ApiCallPayload(result, record, HexHResultValue(record.ReturnCode), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::CoUninitialize:
+        payload = ApiCallPayload(result, record, "void", args.str(), "");
+        break;
+    case KnMonTransportApiId::CoCreateGuid:
+    {
+        const std::string guidPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string guidValue = text0.empty() ? guidPointer : text0;
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "GUID*", "pguid", "out", guidPointer, guidPointer, guidValue, DecodeStatusName(record.Values32[0]));
+        payload = ApiCallPayload(result, record, HexHResultValue(record.ReturnCode), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::StringFromGUID2:
+    {
+        const std::string guidPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string stringPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string guidValue = text0.empty() ? guidPointer : text0;
+        const std::string stringValue = text1.empty() ? stringPointer : text1;
+        const std::string cchMax = SignedIntValue32(record.Values32[0]);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "REFGUID", "rguid", "in", guidPointer, guidPointer, guidValue, DecodeStatusName(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPOLESTR", "lpsz", "out", stringPointer, stringPointer, stringValue, DecodeStatusName(record.Values32[2])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "int", "cchMax", "in", cchMax, cchMax, cchMax);
+        payload = ApiCallPayload(result, record, SignedIntValue(record.ReturnValue), args.str(), "");
         break;
     }
     case KnMonTransportApiId::RpcStringBindingComposeW:

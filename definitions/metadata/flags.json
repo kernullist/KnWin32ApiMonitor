@@ -102,6 +102,15 @@
         { "name": "LOAD_LIBRARY_SEARCH_DEFAULT_DIRS", "value": "0x00001000" },
         { "name": "LOAD_LIBRARY_SAFE_CURRENT_DIRS", "value": "0x00002000" }
       ]
+    },
+    {
+      "name": "com_init_flags",
+      "values": [
+        { "name": "COINIT_MULTITHREADED", "value": "0x00000000" },
+        { "name": "COINIT_APARTMENTTHREADED", "value": "0x00000002" },
+        { "name": "COINIT_DISABLE_OLE1DDE", "value": "0x00000004" },
+        { "name": "COINIT_SPEED_OVER_MEMORY", "value": "0x00000008" }
+      ]
     }
   ]
 }

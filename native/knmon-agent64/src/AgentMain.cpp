@@ -10,6 +10,7 @@
 #include <psapi.h>
 #include <bcrypt.h>
 #include <rpc.h>
+#include <objbase.h>
 #include <shlobj.h>
 #include <wincrypt.h>
 #include <winver.h>
@@ -59,6 +60,7 @@ constexpr DWORD AgentVersionPacked = 0x00020000;
 constexpr std::size_t MaxBufferPreviewBytes = 16;
 constexpr std::size_t MaxNtObjectNameBytes = 512;
 constexpr std::size_t MaxRegistryStringChars = 256;
+constexpr int MaxGuidStringChars = 64;
 constexpr std::size_t MaxRegistryDataPreviewBytes = 128;
 
 struct KnMonPebLdrData
@@ -164,6 +166,10 @@ using GetFileVersionInfoWFn = BOOL(WINAPI*)(LPCWSTR, DWORD, DWORD, LPVOID);
 using VerQueryValueWFn = BOOL(WINAPI*)(LPCVOID, LPCWSTR, LPVOID*, PUINT);
 using SHGetKnownFolderPathFn = HRESULT(WINAPI*)(REFKNOWNFOLDERID, DWORD, HANDLE, PWSTR*);
 using SHGetSpecialFolderPathWFn = BOOL(WINAPI*)(HWND, LPWSTR, int, BOOL);
+using CoInitializeExFn = HRESULT(WINAPI*)(LPVOID, DWORD);
+using CoUninitializeFn = void(WINAPI*)();
+using CoCreateGuidFn = HRESULT(WINAPI*)(GUID*);
+using StringFromGUID2Fn = int(WINAPI*)(REFGUID, LPOLESTR, int);
 using RpcStringBindingComposeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR*);
 using RpcBindingFromStringBindingWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_BINDING_HANDLE*);
 using RpcStringFreeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR*);
@@ -248,6 +254,10 @@ GetFileVersionInfoWFn g_originalGetFileVersionInfoW = nullptr;
 VerQueryValueWFn g_originalVerQueryValueW = nullptr;
 SHGetKnownFolderPathFn g_originalSHGetKnownFolderPath = nullptr;
 SHGetSpecialFolderPathWFn g_originalSHGetSpecialFolderPathW = nullptr;
+CoInitializeExFn g_originalCoInitializeEx = nullptr;
+CoUninitializeFn g_originalCoUninitialize = nullptr;
+CoCreateGuidFn g_originalCoCreateGuid = nullptr;
+StringFromGUID2Fn g_originalStringFromGUID2 = nullptr;
 RpcStringBindingComposeWFn g_originalRpcStringBindingComposeW = nullptr;
 RpcBindingFromStringBindingWFn g_originalRpcBindingFromStringBindingW = nullptr;
 RpcStringFreeWFn g_originalRpcStringFreeW = nullptr;
@@ -341,7 +351,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 60;
+constexpr std::size_t HookDefinitionCount = 64;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1588,6 +1598,10 @@ std::uint16_t ModuleId(const char* moduleName)
     else if (_stricmp(moduleName, "shell32.dll") == 0)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Shell32);
+    }
+    else if (_stricmp(moduleName, "ole32.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Ole32);
     }
 
     return result;
@@ -3301,6 +3315,107 @@ void FormatGuidText(char* destination, std::uint32_t* length, std::size_t capaci
     while (false);
 }
 
+bool IsHexTextChar(char value)
+{
+    return
+        (value >= '0' && value <= '9') ||
+        (value >= 'a' && value <= 'f') ||
+        (value >= 'A' && value <= 'F');
+}
+
+bool IsCanonicalGuidStringText(const char* value)
+{
+    bool result = false;
+
+    do
+    {
+        if (value == nullptr)
+        {
+            break;
+        }
+
+        if (std::strlen(value) != 38)
+        {
+            break;
+        }
+
+        if (value[0] != '{' || value[9] != '-' || value[14] != '-' || value[19] != '-' || value[24] != '-' || value[37] != '}')
+        {
+            break;
+        }
+
+        result = true;
+        for (std::size_t index = 1; index < 37; ++index)
+        {
+            if (index == 9 || index == 14 || index == 19 || index == 24)
+            {
+                continue;
+            }
+
+            if (!IsHexTextChar(value[index]))
+            {
+                result = false;
+                break;
+            }
+        }
+    }
+    while (false);
+
+    return result;
+}
+
+std::uint32_t CopyGuidStringPointerText(char* destination, std::uint32_t* length, std::size_t capacity, const wchar_t* source, int cchMax)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (length != nullptr)
+        {
+            *length = 0;
+        }
+
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        if (cchMax <= 0 || cchMax > MaxGuidStringChars)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        status = CopyWidePointerText(destination, length, capacity, source);
+        if (status != static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
+        {
+            break;
+        }
+
+        if (!IsCanonicalGuidStringText(destination))
+        {
+            destination[0] = '\0';
+            if (length != nullptr)
+            {
+                *length = 0;
+            }
+
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+    }
+    while (false);
+
+    return status;
+}
+
 void FormatCsidlText(char* destination, std::uint32_t* length, std::size_t capacity, int csidl, const char* name)
 {
     if (length != nullptr)
@@ -3540,6 +3655,111 @@ void EmitSHGetSpecialFolderPathWEvent(
         else if (!identity.AllowPath)
         {
             record->Values32[3] = static_cast<std::uint32_t>(ShellFolderPathStatus::NonAllowlistedNoPath);
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitCoInitializeExEvent(
+    HRESULT result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPVOID reserved,
+    DWORD coInit)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::CoInitializeEx, "ole32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->ReturnCode = static_cast<std::uint32_t>(result);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(reserved));
+        record->Values32[0] = coInit;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitCoUninitializeEvent(
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::CoUninitialize, "ole32.dll", start, end, 0);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitCoCreateGuidEvent(
+    HRESULT result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    GUID* guid)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::CoCreateGuid, "ole32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->ReturnCode = static_cast<std::uint32_t>(result);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(guid));
+        record->Values32[0] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+
+        if (SUCCEEDED(result))
+        {
+            GUID localGuid = {};
+            if (ReadCurrentProcessValue(guid, &localGuid))
+            {
+                FormatGuidText(record->Text0, &record->Text0Length, sizeof(record->Text0), localGuid, "GUID");
+            }
+            else
+            {
+                record->Values32[0] = guid == nullptr ?
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer) :
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            }
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitStringFromGUID2Event(
+    int result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    REFGUID guid,
+    LPOLESTR string,
+    int cchMax)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::StringFromGUID2, "ole32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(&guid));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(string));
+        record->Values32[0] = static_cast<std::uint32_t>(cchMax);
+        record->Values32[1] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+        record->Values32[2] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+        FormatGuidText(record->Text0, &record->Text0Length, sizeof(record->Text0), guid, "GUID");
+
+        if (result > 0)
+        {
+            record->Values32[2] = CopyGuidStringPointerText(record->Text1, &record->Text1Length, sizeof(record->Text1), string, cchMax);
         }
 
         CommitTransportRecord(record, overheadStart);
@@ -4147,6 +4367,10 @@ BOOL WINAPI HookedGetFileVersionInfoW(LPCWSTR fileName, DWORD handle, DWORD leng
 BOOL WINAPI HookedVerQueryValueW(LPCVOID block, LPCWSTR subBlock, LPVOID* value, PUINT length);
 HRESULT WINAPI HookedSHGetKnownFolderPath(REFKNOWNFOLDERID knownFolderId, DWORD flags, HANDLE token, PWSTR* path);
 BOOL WINAPI HookedSHGetSpecialFolderPathW(HWND window, LPWSTR path, int csidl, BOOL create);
+HRESULT WINAPI HookedCoInitializeEx(LPVOID reserved, DWORD coInit);
+void WINAPI HookedCoUninitialize();
+HRESULT WINAPI HookedCoCreateGuid(GUID* guid);
+int WINAPI HookedStringFromGUID2(REFGUID guid, LPOLESTR string, int cchMax);
 RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR protSeq, RPC_WSTR networkAddr, RPC_WSTR endpoint, RPC_WSTR options, RPC_WSTR* stringBinding);
 RPC_STATUS RPC_ENTRY HookedRpcBindingFromStringBindingW(RPC_WSTR stringBinding, RPC_BINDING_HANDLE* binding);
 RPC_STATUS RPC_ENTRY HookedRpcStringFreeW(RPC_WSTR* string);
@@ -4214,6 +4438,10 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "version.dll", "VerQueryValueW", reinterpret_cast<void*>(HookedVerQueryValueW), reinterpret_cast<void**>(&g_originalVerQueryValueW), false, true, false, 0, 0 },
         HookDefinition { "shell32.dll", "SHGetKnownFolderPath", reinterpret_cast<void*>(HookedSHGetKnownFolderPath), reinterpret_cast<void**>(&g_originalSHGetKnownFolderPath), false, true, false, 0, 0 },
         HookDefinition { "shell32.dll", "SHGetSpecialFolderPathW", reinterpret_cast<void*>(HookedSHGetSpecialFolderPathW), reinterpret_cast<void**>(&g_originalSHGetSpecialFolderPathW), false, true, false, 0, 0 },
+        HookDefinition { "ole32.dll", "CoInitializeEx", reinterpret_cast<void*>(HookedCoInitializeEx), reinterpret_cast<void**>(&g_originalCoInitializeEx), false, true, false, 0, 0 },
+        HookDefinition { "ole32.dll", "CoUninitialize", reinterpret_cast<void*>(HookedCoUninitialize), reinterpret_cast<void**>(&g_originalCoUninitialize), false, true, false, 0, 0 },
+        HookDefinition { "ole32.dll", "CoCreateGuid", reinterpret_cast<void*>(HookedCoCreateGuid), reinterpret_cast<void**>(&g_originalCoCreateGuid), false, true, false, 0, 0 },
+        HookDefinition { "ole32.dll", "StringFromGUID2", reinterpret_cast<void*>(HookedStringFromGUID2), reinterpret_cast<void**>(&g_originalStringFromGUID2), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringBindingComposeW", reinterpret_cast<void*>(HookedRpcStringBindingComposeW), reinterpret_cast<void**>(&g_originalRpcStringBindingComposeW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcBindingFromStringBindingW", reinterpret_cast<void*>(HookedRpcBindingFromStringBindingW), reinterpret_cast<void**>(&g_originalRpcBindingFromStringBindingW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringFreeW", reinterpret_cast<void*>(HookedRpcStringFreeW), reinterpret_cast<void**>(&g_originalRpcStringFreeW), false, true, false, 0, 0 },
@@ -6111,6 +6339,126 @@ BOOL WINAPI HookedSHGetSpecialFolderPathW(HWND window, LPWSTR path, int csidl, B
     if (HooksEnabled())
     {
         EmitSHGetSpecialFolderPathWEvent(result, eventError, start, end, window, path, csidl, create);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HRESULT WINAPI HookedCoInitializeEx(LPVOID reserved, DWORD coInit)
+{
+    if (g_inHook || !HooksEnabled() || g_originalCoInitializeEx == nullptr)
+    {
+        if (g_originalCoInitializeEx == nullptr)
+        {
+            return HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND);
+        }
+
+        return g_originalCoInitializeEx(reserved, coInit);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const HRESULT result = g_originalCoInitializeEx(reserved, coInit);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = FAILED(result) ? static_cast<DWORD>(result) : 0;
+    if (HooksEnabled())
+    {
+        EmitCoInitializeExEvent(result, eventError, start, end, reserved, coInit);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+void WINAPI HookedCoUninitialize()
+{
+    if (g_inHook || !HooksEnabled() || g_originalCoUninitialize == nullptr)
+    {
+        if (g_originalCoUninitialize == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return;
+        }
+
+        g_originalCoUninitialize();
+        return;
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    g_originalCoUninitialize();
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitCoUninitializeEvent(start, end);
+    }
+
+    SetLastError(lastError);
+}
+
+HRESULT WINAPI HookedCoCreateGuid(GUID* guid)
+{
+    if (g_inHook || !HooksEnabled() || g_originalCoCreateGuid == nullptr)
+    {
+        if (g_originalCoCreateGuid == nullptr)
+        {
+            return HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND);
+        }
+
+        return g_originalCoCreateGuid(guid);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const HRESULT result = g_originalCoCreateGuid(guid);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = FAILED(result) ? static_cast<DWORD>(result) : 0;
+    if (HooksEnabled())
+    {
+        EmitCoCreateGuidEvent(result, eventError, start, end, guid);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+int WINAPI HookedStringFromGUID2(REFGUID guid, LPOLESTR string, int cchMax)
+{
+    if (g_inHook || !HooksEnabled() || g_originalStringFromGUID2 == nullptr)
+    {
+        if (g_originalStringFromGUID2 == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return 0;
+        }
+
+        return g_originalStringFromGUID2(guid, string, cchMax);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const int result = g_originalStringFromGUID2(guid, string, cchMax);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitStringFromGUID2Event(result, 0, start, end, guid, string, cchMax);
     }
 
     SetLastError(lastError);

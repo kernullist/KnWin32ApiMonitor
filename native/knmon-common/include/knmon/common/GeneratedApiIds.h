@@ -113,6 +113,10 @@ enum class KnMonTransportApiId : std::uint16_t
     VerQueryValueW = 104,
     SHGetKnownFolderPath = 105,
     SHGetSpecialFolderPathW = 106,
+    CoInitializeEx = 107,
+    CoUninitialize = 108,
+    CoCreateGuid = 109,
+    StringFromGUID2 = 110,
 };
 
 enum class KnMonTransportModuleId : std::uint16_t
@@ -133,5 +137,6 @@ enum class KnMonTransportModuleId : std::uint16_t
     Psapi = 13,
     Version = 14,
     Shell32 = 15,
+    Ole32 = 16,
 };
 }

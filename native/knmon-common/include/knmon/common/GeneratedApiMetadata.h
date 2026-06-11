@@ -53,7 +53,7 @@ struct KnMonGeneratedParameterMetadata
     std::string_view LengthExpression;
 };
 
-inline constexpr std::array<KnMonGeneratedModuleMetadata, 15> KnMonGeneratedModules =
+inline constexpr std::array<KnMonGeneratedModuleMetadata, 16> KnMonGeneratedModules =
 {{
     {
         1,
@@ -130,9 +130,14 @@ inline constexpr std::array<KnMonGeneratedModuleMetadata, 15> KnMonGeneratedModu
         "shell32.dll",
         "Shell32"
     },
+    {
+        16,
+        "ole32.dll",
+        "Ole32"
+    },
 }};
 
-inline constexpr std::array<KnMonGeneratedApiMetadata, 106> KnMonGeneratedApis =
+inline constexpr std::array<KnMonGeneratedApiMetadata, 110> KnMonGeneratedApis =
 {{
     {
         1,
@@ -2148,9 +2153,85 @@ inline constexpr std::array<KnMonGeneratedApiMetadata, 106> KnMonGeneratedApis =
         418,
         4
     },
+    {
+        107,
+        16,
+        "ole32.dll",
+        "CoInitializeEx",
+        "CoInitializeEx",
+        "com",
+        "com_apartment_init",
+        "low",
+        "iat",
+        "smoke_verified",
+        "stdcall",
+        "HRESULT",
+        "HRESULT",
+        "{\"hresultSuccess\":true}",
+        "{\"hresultFailed\":true}",
+        422,
+        2
+    },
+    {
+        108,
+        16,
+        "ole32.dll",
+        "CoUninitialize",
+        "CoUninitialize",
+        "com",
+        "com_apartment_uninit",
+        "low",
+        "iat",
+        "smoke_verified",
+        "stdcall",
+        "void",
+        "none",
+        "{\"returnVoid\":true}",
+        "{}",
+        424,
+        0
+    },
+    {
+        109,
+        16,
+        "ole32.dll",
+        "CoCreateGuid",
+        "CoCreateGuid",
+        "com",
+        "com_guid_create",
+        "low",
+        "iat",
+        "smoke_verified",
+        "stdcall",
+        "HRESULT",
+        "HRESULT",
+        "{\"returnEqual\":\"S_OK\"}",
+        "{\"returnNotEqual\":\"S_OK\"}",
+        424,
+        1
+    },
+    {
+        110,
+        16,
+        "ole32.dll",
+        "StringFromGUID2",
+        "StringFromGUID2",
+        "com",
+        "com_guid_string",
+        "low",
+        "iat",
+        "smoke_verified",
+        "stdcall",
+        "int",
+        "none",
+        "{\"returnNotEqual\":\"0\"}",
+        "{\"returnEqual\":\"0\"}",
+        425,
+        3
+    },
 }};
 
-inline constexpr std::array<KnMonGeneratedParameterMetadata, 422> KnMonGeneratedParameters =
+inline constexpr std::array<KnMonGeneratedParameterMetadata, 428> KnMonGeneratedParameters =
 {{
     {
         1,
@@ -9315,6 +9396,108 @@ inline constexpr std::array<KnMonGeneratedParameterMetadata, 422> KnMonGenerated
         421,
         "fCreate",
         "BOOL",
+        "in",
+        "dword_value",
+        "pre",
+        false,
+        0,
+        "",
+        "",
+        "",
+        -1,
+        ""
+    },
+    {
+        107,
+        0,
+        422,
+        "pvReserved",
+        "LPVOID",
+        "in",
+        "pointer",
+        "pre",
+        true,
+        0,
+        "",
+        "",
+        "",
+        -1,
+        ""
+    },
+    {
+        107,
+        1,
+        423,
+        "dwCoInit",
+        "DWORD",
+        "in",
+        "com_init_flags",
+        "pre",
+        false,
+        0,
+        "",
+        "",
+        "",
+        -1,
+        ""
+    },
+    {
+        109,
+        0,
+        424,
+        "pguid",
+        "GUID*",
+        "out",
+        "guid_pointer",
+        "post",
+        true,
+        16,
+        "",
+        "",
+        "",
+        -1,
+        ""
+    },
+    {
+        110,
+        0,
+        425,
+        "rguid",
+        "REFGUID",
+        "in",
+        "guid_pointer",
+        "pre",
+        false,
+        16,
+        "",
+        "",
+        "",
+        -1,
+        ""
+    },
+    {
+        110,
+        1,
+        426,
+        "lpsz",
+        "LPOLESTR",
+        "out",
+        "guid_string_buffer_pointer",
+        "post",
+        true,
+        128,
+        "",
+        "",
+        "",
+        -1,
+        ""
+    },
+    {
+        110,
+        2,
+        427,
+        "cchMax",
+        "int",
         "in",
         "dword_value",
         "pre",

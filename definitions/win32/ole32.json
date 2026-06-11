@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "ole32",
+  "description": "Wave 3 low-payload OLE32 COM apartment lifecycle and GUID helper metadata hooks.",
+  "apis": [
+    {
+      "module": "OLE32.dll",
+      "name": "CoInitializeEx",
+      "family": "com",
+      "category": "com_apartment_init",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HRESULT",
+      "errorSource": "HRESULT",
+      "success": { "hresultSuccess": true },
+      "failure": { "hresultFailed": true },
+      "parameters": [
+        { "name": "pvReserved", "type": "LPVOID", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "dwCoInit", "type": "DWORD", "direction": "in", "decode": "com_init_flags" }
+      ]
+    },
+    {
+      "module": "OLE32.dll",
+      "name": "CoUninitialize",
+      "family": "com",
+      "category": "com_apartment_uninit",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "void",
+      "errorSource": "none",
+      "success": { "returnVoid": true },
+      "failure": {},
+      "parameters": []
+    },
+    {
+      "module": "OLE32.dll",
+      "name": "CoCreateGuid",
+      "family": "com",
+      "category": "com_guid_create",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HRESULT",
+      "errorSource": "HRESULT",
+      "success": { "returnEqual": "S_OK" },
+      "failure": { "returnNotEqual": "S_OK" },
+      "parameters": [
+        { "name": "pguid", "type": "GUID*", "direction": "out", "decode": "guid_pointer", "nullable": true, "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "OLE32.dll",
+      "name": "StringFromGUID2",
+      "family": "com",
+      "category": "com_guid_string",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "int",
+      "errorSource": "none",
+      "success": { "returnNotEqual": "0" },
+      "failure": { "returnEqual": "0" },
+      "parameters": [
+        { "name": "rguid", "type": "REFGUID", "direction": "in", "decode": "guid_pointer" },
+        { "name": "lpsz", "type": "LPOLESTR", "direction": "out", "decode": "guid_string_buffer_pointer", "nullable": true, "captureTiming": "post" },
+        { "name": "cchMax", "type": "int", "direction": "in", "decode": "dword_value" }
+      ]
+    }
+  ]
+}

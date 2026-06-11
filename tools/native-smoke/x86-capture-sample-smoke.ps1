@@ -50,6 +50,10 @@ $requiredApis = @(
     "VerQueryValueW",
     "SHGetKnownFolderPath",
     "SHGetSpecialFolderPathW",
+    "CoInitializeEx",
+    "CoUninitialize",
+    "CoCreateGuid",
+    "StringFromGUID2",
     "RpcStringBindingComposeW",
     "RpcBindingFromStringBindingW",
     "RpcStringFreeW",
@@ -775,6 +779,99 @@ if ($shellArgs -cmatch "Users\\\\|AppData|Downloads|Desktop|Documents|Recent|Sta
 if ($shellArgs -cmatch "path=[^`"]*Fonts")
 {
     throw "x86 non-allowlisted Font queries exposed a path: $shellArgs"
+}
+
+$comEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "com" })
+if ($comEvents.Count -lt 4)
+{
+    throw "x86 capture did not include the selected OLE32 COM lifecycle API family slice."
+}
+
+$coInitialize = @($comEvents | Where-Object { $_.api -eq "CoInitializeEx" } | Select-Object -First 1)
+if ($coInitialize.Count -ne 1 -or
+    $coInitialize[0].module -ne "ole32.dll" -or
+    $coInitialize[0].apiCategory -ne "com_apartment_init" -or
+    $coInitialize[0].hookPolicy -ne "iat" -or
+    $coInitialize[0].coverageStatus -ne "smoke_verified" -or
+    ($coInitialize[0].returnValue -ne "0x00000000" -and $coInitialize[0].returnValue -ne "0x00000001"))
+{
+    throw "x86 CoInitializeEx metadata or return evidence mismatch."
+}
+
+$coInitializeArgs = ($coInitialize[0].arguments | ConvertTo-Json -Depth 8)
+if ($coInitializeArgs -notmatch "com_init_flags" -or $coInitializeArgs -notmatch "COINIT_MULTITHREADED")
+{
+    throw "x86 CoInitializeEx arguments did not include COM init flag evidence: $coInitializeArgs"
+}
+
+$coUninitialize = @($comEvents | Where-Object { $_.api -eq "CoUninitialize" } | Select-Object -First 1)
+if ($coUninitialize.Count -ne 1 -or
+    $coUninitialize[0].module -ne "ole32.dll" -or
+    $coUninitialize[0].apiCategory -ne "com_apartment_uninit" -or
+    $coUninitialize[0].returnValue -ne "void" -or
+    @($coUninitialize[0].arguments).Count -ne 0)
+{
+    throw "x86 CoUninitialize should be lifecycle-only with no arguments."
+}
+
+$coCreateGuid = @($comEvents | Where-Object { $_.api -eq "CoCreateGuid" } | Select-Object -First 1)
+if ($coCreateGuid.Count -ne 1 -or
+    $coCreateGuid[0].module -ne "ole32.dll" -or
+    $coCreateGuid[0].apiCategory -ne "com_guid_create" -or
+    $coCreateGuid[0].returnValue -ne "0x00000000")
+{
+    throw "x86 CoCreateGuid metadata or return evidence mismatch."
+}
+
+$createdGuidArg = @($coCreateGuid[0].arguments | Where-Object { $_.name -eq "pguid" } | Select-Object -First 1)
+if ($createdGuidArg.Count -ne 1 -or
+    $createdGuidArg[0].decodeAlias -ne "guid_pointer" -or
+    $createdGuidArg[0].decodedValue -notmatch "^GUID=\{[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\}$")
+{
+    throw "x86 CoCreateGuid did not include canonical GUID evidence: $($createdGuidArg | ConvertTo-Json -Depth 8)"
+}
+
+$stringFromGuid = @($comEvents | Where-Object { $_.api -eq "StringFromGUID2" } | Select-Object -First 1)
+if ($stringFromGuid.Count -ne 1 -or
+    $stringFromGuid[0].module -ne "ole32.dll" -or
+    $stringFromGuid[0].apiCategory -ne "com_guid_string" -or
+    $stringFromGuid[0].returnValue -notmatch "^[1-9][0-9]*$")
+{
+    throw "x86 StringFromGUID2 metadata or return evidence mismatch."
+}
+
+$stringGuidArg = @($stringFromGuid[0].arguments | Where-Object { $_.name -eq "rguid" } | Select-Object -First 1)
+$guidStringArg = @($stringFromGuid[0].arguments | Where-Object { $_.name -eq "lpsz" } | Select-Object -First 1)
+$guidStringSizeArg = @($stringFromGuid[0].arguments | Where-Object { $_.name -eq "cchMax" } | Select-Object -First 1)
+if ($stringGuidArg.Count -ne 1 -or
+    $stringGuidArg[0].decodeAlias -ne "guid_pointer" -or
+    $stringGuidArg[0].decodedValue -notmatch "^GUID=\{[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\}$")
+{
+    throw "x86 StringFromGUID2 did not include input GUID evidence: $($stringGuidArg | ConvertTo-Json -Depth 8)"
+}
+
+if ($guidStringArg.Count -ne 1 -or
+    $guidStringArg[0].decodeAlias -ne "guid_string_buffer_pointer" -or
+    $guidStringArg[0].decodedValue -notmatch "^\{[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\}$")
+{
+    throw "x86 StringFromGUID2 did not include bounded canonical output GUID string evidence: $($guidStringArg | ConvertTo-Json -Depth 8)"
+}
+
+if ($guidStringSizeArg.Count -ne 1 -or $guidStringSizeArg[0].decodedValue -ne "64")
+{
+    throw "x86 StringFromGUID2 used unexpected cchMax evidence: $($guidStringSizeArg | ConvertTo-Json -Depth 8)"
+}
+
+$createdGuid = $createdGuidArg[0].decodedValue -replace "^GUID=", ""
+if ($createdGuid.ToLowerInvariant() -ne $guidStringArg[0].decodedValue.ToLowerInvariant())
+{
+    throw "x86 CoCreateGuid and StringFromGUID2 GUID evidence diverged."
+}
+
+$comArgs = @($comEvents | ForEach-Object { $_.arguments } | ConvertTo-Json -Depth 8)
+if ($comArgs -cmatch "CoCreateInstance|CoGetClassObject|CoGetObject|IClassFactory|IUnknown|IDispatch|vtable|Vtbl|IMarshal|IStream|IStorage|IDataObject|Clipboard|DragDrop|Moniker|RunningObjectTable|ROT|ShellExecute|PIDL|ITEMIDLIST|Users\\\\|AppData|Downloads|Desktop|Documents|Recent|Startup|SendTo|CommandLine|Environment|BEGIN CERTIFICATE|PRIVATE KEY|Authorization|Cookie|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 OLE32 COM lifecycle events appear to expose activation, object, marshaling, storage, user-path, credential, PE/file/hash, or byte-preview evidence: $comArgs"
 }
 
 $rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })
