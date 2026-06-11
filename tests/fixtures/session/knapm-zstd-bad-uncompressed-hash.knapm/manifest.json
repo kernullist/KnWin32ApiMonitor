@@ -1,0 +1,109 @@
+{
+  "schemaVersion": "0.1.0",
+  "format": "knapm",
+  "formatVersion": "1",
+  "sessionId": "fixture-knapm-zstd-bad-uncompressed-hash",
+  "operationId": "fixture-knapm-zstd-bad-uncompressed-hash-op",
+  "createdUtc": "2026-06-10T00:00:00.000Z",
+  "updatedUtc": "2026-06-10T00:00:01.000Z",
+  "finalizedUtc": "2026-06-10T00:00:01.000Z",
+  "finalized": true,
+  "source": "knmon-native-helper attach-session",
+  "backendMode": "native-capture",
+  "captureMode": "bounded-native-attach",
+  "injectionMethod": "remote LoadLibraryW",
+  "target": {
+    "path": "fixture.exe",
+    "pid": 1234,
+    "tid": 1235,
+    "architecture": "x64"
+  },
+  "agent": {
+    "path": "knmon-agent64.dll",
+    "architecture": "x64",
+    "version": "fixture-agent"
+  },
+  "session": {
+    "schemaVersion": "0.1.0",
+    "sessionId": "fixture-knapm-zstd-bad-uncompressed-hash",
+    "operationId": "fixture-knapm-zstd-bad-uncompressed-hash-op",
+    "sessionKind": "attach_capture_stream",
+    "ownerProcessId": 0,
+    "helperProcessId": 0,
+    "targetProcessId": 1234,
+    "sessionState": "stopped",
+    "startedUtc": "2026-06-10T00:00:00.000Z",
+    "updatedUtc": "2026-06-10T00:00:01.000Z",
+    "stoppedUtc": "2026-06-10T00:00:01.000Z",
+    "cancellationEventName": "Local\\KNMonCancel_fixture",
+    "lastTransportSequence": 1,
+    "recordsStreamed": 1,
+    "transportDroppedEvents": 0,
+    "hostDroppedBatches": 0,
+    "staleReason": "",
+    "recoveryAction": "none",
+    "shutdownEvidence": "agent_shutdown reason=self_disable",
+    "stopRequested": true,
+    "agentCleanupAttempted": true,
+    "agentCleanupSucceeded": true
+  },
+  "eventCounts": {
+    "audit": 1,
+    "agentEvents": 3,
+    "traceEvents": 1,
+    "capturedEvents": 1
+  },
+  "droppedEvents": 0,
+  "transportDroppedEvents": 0,
+  "hostDroppedBatches": 0,
+  "chunkCount": 1,
+  "lastBatchSequence": 1,
+  "lastRecordSequence": 1,
+  "writerState": "finalized",
+  "owner": {
+    "ownerKind": "bounded-helper",
+    "hostProcessId": 1234,
+    "helperProcessId": 1234,
+    "writerProcessId": 1234,
+    "writerInstanceId": "writer-fixture-finalized",
+    "writerGeneration": 1,
+    "startedUtc": "2026-06-10T00:00:00.000Z",
+    "updatedUtc": "2026-06-10T00:00:01.000Z",
+    "heartbeatUtc": "2026-06-10T00:00:01.000Z",
+    "leaseTimeoutMs": 15000,
+    "leaseExpiresUtc": "2099-01-01T00:00:00.000Z"
+  },
+  "checkpoint": {
+    "lastCommittedChunkSequence": 1,
+    "lastCommittedBatchSequence": 1,
+    "lastCommittedRecordSequence": 1,
+    "lastCommittedEventId": 1,
+    "lastManifestUpdateUtc": "2026-06-10T00:00:01.000Z",
+    "lastIndexUpdateUtc": "2026-06-10T00:00:01.000Z",
+    "indexConsistent": true
+  },
+  "recovery": {
+    "state": "none",
+    "reason": "finalized",
+    "action": "none",
+    "classifiedUtc": "2026-06-10T00:00:01.000Z",
+    "ownerAlive": false,
+    "helperAlive": false,
+    "writerAlive": false,
+    "targetAlive": false,
+    "leaseExpired": false,
+    "restartEligible": false
+  },
+  "files": {
+    "audit": "audit.jsonl",
+    "agentEvents": "agent-events.jsonl",
+    "index": "index.json",
+    "chunkDirectory": "chunks"
+  },
+  "compression": "zstd",
+  "compressionAlgorithms": [
+    "zstd"
+  ],
+  "storedBytes": 287,
+  "uncompressedBytes": 275
+}

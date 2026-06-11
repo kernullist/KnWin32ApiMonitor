@@ -124,7 +124,7 @@ Current implementation notes:
 4. `replay-session --session <dir>` returns trace-compatible events without launching a target or loading an agent.
 5. The UI exposes `Capture And Save` and `Replay Last` for the default `captures/latest-sample-fileio` session.
 6. `knmon-collector.exe smoke-backpressure --capacity 4 --events 10` proves bounded synthetic collector intake, FIFO retention, drop-newest overflow, and dropped-event accounting.
-7. Phase 11I adds durable directory-backed `.knapm` session chunks and indexed replay for bounded streaming attach sessions, Phase 11J adds explicit `.knapm` restart/recovery ownership classification, Phase 11K adds a host-side persistent daemon supervision foundation, and Phase 11L hardens daemon audit/stale registry handling; compressed chunks, metadata-database catalogs, Windows service mode, and crash-tolerant daemon recovery remain future work.
+7. Phase 11I adds durable directory-backed `.knapm` session chunks and indexed replay for bounded streaming attach sessions, Phase 11J adds explicit `.knapm` restart/recovery ownership classification, Phase 11K adds a host-side persistent daemon supervision foundation, Phase 11L hardens daemon audit/stale registry handling, and Phase 11M adds zstd `.knapm` chunks plus host-side JSON replay catalogs; metadata-database indexing, Windows service mode, and crash-tolerant daemon recovery remain future work.
 
 ## Phase 5: Safe Agent Harness
 
@@ -512,7 +512,7 @@ Next implementation focus:
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 
-Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, Phase 11F, Phase 11G, Phase 11H, Phase 11I, Phase 11J, Phase 11K, and Phase 11L foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, cancellation-safe operation ownership for bounded attach/process-tree helper commands, durable native session ownership readiness, bounded UI streaming trace batches, durable `.knapm` chunk replay, `.knapm` restart/recovery ownership classification, host-side persistent daemon-owned session supervision, and daemon audit/stale-registry hardening are implemented; Windows service mode, automatic daemon crash recovery, orphaned active-agent repair, compressed chunks, and metadata-database replay catalogs remain future work.
+Status: Phase 11A, Phase 11B, Phase 11C, Phase 11D, Phase 11E, Phase 11F, Phase 11G, Phase 11H, Phase 11I, Phase 11J, Phase 11K, Phase 11L, and Phase 11M foundations are implemented. Bounded same-bitness running-process attach, helper-side process-tree supervision, UI controls for selected native target attach/supervision, repeated same-process reattach after self-disable, active loaded-agent rejection, pull-based collector reader foundation for shared transport drain, cancellation-safe operation ownership for bounded attach/process-tree helper commands, durable native session ownership readiness, bounded UI streaming trace batches, durable `.knapm` chunk replay, `.knapm` restart/recovery ownership classification, host-side persistent daemon-owned session supervision, daemon audit/stale-registry hardening, zstd `.knapm` chunks, and host-side JSON replay catalogs are implemented; Windows service mode, automatic daemon crash recovery, orphaned active-agent repair, and database-backed large replay indexing remain future work.
 
 Goal:
 
@@ -674,11 +674,29 @@ Current verified Phase 11L behavior:
 9. `tools/native-smoke/persistent-daemon-hardening-smoke.ps1` verifies healthy audit, duplicate rejection before mutation, stale daemon status, daemon crash classification, writer crash/orphan-risk evidence, dry-run/actual prune, active-record preservation, and finalized `.knapm` validate/replay after pruning.
 10. `tools/session-validator/validate-session-fixtures.mjs` covers deterministic daemon registry fixtures for valid stale registry and malformed registry records.
 
+Current verified Phase 11M behavior:
+
+1. `attach-session --stream-batches --write-knapm <path.knapm> --knapm-compression zstd` writes `.jsonl.zst` chunks while preserving stdout JSONL streaming frames.
+2. `daemon-start-session --write-knapm <path.knapm> --knapm-compression zstd` passes the same compression setting into the daemon-owned attach writer.
+3. zstd support currently writes standards-compatible raw-block zstd frames without adding an external compression dependency or target hook-path work.
+4. `index.json` stores per-chunk `compression`, stored `byteLength`, stored `sha256`, and zstd-required `uncompressedByteLength` plus `uncompressedSha256`.
+5. `manifest.json` stores writer compression summary, compression algorithms, stored byte totals, and uncompressed byte totals.
+6. `validate-session --session <path.knapm>` rejects unsupported compression as `unsupported_compression`, rejects corrupt zstd frames, verifies stored and uncompressed hashes, and preserves Phase 11I/11J/11K/11L uncompressed session compatibility.
+7. `replay-session --session <path.knapm>` validates first, then decodes zstd chunks into the existing `session-replay` result without launching, injecting, attaching, repairing, or mutating targets.
+8. `catalog-sessions --root <dir> [--catalog <path>] [--rebuild]` builds a deterministic JSON replay catalog from disk metadata and validation results.
+9. `catalog-query --catalog <path> [--limit n] [--state state] [--target pid-or-text]` filters catalog rows without touching session directories.
+10. `catalog-remove-missing --catalog <path> [--dry-run]` removes only missing catalog rows; it does not delete `.knapm` data, recover writers, unload agents, launch targets, or attach to targets.
+11. Tauri exposes catalog build/query/remove wrappers, and the UI can refresh a compact catalog summary beside the session controls.
+12. `contracts/knapm-manifest.schema.json`, `contracts/knapm-index.schema.json`, `contracts/session-info.schema.json`, `contracts/session-catalog.schema.json`, and `protocol-version.json` document the compression/catalog contract.
+13. `tools/session-validator/validate-session-fixtures.mjs` covers valid zstd, corrupt zstd frame, bad uncompressed hash, and unsupported compression fixtures.
+14. `tools/native-smoke/knapm-compression-catalog-smoke.ps1` verifies live zstd attach, daemon-owned zstd sessions, validate/replay, catalog build/query, dry-run missing detection, and actual missing-row pruning without deleting active `.knapm` data.
+
 Next implementation focus:
 
-1. Add zstd compression and metadata-database replay catalogs now that daemon-owned uncompressed `.knapm` validation and registry hardening are stable.
-2. Keep automatic daemon crash recovery and orphaned active-agent repair behind a separate design review with explicit operator runbooks.
-3. Keep Windows service mode, protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
+1. Start Phase 12 with catalog-backed replay UX and high-event trace virtualization so large `.knapm` sessions stay usable without increasing target-side overhead.
+2. Keep database-backed catalog indexing behind a separate scale review after the JSON catalog and replay picker contract are stable.
+3. Keep automatic daemon crash recovery and orphaned active-agent repair behind a separate design review with explicit operator runbooks.
+4. Keep Windows service mode, protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 
 ## Phase 12: Advanced UX
 

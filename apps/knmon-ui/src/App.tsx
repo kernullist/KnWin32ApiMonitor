@@ -24,6 +24,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   attachTargetProcessCapture,
   cancelNativeOperation,
+  catalogNativeSessions,
   captureSampleFileIoEvents,
   captureSampleFileIoSession,
   drainNativeTraceBatches,
@@ -44,7 +45,7 @@ import {
 } from "./backend";
 import { apiTree, captureProfiles, createMockFileIoEvent, initialTraceEvents } from "./mockData";
 import { downloadJsonl, estimateSessionBytes } from "./session";
-import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, NativeOperation, NativeSession, NativeTraceBatch, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
+import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, NativeOperation, NativeSession, NativeSessionCatalog, NativeTraceBatch, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
 
 type LeftTab = "targets" | "apis" | "profiles";
 type TraceMode = "flat" | "call-tree";
@@ -342,6 +343,7 @@ function App() {
   const [lastSession, setLastSession] = useState<SessionInfo | null>(null);
   const [nativeOperations, setNativeOperations] = useState<NativeOperation[]>([]);
   const [nativeSessions, setNativeSessions] = useState<NativeSession[]>([]);
+  const [sessionCatalog, setSessionCatalog] = useState<NativeSessionCatalog | null>(null);
   const [outputEvents, setOutputEvents] = useState<AuditEvent[]>([
     makeAuditEvent("backend_ready", "mock_init", "Mock File I/O backend initialized.")
   ]);
@@ -697,6 +699,30 @@ function App() {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       appendOutput([makeAuditEvent("session_replay_blocked", "replay_last_sample_session", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
+  async function handleRefreshSessionCatalog() {
+    setNativeBusy(true);
+
+    try {
+      appendOutput([makeAuditEvent("session_catalog_requested", "catalog_native_sessions", "Session catalog refresh requested from UI.")]);
+      const catalog = await catalogNativeSessions();
+      setSessionCatalog(catalog);
+      appendOutput([
+        makeAuditEvent(
+          catalog.success ? "session_catalog_refreshed" : "session_catalog_failed",
+          "catalog_native_sessions",
+          `${catalog.message}; sessions=${catalog.sessionCount}; valid=${catalog.validSessionCount}; invalid=${catalog.invalidSessionCount}; stored=${formatBytes(catalog.storedBytes)}`
+        )
+      ]);
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("session_catalog_blocked", "catalog_native_sessions", message)]);
       setInspectorTab("output");
     } finally {
       setNativeBusy(false);
@@ -1183,6 +1209,10 @@ function App() {
                     <FolderOpen size={14} />
                     <span>Replay Last</span>
                   </button>
+                  <button type="button" className="tool-button" onClick={handleRefreshSessionCatalog} disabled={nativeBusy}>
+                    <RefreshCcw size={14} />
+                    <span>Catalog</span>
+                  </button>
                   <button type="button" className="tool-button" disabled title="Bounded sample capture owns target lifetime for this milestone; persistent terminate control is not implemented yet.">
                     <Square size={13} />
                     <span>Terminate</span>
@@ -1201,6 +1231,26 @@ function App() {
                 {lastSession ? (
                   <div className={lastSession.success ? "launch-result success" : "launch-result failure"}>
                     session {lastSession.sessionId || "latest-sample-fileio"} / events={lastSession.traceEventCount} / {lastSession.message}
+                  </div>
+                ) : null}
+                {sessionCatalog ? (
+                  <div className="catalog-strip">
+                    <div>
+                      <Database size={14} />
+                      <strong>{sessionCatalog.sessionCount} sessions</strong>
+                      <span>{sessionCatalog.validSessionCount} valid</span>
+                      <span>{sessionCatalog.invalidSessionCount} invalid</span>
+                      <span>{formatBytes(sessionCatalog.storedBytes)} stored</span>
+                    </div>
+                    {sessionCatalog.sessions.slice(0, 3).map((row) => (
+                      <div className="catalog-row" key={row.contentIdentity || row.path} title={row.path}>
+                        <span>{row.targetImage || fileNameFromPath(row.path)}</span>
+                        <strong>{row.validationStatus}</strong>
+                        <span>{row.compression || "none"}</span>
+                        <span>{row.traceEventCount} ev</span>
+                        <small>{row.recoveryState || row.writerState || "n/a"}</small>
+                      </div>
+                    ))}
                   </div>
                 ) : null}
               </div>

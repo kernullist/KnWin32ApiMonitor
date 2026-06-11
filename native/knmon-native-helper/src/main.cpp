@@ -1487,6 +1487,9 @@ struct SessionInfo
     std::uint64_t ChunkCount = 0;
     std::uint64_t LastBatchSequence = 0;
     std::uint64_t LastRecordSequence = 0;
+    std::string CompressionSummary;
+    std::uint64_t StoredBytes = 0;
+    std::uint64_t UncompressedBytes = 0;
     std::string WriterState;
     std::string RecoveryState;
     std::string RecoveryReason;
@@ -1566,6 +1569,9 @@ std::string ToJson(const SessionInfo& session)
     stream << "\"chunkCount\":" << session.ChunkCount << ",";
     stream << "\"lastBatchSequence\":" << session.LastBatchSequence << ",";
     stream << "\"lastRecordSequence\":" << session.LastRecordSequence << ",";
+    stream << "\"compression\":" << Q(session.CompressionSummary) << ",";
+    stream << "\"storedBytes\":" << session.StoredBytes << ",";
+    stream << "\"uncompressedBytes\":" << session.UncompressedBytes << ",";
     stream << "\"writerState\":" << Q(session.WriterState) << ",";
     stream << "\"recoveryState\":" << Q(session.RecoveryState) << ",";
     stream << "\"recoveryReason\":" << Q(session.RecoveryReason) << ",";
@@ -1854,6 +1860,8 @@ struct KnapmChunkInfo
     std::uint64_t LastEventId = 0;
     std::uint64_t ByteLength = 0;
     std::string Sha256;
+    std::uint64_t UncompressedByteLength = 0;
+    std::string UncompressedSha256;
 };
 
 struct KnapmOwnerInfo
@@ -1901,10 +1909,30 @@ struct KnapmRecoveryInfo
     bool RestartEligible = false;
 };
 
-std::string KnapmChunkFileName(std::uint64_t chunkSequence)
+std::string NormalizeKnapmCompression(const std::string& compression)
+{
+    if (compression.empty())
+    {
+        return "none";
+    }
+
+    return compression;
+}
+
+bool IsSupportedKnapmCompression(const std::string& compression)
+{
+    const std::string normalized = NormalizeKnapmCompression(compression);
+    return normalized == "none" || normalized == "zstd";
+}
+
+std::string KnapmChunkFileName(std::uint64_t chunkSequence, const std::string& compression)
 {
     std::ostringstream stream;
     stream << "chunks/trace-" << std::setfill('0') << std::setw(6) << chunkSequence << ".jsonl";
+    if (NormalizeKnapmCompression(compression) == "zstd")
+    {
+        stream << ".zst";
+    }
     return stream.str();
 }
 
@@ -1961,7 +1989,7 @@ bool IsSafeKnapmChunkPath(const std::string& relativePath)
         }
 
         const std::string prefix = "chunks/trace-";
-        const std::string suffix = ".jsonl";
+        const std::string suffix = normalized.ends_with(".jsonl.zst") ? ".jsonl.zst" : ".jsonl";
         if (normalized.rfind(prefix, 0) != 0)
         {
             break;
@@ -1998,6 +2026,210 @@ bool IsSafeKnapmChunkPath(const std::string& relativePath)
     while (false);
 
     return safe;
+}
+
+void AppendLe24(std::string& output, std::uint32_t value)
+{
+    output.push_back(static_cast<char>(value & 0xff));
+    output.push_back(static_cast<char>((value >> 8) & 0xff));
+    output.push_back(static_cast<char>((value >> 16) & 0xff));
+}
+
+void AppendLe32(std::string& output, std::uint32_t value)
+{
+    output.push_back(static_cast<char>(value & 0xff));
+    output.push_back(static_cast<char>((value >> 8) & 0xff));
+    output.push_back(static_cast<char>((value >> 16) & 0xff));
+    output.push_back(static_cast<char>((value >> 24) & 0xff));
+}
+
+std::uint32_t ReadLe24(const std::string& input, std::size_t offset)
+{
+    return
+        static_cast<std::uint32_t>(static_cast<unsigned char>(input[offset])) |
+        (static_cast<std::uint32_t>(static_cast<unsigned char>(input[offset + 1])) << 8) |
+        (static_cast<std::uint32_t>(static_cast<unsigned char>(input[offset + 2])) << 16);
+}
+
+std::uint32_t ReadLe32(const std::string& input, std::size_t offset)
+{
+    return
+        static_cast<std::uint32_t>(static_cast<unsigned char>(input[offset])) |
+        (static_cast<std::uint32_t>(static_cast<unsigned char>(input[offset + 1])) << 8) |
+        (static_cast<std::uint32_t>(static_cast<unsigned char>(input[offset + 2])) << 16) |
+        (static_cast<std::uint32_t>(static_cast<unsigned char>(input[offset + 3])) << 24);
+}
+
+bool EncodeZstdRawFrame(const std::string& input, std::string* output, std::string* error)
+{
+    bool encoded = false;
+
+    do
+    {
+        if (output == nullptr)
+        {
+            if (error != nullptr)
+            {
+                *error = "output is null.";
+            }
+            break;
+        }
+
+        if (input.size() > 0xffffffffULL)
+        {
+            if (error != nullptr)
+            {
+                *error = "zstd raw frame input is too large.";
+            }
+            break;
+        }
+
+        output->clear();
+        output->push_back(static_cast<char>(0x28));
+        output->push_back(static_cast<char>(0xb5));
+        output->push_back(static_cast<char>(0x2f));
+        output->push_back(static_cast<char>(0xfd));
+        output->push_back(static_cast<char>(0xa0));
+        AppendLe32(*output, static_cast<std::uint32_t>(input.size()));
+
+        constexpr std::size_t maxBlockSize = 128 * 1024;
+        std::size_t offset = 0;
+        do
+        {
+            const std::size_t remaining = input.size() - offset;
+            const std::size_t blockSize = remaining > maxBlockSize ? maxBlockSize : remaining;
+            const bool lastBlock = offset + blockSize >= input.size();
+            const std::uint32_t blockHeader = (static_cast<std::uint32_t>(blockSize) << 3) | (lastBlock ? 1U : 0U);
+            AppendLe24(*output, blockHeader);
+            output->append(input.data() + offset, blockSize);
+            offset += blockSize;
+        }
+        while (offset < input.size());
+
+        if (input.empty())
+        {
+            AppendLe24(*output, 1U);
+        }
+
+        encoded = true;
+    }
+    while (false);
+
+    return encoded;
+}
+
+bool DecodeZstdRawFrame(const std::string& input, std::string* output, std::string* error)
+{
+    bool decoded = false;
+
+    do
+    {
+        if (output == nullptr)
+        {
+            if (error != nullptr)
+            {
+                *error = "output is null.";
+            }
+            break;
+        }
+
+        output->clear();
+        if (input.size() < 12)
+        {
+            if (error != nullptr)
+            {
+                *error = "corrupt_zstd_frame";
+            }
+            break;
+        }
+
+        if (
+            static_cast<unsigned char>(input[0]) != 0x28 ||
+            static_cast<unsigned char>(input[1]) != 0xb5 ||
+            static_cast<unsigned char>(input[2]) != 0x2f ||
+            static_cast<unsigned char>(input[3]) != 0xfd)
+        {
+            if (error != nullptr)
+            {
+                *error = "corrupt_zstd_frame";
+            }
+            break;
+        }
+
+        const unsigned char descriptor = static_cast<unsigned char>(input[4]);
+        const bool singleSegment = (descriptor & 0x20) != 0;
+        const unsigned char frameContentSizeFlag = static_cast<unsigned char>(descriptor >> 6);
+        const bool checksumPresent = (descriptor & 0x04) != 0;
+        const unsigned char dictionaryIdFlag = static_cast<unsigned char>(descriptor & 0x03);
+        if (!singleSegment || frameContentSizeFlag != 2 || checksumPresent || dictionaryIdFlag != 0 || (descriptor & 0x18) != 0)
+        {
+            if (error != nullptr)
+            {
+                *error = "unsupported_zstd_frame";
+            }
+            break;
+        }
+
+        const std::uint32_t expectedSize = ReadLe32(input, 5);
+        std::size_t offset = 9;
+        bool sawLastBlock = false;
+        while (offset + 3 <= input.size())
+        {
+            const std::uint32_t blockHeader = ReadLe24(input, offset);
+            offset += 3;
+            const bool lastBlock = (blockHeader & 0x01) != 0;
+            const std::uint32_t blockType = (blockHeader >> 1) & 0x03;
+            const std::uint32_t blockSize = blockHeader >> 3;
+            if (blockType != 0)
+            {
+                if (error != nullptr)
+                {
+                    *error = "unsupported_zstd_block";
+                }
+                break;
+            }
+
+            if (offset + blockSize > input.size())
+            {
+                if (error != nullptr)
+                {
+                    *error = "corrupt_zstd_frame";
+                }
+                break;
+            }
+
+            output->append(input.data() + offset, blockSize);
+            offset += blockSize;
+            if (lastBlock)
+            {
+                sawLastBlock = true;
+                break;
+            }
+        }
+
+        if (!sawLastBlock)
+        {
+            if (error != nullptr && error->empty())
+            {
+                *error = "corrupt_zstd_frame";
+            }
+            break;
+        }
+
+        if (output->size() != expectedSize)
+        {
+            if (error != nullptr)
+            {
+                *error = "zstd_uncompressed_size_mismatch";
+            }
+            break;
+        }
+
+        decoded = true;
+    }
+    while (false);
+
+    return decoded;
 }
 
 std::string ToJson(const KnapmOwnerInfo& owner)
@@ -2072,6 +2304,11 @@ std::string ToJson(const KnapmChunkInfo& chunk)
     stream << "\"lastEventId\":" << chunk.LastEventId << ",";
     stream << "\"byteLength\":" << chunk.ByteLength << ",";
     stream << "\"sha256\":" << Q(chunk.Sha256);
+    if (chunk.Compression == "zstd" || chunk.UncompressedByteLength != 0 || !chunk.UncompressedSha256.empty())
+    {
+        stream << ",\"uncompressedByteLength\":" << chunk.UncompressedByteLength;
+        stream << ",\"uncompressedSha256\":" << Q(chunk.UncompressedSha256);
+    }
     stream << "}";
     return stream.str();
 }
@@ -2107,7 +2344,10 @@ struct KnapmSessionWriter
     std::uint64_t LastBatchSequence = 0;
     std::uint64_t LastRecordSequence = 0;
     std::uint64_t NextEventId = 1;
+    std::uint64_t StoredBytes = 0;
+    std::uint64_t UncompressedBytes = 0;
     bool Finalized = false;
+    std::string Compression = "none";
     std::vector<KnapmChunkInfo> Chunks;
 
     void TouchOwnership()
@@ -2154,14 +2394,23 @@ struct KnapmSessionWriter
     bool Start(
         const std::filesystem::path& root,
         const NativeSessionInfo& session,
-        const knmon::KnMonAttachRequest& request)
+        const knmon::KnMonAttachRequest& request,
+        const std::string& compression)
     {
         bool started = false;
 
         do
         {
+            const std::string normalizedCompression = NormalizeKnapmCompression(compression);
+            if (!IsSupportedKnapmCompression(normalizedCompression))
+            {
+                MarkFailed("unsupported_compression");
+                break;
+            }
+
             Enabled = true;
             Root = root;
+            Compression = normalizedCompression;
             Session = session;
             SessionId = session.SessionId;
             OperationId = session.OperationId;
@@ -2279,17 +2528,35 @@ struct KnapmSessionWriter
             }
 
             const std::uint64_t chunkSequence = static_cast<std::uint64_t>(Chunks.size()) + 1;
-            const std::string chunkFile = KnapmChunkFileName(chunkSequence);
+            const std::string chunkFile = KnapmChunkFileName(chunkSequence, Compression);
             const std::string chunkText = JoinJsonl(lines);
-            const std::string hash = Sha256Hex(chunkText);
-            if (hash.empty())
+            const std::string uncompressedHash = Sha256Hex(chunkText);
+            if (uncompressedHash.empty())
             {
                 MarkFailed("sha256 failed for " + chunkFile);
                 break;
             }
 
+            std::string storedChunk = chunkText;
+            if (Compression == "zstd")
+            {
+                std::string compressionError;
+                if (!EncodeZstdRawFrame(chunkText, &storedChunk, &compressionError))
+                {
+                    MarkFailed(compressionError.empty() ? "zstd compression failed for " + chunkFile : compressionError);
+                    break;
+                }
+            }
+
+            const std::string storedHash = Sha256Hex(storedChunk);
+            if (storedHash.empty())
+            {
+                MarkFailed("stored sha256 failed for " + chunkFile);
+                break;
+            }
+
             std::string writeError;
-            if (!WriteTextFile(KnapmChildPath(Root, chunkFile), chunkText, &writeError))
+            if (!WriteTextFile(KnapmChildPath(Root, chunkFile), storedChunk, &writeError))
             {
                 MarkFailed(writeError);
                 break;
@@ -2299,15 +2566,20 @@ struct KnapmSessionWriter
             chunk.ChunkSequence = chunkSequence;
             chunk.BatchSequence = batch.BatchSequence;
             chunk.File = chunkFile;
+            chunk.Compression = Compression;
             chunk.EventCount = static_cast<std::uint64_t>(lines.size());
             chunk.FirstRecordSequence = batch.FirstRecordSequence;
             chunk.LastRecordSequence = batch.LastRecordSequence;
             chunk.FirstEventId = firstEventId;
             chunk.LastEventId = NextEventId - 1;
-            chunk.ByteLength = static_cast<std::uint64_t>(chunkText.size());
-            chunk.Sha256 = hash;
+            chunk.ByteLength = static_cast<std::uint64_t>(storedChunk.size());
+            chunk.Sha256 = storedHash;
+            chunk.UncompressedByteLength = static_cast<std::uint64_t>(chunkText.size());
+            chunk.UncompressedSha256 = uncompressedHash;
             Chunks.push_back(chunk);
 
+            StoredBytes += chunk.ByteLength;
+            UncompressedBytes += chunk.UncompressedByteLength;
             TraceEventCount += chunk.EventCount;
             LastBatchSequence = batch.BatchSequence;
             LastRecordSequence = batch.LastRecordSequence;
@@ -2491,6 +2763,15 @@ struct KnapmSessionWriter
         stream << "\"chunkCount\":" << Chunks.size() << ",";
         stream << "\"lastBatchSequence\":" << LastBatchSequence << ",";
         stream << "\"lastRecordSequence\":" << LastRecordSequence << ",";
+        stream << "\"compression\":" << Q(Compression) << ",";
+        stream << "\"compressionAlgorithms\":[";
+        if (!Chunks.empty())
+        {
+            stream << Q(Compression);
+        }
+        stream << "],";
+        stream << "\"storedBytes\":" << StoredBytes << ",";
+        stream << "\"uncompressedBytes\":" << UncompressedBytes << ",";
         stream << "\"writerState\":" << Q(WriterState) << ",";
         stream << "\"owner\":" << ToJson(Owner) << ",";
         stream << "\"checkpoint\":" << ToJson(Checkpoint) << ",";
@@ -2522,6 +2803,8 @@ KnapmChunkInfo KnapmChunkFromJson(const std::string& json)
     chunk.LastEventId = ExtractJsonUInt64(json, "lastEventId");
     chunk.ByteLength = ExtractJsonUInt64(json, "byteLength");
     chunk.Sha256 = ExtractJsonString(json, "sha256");
+    chunk.UncompressedByteLength = ExtractJsonUInt64(json, "uncompressedByteLength");
+    chunk.UncompressedSha256 = ExtractJsonString(json, "uncompressedSha256");
     return chunk;
 }
 
@@ -2574,6 +2857,120 @@ KnapmRecoveryInfo KnapmRecoveryFromJson(const std::string& json)
     recovery.LeaseExpired = ExtractJsonBool(json, "leaseExpired");
     recovery.RestartEligible = ExtractJsonBool(json, "restartEligible");
     return recovery;
+}
+
+bool ReadKnapmChunkDecoded(
+    const std::filesystem::path& sessionPath,
+    const KnapmChunkInfo& chunk,
+    std::string* decodedText,
+    std::string* error)
+{
+    bool read = false;
+
+    do
+    {
+        if (decodedText == nullptr)
+        {
+            if (error != nullptr)
+            {
+                *error = "decoded output is null.";
+            }
+            break;
+        }
+
+        decodedText->clear();
+        std::string storedBytes;
+        std::string readError;
+        if (!ReadTextFile(KnapmChildPath(sessionPath, chunk.File), &storedBytes, &readError))
+        {
+            if (error != nullptr)
+            {
+                *error = readError;
+            }
+            break;
+        }
+
+        if (chunk.ByteLength != storedBytes.size())
+        {
+            if (error != nullptr)
+            {
+                *error = "chunk byteLength does not match file size.";
+            }
+            break;
+        }
+
+        const std::string storedHash = Sha256Hex(storedBytes);
+        if (storedHash.empty() || storedHash != chunk.Sha256)
+        {
+            if (error != nullptr)
+            {
+                *error = "chunk stored sha256 does not match file content.";
+            }
+            break;
+        }
+
+        const std::string compression = NormalizeKnapmCompression(chunk.Compression);
+        if (compression == "none")
+        {
+            *decodedText = storedBytes;
+        }
+        else if (compression == "zstd")
+        {
+            if (chunk.UncompressedByteLength == 0 || chunk.UncompressedSha256.empty())
+            {
+                if (error != nullptr)
+                {
+                    *error = "zstd chunk is missing uncompressed integrity fields.";
+                }
+                break;
+            }
+
+            std::string decodeError;
+            if (!DecodeZstdRawFrame(storedBytes, decodedText, &decodeError))
+            {
+                if (error != nullptr)
+                {
+                    *error = decodeError.empty() ? "corrupt_zstd_frame" : decodeError;
+                }
+                break;
+            }
+        }
+        else
+        {
+            if (error != nullptr)
+            {
+                *error = "unsupported_compression";
+            }
+            break;
+        }
+
+        if (chunk.UncompressedByteLength != 0 && chunk.UncompressedByteLength != decodedText->size())
+        {
+            if (error != nullptr)
+            {
+                *error = "chunk uncompressedByteLength does not match decoded size.";
+            }
+            break;
+        }
+
+        if (!chunk.UncompressedSha256.empty())
+        {
+            const std::string decodedHash = Sha256Hex(*decodedText);
+            if (decodedHash.empty() || decodedHash != chunk.UncompressedSha256)
+            {
+                if (error != nullptr)
+                {
+                    *error = "chunk uncompressedSha256 does not match decoded content.";
+                }
+                break;
+            }
+        }
+
+        read = true;
+    }
+    while (false);
+
+    return read;
 }
 
 void SetKnapmSessionRecovery(
@@ -2794,6 +3191,9 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
         session.LastBatchSequence = ExtractJsonUInt64(manifest, "lastBatchSequence");
         session.LastRecordSequence = ExtractJsonUInt64(manifest, "lastRecordSequence");
         session.WriterState = ExtractJsonString(manifest, "writerState");
+        session.CompressionSummary = ExtractJsonString(manifest, "compression");
+        session.StoredBytes = ExtractJsonUInt64(manifest, "storedBytes");
+        session.UncompressedBytes = ExtractJsonUInt64(manifest, "uncompressedBytes");
         const std::uint64_t manifestLastBatchSequence = session.LastBatchSequence;
         const std::uint64_t manifestLastRecordSequence = session.LastRecordSequence;
 
@@ -2998,10 +3398,14 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
         std::uint64_t expectedChunkSequence = 1;
         std::uint64_t indexedLastBatchSequence = 0;
         std::uint64_t indexedLastRecordSequence = 0;
+        std::uint64_t indexedStoredBytes = 0;
+        std::uint64_t indexedUncompressedBytes = 0;
+        std::string indexedCompression;
         for (const auto& chunkJson : chunkObjects)
         {
             const std::size_t chunkErrorStart = session.ValidationErrors.size();
             const KnapmChunkInfo chunk = KnapmChunkFromJson(chunkJson);
+            const std::string chunkCompression = NormalizeKnapmCompression(chunk.Compression);
             if (chunk.ChunkSequence != expectedChunkSequence)
             {
                 session.ValidationErrors.push_back("index chunkSequence is not contiguous.");
@@ -3038,9 +3442,9 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
                 break;
             }
 
-            if (chunk.Compression != "none")
+            if (!IsSupportedKnapmCompression(chunkCompression))
             {
-                session.ValidationErrors.push_back("chunk compression must be none in Phase 11I.");
+                session.ValidationErrors.push_back("unsupported_compression");
                 break;
             }
 
@@ -3051,22 +3455,9 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
             }
 
             std::string chunkText;
-            if (!ReadTextFile(KnapmChildPath(sessionPath, chunk.File), &chunkText, &readError))
+            if (!ReadKnapmChunkDecoded(sessionPath, chunk, &chunkText, &readError))
             {
                 session.ValidationErrors.push_back(readError);
-                break;
-            }
-
-            if (chunk.ByteLength != chunkText.size())
-            {
-                session.ValidationErrors.push_back("chunk byteLength does not match file size.");
-                break;
-            }
-
-            const std::string hash = Sha256Hex(chunkText);
-            if (hash.empty() || hash != chunk.Sha256)
-            {
-                session.ValidationErrors.push_back("chunk sha256 does not match file content.");
                 break;
             }
 
@@ -3106,6 +3497,16 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
             }
 
             totalTraceEvents += chunk.EventCount;
+            indexedStoredBytes += chunk.ByteLength;
+            indexedUncompressedBytes += static_cast<std::uint64_t>(chunkText.size());
+            if (indexedCompression.empty())
+            {
+                indexedCompression = chunkCompression;
+            }
+            else if (indexedCompression != chunkCompression)
+            {
+                indexedCompression = "mixed";
+            }
             previousBatchSequence = chunk.BatchSequence;
             previousRecordSequence = chunk.LastRecordSequence;
             hasPreviousRecordSequence = true;
@@ -3118,6 +3519,9 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
         {
             session.LastBatchSequence = indexedLastBatchSequence;
             session.LastRecordSequence = indexedLastRecordSequence;
+            session.StoredBytes = indexedStoredBytes;
+            session.UncompressedBytes = indexedUncompressedBytes;
+            session.CompressionSummary = indexedCompression.empty() ? "none" : indexedCompression;
         }
 
         if (!chunkObjects.empty() && manifestLastBatchSequence != indexedLastBatchSequence)
@@ -3222,7 +3626,7 @@ std::vector<std::string> ReadKnapmTraceLines(const std::filesystem::path& sessio
         {
             const KnapmChunkInfo chunk = KnapmChunkFromJson(chunkJson);
             std::string chunkText;
-            if (!ReadTextFile(KnapmChildPath(sessionPath, chunk.File), &chunkText, &readError))
+            if (!ReadKnapmChunkDecoded(sessionPath, chunk, &chunkText, &readError))
             {
                 traceLines.clear();
                 break;
@@ -3447,6 +3851,9 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
         {
             const auto lines = SplitJsonl(traceText);
             session.TraceEventCount = lines.size();
+            session.CompressionSummary = "none";
+            session.StoredBytes = static_cast<std::uint64_t>(traceText.size());
+            session.UncompressedBytes = static_cast<std::uint64_t>(traceText.size());
             if (lines.empty())
             {
                 session.ValidationErrors.push_back("trace-events.jsonl is empty.");
@@ -3620,6 +4027,525 @@ std::uint32_t GetUInt32Option(const std::vector<std::string>& args, const std::s
     while (false);
 
     return value;
+}
+
+struct KnapmCatalogRow
+{
+    std::string SessionPath;
+    std::string Format;
+    std::string SessionId;
+    std::string OperationId;
+    std::uint32_t TargetProcessId = 0;
+    std::string TargetImage;
+    std::string TargetPath;
+    std::string TargetArchitecture;
+    std::string OwnerKind;
+    std::string DaemonInstanceId;
+    std::string WriterState;
+    bool Finalized = false;
+    std::string RecoveryState;
+    std::string RecoveryReason;
+    std::string RecoveryAction;
+    std::uint64_t ChunkCount = 0;
+    std::uint64_t TraceEventCount = 0;
+    std::uint64_t LastBatchSequence = 0;
+    std::uint64_t LastRecordSequence = 0;
+    std::string Compression;
+    std::uint64_t StoredBytes = 0;
+    std::uint64_t UncompressedBytes = 0;
+    bool ValidationSuccess = false;
+    std::uint64_t ValidationErrorCount = 0;
+    std::string ValidationStatus;
+    std::string LastValidatedUtc;
+    std::string ContentIdentity;
+    bool StaleIdentity = false;
+};
+
+std::string FileNameFromUtf8Path(const std::string& value)
+{
+    std::string result = value;
+    const std::size_t slash = result.find_last_of("\\/");
+    if (slash != std::string::npos && slash + 1 < result.size())
+    {
+        result = result.substr(slash + 1);
+    }
+
+    return result;
+}
+
+std::string CatalogContentIdentity(const KnapmCatalogRow& row)
+{
+    std::ostringstream stream;
+    stream << row.SessionPath << "|"
+           << row.SessionId << "|"
+           << row.OperationId << "|"
+           << row.TraceEventCount << "|"
+           << row.ChunkCount << "|"
+           << row.LastRecordSequence << "|"
+           << row.StoredBytes << "|"
+           << row.UncompressedBytes << "|"
+           << row.ValidationStatus;
+    return Sha256Hex(stream.str());
+}
+
+std::string ToJson(const KnapmCatalogRow& row)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"path\":" << Q(row.SessionPath) << ",";
+    stream << "\"format\":" << Q(row.Format) << ",";
+    stream << "\"sessionId\":" << Q(row.SessionId) << ",";
+    stream << "\"operationId\":" << Q(row.OperationId) << ",";
+    stream << "\"targetProcessId\":" << row.TargetProcessId << ",";
+    stream << "\"targetImage\":" << Q(row.TargetImage) << ",";
+    stream << "\"targetPath\":" << Q(row.TargetPath) << ",";
+    stream << "\"targetArchitecture\":" << Q(row.TargetArchitecture) << ",";
+    stream << "\"ownerKind\":" << Q(row.OwnerKind) << ",";
+    stream << "\"daemonInstanceId\":" << Q(row.DaemonInstanceId) << ",";
+    stream << "\"writerState\":" << Q(row.WriterState) << ",";
+    stream << "\"finalized\":" << (row.Finalized ? "true" : "false") << ",";
+    stream << "\"recoveryState\":" << Q(row.RecoveryState) << ",";
+    stream << "\"recoveryReason\":" << Q(row.RecoveryReason) << ",";
+    stream << "\"recoveryAction\":" << Q(row.RecoveryAction) << ",";
+    stream << "\"chunkCount\":" << row.ChunkCount << ",";
+    stream << "\"traceEventCount\":" << row.TraceEventCount << ",";
+    stream << "\"lastBatchSequence\":" << row.LastBatchSequence << ",";
+    stream << "\"lastRecordSequence\":" << row.LastRecordSequence << ",";
+    stream << "\"compression\":" << Q(row.Compression) << ",";
+    stream << "\"storedBytes\":" << row.StoredBytes << ",";
+    stream << "\"uncompressedBytes\":" << row.UncompressedBytes << ",";
+    stream << "\"validationSuccess\":" << (row.ValidationSuccess ? "true" : "false") << ",";
+    stream << "\"validationErrorCount\":" << row.ValidationErrorCount << ",";
+    stream << "\"validationStatus\":" << Q(row.ValidationStatus) << ",";
+    stream << "\"lastValidatedUtc\":" << Q(row.LastValidatedUtc) << ",";
+    stream << "\"contentIdentity\":" << Q(row.ContentIdentity) << ",";
+    stream << "\"staleIdentity\":" << (row.StaleIdentity ? "true" : "false");
+    stream << "}";
+    return stream.str();
+}
+
+KnapmCatalogRow KnapmCatalogRowFromJson(const std::string& json)
+{
+    KnapmCatalogRow row;
+    row.SessionPath = ExtractJsonString(json, "path");
+    row.Format = ExtractJsonString(json, "format");
+    row.SessionId = ExtractJsonString(json, "sessionId");
+    row.OperationId = ExtractJsonString(json, "operationId");
+    row.TargetProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "targetProcessId"));
+    row.TargetImage = ExtractJsonString(json, "targetImage");
+    row.TargetPath = ExtractJsonString(json, "targetPath");
+    row.TargetArchitecture = ExtractJsonString(json, "targetArchitecture");
+    row.OwnerKind = ExtractJsonString(json, "ownerKind");
+    row.DaemonInstanceId = ExtractJsonString(json, "daemonInstanceId");
+    row.WriterState = ExtractJsonString(json, "writerState");
+    row.Finalized = ExtractJsonBool(json, "finalized");
+    row.RecoveryState = ExtractJsonString(json, "recoveryState");
+    row.RecoveryReason = ExtractJsonString(json, "recoveryReason");
+    row.RecoveryAction = ExtractJsonString(json, "recoveryAction");
+    row.ChunkCount = ExtractJsonUInt64(json, "chunkCount");
+    row.TraceEventCount = ExtractJsonUInt64(json, "traceEventCount");
+    row.LastBatchSequence = ExtractJsonUInt64(json, "lastBatchSequence");
+    row.LastRecordSequence = ExtractJsonUInt64(json, "lastRecordSequence");
+    row.Compression = ExtractJsonString(json, "compression");
+    row.StoredBytes = ExtractJsonUInt64(json, "storedBytes");
+    row.UncompressedBytes = ExtractJsonUInt64(json, "uncompressedBytes");
+    row.ValidationSuccess = ExtractJsonBool(json, "validationSuccess");
+    row.ValidationErrorCount = ExtractJsonUInt64(json, "validationErrorCount");
+    row.ValidationStatus = ExtractJsonString(json, "validationStatus");
+    row.LastValidatedUtc = ExtractJsonString(json, "lastValidatedUtc");
+    row.ContentIdentity = ExtractJsonString(json, "contentIdentity");
+    row.StaleIdentity = ExtractJsonBool(json, "staleIdentity");
+    return row;
+}
+
+std::string KnapmCatalogJson(
+    const std::string& operation,
+    const std::string& rootPath,
+    const std::string& catalogPath,
+    const std::vector<KnapmCatalogRow>& rows,
+    bool success,
+    const std::string& message,
+    bool dryRun,
+    bool mutationAttempted,
+    const std::vector<std::string>& missingSessionPaths)
+{
+    std::uint64_t validCount = 0;
+    std::uint64_t invalidCount = 0;
+    std::uint64_t storedBytes = 0;
+    std::uint64_t uncompressedBytes = 0;
+    for (const KnapmCatalogRow& row : rows)
+    {
+        if (row.ValidationSuccess)
+        {
+            ++validCount;
+        }
+        else
+        {
+            ++invalidCount;
+        }
+
+        storedBytes += row.StoredBytes;
+        uncompressedBytes += row.UncompressedBytes;
+    }
+
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"format\":\"knapm-session-catalog\",";
+    stream << "\"buildTimeUtc\":" << Q(NowUtc()) << ",";
+    stream << "\"backendMode\":\"native-capture\",";
+    stream << "\"operation\":" << Q(operation) << ",";
+    stream << "\"success\":" << (success ? "true" : "false") << ",";
+    stream << "\"rootPath\":" << Q(rootPath) << ",";
+    stream << "\"catalogPath\":" << Q(catalogPath) << ",";
+    stream << "\"sessionCount\":" << rows.size() << ",";
+    stream << "\"validSessionCount\":" << validCount << ",";
+    stream << "\"invalidSessionCount\":" << invalidCount << ",";
+    stream << "\"storedBytes\":" << storedBytes << ",";
+    stream << "\"uncompressedBytes\":" << uncompressedBytes << ",";
+    stream << "\"dryRun\":" << (dryRun ? "true" : "false") << ",";
+    stream << "\"mutationAttempted\":" << (mutationAttempted ? "true" : "false") << ",";
+    stream << "\"missingSessionPaths\":[";
+    for (std::size_t index = 0; index < missingSessionPaths.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << Q(missingSessionPaths[index]);
+    }
+    stream << "],";
+    stream << "\"sessions\":[";
+    for (std::size_t index = 0; index < rows.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << ToJson(rows[index]);
+    }
+    stream << "],";
+    stream << "\"message\":" << Q(message);
+    stream << "}";
+    return stream.str();
+}
+
+KnapmCatalogRow BuildKnapmCatalogRow(const std::filesystem::path& sessionPath)
+{
+    KnapmCatalogRow row;
+    std::error_code pathError;
+    const std::filesystem::path absolutePath = std::filesystem::absolute(sessionPath, pathError);
+    row.SessionPath = PathToUtf8(pathError ? sessionPath : absolutePath);
+    row.LastValidatedUtc = NowUtc();
+
+    const SessionInfo validation = ValidateSessionPath(sessionPath);
+    row.Format = validation.Format;
+    row.SessionId = validation.SessionId;
+    row.WriterState = validation.WriterState;
+    row.Finalized = validation.Finalized;
+    row.RecoveryState = validation.RecoveryState;
+    row.RecoveryReason = validation.RecoveryReason;
+    row.RecoveryAction = validation.RecoveryAction;
+    row.ChunkCount = validation.ChunkCount;
+    row.TraceEventCount = validation.TraceEventCount;
+    row.LastBatchSequence = validation.LastBatchSequence;
+    row.LastRecordSequence = validation.LastRecordSequence;
+    row.Compression = validation.CompressionSummary.empty() ? "none" : validation.CompressionSummary;
+    row.StoredBytes = validation.StoredBytes;
+    row.UncompressedBytes = validation.UncompressedBytes;
+    row.ValidationSuccess = validation.Success;
+    row.ValidationErrorCount = static_cast<std::uint64_t>(validation.ValidationErrors.size());
+    row.ValidationStatus = validation.Success ? "valid" : "invalid";
+
+    std::string manifest;
+    std::string readError;
+    if (ReadTextFile(KnapmChildPath(sessionPath, "manifest.json"), &manifest, &readError))
+    {
+        row.OperationId = ExtractJsonString(manifest, "operationId");
+
+        const std::string targetObject = ExtractJsonObject(manifest, "target");
+        row.TargetProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(targetObject, "pid"));
+        row.TargetPath = ExtractJsonString(targetObject, "path");
+        row.TargetImage = FileNameFromUtf8Path(row.TargetPath);
+        row.TargetArchitecture = ExtractJsonString(targetObject, "architecture");
+
+        const std::string ownerObject = ExtractJsonObject(manifest, "owner");
+        row.OwnerKind = ExtractJsonString(ownerObject, "ownerKind");
+        row.DaemonInstanceId = ExtractJsonString(ownerObject, "daemonInstanceId");
+    }
+
+    if (row.ContentIdentity.empty())
+    {
+        row.ContentIdentity = CatalogContentIdentity(row);
+    }
+
+    return row;
+}
+
+std::vector<std::filesystem::path> DiscoverKnapmSessionPaths(const std::filesystem::path& root)
+{
+    std::vector<std::filesystem::path> sessions;
+
+    do
+    {
+        std::error_code error;
+        if (!std::filesystem::exists(root, error))
+        {
+            break;
+        }
+
+        if (std::filesystem::is_directory(root, error) && IsKnapmSessionPath(root))
+        {
+            sessions.push_back(root);
+            break;
+        }
+
+        const std::filesystem::directory_options options = std::filesystem::directory_options::skip_permission_denied;
+        std::filesystem::recursive_directory_iterator iterator(root, options, error);
+        const std::filesystem::recursive_directory_iterator end;
+        while (!error && iterator != end)
+        {
+            const std::filesystem::directory_entry entry = *iterator;
+            if (entry.is_directory(error) && IsKnapmSessionPath(entry.path()))
+            {
+                sessions.push_back(entry.path());
+                iterator.disable_recursion_pending();
+            }
+
+            iterator.increment(error);
+            if (error)
+            {
+                error.clear();
+            }
+        }
+    }
+    while (false);
+
+    std::sort(sessions.begin(), sessions.end());
+    return sessions;
+}
+
+std::vector<KnapmCatalogRow> KnapmCatalogRowsFromJson(const std::string& json)
+{
+    std::vector<KnapmCatalogRow> rows;
+    const auto rowObjects = SplitJsonObjectArray(ExtractJsonArray(json, "sessions"));
+    for (const std::string& rowObject : rowObjects)
+    {
+        rows.push_back(KnapmCatalogRowFromJson(rowObject));
+    }
+
+    return rows;
+}
+
+bool CatalogRowMatchesState(const KnapmCatalogRow& row, const std::string& state)
+{
+    if (state.empty())
+    {
+        return true;
+    }
+
+    return row.ValidationStatus == state || row.RecoveryState == state || row.WriterState == state;
+}
+
+bool CatalogRowMatchesTarget(const KnapmCatalogRow& row, const std::string& target)
+{
+    bool matched = target.empty();
+
+    do
+    {
+        if (matched)
+        {
+            break;
+        }
+
+        char* end = nullptr;
+        const unsigned long parsed = std::strtoul(target.c_str(), &end, 10);
+        if (end != target.c_str() && end != nullptr && *end == '\0')
+        {
+            matched = row.TargetProcessId == parsed;
+            break;
+        }
+
+        const std::string needle = LowerAsciiPathKey(target);
+        matched =
+            LowerAsciiPathKey(row.TargetImage).find(needle) != std::string::npos ||
+            LowerAsciiPathKey(row.TargetPath).find(needle) != std::string::npos;
+    }
+    while (false);
+
+    return matched;
+}
+
+std::string CatalogSessionsJson(const std::vector<std::string>& args)
+{
+    const std::string rootOption = GetOption(args, "--root");
+    const std::string catalogOption = GetOption(args, "--catalog");
+    std::vector<KnapmCatalogRow> rows;
+
+    do
+    {
+        if (rootOption.empty())
+        {
+            return KnapmCatalogJson("catalog-sessions", "", catalogOption, rows, false, "missing --root.", false, false, {});
+        }
+
+        const std::filesystem::path rootPath = PathFromUtf8(rootOption);
+        std::error_code rootError;
+        if (!std::filesystem::exists(rootPath, rootError))
+        {
+            return KnapmCatalogJson("catalog-sessions", rootOption, catalogOption, rows, false, "root does not exist.", false, false, {});
+        }
+
+        const auto sessionPaths = DiscoverKnapmSessionPaths(rootPath);
+        for (const std::filesystem::path& sessionPath : sessionPaths)
+        {
+            rows.push_back(BuildKnapmCatalogRow(sessionPath));
+        }
+
+        if (!catalogOption.empty())
+        {
+            std::string writeError;
+            const std::string catalogJson = KnapmCatalogJson("catalog-sessions", rootOption, catalogOption, rows, true, "Catalog built.", false, true, {});
+            if (!WriteTextFile(PathFromUtf8(catalogOption), catalogJson + "\n", &writeError))
+            {
+                return KnapmCatalogJson("catalog-sessions", rootOption, catalogOption, rows, false, writeError, false, true, {});
+            }
+        }
+    }
+    while (false);
+
+    return KnapmCatalogJson("catalog-sessions", rootOption, catalogOption, rows, true, "Catalog built.", false, !catalogOption.empty(), {});
+}
+
+std::string CatalogQueryJson(const std::vector<std::string>& args)
+{
+    const std::string catalogOption = GetOption(args, "--catalog");
+    std::vector<KnapmCatalogRow> rows;
+    std::vector<KnapmCatalogRow> filteredRows;
+
+    do
+    {
+        if (catalogOption.empty())
+        {
+            return KnapmCatalogJson("catalog-query", "", "", rows, false, "missing --catalog.", false, false, {});
+        }
+
+        std::string catalogText;
+        std::string readError;
+        if (!ReadTextFile(PathFromUtf8(catalogOption), &catalogText, &readError))
+        {
+            return KnapmCatalogJson("catalog-query", "", catalogOption, rows, false, readError, false, false, {});
+        }
+
+        rows = KnapmCatalogRowsFromJson(catalogText);
+        const std::string state = GetOption(args, "--state");
+        const std::string target = GetOption(args, "--target");
+        const std::uint32_t limit = GetUInt32Option(args, "--limit", 100);
+        for (const KnapmCatalogRow& row : rows)
+        {
+            if (!CatalogRowMatchesState(row, state) || !CatalogRowMatchesTarget(row, target))
+            {
+                continue;
+            }
+
+            filteredRows.push_back(row);
+            if (limit != 0 && filteredRows.size() >= limit)
+            {
+                break;
+            }
+        }
+    }
+    while (false);
+
+    return KnapmCatalogJson(
+        "catalog-query",
+        "",
+        catalogOption,
+        filteredRows,
+        true,
+        "Catalog query completed.",
+        false,
+        false,
+        {});
+}
+
+std::string CatalogRemoveMissingJson(const std::vector<std::string>& args)
+{
+    const std::string catalogOption = GetOption(args, "--catalog");
+    const bool dryRun = HasOption(args, "--dry-run");
+    std::string rootPath;
+    std::vector<KnapmCatalogRow> rows;
+    std::vector<KnapmCatalogRow> keptRows;
+    std::vector<std::string> missingSessionPaths;
+
+    do
+    {
+        if (catalogOption.empty())
+        {
+            return KnapmCatalogJson("catalog-remove-missing", "", "", rows, false, "missing --catalog.", dryRun, false, {});
+        }
+
+        std::string catalogText;
+        std::string readError;
+        if (!ReadTextFile(PathFromUtf8(catalogOption), &catalogText, &readError))
+        {
+            return KnapmCatalogJson("catalog-remove-missing", "", catalogOption, rows, false, readError, dryRun, false, {});
+        }
+
+        rows = KnapmCatalogRowsFromJson(catalogText);
+        rootPath = ExtractJsonString(catalogText, "rootPath");
+        for (const KnapmCatalogRow& row : rows)
+        {
+            std::error_code existsError;
+            if (row.SessionPath.empty() || !std::filesystem::exists(PathFromUtf8(row.SessionPath), existsError))
+            {
+                missingSessionPaths.push_back(row.SessionPath);
+                continue;
+            }
+
+            keptRows.push_back(row);
+        }
+
+        if (!dryRun)
+        {
+            std::string writeError;
+            const std::string catalogJson = KnapmCatalogJson(
+                "catalog-remove-missing",
+                rootPath,
+                catalogOption,
+                keptRows,
+                true,
+                "Missing catalog rows removed.",
+                false,
+                true,
+                missingSessionPaths);
+            if (!WriteTextFile(PathFromUtf8(catalogOption), catalogJson + "\n", &writeError))
+            {
+                return KnapmCatalogJson(
+                    "catalog-remove-missing",
+                    rootPath,
+                    catalogOption,
+                    rows,
+                    false,
+                    writeError,
+                    dryRun,
+                    true,
+                    missingSessionPaths);
+            }
+        }
+    }
+    while (false);
+
+    return KnapmCatalogJson(
+        "catalog-remove-missing",
+        rootPath,
+        catalogOption,
+        dryRun ? rows : keptRows,
+        true,
+        dryRun ? "Missing catalog rows identified." : "Missing catalog rows removed.",
+        dryRun,
+        !dryRun,
+        missingSessionPaths);
 }
 
 std::string OperationIdFromArgs(const std::vector<std::string>& args)
@@ -3883,6 +4809,7 @@ int AttachSessionCommand(const std::vector<std::string>& args)
     const std::string cancellationEventName = CancellationEventNameFromArgs(args, operationId);
     const std::string pidOption = GetOption(args, "--pid");
     const std::string knapmPath = GetOption(args, "--write-knapm");
+    const std::string knapmCompression = NormalizeKnapmCompression(GetOption(args, "--knapm-compression"));
     const std::string ownerKind = GetOption(args, "--owner-kind");
     const bool daemonOwned = ownerKind == "persistent-daemon";
     const std::uint32_t daemonProcessId = GetUInt32Option(args, "--daemon-process-id", 0);
@@ -3896,6 +4823,21 @@ int AttachSessionCommand(const std::vector<std::string>& args)
     if (batchSize == 0)
     {
         batchSize = 64;
+    }
+
+    if (!IsSupportedKnapmCompression(knapmCompression))
+    {
+        NativeSessionInfo failedSession = BuildAttachSessionInfo(
+            sessionId,
+            operationId,
+            pidOption == "self" ? GetCurrentProcessId() : GetUInt32Option(args, "--pid", 0),
+            cancellationEventName,
+            "failed",
+            startedUtc);
+        failedSession.LastError = "unsupported_compression";
+        failedSession.RecoveryAction = "manual_inspection";
+        std::cout << SessionFrameJson("session_failed", failedSession) << "\n";
+        return 1;
     }
 
     (void)batchIntervalMs;
@@ -3945,7 +4887,7 @@ int AttachSessionCommand(const std::vector<std::string>& args)
     KnapmSessionWriter knapmWriter;
     if (!knapmPath.empty())
     {
-        knapmWriter.Start(PathFromUtf8(knapmPath), session, request);
+        knapmWriter.Start(PathFromUtf8(knapmPath), session, request, knapmCompression);
         if (knapmWriter.Failed)
         {
             std::cerr << "KNAPM writer failed: " << knapmWriter.Error << "\n";
@@ -5265,10 +6207,18 @@ std::string DaemonStartSessionJson(const std::vector<std::string>& args)
         const std::string pidOption = GetOption(args, "--pid");
         const std::uint32_t targetProcessId = pidOption == "self" ? GetCurrentProcessId() : GetUInt32Option(args, "--pid", 0);
         const std::string knapmPath = GetOption(args, "--write-knapm");
+        const std::string knapmCompression = NormalizeKnapmCompression(GetOption(args, "--knapm-compression"));
         if (targetProcessId == 0 || knapmPath.empty())
         {
             win32ErrorCode = ERROR_INVALID_PARAMETER;
             message = "Missing --pid or --write-knapm.";
+            break;
+        }
+
+        if (!IsSupportedKnapmCompression(knapmCompression))
+        {
+            win32ErrorCode = ERROR_INVALID_PARAMETER;
+            message = "unsupported_compression";
             break;
         }
 
@@ -5344,6 +6294,8 @@ std::string DaemonStartSessionJson(const std::vector<std::string>& args)
             "--stream-batches",
             "--write-knapm",
             knapmPath,
+            "--knapm-compression",
+            knapmCompression,
             "--owner-kind",
             "persistent-daemon",
             "--daemon-process-id",
@@ -5554,7 +6506,7 @@ void PrintUsage()
     std::cout << "{";
     std::cout << "\"schemaVersion\":\"0.1.0\",";
     std::cout << "\"success\":false,";
-    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-audit [--runtime-dir dir] | daemon-prune-stale [--runtime-dir dir] [--dry-run] | daemon-start-session --pid pid --write-knapm path [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
+    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] [--knapm-compression none|zstd] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-audit [--runtime-dir dir] | daemon-prune-stale [--runtime-dir dir] [--dry-run] | daemon-start-session --pid pid --write-knapm path [--knapm-compression none|zstd] [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | catalog-sessions --root dir [--catalog path] [--rebuild] | catalog-query --catalog path [--limit n] [--state state] [--target pid-or-text] | catalog-remove-missing --catalog path [--dry-run] | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
     std::cout << "}\n";
 }
 }
@@ -5670,6 +6622,24 @@ int wmain(int argc, wchar_t** argv)
     if (args[0] == "classify-session")
     {
         std::cout << ClassifySessionRecordJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "catalog-sessions")
+    {
+        std::cout << CatalogSessionsJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "catalog-query")
+    {
+        std::cout << CatalogQueryJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "catalog-remove-missing")
+    {
+        std::cout << CatalogRemoveMissingJson(args) << "\n";
         return 0;
     }
 

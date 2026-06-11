@@ -5,6 +5,7 @@ use knmon_tauri::{
     backend_status,
     capture_sample_fileio,
     capture_sample_fileio_session,
+    catalog_native_sessions as catalog_native_sessions_backend,
     launch_sample_early_bird,
     mock_target_processes,
     drain_native_trace_batches as drain_native_trace_batches_backend,
@@ -17,6 +18,8 @@ use knmon_tauri::{
     native_daemon_sessions,
     native_daemon_status as native_daemon_status_backend,
     prune_stale_daemon_sessions as prune_stale_daemon_sessions_backend,
+    query_native_session_catalog as query_native_session_catalog_backend,
+    remove_missing_native_session_catalog_entries as remove_missing_native_session_catalog_entries_backend,
     start_streaming_attach_session as start_streaming_attach_session_backend,
     start_daemon_if_needed as start_daemon_if_needed_backend,
     start_daemon_supervised_session as start_daemon_supervised_session_backend,
@@ -31,6 +34,7 @@ use knmon_tauri::{
     NativeDaemonStatus,
     NativeOperation,
     NativeSession,
+    NativeSessionCatalog,
     NativeTraceBatch,
     ProcessTreeResult,
     SessionReplayResult,
@@ -152,6 +156,24 @@ fn prune_stale_daemon_sessions(dry_run: bool) -> Result<NativeDaemonAudit, Strin
 }
 
 #[tauri::command]
+fn catalog_native_sessions() -> Result<NativeSessionCatalog, String>
+{
+    catalog_native_sessions_backend()
+}
+
+#[tauri::command]
+fn query_native_session_catalog(limit: u32, state: String, target: String) -> Result<NativeSessionCatalog, String>
+{
+    query_native_session_catalog_backend(limit, state, target)
+}
+
+#[tauri::command]
+fn remove_missing_native_session_catalog_entries(dry_run: bool) -> Result<NativeSessionCatalog, String>
+{
+    remove_missing_native_session_catalog_entries_backend(dry_run)
+}
+
+#[tauri::command]
 fn start_daemon_supervised_session(pid: u32, duration_ms: u32) -> Result<NativeSession, String>
 {
     start_daemon_supervised_session_backend(pid, duration_ms)
@@ -210,6 +232,9 @@ fn main()
             list_daemon_sessions,
             audit_daemon_sessions,
             prune_stale_daemon_sessions,
+            catalog_native_sessions,
+            query_native_session_catalog,
+            remove_missing_native_session_catalog_entries,
             start_daemon_supervised_session,
             stop_daemon_session,
             drain_native_trace_batches,

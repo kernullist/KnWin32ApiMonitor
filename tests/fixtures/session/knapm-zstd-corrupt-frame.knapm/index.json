@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "0.1.0",
+  "format": "knapm-index",
+  "sessionId": "fixture-knapm-zstd-corrupt-frame",
+  "operationId": "fixture-knapm-zstd-corrupt-frame-op",
+  "chunks": [
+    {
+      "chunkSequence": 1,
+      "batchSequence": 1,
+      "file": "chunks/trace-000001.jsonl.zst",
+      "compression": "zstd",
+      "eventCount": 1,
+      "firstRecordSequence": 1,
+      "lastRecordSequence": 1,
+      "firstEventId": 1,
+      "lastEventId": 1,
+      "byteLength": 287,
+      "sha256": "d341427028700fd30247f7d1bc0c0250529fdda9169cd60295542017068bf7a6",
+      "uncompressedByteLength": 275,
+      "uncompressedSha256": "5faf6cad46b55100d8fcd3fa15ac77d90f9ee5bbf84e692f73031cfab50705ea"
+    }
+  ]
+}

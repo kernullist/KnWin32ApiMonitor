@@ -42,6 +42,7 @@ contracts/
   session-replay-result.schema.json
   knapm-manifest.schema.json
   knapm-index.schema.json
+  session-catalog.schema.json
   native-daemon-status.schema.json
   native-daemon-audit.schema.json
 ```
@@ -50,7 +51,9 @@ contracts/
 
 `session-manifest.schema.json` accepts helper-written legacy sessions from `knmon-native-helper capture-sample` and `knmon-native-helper attach-capture`, with capture modes `bounded-native-capture` and `bounded-native-attach`.
 
-`knapm-manifest.schema.json` and `knapm-index.schema.json` describe the Phase 11I/11J/11K/11L directory-backed `.knapm` format written by `attach-session --stream-batches --write-knapm` or daemon-owned `daemon-start-session --write-knapm`. The manifest preserves session ownership, finalization state, target/agent evidence, target-vs-host drop counters, chunk count, last indexed record metadata, bounded-helper or persistent-daemon owner metadata, durable checkpoint metadata, and read-only recovery classification metadata. The index stores one chunk entry per non-empty `trace_batch` with byte length and SHA-256 evidence.
+`knapm-manifest.schema.json` and `knapm-index.schema.json` describe the Phase 11I/11J/11K/11L/11M directory-backed `.knapm` format written by `attach-session --stream-batches --write-knapm` or daemon-owned `daemon-start-session --write-knapm`. The manifest preserves session ownership, finalization state, target/agent evidence, target-vs-host drop counters, chunk count, last indexed record metadata, compression summary, stored/uncompressed byte totals, bounded-helper or persistent-daemon owner metadata, durable checkpoint metadata, and read-only recovery classification metadata. The index stores one chunk entry per non-empty `trace_batch` with stored byte length/SHA-256 evidence, plus required uncompressed byte length/SHA-256 evidence for zstd chunks.
+
+`session-catalog.schema.json` describes the Phase 11M host-side replay catalog emitted by `catalog-sessions`, `catalog-query`, and `catalog-remove-missing`. Catalog rows are built only from disk metadata and validation results. They include session path, format, session/operation identity, target PID/image/path/architecture, owner kind, daemon instance id, writer/finalized/recovery state, chunk/event/record counters, compression totals, validation status, last validation UTC, and a content identity hash.
 
 `native-daemon-status.schema.json` describes the Phase 11K/11L daemon status block returned by daemon start/status/stop commands and embedded in daemon audit/prune results. It records daemon PID, daemon instance id, heartbeat UTC, file-registry control endpoint, runtime directory, session count, and machine-readable daemon state including `stale` when a persisted daemon PID is dead.
 
@@ -361,21 +364,22 @@ Directory-backed `.knapm` files:
 2. `index.json`
 3. `audit.jsonl`
 4. `agent-events.jsonl`
-5. `chunks/trace-000NNN.jsonl`
+5. `chunks/trace-000NNN.jsonl` or `chunks/trace-000NNN.jsonl.zst`
 
-Phase 11J/11K/11L `.knapm` manifests add:
+Phase 11J/11K/11L/11M `.knapm` manifests add:
 
 1. `owner`: bounded-helper or persistent-daemon writer owner kind, host/helper/writer PID, writer instance id, generation, heartbeat, lease timeout, lease expiry, and daemon PID/instance/control endpoint when `ownerKind=persistent-daemon`.
 2. `checkpoint`: last committed chunk, batch, record, event id, manifest update, index update, and index consistency.
 3. `recovery`: finalized/owned/stale/recovery-required/legacy/malformed state, reason, action, read-only liveness booleans, lease expiry, and restart eligibility.
+4. `compression`, `compressionAlgorithms`, `storedBytes`, and `uncompressedBytes`: writer compression summary and byte totals.
 
 `session-manifest.schema.json` describes the durable session metadata: source command, backend mode, capture mode, operation id, target, agent, event counts, dropped-event accounting, and file names.
 
-`session-info.schema.json` describes validation and writer status returned to the UI. Additive Phase 11I fields include `format`, `finalized`, chunk count, last batch/record sequence, target transport drops, host dropped batches, and `writerState`. Additive Phase 11J fields include recovery state, reason, action, owner/helper/writer/target liveness, lease expiry, and restart eligibility. `native-session.schema.json` also accepts additive Phase 11K daemon fields for daemon PID, daemon instance id, daemon heartbeat, daemon control endpoint, and `.knapm` path, plus Phase 11L daemon audit fields for daemon/session/target liveness, `.knapm` existence and validation, audit recovery state/reason/action, and stale registry prune eligibility.
+`session-info.schema.json` describes validation and writer status returned to the UI. Additive Phase 11I fields include `format`, `finalized`, chunk count, last batch/record sequence, target transport drops, host dropped batches, and `writerState`. Additive Phase 11J fields include recovery state, reason, action, owner/helper/writer/target liveness, lease expiry, and restart eligibility. Additive Phase 11M fields include `compression`, `storedBytes`, and `uncompressedBytes`. `native-session.schema.json` also accepts additive Phase 11K daemon fields for daemon PID, daemon instance id, daemon heartbeat, daemon control endpoint, and `.knapm` path, plus Phase 11L daemon audit fields for daemon/session/target liveness, `.knapm` existence and validation, audit recovery state/reason/action, and stale registry prune eligibility.
 
 `session-replay-result.schema.json` wraps validated session metadata and replayed trace-compatible events. Replay must not launch the sample target or load an agent.
 
-Finalized session validation requires `agent_shutdown` in `agent-events.jsonl` so hook restore evidence survives persistence and replay workflows. `.knapm` validation additionally checks index identity, chunk SHA-256, byte length, contiguous batch sequence, monotonic record ranges, malformed trace rows, owner/checkpoint/recovery metadata, persistent-daemon owner metadata where applicable, and finalized vs partial state without target mutation.
+Finalized session validation requires `agent_shutdown` in `agent-events.jsonl` so hook restore evidence survives persistence and replay workflows. `.knapm` validation additionally checks index identity, stored chunk SHA-256, stored byte length, zstd uncompressed SHA-256/byte length, contiguous batch sequence, monotonic record ranges, malformed trace rows, owner/checkpoint/recovery metadata, persistent-daemon owner metadata where applicable, and finalized vs partial state without target mutation.
 
 ## Collector Contracts
 

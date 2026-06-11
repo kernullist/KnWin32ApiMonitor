@@ -292,7 +292,95 @@ function sha256(text) {
 }
 
 function isSafeKnapmChunkPath(filePath) {
-  return typeof filePath === "string" && /^chunks\/trace-[0-9]{6}\.jsonl$/u.test(filePath);
+  return typeof filePath === "string" && /^chunks\/trace-[0-9]{6}\.jsonl(?:\.zst)?$/u.test(filePath);
+}
+
+function decodeZstdRawFrame(bytes) {
+  if (!Buffer.isBuffer(bytes) || bytes.length < 12) {
+    return {
+      success: false,
+      error: "corrupt_zstd_frame",
+      bytes: Buffer.alloc(0)
+    };
+  }
+
+  if (bytes[0] !== 0x28 || bytes[1] !== 0xb5 || bytes[2] !== 0x2f || bytes[3] !== 0xfd) {
+    return {
+      success: false,
+      error: "corrupt_zstd_frame",
+      bytes: Buffer.alloc(0)
+    };
+  }
+
+  const descriptor = bytes[4];
+  const singleSegment = (descriptor & 0x20) !== 0;
+  const frameContentSizeFlag = descriptor >> 6;
+  const checksumPresent = (descriptor & 0x04) !== 0;
+  const dictionaryIdFlag = descriptor & 0x03;
+  if (!singleSegment || frameContentSizeFlag !== 2 || checksumPresent || dictionaryIdFlag !== 0 || (descriptor & 0x18) !== 0) {
+    return {
+      success: false,
+      error: "unsupported_zstd_frame",
+      bytes: Buffer.alloc(0)
+    };
+  }
+
+  const expectedSize = bytes.readUInt32LE(5);
+  let offset = 9;
+  let sawLastBlock = false;
+  const parts = [];
+  while (offset + 3 <= bytes.length) {
+    const blockHeader = bytes.readUIntLE(offset, 3);
+    offset += 3;
+    const lastBlock = (blockHeader & 0x01) !== 0;
+    const blockType = (blockHeader >> 1) & 0x03;
+    const blockSize = blockHeader >> 3;
+    if (blockType !== 0) {
+      return {
+        success: false,
+        error: "unsupported_zstd_block",
+        bytes: Buffer.alloc(0)
+      };
+    }
+
+    if (offset + blockSize > bytes.length) {
+      return {
+        success: false,
+        error: "corrupt_zstd_frame",
+        bytes: Buffer.alloc(0)
+      };
+    }
+
+    parts.push(bytes.subarray(offset, offset + blockSize));
+    offset += blockSize;
+    if (lastBlock) {
+      sawLastBlock = true;
+      break;
+    }
+  }
+
+  if (!sawLastBlock) {
+    return {
+      success: false,
+      error: "corrupt_zstd_frame",
+      bytes: Buffer.alloc(0)
+    };
+  }
+
+  const decoded = Buffer.concat(parts);
+  if (decoded.length !== expectedSize) {
+    return {
+      success: false,
+      error: "zstd_uncompressed_size_mismatch",
+      bytes: Buffer.alloc(0)
+    };
+  }
+
+  return {
+    success: true,
+    error: "",
+    bytes: decoded
+  };
 }
 
 const knapmRecoveryStates = new Set(["none", "owned", "stale", "recovery_required", "recovered", "abandoned", "malformed", "legacy"]);
@@ -406,6 +494,29 @@ function validateKnapmFixture(name, expectedSuccess) {
     requireNumber(manifest.lastBatchSequence, "lastBatchSequence", manifestLabel, errors);
     requireNumber(manifest.lastRecordSequence, "lastRecordSequence", manifestLabel, errors);
     requireString(manifest.writerState, "writerState", manifestLabel, errors);
+    if (manifest.compression !== undefined && !["none", "zstd", "mixed"].includes(manifest.compression)) {
+      errors.push(`${manifestLabel}: compression is unsupported`);
+    }
+
+    if (manifest.compressionAlgorithms !== undefined) {
+      if (!Array.isArray(manifest.compressionAlgorithms)) {
+        errors.push(`${manifestLabel}: compressionAlgorithms must be an array`);
+      } else {
+        for (const algorithm of manifest.compressionAlgorithms) {
+          if (!["none", "zstd"].includes(algorithm)) {
+            errors.push(`${manifestLabel}: compressionAlgorithms contains unsupported algorithm`);
+          }
+        }
+      }
+    }
+
+    if (manifest.storedBytes !== undefined) {
+      requireNumber(manifest.storedBytes, "storedBytes", manifestLabel, errors);
+    }
+
+    if (manifest.uncompressedBytes !== undefined) {
+      requireNumber(manifest.uncompressedBytes, "uncompressedBytes", manifestLabel, errors);
+    }
 
     if (manifest.format !== "knapm") {
       errors.push(`${manifestLabel}: format must be knapm`);
@@ -543,6 +654,9 @@ function validateKnapmFixture(name, expectedSuccess) {
       let traceCount = 0;
       let indexedLastBatch = 0;
       let indexedLastRecord = 0;
+      let indexedStoredBytes = 0;
+      let indexedUncompressedBytes = 0;
+      let indexedCompression = "";
       for (const chunk of index.chunks) {
         const chunkLabel = `${indexLabel}:chunk${expectedChunk}`;
         requireNumber(chunk.chunkSequence, "chunkSequence", chunkLabel, errors);
@@ -556,6 +670,7 @@ function validateKnapmFixture(name, expectedSuccess) {
         requireString(chunk.file, "file", chunkLabel, errors);
         requireString(chunk.sha256, "sha256", chunkLabel, errors);
 
+        const chunkCompression = typeof chunk.compression === "string" && chunk.compression.length > 0 ? chunk.compression : "none";
         if (chunk.chunkSequence !== expectedChunk) {
           errors.push(`${chunkLabel}: chunkSequence must be contiguous`);
         }
@@ -568,13 +683,18 @@ function validateKnapmFixture(name, expectedSuccess) {
           errors.push(`${chunkLabel}: record ranges must be monotonic`);
         }
 
-        if (chunk.compression !== "none") {
-          errors.push(`${chunkLabel}: compression must be none`);
+        if (!["none", "zstd"].includes(chunkCompression)) {
+          errors.push(`${chunkLabel}: unsupported_compression`);
+        }
+
+        if (chunkCompression === "zstd") {
+          requireNumber(chunk.uncompressedByteLength, "uncompressedByteLength", chunkLabel, errors);
+          requireString(chunk.uncompressedSha256, "uncompressedSha256", chunkLabel, errors);
         }
 
         const safeChunkPath = isSafeKnapmChunkPath(chunk.file);
         if (!safeChunkPath) {
-          errors.push(`${chunkLabel}: file must match chunks/trace-NNNNNN.jsonl`);
+          errors.push(`${chunkLabel}: file must match chunks/trace-NNNNNN.jsonl or chunks/trace-NNNNNN.jsonl.zst`);
           expectedChunk += 1;
           previousBatch = chunk.batchSequence;
           previousRecord = chunk.lastRecordSequence;
@@ -583,9 +703,9 @@ function validateKnapmFixture(name, expectedSuccess) {
         }
 
         const chunkPath = path.join(sessionPath, chunk.file);
-        let chunkText = "";
+        let chunkBytes = Buffer.alloc(0);
         try {
-          chunkText = fs.readFileSync(chunkPath, "utf8");
+          chunkBytes = fs.readFileSync(chunkPath);
         } catch (error) {
           errors.push(`${path.relative(repoRoot, chunkPath)}: failed to read: ${error.message}`);
           expectedChunk += 1;
@@ -594,14 +714,34 @@ function validateKnapmFixture(name, expectedSuccess) {
           continue;
         }
 
-        if (chunkText.length !== chunk.byteLength) {
+        if (chunkBytes.length !== chunk.byteLength) {
           errors.push(`${path.relative(repoRoot, chunkPath)}: byteLength mismatch`);
         }
 
-        if (sha256(chunkText) !== chunk.sha256) {
+        if (sha256(chunkBytes) !== chunk.sha256) {
           errors.push(`${path.relative(repoRoot, chunkPath)}: sha256 mismatch`);
         }
 
+        let decodedBytes = chunkBytes;
+        if (chunkCompression === "zstd") {
+          const decoded = decodeZstdRawFrame(chunkBytes);
+          if (!decoded.success) {
+            errors.push(`${path.relative(repoRoot, chunkPath)}: ${decoded.error}`);
+          }
+          decodedBytes = decoded.bytes;
+        } else if (chunkCompression !== "none") {
+          decodedBytes = Buffer.alloc(0);
+        }
+
+        if (chunk.uncompressedByteLength !== undefined && decodedBytes.length !== chunk.uncompressedByteLength) {
+          errors.push(`${path.relative(repoRoot, chunkPath)}: uncompressedByteLength mismatch`);
+        }
+
+        if (chunk.uncompressedSha256 !== undefined && sha256(decodedBytes) !== chunk.uncompressedSha256) {
+          errors.push(`${path.relative(repoRoot, chunkPath)}: uncompressedSha256 mismatch`);
+        }
+
+        const chunkText = decodedBytes.toString("utf8");
         const rows = chunkText
           .split(/\r?\n/u)
           .filter((line) => line.trim().length > 0)
@@ -626,6 +766,14 @@ function validateKnapmFixture(name, expectedSuccess) {
           requireString(row.api, "api", rowLabel, errors);
         }
 
+        indexedStoredBytes += chunkBytes.length;
+        indexedUncompressedBytes += decodedBytes.length;
+        if (indexedCompression.length === 0) {
+          indexedCompression = chunkCompression;
+        } else if (indexedCompression !== chunkCompression) {
+          indexedCompression = "mixed";
+        }
+
         traceCount += rows.length;
         expectedChunk += 1;
         previousBatch = chunk.batchSequence;
@@ -645,6 +793,18 @@ function validateKnapmFixture(name, expectedSuccess) {
 
       if (manifest && index.chunks.length > 0 && manifest.lastRecordSequence !== indexedLastRecord) {
         errors.push(`${indexLabel}: indexed last record must match manifest`);
+      }
+
+      if (manifest?.storedBytes !== undefined && manifest.storedBytes !== indexedStoredBytes) {
+        errors.push(`${indexLabel}: indexed stored bytes must match manifest`);
+      }
+
+      if (manifest?.uncompressedBytes !== undefined && manifest.uncompressedBytes !== indexedUncompressedBytes) {
+        errors.push(`${indexLabel}: indexed uncompressed bytes must match manifest`);
+      }
+
+      if (manifest?.compression !== undefined && index.chunks.length > 0 && manifest.compression !== indexedCompression) {
+        errors.push(`${indexLabel}: indexed compression must match manifest`);
       }
     }
   }
@@ -758,11 +918,15 @@ const results = [
   validateKnapmFixture("knapm-lease-expired.knapm", true),
   validateKnapmFixture("knapm-daemon-finalized.knapm", true),
   validateKnapmFixture("knapm-daemon-running.knapm", true),
+  validateKnapmFixture("knapm-zstd-valid.knapm", true),
   validateKnapmFixture("knapm-malformed-owner.knapm", false),
   validateKnapmFixture("knapm-malformed-daemon-owner.knapm", false),
   validateKnapmFixture("knapm-missing-index.knapm", false),
   validateKnapmFixture("knapm-missing-chunk.knapm", false),
   validateKnapmFixture("knapm-bad-hash.knapm", false),
+  validateKnapmFixture("knapm-zstd-corrupt-frame.knapm", false),
+  validateKnapmFixture("knapm-zstd-bad-uncompressed-hash.knapm", false),
+  validateKnapmFixture("knapm-unsupported-compression.knapm", false),
   validateKnapmFixture("knapm-noncontiguous-batch.knapm", false),
   validateKnapmFixture("knapm-overlap-record.knapm", false),
   validateKnapmFixture("knapm-unsafe-chunk-path.knapm", false),

@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { mockTargets } from "./mockData";
-import type { CaptureResult, CaptureSessionState, LaunchResult, NativeDaemonAudit, NativeDaemonStatus, NativeOperation, NativeSession, NativeTraceBatch, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
+import type { CaptureResult, CaptureSessionState, LaunchResult, NativeDaemonAudit, NativeDaemonStatus, NativeOperation, NativeSession, NativeSessionCatalog, NativeTraceBatch, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
 
 function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -191,6 +191,36 @@ export async function pruneStaleDaemonSessions(dryRun: boolean): Promise<NativeD
   }
 
   return invoke<NativeDaemonAudit>("prune_stale_daemon_sessions", {
+    dryRun
+  });
+}
+
+export async function catalogNativeSessions(): Promise<NativeSessionCatalog> {
+  if (!isTauriRuntime()) {
+    throw new Error("Session catalog requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeSessionCatalog>("catalog_native_sessions");
+}
+
+export async function queryNativeSessionCatalog(limit: number, state: string, target: string): Promise<NativeSessionCatalog> {
+  if (!isTauriRuntime()) {
+    throw new Error("Session catalog query requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeSessionCatalog>("query_native_session_catalog", {
+    limit,
+    state,
+    target
+  });
+}
+
+export async function removeMissingNativeSessionCatalogEntries(dryRun: boolean): Promise<NativeSessionCatalog> {
+  if (!isTauriRuntime()) {
+    throw new Error("Session catalog pruning requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeSessionCatalog>("remove_missing_native_session_catalog_entries", {
     dryRun
   });
 }

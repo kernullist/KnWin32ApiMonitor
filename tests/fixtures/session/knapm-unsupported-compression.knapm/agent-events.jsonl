@@ -1,0 +1,3 @@
+{"schemaVersion":"0.1.0","messageType":"agent_hello","operationId":"fixture-knapm-op","pid":1234,"tid":1235,"timestampUtc":"2026-06-10T00:00:00.000Z","sequence":1,"architecture":"x64","agentVersion":"fixture-agent","message":"hello"}
+{"schemaVersion":"0.1.0","messageType":"dropped_events","operationId":"fixture-knapm-op","pid":1234,"tid":1235,"timestampUtc":"2026-06-10T00:00:00.100Z","sequence":2,"droppedCount":0}
+{"schemaVersion":"0.1.0","messageType":"agent_shutdown","operationId":"fixture-knapm-op","pid":1234,"tid":1235,"timestampUtc":"2026-06-10T00:00:01.000Z","sequence":3,"reason":"self_disable","lifecycleState":"disabled","installedHooks":1,"restoredHooks":1,"failedHooks":0,"droppedCount":0}

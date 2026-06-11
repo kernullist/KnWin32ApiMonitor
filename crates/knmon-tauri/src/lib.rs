@@ -186,6 +186,64 @@ pub struct NativeDaemonAudit
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct NativeSessionCatalogRow
+{
+    pub path: String,
+    pub format: String,
+    pub session_id: String,
+    pub operation_id: String,
+    pub target_process_id: u32,
+    pub target_image: String,
+    pub target_path: String,
+    pub target_architecture: String,
+    pub owner_kind: String,
+    pub daemon_instance_id: String,
+    pub writer_state: String,
+    pub finalized: bool,
+    pub recovery_state: String,
+    pub recovery_reason: String,
+    pub recovery_action: String,
+    pub chunk_count: u64,
+    pub trace_event_count: u64,
+    pub last_batch_sequence: u64,
+    pub last_record_sequence: u64,
+    pub compression: String,
+    pub stored_bytes: u64,
+    pub uncompressed_bytes: u64,
+    pub validation_success: bool,
+    pub validation_error_count: u64,
+    pub validation_status: String,
+    pub last_validated_utc: String,
+    pub content_identity: String,
+    pub stale_identity: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeSessionCatalog
+{
+    pub schema_version: String,
+    pub format: String,
+    pub build_time_utc: String,
+    pub backend_mode: String,
+    pub operation: String,
+    pub success: bool,
+    pub root_path: String,
+    pub catalog_path: String,
+    pub session_count: u64,
+    pub valid_session_count: u64,
+    pub invalid_session_count: u64,
+    pub stored_bytes: u64,
+    pub uncompressed_bytes: u64,
+    pub dry_run: bool,
+    pub mutation_attempted: bool,
+    pub missing_session_paths: Vec<String>,
+    pub sessions: Vec<NativeSessionCatalogRow>,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NativeTraceBatch
 {
     pub schema_version: String,
@@ -1361,6 +1419,93 @@ pub fn prune_stale_daemon_sessions(dry_run: bool) -> Result<NativeDaemonAudit, S
     parse_helper_json(&helper_output, "daemon-prune-stale")
 }
 
+pub fn catalog_native_sessions() -> Result<NativeSessionCatalog, String>
+{
+    let root_path = repo_root_path().join("captures");
+    let catalog_path = default_session_catalog_path();
+    let helper_output = run_helper_args(&[
+        "catalog-sessions".to_string(),
+        "--root".to_string(),
+        root_path.to_string_lossy().to_string(),
+        "--catalog".to_string(),
+        catalog_path.to_string_lossy().to_string(),
+        "--rebuild".to_string(),
+    ])?;
+
+    let result: NativeSessionCatalog = parse_helper_json(&helper_output, "catalog-sessions")?;
+    if !result.success
+    {
+        return Err(result.message);
+    }
+
+    Ok(result)
+}
+
+pub fn query_native_session_catalog(limit: u32, state: String, target: String) -> Result<NativeSessionCatalog, String>
+{
+    let catalog_path = default_session_catalog_path();
+    if !catalog_path.is_file()
+    {
+        let _ = catalog_native_sessions()?;
+    }
+
+    let mut args = vec![
+        "catalog-query".to_string(),
+        "--catalog".to_string(),
+        catalog_path.to_string_lossy().to_string(),
+        "--limit".to_string(),
+        limit.to_string(),
+    ];
+    if !state.trim().is_empty()
+    {
+        args.push("--state".to_string());
+        args.push(state);
+    }
+
+    if !target.trim().is_empty()
+    {
+        args.push("--target".to_string());
+        args.push(target);
+    }
+
+    let helper_output = run_helper_args(&args)?;
+    let result: NativeSessionCatalog = parse_helper_json(&helper_output, "catalog-query")?;
+    if !result.success
+    {
+        return Err(result.message);
+    }
+
+    Ok(result)
+}
+
+pub fn remove_missing_native_session_catalog_entries(dry_run: bool) -> Result<NativeSessionCatalog, String>
+{
+    let catalog_path = default_session_catalog_path();
+    if !catalog_path.is_file()
+    {
+        let _ = catalog_native_sessions()?;
+    }
+
+    let mut args = vec![
+        "catalog-remove-missing".to_string(),
+        "--catalog".to_string(),
+        catalog_path.to_string_lossy().to_string(),
+    ];
+    if dry_run
+    {
+        args.push("--dry-run".to_string());
+    }
+
+    let helper_output = run_helper_args(&args)?;
+    let result: NativeSessionCatalog = parse_helper_json(&helper_output, "catalog-remove-missing")?;
+    if !result.success
+    {
+        return Err(result.message);
+    }
+
+    Ok(result)
+}
+
 pub fn stop_daemon_session(session_id: String) -> Result<NativeSession, String>
 {
     let helper_output = run_helper_args(&[
@@ -1831,6 +1976,11 @@ fn default_session_path() -> PathBuf
 fn default_daemon_runtime_path() -> PathBuf
 {
     repo_root_path().join("captures").join("daemon-runtime")
+}
+
+fn default_session_catalog_path() -> PathBuf
+{
+    repo_root_path().join("captures").join("session-catalog.json")
 }
 
 fn default_daemon_session_path(session_id: &str) -> PathBuf

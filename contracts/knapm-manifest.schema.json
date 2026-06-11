@@ -80,6 +80,14 @@
     "chunkCount": { "type": "integer", "minimum": 0 },
     "lastBatchSequence": { "type": "integer", "minimum": 0 },
     "lastRecordSequence": { "type": "integer", "minimum": 0 },
+    "compression": { "enum": ["none", "zstd", "mixed"] },
+    "compressionAlgorithms": {
+      "type": "array",
+      "items": { "enum": ["none", "zstd"] },
+      "uniqueItems": true
+    },
+    "storedBytes": { "type": "integer", "minimum": 0 },
+    "uncompressedBytes": { "type": "integer", "minimum": 0 },
     "writerState": { "enum": ["created", "writing", "partial", "finalized", "failed", "stale", "recovery_required"] },
     "owner": {
       "type": "object",

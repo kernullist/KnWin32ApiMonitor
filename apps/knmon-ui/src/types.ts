@@ -110,6 +110,58 @@ export interface NativeDaemonAudit {
   message: string;
 }
 
+export interface NativeSessionCatalogRow {
+  path: string;
+  format: string;
+  sessionId: string;
+  operationId: string;
+  targetProcessId: number;
+  targetImage: string;
+  targetPath: string;
+  targetArchitecture: string;
+  ownerKind: string;
+  daemonInstanceId: string;
+  writerState: string;
+  finalized: boolean;
+  recoveryState: string;
+  recoveryReason: string;
+  recoveryAction: string;
+  chunkCount: number;
+  traceEventCount: number;
+  lastBatchSequence: number;
+  lastRecordSequence: number;
+  compression: string;
+  storedBytes: number;
+  uncompressedBytes: number;
+  validationSuccess: boolean;
+  validationErrorCount: number;
+  validationStatus: "valid" | "invalid" | string;
+  lastValidatedUtc: string;
+  contentIdentity: string;
+  staleIdentity: boolean;
+}
+
+export interface NativeSessionCatalog {
+  schemaVersion: string;
+  format: string;
+  buildTimeUtc: string;
+  backendMode: BackendMode;
+  operation: string;
+  success: boolean;
+  rootPath: string;
+  catalogPath: string;
+  sessionCount: number;
+  validSessionCount: number;
+  invalidSessionCount: number;
+  storedBytes: number;
+  uncompressedBytes: number;
+  dryRun: boolean;
+  mutationAttempted: boolean;
+  missingSessionPaths: string[];
+  sessions: NativeSessionCatalogRow[];
+  message: string;
+}
+
 export interface AuditEvent {
   schemaVersion: string;
   operationId: string;

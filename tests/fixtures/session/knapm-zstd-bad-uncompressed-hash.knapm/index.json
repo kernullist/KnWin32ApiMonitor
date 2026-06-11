@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "0.1.0",
+  "format": "knapm-index",
+  "sessionId": "fixture-knapm-zstd-bad-uncompressed-hash",
+  "operationId": "fixture-knapm-zstd-bad-uncompressed-hash-op",
+  "chunks": [
+    {
+      "chunkSequence": 1,
+      "batchSequence": 1,
+      "file": "chunks/trace-000001.jsonl.zst",
+      "compression": "zstd",
+      "eventCount": 1,
+      "firstRecordSequence": 1,
+      "lastRecordSequence": 1,
+      "firstEventId": 1,
+      "lastEventId": 1,
+      "byteLength": 287,
+      "sha256": "b56d873f5493c44d12dbcd8fa580c0a550aebefa6c7b59a836bafaecba3980b4",
+      "uncompressedByteLength": 275,
+      "uncompressedSha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

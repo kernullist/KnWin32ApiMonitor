@@ -35,7 +35,7 @@
         "properties": {
           "chunkSequence": { "type": "integer", "minimum": 1 },
           "batchSequence": { "type": "integer", "minimum": 1 },
-          "file": { "type": "string", "pattern": "^chunks/trace-[0-9]{6}\\.jsonl$" },
+          "file": { "type": "string", "pattern": "^chunks/trace-[0-9]{6}\\.jsonl(\\.zst)?$" },
           "compression": { "enum": ["none", "zstd"] },
           "eventCount": { "type": "integer", "minimum": 1 },
           "firstRecordSequence": { "type": "integer", "minimum": 0 },
@@ -43,8 +43,23 @@
           "firstEventId": { "type": "integer", "minimum": 1 },
           "lastEventId": { "type": "integer", "minimum": 1 },
           "byteLength": { "type": "integer", "minimum": 1 },
-          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
-        }
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "uncompressedByteLength": { "type": "integer", "minimum": 1 },
+          "uncompressedSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "compression": { "const": "zstd" }
+              },
+              "required": ["compression"]
+            },
+            "then": {
+              "required": ["uncompressedByteLength", "uncompressedSha256"]
+            }
+          }
+        ]
       }
     }
   }
