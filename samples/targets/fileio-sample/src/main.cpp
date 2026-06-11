@@ -8,6 +8,7 @@
 #include <bcrypt.h>
 #include <objbase.h>
 #include <rpc.h>
+#include <roapi.h>
 #include <shlobj.h>
 #include <wincrypt.h>
 #include <winver.h>
@@ -1215,6 +1216,84 @@ bool RunOle32ComLifecycleProbe()
     return success;
 }
 
+DWORD WINAPI CombaseWinRtLifecycleThreadProc(LPVOID)
+{
+    bool success = false;
+    bool initialized = false;
+    UINT64 apartmentId = 0;
+
+    do
+    {
+        const HRESULT initResult = RoInitialize(RO_INIT_MULTITHREADED);
+        if (FAILED(initResult))
+        {
+            std::cout << "RoInitialize failed with " << HexHResult(initResult) << "\n";
+            break;
+        }
+
+        initialized = true;
+
+        const HRESULT apartmentResult = RoGetApartmentIdentifier(&apartmentId);
+        if (FAILED(apartmentResult))
+        {
+            std::cout << "RoGetApartmentIdentifier failed with " << HexHResult(apartmentResult) << "\n";
+            break;
+        }
+
+        std::cout << "combase winrt lifecycle roundtrip apartment_id=" << apartmentId
+                  << " init=" << HexHResult(initResult) << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (initialized)
+    {
+        RoUninitialize();
+    }
+
+    return success ? 0 : 1;
+}
+
+bool RunCombaseWinRtLifecycleProbe()
+{
+    bool success = false;
+    HANDLE threadHandle = nullptr;
+
+    do
+    {
+        threadHandle = CreateThread(nullptr, 0, CombaseWinRtLifecycleThreadProc, nullptr, 0, nullptr);
+        if (threadHandle == nullptr)
+        {
+            LogLastError("CreateThread(winrt)");
+            break;
+        }
+
+        const DWORD waitResult = WaitForSingleObject(threadHandle, INFINITE);
+        if (waitResult != WAIT_OBJECT_0)
+        {
+            LogLastError("WaitForSingleObject(winrt)");
+            break;
+        }
+
+        DWORD exitCode = 1;
+        if (!GetExitCodeThread(threadHandle, &exitCode))
+        {
+            LogLastError("GetExitCodeThread(winrt)");
+            break;
+        }
+
+        success = exitCode == 0;
+    }
+    while (false);
+
+    if (threadHandle != nullptr)
+    {
+        CloseHandle(threadHandle);
+    }
+
+    return success;
+}
+
 bool RunWinsockProbe()
 {
     bool success = false;
@@ -1695,6 +1774,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunOle32ComLifecycleProbe())
+        {
+            break;
+        }
+
+        if (!RunCombaseWinRtLifecycleProbe())
         {
             break;
         }

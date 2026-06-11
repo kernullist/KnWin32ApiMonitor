@@ -22,6 +22,13 @@
         { "name": "FILE_OVERWRITE", "value": "0x00000004" },
         { "name": "FILE_OVERWRITE_IF", "value": "0x00000005" }
       ]
+    },
+    {
+      "name": "ro_init_type",
+      "values": [
+        { "name": "RO_INIT_SINGLETHREADED", "value": "0x00000000" },
+        { "name": "RO_INIT_MULTITHREADED", "value": "0x00000001" }
+      ]
     }
   ]
 }

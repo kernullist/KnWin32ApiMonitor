@@ -2671,6 +2671,76 @@
         "returnEqual": "RPC_S_OK"
       },
       "symbol": "UuidFromStringW"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "winrt_apartment_init",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "HRESULT",
+      "failure": {
+        "hresultFailed": true
+      },
+      "family": "com",
+      "firstParameterIndex": 432,
+      "hookPolicy": "iat",
+      "id": 113,
+      "module": "api-ms-win-core-winrt-l1-1-0.dll",
+      "moduleId": 17,
+      "name": "RoInitialize",
+      "parameterCount": 1,
+      "returnType": "HRESULT",
+      "risk": "low",
+      "source": "definitions/win32/api-ms-win-core-winrt-l1-1-0.json",
+      "success": {
+        "hresultSuccess": true
+      },
+      "symbol": "RoInitialize"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "winrt_apartment_uninit",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "none",
+      "failure": {},
+      "family": "com",
+      "firstParameterIndex": 433,
+      "hookPolicy": "iat",
+      "id": 114,
+      "module": "api-ms-win-core-winrt-l1-1-0.dll",
+      "moduleId": 17,
+      "name": "RoUninitialize",
+      "parameterCount": 0,
+      "returnType": "void",
+      "risk": "low",
+      "source": "definitions/win32/api-ms-win-core-winrt-l1-1-0.json",
+      "success": {
+        "returnVoid": true
+      },
+      "symbol": "RoUninitialize"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "winrt_apartment_identifier",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "HRESULT",
+      "failure": {
+        "hresultFailed": true
+      },
+      "family": "com",
+      "firstParameterIndex": 433,
+      "hookPolicy": "iat",
+      "id": 115,
+      "module": "api-ms-win-core-winrt-l1-1-0.dll",
+      "moduleId": 17,
+      "name": "RoGetApartmentIdentifier",
+      "parameterCount": 1,
+      "returnType": "HRESULT",
+      "risk": "low",
+      "source": "definitions/win32/api-ms-win-core-winrt-l1-1-0.json",
+      "success": {
+        "hresultSuccess": true
+      },
+      "symbol": "RoGetApartmentIdentifier"
     }
   ],
   "decodeAliases": [
@@ -3071,6 +3141,15 @@
       "readsTargetMemory": true
     },
     {
+      "enum": "ro_init_type",
+      "flags": "",
+      "kind": "enum",
+      "maxPreviewBytes": 0,
+      "name": "ro_init_type",
+      "preview": "symbolic_enum",
+      "readsTargetMemory": false
+    },
+    {
       "enum": "",
       "flags": "",
       "kind": "handle",
@@ -3167,6 +3246,15 @@
       "maxPreviewBytes": 512,
       "name": "token_privileges",
       "preview": "token_privileges",
+      "readsTargetMemory": true
+    },
+    {
+      "enum": "",
+      "flags": "",
+      "kind": "pointer",
+      "maxPreviewBytes": 8,
+      "name": "uint64_pointer",
+      "preview": "uint64_pointer",
       "readsTargetMemory": true
     },
     {
@@ -3313,6 +3401,11 @@
       "id": 16,
       "name": "ole32.dll",
       "symbol": "Ole32"
+    },
+    {
+      "id": 17,
+      "name": "api-ms-win-core-winrt-l1-1-0.dll",
+      "symbol": "ApiMsWinCoreWinrtL110"
     }
   ],
   "parameters": [
@@ -10659,12 +10752,47 @@
       "name": "Uuid",
       "nullable": false,
       "type": "UUID*"
+    },
+    {
+      "absoluteIndex": 432,
+      "apiId": 113,
+      "captureTiming": "pre",
+      "decode": "ro_init_type",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "initType",
+      "nullable": false,
+      "type": "RO_INIT_TYPE"
+    },
+    {
+      "absoluteIndex": 433,
+      "apiId": 115,
+      "captureTiming": "post",
+      "decode": "uint64_pointer",
+      "direction": "out",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 8,
+      "name": "apartmentIdentifier",
+      "nullable": false,
+      "type": "UINT64*"
     }
   ],
   "schemaVersion": "0.1.0",
   "sources": {
     "definitions": [
       "definitions/win32/advapi32.json",
+      "definitions/win32/api-ms-win-core-winrt-l1-1-0.json",
       "definitions/win32/bcrypt.json",
       "definitions/win32/crypt32.json",
       "definitions/win32/file-io.json",

@@ -671,6 +671,24 @@
       "module": "rpcrt4.dll",
       "name": "UuidFromStringW",
       "symbol": "UuidFromStringW"
+    },
+    {
+      "id": 113,
+      "module": "api-ms-win-core-winrt-l1-1-0.dll",
+      "name": "RoInitialize",
+      "symbol": "RoInitialize"
+    },
+    {
+      "id": 114,
+      "module": "api-ms-win-core-winrt-l1-1-0.dll",
+      "name": "RoUninitialize",
+      "symbol": "RoUninitialize"
+    },
+    {
+      "id": 115,
+      "module": "api-ms-win-core-winrt-l1-1-0.dll",
+      "name": "RoGetApartmentIdentifier",
+      "symbol": "RoGetApartmentIdentifier"
     }
   ],
   "modules": [
@@ -753,6 +771,11 @@
       "id": 16,
       "name": "ole32.dll",
       "symbol": "Ole32"
+    },
+    {
+      "id": 17,
+      "name": "api-ms-win-core-winrt-l1-1-0.dll",
+      "symbol": "ApiMsWinCoreWinrtL110"
     }
   ],
   "schemaVersion": "0.1.0",

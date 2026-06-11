@@ -119,6 +119,9 @@ enum class KnMonTransportApiId : std::uint16_t
     StringFromGUID2 = 110,
     UuidToStringW = 111,
     UuidFromStringW = 112,
+    RoInitialize = 113,
+    RoUninitialize = 114,
+    RoGetApartmentIdentifier = 115,
 };
 
 enum class KnMonTransportModuleId : std::uint16_t
@@ -140,5 +143,6 @@ enum class KnMonTransportModuleId : std::uint16_t
     Version = 14,
     Shell32 = 15,
     Ole32 = 16,
+    ApiMsWinCoreWinrtL110 = 17,
 };
 }

@@ -2116,6 +2116,30 @@ std::string ComInitFlagsText(std::uint32_t value)
     return stream.str();
 }
 
+std::string RoInitTypeText(std::uint32_t value)
+{
+    std::ostringstream stream;
+
+    stream << HexDwordValue(value);
+    stream << " (";
+
+    switch (value)
+    {
+    case 0:
+        stream << "RO_INIT_SINGLETHREADED";
+        break;
+    case 1:
+        stream << "RO_INIT_MULTITHREADED";
+        break;
+    default:
+        stream << "unknown";
+        break;
+    }
+
+    stream << ")";
+    return stream.str();
+}
+
 std::string SignedIntValue(std::uint64_t value)
 {
     return std::to_string(static_cast<std::int32_t>(static_cast<std::uint32_t>(value)));
@@ -2844,6 +2868,26 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPOLESTR", "lpsz", "out", stringPointer, stringPointer, stringValue, DecodeStatusName(record.Values32[2])) << ",";
         args << ArgumentJsonFromMetadata(record.ApiId, 2, "int", "cchMax", "in", cchMax, cchMax, cchMax);
         payload = ApiCallPayload(result, record, SignedIntValue(record.ReturnValue), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::RoInitialize:
+    {
+        const std::string initTypeRaw = HexDwordValue(record.Values32[0]);
+        const std::string initTypeDecoded = RoInitTypeText(record.Values32[0]);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "RO_INIT_TYPE", "initType", "in", initTypeRaw, initTypeRaw, initTypeDecoded);
+        payload = ApiCallPayload(result, record, HexHResultValue(record.ReturnCode), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::RoUninitialize:
+        payload = ApiCallPayload(result, record, "void", args.str(), "");
+        break;
+    case KnMonTransportApiId::RoGetApartmentIdentifier:
+    {
+        const std::string identifierPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string identifierValue = std::to_string(record.Values64[1]);
+        const std::string identifierDecoded = DecodeStatusName(record.Values32[0]) + ";value=" + identifierValue;
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "UINT64*", "apartmentIdentifier", "out", identifierPointer, identifierValue, identifierDecoded, DecodeStatusName(record.Values32[0]));
+        payload = ApiCallPayload(result, record, HexHResultValue(record.ReturnCode), args.str(), "");
         break;
     }
     case KnMonTransportApiId::RpcStringBindingComposeW:

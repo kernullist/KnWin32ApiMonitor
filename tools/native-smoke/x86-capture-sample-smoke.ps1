@@ -54,6 +54,9 @@ $requiredApis = @(
     "CoUninitialize",
     "CoCreateGuid",
     "StringFromGUID2",
+    "RoInitialize",
+    "RoUninitialize",
+    "RoGetApartmentIdentifier",
     "RpcStringBindingComposeW",
     "RpcBindingFromStringBindingW",
     "RpcStringFreeW",
@@ -76,6 +79,7 @@ if (-not (Test-Path -LiteralPath $helperPath))
 }
 
 $result = & $helperPath capture-sample | ConvertFrom-Json
+$winrtProviderModule = "api-ms-win-core-winrt-l1-1-0.dll"
 
 if (-not $result.success)
 {
@@ -785,9 +789,9 @@ if ($shellArgs -cmatch "path=[^`"]*Fonts")
 }
 
 $comEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "com" })
-if ($comEvents.Count -lt 4)
+if ($comEvents.Count -lt 7)
 {
-    throw "x86 capture did not include the selected OLE32 COM lifecycle API family slice."
+    throw "x86 capture did not include the selected OLE32 and COMBASE-backed WinRT lifecycle API family slices."
 }
 
 $coInitialize = @($comEvents | Where-Object { $_.api -eq "CoInitializeEx" } | Select-Object -First 1)
@@ -871,10 +875,67 @@ if ($createdGuid.ToLowerInvariant() -ne $guidStringArg[0].decodedValue.ToLowerIn
     throw "x86 CoCreateGuid and StringFromGUID2 GUID evidence diverged."
 }
 
-$comArgs = @($comEvents | ForEach-Object { $_.arguments } | ConvertTo-Json -Depth 8)
-if ($comArgs -cmatch "CoCreateInstance|CoGetClassObject|CoGetObject|IClassFactory|IUnknown|IDispatch|vtable|Vtbl|IMarshal|IStream|IStorage|IDataObject|Clipboard|DragDrop|Moniker|RunningObjectTable|ROT|ShellExecute|PIDL|ITEMIDLIST|Users\\\\|AppData|Downloads|Desktop|Documents|Recent|Startup|SendTo|CommandLine|Environment|BEGIN CERTIFICATE|PRIVATE KEY|Authorization|Cookie|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+$roInitialize = @($comEvents | Where-Object { $_.api -eq "RoInitialize" } | Select-Object -First 1)
+if ($roInitialize.Count -ne 1 -or
+    $roInitialize[0].module -ne $winrtProviderModule -or
+    $roInitialize[0].apiCategory -ne "winrt_apartment_init" -or
+    $roInitialize[0].hookPolicy -ne "iat" -or
+    $roInitialize[0].coverageStatus -ne "smoke_verified" -or
+    $roInitialize[0].returnValue -notmatch "^0x[0-7][0-9a-fA-F]{7}$")
 {
-    throw "x86 OLE32 COM lifecycle events appear to expose activation, object, marshaling, storage, user-path, credential, PE/file/hash, or byte-preview evidence: $comArgs"
+    throw "x86 RoInitialize metadata or return evidence mismatch."
+}
+
+$roInitializeArg = @($roInitialize[0].arguments | Where-Object { $_.name -eq "initType" } | Select-Object -First 1)
+if ($roInitializeArg.Count -ne 1 -or
+    $roInitializeArg[0].decodeAlias -ne "ro_init_type" -or
+    $roInitializeArg[0].decodedValue -notmatch "RO_INIT_MULTITHREADED" -or
+    $roInitializeArg[0].rawValue -ne "0x00000001")
+{
+    throw "x86 RoInitialize did not include WinRT init type evidence: $($roInitializeArg | ConvertTo-Json -Depth 8)"
+}
+
+$roApartment = @($comEvents | Where-Object { $_.api -eq "RoGetApartmentIdentifier" } | Select-Object -First 1)
+if ($roApartment.Count -ne 1 -or
+    $roApartment[0].module -ne $winrtProviderModule -or
+    $roApartment[0].apiCategory -ne "winrt_apartment_identifier" -or
+    $roApartment[0].returnValue -notmatch "^0x[0-7][0-9a-fA-F]{7}$")
+{
+    throw "x86 RoGetApartmentIdentifier metadata or return evidence mismatch."
+}
+
+$roApartmentArg = @($roApartment[0].arguments | Where-Object { $_.name -eq "apartmentIdentifier" } | Select-Object -First 1)
+if ($roApartmentArg.Count -ne 1 -or
+    $roApartmentArg[0].decodeAlias -ne "uint64_pointer" -or
+    $roApartmentArg[0].captureTiming -ne "post" -or
+    $roApartmentArg[0].decodeStatus -ne "decoded" -or
+    $roApartmentArg[0].rawValue -notmatch "^0x[0-9a-fA-F]+$" -or
+    $roApartmentArg[0].postCallValue -notmatch "^\d+$" -or
+    $roApartmentArg[0].decodedValue -notmatch "value=\d+")
+{
+    throw "x86 RoGetApartmentIdentifier did not include decoded UINT64 evidence: $($roApartmentArg | ConvertTo-Json -Depth 8)"
+}
+
+$roUninitialize = @($comEvents | Where-Object { $_.api -eq "RoUninitialize" } | Select-Object -First 1)
+if ($roUninitialize.Count -ne 1 -or
+    $roUninitialize[0].module -ne $winrtProviderModule -or
+    $roUninitialize[0].apiCategory -ne "winrt_apartment_uninit" -or
+    $roUninitialize[0].returnValue -ne "void" -or
+    @($roUninitialize[0].arguments).Count -ne 0)
+{
+    throw "x86 RoUninitialize should be lifecycle-only with no arguments."
+}
+
+$winrtPayload = @($roInitialize[0], $roApartment[0], $roUninitialize[0]) | ConvertTo-Json -Depth 12
+if ($winrtPayload -cmatch "RoGetActivationFactory|RoActivateInstance|RoRegisterActivationFactories|RoRevokeActivationFactories|WindowsCreateString|WindowsGetStringRawBuffer|HSTRING|RuntimeClass|ActivationFactory|IActivationFactory|IInspectable|IClassFactory|IUnknown|IDispatch|vtable|Vtbl|IMarshal|IStream|IStorage|IDataObject|Clipboard|DragDrop|Moniker|RunningObjectTable|ROT|RestrictedError|ErrorInfo|Users\\\\|AppData|Downloads|Desktop|Documents|CommandLine|Environment|Password|Credential|Token|SecurityDescriptor|Sid|Acl|BEGIN CERTIFICATE|PRIVATE KEY|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 COMBASE-backed WinRT events appear to expose activation, HSTRING, COM object, error-info, credential, path, PE/file/hash, or byte-preview evidence: $winrtPayload"
+}
+
+$comArgs = @($comEvents | ForEach-Object { $_.arguments } | ConvertTo-Json -Depth 8)
+if ($comArgs -cmatch "CoCreateInstance|CoGetClassObject|CoGetObject|RoGetActivationFactory|RoActivateInstance|WindowsCreateString|WindowsGetStringRawBuffer|HSTRING|RuntimeClass|ActivationFactory|IActivationFactory|IInspectable|IClassFactory|IUnknown|IDispatch|vtable|Vtbl|IMarshal|IStream|IStorage|IDataObject|Clipboard|DragDrop|Moniker|RunningObjectTable|ROT|RestrictedError|ErrorInfo|ShellExecute|PIDL|ITEMIDLIST|Users\\\\|AppData|Downloads|Desktop|Documents|Recent|Startup|SendTo|CommandLine|Environment|BEGIN CERTIFICATE|PRIVATE KEY|Authorization|Cookie|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 COM lifecycle events appear to expose activation, HSTRING, object, marshaling, storage, user-path, credential, PE/file/hash, or byte-preview evidence: $comArgs"
 }
 
 $rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })

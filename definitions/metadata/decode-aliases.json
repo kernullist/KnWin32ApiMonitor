@@ -58,11 +58,13 @@
     { "name": "object_attributes", "kind": "object", "preview": "object_attributes", "readsTargetMemory": true, "maxPreviewBytes": 512 },
     { "name": "overlapped_optional", "kind": "object", "preview": "overlapped_optional", "readsTargetMemory": true, "maxPreviewBytes": 32 },
     { "name": "proc_name_or_ordinal", "kind": "object", "preview": "proc_name_or_ordinal", "readsTargetMemory": true, "maxPreviewBytes": 512 },
+    { "name": "ro_init_type", "kind": "enum", "preview": "symbolic_enum", "readsTargetMemory": false, "maxPreviewBytes": 0, "enum": "ro_init_type" },
     { "name": "security_attributes", "kind": "object", "preview": "security_attributes", "readsTargetMemory": true, "maxPreviewBytes": 32 },
     { "name": "unicode_string", "kind": "object", "preview": "unicode_string", "readsTargetMemory": true, "maxPreviewBytes": 512 },
     { "name": "unicode_string_optional", "kind": "object", "preview": "unicode_string_optional", "readsTargetMemory": true, "maxPreviewBytes": 512 },
     { "name": "unresolved", "kind": "unknown", "preview": "unresolved_import", "readsTargetMemory": false, "maxPreviewBytes": 0 },
     { "name": "utf16_string", "kind": "string", "preview": "utf16", "readsTargetMemory": true, "maxPreviewBytes": 512 },
-    { "name": "utf16_string_optional", "kind": "string", "preview": "utf16_optional", "readsTargetMemory": true, "maxPreviewBytes": 512 }
+    { "name": "utf16_string_optional", "kind": "string", "preview": "utf16_optional", "readsTargetMemory": true, "maxPreviewBytes": 512 },
+    { "name": "uint64_pointer", "kind": "pointer", "preview": "uint64_pointer", "readsTargetMemory": true, "maxPreviewBytes": 8 }
   ]
 }

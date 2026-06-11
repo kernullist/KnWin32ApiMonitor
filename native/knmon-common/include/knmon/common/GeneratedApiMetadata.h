@@ -53,7 +53,7 @@ struct KnMonGeneratedParameterMetadata
     std::string_view LengthExpression;
 };
 
-inline constexpr std::array<KnMonGeneratedModuleMetadata, 16> KnMonGeneratedModules =
+inline constexpr std::array<KnMonGeneratedModuleMetadata, 17> KnMonGeneratedModules =
 {{
     {
         1,
@@ -135,9 +135,14 @@ inline constexpr std::array<KnMonGeneratedModuleMetadata, 16> KnMonGeneratedModu
         "ole32.dll",
         "Ole32"
     },
+    {
+        17,
+        "api-ms-win-core-winrt-l1-1-0.dll",
+        "ApiMsWinCoreWinrtL110"
+    },
 }};
 
-inline constexpr std::array<KnMonGeneratedApiMetadata, 112> KnMonGeneratedApis =
+inline constexpr std::array<KnMonGeneratedApiMetadata, 115> KnMonGeneratedApis =
 {{
     {
         1,
@@ -2267,9 +2272,66 @@ inline constexpr std::array<KnMonGeneratedApiMetadata, 112> KnMonGeneratedApis =
         430,
         2
     },
+    {
+        113,
+        17,
+        "api-ms-win-core-winrt-l1-1-0.dll",
+        "RoInitialize",
+        "RoInitialize",
+        "com",
+        "winrt_apartment_init",
+        "low",
+        "iat",
+        "smoke_verified",
+        "stdcall",
+        "HRESULT",
+        "HRESULT",
+        "{\"hresultSuccess\":true}",
+        "{\"hresultFailed\":true}",
+        432,
+        1
+    },
+    {
+        114,
+        17,
+        "api-ms-win-core-winrt-l1-1-0.dll",
+        "RoUninitialize",
+        "RoUninitialize",
+        "com",
+        "winrt_apartment_uninit",
+        "low",
+        "iat",
+        "smoke_verified",
+        "stdcall",
+        "void",
+        "none",
+        "{\"returnVoid\":true}",
+        "{}",
+        433,
+        0
+    },
+    {
+        115,
+        17,
+        "api-ms-win-core-winrt-l1-1-0.dll",
+        "RoGetApartmentIdentifier",
+        "RoGetApartmentIdentifier",
+        "com",
+        "winrt_apartment_identifier",
+        "low",
+        "iat",
+        "smoke_verified",
+        "stdcall",
+        "HRESULT",
+        "HRESULT",
+        "{\"hresultSuccess\":true}",
+        "{\"hresultFailed\":true}",
+        433,
+        1
+    },
 }};
 
-inline constexpr std::array<KnMonGeneratedParameterMetadata, 432> KnMonGeneratedParameters =
+inline constexpr std::array<KnMonGeneratedParameterMetadata, 434> KnMonGeneratedParameters =
 {{
     {
         1,
@@ -9609,6 +9671,40 @@ inline constexpr std::array<KnMonGeneratedParameterMetadata, 432> KnMonGenerated
         "post",
         false,
         16,
+        "",
+        "",
+        "",
+        -1,
+        ""
+    },
+    {
+        113,
+        0,
+        432,
+        "initType",
+        "RO_INIT_TYPE",
+        "in",
+        "ro_init_type",
+        "pre",
+        false,
+        0,
+        "",
+        "",
+        "",
+        -1,
+        ""
+    },
+    {
+        115,
+        0,
+        433,
+        "apartmentIdentifier",
+        "UINT64*",
+        "out",
+        "uint64_pointer",
+        "post",
+        false,
+        8,
         "",
         "",
         "",

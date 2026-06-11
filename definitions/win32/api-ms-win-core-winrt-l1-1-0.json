@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "api-ms-win-core-winrt-l1-1-0",
+  "description": "Wave 3 low-payload COMBASE-backed WinRT apartment lifecycle metadata hooks through the observed API-set import provider.",
+  "apis": [
+    {
+      "module": "api-ms-win-core-winrt-l1-1-0.dll",
+      "name": "RoInitialize",
+      "family": "com",
+      "category": "winrt_apartment_init",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HRESULT",
+      "errorSource": "HRESULT",
+      "success": { "hresultSuccess": true },
+      "failure": { "hresultFailed": true },
+      "parameters": [
+        { "name": "initType", "type": "RO_INIT_TYPE", "direction": "in", "decode": "ro_init_type" }
+      ]
+    },
+    {
+      "module": "api-ms-win-core-winrt-l1-1-0.dll",
+      "name": "RoUninitialize",
+      "family": "com",
+      "category": "winrt_apartment_uninit",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "void",
+      "errorSource": "none",
+      "success": { "returnVoid": true },
+      "failure": {},
+      "parameters": []
+    },
+    {
+      "module": "api-ms-win-core-winrt-l1-1-0.dll",
+      "name": "RoGetApartmentIdentifier",
+      "family": "com",
+      "category": "winrt_apartment_identifier",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HRESULT",
+      "errorSource": "HRESULT",
+      "success": { "hresultSuccess": true },
+      "failure": { "hresultFailed": true },
+      "parameters": [
+        { "name": "apartmentIdentifier", "type": "UINT64*", "direction": "out", "decode": "uint64_pointer", "captureTiming": "post" }
+      ]
+    }
+  ]
+}

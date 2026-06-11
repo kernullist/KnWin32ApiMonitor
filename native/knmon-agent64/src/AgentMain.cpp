@@ -11,6 +11,7 @@
 #include <bcrypt.h>
 #include <rpc.h>
 #include <objbase.h>
+#include <roapi.h>
 #include <shlobj.h>
 #include <wincrypt.h>
 #include <winver.h>
@@ -174,6 +175,9 @@ using CoInitializeExFn = HRESULT(WINAPI*)(LPVOID, DWORD);
 using CoUninitializeFn = void(WINAPI*)();
 using CoCreateGuidFn = HRESULT(WINAPI*)(GUID*);
 using StringFromGUID2Fn = int(WINAPI*)(REFGUID, LPOLESTR, int);
+using RoInitializeFn = HRESULT(WINAPI*)(RO_INIT_TYPE);
+using RoUninitializeFn = void(WINAPI*)();
+using RoGetApartmentIdentifierFn = HRESULT(WINAPI*)(UINT64*);
 using RpcStringBindingComposeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR*);
 using RpcBindingFromStringBindingWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_BINDING_HANDLE*);
 using RpcStringFreeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR*);
@@ -265,6 +269,9 @@ CoInitializeExFn g_originalCoInitializeEx = nullptr;
 CoUninitializeFn g_originalCoUninitialize = nullptr;
 CoCreateGuidFn g_originalCoCreateGuid = nullptr;
 StringFromGUID2Fn g_originalStringFromGUID2 = nullptr;
+RoInitializeFn g_originalRoInitialize = nullptr;
+RoUninitializeFn g_originalRoUninitialize = nullptr;
+RoGetApartmentIdentifierFn g_originalRoGetApartmentIdentifier = nullptr;
 RpcStringBindingComposeWFn g_originalRpcStringBindingComposeW = nullptr;
 RpcBindingFromStringBindingWFn g_originalRpcBindingFromStringBindingW = nullptr;
 RpcStringFreeWFn g_originalRpcStringFreeW = nullptr;
@@ -361,7 +368,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 67;
+constexpr std::size_t HookDefinitionCount = 70;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1612,6 +1619,10 @@ std::uint16_t ModuleId(const char* moduleName)
     else if (_stricmp(moduleName, "ole32.dll") == 0)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Ole32);
+    }
+    else if (_stricmp(moduleName, "api-ms-win-core-winrt-l1-1-0.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::ApiMsWinCoreWinrtL110);
     }
 
     return result;
@@ -3863,6 +3874,78 @@ void EmitStringFromGUID2Event(
     }
 }
 
+void EmitRoInitializeEvent(
+    HRESULT result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    RO_INIT_TYPE initType)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::RoInitialize, "api-ms-win-core-winrt-l1-1-0.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->ReturnCode = static_cast<std::uint32_t>(result);
+        record->Values32[0] = static_cast<std::uint32_t>(initType);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitRoUninitializeEvent(
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::RoUninitialize, "api-ms-win-core-winrt-l1-1-0.dll", start, end, 0);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitRoGetApartmentIdentifierEvent(
+    HRESULT result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    UINT64* apartmentIdentifier)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::RoGetApartmentIdentifier, "api-ms-win-core-winrt-l1-1-0.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->ReturnCode = static_cast<std::uint32_t>(result);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(apartmentIdentifier));
+        record->Values32[0] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+
+        if (SUCCEEDED(result))
+        {
+            UINT64 localIdentifier = 0;
+            if (ReadCurrentProcessValue(apartmentIdentifier, &localIdentifier))
+            {
+                record->Values64[1] = static_cast<std::uint64_t>(localIdentifier);
+                record->Values32[0] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+            }
+            else
+            {
+                record->Values32[0] = apartmentIdentifier == nullptr ?
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer) :
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            }
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 std::uint32_t CopyRpcWideStringText(char* destination, std::uint32_t* length, std::size_t capacity, RPC_WSTR source)
 {
     return CopyWidePointerText(destination, length, capacity, reinterpret_cast<const wchar_t*>(source));
@@ -4596,6 +4679,9 @@ HRESULT WINAPI HookedCoInitializeEx(LPVOID reserved, DWORD coInit);
 void WINAPI HookedCoUninitialize();
 HRESULT WINAPI HookedCoCreateGuid(GUID* guid);
 int WINAPI HookedStringFromGUID2(REFGUID guid, LPOLESTR string, int cchMax);
+HRESULT WINAPI HookedRoInitialize(RO_INIT_TYPE initType);
+void WINAPI HookedRoUninitialize();
+HRESULT WINAPI HookedRoGetApartmentIdentifier(UINT64* apartmentIdentifier);
 RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR protSeq, RPC_WSTR networkAddr, RPC_WSTR endpoint, RPC_WSTR options, RPC_WSTR* stringBinding);
 RPC_STATUS RPC_ENTRY HookedRpcBindingFromStringBindingW(RPC_WSTR stringBinding, RPC_BINDING_HANDLE* binding);
 RPC_STATUS RPC_ENTRY HookedRpcStringFreeW(RPC_WSTR* string);
@@ -4670,6 +4756,9 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "ole32.dll", "CoUninitialize", reinterpret_cast<void*>(HookedCoUninitialize), reinterpret_cast<void**>(&g_originalCoUninitialize), false, true, false, 0, 0 },
         HookDefinition { "ole32.dll", "CoCreateGuid", reinterpret_cast<void*>(HookedCoCreateGuid), reinterpret_cast<void**>(&g_originalCoCreateGuid), false, true, false, 0, 0 },
         HookDefinition { "ole32.dll", "StringFromGUID2", reinterpret_cast<void*>(HookedStringFromGUID2), reinterpret_cast<void**>(&g_originalStringFromGUID2), false, true, false, 0, 0 },
+        HookDefinition { "api-ms-win-core-winrt-l1-1-0.dll", "RoInitialize", reinterpret_cast<void*>(HookedRoInitialize), reinterpret_cast<void**>(&g_originalRoInitialize), false, true, false, 0, 0 },
+        HookDefinition { "api-ms-win-core-winrt-l1-1-0.dll", "RoUninitialize", reinterpret_cast<void*>(HookedRoUninitialize), reinterpret_cast<void**>(&g_originalRoUninitialize), false, true, false, 0, 0 },
+        HookDefinition { "api-ms-win-core-winrt-l1-1-0.dll", "RoGetApartmentIdentifier", reinterpret_cast<void*>(HookedRoGetApartmentIdentifier), reinterpret_cast<void**>(&g_originalRoGetApartmentIdentifier), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringBindingComposeW", reinterpret_cast<void*>(HookedRpcStringBindingComposeW), reinterpret_cast<void**>(&g_originalRpcStringBindingComposeW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcBindingFromStringBindingW", reinterpret_cast<void*>(HookedRpcBindingFromStringBindingW), reinterpret_cast<void**>(&g_originalRpcBindingFromStringBindingW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringFreeW", reinterpret_cast<void*>(HookedRpcStringFreeW), reinterpret_cast<void**>(&g_originalRpcStringFreeW), false, true, false, 0, 0 },
@@ -6690,6 +6779,96 @@ int WINAPI HookedStringFromGUID2(REFGUID guid, LPOLESTR string, int cchMax)
     if (HooksEnabled())
     {
         EmitStringFromGUID2Event(result, 0, start, end, guid, string, cchMax);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HRESULT WINAPI HookedRoInitialize(RO_INIT_TYPE initType)
+{
+    if (g_inHook || !HooksEnabled() || g_originalRoInitialize == nullptr)
+    {
+        if (g_originalRoInitialize == nullptr)
+        {
+            return HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND);
+        }
+
+        return g_originalRoInitialize(initType);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const HRESULT result = g_originalRoInitialize(initType);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = FAILED(result) ? static_cast<DWORD>(result) : 0;
+    if (HooksEnabled())
+    {
+        EmitRoInitializeEvent(result, eventError, start, end, initType);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+void WINAPI HookedRoUninitialize()
+{
+    if (g_inHook || !HooksEnabled() || g_originalRoUninitialize == nullptr)
+    {
+        if (g_originalRoUninitialize == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return;
+        }
+
+        g_originalRoUninitialize();
+        return;
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    g_originalRoUninitialize();
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitRoUninitializeEvent(start, end);
+    }
+
+    SetLastError(lastError);
+}
+
+HRESULT WINAPI HookedRoGetApartmentIdentifier(UINT64* apartmentIdentifier)
+{
+    if (g_inHook || !HooksEnabled() || g_originalRoGetApartmentIdentifier == nullptr)
+    {
+        if (g_originalRoGetApartmentIdentifier == nullptr)
+        {
+            return HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND);
+        }
+
+        return g_originalRoGetApartmentIdentifier(apartmentIdentifier);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const HRESULT result = g_originalRoGetApartmentIdentifier(apartmentIdentifier);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = FAILED(result) ? static_cast<DWORD>(result) : 0;
+    if (HooksEnabled())
+    {
+        EmitRoGetApartmentIdentifierEvent(result, eventError, start, end, apartmentIdentifier);
     }
 
     SetLastError(lastError);
