@@ -6,6 +6,7 @@ export type TraceQueryField =
   | "process"
   | "pid"
   | "tid"
+  | "relativeTimeMs"
   | "tag"
   | "returnValue"
   | "error"
@@ -72,6 +73,7 @@ export const traceQueryFieldOptions: Array<TraceQueryOption<TraceQueryField>> = 
   { id: "process", label: "Process" },
   { id: "pid", label: "PID" },
   { id: "tid", label: "TID" },
+  { id: "relativeTimeMs", label: "Time" },
   { id: "tag", label: "Tag" },
   { id: "returnValue", label: "Return" },
   { id: "error", label: "Error" },
@@ -92,7 +94,7 @@ export const traceQueryOperatorOptions: Array<TraceQueryOption<TraceQueryOperato
 ];
 
 const valueLessOperators = new Set<TraceQueryOperator>(["exists", "missing"]);
-const numericFields = new Set<TraceQueryField>(["pid", "tid", "durationUs"]);
+const numericFields = new Set<TraceQueryField>(["pid", "tid", "relativeTimeMs", "durationUs"]);
 
 export function operatorNeedsValue(operator: TraceQueryOperator): boolean {
   return !valueLessOperators.has(operator);
@@ -144,6 +146,8 @@ function getStringValues(event: TraceEvent, field: TraceQueryField): string[] {
       return [String(event.pid)];
     case "tid":
       return [String(event.tid)];
+    case "relativeTimeMs":
+      return [String(event.relativeTimeMs)];
     case "tag":
       return event.tags;
     case "returnValue":
@@ -174,6 +178,8 @@ function getNumericValue(event: TraceEvent, field: TraceQueryField): number | nu
       return event.pid;
     case "tid":
       return event.tid;
+    case "relativeTimeMs":
+      return event.relativeTimeMs;
     case "durationUs":
       return event.durationUs;
     default:
@@ -187,7 +193,7 @@ function validateClause(clause: TraceQueryClause): string | null {
   }
 
   if ((clause.operator === "greater_than" || clause.operator === "less_than") && !isNumericTraceQueryField(clause.field)) {
-    return "numeric operator requires pid, tid, or duration";
+    return "numeric operator requires pid, tid, time, or duration";
   }
 
   if ((clause.operator === "greater_than" || clause.operator === "less_than") && !Number.isFinite(Number(clause.value))) {

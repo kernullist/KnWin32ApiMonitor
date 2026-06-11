@@ -3,6 +3,7 @@ import {
   Braces,
   ChevronRight,
   CircleDot,
+  Clock3,
   Cpu,
   Database,
   Download,
@@ -59,10 +60,12 @@ import {
   traceQueryOperatorOptions
 } from "./traceQuery";
 import type { TraceIssueGroup, TraceQueryClause, TraceQueryField, TraceQueryMatchMode, TraceQueryOperator } from "./traceQuery";
+import { buildTraceThreadGroups, buildTraceTimeline } from "./traceViews";
+import type { TraceThreadGroup, TraceTimelineBucket } from "./traceViews";
 import { computeVirtualTraceWindow } from "./virtualTrace";
 
 type LeftTab = "targets" | "apis" | "profiles";
-type TraceMode = "flat" | "call-tree" | "errors";
+type TraceMode = "flat" | "call-tree" | "errors" | "threads" | "timeline";
 type TargetSource = "mock" | "native";
 type ChildPolicy = ProcessTreeResult["childPolicy"];
 
@@ -479,6 +482,26 @@ function App() {
     appendOutput([makeAuditEvent("trace_issue_filter_applied", "trace_issue_view", `${group.kind}; ${group.label}; events=${group.count}`)]);
   }
 
+  function handleApplyThreadGroup(group: TraceThreadGroup) {
+    const nextClauses = group.clauses.map((clause) => createTraceQueryClause(clause));
+    setTraceQueryMatchMode("all");
+    setTraceQueryClauses(nextClauses);
+    setFilter("");
+    setSelectedEventId(group.eventIds[0] ?? 0);
+    setInspectorTab(group.errorCount > 0 ? "return" : "parameters");
+    appendOutput([makeAuditEvent("trace_thread_filter_applied", "trace_thread_view", `${group.threadLabel}; events=${group.eventCount}; spanMs=${group.spanMs}`)]);
+  }
+
+  function handleApplyTimelineBucket(bucket: TraceTimelineBucket) {
+    const nextClauses = bucket.clauses.map((clause) => createTraceQueryClause(clause));
+    setTraceQueryMatchMode("all");
+    setTraceQueryClauses(nextClauses);
+    setFilter("");
+    setSelectedEventId(bucket.eventIds[0] ?? 0);
+    setInspectorTab(bucket.errorCount > 0 ? "return" : "parameters");
+    appendOutput([makeAuditEvent("trace_timeline_filter_applied", "trace_timeline_view", `${formatElapsedMs(bucket.startRelativeTimeMs)}-${formatElapsedMs(bucket.endRelativeTimeMs)}; events=${bucket.eventCount}`)]);
+  }
+
   function applySessionCatalog(catalog: NativeSessionCatalog) {
     setSessionCatalog(catalog);
     setSelectedCatalogPath((current) => {
@@ -633,6 +656,22 @@ function App() {
   const visibleIssueGroups = useMemo(
     () => issueGroups.slice(0, 12),
     [issueGroups]
+  );
+  const threadGroups = useMemo(
+    () => buildTraceThreadGroups(events, durationThresholdUs),
+    [events, durationThresholdUs]
+  );
+  const visibleThreadGroups = useMemo(
+    () => threadGroups.slice(0, 16),
+    [threadGroups]
+  );
+  const timelineView = useMemo(
+    () => buildTraceTimeline(events, durationThresholdUs),
+    [events, durationThresholdUs]
+  );
+  const visibleTimelineBuckets = useMemo(
+    () => timelineView.buckets.slice(0, 48),
+    [timelineView]
   );
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
@@ -1653,6 +1692,14 @@ function App() {
                 <Filter size={14} />
                 <span>Errors</span>
               </button>
+              <button type="button" className={traceMode === "threads" ? "active" : ""} onClick={() => setTraceMode("threads")}>
+                <GitBranch size={14} />
+                <span>Threads</span>
+              </button>
+              <button type="button" className={traceMode === "timeline" ? "active" : ""} onClick={() => setTraceMode("timeline")}>
+                <Clock3 size={14} />
+                <span>Timeline</span>
+              </button>
             </div>
             <div className="trace-stats">
               <span>{filteredEvents.length}/{events.length} rows</span>
@@ -1711,7 +1758,7 @@ function App() {
                         ))}
                       </select>
                       <input
-                        type={clause.field === "pid" || clause.field === "tid" || clause.field === "durationUs" ? "number" : "text"}
+                        type={clause.field === "pid" || clause.field === "tid" || clause.field === "relativeTimeMs" || clause.field === "durationUs" ? "number" : "text"}
                         value={clause.value}
                         disabled={!needsValue}
                         onChange={(event) => handleUpdateTraceQueryClause(clause.id, { value: event.target.value })}
@@ -1760,6 +1807,101 @@ function App() {
                   </div>
                 ) : (
                   <div className="query-empty">No error, decode, or slow-call groups.</div>
+                )}
+              </div>
+            ) : null}
+            {traceMode === "threads" ? (
+              <div className="analysis-panel">
+                <div className="issue-toolbar">
+                  <div className="query-title">
+                    <GitBranch size={14} />
+                    <strong>Thread Groups</strong>
+                    <span>{threadGroups.length} groups; top {visibleThreadGroups.length}</span>
+                  </div>
+                  <label htmlFor="thread-duration-threshold">Slow us</label>
+                  <input
+                    id="thread-duration-threshold"
+                    type="number"
+                    min={1}
+                    max={60000000}
+                    value={durationThresholdUs}
+                    onChange={(event) => setDurationThresholdUs(Math.min(60000000, Math.max(1, Number.parseInt(event.target.value, 10) || 1)))}
+                  />
+                </div>
+                {visibleThreadGroups.length > 0 ? (
+                  <div className="thread-group-list">
+                    {visibleThreadGroups.map((group) => (
+                      <button
+                        type="button"
+                        className={[
+                          "analysis-group",
+                          "thread",
+                          group.errorCount > 0 ? "has-error" : "",
+                          group.decodeFailureCount > 0 ? "has-decode" : "",
+                          group.slowCallCount > 0 ? "has-slow" : ""
+                        ].filter(Boolean).join(" ")}
+                        key={group.id}
+                        onClick={() => handleApplyThreadGroup(group)}
+                      >
+                        <span>PID {group.pid}</span>
+                        <strong>{group.threadLabel}</strong>
+                        <em>{group.eventCount}</em>
+                        <small>{formatElapsedMs(group.firstRelativeTimeMs)}-{formatElapsedMs(group.lastRelativeTimeMs)} / span {formatElapsedMs(group.spanMs)}</small>
+                        <small>err={group.errorCount}; decode={group.decodeFailureCount}; slow={group.slowCallCount}</small>
+                        <small>api={group.topApis.map((item) => `${item.value}:${item.count}`).join(", ") || "n/a"}</small>
+                        <small>mod={group.topModules.map((item) => `${item.value}:${item.count}`).join(", ") || "n/a"}</small>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="query-empty">No thread groups.</div>
+                )}
+              </div>
+            ) : null}
+            {traceMode === "timeline" ? (
+              <div className="analysis-panel">
+                <div className="issue-toolbar">
+                  <div className="query-title">
+                    <Clock3 size={14} />
+                    <strong>Timeline Buckets</strong>
+                    <span>{timelineView.buckets.length} buckets; size {formatElapsedMs(timelineView.bucketSizeMs)}</span>
+                  </div>
+                  <label htmlFor="timeline-duration-threshold">Slow us</label>
+                  <input
+                    id="timeline-duration-threshold"
+                    type="number"
+                    min={1}
+                    max={60000000}
+                    value={durationThresholdUs}
+                    onChange={(event) => setDurationThresholdUs(Math.min(60000000, Math.max(1, Number.parseInt(event.target.value, 10) || 1)))}
+                  />
+                </div>
+                {visibleTimelineBuckets.length > 0 ? (
+                  <div className="timeline-bucket-list">
+                    {visibleTimelineBuckets.map((bucket) => (
+                      <button
+                        type="button"
+                        className={[
+                          "analysis-group",
+                          "timeline",
+                          bucket.errorCount > 0 ? "has-error" : "",
+                          bucket.decodeFailureCount > 0 ? "has-decode" : "",
+                          bucket.slowCallCount > 0 ? "has-slow" : ""
+                        ].filter(Boolean).join(" ")}
+                        key={bucket.id}
+                        onClick={() => handleApplyTimelineBucket(bucket)}
+                      >
+                        <span>{formatElapsedMs(bucket.startRelativeTimeMs)}</span>
+                        <strong>{formatElapsedMs(bucket.startRelativeTimeMs)}-{formatElapsedMs(bucket.endRelativeTimeMs)}</strong>
+                        <em>{bucket.eventCount}</em>
+                        <small>err={bucket.errorCount}; decode={bucket.decodeFailureCount}; slow={bucket.slowCallCount}</small>
+                        <small>api={bucket.dominantApi || "n/a"}; mod={bucket.dominantModule || "n/a"}</small>
+                        <small>{bucket.samples.map((sample) => `#${sample.eventId} ${sample.module}!${sample.api}`).join("; ")}</small>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="query-empty">No timeline buckets.</div>
                 )}
               </div>
             ) : null}

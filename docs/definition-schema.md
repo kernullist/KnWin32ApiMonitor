@@ -457,7 +457,7 @@ Validate collector fixtures and smoke output:
 npm run collector:validate
 ```
 
-`npm run verify` runs the UI build, UI trace virtualizer/query validators, definition validator, session fixture validator, and collector validator.
+`npm run verify` runs the UI build, UI trace virtualizer/query/view validators, definition validator, session fixture validator, and collector validator.
 
 ## Decode Hints
 

@@ -710,13 +710,22 @@ Current verified Phase 12B behavior:
 6. Full-session JSONL export still uses the complete current event array, not the query-filtered or visible virtual row subset.
 7. `tools/ui-validator/validate-trace-query.mjs` covers structured query matching, invalid-clause handling, free-text matching, and issue group construction and is included in `npm run ui:validate`.
 
+Current verified Phase 12C behavior:
+
+1. The React UI has `Threads` and `Timeline` trace modes beside `Flat`, `Call Tree`, and `Errors`.
+2. Thread groups are built UI-side from the current trace events by process, PID, and TID, with event counts, first/last relative time, span, error count, decode-failure count, slow-call count, top modules/APIs, and representative samples.
+3. Timeline buckets are built UI-side from deterministic relative-time bucket sizes, with event counts, error/decode/slow metrics, dominant API/module, and representative samples.
+4. Clicking a thread group or timeline bucket replaces the structured query clauses, clears the free-text filter, selects a representative event, and reuses the existing inspector/output state.
+5. Timeline narrowing uses the existing query engine with the added `relativeTimeMs` UI-side field; no helper, agent, transport, or `.knapm` schema changes are required.
+6. Summary panels keep bounded DOM rows while the main trace table remains virtualized and full-session JSONL export remains based on the complete event array.
+7. `tools/ui-validator/validate-trace-views.mjs` covers empty sessions, single-event sessions, multiple threads, error/decode/slow metrics, deterministic bucket sizing, and query clauses and is included in `npm run ui:validate`.
+
 Next implementation focus:
 
-1. Continue Phase 12 with thread and timeline views over the existing trace model, using the query/error UX as the selection and narrowing foundation.
-2. Add rule-based highlighting only after thread/timeline views have stable event grouping semantics.
-3. Keep database-backed catalog indexing behind a separate scale review after the JSON catalog and replay picker contract are stable.
-4. Keep automatic daemon crash recovery and orphaned active-agent repair behind a separate design review with explicit operator runbooks.
-5. Keep Windows service mode, protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
+1. Continue Phase 12 with rule-based highlighting now that query, error, thread, and timeline grouping semantics are stable.
+2. Keep database-backed catalog indexing behind a separate scale review after the JSON catalog and replay picker contract are stable.
+3. Keep automatic daemon crash recovery and orphaned active-agent repair behind a separate design review with explicit operator runbooks.
+4. Keep Windows service mode, protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 
 ## Phase 12: Advanced UX
 
