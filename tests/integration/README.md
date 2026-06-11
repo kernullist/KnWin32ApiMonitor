@@ -15,8 +15,9 @@ Current verification gates include:
 9. Loader-aware IAT sweep smoke through `tools\native-smoke\loader-aware-iat-sweep-smoke.ps1`.
 10. Dynamic-load re-hook smoke through `tools\native-smoke\dynamic-load-rehook-smoke.ps1`.
 11. Injection preflight negative smoke through `tools\native-smoke\injection-preflight-negative-smoke.ps1`.
-12. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
-13. Collector fixture and native smoke validation through `npm run collector:validate`.
+12. Wave 3 User32/GDI32 metadata smoke through `tools\native-smoke\wave3-user32-gdi32-smoke.ps1`.
+13. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
+14. Collector fixture and native smoke validation through `npm run collector:validate`.
 
 Run repeated lifecycle smoke:
 
@@ -74,6 +75,14 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\injection-preflight-
 
 The preflight smoke verifies that missing target, missing agent, and available architecture mismatch cases fail before remote mutation and include `preflight_failed` audit evidence.
 
+Run Wave 3 User32/GDI32 smoke:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave3-user32-gdi32-smoke.ps1
+```
+
+The Wave 3 smoke verifies selected User32/GDI32 low-payload metadata calls, generated UI/GDI labels, numeric handle/PID/TID/metric evidence, shared-memory transport mode, zero dropped events, clean hook restore, and no window text, pixel, clipboard, input, credential, or byte-preview payload evidence.
+
 Run optional Win32/x86 capture smoke:
 
 ```powershell
@@ -82,7 +91,7 @@ cmake --build build/native-win32 --config Debug
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-smoke.ps1
 ```
 
-The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, zero dropped events, and clean hook restore.
+The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence, selected User32/GDI32 evidence, zero dropped events, and clean hook restore.
 
 Run collector backpressure smoke:
 

@@ -116,6 +116,13 @@ using InternetOpenWFn = HINTERNET(WINAPI*)(LPCWSTR, DWORD, LPCWSTR, LPCWSTR, DWO
 using InternetCloseHandleFn = BOOL(WINAPI*)(HINTERNET);
 using WinHttpOpenFn = HINTERNET(WINAPI*)(LPCWSTR, DWORD, LPCWSTR, LPCWSTR, DWORD);
 using WinHttpCloseHandleFn = BOOL(WINAPI*)(HINTERNET);
+using GetSystemMetricsFn = int(WINAPI*)(int);
+using GetDesktopWindowFn = HWND(WINAPI*)();
+using GetForegroundWindowFn = HWND(WINAPI*)();
+using GetWindowThreadProcessIdFn = DWORD(WINAPI*)(HWND, LPDWORD);
+using CreateCompatibleDCFn = HDC(WINAPI*)(HDC);
+using GetDeviceCapsFn = int(WINAPI*)(HDC, int);
+using DeleteDCFn = BOOL(WINAPI*)(HDC);
 using RpcStringBindingComposeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR*);
 using RpcBindingFromStringBindingWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_BINDING_HANDLE*);
 using RpcStringFreeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR*);
@@ -184,6 +191,13 @@ InternetOpenWFn g_originalInternetOpenW = nullptr;
 InternetCloseHandleFn g_originalInternetCloseHandle = nullptr;
 WinHttpOpenFn g_originalWinHttpOpen = nullptr;
 WinHttpCloseHandleFn g_originalWinHttpCloseHandle = nullptr;
+GetSystemMetricsFn g_originalGetSystemMetrics = nullptr;
+GetDesktopWindowFn g_originalGetDesktopWindow = nullptr;
+GetForegroundWindowFn g_originalGetForegroundWindow = nullptr;
+GetWindowThreadProcessIdFn g_originalGetWindowThreadProcessId = nullptr;
+CreateCompatibleDCFn g_originalCreateCompatibleDC = nullptr;
+GetDeviceCapsFn g_originalGetDeviceCaps = nullptr;
+DeleteDCFn g_originalDeleteDC = nullptr;
 RpcStringBindingComposeWFn g_originalRpcStringBindingComposeW = nullptr;
 RpcBindingFromStringBindingWFn g_originalRpcBindingFromStringBindingW = nullptr;
 RpcStringFreeWFn g_originalRpcStringFreeW = nullptr;
@@ -277,7 +291,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 44;
+constexpr std::size_t HookDefinitionCount = 51;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1504,6 +1518,14 @@ std::uint16_t ModuleId(const char* moduleName)
     else if (_stricmp(moduleName, "winhttp.dll") == 0)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Winhttp);
+    }
+    else if (_stricmp(moduleName, "user32.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::User32);
+    }
+    else if (_stricmp(moduleName, "gdi32.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Gdi32);
     }
 
     return result;
@@ -2765,6 +2787,139 @@ void EmitWinHttpCloseHandleEvent(
     }
 }
 
+void EmitGetSystemMetricsEvent(
+    int result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    int index)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetSystemMetrics, "user32.dll", start, end, 0);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values32[0] = static_cast<std::uint32_t>(index);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetDesktopWindowEvent(
+    HWND result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetDesktopWindow, "user32.dll", start, end, 0);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetForegroundWindowEvent(
+    HWND result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetForegroundWindow, "user32.dll", start, end, 0);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetWindowThreadProcessIdEvent(
+    DWORD result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HWND window,
+    LPDWORD processId)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetWindowThreadProcessId, "user32.dll", start, end, 0);
+        record->ReturnValue = static_cast<std::uint64_t>(result);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(window));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(processId));
+        if (processId != nullptr)
+        {
+            record->Values32[0] = *processId;
+            record->Values32[1] = 1;
+        }
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitCreateCompatibleDCEvent(
+    HDC result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HDC dc)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::CreateCompatibleDC, "gdi32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(dc));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetDeviceCapsEvent(
+    int result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HDC dc,
+    int index)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetDeviceCaps, "gdi32.dll", start, end, 0);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(dc));
+        record->Values32[0] = static_cast<std::uint32_t>(index);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitDeleteDCEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HDC dc)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::DeleteDC, "gdi32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(dc));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 std::uint32_t CopyRpcWideStringText(char* destination, std::uint32_t* length, std::size_t capacity, RPC_WSTR source)
 {
     return CopyWidePointerText(destination, length, capacity, reinterpret_cast<const wchar_t*>(source));
@@ -3350,6 +3505,13 @@ HINTERNET WINAPI HookedInternetOpenW(LPCWSTR agent, DWORD accessType, LPCWSTR pr
 BOOL WINAPI HookedInternetCloseHandle(HINTERNET internet);
 HINTERNET WINAPI HookedWinHttpOpen(LPCWSTR agent, DWORD accessType, LPCWSTR proxy, LPCWSTR proxyBypass, DWORD flags);
 BOOL WINAPI HookedWinHttpCloseHandle(HINTERNET internet);
+int WINAPI HookedGetSystemMetrics(int index);
+HWND WINAPI HookedGetDesktopWindow();
+HWND WINAPI HookedGetForegroundWindow();
+DWORD WINAPI HookedGetWindowThreadProcessId(HWND window, LPDWORD processId);
+HDC WINAPI HookedCreateCompatibleDC(HDC dc);
+int WINAPI HookedGetDeviceCaps(HDC dc, int index);
+BOOL WINAPI HookedDeleteDC(HDC dc);
 RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR protSeq, RPC_WSTR networkAddr, RPC_WSTR endpoint, RPC_WSTR options, RPC_WSTR* stringBinding);
 RPC_STATUS RPC_ENTRY HookedRpcBindingFromStringBindingW(RPC_WSTR stringBinding, RPC_BINDING_HANDLE* binding);
 RPC_STATUS RPC_ENTRY HookedRpcStringFreeW(RPC_WSTR* string);
@@ -3401,6 +3563,13 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "wininet.dll", "InternetCloseHandle", reinterpret_cast<void*>(HookedInternetCloseHandle), reinterpret_cast<void**>(&g_originalInternetCloseHandle), false, true, false, 0, 0 },
         HookDefinition { "winhttp.dll", "WinHttpOpen", reinterpret_cast<void*>(HookedWinHttpOpen), reinterpret_cast<void**>(&g_originalWinHttpOpen), false, true, false, 0, 0 },
         HookDefinition { "winhttp.dll", "WinHttpCloseHandle", reinterpret_cast<void*>(HookedWinHttpCloseHandle), reinterpret_cast<void**>(&g_originalWinHttpCloseHandle), false, true, false, 0, 0 },
+        HookDefinition { "user32.dll", "GetSystemMetrics", reinterpret_cast<void*>(HookedGetSystemMetrics), reinterpret_cast<void**>(&g_originalGetSystemMetrics), false, true, false, 0, 0 },
+        HookDefinition { "user32.dll", "GetDesktopWindow", reinterpret_cast<void*>(HookedGetDesktopWindow), reinterpret_cast<void**>(&g_originalGetDesktopWindow), false, true, false, 0, 0 },
+        HookDefinition { "user32.dll", "GetForegroundWindow", reinterpret_cast<void*>(HookedGetForegroundWindow), reinterpret_cast<void**>(&g_originalGetForegroundWindow), false, true, false, 0, 0 },
+        HookDefinition { "user32.dll", "GetWindowThreadProcessId", reinterpret_cast<void*>(HookedGetWindowThreadProcessId), reinterpret_cast<void**>(&g_originalGetWindowThreadProcessId), false, true, false, 0, 0 },
+        HookDefinition { "gdi32.dll", "CreateCompatibleDC", reinterpret_cast<void*>(HookedCreateCompatibleDC), reinterpret_cast<void**>(&g_originalCreateCompatibleDC), false, true, false, 0, 0 },
+        HookDefinition { "gdi32.dll", "GetDeviceCaps", reinterpret_cast<void*>(HookedGetDeviceCaps), reinterpret_cast<void**>(&g_originalGetDeviceCaps), false, true, false, 0, 0 },
+        HookDefinition { "gdi32.dll", "DeleteDC", reinterpret_cast<void*>(HookedDeleteDC), reinterpret_cast<void**>(&g_originalDeleteDC), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringBindingComposeW", reinterpret_cast<void*>(HookedRpcStringBindingComposeW), reinterpret_cast<void**>(&g_originalRpcStringBindingComposeW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcBindingFromStringBindingW", reinterpret_cast<void*>(HookedRpcBindingFromStringBindingW), reinterpret_cast<void**>(&g_originalRpcBindingFromStringBindingW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringFreeW", reinterpret_cast<void*>(HookedRpcStringFreeW), reinterpret_cast<void**>(&g_originalRpcStringFreeW), false, true, false, 0, 0 },
@@ -4808,6 +4977,218 @@ BOOL WINAPI HookedWinHttpCloseHandle(HINTERNET internet)
     if (HooksEnabled())
     {
         EmitWinHttpCloseHandleEvent(result, eventError, start, end, internet);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+int WINAPI HookedGetSystemMetrics(int index)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetSystemMetrics == nullptr)
+    {
+        if (g_originalGetSystemMetrics == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return 0;
+        }
+
+        return g_originalGetSystemMetrics(index);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const int result = g_originalGetSystemMetrics(index);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitGetSystemMetricsEvent(result, start, end, index);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HWND WINAPI HookedGetDesktopWindow()
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetDesktopWindow == nullptr)
+    {
+        if (g_originalGetDesktopWindow == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalGetDesktopWindow();
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HWND result = g_originalGetDesktopWindow();
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitGetDesktopWindowEvent(result, start, end);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HWND WINAPI HookedGetForegroundWindow()
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetForegroundWindow == nullptr)
+    {
+        if (g_originalGetForegroundWindow == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalGetForegroundWindow();
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HWND result = g_originalGetForegroundWindow();
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitGetForegroundWindowEvent(result, start, end);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+DWORD WINAPI HookedGetWindowThreadProcessId(HWND window, LPDWORD processId)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetWindowThreadProcessId == nullptr)
+    {
+        if (g_originalGetWindowThreadProcessId == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return 0;
+        }
+
+        return g_originalGetWindowThreadProcessId(window, processId);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const DWORD result = g_originalGetWindowThreadProcessId(window, processId);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitGetWindowThreadProcessIdEvent(result, start, end, window, processId);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HDC WINAPI HookedCreateCompatibleDC(HDC dc)
+{
+    if (g_inHook || !HooksEnabled() || g_originalCreateCompatibleDC == nullptr)
+    {
+        if (g_originalCreateCompatibleDC == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalCreateCompatibleDC(dc);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HDC result = g_originalCreateCompatibleDC(dc);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitCreateCompatibleDCEvent(result, eventError, start, end, dc);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+int WINAPI HookedGetDeviceCaps(HDC dc, int index)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetDeviceCaps == nullptr)
+    {
+        if (g_originalGetDeviceCaps == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return 0;
+        }
+
+        return g_originalGetDeviceCaps(dc, index);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const int result = g_originalGetDeviceCaps(dc, index);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitGetDeviceCapsEvent(result, start, end, dc, index);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedDeleteDC(HDC dc)
+{
+    if (g_inHook || !HooksEnabled() || g_originalDeleteDC == nullptr)
+    {
+        if (g_originalDeleteDC == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalDeleteDC(dc);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalDeleteDC(dc);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FALSE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitDeleteDCEvent(result, eventError, start, end, dc);
     }
 
     SetLastError(lastError);

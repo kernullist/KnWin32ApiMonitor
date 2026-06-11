@@ -539,6 +539,48 @@
       "module": "winhttp.dll",
       "name": "WinHttpQueryHeaders",
       "symbol": "WinHttpQueryHeaders"
+    },
+    {
+      "id": 91,
+      "module": "user32.dll",
+      "name": "GetSystemMetrics",
+      "symbol": "GetSystemMetrics"
+    },
+    {
+      "id": 92,
+      "module": "user32.dll",
+      "name": "GetDesktopWindow",
+      "symbol": "GetDesktopWindow"
+    },
+    {
+      "id": 93,
+      "module": "user32.dll",
+      "name": "GetForegroundWindow",
+      "symbol": "GetForegroundWindow"
+    },
+    {
+      "id": 94,
+      "module": "user32.dll",
+      "name": "GetWindowThreadProcessId",
+      "symbol": "GetWindowThreadProcessId"
+    },
+    {
+      "id": 95,
+      "module": "gdi32.dll",
+      "name": "CreateCompatibleDC",
+      "symbol": "CreateCompatibleDC"
+    },
+    {
+      "id": 96,
+      "module": "gdi32.dll",
+      "name": "GetDeviceCaps",
+      "symbol": "GetDeviceCaps"
+    },
+    {
+      "id": 97,
+      "module": "gdi32.dll",
+      "name": "DeleteDC",
+      "symbol": "DeleteDC"
     }
   ],
   "modules": [
@@ -591,6 +633,16 @@
       "id": 10,
       "name": "winhttp.dll",
       "symbol": "Winhttp"
+    },
+    {
+      "id": 11,
+      "name": "user32.dll",
+      "symbol": "User32"
+    },
+    {
+      "id": 12,
+      "name": "gdi32.dll",
+      "symbol": "Gdi32"
     }
   ],
   "schemaVersion": "0.1.0",

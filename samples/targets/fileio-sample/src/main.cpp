@@ -7,6 +7,8 @@
 #include <winhttp.h>
 #include <wininet.h>
 #include <winternl.h>
+#include <winuser.h>
+#include <wingdi.h>
 
 #include <array>
 #include <cstring>
@@ -715,6 +717,59 @@ bool RunWinInetProbe()
     return success;
 }
 
+bool RunUserGdiProbe()
+{
+    bool success = false;
+    HDC compatibleDc = nullptr;
+
+    do
+    {
+        const int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+        const int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+        HWND desktopWindow = GetDesktopWindow();
+        HWND foregroundWindow = GetForegroundWindow();
+        HWND queryWindow = foregroundWindow != nullptr ? foregroundWindow : desktopWindow;
+        DWORD windowProcessId = 0;
+        const DWORD windowThreadId = GetWindowThreadProcessId(queryWindow, &windowProcessId);
+
+        compatibleDc = CreateCompatibleDC(nullptr);
+        if (compatibleDc == nullptr)
+        {
+            LogLastError("CreateCompatibleDC");
+            break;
+        }
+
+        const int planes = GetDeviceCaps(compatibleDc, PLANES);
+        const int bitsPerPixel = GetDeviceCaps(compatibleDc, BITSPIXEL);
+
+        if (!DeleteDC(compatibleDc))
+        {
+            LogLastError("DeleteDC");
+            break;
+        }
+
+        compatibleDc = nullptr;
+        std::cout << "user32/gdi32 metadata roundtrip metrics=" << screenWidth << "x" << screenHeight
+                  << " window_tid=" << windowThreadId
+                  << " window_pid=" << windowProcessId
+                  << " planes=" << planes
+                  << " bits_per_pixel=" << bitsPerPixel << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (compatibleDc != nullptr)
+    {
+        if (!DeleteDC(compatibleDc))
+        {
+            LogLastError("DeleteDC(cleanup)");
+            success = false;
+        }
+    }
+
+    return success;
+}
+
 bool RunWinsockProbe()
 {
     bool success = false;
@@ -1170,6 +1225,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunWinInetProbe())
+        {
+            break;
+        }
+
+        if (!RunUserGdiProbe())
         {
             break;
         }

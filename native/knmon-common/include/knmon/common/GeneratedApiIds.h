@@ -97,6 +97,13 @@ enum class KnMonTransportApiId : std::uint16_t
     WinHttpWriteData = 88,
     WinHttpSetOption = 89,
     WinHttpQueryHeaders = 90,
+    GetSystemMetrics = 91,
+    GetDesktopWindow = 92,
+    GetForegroundWindow = 93,
+    GetWindowThreadProcessId = 94,
+    CreateCompatibleDC = 95,
+    GetDeviceCaps = 96,
+    DeleteDC = 97,
 };
 
 enum class KnMonTransportModuleId : std::uint16_t
@@ -112,5 +119,7 @@ enum class KnMonTransportModuleId : std::uint16_t
     Ws2_32 = 8,
     Wininet = 9,
     Winhttp = 10,
+    User32 = 11,
+    Gdi32 = 12,
 };
 }

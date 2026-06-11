@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "gdi32",
+  "description": "Wave 3 low-payload GDI32 metadata hooks for device-context lifecycle and numeric capability queries.",
+  "apis": [
+    {
+      "module": "GDI32.dll",
+      "name": "CreateCompatibleDC",
+      "family": "gdi",
+      "category": "gdi_dc_create",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HDC",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "hdc", "type": "HDC", "direction": "in", "decode": "hdc_handle", "nullable": true }
+      ]
+    },
+    {
+      "module": "GDI32.dll",
+      "name": "GetDeviceCaps",
+      "family": "gdi",
+      "category": "gdi_device_cap_query",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "int",
+      "errorSource": "none",
+      "success": { "always": true },
+      "failure": {},
+      "parameters": [
+        { "name": "hdc", "type": "HDC", "direction": "in", "decode": "hdc_handle" },
+        { "name": "index", "type": "int", "direction": "in", "decode": "device_cap_index" }
+      ]
+    },
+    {
+      "module": "GDI32.dll",
+      "name": "DeleteDC",
+      "family": "gdi",
+      "category": "gdi_dc_delete",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "FALSE" },
+      "failure": { "returnEqual": "FALSE" },
+      "parameters": [
+        { "name": "hdc", "type": "HDC", "direction": "in", "decode": "hdc_handle" }
+      ]
+    }
+  ]
+}

@@ -34,6 +34,13 @@ $requiredApis = @(
     "InternetCloseHandle",
     "WinHttpOpen",
     "WinHttpCloseHandle",
+    "GetSystemMetrics",
+    "GetDesktopWindow",
+    "GetForegroundWindow",
+    "GetWindowThreadProcessId",
+    "CreateCompatibleDC",
+    "GetDeviceCaps",
+    "DeleteDC",
     "RpcStringBindingComposeW",
     "RpcBindingFromStringBindingW",
     "RpcStringFreeW",
@@ -404,6 +411,72 @@ $winInetArgs = @($result.capturedEvents | Where-Object { $_.module -eq "wininet.
 if ($winInetArgs -cmatch "https?://|Authorization|Cookie|Set-Cookie|POST|GET /|BEGIN CERTIFICATE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 WinINet events appear to expose URL/header/body/credential or byte-preview evidence: $winInetArgs"
+}
+
+$uiEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "ui" })
+if ($uiEvents.Count -lt 4)
+{
+    throw "x86 capture did not include the selected User32 API family slice."
+}
+
+$systemMetric = @($uiEvents | Where-Object { $_.api -eq "GetSystemMetrics" } | Select-Object -First 1)
+if ($systemMetric.Count -ne 1 -or $systemMetric[0].module -ne "user32.dll" -or $systemMetric[0].hookPolicy -ne "iat" -or $systemMetric[0].coverageStatus -ne "smoke_verified")
+{
+    throw "x86 GetSystemMetrics metadata mismatch."
+}
+
+$metricArg = @($systemMetric[0].arguments | Where-Object { $_.name -eq "nIndex" } | Select-Object -First 1)
+if ($metricArg.Count -ne 1 -or $metricArg[0].decodeAlias -ne "system_metric_index" -or $metricArg[0].decodedValue -notmatch "^-?[0-9]+$")
+{
+    throw "x86 GetSystemMetrics nIndex evidence mismatch: $($systemMetric[0] | ConvertTo-Json -Depth 8)"
+}
+
+$windowThread = @($uiEvents | Where-Object { $_.api -eq "GetWindowThreadProcessId" } | Select-Object -First 1)
+if ($windowThread.Count -ne 1 -or $windowThread[0].module -ne "user32.dll" -or $windowThread[0].apiCategory -ne "window_thread_process_query")
+{
+    throw "x86 GetWindowThreadProcessId metadata mismatch."
+}
+
+$windowThreadArgs = ($windowThread[0].arguments | ConvertTo-Json -Depth 8)
+if ($windowThreadArgs -notmatch "hwnd_handle" -or $windowThreadArgs -notmatch "dword_pointer")
+{
+    throw "x86 GetWindowThreadProcessId arguments did not include HWND/PID evidence: $windowThreadArgs"
+}
+
+$gdiEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "gdi" })
+if ($gdiEvents.Count -lt 3)
+{
+    throw "x86 capture did not include the selected GDI32 API family slice."
+}
+
+$createDc = @($gdiEvents | Where-Object { $_.api -eq "CreateCompatibleDC" } | Select-Object -First 1)
+if ($createDc.Count -ne 1 -or $createDc[0].module -ne "gdi32.dll" -or $createDc[0].hookPolicy -ne "iat" -or $createDc[0].coverageStatus -ne "smoke_verified" -or $createDc[0].returnValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 CreateCompatibleDC metadata or handle evidence mismatch."
+}
+
+$deviceCaps = @($gdiEvents | Where-Object { $_.api -eq "GetDeviceCaps" } | Select-Object -First 1)
+if ($deviceCaps.Count -ne 1 -or $deviceCaps[0].apiCategory -ne "gdi_device_cap_query")
+{
+    throw "x86 GetDeviceCaps metadata mismatch."
+}
+
+$deviceArgs = ($deviceCaps[0].arguments | ConvertTo-Json -Depth 8)
+if ($deviceArgs -notmatch "hdc_handle" -or $deviceArgs -notmatch "device_cap_index")
+{
+    throw "x86 GetDeviceCaps arguments did not include HDC/index evidence: $deviceArgs"
+}
+
+$deleteDc = @($gdiEvents | Where-Object { $_.api -eq "DeleteDC" } | Select-Object -First 1)
+if ($deleteDc.Count -ne 1 -or $deleteDc[0].returnValue -ne "1")
+{
+    throw "x86 DeleteDC did not report a successful handle close."
+}
+
+$uiGdiArgs = @($result.capturedEvents | Where-Object { $_.module -in @("user32.dll", "gdi32.dll") } | ForEach-Object { $_.arguments } | ConvertTo-Json -Depth 8)
+if ($uiGdiArgs -cmatch "GetWindowText|WM_GETTEXT|Clipboard|CF_|Screenshot|ScreenCapture|DIB|Bitmap|Keyboard|Mouse|Password|Credential|Authorization|Cookie|BEGIN CERTIFICATE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 UI/GDI events appear to expose text, pixel, clipboard, input, credential, or byte-preview evidence: $uiGdiArgs"
 }
 
 $rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })

@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "user32",
+  "description": "Wave 3 low-payload User32 metadata hooks for system metrics and window handle/thread-process context.",
+  "apis": [
+    {
+      "module": "USER32.dll",
+      "name": "GetSystemMetrics",
+      "family": "ui",
+      "category": "user_system_metric",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "int",
+      "errorSource": "none",
+      "success": { "always": true },
+      "failure": {},
+      "parameters": [
+        { "name": "nIndex", "type": "int", "direction": "in", "decode": "system_metric_index" }
+      ]
+    },
+    {
+      "module": "USER32.dll",
+      "name": "GetDesktopWindow",
+      "family": "ui",
+      "category": "window_handle_query",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HWND",
+      "errorSource": "none",
+      "success": { "always": true },
+      "failure": {},
+      "parameters": []
+    },
+    {
+      "module": "USER32.dll",
+      "name": "GetForegroundWindow",
+      "family": "ui",
+      "category": "window_handle_query",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HWND",
+      "errorSource": "none",
+      "success": { "always": true },
+      "failure": {},
+      "parameters": []
+    },
+    {
+      "module": "USER32.dll",
+      "name": "GetWindowThreadProcessId",
+      "family": "ui",
+      "category": "window_thread_process_query",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "DWORD",
+      "errorSource": "none",
+      "success": { "always": true },
+      "failure": {},
+      "parameters": [
+        { "name": "hWnd", "type": "HWND", "direction": "in", "decode": "hwnd_handle" },
+        { "name": "lpdwProcessId", "type": "LPDWORD", "direction": "out", "decode": "dword_pointer", "nullable": true, "captureTiming": "post" }
+      ]
+    }
+  ]
+}

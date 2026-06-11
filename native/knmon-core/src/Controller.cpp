@@ -2527,6 +2527,39 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "HINTERNET", "hInternet", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture));
         payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
         break;
+    case KnMonTransportApiId::GetSystemMetrics:
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "int", "nIndex", "in", SignedIntValue32(record.Values32[0]), SignedIntValue32(record.Values32[0]), SignedIntValue32(record.Values32[0]));
+        payload = ApiCallPayload(result, record, SignedIntValue(record.ReturnValue), args.str(), "");
+        break;
+    case KnMonTransportApiId::GetDesktopWindow:
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    case KnMonTransportApiId::GetForegroundWindow:
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    case KnMonTransportApiId::GetWindowThreadProcessId:
+    {
+        const std::string window = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string processIdPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string processIdValue = record.Values32[1] == 0 ? processIdPointer : std::to_string(record.Values32[0]);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HWND", "hWnd", "in", window, window, window) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPDWORD", "lpdwProcessId", "out", processIdPointer, processIdValue, processIdValue);
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::CreateCompatibleDC:
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HDC", "hdc", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture));
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    case KnMonTransportApiId::GetDeviceCaps:
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HDC", "hdc", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture)) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "int", "index", "in", SignedIntValue32(record.Values32[0]), SignedIntValue32(record.Values32[0]), SignedIntValue32(record.Values32[0]));
+        payload = ApiCallPayload(result, record, SignedIntValue(record.ReturnValue), args.str(), "");
+        break;
+    case KnMonTransportApiId::DeleteDC:
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HDC", "hdc", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture));
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
     case KnMonTransportApiId::RpcStringBindingComposeW:
     {
         const std::string objUuidPointer = HexPointerValue(record.Values64[0], result.Architecture);

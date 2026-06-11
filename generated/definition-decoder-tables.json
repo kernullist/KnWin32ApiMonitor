@@ -2155,6 +2155,164 @@
         "returnNotEqual": "FALSE"
       },
       "symbol": "WinHttpQueryHeaders"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "user_system_metric",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "none",
+      "failure": {},
+      "family": "ui",
+      "firstParameterIndex": 381,
+      "hookPolicy": "iat",
+      "id": 91,
+      "module": "user32.dll",
+      "moduleId": 11,
+      "name": "GetSystemMetrics",
+      "parameterCount": 1,
+      "returnType": "int",
+      "risk": "low",
+      "source": "definitions/win32/user32.json",
+      "success": {
+        "always": true
+      },
+      "symbol": "GetSystemMetrics"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "window_handle_query",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "none",
+      "failure": {},
+      "family": "ui",
+      "firstParameterIndex": 382,
+      "hookPolicy": "iat",
+      "id": 92,
+      "module": "user32.dll",
+      "moduleId": 11,
+      "name": "GetDesktopWindow",
+      "parameterCount": 0,
+      "returnType": "HWND",
+      "risk": "low",
+      "source": "definitions/win32/user32.json",
+      "success": {
+        "always": true
+      },
+      "symbol": "GetDesktopWindow"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "window_handle_query",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "none",
+      "failure": {},
+      "family": "ui",
+      "firstParameterIndex": 382,
+      "hookPolicy": "iat",
+      "id": 93,
+      "module": "user32.dll",
+      "moduleId": 11,
+      "name": "GetForegroundWindow",
+      "parameterCount": 0,
+      "returnType": "HWND",
+      "risk": "low",
+      "source": "definitions/win32/user32.json",
+      "success": {
+        "always": true
+      },
+      "symbol": "GetForegroundWindow"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "window_thread_process_query",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "none",
+      "failure": {},
+      "family": "ui",
+      "firstParameterIndex": 382,
+      "hookPolicy": "iat",
+      "id": 94,
+      "module": "user32.dll",
+      "moduleId": 11,
+      "name": "GetWindowThreadProcessId",
+      "parameterCount": 2,
+      "returnType": "DWORD",
+      "risk": "low",
+      "source": "definitions/win32/user32.json",
+      "success": {
+        "always": true
+      },
+      "symbol": "GetWindowThreadProcessId"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "gdi_dc_create",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "GetLastError",
+      "failure": {
+        "returnEqual": "NULL"
+      },
+      "family": "gdi",
+      "firstParameterIndex": 384,
+      "hookPolicy": "iat",
+      "id": 95,
+      "module": "gdi32.dll",
+      "moduleId": 12,
+      "name": "CreateCompatibleDC",
+      "parameterCount": 1,
+      "returnType": "HDC",
+      "risk": "low",
+      "source": "definitions/win32/gdi32.json",
+      "success": {
+        "returnNotEqual": "NULL"
+      },
+      "symbol": "CreateCompatibleDC"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "gdi_device_cap_query",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "none",
+      "failure": {},
+      "family": "gdi",
+      "firstParameterIndex": 385,
+      "hookPolicy": "iat",
+      "id": 96,
+      "module": "gdi32.dll",
+      "moduleId": 12,
+      "name": "GetDeviceCaps",
+      "parameterCount": 2,
+      "returnType": "int",
+      "risk": "low",
+      "source": "definitions/win32/gdi32.json",
+      "success": {
+        "always": true
+      },
+      "symbol": "GetDeviceCaps"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "gdi_dc_delete",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "GetLastError",
+      "failure": {
+        "returnEqual": "FALSE"
+      },
+      "family": "gdi",
+      "firstParameterIndex": 387,
+      "hookPolicy": "iat",
+      "id": 97,
+      "module": "gdi32.dll",
+      "moduleId": 12,
+      "name": "DeleteDC",
+      "parameterCount": 1,
+      "returnType": "BOOL",
+      "risk": "low",
+      "source": "definitions/win32/gdi32.json",
+      "success": {
+        "returnNotEqual": "FALSE"
+      },
+      "symbol": "DeleteDC"
     }
   ],
   "decodeAliases": [
@@ -2260,6 +2418,15 @@
     {
       "enum": "",
       "flags": "",
+      "kind": "count",
+      "maxPreviewBytes": 0,
+      "name": "device_cap_index",
+      "preview": "decimal",
+      "readsTargetMemory": false
+    },
+    {
+      "enum": "",
+      "flags": "",
       "kind": "pointer",
       "maxPreviewBytes": 4,
       "name": "dword_pointer",
@@ -2328,6 +2495,24 @@
       "name": "handle_pointer",
       "preview": "handle_pointer",
       "readsTargetMemory": true
+    },
+    {
+      "enum": "",
+      "flags": "",
+      "kind": "handle",
+      "maxPreviewBytes": 0,
+      "name": "hdc_handle",
+      "preview": "hdc_handle",
+      "readsTargetMemory": false
+    },
+    {
+      "enum": "",
+      "flags": "",
+      "kind": "handle",
+      "maxPreviewBytes": 0,
+      "name": "hwnd_handle",
+      "preview": "hwnd_handle",
+      "readsTargetMemory": false
     },
     {
       "enum": "",
@@ -2512,6 +2697,15 @@
     {
       "enum": "",
       "flags": "",
+      "kind": "count",
+      "maxPreviewBytes": 0,
+      "name": "system_metric_index",
+      "preview": "decimal",
+      "readsTargetMemory": false
+    },
+    {
+      "enum": "",
+      "flags": "",
       "kind": "object",
       "maxPreviewBytes": 512,
       "name": "token_privileges",
@@ -2614,6 +2808,16 @@
       "id": 10,
       "name": "winhttp.dll",
       "symbol": "Winhttp"
+    },
+    {
+      "id": 11,
+      "name": "user32.dll",
+      "symbol": "User32"
+    },
+    {
+      "id": 12,
+      "name": "gdi32.dll",
+      "symbol": "Gdi32"
     }
   ],
   "parameters": [
@@ -9093,6 +9297,125 @@
       "name": "lpdwIndex",
       "nullable": true,
       "type": "LPDWORD"
+    },
+    {
+      "absoluteIndex": 381,
+      "apiId": 91,
+      "captureTiming": "pre",
+      "decode": "system_metric_index",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "nIndex",
+      "nullable": false,
+      "type": "int"
+    },
+    {
+      "absoluteIndex": 382,
+      "apiId": 94,
+      "captureTiming": "pre",
+      "decode": "hwnd_handle",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "hWnd",
+      "nullable": false,
+      "type": "HWND"
+    },
+    {
+      "absoluteIndex": 383,
+      "apiId": 94,
+      "captureTiming": "post",
+      "decode": "dword_pointer",
+      "direction": "out",
+      "enum": "",
+      "flags": "",
+      "index": 1,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 4,
+      "name": "lpdwProcessId",
+      "nullable": true,
+      "type": "LPDWORD"
+    },
+    {
+      "absoluteIndex": 384,
+      "apiId": 95,
+      "captureTiming": "pre",
+      "decode": "hdc_handle",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "hdc",
+      "nullable": true,
+      "type": "HDC"
+    },
+    {
+      "absoluteIndex": 385,
+      "apiId": 96,
+      "captureTiming": "pre",
+      "decode": "hdc_handle",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "hdc",
+      "nullable": false,
+      "type": "HDC"
+    },
+    {
+      "absoluteIndex": 386,
+      "apiId": 96,
+      "captureTiming": "pre",
+      "decode": "device_cap_index",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 1,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "index",
+      "nullable": false,
+      "type": "int"
+    },
+    {
+      "absoluteIndex": 387,
+      "apiId": 97,
+      "captureTiming": "pre",
+      "decode": "hdc_handle",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "hdc",
+      "nullable": false,
+      "type": "HDC"
     }
   ],
   "schemaVersion": "0.1.0",
@@ -9102,9 +9425,11 @@
       "definitions/win32/bcrypt.json",
       "definitions/win32/crypt32.json",
       "definitions/win32/file-io.json",
+      "definitions/win32/gdi32.json",
       "definitions/win32/loader.json",
       "definitions/win32/resolver.json",
       "definitions/win32/rpcrt4.json",
+      "definitions/win32/user32.json",
       "definitions/win32/winhttp.json",
       "definitions/win32/wininet.json",
       "definitions/win32/ws2_32.json"

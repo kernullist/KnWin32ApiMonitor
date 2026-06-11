@@ -22,9 +22,11 @@ definitions/
   win32/bcrypt.json
   win32/crypt32.json
   win32/file-io.json
+  win32/gdi32.json
   win32/loader.json
   win32/rpcrt4.json
   win32/resolver.json
+  win32/user32.json
   win32/winhttp.json
   win32/wininet.json
   win32/ws2_32.json
@@ -171,7 +173,7 @@ Decode aliases are centralized in `definitions/metadata/decode-aliases.json`. Ea
 
 Enum values live in `definitions/metadata/enums.json`; flag values live in `definitions/metadata/flags.json`. Numeric values may be decimal or hex strings and are normalized by tooling for validation/reporting.
 
-Current File I/O decode metadata covers file access masks, file share masks, CreateFile creation disposition, NT file disposition, File flags/attributes, NT create options, and LoadLibrary flags. Wave 2 metadata also registers generic aliases for registry handles and value buffers, access masks, CNG handles, certificate contexts, RPC bindings, socket handles, internet handles, sockaddr/addrinfo objects, token privileges, service status records, and pointer buffers used by controller-side decoders.
+Current File I/O decode metadata covers file access masks, file share masks, CreateFile creation disposition, NT file disposition, File flags/attributes, NT create options, and LoadLibrary flags. Wave 2 metadata also registers generic aliases for registry handles and value buffers, access masks, CNG handles, certificate contexts, RPC bindings, socket handles, internet handles, sockaddr/addrinfo objects, token privileges, service status records, and pointer buffers used by controller-side decoders. Phase 13B adds low-payload HWND/HDC handle aliases and integer system-metric/device-capability index aliases.
 
 ## Stable Transport IDs
 
@@ -188,7 +190,8 @@ Existing transport IDs are preserved:
 2. Loader API IDs `7` through `11`.
 3. Resolver API IDs `12` through `13`.
 4. Wave 2 API IDs `14` through `90`, with selected registry, token query/privilege lookup, bcrypt CNG provider/RNG, crypt32 certificate-store/message-handle, RPCRT4 binding, Winsock, WinHTTP session, and WinINet session IDs promoted from definition-only to smoke-verified IAT coverage.
-5. Module IDs:
+5. Phase 13B Wave 3 API IDs `91` through `97`, with selected User32 system/window metadata and GDI32 DC metadata APIs promoted directly to smoke-verified IAT coverage.
+6. Module IDs:
    - `kernel32.dll = 1`
    - `ntdll.dll = 2`
    - `kernelbase.dll = 3`
@@ -199,12 +202,14 @@ Existing transport IDs are preserved:
    - `ws2_32.dll = 8`
    - `wininet.dll = 9`
    - `winhttp.dll = 10`
+   - `user32.dll = 11`
+   - `gdi32.dll = 12`
 
 The native agent and controller use generated compile-time enum constants through `GeneratedApiIds.h`. The controller also uses `GeneratedApiMetadata.h` for API/module names, API family/category/risk labels, argument names/types/directions, decode aliases, and capture timing. Target hook fast paths still do not parse definitions or metadata.
 
 `generated/definition-decoder-tables.json` is the deterministic JSON view for tooling. It contains module rows, API rows, flattened parameter rows, decode alias rows, and source file lists without wall-clock timestamps or local machine paths.
 
-## File I/O, Loader, Resolver, And Wave 2 Metadata Coverage
+## File I/O, Loader, Resolver, And Wave 2/3 Metadata Coverage
 
 The first validator requires definitions for:
 
@@ -252,11 +257,18 @@ Wave 2 metadata adds 77 APIs across:
 
 The live Wave 2 slices are limited to smoke-verified `advapi32.dll` registry, selected `advapi32.dll` token query/privilege lookup, `bcrypt.dll` CNG provider/RNG, `crypt32.dll` certificate-store/message-handle, `rpcrt4.dll` local RPC binding, `ws2_32.dll` bootstrap/address-resolution, `winhttp.dll` session-handle, and `wininet.dll` session-handle IAT hooks. The selected registry APIs are `RegOpenKeyExW`, `RegCreateKeyExW`, `RegQueryValueExW`, `RegSetValueExW`, `RegDeleteValueW`, and `RegCloseKey`. The selected token query APIs are `OpenProcessToken` and `LookupPrivilegeValueW`. The selected bcrypt APIs are `BCryptOpenAlgorithmProvider`, `BCryptCloseAlgorithmProvider`, `BCryptGetProperty`, and `BCryptGenRandom`. The selected crypt32 APIs are `CertOpenStore`, `CertCloseStore`, `CryptMsgOpenToDecode`, and `CryptMsgClose`. The selected RPCRT4 APIs are `RpcStringBindingComposeW`, `RpcBindingFromStringBindingW`, `RpcStringFreeW`, and `RpcBindingFree`. The selected Winsock APIs are `WSAStartup`, `WSACleanup`, `socket`, `closesocket`, `getaddrinfo`, `freeaddrinfo`, and `WSAGetLastError`. The selected WinHTTP APIs are `WinHttpOpen` and `WinHttpCloseHandle`. The selected WinINet APIs are `InternetOpenW` and `InternetCloseHandle`. All other Wave 2 APIs remain `definition_only`.
 
-The current definition coverage report totals 90 APIs:
+Phase 13B adds seven smoke-verified Wave 3 APIs across:
+
+1. `user32.dll`: `GetSystemMetrics`, `GetDesktopWindow`, `GetForegroundWindow`, and `GetWindowThreadProcessId`.
+2. `gdi32.dll`: `CreateCompatibleDC`, `GetDeviceCaps`, and `DeleteDC`.
+
+These records capture only metric/capability indexes and results, HWND/HDC handle values, and window thread/process numeric evidence. They do not capture window text, screenshots, pixels, bitmaps/DIBs, clipboard, keyboard/mouse input, message hooks, credentials, or arbitrary payload previews.
+
+The current definition coverage report totals 97 APIs:
 
 1. `definition_only`: 46
 2. `hooked`: 4
-3. `smoke_verified`: 40
+3. `smoke_verified`: 47
 
 `NtCreateFile` is captured as a controlled `ntdll.dll` IAT hook in the repository sample target. The native event keeps `returnValue` as the NTSTATUS hex string. For compatibility with the existing trace error model, `lastErrorCode` remains `0` on NT success and a mapped Win32 error on NT failure.
 
@@ -437,7 +449,7 @@ npm run defs:decoder-tables
 npm run defs:coverage
 ```
 
-`defs:decoder-tables` verifies the generated decoder metadata artifact covers API IDs `1` through `90`, parameter rows, decode alias rows, and length-source resolution.
+`defs:decoder-tables` verifies the generated decoder metadata artifact covers API IDs `1` through `97`, parameter rows, decode alias rows, and length-source resolution.
 
 `defs:coverage` prints a deterministic Markdown report grouped by module, family, risk, hook policy, coverage status, and decode quality. The report explicitly separates:
 
