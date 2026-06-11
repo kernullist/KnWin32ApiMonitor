@@ -104,6 +104,59 @@
       ]
     },
     {
+      "name": "memory_allocation_type",
+      "values": [
+        { "name": "MEM_COMMIT", "value": "0x00001000" },
+        { "name": "MEM_RESERVE", "value": "0x00002000" },
+        { "name": "MEM_RESET", "value": "0x00080000" },
+        { "name": "MEM_TOP_DOWN", "value": "0x00100000" },
+        { "name": "MEM_WRITE_WATCH", "value": "0x00200000" },
+        { "name": "MEM_PHYSICAL", "value": "0x00400000" },
+        { "name": "MEM_RESET_UNDO", "value": "0x01000000" },
+        { "name": "MEM_LARGE_PAGES", "value": "0x20000000" }
+      ]
+    },
+    {
+      "name": "memory_free_type",
+      "values": [
+        { "name": "MEM_DECOMMIT", "value": "0x00004000" },
+        { "name": "MEM_RELEASE", "value": "0x00008000" }
+      ]
+    },
+    {
+      "name": "memory_protection_flags",
+      "values": [
+        { "name": "PAGE_NOACCESS", "value": "0x00000001" },
+        { "name": "PAGE_READONLY", "value": "0x00000002" },
+        { "name": "PAGE_READWRITE", "value": "0x00000004" },
+        { "name": "PAGE_WRITECOPY", "value": "0x00000008" },
+        { "name": "PAGE_EXECUTE", "value": "0x00000010" },
+        { "name": "PAGE_EXECUTE_READ", "value": "0x00000020" },
+        { "name": "PAGE_EXECUTE_READWRITE", "value": "0x00000040" },
+        { "name": "PAGE_EXECUTE_WRITECOPY", "value": "0x00000080" },
+        { "name": "PAGE_GUARD", "value": "0x00000100" },
+        { "name": "PAGE_NOCACHE", "value": "0x00000200" },
+        { "name": "PAGE_WRITECOMBINE", "value": "0x00000400" },
+        { "name": "PAGE_TARGETS_INVALID", "value": "0x40000000" }
+      ]
+    },
+    {
+      "name": "memory_state_flags",
+      "values": [
+        { "name": "MEM_COMMIT", "value": "0x00001000" },
+        { "name": "MEM_RESERVE", "value": "0x00002000" },
+        { "name": "MEM_FREE", "value": "0x00010000" }
+      ]
+    },
+    {
+      "name": "memory_type_flags",
+      "values": [
+        { "name": "MEM_PRIVATE", "value": "0x00020000" },
+        { "name": "MEM_MAPPED", "value": "0x00040000" },
+        { "name": "MEM_IMAGE", "value": "0x01000000" }
+      ]
+    },
+    {
       "name": "com_init_flags",
       "values": [
         { "name": "COINIT_MULTITHREADED", "value": "0x00000000" },

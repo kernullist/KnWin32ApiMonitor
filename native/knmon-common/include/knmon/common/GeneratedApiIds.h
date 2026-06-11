@@ -122,6 +122,10 @@ enum class KnMonTransportApiId : std::uint16_t
     RoInitialize = 113,
     RoUninitialize = 114,
     RoGetApartmentIdentifier = 115,
+    VirtualAlloc = 116,
+    VirtualFree = 117,
+    VirtualProtect = 118,
+    VirtualQuery = 119,
 };
 
 enum class KnMonTransportModuleId : std::uint16_t

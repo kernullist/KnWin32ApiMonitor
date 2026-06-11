@@ -22,8 +22,9 @@ Current verification gates include:
 16. Wave 3 OLE32 COM lifecycle smoke through `tools\native-smoke\wave3-ole32-com-lifecycle-smoke.ps1`.
 17. Wave 3 RPCRT4 UUID helper smoke through `tools\native-smoke\wave3-rpcrt4-uuid-helper-smoke.ps1`.
 18. Wave 3 COMBASE-backed WinRT lifecycle smoke through `tools\native-smoke\wave3-combase-winrt-lifecycle-smoke.ps1`.
-19. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
-20. Collector fixture and native smoke validation through `npm run collector:validate`.
+19. Wave 3 KERNEL32 memory protection smoke through `tools\native-smoke\wave3-kernel32-memory-protection-smoke.ps1`.
+20. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
+21. Collector fixture and native smoke validation through `npm run collector:validate`.
 
 Run repeated lifecycle smoke:
 
@@ -137,6 +138,14 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave3-combase-winrt-
 
 The COMBASE-backed WinRT lifecycle smoke verifies selected `RoInitialize`, `RoUninitialize`, and `RoGetApartmentIdentifier` calls through the observed `api-ms-win-core-winrt-l1-1-0.dll` provider, generated COM metadata, stable API IDs `113` through `115`, init type/HRESULT/void/apartment-id evidence, shared-memory transport mode, zero dropped events, clean hook restore, and no activation, HSTRING, runtime-class, restricted-error-info, COM object, marshaling, user-path, credential, or byte-preview payload evidence.
 
+Run Wave 3 KERNEL32 memory protection smoke:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave3-kernel32-memory-protection-smoke.ps1
+```
+
+The KERNEL32 memory protection smoke verifies selected `VirtualAlloc`, `VirtualFree`, `VirtualProtect`, and `VirtualQuery` calls, generated memory metadata, stable API IDs `116` through `119`, allocation/free/protection/state/type flag decoding, decoded `MEMORY_BASIC_INFORMATION` metadata, shared-memory transport mode, zero dropped events, clean hook restore, and no remote-memory, injection, file/PE/hash, credential, or byte-preview payload evidence.
+
 Run optional Win32/x86 capture smoke:
 
 ```powershell
@@ -145,7 +154,7 @@ cmake --build build/native-win32 --config Debug
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-smoke.ps1
 ```
 
-The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence, selected RPCRT4 UUID helper evidence, selected User32/GDI32 evidence, selected PSAPI module-query evidence, selected Version resource evidence, selected Shell known-folder evidence, selected OLE32 COM lifecycle evidence, selected COMBASE-backed WinRT lifecycle evidence, zero dropped events, and clean hook restore.
+The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence, selected RPCRT4 UUID helper evidence, selected User32/GDI32 evidence, selected PSAPI module-query evidence, selected Version resource evidence, selected Shell known-folder evidence, selected OLE32 COM lifecycle evidence, selected COMBASE-backed WinRT lifecycle evidence, selected KERNEL32 memory protection evidence, zero dropped events, and clean hook restore.
 
 Run collector backpressure smoke:
 

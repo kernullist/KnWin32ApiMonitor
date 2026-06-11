@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "memory",
+  "description": "Wave 3 low-payload current-process memory allocation and protection metadata hooks.",
+  "apis": [
+    {
+      "module": "KERNEL32.dll",
+      "name": "VirtualAlloc",
+      "family": "memory",
+      "category": "memory_allocate",
+      "risk": "high",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "LPVOID",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "lpAddress", "type": "LPVOID", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "dwSize", "type": "SIZE_T", "direction": "in", "decode": "byte_count" },
+        { "name": "flAllocationType", "type": "DWORD", "direction": "in", "decode": "memory_allocation_type", "flags": "memory_allocation_type" },
+        { "name": "flProtect", "type": "DWORD", "direction": "in", "decode": "memory_protection_flags", "flags": "memory_protection_flags" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "VirtualFree",
+      "family": "memory",
+      "category": "memory_free",
+      "risk": "high",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": 0 },
+      "failure": { "returnEqual": 0 },
+      "parameters": [
+        { "name": "lpAddress", "type": "LPVOID", "direction": "in", "decode": "pointer" },
+        { "name": "dwSize", "type": "SIZE_T", "direction": "in", "decode": "byte_count" },
+        { "name": "dwFreeType", "type": "DWORD", "direction": "in", "decode": "memory_free_type", "flags": "memory_free_type" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "VirtualProtect",
+      "family": "memory",
+      "category": "memory_protect",
+      "risk": "high",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": 0 },
+      "failure": { "returnEqual": 0 },
+      "parameters": [
+        { "name": "lpAddress", "type": "LPVOID", "direction": "in", "decode": "pointer" },
+        { "name": "dwSize", "type": "SIZE_T", "direction": "in", "decode": "byte_count" },
+        { "name": "flNewProtect", "type": "DWORD", "direction": "in", "decode": "memory_protection_flags", "flags": "memory_protection_flags" },
+        { "name": "lpflOldProtect", "type": "PDWORD", "direction": "out", "decode": "dword_pointer", "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "VirtualQuery",
+      "family": "memory",
+      "category": "memory_query",
+      "risk": "medium",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "SIZE_T",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": 0 },
+      "failure": { "returnEqual": 0 },
+      "parameters": [
+        { "name": "lpAddress", "type": "LPCVOID", "direction": "in", "decode": "pointer" },
+        { "name": "lpBuffer", "type": "PMEMORY_BASIC_INFORMATION", "direction": "out", "decode": "memory_basic_information_pointer", "captureTiming": "post" },
+        { "name": "dwLength", "type": "SIZE_T", "direction": "in", "decode": "byte_count" }
+      ]
+    }
+  ]
+}

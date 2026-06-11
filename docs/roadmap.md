@@ -819,6 +819,18 @@ Current verified Phase 13H behavior:
 8. `tools/native-smoke/wave3-combase-winrt-lifecycle-smoke.ps1` verifies shared-memory `api_call` records for all selected WinRT lifecycle APIs, generated COM metadata, provider and stable ID evidence, init type/HRESULT/void/apartment-id evidence, zero healthy-path transport drops, `restoredHooks=installedHooks`, `failedHooks=0`, and absence of activation/HSTRING/runtime-class/restricted-error-info/COM object/marshaling/user-path/credential/byte-preview payload evidence.
 9. The optional x86 smoke expectation now includes the same selected COMBASE-backed WinRT lifecycle slice after a Win32 helper/target/agent build.
 
+Current verified Phase 13I behavior:
+
+1. `definitions/win32/memory.json` adds four low-payload KERNEL32 current-process memory allocation/protection/query API definitions with stable generated IDs `116` through `119`.
+2. Generated metadata now covers memory allocation/free/protection/state/type flag aliases plus `memory_basic_information_pointer` decode metadata while keeping `kernel32.dll` at module ID `1`.
+3. `dumpbin` provider inspection verified that the controlled sample imports `VirtualAlloc`, `VirtualFree`, `VirtualProtect`, and `VirtualQuery` through `kernel32.dll`.
+4. The sample reserves and commits a small current-process region, writes a single local byte before protection changes, switches one page to `PAGE_READONLY`, queries `MEMORY_BASIC_INFORMATION`, and releases the region.
+5. The agent installs IAT hooks for the selected memory APIs through the existing eligible-module sweep and dynamic re-sweep path.
+6. Hook fast paths stay on fixed-size shared-memory records and do not serialize JSON, write API events to the named pipe, allocate heap-heavy payloads, capture stacks, copy memory contents, inspect remote process memory, call injection helpers, dump module memory, parse PE data, or emit arbitrary buffers.
+7. The controller renders allocation/free/protection flags, old-protection output, state/type flags, and `MEMORY_BASIC_INFORMATION` metadata in generated-metadata arguments while keeping `bufferPreview` empty for the selected memory records.
+8. `tools/native-smoke/wave3-kernel32-memory-protection-smoke.ps1` verifies shared-memory `api_call` records for all selected memory APIs, generated memory metadata, stable ID evidence, allocation/free/protection/state/type flag decoding, decoded `MEMORY_BASIC_INFORMATION` metadata, zero healthy-path transport drops, `restoredHooks=installedHooks`, `failedHooks=0`, and absence of remote-memory/injection/file/PE/hash/credential/byte-preview payload evidence.
+9. The optional x86 smoke expectation now includes the same selected KERNEL32 memory protection slice after a Win32 helper/target/agent build.
+
 Current verified Phase 12A behavior:
 
 1. The React UI has a catalog-backed replay browser that surfaces path, target image/PID, session id, validation status, recovery state, compression, event count, byte totals, and last validation UTC.
@@ -862,7 +874,7 @@ Current verified Phase 12D behavior:
 Next implementation focus:
 
 1. Resume small, low-volume system DLL coverage waves only when each slice has deterministic smoke evidence, generated metadata, and transport/hook-overhead gates.
-2. Prefer another low-payload handle/lifecycle or explicitly reviewed metadata slice before payload-heavy network, crypto key material, certificate chain decode, service-control, token mutation, RPC auth/endpoint work, UI/GDI payload capture, raw resource capture, Shell payload capture, COM/WinRT activation/object/marshaling/HSTRING/runtime-class/error-info capture, or module memory/PE payload capture.
+2. Prefer another low-payload handle/lifecycle or explicitly reviewed metadata slice before payload-heavy network, crypto key material, certificate chain decode, service-control, token mutation, RPC auth/endpoint work, UI/GDI payload capture, raw resource capture, Shell payload capture, COM/WinRT activation/object/marshaling/HSTRING/runtime-class/error-info capture, memory-content capture, remote process memory APIs, injection helper capture, or module memory/PE payload capture.
 3. Keep automatic daemon crash recovery, orphaned active-agent repair, event-level replay indexing, and full-text trace search behind separate design reviews with explicit operator runbooks.
 4. Keep Windows service mode, protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
 
@@ -890,7 +902,8 @@ Deliverables:
 4. Breakpoint mutation.
 5. Live arbitrary process memory editing.
 6. Broad COM/WinRT activation, object, interface, vtable, marshaling, storage, HSTRING, runtime-class, or restricted-error-info monitoring.
-7. Full symbol server integration.
-8. Cross-bitness injection.
-9. Stealth/manual-map injection.
-10. Inline detours for broad API coverage without a separate ABI, stability, and performance review.
+7. Memory-content capture, remote process memory API capture, or injection helper capture without a separate ABI, stability, and performance review.
+8. Full symbol server integration.
+9. Cross-bitness injection.
+10. Stealth/manual-map injection.
+11. Inline detours for broad API coverage without a separate ABI, stability, and performance review.

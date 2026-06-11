@@ -130,6 +130,10 @@ using CreateFileAFn = HANDLE(WINAPI*)(LPCSTR, DWORD, DWORD, LPSECURITY_ATTRIBUTE
 using ReadFileFn = BOOL(WINAPI*)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
 using WriteFileFn = BOOL(WINAPI*)(HANDLE, LPCVOID, DWORD, LPDWORD, LPOVERLAPPED);
 using CloseHandleFn = BOOL(WINAPI*)(HANDLE);
+using VirtualAllocFn = LPVOID(WINAPI*)(LPVOID, SIZE_T, DWORD, DWORD);
+using VirtualFreeFn = BOOL(WINAPI*)(LPVOID, SIZE_T, DWORD);
+using VirtualProtectFn = BOOL(WINAPI*)(LPVOID, SIZE_T, DWORD, PDWORD);
+using VirtualQueryFn = SIZE_T(WINAPI*)(LPCVOID, PMEMORY_BASIC_INFORMATION, SIZE_T);
 using LoadLibraryWFn = HMODULE(WINAPI*)(LPCWSTR);
 using LoadLibraryAFn = HMODULE(WINAPI*)(LPCSTR);
 using LoadLibraryExWFn = HMODULE(WINAPI*)(LPCWSTR, HANDLE, DWORD);
@@ -224,6 +228,10 @@ CreateFileAFn g_originalCreateFileA = nullptr;
 ReadFileFn g_originalReadFile = nullptr;
 WriteFileFn g_originalWriteFile = nullptr;
 CloseHandleFn g_originalCloseHandle = nullptr;
+VirtualAllocFn g_originalVirtualAlloc = nullptr;
+VirtualFreeFn g_originalVirtualFree = nullptr;
+VirtualProtectFn g_originalVirtualProtect = nullptr;
+VirtualQueryFn g_originalVirtualQuery = nullptr;
 LoadLibraryWFn g_originalLoadLibraryW = nullptr;
 LoadLibraryAFn g_originalLoadLibraryA = nullptr;
 LoadLibraryExWFn g_originalLoadLibraryExW = nullptr;
@@ -368,7 +376,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 70;
+constexpr std::size_t HookDefinitionCount = 74;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -2072,6 +2080,150 @@ void EmitCloseHandleEvent(
         FillTransportCommon(record, knmon::KnMonTransportApiId::CloseHandle, "kernel32.dll", start, end, errorCode);
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(handle));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitVirtualAllocEvent(
+    LPVOID result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPVOID address,
+    SIZE_T size,
+    DWORD allocationType,
+    DWORD protect)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::VirtualAlloc, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(address));
+        record->Values64[1] = static_cast<std::uint64_t>(size);
+        record->Values32[0] = allocationType;
+        record->Values32[1] = protect;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitVirtualFreeEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPVOID address,
+    SIZE_T size,
+    DWORD freeType)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::VirtualFree, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result ? 1 : 0;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(address));
+        record->Values64[1] = static_cast<std::uint64_t>(size);
+        record->Values32[0] = freeType;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitVirtualProtectEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPVOID address,
+    SIZE_T size,
+    DWORD newProtect,
+    PDWORD oldProtect)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        DWORD oldProtectValue = 0;
+        std::uint32_t oldProtectStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+
+        if (result != FALSE)
+        {
+            if (oldProtect == nullptr)
+            {
+                oldProtectStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            }
+            else if (ReadCurrentProcessValue(oldProtect, &oldProtectValue))
+            {
+                oldProtectStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+            }
+            else
+            {
+                oldProtectStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            }
+        }
+
+        FillTransportCommon(record, knmon::KnMonTransportApiId::VirtualProtect, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result ? 1 : 0;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(address));
+        record->Values64[1] = static_cast<std::uint64_t>(size);
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(oldProtect));
+        record->Values32[0] = newProtect;
+        record->Values32[1] = oldProtectStatus;
+        record->Values32[2] = oldProtectValue;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitVirtualQueryEvent(
+    SIZE_T result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPCVOID address,
+    PMEMORY_BASIC_INFORMATION buffer,
+    SIZE_T length)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        MEMORY_BASIC_INFORMATION localInfo = {};
+        std::uint32_t infoStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+
+        if (result != 0)
+        {
+            if (buffer == nullptr)
+            {
+                infoStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            }
+            else if (ReadCurrentProcessValue(buffer, &localInfo))
+            {
+                infoStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+            }
+            else
+            {
+                infoStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            }
+        }
+
+        FillTransportCommon(record, knmon::KnMonTransportApiId::VirtualQuery, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(result);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(address));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(buffer));
+        record->Values64[2] = static_cast<std::uint64_t>(length);
+        record->Values64[3] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(localInfo.BaseAddress));
+        record->Values64[4] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(localInfo.AllocationBase));
+        record->Values64[5] = static_cast<std::uint64_t>(localInfo.RegionSize);
+        record->Values32[0] = infoStatus;
+        record->Values32[1] = localInfo.AllocationProtect;
+        record->Values32[2] = localInfo.State;
+        record->Values32[3] = localInfo.Protect;
+        record->Values32[4] = localInfo.Type;
         CommitTransportRecord(record, overheadStart);
     }
 }
@@ -4634,6 +4786,10 @@ HANDLE WINAPI HookedCreateFileA(LPCSTR fileName, DWORD desiredAccess, DWORD shar
 BOOL WINAPI HookedReadFile(HANDLE file, LPVOID buffer, DWORD bytesToRead, LPDWORD bytesRead, LPOVERLAPPED overlapped);
 BOOL WINAPI HookedWriteFile(HANDLE file, LPCVOID buffer, DWORD bytesToWrite, LPDWORD bytesWritten, LPOVERLAPPED overlapped);
 BOOL WINAPI HookedCloseHandle(HANDLE handle);
+LPVOID WINAPI HookedVirtualAlloc(LPVOID address, SIZE_T size, DWORD allocationType, DWORD protect);
+BOOL WINAPI HookedVirtualFree(LPVOID address, SIZE_T size, DWORD freeType);
+BOOL WINAPI HookedVirtualProtect(LPVOID address, SIZE_T size, DWORD newProtect, PDWORD oldProtect);
+SIZE_T WINAPI HookedVirtualQuery(LPCVOID address, PMEMORY_BASIC_INFORMATION buffer, SIZE_T length);
 HMODULE WINAPI HookedLoadLibraryW(LPCWSTR fileName);
 HMODULE WINAPI HookedLoadLibraryA(LPCSTR fileName);
 HMODULE WINAPI HookedLoadLibraryExW(LPCWSTR fileName, HANDLE file, DWORD flags);
@@ -4708,6 +4864,10 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "kernel32.dll", "ReadFile", reinterpret_cast<void*>(HookedReadFile), reinterpret_cast<void**>(&g_originalReadFile), true, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "WriteFile", reinterpret_cast<void*>(HookedWriteFile), reinterpret_cast<void**>(&g_originalWriteFile), true, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "CloseHandle", reinterpret_cast<void*>(HookedCloseHandle), reinterpret_cast<void**>(&g_originalCloseHandle), true, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "VirtualAlloc", reinterpret_cast<void*>(HookedVirtualAlloc), reinterpret_cast<void**>(&g_originalVirtualAlloc), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "VirtualFree", reinterpret_cast<void*>(HookedVirtualFree), reinterpret_cast<void**>(&g_originalVirtualFree), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "VirtualProtect", reinterpret_cast<void*>(HookedVirtualProtect), reinterpret_cast<void**>(&g_originalVirtualProtect), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "VirtualQuery", reinterpret_cast<void*>(HookedVirtualQuery), reinterpret_cast<void**>(&g_originalVirtualQuery), false, true, false, 0, 0 },
         HookDefinition { "ntdll.dll", "NtCreateFile", reinterpret_cast<void*>(HookedNtCreateFile), reinterpret_cast<void**>(&g_originalNtCreateFile), true, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "LoadLibraryW", reinterpret_cast<void*>(HookedLoadLibraryW), reinterpret_cast<void**>(&g_originalLoadLibraryW), false, true, true, 0, 0 },
         HookDefinition { "kernel32.dll", "LoadLibraryA", reinterpret_cast<void*>(HookedLoadLibraryA), reinterpret_cast<void**>(&g_originalLoadLibraryA), false, true, true, 0, 0 },
@@ -5263,6 +5423,130 @@ BOOL WINAPI HookedCloseHandle(HANDLE handle)
     if (HooksEnabled())
     {
         EmitCloseHandleEvent(result, eventError, start, end, handle);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+LPVOID WINAPI HookedVirtualAlloc(LPVOID address, SIZE_T size, DWORD allocationType, DWORD protect)
+{
+    if (g_inHook || !HooksEnabled() || g_originalVirtualAlloc == nullptr)
+    {
+        if (g_originalVirtualAlloc == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalVirtualAlloc(address, size, allocationType, protect);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    LPVOID result = g_originalVirtualAlloc(address, size, allocationType, protect);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitVirtualAllocEvent(result, eventError, start, end, address, size, allocationType, protect);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedVirtualFree(LPVOID address, SIZE_T size, DWORD freeType)
+{
+    if (g_inHook || !HooksEnabled() || g_originalVirtualFree == nullptr)
+    {
+        if (g_originalVirtualFree == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalVirtualFree(address, size, freeType);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    BOOL result = g_originalVirtualFree(address, size, freeType);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitVirtualFreeEvent(result, eventError, start, end, address, size, freeType);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedVirtualProtect(LPVOID address, SIZE_T size, DWORD newProtect, PDWORD oldProtect)
+{
+    if (g_inHook || !HooksEnabled() || g_originalVirtualProtect == nullptr)
+    {
+        if (g_originalVirtualProtect == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalVirtualProtect(address, size, newProtect, oldProtect);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    BOOL result = g_originalVirtualProtect(address, size, newProtect, oldProtect);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitVirtualProtectEvent(result, eventError, start, end, address, size, newProtect, oldProtect);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+SIZE_T WINAPI HookedVirtualQuery(LPCVOID address, PMEMORY_BASIC_INFORMATION buffer, SIZE_T length)
+{
+    if (g_inHook || !HooksEnabled() || g_originalVirtualQuery == nullptr)
+    {
+        if (g_originalVirtualQuery == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return 0;
+        }
+
+        return g_originalVirtualQuery(address, buffer, length);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    SIZE_T result = g_originalVirtualQuery(address, buffer, length);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == 0 ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitVirtualQueryEvent(result, eventError, start, end, address, buffer, length);
     }
 
     SetLastError(lastError);

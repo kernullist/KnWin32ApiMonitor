@@ -12,6 +12,10 @@ $requiredApis = @(
     "ReadFile",
     "WriteFile",
     "CloseHandle",
+    "VirtualAlloc",
+    "VirtualFree",
+    "VirtualProtect",
+    "VirtualQuery",
     "GetProcAddress",
     "LdrGetProcedureAddress",
     "RegOpenKeyExW",
@@ -936,6 +940,105 @@ $comArgs = @($comEvents | ForEach-Object { $_.arguments } | ConvertTo-Json -Dept
 if ($comArgs -cmatch "CoCreateInstance|CoGetClassObject|CoGetObject|RoGetActivationFactory|RoActivateInstance|WindowsCreateString|WindowsGetStringRawBuffer|HSTRING|RuntimeClass|ActivationFactory|IActivationFactory|IInspectable|IClassFactory|IUnknown|IDispatch|vtable|Vtbl|IMarshal|IStream|IStorage|IDataObject|Clipboard|DragDrop|Moniker|RunningObjectTable|ROT|RestrictedError|ErrorInfo|ShellExecute|PIDL|ITEMIDLIST|Users\\\\|AppData|Downloads|Desktop|Documents|Recent|Startup|SendTo|CommandLine|Environment|BEGIN CERTIFICATE|PRIVATE KEY|Authorization|Cookie|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 COM lifecycle events appear to expose activation, HSTRING, object, marshaling, storage, user-path, credential, PE/file/hash, or byte-preview evidence: $comArgs"
+}
+
+$memoryEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "memory" })
+if ($memoryEvents.Count -lt 4)
+{
+    throw "x86 capture did not include the selected KERNEL32 memory protection API slice."
+}
+
+$virtualAlloc = @($memoryEvents | Where-Object { $_.api -eq "VirtualAlloc" } | Select-Object -First 1)
+if ($virtualAlloc.Count -ne 1 -or
+    $virtualAlloc[0].module -ne "kernel32.dll" -or
+    $virtualAlloc[0].apiCategory -ne "memory_allocate" -or
+    $virtualAlloc[0].hookPolicy -ne "iat" -or
+    $virtualAlloc[0].coverageStatus -ne "smoke_verified" -or
+    $virtualAlloc[0].returnValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 VirtualAlloc metadata or return evidence mismatch."
+}
+
+$virtualAllocArgs = ($virtualAlloc[0].arguments | ConvertTo-Json -Depth 8)
+if ($virtualAllocArgs -notmatch "memory_allocation_type" -or
+    $virtualAllocArgs -notmatch "memory_protection_flags" -or
+    $virtualAllocArgs -notmatch "MEM_COMMIT" -or
+    $virtualAllocArgs -notmatch "MEM_RESERVE" -or
+    $virtualAllocArgs -notmatch "PAGE_READWRITE" -or
+    $virtualAllocArgs -notmatch '"decodedValue":\s*"12288"')
+{
+    throw "x86 VirtualAlloc arguments did not include expected allocation metadata: $virtualAllocArgs"
+}
+
+$virtualProtect = @($memoryEvents | Where-Object { $_.api -eq "VirtualProtect" } | Select-Object -First 1)
+if ($virtualProtect.Count -ne 1 -or
+    $virtualProtect[0].module -ne "kernel32.dll" -or
+    $virtualProtect[0].apiCategory -ne "memory_protect" -or
+    $virtualProtect[0].returnValue -ne "TRUE")
+{
+    throw "x86 VirtualProtect metadata or return evidence mismatch."
+}
+
+$newProtectArg = @($virtualProtect[0].arguments | Where-Object { $_.name -eq "flNewProtect" } | Select-Object -First 1)
+$oldProtectArg = @($virtualProtect[0].arguments | Where-Object { $_.name -eq "lpflOldProtect" } | Select-Object -First 1)
+if ($newProtectArg.Count -ne 1 -or
+    $newProtectArg[0].decodeAlias -ne "memory_protection_flags" -or
+    $newProtectArg[0].decodedValue -notmatch "PAGE_READONLY" -or
+    $oldProtectArg.Count -ne 1 -or
+    $oldProtectArg[0].decodeAlias -ne "dword_pointer" -or
+    $oldProtectArg[0].captureTiming -ne "post" -or
+    $oldProtectArg[0].decodeStatus -ne "decoded" -or
+    $oldProtectArg[0].postCallValue -ne "0x00000004" -or
+    $oldProtectArg[0].decodedValue -notmatch "PAGE_READWRITE")
+{
+    throw "x86 VirtualProtect did not include expected protection transition metadata: $($virtualProtect[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$virtualQuery = @($memoryEvents | Where-Object { $_.api -eq "VirtualQuery" } | Select-Object -First 1)
+if ($virtualQuery.Count -ne 1 -or
+    $virtualQuery[0].module -ne "kernel32.dll" -or
+    $virtualQuery[0].apiCategory -ne "memory_query" -or
+    $virtualQuery[0].returnValue -notmatch "^[1-9][0-9]*$")
+{
+    throw "x86 VirtualQuery metadata or return evidence mismatch."
+}
+
+$queryBufferArg = @($virtualQuery[0].arguments | Where-Object { $_.name -eq "lpBuffer" } | Select-Object -First 1)
+if ($queryBufferArg.Count -ne 1 -or
+    $queryBufferArg[0].decodeAlias -ne "memory_basic_information_pointer" -or
+    $queryBufferArg[0].captureTiming -ne "post" -or
+    $queryBufferArg[0].decodeStatus -ne "decoded" -or
+    $queryBufferArg[0].decodedValue -notmatch "base=0x" -or
+    $queryBufferArg[0].decodedValue -notmatch "allocationBase=0x" -or
+    $queryBufferArg[0].decodedValue -notmatch "regionSize=[1-9][0-9]*" -or
+    $queryBufferArg[0].decodedValue -notmatch "MEM_COMMIT" -or
+    $queryBufferArg[0].decodedValue -notmatch "PAGE_READONLY" -or
+    $queryBufferArg[0].decodedValue -notmatch "MEM_PRIVATE")
+{
+    throw "x86 VirtualQuery did not include decoded MEMORY_BASIC_INFORMATION metadata: $($queryBufferArg | ConvertTo-Json -Depth 8)"
+}
+
+$virtualFree = @($memoryEvents | Where-Object { $_.api -eq "VirtualFree" } | Select-Object -First 1)
+if ($virtualFree.Count -ne 1 -or
+    $virtualFree[0].module -ne "kernel32.dll" -or
+    $virtualFree[0].apiCategory -ne "memory_free" -or
+    $virtualFree[0].returnValue -ne "TRUE")
+{
+    throw "x86 VirtualFree metadata or return evidence mismatch."
+}
+
+$freeTypeArg = @($virtualFree[0].arguments | Where-Object { $_.name -eq "dwFreeType" } | Select-Object -First 1)
+if ($freeTypeArg.Count -ne 1 -or
+    $freeTypeArg[0].decodeAlias -ne "memory_free_type" -or
+    $freeTypeArg[0].decodedValue -notmatch "MEM_RELEASE")
+{
+    throw "x86 VirtualFree did not include expected free metadata: $($freeTypeArg | ConvertTo-Json -Depth 8)"
+}
+
+$memoryPayload = $memoryEvents | ConvertTo-Json -Depth 12
+if ($memoryPayload -cmatch "VirtualAllocEx|VirtualFreeEx|VirtualProtectEx|ReadProcessMemory|WriteProcessMemory|CreateRemoteThread|QueueUserAPC|NtMapViewOfSection|MapViewOfFile|SECTION_|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 KERNEL32 memory events appear to expose remote-memory, injection, file/PE/hash, credential, or byte-preview evidence: $memoryPayload"
 }
 
 $rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })

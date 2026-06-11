@@ -135,6 +135,10 @@
     { "id": 112, "module": "rpcrt4.dll", "name": "UuidFromStringW", "symbol": "UuidFromStringW" },
     { "id": 113, "module": "api-ms-win-core-winrt-l1-1-0.dll", "name": "RoInitialize", "symbol": "RoInitialize" },
     { "id": 114, "module": "api-ms-win-core-winrt-l1-1-0.dll", "name": "RoUninitialize", "symbol": "RoUninitialize" },
-    { "id": 115, "module": "api-ms-win-core-winrt-l1-1-0.dll", "name": "RoGetApartmentIdentifier", "symbol": "RoGetApartmentIdentifier" }
+    { "id": 115, "module": "api-ms-win-core-winrt-l1-1-0.dll", "name": "RoGetApartmentIdentifier", "symbol": "RoGetApartmentIdentifier" },
+    { "id": 116, "module": "kernel32.dll", "name": "VirtualAlloc", "symbol": "VirtualAlloc" },
+    { "id": 117, "module": "kernel32.dll", "name": "VirtualFree", "symbol": "VirtualFree" },
+    { "id": 118, "module": "kernel32.dll", "name": "VirtualProtect", "symbol": "VirtualProtect" },
+    { "id": 119, "module": "kernel32.dll", "name": "VirtualQuery", "symbol": "VirtualQuery" }
   ]
 }

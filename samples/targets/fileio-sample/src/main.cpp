@@ -1294,6 +1294,59 @@ bool RunCombaseWinRtLifecycleProbe()
     return success;
 }
 
+bool RunMemoryProtectionProbe()
+{
+    bool success = false;
+    void* region = nullptr;
+
+    do
+    {
+        constexpr SIZE_T AllocationSize = 0x3000;
+        constexpr SIZE_T ProtectSize = 0x1000;
+
+        region = VirtualAlloc(nullptr, AllocationSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+        if (region == nullptr)
+        {
+            LogLastError("VirtualAlloc(memory)");
+            break;
+        }
+
+        volatile unsigned char* bytes = static_cast<volatile unsigned char*>(region);
+        bytes[0] = 0x41;
+
+        DWORD oldProtect = 0;
+        if (!VirtualProtect(region, ProtectSize, PAGE_READONLY, &oldProtect))
+        {
+            LogLastError("VirtualProtect(memory)");
+            break;
+        }
+
+        MEMORY_BASIC_INFORMATION info = {};
+        const SIZE_T querySize = VirtualQuery(region, &info, sizeof(info));
+        if (querySize == 0)
+        {
+            LogLastError("VirtualQuery(memory)");
+            break;
+        }
+
+        std::cout << "memory protection roundtrip size=" << AllocationSize
+                  << " query=" << querySize << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (region != nullptr)
+    {
+        if (!VirtualFree(region, 0, MEM_RELEASE))
+        {
+            LogLastError("VirtualFree(memory)");
+            success = false;
+        }
+    }
+
+    return success;
+}
+
 bool RunWinsockProbe()
 {
     bool success = false;
@@ -1779,6 +1832,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunCombaseWinRtLifecycleProbe())
+        {
+            break;
+        }
+
+        if (!RunMemoryProtectionProbe())
         {
             break;
         }

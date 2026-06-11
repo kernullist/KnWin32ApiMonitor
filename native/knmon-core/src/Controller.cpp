@@ -2140,6 +2140,129 @@ std::string RoInitTypeText(std::uint32_t value)
     return stream.str();
 }
 
+struct FlagName
+{
+    std::uint32_t Mask;
+    const char* Name;
+};
+
+std::string FlagMaskText(std::uint32_t value, const FlagName* flags, std::size_t count)
+{
+    std::ostringstream stream;
+    std::uint32_t remaining = value;
+    bool hasName = false;
+
+    stream << HexDwordValue(value);
+    stream << " (";
+
+    for (std::size_t index = 0; index < count; ++index)
+    {
+        if (flags[index].Mask != 0 && (remaining & flags[index].Mask) == flags[index].Mask)
+        {
+            if (hasName)
+            {
+                stream << "|";
+            }
+
+            stream << flags[index].Name;
+            remaining &= ~flags[index].Mask;
+            hasName = true;
+        }
+    }
+
+    if (remaining != 0)
+    {
+        if (hasName)
+        {
+            stream << "|";
+        }
+
+        stream << "unknown=" << HexDwordValue(remaining);
+        hasName = true;
+    }
+
+    if (!hasName)
+    {
+        stream << "none";
+    }
+
+    stream << ")";
+    return stream.str();
+}
+
+std::string MemoryAllocationTypeText(std::uint32_t value)
+{
+    static constexpr FlagName Flags[] =
+    {
+        { 0x00001000U, "MEM_COMMIT" },
+        { 0x00002000U, "MEM_RESERVE" },
+        { 0x00080000U, "MEM_RESET" },
+        { 0x00100000U, "MEM_TOP_DOWN" },
+        { 0x00200000U, "MEM_WRITE_WATCH" },
+        { 0x00400000U, "MEM_PHYSICAL" },
+        { 0x01000000U, "MEM_RESET_UNDO" },
+        { 0x20000000U, "MEM_LARGE_PAGES" },
+    };
+
+    return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
+}
+
+std::string MemoryFreeTypeText(std::uint32_t value)
+{
+    static constexpr FlagName Flags[] =
+    {
+        { 0x00004000U, "MEM_DECOMMIT" },
+        { 0x00008000U, "MEM_RELEASE" },
+    };
+
+    return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
+}
+
+std::string MemoryProtectionFlagsText(std::uint32_t value)
+{
+    static constexpr FlagName Flags[] =
+    {
+        { 0x00000001U, "PAGE_NOACCESS" },
+        { 0x00000002U, "PAGE_READONLY" },
+        { 0x00000004U, "PAGE_READWRITE" },
+        { 0x00000008U, "PAGE_WRITECOPY" },
+        { 0x00000010U, "PAGE_EXECUTE" },
+        { 0x00000020U, "PAGE_EXECUTE_READ" },
+        { 0x00000040U, "PAGE_EXECUTE_READWRITE" },
+        { 0x00000080U, "PAGE_EXECUTE_WRITECOPY" },
+        { 0x00000100U, "PAGE_GUARD" },
+        { 0x00000200U, "PAGE_NOCACHE" },
+        { 0x00000400U, "PAGE_WRITECOMBINE" },
+        { 0x40000000U, "PAGE_TARGETS_INVALID" },
+    };
+
+    return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
+}
+
+std::string MemoryStateText(std::uint32_t value)
+{
+    static constexpr FlagName Flags[] =
+    {
+        { 0x00001000U, "MEM_COMMIT" },
+        { 0x00002000U, "MEM_RESERVE" },
+        { 0x00010000U, "MEM_FREE" },
+    };
+
+    return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
+}
+
+std::string MemoryTypeText(std::uint32_t value)
+{
+    static constexpr FlagName Flags[] =
+    {
+        { 0x00020000U, "MEM_PRIVATE" },
+        { 0x00040000U, "MEM_MAPPED" },
+        { 0x01000000U, "MEM_IMAGE" },
+    };
+
+    return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
+}
+
 std::string SignedIntValue(std::uint64_t value)
 {
     return std::to_string(static_cast<std::int32_t>(static_cast<std::uint32_t>(value)));
@@ -2189,6 +2312,25 @@ std::string DecodeStatusName(std::uint32_t value)
     }
 
     return result;
+}
+
+std::string MemoryBasicInformationText(const KnMonCaptureResult& result, const KnMonTransportRecord& record)
+{
+    std::ostringstream stream;
+
+    stream << "status=" << DecodeStatusName(record.Values32[0]);
+    if (static_cast<KnMonDecodeStatus>(record.Values32[0]) == KnMonDecodeStatus::Decoded)
+    {
+        stream << ";base=" << HexPointerValue(record.Values64[3], result.Architecture)
+               << ";allocationBase=" << HexPointerValue(record.Values64[4], result.Architecture)
+               << ";allocationProtect=" << MemoryProtectionFlagsText(record.Values32[1])
+               << ";regionSize=" << record.Values64[5]
+               << ";state=" << MemoryStateText(record.Values32[2])
+               << ";protect=" << MemoryProtectionFlagsText(record.Values32[3])
+               << ";type=" << MemoryTypeText(record.Values32[4]);
+    }
+
+    return stream.str();
 }
 
 std::string TransportApiName(std::uint16_t apiId)
@@ -2416,6 +2558,53 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hObject", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture));
         payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
         break;
+    case KnMonTransportApiId::VirtualAlloc:
+    {
+        const std::string addressPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPVOID", "lpAddress", "in", addressPointer, addressPointer, addressPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "SIZE_T", "dwSize", "in", std::to_string(record.Values64[1]), std::to_string(record.Values64[1]), std::to_string(record.Values64[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "DWORD", "flAllocationType", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), MemoryAllocationTypeText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "DWORD", "flProtect", "in", HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]), MemoryProtectionFlagsText(record.Values32[1]));
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::VirtualFree:
+    {
+        const std::string addressPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPVOID", "lpAddress", "in", addressPointer, addressPointer, addressPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "SIZE_T", "dwSize", "in", std::to_string(record.Values64[1]), std::to_string(record.Values64[1]), std::to_string(record.Values64[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "DWORD", "dwFreeType", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), MemoryFreeTypeText(record.Values32[0]));
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::VirtualProtect:
+    {
+        const std::string addressPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string oldProtectPointer = HexPointerValue(record.Values64[2], result.Architecture);
+        const std::string oldProtectValue = HexDwordValue(record.Values32[2]);
+        const bool oldProtectDecoded = static_cast<KnMonDecodeStatus>(record.Values32[1]) == KnMonDecodeStatus::Decoded;
+        const std::string oldProtectPost = oldProtectDecoded ? oldProtectValue : oldProtectPointer;
+        const std::string oldProtectDecodedValue = oldProtectDecoded ?
+            MemoryProtectionFlagsText(record.Values32[2]) :
+            (DecodeStatusName(record.Values32[1]) + ";pointer=" + oldProtectPointer);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPVOID", "lpAddress", "in", addressPointer, addressPointer, addressPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "SIZE_T", "dwSize", "in", std::to_string(record.Values64[1]), std::to_string(record.Values64[1]), std::to_string(record.Values64[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "DWORD", "flNewProtect", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), MemoryProtectionFlagsText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "PDWORD", "lpflOldProtect", "out", oldProtectPointer, oldProtectPost, oldProtectDecodedValue, DecodeStatusName(record.Values32[1]));
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::VirtualQuery:
+    {
+        const std::string addressPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string bufferPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string bufferValue = MemoryBasicInformationText(result, record);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPCVOID", "lpAddress", "in", addressPointer, addressPointer, addressPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "PMEMORY_BASIC_INFORMATION", "lpBuffer", "out", bufferPointer, bufferValue, bufferValue, DecodeStatusName(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "SIZE_T", "dwLength", "in", std::to_string(record.Values64[2]), std::to_string(record.Values64[2]), std::to_string(record.Values64[2]));
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::NtCreateFile:
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "PHANDLE", "FileHandle", "out", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture)) << ",";
         args << ArgumentJsonFromMetadata(record.ApiId, 1, "ACCESS_MASK", "DesiredAccess", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0])) << ",";

@@ -689,6 +689,30 @@
       "module": "api-ms-win-core-winrt-l1-1-0.dll",
       "name": "RoGetApartmentIdentifier",
       "symbol": "RoGetApartmentIdentifier"
+    },
+    {
+      "id": 116,
+      "module": "kernel32.dll",
+      "name": "VirtualAlloc",
+      "symbol": "VirtualAlloc"
+    },
+    {
+      "id": 117,
+      "module": "kernel32.dll",
+      "name": "VirtualFree",
+      "symbol": "VirtualFree"
+    },
+    {
+      "id": 118,
+      "module": "kernel32.dll",
+      "name": "VirtualProtect",
+      "symbol": "VirtualProtect"
+    },
+    {
+      "id": 119,
+      "module": "kernel32.dll",
+      "name": "VirtualQuery",
+      "symbol": "VirtualQuery"
     }
   ],
   "modules": [
