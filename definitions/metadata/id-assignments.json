@@ -129,6 +129,8 @@
     { "id": 107, "module": "ole32.dll", "name": "CoInitializeEx", "symbol": "CoInitializeEx" },
     { "id": 108, "module": "ole32.dll", "name": "CoUninitialize", "symbol": "CoUninitialize" },
     { "id": 109, "module": "ole32.dll", "name": "CoCreateGuid", "symbol": "CoCreateGuid" },
-    { "id": 110, "module": "ole32.dll", "name": "StringFromGUID2", "symbol": "StringFromGUID2" }
+    { "id": 110, "module": "ole32.dll", "name": "StringFromGUID2", "symbol": "StringFromGUID2" },
+    { "id": 111, "module": "rpcrt4.dll", "name": "UuidToStringW", "symbol": "UuidToStringW" },
+    { "id": 112, "module": "rpcrt4.dll", "name": "UuidFromStringW", "symbol": "UuidFromStringW" }
   ]
 }

@@ -659,6 +659,18 @@
       "module": "ole32.dll",
       "name": "StringFromGUID2",
       "symbol": "StringFromGUID2"
+    },
+    {
+      "id": 111,
+      "module": "rpcrt4.dll",
+      "name": "UuidToStringW",
+      "symbol": "UuidToStringW"
+    },
+    {
+      "id": 112,
+      "module": "rpcrt4.dll",
+      "name": "UuidFromStringW",
+      "symbol": "UuidFromStringW"
     }
   ],
   "modules": [

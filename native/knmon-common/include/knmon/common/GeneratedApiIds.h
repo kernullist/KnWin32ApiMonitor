@@ -117,6 +117,8 @@ enum class KnMonTransportApiId : std::uint16_t
     CoUninitialize = 108,
     CoCreateGuid = 109,
     StringFromGUID2 = 110,
+    UuidToStringW = 111,
+    UuidFromStringW = 112,
 };
 
 enum class KnMonTransportModuleId : std::uint16_t

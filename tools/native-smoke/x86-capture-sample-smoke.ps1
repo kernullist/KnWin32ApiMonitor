@@ -58,6 +58,9 @@ $requiredApis = @(
     "RpcBindingFromStringBindingW",
     "RpcStringFreeW",
     "RpcBindingFree",
+    "UuidCreate",
+    "UuidToStringW",
+    "UuidFromStringW",
     "WSAStartup",
     "WSACleanup",
     "socket",
@@ -875,9 +878,9 @@ if ($comArgs -cmatch "CoCreateInstance|CoGetClassObject|CoGetObject|IClassFactor
 }
 
 $rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })
-if ($rpcEvents.Count -lt 4)
+if ($rpcEvents.Count -lt 7)
 {
-    throw "x86 capture did not include the selected RPCRT4 binding API family slice."
+    throw "x86 capture did not include the selected RPCRT4 binding and UUID API family slices."
 }
 
 $rpcCompose = @($rpcEvents | Where-Object { $_.api -eq "RpcStringBindingComposeW" } | Select-Object -First 1)
@@ -902,6 +905,104 @@ $rpcStringFreeArgs = ($rpcStringFree[0].arguments | ConvertTo-Json -Depth 8)
 if ($rpcStringFreeArgs -notmatch "ncalrpc" -or $rpcStringFreeArgs -notmatch "KNMonRpcSample")
 {
     throw "x86 RPC string-free arguments did not include pre-free binding evidence: $rpcStringFreeArgs"
+}
+
+$uuidCreate = @($rpcEvents | Where-Object { $_.api -eq "UuidCreate" } | Select-Object -First 1)
+if ($uuidCreate.Count -ne 1 -or
+    $uuidCreate[0].module -ne "rpcrt4.dll" -or
+    $uuidCreate[0].apiCategory -ne "uuid_create" -or
+    ($uuidCreate[0].returnValue -ne "0 (0x00000000)" -and $uuidCreate[0].returnValue -ne "1824 (0x00000720)") -or
+    $uuidCreate[0].hookPolicy -ne "iat" -or
+    $uuidCreate[0].coverageStatus -ne "smoke_verified")
+{
+    throw "x86 UuidCreate metadata or return evidence mismatch."
+}
+
+$uuidCreateArg = @($uuidCreate[0].arguments | Where-Object { $_.name -eq "Uuid" } | Select-Object -First 1)
+if ($uuidCreateArg.Count -ne 1 -or
+    $uuidCreateArg[0].decodeAlias -ne "guid_pointer" -or
+    $uuidCreateArg[0].captureTiming -ne "post" -or
+    $uuidCreateArg[0].decodedValue -notmatch "^UUID=\{[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\}$")
+{
+    throw "x86 UuidCreate did not include canonical UUID evidence: $($uuidCreateArg | ConvertTo-Json -Depth 8)"
+}
+
+$uuidToString = @($rpcEvents | Where-Object { $_.api -eq "UuidToStringW" } | Select-Object -First 1)
+if ($uuidToString.Count -ne 1 -or
+    $uuidToString[0].module -ne "rpcrt4.dll" -or
+    $uuidToString[0].apiCategory -ne "uuid_to_string" -or
+    $uuidToString[0].returnValue -ne "0 (0x00000000)")
+{
+    throw "x86 UuidToStringW metadata or return evidence mismatch."
+}
+
+$uuidToStringInput = @($uuidToString[0].arguments | Where-Object { $_.name -eq "Uuid" } | Select-Object -First 1)
+$uuidToStringOutput = @($uuidToString[0].arguments | Where-Object { $_.name -eq "StringUuid" } | Select-Object -First 1)
+if ($uuidToStringInput.Count -ne 1 -or
+    $uuidToStringInput[0].decodeAlias -ne "guid_pointer" -or
+    $uuidToStringInput[0].decodedValue -notmatch "^UUID=\{[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\}$")
+{
+    throw "x86 UuidToStringW did not include input UUID evidence: $($uuidToStringInput | ConvertTo-Json -Depth 8)"
+}
+
+if ($uuidToStringOutput.Count -ne 1 -or
+    $uuidToStringOutput[0].decodeAlias -ne "rpc_string_pointer" -or
+    $uuidToStringOutput[0].captureTiming -ne "post" -or
+    $uuidToStringOutput[0].decodedValue -notmatch "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+{
+    throw "x86 UuidToStringW did not include bounded canonical UUID string evidence: $($uuidToStringOutput | ConvertTo-Json -Depth 8)"
+}
+
+$createdUuid = $uuidCreateArg[0].decodedValue -replace "^UUID=\{", "" -replace "\}$", ""
+if ($createdUuid.ToLowerInvariant() -ne $uuidToStringOutput[0].decodedValue.ToLowerInvariant())
+{
+    throw "x86 UuidCreate and UuidToStringW UUID evidence diverged."
+}
+
+$uuidFromString = @($rpcEvents | Where-Object { $_.api -eq "UuidFromStringW" } | Select-Object -First 1)
+if ($uuidFromString.Count -ne 1 -or
+    $uuidFromString[0].module -ne "rpcrt4.dll" -or
+    $uuidFromString[0].apiCategory -ne "uuid_from_string" -or
+    $uuidFromString[0].returnValue -ne "0 (0x00000000)")
+{
+    throw "x86 UuidFromStringW metadata or return evidence mismatch."
+}
+
+$uuidFromStringInput = @($uuidFromString[0].arguments | Where-Object { $_.name -eq "StringUuid" } | Select-Object -First 1)
+$uuidFromStringOutput = @($uuidFromString[0].arguments | Where-Object { $_.name -eq "Uuid" } | Select-Object -First 1)
+if ($uuidFromStringInput.Count -ne 1 -or
+    $uuidFromStringInput[0].decodeAlias -ne "utf16_string" -or
+    $uuidFromStringInput[0].decodedValue -notmatch "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+{
+    throw "x86 UuidFromStringW did not include canonical input string evidence: $($uuidFromStringInput | ConvertTo-Json -Depth 8)"
+}
+
+if ($uuidFromStringOutput.Count -ne 1 -or
+    $uuidFromStringOutput[0].decodeAlias -ne "guid_pointer" -or
+    $uuidFromStringOutput[0].captureTiming -ne "post" -or
+    $uuidFromStringOutput[0].decodedValue -notmatch "^UUID=\{[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\}$")
+{
+    throw "x86 UuidFromStringW did not include output UUID evidence: $($uuidFromStringOutput | ConvertTo-Json -Depth 8)"
+}
+
+$parsedUuid = "UUID={$($uuidFromStringInput[0].decodedValue)}"
+if ($parsedUuid.ToLowerInvariant() -ne $uuidFromStringOutput[0].decodedValue.ToLowerInvariant())
+{
+    throw "x86 UuidFromStringW input and output UUID evidence diverged."
+}
+
+$uuidStringFree = @($rpcEvents | Where-Object {
+    $_.api -eq "RpcStringFreeW" -and (($_.arguments | ConvertTo-Json -Depth 8) -match "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+} | Select-Object -First 1)
+if ($uuidStringFree.Count -ne 1)
+{
+    throw "x86 capture did not include RpcStringFreeW cleanup for UuidToStringW output."
+}
+
+$uuidPayload = @($uuidCreate[0], $uuidToString[0], $uuidFromString[0]) | ConvertTo-Json -Depth 12
+if ($uuidPayload -cmatch "RpcMgmtEp|RpcBindingSetAuth|RpcBindingSetOption|Endpoint|Annotation|ServerPrinc|AuthIdentity|Authn|Authz|NetworkAddr|connect|send|recv|WinHttp|InternetOpenUrl|HttpSend|Authorization|Cookie|Password|Credential|Token|SecurityDescriptor|Sid|Acl|CoCreateInstance|CoGetClassObject|IClassFactory|IUnknown|IDispatch|vtable|Vtbl|IMarshal|IStream|IStorage|IDataObject|Clipboard|DragDrop|Moniker|RunningObjectTable|ROT|Users\\\\|AppData|Downloads|Desktop|Documents|CommandLine|Environment|BEGIN CERTIFICATE|PRIVATE KEY|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 RPCRT4 UUID helper events appear to expose endpoint, auth, network, COM, credential, path, PE/file/hash, or byte-preview evidence: $uuidPayload"
 }
 
 $dynamicSweep = @($result.agentMessages | Where-Object { $_.messageType -eq "iat_sweep" -and $_.reason -eq "dynamic_load" } | Select-Object -Last 1)

@@ -30,6 +30,10 @@
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 #endif
 
+#ifndef RPC_S_UUID_LOCAL_ONLY
+#define RPC_S_UUID_LOCAL_ONLY 1824L
+#endif
+
 #ifndef FILE_OPEN
 #define FILE_OPEN 0x00000001
 #endif
@@ -519,6 +523,61 @@ bool RunRpcBindingProbe()
         if (cleanupStatus != RPC_S_OK)
         {
             std::cout << "RpcStringFreeW(cleanup) failed with " << cleanupStatus << "\n";
+            success = false;
+        }
+    }
+
+    return success;
+}
+
+bool RpcStatusProducedUuid(RPC_STATUS status)
+{
+    return status == RPC_S_OK || status == RPC_S_UUID_LOCAL_ONLY;
+}
+
+bool RunRpcUuidProbe()
+{
+    bool success = false;
+    UUID createdUuid = {};
+    UUID parsedUuid = {};
+    RPC_WSTR uuidString = nullptr;
+    auto* parseInput = reinterpret_cast<RPC_WSTR>(const_cast<wchar_t*>(L"12345678-1234-5678-9abc-def012345678"));
+
+    do
+    {
+        RPC_STATUS status = UuidCreate(&createdUuid);
+        if (!RpcStatusProducedUuid(status))
+        {
+            std::cout << "UuidCreate failed with " << status << "\n";
+            break;
+        }
+
+        const RPC_STATUS createStatus = status;
+        status = UuidToStringW(&createdUuid, &uuidString);
+        if (status != RPC_S_OK)
+        {
+            std::cout << "UuidToStringW failed with " << status << "\n";
+            break;
+        }
+
+        status = UuidFromStringW(parseInput, &parsedUuid);
+        if (status != RPC_S_OK)
+        {
+            std::cout << "UuidFromStringW failed with " << status << "\n";
+            break;
+        }
+
+        std::cout << "rpc uuid helper roundtrip create_status=" << createStatus << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (uuidString != nullptr)
+    {
+        const RPC_STATUS cleanupStatus = RpcStringFreeW(&uuidString);
+        if (cleanupStatus != RPC_S_OK)
+        {
+            std::cout << "RpcStringFreeW(uuid cleanup) failed with " << cleanupStatus << "\n";
             success = false;
         }
     }
@@ -1591,6 +1650,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunRpcBindingProbe())
+        {
+            break;
+        }
+
+        if (!RunRpcUuidProbe())
         {
             break;
         }

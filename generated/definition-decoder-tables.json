@@ -1371,24 +1371,24 @@
     {
       "callingConvention": "stdcall",
       "category": "uuid_create",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
-        "returnNotEqual": "RPC_S_OK"
+        "returnNotIn": "RPC_S_OK,RPC_S_UUID_LOCAL_ONLY"
       },
       "family": "rpc",
       "firstParameterIndex": 253,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 58,
       "module": "rpcrt4.dll",
       "moduleId": 7,
       "name": "UuidCreate",
       "parameterCount": 1,
       "returnType": "RPC_STATUS",
-      "risk": "medium",
+      "risk": "low",
       "source": "definitions/win32/rpcrt4.json",
       "success": {
-        "returnEqual": "RPC_S_OK"
+        "returnIn": "RPC_S_OK,RPC_S_UUID_LOCAL_ONLY"
       },
       "symbol": "UuidCreate"
     },
@@ -2623,6 +2623,54 @@
         "returnNotEqual": "0"
       },
       "symbol": "StringFromGUID2"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "uuid_to_string",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "none",
+      "failure": {
+        "returnNotEqual": "RPC_S_OK"
+      },
+      "family": "rpc",
+      "firstParameterIndex": 428,
+      "hookPolicy": "iat",
+      "id": 111,
+      "module": "rpcrt4.dll",
+      "moduleId": 7,
+      "name": "UuidToStringW",
+      "parameterCount": 2,
+      "returnType": "RPC_STATUS",
+      "risk": "low",
+      "source": "definitions/win32/rpcrt4.json",
+      "success": {
+        "returnEqual": "RPC_S_OK"
+      },
+      "symbol": "UuidToStringW"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "uuid_from_string",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "none",
+      "failure": {
+        "returnNotEqual": "RPC_S_OK"
+      },
+      "family": "rpc",
+      "firstParameterIndex": 430,
+      "hookPolicy": "iat",
+      "id": 112,
+      "module": "rpcrt4.dll",
+      "moduleId": 7,
+      "name": "UuidFromStringW",
+      "parameterCount": 2,
+      "returnType": "RPC_STATUS",
+      "risk": "low",
+      "source": "definitions/win32/rpcrt4.json",
+      "success": {
+        "returnEqual": "RPC_S_OK"
+      },
+      "symbol": "UuidFromStringW"
     }
   ],
   "decodeAliases": [
@@ -7573,7 +7621,7 @@
       "absoluteIndex": 253,
       "apiId": 58,
       "captureTiming": "post",
-      "decode": "buffer",
+      "decode": "guid_pointer",
       "direction": "out",
       "enum": "",
       "flags": "",
@@ -10543,6 +10591,74 @@
       "name": "cchMax",
       "nullable": false,
       "type": "int"
+    },
+    {
+      "absoluteIndex": 428,
+      "apiId": 111,
+      "captureTiming": "pre",
+      "decode": "guid_pointer",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 16,
+      "name": "Uuid",
+      "nullable": false,
+      "type": "UUID*"
+    },
+    {
+      "absoluteIndex": 429,
+      "apiId": 111,
+      "captureTiming": "post",
+      "decode": "rpc_string_pointer",
+      "direction": "out",
+      "enum": "",
+      "flags": "",
+      "index": 1,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 8,
+      "name": "StringUuid",
+      "nullable": false,
+      "type": "RPC_WSTR*"
+    },
+    {
+      "absoluteIndex": 430,
+      "apiId": 112,
+      "captureTiming": "pre",
+      "decode": "utf16_string",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 128,
+      "name": "StringUuid",
+      "nullable": false,
+      "type": "RPC_WSTR"
+    },
+    {
+      "absoluteIndex": 431,
+      "apiId": 112,
+      "captureTiming": "post",
+      "decode": "guid_pointer",
+      "direction": "out",
+      "enum": "",
+      "flags": "",
+      "index": 1,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 16,
+      "name": "Uuid",
+      "nullable": false,
+      "type": "UUID*"
     }
   ],
   "schemaVersion": "0.1.0",

@@ -20,8 +20,9 @@ Current verification gates include:
 14. Wave 3 Version resource smoke through `tools\native-smoke\wave3-version-resource-smoke.ps1`.
 15. Wave 3 Shell known-folder smoke through `tools\native-smoke\wave3-shell-known-folder-smoke.ps1`.
 16. Wave 3 OLE32 COM lifecycle smoke through `tools\native-smoke\wave3-ole32-com-lifecycle-smoke.ps1`.
-17. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
-18. Collector fixture and native smoke validation through `npm run collector:validate`.
+17. Wave 3 RPCRT4 UUID helper smoke through `tools\native-smoke\wave3-rpcrt4-uuid-helper-smoke.ps1`.
+18. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
+19. Collector fixture and native smoke validation through `npm run collector:validate`.
 
 Run repeated lifecycle smoke:
 
@@ -119,6 +120,14 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave3-ole32-com-life
 
 The OLE32 smoke verifies selected COM apartment lifecycle and GUID helper calls, generated COM metadata, init flag/pointer/HRESULT/int return/GUID/GUID-string evidence, shared-memory transport mode, zero dropped events, clean hook restore, and no COM activation, object/interface/vtable, marshaling, storage, clipboard, drag-drop, user-path, credential, or byte-preview payload evidence.
 
+Run Wave 3 RPCRT4 UUID helper smoke:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave3-rpcrt4-uuid-helper-smoke.ps1
+```
+
+The RPCRT4 UUID smoke verifies selected UUID create/to-string/from-string calls, generated RPC metadata, stable API ID `58` promotion plus IDs `111` and `112`, bounded UUID value/string evidence, shared-memory transport mode, zero dropped events, clean hook restore, and no endpoint, auth, network, COM, credential, path, or byte-preview payload evidence.
+
 Run optional Win32/x86 capture smoke:
 
 ```powershell
@@ -127,7 +136,7 @@ cmake --build build/native-win32 --config Debug
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-smoke.ps1
 ```
 
-The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence, selected User32/GDI32 evidence, selected PSAPI module-query evidence, selected Version resource evidence, selected Shell known-folder evidence, selected OLE32 COM lifecycle evidence, zero dropped events, and clean hook restore.
+The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence, selected RPCRT4 UUID helper evidence, selected User32/GDI32 evidence, selected PSAPI module-query evidence, selected Version resource evidence, selected Shell known-folder evidence, selected OLE32 COM lifecycle evidence, zero dropped events, and clean hook restore.
 
 Run collector backpressure smoke:
 

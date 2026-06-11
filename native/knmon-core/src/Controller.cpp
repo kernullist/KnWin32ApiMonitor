@@ -2894,6 +2894,37 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         payload = ApiCallPayload(result, record, RpcStatusValue(record.ReturnValue), args.str(), "");
         break;
     }
+    case KnMonTransportApiId::UuidCreate:
+    {
+        const std::string uuidPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string uuidValue = text0.empty() ? uuidPointer : text0;
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "UUID*", "Uuid", "out", uuidPointer, uuidPointer, uuidValue, DecodeStatusName(record.Values32[0]));
+        payload = ApiCallPayload(result, record, RpcStatusValue(record.ReturnValue), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::UuidToStringW:
+    {
+        const std::string uuidPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string stringUuidPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string returnedStringPointer = HexPointerValue(record.Values64[2], result.Architecture);
+        const std::string uuidValue = text0.empty() ? uuidPointer : text0;
+        const std::string stringValue = text1.empty() ? returnedStringPointer : text1;
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "UUID*", "Uuid", "in", uuidPointer, uuidPointer, uuidValue, DecodeStatusName(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "RPC_WSTR*", "StringUuid", "out", stringUuidPointer, returnedStringPointer, stringValue, DecodeStatusName(record.Values32[1]));
+        payload = ApiCallPayload(result, record, RpcStatusValue(record.ReturnValue), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::UuidFromStringW:
+    {
+        const std::string stringUuidPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string uuidPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string stringValue = text0.empty() ? stringUuidPointer : text0;
+        const std::string uuidValue = text1.empty() ? uuidPointer : text1;
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "RPC_WSTR", "StringUuid", "in", stringUuidPointer, stringUuidPointer, stringValue, DecodeStatusName(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "UUID*", "Uuid", "out", uuidPointer, uuidPointer, uuidValue, DecodeStatusName(record.Values32[1]));
+        payload = ApiCallPayload(result, record, RpcStatusValue(record.ReturnValue), args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::WSAStartup:
     {
         const std::string dataPointer = HexPointerValue(record.Values64[0], result.Architecture);

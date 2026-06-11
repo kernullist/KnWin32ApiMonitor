@@ -41,6 +41,10 @@
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 #endif
 
+#ifndef RPC_S_UUID_LOCAL_ONLY
+#define RPC_S_UUID_LOCAL_ONLY 1824L
+#endif
+
 #ifndef KNMON_AGENT_ARCHITECTURE
 #define KNMON_AGENT_ARCHITECTURE "unknown"
 #endif
@@ -174,6 +178,9 @@ using RpcStringBindingComposeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_WSTR, RP
 using RpcBindingFromStringBindingWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_BINDING_HANDLE*);
 using RpcStringFreeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR*);
 using RpcBindingFreeFn = RPC_STATUS(RPC_ENTRY*)(RPC_BINDING_HANDLE*);
+using UuidCreateFn = RPC_STATUS(RPC_ENTRY*)(UUID*);
+using UuidToStringWFn = RPC_STATUS(RPC_ENTRY*)(UUID*, RPC_WSTR*);
+using UuidFromStringWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, UUID*);
 using WSAStartupFn = int(WINAPI*)(WORD, LPWSADATA);
 using WSACleanupFn = int(WINAPI*)();
 using SocketFn = SOCKET(WINAPI*)(int, int, int);
@@ -262,6 +269,9 @@ RpcStringBindingComposeWFn g_originalRpcStringBindingComposeW = nullptr;
 RpcBindingFromStringBindingWFn g_originalRpcBindingFromStringBindingW = nullptr;
 RpcStringFreeWFn g_originalRpcStringFreeW = nullptr;
 RpcBindingFreeFn g_originalRpcBindingFree = nullptr;
+UuidCreateFn g_originalUuidCreate = nullptr;
+UuidToStringWFn g_originalUuidToStringW = nullptr;
+UuidFromStringWFn g_originalUuidFromStringW = nullptr;
 WSAStartupFn g_originalWSAStartup = nullptr;
 WSACleanupFn g_originalWSACleanup = nullptr;
 SocketFn g_originalSocket = nullptr;
@@ -351,7 +361,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 64;
+constexpr std::size_t HookDefinitionCount = 67;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -3364,6 +3374,47 @@ bool IsCanonicalGuidStringText(const char* value)
     return result;
 }
 
+bool IsCanonicalUuidStringText(const char* value)
+{
+    bool result = false;
+
+    do
+    {
+        if (value == nullptr)
+        {
+            break;
+        }
+
+        if (std::strlen(value) != 36)
+        {
+            break;
+        }
+
+        if (value[8] != '-' || value[13] != '-' || value[18] != '-' || value[23] != '-')
+        {
+            break;
+        }
+
+        result = true;
+        for (std::size_t index = 0; index < 36; ++index)
+        {
+            if (index == 8 || index == 13 || index == 18 || index == 23)
+            {
+                continue;
+            }
+
+            if (!IsHexTextChar(value[index]))
+            {
+                result = false;
+                break;
+            }
+        }
+    }
+    while (false);
+
+    return result;
+}
+
 std::uint32_t CopyGuidStringPointerText(char* destination, std::uint32_t* length, std::size_t capacity, const wchar_t* source, int cchMax)
 {
     std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
@@ -3401,6 +3452,52 @@ std::uint32_t CopyGuidStringPointerText(char* destination, std::uint32_t* length
         }
 
         if (!IsCanonicalGuidStringText(destination))
+        {
+            destination[0] = '\0';
+            if (length != nullptr)
+            {
+                *length = 0;
+            }
+
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+    }
+    while (false);
+
+    return status;
+}
+
+std::uint32_t CopyUuidStringPointerText(char* destination, std::uint32_t* length, std::size_t capacity, const wchar_t* source)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (length != nullptr)
+        {
+            *length = 0;
+        }
+
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        status = CopyWidePointerText(destination, length, capacity, source);
+        if (status != static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
+        {
+            break;
+        }
+
+        if (!IsCanonicalUuidStringText(destination))
         {
             destination[0] = '\0';
             if (length != nullptr)
@@ -3771,6 +3868,11 @@ std::uint32_t CopyRpcWideStringText(char* destination, std::uint32_t* length, st
     return CopyWidePointerText(destination, length, capacity, reinterpret_cast<const wchar_t*>(source));
 }
 
+bool RpcStatusProducedUuid(RPC_STATUS result)
+{
+    return result == RPC_S_OK || result == RPC_S_UUID_LOCAL_ONLY;
+}
+
 void EmitRpcStringBindingComposeWEvent(
     RPC_STATUS result,
     const LARGE_INTEGER& start,
@@ -3881,6 +3983,129 @@ void EmitRpcBindingFreeEvent(
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(binding));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(preBinding));
         record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(postBinding));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitUuidCreateEvent(
+    RPC_STATUS result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    UUID* uuid)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::UuidCreate, "rpcrt4.dll", start, end, RpcStatusProducedUuid(result) ? 0 : static_cast<DWORD>(result));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(uuid));
+        record->Values32[0] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+
+        if (RpcStatusProducedUuid(result))
+        {
+            UUID localUuid = {};
+            if (ReadCurrentProcessValue(uuid, &localUuid))
+            {
+                record->Values32[0] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+                FormatGuidText(record->Text0, &record->Text0Length, sizeof(record->Text0), localUuid, "UUID");
+            }
+            else
+            {
+                record->Values32[0] = uuid == nullptr ?
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer) :
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            }
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitUuidToStringWEvent(
+    RPC_STATUS result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    UUID* uuid,
+    RPC_WSTR* stringUuid)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::UuidToStringW, "rpcrt4.dll", start, end, result == RPC_S_OK ? 0 : static_cast<DWORD>(result));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(uuid));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(stringUuid));
+        record->Values32[0] = uuid == nullptr ?
+            static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer) :
+            static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+        record->Values32[1] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+
+        UUID localUuid = {};
+        if (ReadCurrentProcessValue(uuid, &localUuid))
+        {
+            record->Values32[0] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+            FormatGuidText(record->Text0, &record->Text0Length, sizeof(record->Text0), localUuid, "UUID");
+        }
+
+        RPC_WSTR localString = nullptr;
+        if (result == RPC_S_OK)
+        {
+            if (ReadCurrentProcessValue(stringUuid, &localString))
+            {
+                record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(localString));
+                record->Values32[1] = CopyUuidStringPointerText(record->Text1, &record->Text1Length, sizeof(record->Text1), reinterpret_cast<const wchar_t*>(localString));
+            }
+            else
+            {
+                record->Values32[1] = stringUuid == nullptr ?
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer) :
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            }
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitUuidFromStringWEvent(
+    RPC_STATUS result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    RPC_WSTR stringUuid,
+    UUID* uuid)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::UuidFromStringW, "rpcrt4.dll", start, end, result == RPC_S_OK ? 0 : static_cast<DWORD>(result));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(stringUuid));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(uuid));
+        record->Values32[0] = CopyUuidStringPointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), reinterpret_cast<const wchar_t*>(stringUuid));
+        record->Values32[1] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+
+        if (result == RPC_S_OK)
+        {
+            UUID localUuid = {};
+            if (ReadCurrentProcessValue(uuid, &localUuid))
+            {
+                record->Values32[1] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+                FormatGuidText(record->Text1, &record->Text1Length, sizeof(record->Text1), localUuid, "UUID");
+            }
+            else
+            {
+                record->Values32[1] = uuid == nullptr ?
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer) :
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            }
+        }
+
         CommitTransportRecord(record, overheadStart);
     }
 }
@@ -4375,6 +4600,9 @@ RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR p
 RPC_STATUS RPC_ENTRY HookedRpcBindingFromStringBindingW(RPC_WSTR stringBinding, RPC_BINDING_HANDLE* binding);
 RPC_STATUS RPC_ENTRY HookedRpcStringFreeW(RPC_WSTR* string);
 RPC_STATUS RPC_ENTRY HookedRpcBindingFree(RPC_BINDING_HANDLE* binding);
+RPC_STATUS RPC_ENTRY HookedUuidCreate(UUID* uuid);
+RPC_STATUS RPC_ENTRY HookedUuidToStringW(UUID* uuid, RPC_WSTR* stringUuid);
+RPC_STATUS RPC_ENTRY HookedUuidFromStringW(RPC_WSTR stringUuid, UUID* uuid);
 int WINAPI HookedWSAStartup(WORD versionRequested, LPWSADATA data);
 int WINAPI HookedWSACleanup();
 SOCKET WINAPI HookedSocket(int af, int type, int protocol);
@@ -4446,6 +4674,9 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "rpcrt4.dll", "RpcBindingFromStringBindingW", reinterpret_cast<void*>(HookedRpcBindingFromStringBindingW), reinterpret_cast<void**>(&g_originalRpcBindingFromStringBindingW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringFreeW", reinterpret_cast<void*>(HookedRpcStringFreeW), reinterpret_cast<void**>(&g_originalRpcStringFreeW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcBindingFree", reinterpret_cast<void*>(HookedRpcBindingFree), reinterpret_cast<void**>(&g_originalRpcBindingFree), false, true, false, 0, 0 },
+        HookDefinition { "rpcrt4.dll", "UuidCreate", reinterpret_cast<void*>(HookedUuidCreate), reinterpret_cast<void**>(&g_originalUuidCreate), false, true, false, 0, 0 },
+        HookDefinition { "rpcrt4.dll", "UuidToStringW", reinterpret_cast<void*>(HookedUuidToStringW), reinterpret_cast<void**>(&g_originalUuidToStringW), false, true, false, 0, 0 },
+        HookDefinition { "rpcrt4.dll", "UuidFromStringW", reinterpret_cast<void*>(HookedUuidFromStringW), reinterpret_cast<void**>(&g_originalUuidFromStringW), false, true, false, 0, 0 },
         HookDefinition { "ws2_32.dll", "WSAStartup", reinterpret_cast<void*>(HookedWSAStartup), reinterpret_cast<void**>(&g_originalWSAStartup), false, true, false, 115, 0 },
         HookDefinition { "ws2_32.dll", "WSACleanup", reinterpret_cast<void*>(HookedWSACleanup), reinterpret_cast<void**>(&g_originalWSACleanup), false, true, false, 116, 0 },
         HookDefinition { "ws2_32.dll", "socket", reinterpret_cast<void*>(HookedSocket), reinterpret_cast<void**>(&g_originalSocket), false, true, false, 23, 0 },
@@ -6592,6 +6823,87 @@ RPC_STATUS RPC_ENTRY HookedRpcBindingFree(RPC_BINDING_HANDLE* binding)
     if (HooksEnabled())
     {
         EmitRpcBindingFreeEvent(result, start, end, binding, preBinding, postBinding);
+    }
+
+    return result;
+}
+
+RPC_STATUS RPC_ENTRY HookedUuidCreate(UUID* uuid)
+{
+    if (g_inHook || !HooksEnabled() || g_originalUuidCreate == nullptr)
+    {
+        if (g_originalUuidCreate == nullptr)
+        {
+            return RPC_S_CALL_FAILED;
+        }
+
+        return g_originalUuidCreate(uuid);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const RPC_STATUS result = g_originalUuidCreate(uuid);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitUuidCreateEvent(result, start, end, uuid);
+    }
+
+    return result;
+}
+
+RPC_STATUS RPC_ENTRY HookedUuidToStringW(UUID* uuid, RPC_WSTR* stringUuid)
+{
+    if (g_inHook || !HooksEnabled() || g_originalUuidToStringW == nullptr)
+    {
+        if (g_originalUuidToStringW == nullptr)
+        {
+            return RPC_S_CALL_FAILED;
+        }
+
+        return g_originalUuidToStringW(uuid, stringUuid);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const RPC_STATUS result = g_originalUuidToStringW(uuid, stringUuid);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitUuidToStringWEvent(result, start, end, uuid, stringUuid);
+    }
+
+    return result;
+}
+
+RPC_STATUS RPC_ENTRY HookedUuidFromStringW(RPC_WSTR stringUuid, UUID* uuid)
+{
+    if (g_inHook || !HooksEnabled() || g_originalUuidFromStringW == nullptr)
+    {
+        if (g_originalUuidFromStringW == nullptr)
+        {
+            return RPC_S_CALL_FAILED;
+        }
+
+        return g_originalUuidFromStringW(stringUuid, uuid);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const RPC_STATUS result = g_originalUuidFromStringW(stringUuid, uuid);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitUuidFromStringWEvent(result, start, end, stringUuid, uuid);
     }
 
     return result;

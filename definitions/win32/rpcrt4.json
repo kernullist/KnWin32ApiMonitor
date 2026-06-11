@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "module": "rpcrt4",
-  "description": "Wave 2 RPC metadata with a smoke-verified local binding lifecycle slice and definition-only endpoint/auth/UUID APIs.",
+  "description": "Wave 2 RPC metadata with smoke-verified local binding lifecycle coverage plus a low-payload Wave 3 UUID helper slice.",
   "apis": [
     {
       "module": "RPCRT4.dll",
@@ -192,9 +192,27 @@
       "name": "UuidCreate",
       "family": "rpc",
       "category": "uuid_create",
-      "risk": "medium",
-      "hookPolicy": "definition_only",
-      "coverageStatus": "definition_only",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "RPC_STATUS",
+      "errorSource": "none",
+      "success": { "returnIn": "RPC_S_OK,RPC_S_UUID_LOCAL_ONLY" },
+      "failure": { "returnNotIn": "RPC_S_OK,RPC_S_UUID_LOCAL_ONLY" },
+      "parameters": [
+        { "name": "Uuid", "type": "UUID*", "direction": "out", "decode": "guid_pointer", "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "RPCRT4.dll",
+      "name": "UuidToStringW",
+      "family": "rpc",
+      "category": "uuid_to_string",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
       "architectures": ["x86", "x64"],
       "callingConvention": "stdcall",
       "returnType": "RPC_STATUS",
@@ -202,7 +220,27 @@
       "success": { "returnEqual": "RPC_S_OK" },
       "failure": { "returnNotEqual": "RPC_S_OK" },
       "parameters": [
-        { "name": "Uuid", "type": "UUID*", "direction": "out", "decode": "buffer", "maxBytes": 16, "captureTiming": "post" }
+        { "name": "Uuid", "type": "UUID*", "direction": "in", "decode": "guid_pointer" },
+        { "name": "StringUuid", "type": "RPC_WSTR*", "direction": "out", "decode": "rpc_string_pointer", "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "RPCRT4.dll",
+      "name": "UuidFromStringW",
+      "family": "rpc",
+      "category": "uuid_from_string",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "RPC_STATUS",
+      "errorSource": "none",
+      "success": { "returnEqual": "RPC_S_OK" },
+      "failure": { "returnNotEqual": "RPC_S_OK" },
+      "parameters": [
+        { "name": "StringUuid", "type": "RPC_WSTR", "direction": "in", "decode": "utf16_string", "maxBytes": 128 },
+        { "name": "Uuid", "type": "UUID*", "direction": "out", "decode": "guid_pointer", "captureTiming": "post" }
       ]
     }
   ]
