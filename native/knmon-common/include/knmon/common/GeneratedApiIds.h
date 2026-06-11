@@ -108,6 +108,9 @@ enum class KnMonTransportApiId : std::uint16_t
     GetModuleInformation = 99,
     GetModuleBaseNameW = 100,
     GetModuleFileNameExW = 101,
+    GetFileVersionInfoSizeW = 102,
+    GetFileVersionInfoW = 103,
+    VerQueryValueW = 104,
 };
 
 enum class KnMonTransportModuleId : std::uint16_t
@@ -126,5 +129,6 @@ enum class KnMonTransportModuleId : std::uint16_t
     User32 = 11,
     Gdi32 = 12,
     Psapi = 13,
+    Version = 14,
 };
 }

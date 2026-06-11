@@ -2623,6 +2623,59 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
         break;
     }
+    case KnMonTransportApiId::GetFileVersionInfoSizeW:
+    {
+        const std::string fileNamePointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string handlePointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string fileName = text0.empty() ? fileNamePointer : text0;
+        const std::string handleValue = record.Values32[1] == 0 ? handlePointer : std::to_string(record.Values32[0]);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPCWSTR", "lptstrFilename", "in", fileNamePointer, fileNamePointer, fileName, DecodeStatusName(record.Values32[2])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPDWORD", "lpdwHandle", "out", handlePointer, handleValue, handleValue);
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::GetFileVersionInfoW:
+    {
+        const std::string fileNamePointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string dataPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string fileName = text0.empty() ? fileNamePointer : text0;
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPCWSTR", "lptstrFilename", "in", fileNamePointer, fileNamePointer, fileName, DecodeStatusName(record.Values32[2])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "dwHandle", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "DWORD", "dwLen", "in", std::to_string(record.Values32[1]), std::to_string(record.Values32[1]), std::to_string(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "LPVOID", "lpData", "out", dataPointer, dataPointer, dataPointer);
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::VerQueryValueW:
+    {
+        const std::string blockPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string subBlockPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string valuePointerPointer = HexPointerValue(record.Values64[2], result.Architecture);
+        const std::string lengthPointer = HexPointerValue(record.Values64[3], result.Architecture);
+        const std::string valuePointer = HexPointerValue(record.Values64[4], result.Architecture);
+        const std::string subBlock = text0.empty() ? subBlockPointer : text0;
+        std::string valueDecoded = record.Values32[4] == 0 ? valuePointerPointer : valuePointer;
+        if (record.Values32[3] == 1)
+        {
+            valueDecoded = valuePointer + ";" + text1;
+            if (!text2.empty())
+            {
+                valueDecoded += ";" + text2;
+            }
+        }
+        else if (record.Values32[3] == 2)
+        {
+            valueDecoded = valuePointer + ";" + text1;
+        }
+
+        const std::string lengthValue = record.Values32[1] == 0 ? lengthPointer : std::to_string(record.Values32[0]);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPCVOID", "pBlock", "in", blockPointer, blockPointer, blockPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPCWSTR", "lpSubBlock", "in", subBlockPointer, subBlockPointer, subBlock, DecodeStatusName(record.Values32[2])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "LPVOID*", "lplpBuffer", "out", valuePointerPointer, valuePointer, valueDecoded) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "PUINT", "puLen", "out", lengthPointer, lengthValue, lengthValue);
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::RpcStringBindingComposeW:
     {
         const std::string objUuidPointer = HexPointerValue(record.Values64[0], result.Architecture);

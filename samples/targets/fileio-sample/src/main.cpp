@@ -8,6 +8,7 @@
 #include <bcrypt.h>
 #include <rpc.h>
 #include <wincrypt.h>
+#include <winver.h>
 #include <winhttp.h>
 #include <wininet.h>
 #include <winternl.h>
@@ -839,6 +840,98 @@ bool RunPsapiModuleQueryProbe()
     return success;
 }
 
+std::wstring BuildVersionProbePath()
+{
+    std::array<wchar_t, MAX_PATH> systemDirectory = {};
+    std::wstring result;
+
+    do
+    {
+        const UINT length = GetSystemDirectoryW(systemDirectory.data(), static_cast<UINT>(systemDirectory.size()));
+        if (length == 0 || length >= systemDirectory.size())
+        {
+            result = L"C:\\Windows\\System32\\kernel32.dll";
+            break;
+        }
+
+        result.assign(systemDirectory.data(), length);
+        if (!result.empty() && result.back() != L'\\')
+        {
+            result += L"\\";
+        }
+
+        result += L"kernel32.dll";
+    }
+    while (false);
+
+    return result;
+}
+
+bool RunVersionResourceProbe()
+{
+    bool success = false;
+    static constexpr DWORD MaxVersionInfoBytes = 64 * 1024;
+    std::array<BYTE, MaxVersionInfoBytes> versionInfo = {};
+    std::wstring versionPath = BuildVersionProbePath();
+    DWORD versionHandle = 0;
+
+    do
+    {
+        const DWORD versionBytes = GetFileVersionInfoSizeW(versionPath.c_str(), &versionHandle);
+        if (versionBytes == 0)
+        {
+            LogLastError("GetFileVersionInfoSizeW");
+            break;
+        }
+
+        if (versionBytes > versionInfo.size())
+        {
+            std::cout << "version resource too large bytes=" << versionBytes << "\n";
+            break;
+        }
+
+        if (!GetFileVersionInfoW(versionPath.c_str(), versionHandle, versionBytes, versionInfo.data()))
+        {
+            LogLastError("GetFileVersionInfoW");
+            break;
+        }
+
+        LPVOID fixedValue = nullptr;
+        UINT fixedLength = 0;
+        if (!VerQueryValueW(versionInfo.data(), L"\\", &fixedValue, &fixedLength))
+        {
+            LogLastError("VerQueryValueW(root)");
+            break;
+        }
+
+        auto* fixedInfo = static_cast<VS_FIXEDFILEINFO*>(fixedValue);
+        if (fixedInfo == nullptr || fixedLength < sizeof(VS_FIXEDFILEINFO) || fixedInfo->dwSignature != VS_FFI_SIGNATURE)
+        {
+            std::cout << "version fixed info evidence invalid\n";
+            break;
+        }
+
+        LPVOID translationValue = nullptr;
+        UINT translationLength = 0;
+        if (!VerQueryValueW(versionInfo.data(), L"\\VarFileInfo\\Translation", &translationValue, &translationLength))
+        {
+            LogLastError("VerQueryValueW(translation)");
+            break;
+        }
+
+        std::cout << "version resource roundtrip bytes=" << versionBytes
+                  << " file_version_ms=0x" << std::hex << fixedInfo->dwFileVersionMS
+                  << " file_version_ls=0x" << fixedInfo->dwFileVersionLS
+                  << " type=0x" << fixedInfo->dwFileType
+                  << std::dec
+                  << " translation_bytes=" << translationLength << "\n";
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
 bool RunWinsockProbe()
 {
     bool success = false;
@@ -1304,6 +1397,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunPsapiModuleQueryProbe())
+        {
+            break;
+        }
+
+        if (!RunVersionResourceProbe())
         {
             break;
         }

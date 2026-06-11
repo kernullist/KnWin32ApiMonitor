@@ -45,6 +45,9 @@ $requiredApis = @(
     "GetModuleInformation",
     "GetModuleBaseNameW",
     "GetModuleFileNameExW",
+    "GetFileVersionInfoSizeW",
+    "GetFileVersionInfoW",
+    "VerQueryValueW",
     "RpcStringBindingComposeW",
     "RpcBindingFromStringBindingW",
     "RpcStringFreeW",
@@ -541,6 +544,84 @@ $moduleArgs = @($moduleEvents | ForEach-Object { $_.arguments } | ConvertTo-Json
 if ($moduleArgs -cmatch "BEGIN CERTIFICATE|PRIVATE KEY|Authorization|Cookie|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|Authenticode|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 PSAPI module-query events appear to expose PE, module-memory, file-content, hash, signature, credential, or byte-preview evidence: $moduleArgs"
+}
+
+$resourceEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "resource" })
+if ($resourceEvents.Count -lt 4)
+{
+    throw "x86 capture did not include the selected version resource API family slice."
+}
+
+$versionSize = @($resourceEvents | Where-Object { $_.api -eq "GetFileVersionInfoSizeW" } | Select-Object -First 1)
+if ($versionSize.Count -ne 1 -or $versionSize[0].module -ne "version.dll" -or $versionSize[0].hookPolicy -ne "iat" -or $versionSize[0].coverageStatus -ne "smoke_verified" -or $versionSize[0].returnValue -notmatch "^[1-9][0-9]*$")
+{
+    throw "x86 GetFileVersionInfoSizeW metadata or return evidence mismatch."
+}
+
+$versionSizeArgs = ($versionSize[0].arguments | ConvertTo-Json -Depth 8)
+if ($versionSizeArgs -notmatch "kernel32\.dll" -or $versionSizeArgs -notmatch "dword_pointer")
+{
+    throw "x86 GetFileVersionInfoSizeW arguments did not include path/handle evidence: $versionSizeArgs"
+}
+
+$versionLoad = @($resourceEvents | Where-Object { $_.api -eq "GetFileVersionInfoW" } | Select-Object -First 1)
+if ($versionLoad.Count -ne 1 -or $versionLoad[0].module -ne "version.dll" -or $versionLoad[0].apiCategory -ne "version_info_load" -or $versionLoad[0].returnValue -ne "1")
+{
+    throw "x86 GetFileVersionInfoW metadata or return evidence mismatch."
+}
+
+$versionLoadArgs = ($versionLoad[0].arguments | ConvertTo-Json -Depth 8)
+if ($versionLoadArgs -notmatch "kernel32\.dll" -or $versionLoadArgs -notmatch "version_info_buffer_pointer" -or $versionLoadArgs -notmatch "byte_count")
+{
+    throw "x86 GetFileVersionInfoW arguments did not include path/size/pointer evidence: $versionLoadArgs"
+}
+
+$versionQueries = @($resourceEvents | Where-Object { $_.api -eq "VerQueryValueW" })
+if ($versionQueries.Count -lt 2)
+{
+    throw "x86 capture did not include root and translation VerQueryValueW evidence."
+}
+
+$rootVersionQuery = @($versionQueries | Where-Object {
+    $subBlock = @($_.arguments | Where-Object { $_.name -eq "lpSubBlock" } | Select-Object -First 1)
+    $subBlock.Count -eq 1 -and $subBlock[0].decodedValue -eq "\"
+} | Select-Object -First 1)
+if ($rootVersionQuery.Count -ne 1 -or $rootVersionQuery[0].returnValue -ne "1")
+{
+    throw "x86 VerQueryValueW root fixed-info evidence missing."
+}
+
+$rootValueArg = @($rootVersionQuery[0].arguments | Where-Object { $_.name -eq "lplpBuffer" } | Select-Object -First 1)
+if ($rootValueArg.Count -ne 1 -or
+    $rootValueArg[0].decodeAlias -ne "version_info_value_pointer" -or
+    $rootValueArg[0].decodedValue -notmatch "sig=0xfeef04bd" -or
+    $rootValueArg[0].decodedValue -notmatch "fileMS=0x[0-9a-fA-F]{8}" -or
+    $rootValueArg[0].decodedValue -notmatch "prodMS=0x[0-9a-fA-F]{8}" -or
+    $rootValueArg[0].decodedValue -notmatch "flags=0x[0-9a-fA-F]{8}" -or
+    $rootValueArg[0].decodedValue -notmatch "type=0x[0-9a-fA-F]{8}")
+{
+    throw "x86 VerQueryValueW root did not include fixed-file-info numeric evidence: $($rootValueArg | ConvertTo-Json -Depth 8)"
+}
+
+$translationVersionQuery = @($versionQueries | Where-Object {
+    $subBlock = @($_.arguments | Where-Object { $_.name -eq "lpSubBlock" } | Select-Object -First 1)
+    $subBlock.Count -eq 1 -and $subBlock[0].decodedValue -eq "\VarFileInfo\Translation"
+} | Select-Object -First 1)
+if ($translationVersionQuery.Count -ne 1 -or $translationVersionQuery[0].returnValue -ne "1")
+{
+    throw "x86 VerQueryValueW translation evidence missing."
+}
+
+$translationValueArg = @($translationVersionQuery[0].arguments | Where-Object { $_.name -eq "lplpBuffer" } | Select-Object -First 1)
+if ($translationValueArg.Count -ne 1 -or $translationValueArg[0].decodedValue -notmatch "translation=lang=0x[0-9a-fA-F]{4},codepage=0x[0-9a-fA-F]{4}")
+{
+    throw "x86 VerQueryValueW translation did not include language/codepage evidence: $($translationValueArg | ConvertTo-Json -Depth 8)"
+}
+
+$versionArgs = @($resourceEvents | ForEach-Object { $_.arguments } | ConvertTo-Json -Depth 8)
+if ($versionArgs -cmatch "CompanyName|ProductName|FileDescription|OriginalFilename|StringFileInfo|VS_VERSION_INFO|BEGIN CERTIFICATE|PRIVATE KEY|Authorization|Cookie|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|Authenticode|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 version resource events appear to expose raw resource, PE, file-content, hash, signature, string-table, credential, or byte-preview evidence: $versionArgs"
 }
 
 $rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })

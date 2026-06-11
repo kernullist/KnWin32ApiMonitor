@@ -605,6 +605,24 @@
       "module": "psapi.dll",
       "name": "GetModuleFileNameExW",
       "symbol": "GetModuleFileNameExW"
+    },
+    {
+      "id": 102,
+      "module": "version.dll",
+      "name": "GetFileVersionInfoSizeW",
+      "symbol": "GetFileVersionInfoSizeW"
+    },
+    {
+      "id": 103,
+      "module": "version.dll",
+      "name": "GetFileVersionInfoW",
+      "symbol": "GetFileVersionInfoW"
+    },
+    {
+      "id": 104,
+      "module": "version.dll",
+      "name": "VerQueryValueW",
+      "symbol": "VerQueryValueW"
     }
   ],
   "modules": [
@@ -672,6 +690,11 @@
       "id": 13,
       "name": "psapi.dll",
       "symbol": "Psapi"
+    },
+    {
+      "id": 14,
+      "name": "version.dll",
+      "symbol": "Version"
     }
   ],
   "schemaVersion": "0.1.0",

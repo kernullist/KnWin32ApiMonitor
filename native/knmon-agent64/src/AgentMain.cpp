@@ -11,6 +11,7 @@
 #include <bcrypt.h>
 #include <rpc.h>
 #include <wincrypt.h>
+#include <winver.h>
 #include <winhttp.h>
 #include <wininet.h>
 #include <winternl.h>
@@ -90,6 +91,12 @@ struct KnMonPeb
     KnMonPebLdrData* Ldr;
 };
 
+struct VersionTranslation
+{
+    WORD Language;
+    WORD CodePage;
+};
+
 using CreateFileWFn = HANDLE(WINAPI*)(LPCWSTR, DWORD, DWORD, LPSECURITY_ATTRIBUTES, DWORD, DWORD, HANDLE);
 using CreateFileAFn = HANDLE(WINAPI*)(LPCSTR, DWORD, DWORD, LPSECURITY_ATTRIBUTES, DWORD, DWORD, HANDLE);
 using ReadFileFn = BOOL(WINAPI*)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
@@ -131,6 +138,9 @@ using EnumProcessModulesFn = BOOL(WINAPI*)(HANDLE, HMODULE*, DWORD, LPDWORD);
 using GetModuleInformationFn = BOOL(WINAPI*)(HANDLE, HMODULE, LPMODULEINFO, DWORD);
 using GetModuleBaseNameWFn = DWORD(WINAPI*)(HANDLE, HMODULE, LPWSTR, DWORD);
 using GetModuleFileNameExWFn = DWORD(WINAPI*)(HANDLE, HMODULE, LPWSTR, DWORD);
+using GetFileVersionInfoSizeWFn = DWORD(WINAPI*)(LPCWSTR, LPDWORD);
+using GetFileVersionInfoWFn = BOOL(WINAPI*)(LPCWSTR, DWORD, DWORD, LPVOID);
+using VerQueryValueWFn = BOOL(WINAPI*)(LPCVOID, LPCWSTR, LPVOID*, PUINT);
 using RpcStringBindingComposeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR*);
 using RpcBindingFromStringBindingWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_BINDING_HANDLE*);
 using RpcStringFreeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR*);
@@ -210,6 +220,9 @@ EnumProcessModulesFn g_originalEnumProcessModules = nullptr;
 GetModuleInformationFn g_originalGetModuleInformation = nullptr;
 GetModuleBaseNameWFn g_originalGetModuleBaseNameW = nullptr;
 GetModuleFileNameExWFn g_originalGetModuleFileNameExW = nullptr;
+GetFileVersionInfoSizeWFn g_originalGetFileVersionInfoSizeW = nullptr;
+GetFileVersionInfoWFn g_originalGetFileVersionInfoW = nullptr;
+VerQueryValueWFn g_originalVerQueryValueW = nullptr;
 RpcStringBindingComposeWFn g_originalRpcStringBindingComposeW = nullptr;
 RpcBindingFromStringBindingWFn g_originalRpcBindingFromStringBindingW = nullptr;
 RpcStringFreeWFn g_originalRpcStringFreeW = nullptr;
@@ -303,7 +316,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 55;
+constexpr std::size_t HookDefinitionCount = 58;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1542,6 +1555,10 @@ std::uint16_t ModuleId(const char* moduleName)
     else if (_stricmp(moduleName, "psapi.dll") == 0)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Psapi);
+    }
+    else if (_stricmp(moduleName, "version.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Version);
     }
 
     return result;
@@ -3071,6 +3088,189 @@ void EmitGetModuleFileNameExWEvent(
     }
 }
 
+void SetFormattedTextLength(char* destination, std::uint32_t* length, std::size_t capacity, int written)
+{
+    if (length != nullptr)
+    {
+        if (destination == nullptr || capacity == 0 || written < 0)
+        {
+            *length = 0;
+        }
+        else if (static_cast<std::size_t>(written) >= capacity)
+        {
+            *length = static_cast<std::uint32_t>(capacity - 1);
+        }
+        else
+        {
+            *length = static_cast<std::uint32_t>(written);
+        }
+    }
+}
+
+void FormatFixedFileInfoText(knmon::KnMonTransportRecord* record, const VS_FIXEDFILEINFO& info)
+{
+    if (record != nullptr)
+    {
+        const int fixedVersionWritten = std::snprintf(
+            record->Text1,
+            sizeof(record->Text1),
+            "sig=0x%08lx,fileMS=0x%08lx,fileLS=0x%08lx,prodMS=0x%08lx,prodLS=0x%08lx",
+            static_cast<unsigned long>(info.dwSignature),
+            static_cast<unsigned long>(info.dwFileVersionMS),
+            static_cast<unsigned long>(info.dwFileVersionLS),
+            static_cast<unsigned long>(info.dwProductVersionMS),
+            static_cast<unsigned long>(info.dwProductVersionLS));
+        SetFormattedTextLength(record->Text1, &record->Text1Length, sizeof(record->Text1), fixedVersionWritten);
+
+        const int fixedFlagsWritten = std::snprintf(
+            record->Text2,
+            sizeof(record->Text2),
+            "mask=0x%08lx,flags=0x%08lx,os=0x%08lx,type=0x%08lx,sub=0x%08lx",
+            static_cast<unsigned long>(info.dwFileFlagsMask),
+            static_cast<unsigned long>(info.dwFileFlags),
+            static_cast<unsigned long>(info.dwFileOS),
+            static_cast<unsigned long>(info.dwFileType),
+            static_cast<unsigned long>(info.dwFileSubtype));
+        SetFormattedTextLength(record->Text2, &record->Text2Length, sizeof(record->Text2), fixedFlagsWritten);
+    }
+}
+
+void FormatTranslationText(knmon::KnMonTransportRecord* record, const VersionTranslation& translation)
+{
+    if (record != nullptr)
+    {
+        const int written = std::snprintf(
+            record->Text1,
+            sizeof(record->Text1),
+            "translation=lang=0x%04x,codepage=0x%04x",
+            static_cast<unsigned int>(translation.Language),
+            static_cast<unsigned int>(translation.CodePage));
+        SetFormattedTextLength(record->Text1, &record->Text1Length, sizeof(record->Text1), written);
+    }
+}
+
+void EmitGetFileVersionInfoSizeWEvent(
+    DWORD result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPCWSTR fileName,
+    LPDWORD handle)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetFileVersionInfoSizeW, "version.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(result);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(fileName));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(handle));
+        record->Values32[2] = CopyWidePointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), fileName);
+
+        DWORD localHandle = 0;
+        if (ReadCurrentProcessValue(handle, &localHandle))
+        {
+            record->Values32[0] = localHandle;
+            record->Values32[1] = 1;
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetFileVersionInfoWEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPCWSTR fileName,
+    DWORD handle,
+    DWORD length,
+    LPVOID data)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetFileVersionInfoW, "version.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(fileName));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(data));
+        record->Values32[0] = handle;
+        record->Values32[1] = length;
+        record->Values32[2] = CopyWidePointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), fileName);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitVerQueryValueWEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPCVOID block,
+    LPCWSTR subBlock,
+    LPVOID* value,
+    PUINT length)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::VerQueryValueW, "version.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(block));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(subBlock));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(value));
+        record->Values64[3] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(length));
+        record->Values32[2] = CopyWidePointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), subBlock);
+
+        UINT localLength = 0;
+        if (result != FALSE && ReadCurrentProcessValue(length, &localLength))
+        {
+            record->Values32[0] = localLength;
+            record->Values32[1] = 1;
+        }
+
+        LPVOID localValue = nullptr;
+        if (result != FALSE && ReadCurrentProcessValue(value, &localValue))
+        {
+            record->Values64[4] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(localValue));
+            record->Values32[4] = 1;
+        }
+
+        if (result != FALSE && record->Values32[4] != 0 && std::strcmp(record->Text0, "\\") == 0 && localLength >= sizeof(VS_FIXEDFILEINFO))
+        {
+            VS_FIXEDFILEINFO localInfo = {};
+            if (ReadCurrentProcessValue(static_cast<const VS_FIXEDFILEINFO*>(localValue), &localInfo))
+            {
+                record->Values32[3] = 1;
+                FormatFixedFileInfoText(record, localInfo);
+            }
+        }
+        else if (
+            result != FALSE &&
+            record->Values32[4] != 0 &&
+            _stricmp(record->Text0, "\\VarFileInfo\\Translation") == 0 &&
+            localLength >= sizeof(VersionTranslation))
+        {
+            VersionTranslation translation = {};
+            if (ReadCurrentProcessValue(static_cast<const VersionTranslation*>(localValue), &translation))
+            {
+                record->Values32[3] = 2;
+                record->Values32[5] = translation.Language;
+                record->Values32[6] = translation.CodePage;
+                FormatTranslationText(record, translation);
+            }
+        }
+
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 std::uint32_t CopyRpcWideStringText(char* destination, std::uint32_t* length, std::size_t capacity, RPC_WSTR source)
 {
     return CopyWidePointerText(destination, length, capacity, reinterpret_cast<const wchar_t*>(source));
@@ -3667,6 +3867,9 @@ BOOL WINAPI HookedEnumProcessModules(HANDLE process, HMODULE* modules, DWORD req
 BOOL WINAPI HookedGetModuleInformation(HANDLE process, HMODULE module, LPMODULEINFO moduleInfo, DWORD requestedBytes);
 DWORD WINAPI HookedGetModuleBaseNameW(HANDLE process, HMODULE module, LPWSTR baseName, DWORD sizeChars);
 DWORD WINAPI HookedGetModuleFileNameExW(HANDLE process, HMODULE module, LPWSTR fileName, DWORD sizeChars);
+DWORD WINAPI HookedGetFileVersionInfoSizeW(LPCWSTR fileName, LPDWORD handle);
+BOOL WINAPI HookedGetFileVersionInfoW(LPCWSTR fileName, DWORD handle, DWORD length, LPVOID data);
+BOOL WINAPI HookedVerQueryValueW(LPCVOID block, LPCWSTR subBlock, LPVOID* value, PUINT length);
 RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR protSeq, RPC_WSTR networkAddr, RPC_WSTR endpoint, RPC_WSTR options, RPC_WSTR* stringBinding);
 RPC_STATUS RPC_ENTRY HookedRpcBindingFromStringBindingW(RPC_WSTR stringBinding, RPC_BINDING_HANDLE* binding);
 RPC_STATUS RPC_ENTRY HookedRpcStringFreeW(RPC_WSTR* string);
@@ -3729,6 +3932,9 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "psapi.dll", "GetModuleInformation", reinterpret_cast<void*>(HookedGetModuleInformation), reinterpret_cast<void**>(&g_originalGetModuleInformation), false, true, false, 0, 0 },
         HookDefinition { "psapi.dll", "GetModuleBaseNameW", reinterpret_cast<void*>(HookedGetModuleBaseNameW), reinterpret_cast<void**>(&g_originalGetModuleBaseNameW), false, true, false, 0, 0 },
         HookDefinition { "psapi.dll", "GetModuleFileNameExW", reinterpret_cast<void*>(HookedGetModuleFileNameExW), reinterpret_cast<void**>(&g_originalGetModuleFileNameExW), false, true, false, 0, 0 },
+        HookDefinition { "version.dll", "GetFileVersionInfoSizeW", reinterpret_cast<void*>(HookedGetFileVersionInfoSizeW), reinterpret_cast<void**>(&g_originalGetFileVersionInfoSizeW), false, true, false, 0, 0 },
+        HookDefinition { "version.dll", "GetFileVersionInfoW", reinterpret_cast<void*>(HookedGetFileVersionInfoW), reinterpret_cast<void**>(&g_originalGetFileVersionInfoW), false, true, false, 0, 0 },
+        HookDefinition { "version.dll", "VerQueryValueW", reinterpret_cast<void*>(HookedVerQueryValueW), reinterpret_cast<void**>(&g_originalVerQueryValueW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringBindingComposeW", reinterpret_cast<void*>(HookedRpcStringBindingComposeW), reinterpret_cast<void**>(&g_originalRpcStringBindingComposeW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcBindingFromStringBindingW", reinterpret_cast<void*>(HookedRpcBindingFromStringBindingW), reinterpret_cast<void**>(&g_originalRpcBindingFromStringBindingW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringFreeW", reinterpret_cast<void*>(HookedRpcStringFreeW), reinterpret_cast<void**>(&g_originalRpcStringFreeW), false, true, false, 0, 0 },
@@ -5472,6 +5678,99 @@ DWORD WINAPI HookedGetModuleFileNameExW(HANDLE process, HMODULE module, LPWSTR f
     if (HooksEnabled())
     {
         EmitGetModuleFileNameExWEvent(result, eventError, start, end, process, module, fileName, sizeChars);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+DWORD WINAPI HookedGetFileVersionInfoSizeW(LPCWSTR fileName, LPDWORD handle)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetFileVersionInfoSizeW == nullptr)
+    {
+        if (g_originalGetFileVersionInfoSizeW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return 0;
+        }
+
+        return g_originalGetFileVersionInfoSizeW(fileName, handle);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const DWORD result = g_originalGetFileVersionInfoSizeW(fileName, handle);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == 0 ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitGetFileVersionInfoSizeWEvent(result, eventError, start, end, fileName, handle);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedGetFileVersionInfoW(LPCWSTR fileName, DWORD handle, DWORD length, LPVOID data)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetFileVersionInfoW == nullptr)
+    {
+        if (g_originalGetFileVersionInfoW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalGetFileVersionInfoW(fileName, handle, length, data);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalGetFileVersionInfoW(fileName, handle, length, data);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FALSE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitGetFileVersionInfoWEvent(result, eventError, start, end, fileName, handle, length, data);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedVerQueryValueW(LPCVOID block, LPCWSTR subBlock, LPVOID* value, PUINT length)
+{
+    if (g_inHook || !HooksEnabled() || g_originalVerQueryValueW == nullptr)
+    {
+        if (g_originalVerQueryValueW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalVerQueryValueW(block, subBlock, value, length);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalVerQueryValueW(block, subBlock, value, length);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FALSE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitVerQueryValueWEvent(result, eventError, start, end, block, subBlock, value, length);
     }
 
     SetLastError(lastError);

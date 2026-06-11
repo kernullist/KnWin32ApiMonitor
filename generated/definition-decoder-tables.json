@@ -2409,6 +2409,78 @@
         "returnNotEqual": "0"
       },
       "symbol": "GetModuleFileNameExW"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "version_info_size_query",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "GetLastError",
+      "failure": {
+        "returnEqual": "0"
+      },
+      "family": "resource",
+      "firstParameterIndex": 404,
+      "hookPolicy": "iat",
+      "id": 102,
+      "module": "version.dll",
+      "moduleId": 14,
+      "name": "GetFileVersionInfoSizeW",
+      "parameterCount": 2,
+      "returnType": "DWORD",
+      "risk": "low",
+      "source": "definitions/win32/version.json",
+      "success": {
+        "returnNotEqual": "0"
+      },
+      "symbol": "GetFileVersionInfoSizeW"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "version_info_load",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "GetLastError",
+      "failure": {
+        "returnEqual": "FALSE"
+      },
+      "family": "resource",
+      "firstParameterIndex": 406,
+      "hookPolicy": "iat",
+      "id": 103,
+      "module": "version.dll",
+      "moduleId": 14,
+      "name": "GetFileVersionInfoW",
+      "parameterCount": 4,
+      "returnType": "BOOL",
+      "risk": "low",
+      "source": "definitions/win32/version.json",
+      "success": {
+        "returnNotEqual": "FALSE"
+      },
+      "symbol": "GetFileVersionInfoW"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "version_value_query",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "GetLastError",
+      "failure": {
+        "returnEqual": "FALSE"
+      },
+      "family": "resource",
+      "firstParameterIndex": 410,
+      "hookPolicy": "iat",
+      "id": 104,
+      "module": "version.dll",
+      "moduleId": 14,
+      "name": "VerQueryValueW",
+      "parameterCount": 4,
+      "returnType": "BOOL",
+      "risk": "low",
+      "source": "definitions/win32/version.json",
+      "success": {
+        "returnNotEqual": "FALSE"
+      },
+      "symbol": "VerQueryValueW"
     }
   ],
   "decodeAliases": [
@@ -2531,6 +2603,15 @@
     },
     {
       "enum": "",
+      "flags": "",
+      "kind": "count",
+      "maxPreviewBytes": 0,
+      "name": "dword_value",
+      "preview": "decimal",
+      "readsTargetMemory": false
+    },
+    {
+      "enum": "",
       "flags": "file_access_mask",
       "kind": "flags",
       "maxPreviewBytes": 0,
@@ -2564,6 +2645,15 @@
       "name": "file_share_mask",
       "preview": "symbolic_mask",
       "readsTargetMemory": false
+    },
+    {
+      "enum": "",
+      "flags": "",
+      "kind": "object",
+      "maxPreviewBytes": 64,
+      "name": "fixed_file_info_pointer",
+      "preview": "fixed_file_info",
+      "readsTargetMemory": true
     },
     {
       "enum": "",
@@ -2870,6 +2960,24 @@
       "name": "utf16_string_optional",
       "preview": "utf16_optional",
       "readsTargetMemory": true
+    },
+    {
+      "enum": "",
+      "flags": "",
+      "kind": "pointer",
+      "maxPreviewBytes": 0,
+      "name": "version_info_buffer_pointer",
+      "preview": "version_info_buffer_pointer",
+      "readsTargetMemory": false
+    },
+    {
+      "enum": "",
+      "flags": "",
+      "kind": "pointer",
+      "maxPreviewBytes": 64,
+      "name": "version_info_value_pointer",
+      "preview": "version_info_value_pointer",
+      "readsTargetMemory": true
     }
   ],
   "modules": [
@@ -2937,6 +3045,11 @@
       "id": 13,
       "name": "psapi.dll",
       "symbol": "Psapi"
+    },
+    {
+      "id": 14,
+      "name": "version.dll",
+      "symbol": "Version"
     }
   ],
   "parameters": [
@@ -9807,6 +9920,176 @@
       "name": "nSize",
       "nullable": false,
       "type": "DWORD"
+    },
+    {
+      "absoluteIndex": 404,
+      "apiId": 102,
+      "captureTiming": "pre",
+      "decode": "utf16_string",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 512,
+      "name": "lptstrFilename",
+      "nullable": false,
+      "type": "LPCWSTR"
+    },
+    {
+      "absoluteIndex": 405,
+      "apiId": 102,
+      "captureTiming": "post",
+      "decode": "dword_pointer",
+      "direction": "out",
+      "enum": "",
+      "flags": "",
+      "index": 1,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 4,
+      "name": "lpdwHandle",
+      "nullable": true,
+      "type": "LPDWORD"
+    },
+    {
+      "absoluteIndex": 406,
+      "apiId": 103,
+      "captureTiming": "pre",
+      "decode": "utf16_string",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 512,
+      "name": "lptstrFilename",
+      "nullable": false,
+      "type": "LPCWSTR"
+    },
+    {
+      "absoluteIndex": 407,
+      "apiId": 103,
+      "captureTiming": "pre",
+      "decode": "dword_value",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 1,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "dwHandle",
+      "nullable": false,
+      "type": "DWORD"
+    },
+    {
+      "absoluteIndex": 408,
+      "apiId": 103,
+      "captureTiming": "pre",
+      "decode": "byte_count",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 2,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "dwLen",
+      "nullable": false,
+      "type": "DWORD"
+    },
+    {
+      "absoluteIndex": 409,
+      "apiId": 103,
+      "captureTiming": "post",
+      "decode": "version_info_buffer_pointer",
+      "direction": "out",
+      "enum": "",
+      "flags": "",
+      "index": 3,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "lpData",
+      "nullable": true,
+      "type": "LPVOID"
+    },
+    {
+      "absoluteIndex": 410,
+      "apiId": 104,
+      "captureTiming": "pre",
+      "decode": "version_info_buffer_pointer",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "pBlock",
+      "nullable": false,
+      "type": "LPCVOID"
+    },
+    {
+      "absoluteIndex": 411,
+      "apiId": 104,
+      "captureTiming": "pre",
+      "decode": "utf16_string",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 1,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 512,
+      "name": "lpSubBlock",
+      "nullable": false,
+      "type": "LPCWSTR"
+    },
+    {
+      "absoluteIndex": 412,
+      "apiId": 104,
+      "captureTiming": "post",
+      "decode": "version_info_value_pointer",
+      "direction": "out",
+      "enum": "",
+      "flags": "",
+      "index": 2,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 64,
+      "name": "lplpBuffer",
+      "nullable": true,
+      "type": "LPVOID*"
+    },
+    {
+      "absoluteIndex": 413,
+      "apiId": 104,
+      "captureTiming": "post",
+      "decode": "dword_pointer",
+      "direction": "out",
+      "enum": "",
+      "flags": "",
+      "index": 3,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 4,
+      "name": "puLen",
+      "nullable": true,
+      "type": "PUINT"
     }
   ],
   "schemaVersion": "0.1.0",
@@ -9822,6 +10105,7 @@
       "definitions/win32/resolver.json",
       "definitions/win32/rpcrt4.json",
       "definitions/win32/user32.json",
+      "definitions/win32/version.json",
       "definitions/win32/winhttp.json",
       "definitions/win32/wininet.json",
       "definitions/win32/ws2_32.json"

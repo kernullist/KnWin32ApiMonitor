@@ -14,7 +14,8 @@
     { "id": 10, "name": "winhttp.dll", "symbol": "Winhttp" },
     { "id": 11, "name": "user32.dll", "symbol": "User32" },
     { "id": 12, "name": "gdi32.dll", "symbol": "Gdi32" },
-    { "id": 13, "name": "psapi.dll", "symbol": "Psapi" }
+    { "id": 13, "name": "psapi.dll", "symbol": "Psapi" },
+    { "id": 14, "name": "version.dll", "symbol": "Version" }
   ],
   "apis": [
     { "id": 1, "module": "kernel32.dll", "name": "CreateFileW", "symbol": "CreateFileW" },
@@ -117,6 +118,9 @@
     { "id": 98, "module": "psapi.dll", "name": "EnumProcessModules", "symbol": "EnumProcessModules" },
     { "id": 99, "module": "psapi.dll", "name": "GetModuleInformation", "symbol": "GetModuleInformation" },
     { "id": 100, "module": "psapi.dll", "name": "GetModuleBaseNameW", "symbol": "GetModuleBaseNameW" },
-    { "id": 101, "module": "psapi.dll", "name": "GetModuleFileNameExW", "symbol": "GetModuleFileNameExW" }
+    { "id": 101, "module": "psapi.dll", "name": "GetModuleFileNameExW", "symbol": "GetModuleFileNameExW" },
+    { "id": 102, "module": "version.dll", "name": "GetFileVersionInfoSizeW", "symbol": "GetFileVersionInfoSizeW" },
+    { "id": 103, "module": "version.dll", "name": "GetFileVersionInfoW", "symbol": "GetFileVersionInfoW" },
+    { "id": 104, "module": "version.dll", "name": "VerQueryValueW", "symbol": "VerQueryValueW" }
   ]
 }
