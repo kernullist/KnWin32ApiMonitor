@@ -84,6 +84,7 @@ Implemented now:
 47. Phase 11L daemon supervision hardening, including read-only `daemon-audit`, stale registry `daemon-prune-stale`, duplicate target/session/path arbitration before attach mutation, daemon-crash/writer-crash/orphan-risk classification, additive Tauri/UI audit fields, and stale daemon status visibility.
 48. Phase 11M `.knapm` compression and host-side replay catalog support, including `--knapm-compression none|zstd`, zstd raw-block frame validation/replay, stored and uncompressed chunk integrity metadata, read-only catalog build/query, catalog missing-row pruning, Tauri catalog wrappers, UI catalog visibility, and regression smoke coverage.
 49. Phase 12A catalog-backed replay UX and virtualized trace rendering, including catalog rebuild/query/state-target-limit filters, missing-row dry-run/prune controls, explicit per-row `.knapm` replay by path, replay source/status output, and bounded DOM trace rows while preserving full-session JSONL export.
+50. Phase 12B trace query builder and error-focused view, including structured all/any query clauses over trace fields, invalid-clause handling, error/decode/slow-call issue groups, click-to-filter issue triage, and focused UI query validator coverage.
 
 Not implemented yet:
 
@@ -204,6 +205,7 @@ The Phase 11M compression and catalog path keeps replay target-free:
 6. `catalog-remove-missing --catalog <path> [--dry-run]` removes only missing catalog rows; it does not delete `.knapm` data, recover writers, unload agents, launch targets, or attach to targets.
 7. Tauri exposes catalog wrappers, and the UI can rebuild/query/prune the catalog, inspect catalog rows, and replay an explicit `.knapm` row by path without target mutation.
 8. The trace table uses a local virtual row window so large replay sessions keep the DOM bounded while export and inspector state continue to use the full event set.
+9. Structured query and error-focused views run only over the existing UI-side trace model; they add no target process overhead and do not change helper, agent, transport, or `.knapm` contracts.
 
 Verified live hook coverage:
 
@@ -415,7 +417,7 @@ Validate collector fixtures and native smoke output:
 npm run collector:validate
 ```
 
-Validate UI trace virtualization:
+Validate UI trace virtualization and query helpers:
 
 ```powershell
 npm run ui:validate

@@ -18,7 +18,7 @@
     "defs:coverage": "node tools/def-validator/report-definition-coverage.mjs",
     "defs:decoder-tables": "node tools/def-validator/validate-generated-decoder-tables.mjs",
     "defs:validate": "node tools/def-validator/validate-definitions.mjs && npm run defs:decoder-tables && node tools/rohitab-importer/test-importer.mjs && node tools/def-validator/report-definition-coverage.mjs --check",
-    "ui:validate": "node tools/ui-validator/validate-virtual-trace-window.mjs",
+    "ui:validate": "node tools/ui-validator/validate-virtual-trace-window.mjs && node tools/ui-validator/validate-trace-query.mjs",
     "sessions:validate": "node tools/session-validator/validate-session-fixtures.mjs",
     "collector:validate": "node tools/collector-validator/validate-collector-fixtures.mjs",
     "verify": "npm run build && npm run ui:validate && npm run defs:validate && npm run sessions:validate && npm run collector:validate"

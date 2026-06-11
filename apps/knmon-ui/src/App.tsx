@@ -13,6 +13,7 @@ import {
   HardDrive,
   Layers,
   Play,
+  Plus,
   RefreshCcw,
   Rocket,
   Search,
@@ -49,10 +50,19 @@ import {
 import { apiTree, captureProfiles, createMockFileIoEvent, initialTraceEvents } from "./mockData";
 import { downloadJsonl, estimateSessionBytes } from "./session";
 import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, NativeOperation, NativeSession, NativeSessionCatalog, NativeSessionCatalogRow, NativeTraceBatch, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
+import {
+  buildTraceIssueGroups,
+  compileTraceQuery,
+  matchesFreeTextFilter,
+  operatorNeedsValue,
+  traceQueryFieldOptions,
+  traceQueryOperatorOptions
+} from "./traceQuery";
+import type { TraceIssueGroup, TraceQueryClause, TraceQueryField, TraceQueryMatchMode, TraceQueryOperator } from "./traceQuery";
 import { computeVirtualTraceWindow } from "./virtualTrace";
 
 type LeftTab = "targets" | "apis" | "profiles";
-type TraceMode = "flat" | "call-tree";
+type TraceMode = "flat" | "call-tree" | "errors";
 type TargetSource = "mock" | "native";
 type ChildPolicy = ProcessTreeResult["childPolicy"];
 
@@ -347,6 +357,9 @@ function App() {
   const [events, setEvents] = useState<TraceEvent[]>(initialTraceEvents);
   const [selectedEventId, setSelectedEventId] = useState<number>(initialTraceEvents[0]?.eventId ?? 0);
   const [filter, setFilter] = useState("");
+  const [traceQueryMatchMode, setTraceQueryMatchMode] = useState<TraceQueryMatchMode>("all");
+  const [traceQueryClauses, setTraceQueryClauses] = useState<TraceQueryClause[]>([]);
+  const [durationThresholdUs, setDurationThresholdUs] = useState(100);
   const [running, setRunning] = useState(false);
   const [droppedCount, setDroppedCount] = useState(0);
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("parameters");
@@ -374,6 +387,7 @@ function App() {
     makeAuditEvent("backend_ready", "mock_init", "Mock File I/O backend initialized.")
   ]);
   const nextEventId = useRef(initialTraceEvents.length + 1);
+  const nextQueryClauseId = useRef(1);
   const streamBatchCursors = useRef<Record<string, number>>({});
   const traceScrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -414,6 +428,55 @@ function App() {
 
   function appendOutput(eventsToAppend: AuditEvent[]) {
     setOutputEvents((current) => [...eventsToAppend, ...current].slice(0, 80));
+  }
+
+  function createTraceQueryClause(template?: Partial<Omit<TraceQueryClause, "id">>): TraceQueryClause {
+    const id = `q-${nextQueryClauseId.current}`;
+    nextQueryClauseId.current += 1;
+
+    return {
+      id,
+      field: template?.field ?? "api",
+      operator: template?.operator ?? "contains",
+      value: template?.value ?? ""
+    };
+  }
+
+  function handleAddTraceQueryClause() {
+    setTraceQueryClauses((current) => [...current, createTraceQueryClause()]);
+  }
+
+  function handleUpdateTraceQueryClause(id: string, patch: Partial<Omit<TraceQueryClause, "id">>) {
+    setTraceQueryClauses((current) => current.map((clause) => {
+      if (clause.id !== id) {
+        return clause;
+      }
+
+      return {
+        ...clause,
+        ...patch
+      };
+    }));
+  }
+
+  function handleRemoveTraceQueryClause(id: string) {
+    setTraceQueryClauses((current) => current.filter((clause) => clause.id !== id));
+  }
+
+  function handleClearTraceQuery() {
+    setTraceQueryClauses([]);
+    setFilter("");
+    appendOutput([makeAuditEvent("trace_query_cleared", "trace_query", "Trace query and display filter cleared.")]);
+  }
+
+  function handleApplyIssueGroup(group: TraceIssueGroup) {
+    const nextClauses = group.clauses.map((clause) => createTraceQueryClause(clause));
+    setTraceQueryMatchMode("all");
+    setTraceQueryClauses(nextClauses);
+    setFilter("");
+    setSelectedEventId(group.eventIds[0] ?? 0);
+    setInspectorTab(group.kind === "error" || group.kind === "module_api" ? "return" : "parameters");
+    appendOutput([makeAuditEvent("trace_issue_filter_applied", "trace_issue_view", `${group.kind}; ${group.label}; events=${group.count}`)]);
   }
 
   function applySessionCatalog(catalog: NativeSessionCatalog) {
@@ -555,27 +618,27 @@ function App() {
     };
   }, [nativeBusy, nativeOperations, nativeSessions]);
 
+  const compiledTraceQuery = useMemo(
+    () => compileTraceQuery(traceQueryClauses, traceQueryMatchMode),
+    [traceQueryClauses, traceQueryMatchMode]
+  );
+  const invalidTraceQueryClauseIds = useMemo(
+    () => new Set(compiledTraceQuery.invalidClauses.map((clause) => clause.id)),
+    [compiledTraceQuery]
+  );
+  const issueGroups = useMemo(
+    () => buildTraceIssueGroups(events, durationThresholdUs),
+    [events, durationThresholdUs]
+  );
+  const visibleIssueGroups = useMemo(
+    () => issueGroups.slice(0, 12),
+    [issueGroups]
+  );
   const filteredEvents = useMemo(() => {
-    const normalized = filter.trim().toLowerCase();
-
-    if (!normalized) {
-      return events;
-    }
-
     return events.filter((event) => {
-      const haystack = [
-        event.api,
-        event.module,
-        event.process,
-        event.returnValue,
-        event.error?.message ?? "",
-        event.tags.join(" "),
-        compactArgs(event)
-      ].join(" ").toLowerCase();
-
-      return haystack.includes(normalized);
+      return matchesFreeTextFilter(event, filter) && compiledTraceQuery.matches(event);
     });
-  }, [events, filter]);
+  }, [events, filter, compiledTraceQuery]);
 
   const selectedTraceIndex = useMemo(
     () => filteredEvents.findIndex((event) => event.eventId === selectedEventId),
@@ -613,7 +676,7 @@ function App() {
     }
 
     setTraceScrollTop(0);
-  }, [filter, traceMode]);
+  }, [filter, traceMode, compiledTraceQuery]);
 
   useEffect(() => {
     const element = traceScrollRef.current;
@@ -1586,12 +1649,120 @@ function App() {
                 <GitBranch size={14} />
                 <span>Call Tree</span>
               </button>
+              <button type="button" className={traceMode === "errors" ? "active" : ""} onClick={() => setTraceMode("errors")}>
+                <Filter size={14} />
+                <span>Errors</span>
+              </button>
             </div>
             <div className="trace-stats">
               <span>{filteredEvents.length}/{events.length} rows</span>
               <span>DOM {visibleTraceEvents.length}</span>
+              {compiledTraceQuery.activeClauseCount > 0 ? <span>{compiledTraceQuery.activeClauseCount} query</span> : null}
+              {compiledTraceQuery.invalidClauses.length > 0 ? <span>{compiledTraceQuery.invalidClauses.length} invalid</span> : null}
               {replaySource ? <span title={replaySource.path}>Replay {replaySource.label} / {replaySource.validationStatus}</span> : null}
             </div>
+          </div>
+
+          <div className="query-panel">
+            <div className="query-header">
+              <div className="query-title">
+                <Filter size={14} />
+                <strong>Trace Query</strong>
+                <span>{traceQueryMatchMode}; {compiledTraceQuery.activeClauseCount} active; {compiledTraceQuery.invalidClauses.length} invalid</span>
+              </div>
+              <div className="query-actions">
+                <div className="mini-segmented" aria-label="Trace query match mode">
+                  <button type="button" className={traceQueryMatchMode === "all" ? "active" : ""} onClick={() => setTraceQueryMatchMode("all")}>All</button>
+                  <button type="button" className={traceQueryMatchMode === "any" ? "active" : ""} onClick={() => setTraceQueryMatchMode("any")}>Any</button>
+                </div>
+                <button type="button" className="tool-button" onClick={handleAddTraceQueryClause}>
+                  <Plus size={13} />
+                  <span>Add</span>
+                </button>
+                <button type="button" className="tool-button" onClick={handleClearTraceQuery}>
+                  <Trash2 size={13} />
+                  <span>Clear</span>
+                </button>
+              </div>
+            </div>
+            {traceQueryClauses.length > 0 ? (
+              <div className="query-clause-list">
+                {traceQueryClauses.map((clause, index) => {
+                  const invalidReason = compiledTraceQuery.invalidClauses.find((invalidClause) => invalidClause.id === clause.id)?.reason ?? "";
+                  const needsValue = operatorNeedsValue(clause.operator);
+
+                  return (
+                    <div className={invalidTraceQueryClauseIds.has(clause.id) ? "query-clause-row invalid" : "query-clause-row"} key={clause.id}>
+                      <span>{index + 1}</span>
+                      <select
+                        value={clause.field}
+                        onChange={(event) => handleUpdateTraceQueryClause(clause.id, { field: event.target.value as TraceQueryField })}
+                      >
+                        {traceQueryFieldOptions.map((option) => (
+                          <option value={option.id} key={option.id}>{option.label}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={clause.operator}
+                        onChange={(event) => handleUpdateTraceQueryClause(clause.id, { operator: event.target.value as TraceQueryOperator })}
+                      >
+                        {traceQueryOperatorOptions.map((option) => (
+                          <option value={option.id} key={option.id}>{option.label}</option>
+                        ))}
+                      </select>
+                      <input
+                        type={clause.field === "pid" || clause.field === "tid" || clause.field === "durationUs" ? "number" : "text"}
+                        value={clause.value}
+                        disabled={!needsValue}
+                        onChange={(event) => handleUpdateTraceQueryClause(clause.id, { value: event.target.value })}
+                        placeholder={needsValue ? "value" : ""}
+                      />
+                      <small>{invalidReason ? `${invalidReason}; ignored` : "active"}</small>
+                      <button type="button" className="tool-button danger" onClick={() => handleRemoveTraceQueryClause(clause.id)}>
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="query-empty">No structured clauses.</div>
+            )}
+            {traceMode === "errors" ? (
+              <div className="issue-panel">
+                <div className="issue-toolbar">
+                  <div className="query-title">
+                    <Activity size={14} />
+                    <strong>Issue Groups</strong>
+                    <span>{issueGroups.length} groups</span>
+                  </div>
+                  <label htmlFor="duration-threshold">Slow us</label>
+                  <input
+                    id="duration-threshold"
+                    type="number"
+                    min={1}
+                    max={60000000}
+                    value={durationThresholdUs}
+                    onChange={(event) => setDurationThresholdUs(Math.min(60000000, Math.max(1, Number.parseInt(event.target.value, 10) || 1)))}
+                  />
+                </div>
+                {visibleIssueGroups.length > 0 ? (
+                  <div className="issue-group-list">
+                    {visibleIssueGroups.map((group) => (
+                      <button type="button" className={`issue-group ${group.kind}`} key={group.id} onClick={() => handleApplyIssueGroup(group)}>
+                        <span>{group.kind}</span>
+                        <strong>{group.label}</strong>
+                        <em>{group.count}</em>
+                        <small>{group.detail}</small>
+                        <small>{group.samples.map((sample) => `#${sample.eventId} ${sample.module}!${sample.api}`).join("; ")}</small>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="query-empty">No error, decode, or slow-call groups.</div>
+                )}
+              </div>
+            ) : null}
           </div>
 
           <div
@@ -1649,7 +1820,7 @@ function App() {
                 ))}
               </div>
             </div>
-            {filteredEvents.length === 0 ? <div className="trace-empty">No trace events match the current filter.</div> : null}
+            {filteredEvents.length === 0 ? <div className="trace-empty">No trace events match the current filter or query.</div> : null}
           </div>
 
           <div className="inspector">
@@ -1734,6 +1905,7 @@ function App() {
                     <div className="output-log">
                       <div><Braces size={14} /> schemaVersion={selectedEvent?.schemaVersion ?? "0.1.0"}</div>
                       <div><Filter size={14} /> backend={backendMode}; filter="{filter || "*"}"; mode={traceMode}</div>
+                      <div><Filter size={14} /> queryMode={traceQueryMatchMode}; activeClauses={compiledTraceQuery.activeClauseCount}; invalidClauses={compiledTraceQuery.invalidClauses.length}; filteredRows={filteredEvents.length}</div>
                       <div><Database size={14} /> sessionBytes={formatBytes(sessionBytes)}; droppedEvents={droppedCount}</div>
                       {replaySource ? <div><FolderOpen size={14} /> replay={replaySource.kind}; status={replaySource.validationStatus}; path={replaySource.path}</div> : null}
                       {outputEvents.map((event) => (

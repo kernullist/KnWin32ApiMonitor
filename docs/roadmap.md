@@ -700,10 +700,20 @@ Current verified Phase 12A behavior:
 5. The trace table uses a local virtual row-window helper so DOM row count stays bounded while display filters, row selection, inspector tabs, and full-session JSONL export continue to use the full event array.
 6. `tools/ui-validator/validate-virtual-trace-window.mjs` covers empty, top, middle, and clamped-bottom virtual trace window calculations and is included in `npm run verify`.
 
+Current verified Phase 12B behavior:
+
+1. The React UI has a structured trace query builder with `all`/`any` match modes and clauses for API, module, process, PID, TID, tag, return value, error, argument text, duration, and decode status.
+2. Query operators cover contains, equals, not equals, starts with, exists, missing, greater than, and less than, with invalid or incomplete clauses highlighted and ignored rather than crashing the UI.
+3. The existing free-text display filter is combined with structured query predicates before the virtualized trace window, so query results still keep bounded DOM rows.
+4. The error-focused view groups error code/message, erroring module/API pairs, argument decode failures, and high-duration API calls over the current in-memory trace events.
+5. Clicking an issue group replaces the structured query with the matching clauses, clears the free-text filter, selects a representative event, and reuses the existing inspector/output state.
+6. Full-session JSONL export still uses the complete current event array, not the query-filtered or visible virtual row subset.
+7. `tools/ui-validator/validate-trace-query.mjs` covers structured query matching, invalid-clause handling, free-text matching, and issue group construction and is included in `npm run ui:validate`.
+
 Next implementation focus:
 
-1. Continue Phase 12 with a query builder and error-focused view over the existing trace model before adding heavier replay indexing.
-2. Add thread and timeline views after query/error UX proves useful on high-event `.knapm` replay sessions.
+1. Continue Phase 12 with thread and timeline views over the existing trace model, using the query/error UX as the selection and narrowing foundation.
+2. Add rule-based highlighting only after thread/timeline views have stable event grouping semantics.
 3. Keep database-backed catalog indexing behind a separate scale review after the JSON catalog and replay picker contract are stable.
 4. Keep automatic daemon crash recovery and orphaned active-agent repair behind a separate design review with explicit operator runbooks.
 5. Keep Windows service mode, protected/PPL, cross-bitness, stealth/manual-map, and privilege-elevation paths as explicit non-goals unless a separate design review changes the boundary.
