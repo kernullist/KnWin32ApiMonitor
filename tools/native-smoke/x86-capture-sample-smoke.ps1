@@ -99,6 +99,7 @@ $requiredApis = @(
     "RpcBindingFromStringBindingW",
     "RpcStringFreeW",
     "RpcBindingFree",
+    "RpcBindingSetOption",
     "UuidCreate",
     "UuidToStringW",
     "UuidFromStringW",
@@ -178,6 +179,57 @@ foreach ($api in $requiredApis)
     {
         throw "x86 capture missing API: $api"
     }
+}
+
+$bindingSetOptionEvent = @($result.capturedEvents | Where-Object { $_.api -eq "RpcBindingSetOption" } | Select-Object -First 1)
+if ($bindingSetOptionEvent.Count -ne 1)
+{
+    throw "x86 capture did not include RpcBindingSetOption."
+}
+
+if ($bindingSetOptionEvent[0].module -ne "rpcrt4.dll" -or
+    $bindingSetOptionEvent[0].apiFamily -ne "rpc" -or
+    $bindingSetOptionEvent[0].apiCategory -ne "rpc_binding_option_set" -or
+    $bindingSetOptionEvent[0].hookPolicy -ne "iat" -or
+    $bindingSetOptionEvent[0].coverageStatus -ne "smoke_verified" -or
+    $bindingSetOptionEvent[0].returnValue -notmatch "^0 \(0x00000000\)$")
+{
+    throw "x86 RpcBindingSetOption metadata or return evidence mismatch: $($bindingSetOptionEvent | ConvertTo-Json -Depth 8)"
+}
+
+if (-not [string]::IsNullOrEmpty($bindingSetOptionEvent[0].bufferPreview))
+{
+    throw "x86 RpcBindingSetOption exposed bufferPreview: $($bindingSetOptionEvent | ConvertTo-Json -Depth 8)"
+}
+
+$bindingHandle = @($bindingSetOptionEvent[0].arguments | Where-Object { $_.name -eq "hBinding" } | Select-Object -First 1)
+if ($bindingHandle.Count -ne 1 -or
+    $bindingHandle[0].decodeAlias -ne "rpc_binding_handle" -or
+    $bindingHandle[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 RpcBindingSetOption binding handle evidence mismatch: $($bindingHandle | ConvertTo-Json -Depth 8)"
+}
+
+$bindingOption = @($bindingSetOptionEvent[0].arguments | Where-Object { $_.name -eq "option" } | Select-Object -First 1)
+if ($bindingOption.Count -ne 1 -or
+    $bindingOption[0].decodeAlias -ne "byte_count" -or
+    ($bindingOption[0].decodedValue -ne "12 (0x0000000C)" -and $bindingOption[0].decodedValue -ne "12"))
+{
+    throw "x86 RpcBindingSetOption option evidence mismatch: $($bindingOption | ConvertTo-Json -Depth 8)"
+}
+
+$bindingOptionValue = @($bindingSetOptionEvent[0].arguments | Where-Object { $_.name -eq "optionValue" } | Select-Object -First 1)
+if ($bindingOptionValue.Count -ne 1 -or
+    $bindingOptionValue[0].decodeAlias -ne "byte_count" -or
+    $bindingOptionValue[0].decodedValue -ne "5000")
+{
+    throw "x86 RpcBindingSetOption optionValue evidence mismatch: $($bindingOptionValue | ConvertTo-Json -Depth 8)"
+}
+
+$bindingSetOptionPayload = $bindingSetOptionEvent[0] | ConvertTo-Json -Depth 12
+if ($bindingSetOptionPayload -cmatch "RpcBindingSetAuthInfo|RpcMgmtEp|EndpointMapper|Annotation|ServerPrinc|AuthIdentity|Authn|Authz|Credential|Password|Token|SID|ACL|SecurityDescriptor|send|recv|WinHttp|InternetOpenUrl|HttpSend|Cookie|Authorization|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|Injection|BEGIN CERTIFICATE|PRIVATE KEY|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 RpcBindingSetOption event appears to expose forbidden auth, endpoint, credential, payload, remote-memory, stack, injection, or byte-preview evidence: $bindingSetOptionPayload"
 }
 
 $connectEvent = @($result.capturedEvents | Where-Object { $_.api -eq "connect" } | Select-Object -First 1)

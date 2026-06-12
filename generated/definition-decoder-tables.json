@@ -1275,14 +1275,14 @@
     {
       "callingConvention": "stdcall",
       "category": "rpc_binding_option_set",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": "RPC_S_OK"
       },
       "family": "rpc",
       "firstParameterIndex": 238,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 54,
       "module": "rpcrt4.dll",
       "moduleId": 7,

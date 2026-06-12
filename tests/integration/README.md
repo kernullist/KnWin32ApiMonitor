@@ -16,22 +16,23 @@ Current verification gates include:
 10. Dynamic-load re-hook smoke through `tools\native-smoke\dynamic-load-rehook-smoke.ps1`.
 11. Injection preflight negative smoke through `tools\native-smoke\injection-preflight-negative-smoke.ps1`.
 12. Wave 2 Winsock smoke through `tools\native-smoke\wave2-winsock-smoke.ps1`.
-13. Wave 3 User32/GDI32 metadata smoke through `tools\native-smoke\wave3-user32-gdi32-smoke.ps1`.
-14. Wave 3 PSAPI module-query smoke through `tools\native-smoke\wave3-psapi-module-query-smoke.ps1`.
-15. Wave 3 Version resource smoke through `tools\native-smoke\wave3-version-resource-smoke.ps1`.
-16. Wave 3 Shell known-folder smoke through `tools\native-smoke\wave3-shell-known-folder-smoke.ps1`.
-17. Wave 3 OLE32 COM lifecycle smoke through `tools\native-smoke\wave3-ole32-com-lifecycle-smoke.ps1`.
-18. Wave 3 RPCRT4 UUID helper smoke through `tools\native-smoke\wave3-rpcrt4-uuid-helper-smoke.ps1`.
-19. Wave 3 COMBASE-backed WinRT lifecycle smoke through `tools\native-smoke\wave3-combase-winrt-lifecycle-smoke.ps1`.
-20. Wave 3 KERNEL32 memory protection smoke through `tools\native-smoke\wave3-kernel32-memory-protection-smoke.ps1`.
-21. Wave 3 KERNEL32 thread lifecycle smoke through `tools\native-smoke\wave3-kernel32-thread-lifecycle-smoke.ps1`.
-22. Wave 3 KERNEL32 event synchronization smoke through `tools\native-smoke\wave3-kernel32-event-sync-smoke.ps1`.
-23. Wave 3 KERNEL32 mutex/semaphore synchronization smoke through `tools\native-smoke\wave3-kernel32-mutex-semaphore-smoke.ps1`.
-24. Wave 3 KERNEL32 file-mapping smoke through `tools\native-smoke\wave3-kernel32-file-mapping-smoke.ps1`.
-25. Wave 3 KERNEL32 process/thread identity smoke through `tools\native-smoke\wave3-kernel32-process-thread-identity-smoke.ps1`.
-26. Wave 3 KERNEL32 handle metadata smoke through `tools\native-smoke\wave3-kernel32-handle-metadata-smoke.ps1`.
-27. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
-28. Collector fixture and native smoke validation through `npm run collector:validate`.
+13. Wave 2 RPCRT4 binding option smoke through `tools\native-smoke\wave2-rpcrt4-binding-smoke.ps1`.
+14. Wave 3 User32/GDI32 metadata smoke through `tools\native-smoke\wave3-user32-gdi32-smoke.ps1`.
+15. Wave 3 PSAPI module-query smoke through `tools\native-smoke\wave3-psapi-module-query-smoke.ps1`.
+16. Wave 3 Version resource smoke through `tools\native-smoke\wave3-version-resource-smoke.ps1`.
+17. Wave 3 Shell known-folder smoke through `tools\native-smoke\wave3-shell-known-folder-smoke.ps1`.
+18. Wave 3 OLE32 COM lifecycle smoke through `tools\native-smoke\wave3-ole32-com-lifecycle-smoke.ps1`.
+19. Wave 3 RPCRT4 UUID helper smoke through `tools\native-smoke\wave3-rpcrt4-uuid-helper-smoke.ps1`.
+20. Wave 3 COMBASE-backed WinRT lifecycle smoke through `tools\native-smoke\wave3-combase-winrt-lifecycle-smoke.ps1`.
+21. Wave 3 KERNEL32 memory protection smoke through `tools\native-smoke\wave3-kernel32-memory-protection-smoke.ps1`.
+22. Wave 3 KERNEL32 thread lifecycle smoke through `tools\native-smoke\wave3-kernel32-thread-lifecycle-smoke.ps1`.
+23. Wave 3 KERNEL32 event synchronization smoke through `tools\native-smoke\wave3-kernel32-event-sync-smoke.ps1`.
+24. Wave 3 KERNEL32 mutex/semaphore synchronization smoke through `tools\native-smoke\wave3-kernel32-mutex-semaphore-smoke.ps1`.
+25. Wave 3 KERNEL32 file-mapping smoke through `tools\native-smoke\wave3-kernel32-file-mapping-smoke.ps1`.
+26. Wave 3 KERNEL32 process/thread identity smoke through `tools\native-smoke\wave3-kernel32-process-thread-identity-smoke.ps1`.
+27. Wave 3 KERNEL32 handle metadata smoke through `tools\native-smoke\wave3-kernel32-handle-metadata-smoke.ps1`.
+28. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
+29. Collector fixture and native smoke validation through `npm run collector:validate`.
 
 Run repeated lifecycle smoke:
 
@@ -96,6 +97,14 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave2-winsock-smoke.
 ```
 
 The Winsock smoke verifies selected `ws2_32.dll` bootstrap/address-resolution/connect metadata calls, generated network labels, stable API ID `63` for `connect`, decoded loopback endpoint evidence, shared-memory transport mode, zero dropped events, clean hook restore, and no send/recv payload, HTTP body/header/cookie/credential, network inventory, remote-memory/thread/stack, injection, or byte-preview evidence.
+
+Run Wave 2 RPCRT4 binding option smoke:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave2-rpcrt4-binding-smoke.ps1
+```
+
+The RPCRT4 binding smoke verifies selected local binding lifecycle calls plus `RpcBindingSetOption`, generated RPC metadata, stable API ID `54`, decoded binding handle, option ID `12`, scalar option value `5000`, shared-memory transport mode, zero dropped events, clean hook restore, and no auth, endpoint mapper, credential, network payload, RPC server communication, remote-memory/thread/stack, injection, or byte-preview evidence.
 
 Run Wave 3 User32/GDI32 smoke:
 
@@ -225,7 +234,7 @@ cmake --build build/native-win32 --config Debug
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-smoke.ps1
 ```
 
-The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence including Winsock connect metadata, selected RPCRT4 UUID helper evidence, selected User32/GDI32 evidence, selected PSAPI module-query evidence, selected Version resource evidence, selected Shell known-folder evidence, selected OLE32 COM lifecycle evidence, selected COMBASE-backed WinRT lifecycle evidence, selected KERNEL32 memory protection evidence, selected KERNEL32 thread lifecycle evidence, selected KERNEL32 event synchronization evidence, selected KERNEL32 mutex/semaphore synchronization evidence, selected KERNEL32 file-mapping evidence, selected KERNEL32 process/thread identity evidence, selected KERNEL32 handle metadata evidence, selected KERNEL32 module lifecycle evidence, zero dropped events, and clean hook restore.
+The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence including Winsock connect metadata and RPCRT4 binding option metadata, selected RPCRT4 UUID helper evidence, selected User32/GDI32 evidence, selected PSAPI module-query evidence, selected Version resource evidence, selected Shell known-folder evidence, selected OLE32 COM lifecycle evidence, selected COMBASE-backed WinRT lifecycle evidence, selected KERNEL32 memory protection evidence, selected KERNEL32 thread lifecycle evidence, selected KERNEL32 event synchronization evidence, selected KERNEL32 mutex/semaphore synchronization evidence, selected KERNEL32 file-mapping evidence, selected KERNEL32 process/thread identity evidence, selected KERNEL32 handle metadata evidence, selected KERNEL32 module lifecycle evidence, zero dropped events, and clean hook restore.
 
 Run collector backpressure smoke:
 

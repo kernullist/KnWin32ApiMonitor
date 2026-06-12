@@ -9,6 +9,25 @@ if (-not (Test-Path -LiteralPath $HelperPath))
     throw "Helper not found: $HelperPath"
 }
 
+$idPath = Join-Path (Get-Location) "generated\definition-ids.json"
+if (-not (Test-Path -LiteralPath $idPath))
+{
+    throw "Generated ID file not found: $idPath"
+}
+
+$ids = Get-Content -LiteralPath $idPath -Raw | ConvertFrom-Json
+$provider = @($ids.modules | Where-Object { $_.name -ieq "rpcrt4.dll" } | Select-Object -First 1)
+if ($provider.Count -ne 1 -or $provider[0].id -ne 7)
+{
+    throw "Generated provider module mismatch for rpcrt4.dll: $($provider | ConvertTo-Json -Depth 4)"
+}
+
+$bindingSetOptionId = @($ids.apis | Where-Object { $_.module -ieq "rpcrt4.dll" -and $_.name -eq "RpcBindingSetOption" } | Select-Object -First 1)
+if ($bindingSetOptionId.Count -ne 1 -or $bindingSetOptionId[0].id -ne 54)
+{
+    throw "Generated ID mismatch for RpcBindingSetOption: $($bindingSetOptionId | ConvertTo-Json -Depth 4)"
+}
+
 $result = & $HelperPath capture-sample | ConvertFrom-Json
 
 if (-not $result.success)
@@ -30,7 +49,8 @@ $expected = @(
     @{ Api = "RpcStringBindingComposeW"; Category = "rpc_string_binding_compose"; Args = @("ObjUuid", "ProtSeq", "NetworkAddr", "Endpoint", "Options", "StringBinding") },
     @{ Api = "RpcBindingFromStringBindingW"; Category = "rpc_binding_from_string"; Args = @("StringBinding", "Binding") },
     @{ Api = "RpcStringFreeW"; Category = "rpc_string_free"; Args = @("String") },
-    @{ Api = "RpcBindingFree"; Category = "rpc_binding_free"; Args = @("Binding") }
+    @{ Api = "RpcBindingFree"; Category = "rpc_binding_free"; Args = @("Binding") },
+    @{ Api = "RpcBindingSetOption"; Category = "rpc_binding_option_set"; Args = @("hBinding", "option", "optionValue") }
 )
 
 foreach ($item in $expected)
@@ -95,6 +115,52 @@ $stringFreeArgs = $stringFreeEvent[0].arguments | ConvertTo-Json -Depth 8
 if ($stringFreeArgs -notmatch "ncalrpc" -or $stringFreeArgs -notmatch "KNMonRpcSample")
 {
     throw "RpcStringFreeW did not include pre-free binding evidence: $stringFreeArgs"
+}
+
+$bindingSetOptionEvent = @($result.capturedEvents | Where-Object { $_.api -eq "RpcBindingSetOption" } | Select-Object -First 1)
+if ($bindingSetOptionEvent.Count -ne 1)
+{
+    throw "RpcBindingSetOption event was not captured."
+}
+
+if ($bindingSetOptionEvent[0].returnValue -notmatch "^0 \(0x00000000\)$")
+{
+    throw "RpcBindingSetOption return value mismatch: $($bindingSetOptionEvent[0].returnValue)"
+}
+
+if (-not [string]::IsNullOrEmpty($bindingSetOptionEvent[0].bufferPreview))
+{
+    throw "RpcBindingSetOption exposed bufferPreview: $($bindingSetOptionEvent[0] | ConvertTo-Json -Depth 8)"
+}
+
+$bindingHandle = @($bindingSetOptionEvent[0].arguments | Where-Object { $_.name -eq "hBinding" } | Select-Object -First 1)
+if ($bindingHandle.Count -ne 1 -or
+    $bindingHandle[0].decodeAlias -ne "rpc_binding_handle" -or
+    $bindingHandle[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "RpcBindingSetOption binding handle evidence mismatch: $($bindingHandle | ConvertTo-Json -Depth 8)"
+}
+
+$option = @($bindingSetOptionEvent[0].arguments | Where-Object { $_.name -eq "option" } | Select-Object -First 1)
+if ($option.Count -ne 1 -or
+    $option[0].decodeAlias -ne "byte_count" -or
+    ($option[0].decodedValue -ne "12 (0x0000000C)" -and $option[0].decodedValue -ne "12"))
+{
+    throw "RpcBindingSetOption option evidence mismatch: $($option | ConvertTo-Json -Depth 8)"
+}
+
+$optionValue = @($bindingSetOptionEvent[0].arguments | Where-Object { $_.name -eq "optionValue" } | Select-Object -First 1)
+if ($optionValue.Count -ne 1 -or
+    $optionValue[0].decodeAlias -ne "byte_count" -or
+    $optionValue[0].decodedValue -ne "5000")
+{
+    throw "RpcBindingSetOption optionValue evidence mismatch: $($optionValue | ConvertTo-Json -Depth 8)"
+}
+
+$bindingSetOptionPayload = $bindingSetOptionEvent[0] | ConvertTo-Json -Depth 12
+if ($bindingSetOptionPayload -cmatch "RpcBindingSetAuthInfo|RpcMgmtEp|EndpointMapper|Annotation|ServerPrinc|AuthIdentity|Authn|Authz|Credential|Password|Token|SID|ACL|SecurityDescriptor|send|recv|WinHttp|InternetOpenUrl|HttpSend|Cookie|Authorization|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|Injection|BEGIN CERTIFICATE|PRIVATE KEY|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "RpcBindingSetOption event appears to expose forbidden auth, endpoint, credential, payload, remote-memory, stack, injection, or byte-preview evidence: $bindingSetOptionPayload"
 }
 
 $shutdown = @($result.agentMessages | Where-Object { $_.messageType -eq "agent_shutdown" } | Select-Object -Last 1)

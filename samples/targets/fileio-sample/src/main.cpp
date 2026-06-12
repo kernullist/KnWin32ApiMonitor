@@ -489,6 +489,13 @@ bool RunRpcBindingProbe()
             break;
         }
 
+        status = RpcBindingSetOption(binding, RPC_C_OPT_CALL_TIMEOUT, 5000);
+        if (status != RPC_S_OK)
+        {
+            std::cout << "RpcBindingSetOption failed with " << status << "\n";
+            break;
+        }
+
         status = RpcBindingFree(&binding);
         if (status != RPC_S_OK)
         {

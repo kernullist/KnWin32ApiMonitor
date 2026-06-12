@@ -3761,6 +3761,18 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         payload = ApiCallPayload(result, record, RpcStatusValue(record.ReturnValue), args.str(), "");
         break;
     }
+    case KnMonTransportApiId::RpcBindingSetOption:
+    {
+        const std::string bindingValue = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string optionValue = std::to_string(record.Values32[0]);
+        const std::string optionValueDecoded = DwordDecimalHexText(record.Values32[0]);
+        const std::string scalarValue = std::to_string(record.Values64[1]);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "RPC_BINDING_HANDLE", "hBinding", "in", bindingValue, bindingValue, bindingValue) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "unsigned long", "option", "in", optionValue, optionValue, optionValueDecoded) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "ULONG_PTR", "optionValue", "in", scalarValue, scalarValue, scalarValue);
+        payload = ApiCallPayload(result, record, RpcStatusValue(record.ReturnValue), args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::UuidCreate:
     {
         const std::string uuidPointer = HexPointerValue(record.Values64[0], result.Architecture);
