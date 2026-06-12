@@ -737,6 +737,36 @@
       "module": "kernel32.dll",
       "name": "GetExitCodeThread",
       "symbol": "GetExitCodeThread"
+    },
+    {
+      "id": 124,
+      "module": "kernel32.dll",
+      "name": "CreateEventW",
+      "symbol": "CreateEventW"
+    },
+    {
+      "id": 125,
+      "module": "kernel32.dll",
+      "name": "OpenEventW",
+      "symbol": "OpenEventW"
+    },
+    {
+      "id": 126,
+      "module": "kernel32.dll",
+      "name": "SetEvent",
+      "symbol": "SetEvent"
+    },
+    {
+      "id": 127,
+      "module": "kernel32.dll",
+      "name": "ResetEvent",
+      "symbol": "ResetEvent"
+    },
+    {
+      "id": 128,
+      "module": "kernel32.dll",
+      "name": "WaitForSingleObjectEx",
+      "symbol": "WaitForSingleObjectEx"
     }
   ],
   "modules": [

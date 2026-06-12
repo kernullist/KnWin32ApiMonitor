@@ -2309,6 +2309,21 @@ std::string ThreadCreationFlagsText(std::uint32_t value)
     return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
 }
 
+std::string EventAccessFlagsText(std::uint32_t value)
+{
+    static constexpr FlagName Flags[] =
+    {
+        { 0x00000002U, "EVENT_MODIFY_STATE" },
+        { 0x00010000U, "DELETE" },
+        { 0x00020000U, "READ_CONTROL" },
+        { 0x00040000U, "WRITE_DAC" },
+        { 0x00080000U, "WRITE_OWNER" },
+        { 0x00100000U, "SYNCHRONIZE" },
+    };
+
+    return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
+}
+
 std::string WaitTimeoutText(std::uint32_t value)
 {
     if (value == 0xFFFFFFFFU)
@@ -2742,6 +2757,49 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hThread", "in", threadPointer, threadPointer, threadPointer) << ",";
         args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPDWORD", "lpExitCode", "out", exitCodePointer, exitCodePost, exitCodeDecodedValue, DecodeStatusName(record.Values32[0]));
         payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::CreateEventW:
+    {
+        const std::string attributesPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string namePointer = HexPointerValue(record.Values64[1], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPSECURITY_ATTRIBUTES", "lpEventAttributes", "in", attributesPointer, attributesPointer, attributesPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "BOOL", "bManualReset", "in", std::to_string(record.Values32[0]), std::to_string(record.Values32[0]), BoolText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "BOOL", "bInitialState", "in", std::to_string(record.Values32[1]), std::to_string(record.Values32[1]), BoolText(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "LPCWSTR", "lpName", "in", namePointer, namePointer, namePointer);
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::OpenEventW:
+    {
+        const std::string namePointer = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "DWORD", "dwDesiredAccess", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), EventAccessFlagsText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "BOOL", "bInheritHandle", "in", std::to_string(record.Values32[1]), std::to_string(record.Values32[1]), BoolText(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "LPCWSTR", "lpName", "in", namePointer, namePointer, namePointer);
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::SetEvent:
+    {
+        const std::string eventHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hEvent", "in", eventHandle, eventHandle, eventHandle);
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::ResetEvent:
+    {
+        const std::string eventHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hEvent", "in", eventHandle, eventHandle, eventHandle);
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::WaitForSingleObjectEx:
+    {
+        const std::string handlePointer = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hHandle", "in", handlePointer, handlePointer, handlePointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "dwMilliseconds", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), WaitTimeoutText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "BOOL", "bAlertable", "in", std::to_string(record.Values32[1]), std::to_string(record.Values32[1]), BoolText(record.Values32[1]));
+        payload = ApiCallPayload(result, record, WaitResultText(static_cast<std::uint32_t>(record.ReturnValue)), args.str(), "");
         break;
     }
     case KnMonTransportApiId::NtCreateFile:

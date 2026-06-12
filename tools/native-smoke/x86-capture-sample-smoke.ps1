@@ -20,6 +20,11 @@ $requiredApis = @(
     "OpenThread",
     "WaitForSingleObject",
     "GetExitCodeThread",
+    "CreateEventW",
+    "OpenEventW",
+    "SetEvent",
+    "ResetEvent",
+    "WaitForSingleObjectEx",
     "GetProcAddress",
     "LdrGetProcedureAddress",
     "RegOpenKeyExW",
@@ -1206,6 +1211,144 @@ $threadPayload = $threadEvents | ConvertTo-Json -Depth 12
 if ($threadPayload -cmatch "CreateRemoteThread|QueueUserAPC|NtQueueApcThread|SuspendThread|ResumeThread|GetThreadContext|SetThreadContext|TerminateThread|CONTEXT|Eip|Rip|Rsp|CallStack|StackTrace|StackWalk|StackFrame|Disassembly|VirtualAllocEx|WriteProcessMemory|ReadProcessMemory|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 KERNEL32 thread lifecycle events appear to expose remote-thread, APC, context, stack, injection, PE/file/hash, credential, or byte-preview evidence: $threadPayload"
+}
+
+$syncEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "synchronization" })
+if ($syncEvents.Count -lt 5)
+{
+    throw "x86 capture did not include the selected KERNEL32 event synchronization API slice."
+}
+
+$createEvent = @($syncEvents | Where-Object { $_.api -eq "CreateEventW" } | Select-Object -First 1)
+if ($createEvent.Count -ne 1 -or
+    $createEvent[0].module -ne "kernel32.dll" -or
+    $createEvent[0].apiCategory -ne "event_create" -or
+    $createEvent[0].hookPolicy -ne "iat" -or
+    $createEvent[0].coverageStatus -ne "smoke_verified" -or
+    $createEvent[0].returnValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 CreateEventW metadata or return evidence mismatch."
+}
+
+$createEventAttributesArg = @($createEvent[0].arguments | Where-Object { $_.name -eq "lpEventAttributes" } | Select-Object -First 1)
+$manualResetArg = @($createEvent[0].arguments | Where-Object { $_.name -eq "bManualReset" } | Select-Object -First 1)
+$initialStateArg = @($createEvent[0].arguments | Where-Object { $_.name -eq "bInitialState" } | Select-Object -First 1)
+$createNameArg = @($createEvent[0].arguments | Where-Object { $_.name -eq "lpName" } | Select-Object -First 1)
+if ($createEventAttributesArg.Count -ne 1 -or
+    $createEventAttributesArg[0].decodeAlias -ne "pointer" -or
+    $createEventAttributesArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]+$" -or
+    $manualResetArg.Count -ne 1 -or
+    $manualResetArg[0].decodeAlias -ne "event_manual_reset_bool" -or
+    $manualResetArg[0].decodedValue -ne "TRUE" -or
+    $initialStateArg.Count -ne 1 -or
+    $initialStateArg[0].decodeAlias -ne "event_initial_state_bool" -or
+    $initialStateArg[0].decodedValue -ne "FALSE" -or
+    $createNameArg.Count -ne 1 -or
+    $createNameArg[0].decodeAlias -ne "event_name_pointer" -or
+    $createNameArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 CreateEventW did not include expected event create metadata: $($createEvent[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$openEvent = @($syncEvents | Where-Object { $_.api -eq "OpenEventW" } | Select-Object -First 1)
+if ($openEvent.Count -ne 1 -or
+    $openEvent[0].module -ne "kernel32.dll" -or
+    $openEvent[0].apiCategory -ne "event_open" -or
+    $openEvent[0].hookPolicy -ne "iat" -or
+    $openEvent[0].coverageStatus -ne "smoke_verified" -or
+    $openEvent[0].returnValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 OpenEventW metadata or return evidence mismatch."
+}
+
+$eventAccessArg = @($openEvent[0].arguments | Where-Object { $_.name -eq "dwDesiredAccess" } | Select-Object -First 1)
+$eventInheritArg = @($openEvent[0].arguments | Where-Object { $_.name -eq "bInheritHandle" } | Select-Object -First 1)
+$openNameArg = @($openEvent[0].arguments | Where-Object { $_.name -eq "lpName" } | Select-Object -First 1)
+if ($eventAccessArg.Count -ne 1 -or
+    $eventAccessArg[0].decodeAlias -ne "event_access_flags" -or
+    $eventAccessArg[0].decodedValue -notmatch "EVENT_MODIFY_STATE" -or
+    $eventAccessArg[0].decodedValue -notmatch "SYNCHRONIZE" -or
+    $eventInheritArg.Count -ne 1 -or
+    $eventInheritArg[0].decodeAlias -ne "dword_value" -or
+    $eventInheritArg[0].decodedValue -ne "FALSE" -or
+    $openNameArg.Count -ne 1 -or
+    $openNameArg[0].decodeAlias -ne "event_name_pointer" -or
+    $openNameArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 OpenEventW did not include expected event open metadata: $($openEvent[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$setEvent = @($syncEvents | Where-Object { $_.api -eq "SetEvent" } | Select-Object -First 1)
+if ($setEvent.Count -ne 1 -or
+    $setEvent[0].module -ne "kernel32.dll" -or
+    $setEvent[0].apiCategory -ne "event_set" -or
+    $setEvent[0].returnValue -ne "TRUE")
+{
+    throw "x86 SetEvent metadata or return evidence mismatch."
+}
+
+$setEventHandleArg = @($setEvent[0].arguments | Where-Object { $_.name -eq "hEvent" } | Select-Object -First 1)
+if ($setEventHandleArg.Count -ne 1 -or
+    $setEventHandleArg[0].decodeAlias -ne "handle" -or
+    $setEventHandleArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 SetEvent did not include expected handle metadata: $($setEvent[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$waitEvent = @($syncEvents | Where-Object { $_.api -eq "WaitForSingleObjectEx" -and $_.returnValue -match "WAIT_OBJECT_0" } | Select-Object -First 1)
+if ($waitEvent.Count -ne 1 -or
+    $waitEvent[0].module -ne "kernel32.dll" -or
+    $waitEvent[0].apiCategory -ne "event_wait")
+{
+    throw "x86 WaitForSingleObjectEx metadata or return evidence mismatch."
+}
+
+$waitEventHandleArg = @($waitEvent[0].arguments | Where-Object { $_.name -eq "hHandle" } | Select-Object -First 1)
+$waitEventTimeoutArg = @($waitEvent[0].arguments | Where-Object { $_.name -eq "dwMilliseconds" } | Select-Object -First 1)
+$waitEventAlertableArg = @($waitEvent[0].arguments | Where-Object { $_.name -eq "bAlertable" } | Select-Object -First 1)
+if ($waitEventHandleArg.Count -ne 1 -or
+    $waitEventHandleArg[0].decodeAlias -ne "handle" -or
+    $waitEventHandleArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $waitEventTimeoutArg.Count -ne 1 -or
+    $waitEventTimeoutArg[0].decodeAlias -ne "wait_timeout_ms" -or
+    $waitEventTimeoutArg[0].decodedValue -notmatch "1000" -or
+    $waitEventTimeoutArg[0].decodedValue -notmatch "0x000003e8" -or
+    $waitEventAlertableArg.Count -ne 1 -or
+    $waitEventAlertableArg[0].decodeAlias -ne "wait_alertable_bool" -or
+    $waitEventAlertableArg[0].decodedValue -ne "FALSE")
+{
+    throw "x86 WaitForSingleObjectEx did not include expected wait metadata: $($waitEvent[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$resetEvent = @($syncEvents | Where-Object { $_.api -eq "ResetEvent" } | Select-Object -First 1)
+if ($resetEvent.Count -ne 1 -or
+    $resetEvent[0].module -ne "kernel32.dll" -or
+    $resetEvent[0].apiCategory -ne "event_reset" -or
+    $resetEvent[0].returnValue -ne "TRUE")
+{
+    throw "x86 ResetEvent metadata or return evidence mismatch."
+}
+
+$resetEventHandleArg = @($resetEvent[0].arguments | Where-Object { $_.name -eq "hEvent" } | Select-Object -First 1)
+if ($resetEventHandleArg.Count -ne 1 -or
+    $resetEventHandleArg[0].decodeAlias -ne "handle" -or
+    $resetEventHandleArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 ResetEvent did not include expected handle metadata: $($resetEvent[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+foreach ($syncEvent in $syncEvents)
+{
+    if (-not [string]::IsNullOrEmpty($syncEvent.bufferPreview))
+    {
+        throw "x86 event synchronization event exposed bufferPreview: $($syncEvent | ConvertTo-Json -Depth 8)"
+    }
+}
+
+$syncPayload = $syncEvents | ConvertTo-Json -Depth 12
+if ($syncPayload -cmatch "KnMonEventProbe|Global\\|Local\\|BaseNamedObjects|ObjectName|ObjectDirectory|ObjectManager|SecurityDescriptor|SECURITY_DESCRIPTOR|SID|ACL|TOKEN_|Privilege|Integrity|DuplicateHandle|WaitChain|WCT|Apc|APC|QueueUserAPC|NtQueueApcThread|CreateRemoteThread|SuspendThread|ResumeThread|GetThreadContext|SetThreadContext|TerminateThread|CONTEXT|Eip|Rip|Rsp|CallStack|StackTrace|StackWalk|StackFrame|Disassembly|VirtualAllocEx|WriteProcessMemory|ReadProcessMemory|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 KERNEL32 event synchronization events appear to expose event-name, namespace, security, wait-chain, APC, context, stack, injection, PE/file/hash, credential, or byte-preview evidence: $syncPayload"
 }
 
 $rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })

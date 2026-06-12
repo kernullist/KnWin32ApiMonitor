@@ -130,6 +130,11 @@ enum class KnMonTransportApiId : std::uint16_t
     OpenThread = 121,
     WaitForSingleObject = 122,
     GetExitCodeThread = 123,
+    CreateEventW = 124,
+    OpenEventW = 125,
+    SetEvent = 126,
+    ResetEvent = 127,
+    WaitForSingleObjectEx = 128,
 };
 
 enum class KnMonTransportModuleId : std::uint16_t

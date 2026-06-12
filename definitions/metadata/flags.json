@@ -25,6 +25,17 @@
       ]
     },
     {
+      "name": "event_access_flags",
+      "values": [
+        { "name": "EVENT_MODIFY_STATE", "value": "0x00000002" },
+        { "name": "DELETE", "value": "0x00010000" },
+        { "name": "READ_CONTROL", "value": "0x00020000" },
+        { "name": "WRITE_DAC", "value": "0x00040000" },
+        { "name": "WRITE_OWNER", "value": "0x00080000" },
+        { "name": "SYNCHRONIZE", "value": "0x00100000" }
+      ]
+    },
+    {
       "name": "file_share_mask",
       "values": [
         { "name": "FILE_SHARE_READ", "value": "0x00000001" },

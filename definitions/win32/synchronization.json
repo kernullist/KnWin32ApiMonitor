@@ -1,0 +1,104 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "synchronization",
+  "description": "Wave 3 low-payload current-process event synchronization metadata hooks.",
+  "apis": [
+    {
+      "module": "KERNEL32.dll",
+      "name": "CreateEventW",
+      "family": "synchronization",
+      "category": "event_create",
+      "risk": "medium",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HANDLE",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "lpEventAttributes", "type": "LPSECURITY_ATTRIBUTES", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "bManualReset", "type": "BOOL", "direction": "in", "decode": "event_manual_reset_bool" },
+        { "name": "bInitialState", "type": "BOOL", "direction": "in", "decode": "event_initial_state_bool" },
+        { "name": "lpName", "type": "LPCWSTR", "direction": "in", "decode": "event_name_pointer", "nullable": true }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "OpenEventW",
+      "family": "synchronization",
+      "category": "event_open",
+      "risk": "medium",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HANDLE",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "dwDesiredAccess", "type": "DWORD", "direction": "in", "decode": "event_access_flags", "flags": "event_access_flags" },
+        { "name": "bInheritHandle", "type": "BOOL", "direction": "in", "decode": "dword_value" },
+        { "name": "lpName", "type": "LPCWSTR", "direction": "in", "decode": "event_name_pointer" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "SetEvent",
+      "family": "synchronization",
+      "category": "event_set",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": 0 },
+      "failure": { "returnEqual": 0 },
+      "parameters": [
+        { "name": "hEvent", "type": "HANDLE", "direction": "in", "decode": "handle" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "ResetEvent",
+      "family": "synchronization",
+      "category": "event_reset",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": 0 },
+      "failure": { "returnEqual": 0 },
+      "parameters": [
+        { "name": "hEvent", "type": "HANDLE", "direction": "in", "decode": "handle" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "WaitForSingleObjectEx",
+      "family": "synchronization",
+      "category": "event_wait",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "DWORD",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "0xFFFFFFFF" },
+      "failure": { "returnEqual": "0xFFFFFFFF" },
+      "parameters": [
+        { "name": "hHandle", "type": "HANDLE", "direction": "in", "decode": "handle" },
+        { "name": "dwMilliseconds", "type": "DWORD", "direction": "in", "decode": "wait_timeout_ms" },
+        { "name": "bAlertable", "type": "BOOL", "direction": "in", "decode": "wait_alertable_bool" }
+      ]
+    }
+  ]
+}

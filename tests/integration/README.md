@@ -24,8 +24,9 @@ Current verification gates include:
 18. Wave 3 COMBASE-backed WinRT lifecycle smoke through `tools\native-smoke\wave3-combase-winrt-lifecycle-smoke.ps1`.
 19. Wave 3 KERNEL32 memory protection smoke through `tools\native-smoke\wave3-kernel32-memory-protection-smoke.ps1`.
 20. Wave 3 KERNEL32 thread lifecycle smoke through `tools\native-smoke\wave3-kernel32-thread-lifecycle-smoke.ps1`.
-21. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
-22. Collector fixture and native smoke validation through `npm run collector:validate`.
+21. Wave 3 KERNEL32 event synchronization smoke through `tools\native-smoke\wave3-kernel32-event-sync-smoke.ps1`.
+22. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
+23. Collector fixture and native smoke validation through `npm run collector:validate`.
 
 Run repeated lifecycle smoke:
 
@@ -155,6 +156,14 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave3-kernel32-threa
 
 The KERNEL32 thread lifecycle smoke verifies selected `CreateThread`, `OpenThread`, `WaitForSingleObject`, and `GetExitCodeThread` calls, generated thread metadata, stable API IDs `120` through `123`, thread access/creation/wait decoding, decoded thread ID and exit-code evidence, shared-memory transport mode, zero dropped events, clean hook restore, and no remote-thread, APC, context, stack, injection, credential, or byte-preview payload evidence.
 
+Run Wave 3 KERNEL32 event synchronization smoke:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave3-kernel32-event-sync-smoke.ps1
+```
+
+The KERNEL32 event synchronization smoke verifies selected `CreateEventW`, `OpenEventW`, `SetEvent`, `ResetEvent`, and `WaitForSingleObjectEx` calls, generated synchronization metadata, stable API IDs `124` through `128`, event access/BOOL/wait decoding, event handle and pointer evidence, shared-memory transport mode, zero dropped events, clean hook restore, and no event-name, object-namespace, security-descriptor, SID/ACL, wait-chain, APC, context, stack, injection, credential, or byte-preview payload evidence.
+
 Run optional Win32/x86 capture smoke:
 
 ```powershell
@@ -163,7 +172,7 @@ cmake --build build/native-win32 --config Debug
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-smoke.ps1
 ```
 
-The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence, selected RPCRT4 UUID helper evidence, selected User32/GDI32 evidence, selected PSAPI module-query evidence, selected Version resource evidence, selected Shell known-folder evidence, selected OLE32 COM lifecycle evidence, selected COMBASE-backed WinRT lifecycle evidence, selected KERNEL32 memory protection evidence, selected KERNEL32 thread lifecycle evidence, zero dropped events, and clean hook restore.
+The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence, selected RPCRT4 UUID helper evidence, selected User32/GDI32 evidence, selected PSAPI module-query evidence, selected Version resource evidence, selected Shell known-folder evidence, selected OLE32 COM lifecycle evidence, selected COMBASE-backed WinRT lifecycle evidence, selected KERNEL32 memory protection evidence, selected KERNEL32 thread lifecycle evidence, selected KERNEL32 event synchronization evidence, zero dropped events, and clean hook restore.
 
 Run collector backpressure smoke:
 

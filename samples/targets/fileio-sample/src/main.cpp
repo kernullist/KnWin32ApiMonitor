@@ -1431,6 +1431,68 @@ bool RunThreadLifecycleProbe()
     return success;
 }
 
+bool RunEventSynchronizationProbe()
+{
+    bool success = false;
+    HANDLE createdEvent = nullptr;
+    HANDLE openedEvent = nullptr;
+    const std::wstring eventName = L"Local\\KnMonEventProbe_" + std::to_wstring(GetCurrentProcessId());
+
+    do
+    {
+        createdEvent = CreateEventW(nullptr, TRUE, FALSE, eventName.c_str());
+        if (createdEvent == nullptr)
+        {
+            LogLastError("CreateEventW(event)");
+            break;
+        }
+
+        openedEvent = OpenEventW(EVENT_MODIFY_STATE | SYNCHRONIZE, FALSE, eventName.c_str());
+        if (openedEvent == nullptr)
+        {
+            LogLastError("OpenEventW(event)");
+            break;
+        }
+
+        if (!SetEvent(openedEvent))
+        {
+            LogLastError("SetEvent(event)");
+            break;
+        }
+
+        const DWORD waitResult = WaitForSingleObjectEx(createdEvent, 1000, FALSE);
+        if (waitResult != WAIT_OBJECT_0)
+        {
+            std::cout << "WaitForSingleObjectEx(event) returned 0x"
+                      << std::hex << waitResult << std::dec << "\n";
+            break;
+        }
+
+        if (!ResetEvent(createdEvent))
+        {
+            LogLastError("ResetEvent(event)");
+            break;
+        }
+
+        std::cout << "event synchronization roundtrip wait=0x"
+                  << std::hex << waitResult << std::dec << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (openedEvent != nullptr)
+    {
+        CloseHandle(openedEvent);
+    }
+
+    if (createdEvent != nullptr)
+    {
+        CloseHandle(createdEvent);
+    }
+
+    return success;
+}
+
 bool RunWinsockProbe()
 {
     bool success = false;
@@ -1926,6 +1988,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunThreadLifecycleProbe())
+        {
+            break;
+        }
+
+        if (!RunEventSynchronizationProbe())
         {
             break;
         }
