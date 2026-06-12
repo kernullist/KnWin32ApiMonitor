@@ -767,6 +767,48 @@
       "module": "kernel32.dll",
       "name": "WaitForSingleObjectEx",
       "symbol": "WaitForSingleObjectEx"
+    },
+    {
+      "id": 129,
+      "module": "kernel32.dll",
+      "name": "CreateMutexW",
+      "symbol": "CreateMutexW"
+    },
+    {
+      "id": 130,
+      "module": "kernel32.dll",
+      "name": "OpenMutexW",
+      "symbol": "OpenMutexW"
+    },
+    {
+      "id": 131,
+      "module": "kernel32.dll",
+      "name": "ReleaseMutex",
+      "symbol": "ReleaseMutex"
+    },
+    {
+      "id": 132,
+      "module": "kernel32.dll",
+      "name": "CreateSemaphoreW",
+      "symbol": "CreateSemaphoreW"
+    },
+    {
+      "id": 133,
+      "module": "kernel32.dll",
+      "name": "OpenSemaphoreW",
+      "symbol": "OpenSemaphoreW"
+    },
+    {
+      "id": 134,
+      "module": "kernel32.dll",
+      "name": "ReleaseSemaphore",
+      "symbol": "ReleaseSemaphore"
+    },
+    {
+      "id": 135,
+      "module": "kernel32.dll",
+      "name": "WaitForMultipleObjectsEx",
+      "symbol": "WaitForMultipleObjectsEx"
     }
   ],
   "modules": [

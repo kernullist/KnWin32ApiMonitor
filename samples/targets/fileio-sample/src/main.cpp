@@ -1493,6 +1493,114 @@ bool RunEventSynchronizationProbe()
     return success;
 }
 
+bool RunMutexSemaphoreProbe()
+{
+    bool success = false;
+    HANDLE createdMutex = nullptr;
+    HANDLE openedMutex = nullptr;
+    HANDLE createdSemaphore = nullptr;
+    HANDLE openedSemaphore = nullptr;
+    LONG previousSemaphoreCount = -1;
+    const std::wstring mutexName = L"Local\\KnMonMutexProbe_" + std::to_wstring(GetCurrentProcessId());
+    const std::wstring semaphoreName = L"Local\\KnMonSemaphoreProbe_" + std::to_wstring(GetCurrentProcessId());
+
+    do
+    {
+        createdMutex = CreateMutexW(nullptr, FALSE, mutexName.c_str());
+        if (createdMutex == nullptr)
+        {
+            LogLastError("CreateMutexW(mutex)");
+            break;
+        }
+
+        openedMutex = OpenMutexW(MUTEX_MODIFY_STATE | SYNCHRONIZE, FALSE, mutexName.c_str());
+        if (openedMutex == nullptr)
+        {
+            LogLastError("OpenMutexW(mutex)");
+            break;
+        }
+
+        const DWORD mutexWait = WaitForSingleObject(openedMutex, 1000);
+        if (mutexWait != WAIT_OBJECT_0)
+        {
+            std::cout << "WaitForSingleObject(mutex) returned 0x"
+                      << std::hex << mutexWait << std::dec << "\n";
+            break;
+        }
+
+        if (!ReleaseMutex(openedMutex))
+        {
+            LogLastError("ReleaseMutex(mutex)");
+            break;
+        }
+
+        createdSemaphore = CreateSemaphoreW(nullptr, 0, 1, semaphoreName.c_str());
+        if (createdSemaphore == nullptr)
+        {
+            LogLastError("CreateSemaphoreW(semaphore)");
+            break;
+        }
+
+        openedSemaphore = OpenSemaphoreW(SEMAPHORE_MODIFY_STATE | SYNCHRONIZE, FALSE, semaphoreName.c_str());
+        if (openedSemaphore == nullptr)
+        {
+            LogLastError("OpenSemaphoreW(semaphore)");
+            break;
+        }
+
+        if (!ReleaseSemaphore(openedSemaphore, 1, &previousSemaphoreCount))
+        {
+            LogLastError("ReleaseSemaphore(semaphore)");
+            break;
+        }
+
+        if (previousSemaphoreCount != 0)
+        {
+            std::cout << "ReleaseSemaphore previous count mismatch: "
+                      << previousSemaphoreCount << "\n";
+            break;
+        }
+
+        const HANDLE waitHandles[] = { createdSemaphore };
+        const DWORD semaphoreWait = WaitForMultipleObjectsEx(1, waitHandles, FALSE, 1000, FALSE);
+        if (semaphoreWait != WAIT_OBJECT_0)
+        {
+            std::cout << "WaitForMultipleObjectsEx(semaphore) returned 0x"
+                      << std::hex << semaphoreWait << std::dec << "\n";
+            break;
+        }
+
+        std::cout << "mutex semaphore roundtrip mutexWait=0x"
+                  << std::hex << mutexWait
+                  << " semaphoreWait=0x" << semaphoreWait
+                  << std::dec << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (openedSemaphore != nullptr)
+    {
+        CloseHandle(openedSemaphore);
+    }
+
+    if (createdSemaphore != nullptr)
+    {
+        CloseHandle(createdSemaphore);
+    }
+
+    if (openedMutex != nullptr)
+    {
+        CloseHandle(openedMutex);
+    }
+
+    if (createdMutex != nullptr)
+    {
+        CloseHandle(createdMutex);
+    }
+
+    return success;
+}
+
 bool RunWinsockProbe()
 {
     bool success = false;
@@ -1993,6 +2101,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunEventSynchronizationProbe())
+        {
+            break;
+        }
+
+        if (!RunMutexSemaphoreProbe())
         {
             break;
         }

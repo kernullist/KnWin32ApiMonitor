@@ -25,6 +25,13 @@ $requiredApis = @(
     "SetEvent",
     "ResetEvent",
     "WaitForSingleObjectEx",
+    "CreateMutexW",
+    "OpenMutexW",
+    "ReleaseMutex",
+    "CreateSemaphoreW",
+    "OpenSemaphoreW",
+    "ReleaseSemaphore",
+    "WaitForMultipleObjectsEx",
     "GetProcAddress",
     "LdrGetProcedureAddress",
     "RegOpenKeyExW",
@@ -1349,6 +1356,228 @@ $syncPayload = $syncEvents | ConvertTo-Json -Depth 12
 if ($syncPayload -cmatch "KnMonEventProbe|Global\\|Local\\|BaseNamedObjects|ObjectName|ObjectDirectory|ObjectManager|SecurityDescriptor|SECURITY_DESCRIPTOR|SID|ACL|TOKEN_|Privilege|Integrity|DuplicateHandle|WaitChain|WCT|Apc|APC|QueueUserAPC|NtQueueApcThread|CreateRemoteThread|SuspendThread|ResumeThread|GetThreadContext|SetThreadContext|TerminateThread|CONTEXT|Eip|Rip|Rsp|CallStack|StackTrace|StackWalk|StackFrame|Disassembly|VirtualAllocEx|WriteProcessMemory|ReadProcessMemory|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 KERNEL32 event synchronization events appear to expose event-name, namespace, security, wait-chain, APC, context, stack, injection, PE/file/hash, credential, or byte-preview evidence: $syncPayload"
+}
+
+$mutexSemaphoreApis = @(
+    "CreateMutexW",
+    "OpenMutexW",
+    "ReleaseMutex",
+    "CreateSemaphoreW",
+    "OpenSemaphoreW",
+    "ReleaseSemaphore",
+    "WaitForMultipleObjectsEx"
+)
+
+$mutexSemaphoreEvents = @($result.capturedEvents | Where-Object { $mutexSemaphoreApis -contains $_.api })
+if ($mutexSemaphoreEvents.Count -lt $mutexSemaphoreApis.Count)
+{
+    throw "x86 capture did not include the selected KERNEL32 mutex/semaphore API slice."
+}
+
+$createMutex = @($mutexSemaphoreEvents | Where-Object { $_.api -eq "CreateMutexW" } | Select-Object -First 1)
+if ($createMutex.Count -ne 1 -or
+    $createMutex[0].module -ne "kernel32.dll" -or
+    $createMutex[0].apiCategory -ne "mutex_create" -or
+    $createMutex[0].hookPolicy -ne "iat" -or
+    $createMutex[0].coverageStatus -ne "smoke_verified" -or
+    $createMutex[0].returnValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 CreateMutexW metadata or return evidence mismatch."
+}
+
+$createMutexAttributesArg = @($createMutex[0].arguments | Where-Object { $_.name -eq "lpMutexAttributes" } | Select-Object -First 1)
+$initialOwnerArg = @($createMutex[0].arguments | Where-Object { $_.name -eq "bInitialOwner" } | Select-Object -First 1)
+$createMutexNameArg = @($createMutex[0].arguments | Where-Object { $_.name -eq "lpName" } | Select-Object -First 1)
+if ($createMutexAttributesArg.Count -ne 1 -or
+    $createMutexAttributesArg[0].decodeAlias -ne "pointer" -or
+    $createMutexAttributesArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]+$" -or
+    $initialOwnerArg.Count -ne 1 -or
+    $initialOwnerArg[0].decodeAlias -ne "mutex_initial_owner_bool" -or
+    $initialOwnerArg[0].decodedValue -ne "FALSE" -or
+    $createMutexNameArg.Count -ne 1 -or
+    $createMutexNameArg[0].decodeAlias -ne "sync_object_name_pointer" -or
+    $createMutexNameArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 CreateMutexW did not include expected mutex create metadata: $($createMutex[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$openMutex = @($mutexSemaphoreEvents | Where-Object { $_.api -eq "OpenMutexW" } | Select-Object -First 1)
+if ($openMutex.Count -ne 1 -or
+    $openMutex[0].module -ne "kernel32.dll" -or
+    $openMutex[0].apiCategory -ne "mutex_open" -or
+    $openMutex[0].hookPolicy -ne "iat" -or
+    $openMutex[0].coverageStatus -ne "smoke_verified" -or
+    $openMutex[0].returnValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 OpenMutexW metadata or return evidence mismatch."
+}
+
+$mutexAccessArg = @($openMutex[0].arguments | Where-Object { $_.name -eq "dwDesiredAccess" } | Select-Object -First 1)
+$mutexInheritArg = @($openMutex[0].arguments | Where-Object { $_.name -eq "bInheritHandle" } | Select-Object -First 1)
+$openMutexNameArg = @($openMutex[0].arguments | Where-Object { $_.name -eq "lpName" } | Select-Object -First 1)
+if ($mutexAccessArg.Count -ne 1 -or
+    $mutexAccessArg[0].decodeAlias -ne "mutex_access_flags" -or
+    $mutexAccessArg[0].decodedValue -notmatch "MUTEX_MODIFY_STATE" -or
+    $mutexAccessArg[0].decodedValue -notmatch "SYNCHRONIZE" -or
+    $mutexInheritArg.Count -ne 1 -or
+    $mutexInheritArg[0].decodeAlias -ne "dword_value" -or
+    $mutexInheritArg[0].decodedValue -ne "FALSE" -or
+    $openMutexNameArg.Count -ne 1 -or
+    $openMutexNameArg[0].decodeAlias -ne "sync_object_name_pointer" -or
+    $openMutexNameArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 OpenMutexW did not include expected mutex open metadata: $($openMutex[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$releaseMutex = @($mutexSemaphoreEvents | Where-Object { $_.api -eq "ReleaseMutex" } | Select-Object -First 1)
+if ($releaseMutex.Count -ne 1 -or
+    $releaseMutex[0].module -ne "kernel32.dll" -or
+    $releaseMutex[0].apiCategory -ne "mutex_release" -or
+    $releaseMutex[0].returnValue -ne "TRUE")
+{
+    throw "x86 ReleaseMutex metadata or return evidence mismatch."
+}
+
+$releaseMutexHandleArg = @($releaseMutex[0].arguments | Where-Object { $_.name -eq "hMutex" } | Select-Object -First 1)
+if ($releaseMutexHandleArg.Count -ne 1 -or
+    $releaseMutexHandleArg[0].decodeAlias -ne "handle" -or
+    $releaseMutexHandleArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 ReleaseMutex did not include expected handle metadata: $($releaseMutex[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$createSemaphore = @($mutexSemaphoreEvents | Where-Object { $_.api -eq "CreateSemaphoreW" } | Select-Object -First 1)
+if ($createSemaphore.Count -ne 1 -or
+    $createSemaphore[0].module -ne "kernel32.dll" -or
+    $createSemaphore[0].apiCategory -ne "semaphore_create" -or
+    $createSemaphore[0].hookPolicy -ne "iat" -or
+    $createSemaphore[0].coverageStatus -ne "smoke_verified" -or
+    $createSemaphore[0].returnValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 CreateSemaphoreW metadata or return evidence mismatch."
+}
+
+$createSemaphoreAttributesArg = @($createSemaphore[0].arguments | Where-Object { $_.name -eq "lpSemaphoreAttributes" } | Select-Object -First 1)
+$initialCountArg = @($createSemaphore[0].arguments | Where-Object { $_.name -eq "lInitialCount" } | Select-Object -First 1)
+$maximumCountArg = @($createSemaphore[0].arguments | Where-Object { $_.name -eq "lMaximumCount" } | Select-Object -First 1)
+$createSemaphoreNameArg = @($createSemaphore[0].arguments | Where-Object { $_.name -eq "lpName" } | Select-Object -First 1)
+if ($createSemaphoreAttributesArg.Count -ne 1 -or
+    $createSemaphoreAttributesArg[0].decodeAlias -ne "pointer" -or
+    $createSemaphoreAttributesArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]+$" -or
+    $initialCountArg.Count -ne 1 -or
+    $initialCountArg[0].decodeAlias -ne "semaphore_count_value" -or
+    $initialCountArg[0].decodedValue -ne "0" -or
+    $maximumCountArg.Count -ne 1 -or
+    $maximumCountArg[0].decodeAlias -ne "semaphore_count_value" -or
+    $maximumCountArg[0].decodedValue -ne "1" -or
+    $createSemaphoreNameArg.Count -ne 1 -or
+    $createSemaphoreNameArg[0].decodeAlias -ne "sync_object_name_pointer" -or
+    $createSemaphoreNameArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 CreateSemaphoreW did not include expected semaphore create metadata: $($createSemaphore[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$openSemaphore = @($mutexSemaphoreEvents | Where-Object { $_.api -eq "OpenSemaphoreW" } | Select-Object -First 1)
+if ($openSemaphore.Count -ne 1 -or
+    $openSemaphore[0].module -ne "kernel32.dll" -or
+    $openSemaphore[0].apiCategory -ne "semaphore_open" -or
+    $openSemaphore[0].hookPolicy -ne "iat" -or
+    $openSemaphore[0].coverageStatus -ne "smoke_verified" -or
+    $openSemaphore[0].returnValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 OpenSemaphoreW metadata or return evidence mismatch."
+}
+
+$semaphoreAccessArg = @($openSemaphore[0].arguments | Where-Object { $_.name -eq "dwDesiredAccess" } | Select-Object -First 1)
+$semaphoreInheritArg = @($openSemaphore[0].arguments | Where-Object { $_.name -eq "bInheritHandle" } | Select-Object -First 1)
+$openSemaphoreNameArg = @($openSemaphore[0].arguments | Where-Object { $_.name -eq "lpName" } | Select-Object -First 1)
+if ($semaphoreAccessArg.Count -ne 1 -or
+    $semaphoreAccessArg[0].decodeAlias -ne "semaphore_access_flags" -or
+    $semaphoreAccessArg[0].decodedValue -notmatch "SEMAPHORE_MODIFY_STATE" -or
+    $semaphoreAccessArg[0].decodedValue -notmatch "SYNCHRONIZE" -or
+    $semaphoreInheritArg.Count -ne 1 -or
+    $semaphoreInheritArg[0].decodeAlias -ne "dword_value" -or
+    $semaphoreInheritArg[0].decodedValue -ne "FALSE" -or
+    $openSemaphoreNameArg.Count -ne 1 -or
+    $openSemaphoreNameArg[0].decodeAlias -ne "sync_object_name_pointer" -or
+    $openSemaphoreNameArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 OpenSemaphoreW did not include expected semaphore open metadata: $($openSemaphore[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$releaseSemaphore = @($mutexSemaphoreEvents | Where-Object { $_.api -eq "ReleaseSemaphore" } | Select-Object -First 1)
+if ($releaseSemaphore.Count -ne 1 -or
+    $releaseSemaphore[0].module -ne "kernel32.dll" -or
+    $releaseSemaphore[0].apiCategory -ne "semaphore_release" -or
+    $releaseSemaphore[0].returnValue -ne "TRUE")
+{
+    throw "x86 ReleaseSemaphore metadata or return evidence mismatch."
+}
+
+$releaseSemaphoreHandleArg = @($releaseSemaphore[0].arguments | Where-Object { $_.name -eq "hSemaphore" } | Select-Object -First 1)
+$releaseCountArg = @($releaseSemaphore[0].arguments | Where-Object { $_.name -eq "lReleaseCount" } | Select-Object -First 1)
+$previousCountArg = @($releaseSemaphore[0].arguments | Where-Object { $_.name -eq "lpPreviousCount" } | Select-Object -First 1)
+if ($releaseSemaphoreHandleArg.Count -ne 1 -or
+    $releaseSemaphoreHandleArg[0].decodeAlias -ne "handle" -or
+    $releaseSemaphoreHandleArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $releaseCountArg.Count -ne 1 -or
+    $releaseCountArg[0].decodeAlias -ne "semaphore_count_value" -or
+    $releaseCountArg[0].decodedValue -ne "1" -or
+    $previousCountArg.Count -ne 1 -or
+    $previousCountArg[0].decodeAlias -ne "semaphore_previous_count_pointer" -or
+    $previousCountArg[0].captureTiming -ne "post" -or
+    $previousCountArg[0].decodeStatus -ne "decoded" -or
+    $previousCountArg[0].postCallValue -ne "0" -or
+    $previousCountArg[0].decodedValue -notmatch "value=0")
+{
+    throw "x86 ReleaseSemaphore did not include expected semaphore release metadata: $($releaseSemaphore[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$multiWait = @($mutexSemaphoreEvents | Where-Object { $_.api -eq "WaitForMultipleObjectsEx" -and $_.returnValue -match "WAIT_OBJECT_0" } | Select-Object -First 1)
+if ($multiWait.Count -ne 1 -or
+    $multiWait[0].module -ne "kernel32.dll" -or
+    $multiWait[0].apiCategory -ne "multi_wait")
+{
+    throw "x86 WaitForMultipleObjectsEx metadata or return evidence mismatch."
+}
+
+$waitCountArg = @($multiWait[0].arguments | Where-Object { $_.name -eq "nCount" } | Select-Object -First 1)
+$waitHandlesArg = @($multiWait[0].arguments | Where-Object { $_.name -eq "lpHandles" } | Select-Object -First 1)
+$waitAllArg = @($multiWait[0].arguments | Where-Object { $_.name -eq "bWaitAll" } | Select-Object -First 1)
+$multiWaitTimeoutArg = @($multiWait[0].arguments | Where-Object { $_.name -eq "dwMilliseconds" } | Select-Object -First 1)
+$multiWaitAlertableArg = @($multiWait[0].arguments | Where-Object { $_.name -eq "bAlertable" } | Select-Object -First 1)
+if ($waitCountArg.Count -ne 1 -or
+    $waitCountArg[0].decodeAlias -ne "dword_value" -or
+    $waitCountArg[0].decodedValue -ne "1" -or
+    $waitHandlesArg.Count -ne 1 -or
+    $waitHandlesArg[0].decodeAlias -ne "wait_handle_array_pointer" -or
+    $waitHandlesArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $waitAllArg.Count -ne 1 -or
+    $waitAllArg[0].decodeAlias -ne "wait_all_bool" -or
+    $waitAllArg[0].decodedValue -ne "FALSE" -or
+    $multiWaitTimeoutArg.Count -ne 1 -or
+    $multiWaitTimeoutArg[0].decodeAlias -ne "wait_timeout_ms" -or
+    $multiWaitTimeoutArg[0].decodedValue -notmatch "1000" -or
+    $multiWaitTimeoutArg[0].decodedValue -notmatch "0x000003e8" -or
+    $multiWaitAlertableArg.Count -ne 1 -or
+    $multiWaitAlertableArg[0].decodeAlias -ne "wait_alertable_bool" -or
+    $multiWaitAlertableArg[0].decodedValue -ne "FALSE")
+{
+    throw "x86 WaitForMultipleObjectsEx did not include expected multi-wait metadata: $($multiWait[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+foreach ($mutexSemaphoreEvent in $mutexSemaphoreEvents)
+{
+    if (-not [string]::IsNullOrEmpty($mutexSemaphoreEvent.bufferPreview))
+    {
+        throw "x86 mutex/semaphore event exposed bufferPreview: $($mutexSemaphoreEvent | ConvertTo-Json -Depth 8)"
+    }
+}
+
+$mutexSemaphorePayload = $mutexSemaphoreEvents | ConvertTo-Json -Depth 12
+if ($mutexSemaphorePayload -cmatch "KnMonMutexProbe|KnMonSemaphoreProbe|Global\\|Local\\|BaseNamedObjects|ObjectName|ObjectDirectory|ObjectManager|SecurityDescriptor|SECURITY_DESCRIPTOR|SID|ACL|TOKEN_|Privilege|Integrity|DuplicateHandle|WaitChain|WCT|Apc|APC|QueueUserAPC|NtQueueApcThread|CreateRemoteThread|SuspendThread|ResumeThread|GetThreadContext|SetThreadContext|TerminateThread|CONTEXT|Eip|Rip|Rsp|CallStack|StackTrace|StackWalk|StackFrame|Disassembly|VirtualAllocEx|WriteProcessMemory|ReadProcessMemory|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 KERNEL32 mutex/semaphore events appear to expose object-name, namespace, security, handle-array, wait-chain, APC, context, stack, injection, PE/file/hash, credential, or byte-preview evidence: $mutexSemaphorePayload"
 }
 
 $rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })

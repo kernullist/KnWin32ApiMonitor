@@ -2324,6 +2324,36 @@ std::string EventAccessFlagsText(std::uint32_t value)
     return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
 }
 
+std::string MutexAccessFlagsText(std::uint32_t value)
+{
+    static constexpr FlagName Flags[] =
+    {
+        { 0x00000001U, "MUTEX_MODIFY_STATE" },
+        { 0x00010000U, "DELETE" },
+        { 0x00020000U, "READ_CONTROL" },
+        { 0x00040000U, "WRITE_DAC" },
+        { 0x00080000U, "WRITE_OWNER" },
+        { 0x00100000U, "SYNCHRONIZE" },
+    };
+
+    return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
+}
+
+std::string SemaphoreAccessFlagsText(std::uint32_t value)
+{
+    static constexpr FlagName Flags[] =
+    {
+        { 0x00000002U, "SEMAPHORE_MODIFY_STATE" },
+        { 0x00010000U, "DELETE" },
+        { 0x00020000U, "READ_CONTROL" },
+        { 0x00040000U, "WRITE_DAC" },
+        { 0x00080000U, "WRITE_OWNER" },
+        { 0x00100000U, "SYNCHRONIZE" },
+    };
+
+    return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
+}
+
 std::string WaitTimeoutText(std::uint32_t value)
 {
     if (value == 0xFFFFFFFFU)
@@ -2358,6 +2388,50 @@ std::string WaitResultText(std::uint32_t value)
     default:
         stream << "unknown";
         break;
+    }
+
+    stream << ")";
+    return stream.str();
+}
+
+std::string MultiWaitResultText(std::uint32_t value, std::uint32_t count)
+{
+    std::ostringstream stream;
+
+    stream << HexDwordValue(value);
+    stream << " (";
+
+    if (count > 0 && value < count)
+    {
+        stream << "WAIT_OBJECT_0";
+        if (value > 0)
+        {
+            stream << "+" << value;
+        }
+    }
+    else if (count > 0 && value >= 0x00000080U && value < 0x00000080U + count)
+    {
+        const std::uint32_t index = value - 0x00000080U;
+        stream << "WAIT_ABANDONED";
+        if (index > 0)
+        {
+            stream << "+" << index;
+        }
+    }
+    else
+    {
+        switch (value)
+        {
+        case 0x00000102U:
+            stream << "WAIT_TIMEOUT";
+            break;
+        case 0xFFFFFFFFU:
+            stream << "WAIT_FAILED";
+            break;
+        default:
+            stream << "unknown";
+            break;
+        }
     }
 
     stream << ")";
@@ -2800,6 +2874,79 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "dwMilliseconds", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), WaitTimeoutText(record.Values32[0])) << ",";
         args << ArgumentJsonFromMetadata(record.ApiId, 2, "BOOL", "bAlertable", "in", std::to_string(record.Values32[1]), std::to_string(record.Values32[1]), BoolText(record.Values32[1]));
         payload = ApiCallPayload(result, record, WaitResultText(static_cast<std::uint32_t>(record.ReturnValue)), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::CreateMutexW:
+    {
+        const std::string attributesPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string namePointer = HexPointerValue(record.Values64[1], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPSECURITY_ATTRIBUTES", "lpMutexAttributes", "in", attributesPointer, attributesPointer, attributesPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "BOOL", "bInitialOwner", "in", std::to_string(record.Values32[0]), std::to_string(record.Values32[0]), BoolText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "LPCWSTR", "lpName", "in", namePointer, namePointer, namePointer);
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::OpenMutexW:
+    {
+        const std::string namePointer = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "DWORD", "dwDesiredAccess", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), MutexAccessFlagsText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "BOOL", "bInheritHandle", "in", std::to_string(record.Values32[1]), std::to_string(record.Values32[1]), BoolText(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "LPCWSTR", "lpName", "in", namePointer, namePointer, namePointer);
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::ReleaseMutex:
+    {
+        const std::string mutexHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hMutex", "in", mutexHandle, mutexHandle, mutexHandle);
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::CreateSemaphoreW:
+    {
+        const std::string attributesPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string namePointer = HexPointerValue(record.Values64[1], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPSECURITY_ATTRIBUTES", "lpSemaphoreAttributes", "in", attributesPointer, attributesPointer, attributesPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LONG", "lInitialCount", "in", SignedIntValue32(record.Values32[0]), SignedIntValue32(record.Values32[0]), SignedIntValue32(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "LONG", "lMaximumCount", "in", SignedIntValue32(record.Values32[1]), SignedIntValue32(record.Values32[1]), SignedIntValue32(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "LPCWSTR", "lpName", "in", namePointer, namePointer, namePointer);
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::OpenSemaphoreW:
+    {
+        const std::string namePointer = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "DWORD", "dwDesiredAccess", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), SemaphoreAccessFlagsText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "BOOL", "bInheritHandle", "in", std::to_string(record.Values32[1]), std::to_string(record.Values32[1]), BoolText(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "LPCWSTR", "lpName", "in", namePointer, namePointer, namePointer);
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::ReleaseSemaphore:
+    {
+        const std::string semaphoreHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string previousCountPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const bool previousCountDecoded = static_cast<KnMonDecodeStatus>(record.Values32[1]) == KnMonDecodeStatus::Decoded;
+        const std::string previousCountValue = SignedIntValue32(record.Values32[2]);
+        const std::string previousCountPost = previousCountDecoded ? previousCountValue : previousCountPointer;
+        const std::string previousCountDecodedValue = previousCountDecoded ?
+            ("value=" + previousCountValue) :
+            (DecodeStatusName(record.Values32[1]) + ";pointer=" + previousCountPointer);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hSemaphore", "in", semaphoreHandle, semaphoreHandle, semaphoreHandle) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LONG", "lReleaseCount", "in", SignedIntValue32(record.Values32[0]), SignedIntValue32(record.Values32[0]), SignedIntValue32(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "LPLONG", "lpPreviousCount", "out", previousCountPointer, previousCountPost, previousCountDecodedValue, DecodeStatusName(record.Values32[1]));
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::WaitForMultipleObjectsEx:
+    {
+        const std::string handlesPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "DWORD", "nCount", "in", std::to_string(record.Values32[0]), std::to_string(record.Values32[0]), std::to_string(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "const HANDLE*", "lpHandles", "in", handlesPointer, handlesPointer, handlesPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "BOOL", "bWaitAll", "in", std::to_string(record.Values32[1]), std::to_string(record.Values32[1]), BoolText(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "DWORD", "dwMilliseconds", "in", HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2]), WaitTimeoutText(record.Values32[2])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 4, "BOOL", "bAlertable", "in", std::to_string(record.Values32[3]), std::to_string(record.Values32[3]), BoolText(record.Values32[3]));
+        payload = ApiCallPayload(result, record, MultiWaitResultText(static_cast<std::uint32_t>(record.ReturnValue), record.Values32[0]), args.str(), "");
         break;
     }
     case KnMonTransportApiId::NtCreateFile:

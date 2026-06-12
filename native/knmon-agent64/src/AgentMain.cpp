@@ -143,6 +143,13 @@ using OpenEventWFn = HANDLE(WINAPI*)(DWORD, BOOL, LPCWSTR);
 using SetEventFn = BOOL(WINAPI*)(HANDLE);
 using ResetEventFn = BOOL(WINAPI*)(HANDLE);
 using WaitForSingleObjectExFn = DWORD(WINAPI*)(HANDLE, DWORD, BOOL);
+using CreateMutexWFn = HANDLE(WINAPI*)(LPSECURITY_ATTRIBUTES, BOOL, LPCWSTR);
+using OpenMutexWFn = HANDLE(WINAPI*)(DWORD, BOOL, LPCWSTR);
+using ReleaseMutexFn = BOOL(WINAPI*)(HANDLE);
+using CreateSemaphoreWFn = HANDLE(WINAPI*)(LPSECURITY_ATTRIBUTES, LONG, LONG, LPCWSTR);
+using OpenSemaphoreWFn = HANDLE(WINAPI*)(DWORD, BOOL, LPCWSTR);
+using ReleaseSemaphoreFn = BOOL(WINAPI*)(HANDLE, LONG, LPLONG);
+using WaitForMultipleObjectsExFn = DWORD(WINAPI*)(DWORD, const HANDLE*, BOOL, DWORD, BOOL);
 using LoadLibraryWFn = HMODULE(WINAPI*)(LPCWSTR);
 using LoadLibraryAFn = HMODULE(WINAPI*)(LPCSTR);
 using LoadLibraryExWFn = HMODULE(WINAPI*)(LPCWSTR, HANDLE, DWORD);
@@ -250,6 +257,13 @@ OpenEventWFn g_originalOpenEventW = nullptr;
 SetEventFn g_originalSetEvent = nullptr;
 ResetEventFn g_originalResetEvent = nullptr;
 WaitForSingleObjectExFn g_originalWaitForSingleObjectEx = nullptr;
+CreateMutexWFn g_originalCreateMutexW = nullptr;
+OpenMutexWFn g_originalOpenMutexW = nullptr;
+ReleaseMutexFn g_originalReleaseMutex = nullptr;
+CreateSemaphoreWFn g_originalCreateSemaphoreW = nullptr;
+OpenSemaphoreWFn g_originalOpenSemaphoreW = nullptr;
+ReleaseSemaphoreFn g_originalReleaseSemaphore = nullptr;
+WaitForMultipleObjectsExFn g_originalWaitForMultipleObjectsEx = nullptr;
 LoadLibraryWFn g_originalLoadLibraryW = nullptr;
 LoadLibraryAFn g_originalLoadLibraryA = nullptr;
 LoadLibraryExWFn g_originalLoadLibraryExW = nullptr;
@@ -394,7 +408,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 83;
+constexpr std::size_t HookDefinitionCount = 90;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -2487,6 +2501,190 @@ void EmitWaitForSingleObjectExEvent(
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(handle));
         record->Values32[0] = milliseconds;
         record->Values32[1] = alertable ? 1U : 0U;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitCreateMutexWEvent(
+    HANDLE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPSECURITY_ATTRIBUTES mutexAttributes,
+    BOOL initialOwner,
+    LPCWSTR name)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::CreateMutexW, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(mutexAttributes));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(name));
+        record->Values32[0] = initialOwner ? 1U : 0U;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitOpenMutexWEvent(
+    HANDLE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    DWORD desiredAccess,
+    BOOL inheritHandle,
+    LPCWSTR name)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::OpenMutexW, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(name));
+        record->Values32[0] = desiredAccess;
+        record->Values32[1] = inheritHandle ? 1U : 0U;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitReleaseMutexEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE mutexHandle)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::ReleaseMutex, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result ? 1 : 0;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(mutexHandle));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitCreateSemaphoreWEvent(
+    HANDLE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPSECURITY_ATTRIBUTES semaphoreAttributes,
+    LONG initialCount,
+    LONG maximumCount,
+    LPCWSTR name)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::CreateSemaphoreW, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(semaphoreAttributes));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(name));
+        record->Values32[0] = static_cast<std::uint32_t>(initialCount);
+        record->Values32[1] = static_cast<std::uint32_t>(maximumCount);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitOpenSemaphoreWEvent(
+    HANDLE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    DWORD desiredAccess,
+    BOOL inheritHandle,
+    LPCWSTR name)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::OpenSemaphoreW, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(name));
+        record->Values32[0] = desiredAccess;
+        record->Values32[1] = inheritHandle ? 1U : 0U;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitReleaseSemaphoreEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE semaphoreHandle,
+    LONG releaseCount,
+    LPLONG previousCount)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        LONG previousCountValue = 0;
+        std::uint32_t previousCountStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+
+        if (result != FALSE)
+        {
+            if (previousCount == nullptr)
+            {
+                previousCountStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            }
+            else if (ReadCurrentProcessValue(previousCount, &previousCountValue))
+            {
+                previousCountStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+            }
+            else
+            {
+                previousCountStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            }
+        }
+
+        FillTransportCommon(record, knmon::KnMonTransportApiId::ReleaseSemaphore, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result ? 1 : 0;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(semaphoreHandle));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(previousCount));
+        record->Values32[0] = static_cast<std::uint32_t>(releaseCount);
+        record->Values32[1] = previousCountStatus;
+        record->Values32[2] = static_cast<std::uint32_t>(previousCountValue);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitWaitForMultipleObjectsExEvent(
+    DWORD result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    DWORD count,
+    const HANDLE* handles,
+    BOOL waitAll,
+    DWORD milliseconds,
+    BOOL alertable)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::WaitForMultipleObjectsEx, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(handles));
+        record->Values32[0] = count;
+        record->Values32[1] = waitAll ? 1U : 0U;
+        record->Values32[2] = milliseconds;
+        record->Values32[3] = alertable ? 1U : 0U;
         CommitTransportRecord(record, overheadStart);
     }
 }
@@ -5062,6 +5260,13 @@ HANDLE WINAPI HookedOpenEventW(DWORD desiredAccess, BOOL inheritHandle, LPCWSTR 
 BOOL WINAPI HookedSetEvent(HANDLE eventHandle);
 BOOL WINAPI HookedResetEvent(HANDLE eventHandle);
 DWORD WINAPI HookedWaitForSingleObjectEx(HANDLE handle, DWORD milliseconds, BOOL alertable);
+HANDLE WINAPI HookedCreateMutexW(LPSECURITY_ATTRIBUTES mutexAttributes, BOOL initialOwner, LPCWSTR name);
+HANDLE WINAPI HookedOpenMutexW(DWORD desiredAccess, BOOL inheritHandle, LPCWSTR name);
+BOOL WINAPI HookedReleaseMutex(HANDLE mutexHandle);
+HANDLE WINAPI HookedCreateSemaphoreW(LPSECURITY_ATTRIBUTES semaphoreAttributes, LONG initialCount, LONG maximumCount, LPCWSTR name);
+HANDLE WINAPI HookedOpenSemaphoreW(DWORD desiredAccess, BOOL inheritHandle, LPCWSTR name);
+BOOL WINAPI HookedReleaseSemaphore(HANDLE semaphoreHandle, LONG releaseCount, LPLONG previousCount);
+DWORD WINAPI HookedWaitForMultipleObjectsEx(DWORD count, const HANDLE* handles, BOOL waitAll, DWORD milliseconds, BOOL alertable);
 HMODULE WINAPI HookedLoadLibraryW(LPCWSTR fileName);
 HMODULE WINAPI HookedLoadLibraryA(LPCSTR fileName);
 HMODULE WINAPI HookedLoadLibraryExW(LPCWSTR fileName, HANDLE file, DWORD flags);
@@ -5149,6 +5354,13 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "kernel32.dll", "SetEvent", reinterpret_cast<void*>(HookedSetEvent), reinterpret_cast<void**>(&g_originalSetEvent), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "ResetEvent", reinterpret_cast<void*>(HookedResetEvent), reinterpret_cast<void**>(&g_originalResetEvent), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "WaitForSingleObjectEx", reinterpret_cast<void*>(HookedWaitForSingleObjectEx), reinterpret_cast<void**>(&g_originalWaitForSingleObjectEx), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "CreateMutexW", reinterpret_cast<void*>(HookedCreateMutexW), reinterpret_cast<void**>(&g_originalCreateMutexW), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "OpenMutexW", reinterpret_cast<void*>(HookedOpenMutexW), reinterpret_cast<void**>(&g_originalOpenMutexW), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "ReleaseMutex", reinterpret_cast<void*>(HookedReleaseMutex), reinterpret_cast<void**>(&g_originalReleaseMutex), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "CreateSemaphoreW", reinterpret_cast<void*>(HookedCreateSemaphoreW), reinterpret_cast<void**>(&g_originalCreateSemaphoreW), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "OpenSemaphoreW", reinterpret_cast<void*>(HookedOpenSemaphoreW), reinterpret_cast<void**>(&g_originalOpenSemaphoreW), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "ReleaseSemaphore", reinterpret_cast<void*>(HookedReleaseSemaphore), reinterpret_cast<void**>(&g_originalReleaseSemaphore), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "WaitForMultipleObjectsEx", reinterpret_cast<void*>(HookedWaitForMultipleObjectsEx), reinterpret_cast<void**>(&g_originalWaitForMultipleObjectsEx), false, true, false, 0, 0 },
         HookDefinition { "ntdll.dll", "NtCreateFile", reinterpret_cast<void*>(HookedNtCreateFile), reinterpret_cast<void**>(&g_originalNtCreateFile), true, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "LoadLibraryW", reinterpret_cast<void*>(HookedLoadLibraryW), reinterpret_cast<void**>(&g_originalLoadLibraryW), false, true, true, 0, 0 },
         HookDefinition { "kernel32.dll", "LoadLibraryA", reinterpret_cast<void*>(HookedLoadLibraryA), reinterpret_cast<void**>(&g_originalLoadLibraryA), false, true, true, 0, 0 },
@@ -6113,6 +6325,223 @@ DWORD WINAPI HookedWaitForSingleObjectEx(HANDLE handle, DWORD milliseconds, BOOL
     if (HooksEnabled())
     {
         EmitWaitForSingleObjectExEvent(result, eventError, start, end, handle, milliseconds, alertable);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HANDLE WINAPI HookedCreateMutexW(LPSECURITY_ATTRIBUTES mutexAttributes, BOOL initialOwner, LPCWSTR name)
+{
+    if (g_inHook || !HooksEnabled() || g_originalCreateMutexW == nullptr)
+    {
+        if (g_originalCreateMutexW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalCreateMutexW(mutexAttributes, initialOwner, name);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HANDLE result = g_originalCreateMutexW(mutexAttributes, initialOwner, name);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitCreateMutexWEvent(result, eventError, start, end, mutexAttributes, initialOwner, name);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HANDLE WINAPI HookedOpenMutexW(DWORD desiredAccess, BOOL inheritHandle, LPCWSTR name)
+{
+    if (g_inHook || !HooksEnabled() || g_originalOpenMutexW == nullptr)
+    {
+        if (g_originalOpenMutexW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalOpenMutexW(desiredAccess, inheritHandle, name);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HANDLE result = g_originalOpenMutexW(desiredAccess, inheritHandle, name);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitOpenMutexWEvent(result, eventError, start, end, desiredAccess, inheritHandle, name);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedReleaseMutex(HANDLE mutexHandle)
+{
+    if (g_inHook || !HooksEnabled() || g_originalReleaseMutex == nullptr)
+    {
+        if (g_originalReleaseMutex == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalReleaseMutex(mutexHandle);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    BOOL result = g_originalReleaseMutex(mutexHandle);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitReleaseMutexEvent(result, eventError, start, end, mutexHandle);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HANDLE WINAPI HookedCreateSemaphoreW(LPSECURITY_ATTRIBUTES semaphoreAttributes, LONG initialCount, LONG maximumCount, LPCWSTR name)
+{
+    if (g_inHook || !HooksEnabled() || g_originalCreateSemaphoreW == nullptr)
+    {
+        if (g_originalCreateSemaphoreW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalCreateSemaphoreW(semaphoreAttributes, initialCount, maximumCount, name);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HANDLE result = g_originalCreateSemaphoreW(semaphoreAttributes, initialCount, maximumCount, name);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitCreateSemaphoreWEvent(result, eventError, start, end, semaphoreAttributes, initialCount, maximumCount, name);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HANDLE WINAPI HookedOpenSemaphoreW(DWORD desiredAccess, BOOL inheritHandle, LPCWSTR name)
+{
+    if (g_inHook || !HooksEnabled() || g_originalOpenSemaphoreW == nullptr)
+    {
+        if (g_originalOpenSemaphoreW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalOpenSemaphoreW(desiredAccess, inheritHandle, name);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HANDLE result = g_originalOpenSemaphoreW(desiredAccess, inheritHandle, name);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitOpenSemaphoreWEvent(result, eventError, start, end, desiredAccess, inheritHandle, name);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedReleaseSemaphore(HANDLE semaphoreHandle, LONG releaseCount, LPLONG previousCount)
+{
+    if (g_inHook || !HooksEnabled() || g_originalReleaseSemaphore == nullptr)
+    {
+        if (g_originalReleaseSemaphore == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalReleaseSemaphore(semaphoreHandle, releaseCount, previousCount);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    BOOL result = g_originalReleaseSemaphore(semaphoreHandle, releaseCount, previousCount);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitReleaseSemaphoreEvent(result, eventError, start, end, semaphoreHandle, releaseCount, previousCount);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+DWORD WINAPI HookedWaitForMultipleObjectsEx(DWORD count, const HANDLE* handles, BOOL waitAll, DWORD milliseconds, BOOL alertable)
+{
+    if (g_inHook || !HooksEnabled() || g_originalWaitForMultipleObjectsEx == nullptr)
+    {
+        if (g_originalWaitForMultipleObjectsEx == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return WAIT_FAILED;
+        }
+
+        return g_originalWaitForMultipleObjectsEx(count, handles, waitAll, milliseconds, alertable);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    DWORD result = g_originalWaitForMultipleObjectsEx(count, handles, waitAll, milliseconds, alertable);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == WAIT_FAILED ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitWaitForMultipleObjectsExEvent(result, eventError, start, end, count, handles, waitAll, milliseconds, alertable);
     }
 
     SetLastError(lastError);

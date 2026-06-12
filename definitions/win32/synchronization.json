@@ -99,6 +99,147 @@
         { "name": "dwMilliseconds", "type": "DWORD", "direction": "in", "decode": "wait_timeout_ms" },
         { "name": "bAlertable", "type": "BOOL", "direction": "in", "decode": "wait_alertable_bool" }
       ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "CreateMutexW",
+      "family": "synchronization",
+      "category": "mutex_create",
+      "risk": "medium",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HANDLE",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "lpMutexAttributes", "type": "LPSECURITY_ATTRIBUTES", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "bInitialOwner", "type": "BOOL", "direction": "in", "decode": "mutex_initial_owner_bool" },
+        { "name": "lpName", "type": "LPCWSTR", "direction": "in", "decode": "sync_object_name_pointer", "nullable": true }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "OpenMutexW",
+      "family": "synchronization",
+      "category": "mutex_open",
+      "risk": "medium",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HANDLE",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "dwDesiredAccess", "type": "DWORD", "direction": "in", "decode": "mutex_access_flags", "flags": "mutex_access_flags" },
+        { "name": "bInheritHandle", "type": "BOOL", "direction": "in", "decode": "dword_value" },
+        { "name": "lpName", "type": "LPCWSTR", "direction": "in", "decode": "sync_object_name_pointer" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "ReleaseMutex",
+      "family": "synchronization",
+      "category": "mutex_release",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": 0 },
+      "failure": { "returnEqual": 0 },
+      "parameters": [
+        { "name": "hMutex", "type": "HANDLE", "direction": "in", "decode": "handle" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "CreateSemaphoreW",
+      "family": "synchronization",
+      "category": "semaphore_create",
+      "risk": "medium",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HANDLE",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "lpSemaphoreAttributes", "type": "LPSECURITY_ATTRIBUTES", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "lInitialCount", "type": "LONG", "direction": "in", "decode": "semaphore_count_value" },
+        { "name": "lMaximumCount", "type": "LONG", "direction": "in", "decode": "semaphore_count_value" },
+        { "name": "lpName", "type": "LPCWSTR", "direction": "in", "decode": "sync_object_name_pointer", "nullable": true }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "OpenSemaphoreW",
+      "family": "synchronization",
+      "category": "semaphore_open",
+      "risk": "medium",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HANDLE",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "dwDesiredAccess", "type": "DWORD", "direction": "in", "decode": "semaphore_access_flags", "flags": "semaphore_access_flags" },
+        { "name": "bInheritHandle", "type": "BOOL", "direction": "in", "decode": "dword_value" },
+        { "name": "lpName", "type": "LPCWSTR", "direction": "in", "decode": "sync_object_name_pointer" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "ReleaseSemaphore",
+      "family": "synchronization",
+      "category": "semaphore_release",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": 0 },
+      "failure": { "returnEqual": 0 },
+      "parameters": [
+        { "name": "hSemaphore", "type": "HANDLE", "direction": "in", "decode": "handle" },
+        { "name": "lReleaseCount", "type": "LONG", "direction": "in", "decode": "semaphore_count_value" },
+        { "name": "lpPreviousCount", "type": "LPLONG", "direction": "out", "decode": "semaphore_previous_count_pointer", "nullable": true, "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "WaitForMultipleObjectsEx",
+      "family": "synchronization",
+      "category": "multi_wait",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "DWORD",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "0xFFFFFFFF" },
+      "failure": { "returnEqual": "0xFFFFFFFF" },
+      "parameters": [
+        { "name": "nCount", "type": "DWORD", "direction": "in", "decode": "dword_value" },
+        { "name": "lpHandles", "type": "const HANDLE*", "direction": "in", "decode": "wait_handle_array_pointer" },
+        { "name": "bWaitAll", "type": "BOOL", "direction": "in", "decode": "wait_all_bool" },
+        { "name": "dwMilliseconds", "type": "DWORD", "direction": "in", "decode": "wait_timeout_ms" },
+        { "name": "bAlertable", "type": "BOOL", "direction": "in", "decode": "wait_alertable_bool" }
+      ]
     }
   ]
 }

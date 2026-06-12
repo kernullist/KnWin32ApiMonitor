@@ -135,6 +135,13 @@ enum class KnMonTransportApiId : std::uint16_t
     SetEvent = 126,
     ResetEvent = 127,
     WaitForSingleObjectEx = 128,
+    CreateMutexW = 129,
+    OpenMutexW = 130,
+    ReleaseMutex = 131,
+    CreateSemaphoreW = 132,
+    OpenSemaphoreW = 133,
+    ReleaseSemaphore = 134,
+    WaitForMultipleObjectsEx = 135,
 };
 
 enum class KnMonTransportModuleId : std::uint16_t
