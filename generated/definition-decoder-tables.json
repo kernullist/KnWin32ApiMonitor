@@ -1491,14 +1491,14 @@
     {
       "callingConvention": "stdcall",
       "category": "socket_connect",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnEqual": "SOCKET_ERROR"
       },
       "family": "network",
       "firstParameterIndex": 260,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 63,
       "module": "ws2_32.dll",
       "moduleId": 8,

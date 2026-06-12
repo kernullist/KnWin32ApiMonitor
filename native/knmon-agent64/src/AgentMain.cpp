@@ -227,6 +227,7 @@ using WSAStartupFn = int(WINAPI*)(WORD, LPWSADATA);
 using WSACleanupFn = int(WINAPI*)();
 using SocketFn = SOCKET(WINAPI*)(int, int, int);
 using ClosesocketFn = int(WINAPI*)(SOCKET);
+using ConnectFn = int(WINAPI*)(SOCKET, const sockaddr*, int);
 using GetAddrInfoFn = int(WINAPI*)(PCSTR, PCSTR, const ADDRINFOA*, PADDRINFOA*);
 using FreeAddrInfoFn = void(WINAPI*)(PADDRINFOA);
 using WSAGetLastErrorFn = int(WINAPI*)();
@@ -359,6 +360,7 @@ WSAStartupFn g_originalWSAStartup = nullptr;
 WSACleanupFn g_originalWSACleanup = nullptr;
 SocketFn g_originalSocket = nullptr;
 ClosesocketFn g_originalClosesocket = nullptr;
+ConnectFn g_originalConnect = nullptr;
 GetAddrInfoFn g_originalGetAddrInfo = nullptr;
 FreeAddrInfoFn g_originalFreeAddrInfo = nullptr;
 WSAGetLastErrorFn g_originalWSAGetLastError = nullptr;
@@ -444,7 +446,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 108;
+constexpr std::size_t HookDefinitionCount = 109;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -5402,6 +5404,165 @@ void EmitSocketEvent(
     }
 }
 
+std::uint16_t SwapNetworkShort(std::uint16_t value)
+{
+    return static_cast<std::uint16_t>(((value & 0x00ffU) << 8) | ((value & 0xff00U) >> 8));
+}
+
+std::uint32_t CopyConnectEndpointText(
+    char* destination,
+    std::uint32_t* length,
+    std::size_t capacity,
+    const sockaddr* address,
+    int addressLength,
+    std::uint32_t* family,
+    std::uint32_t* port,
+    std::uint32_t* ipv4Address)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+    sockaddr_storage localAddress = {};
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (family != nullptr)
+        {
+            *family = 0;
+        }
+
+        if (port != nullptr)
+        {
+            *port = 0;
+        }
+
+        if (ipv4Address != nullptr)
+        {
+            *ipv4Address = 0;
+        }
+
+        if (address == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        if (addressLength < static_cast<int>(sizeof(ADDRESS_FAMILY)))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        std::size_t bytesToRead = static_cast<std::size_t>(addressLength);
+        if (bytesToRead > sizeof(localAddress))
+        {
+            bytesToRead = sizeof(localAddress);
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+        }
+
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), address, &localAddress, bytesToRead, &bytesRead) || bytesRead < sizeof(ADDRESS_FAMILY))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        const std::uint32_t decodedFamily = static_cast<std::uint32_t>(localAddress.ss_family);
+        if (family != nullptr)
+        {
+            *family = decodedFamily;
+        }
+
+        if (localAddress.ss_family != AF_INET)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+            std::snprintf(destination, capacity, "family=%u", decodedFamily);
+            break;
+        }
+
+        if (bytesRead < sizeof(sockaddr_in) || addressLength < static_cast<int>(sizeof(sockaddr_in)))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        const auto* ipv4 = reinterpret_cast<const sockaddr_in*>(&localAddress);
+        const std::uint16_t hostPort = SwapNetworkShort(ipv4->sin_port);
+        const auto* bytes = reinterpret_cast<const std::uint8_t*>(&ipv4->sin_addr.S_un.S_addr);
+        const std::uint32_t packedAddress =
+            (static_cast<std::uint32_t>(bytes[0]) << 24) |
+            (static_cast<std::uint32_t>(bytes[1]) << 16) |
+            (static_cast<std::uint32_t>(bytes[2]) << 8) |
+            static_cast<std::uint32_t>(bytes[3]);
+
+        if (port != nullptr)
+        {
+            *port = hostPort;
+        }
+
+        if (ipv4Address != nullptr)
+        {
+            *ipv4Address = packedAddress;
+        }
+
+        std::snprintf(
+            destination,
+            capacity,
+            "%u.%u.%u.%u:%u",
+            static_cast<unsigned int>(bytes[0]),
+            static_cast<unsigned int>(bytes[1]),
+            static_cast<unsigned int>(bytes[2]),
+            static_cast<unsigned int>(bytes[3]),
+            static_cast<unsigned int>(hostPort));
+        status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = destination == nullptr ? 0 : static_cast<std::uint32_t>(std::strlen(destination));
+    }
+
+    return status;
+}
+
+void EmitConnectEvent(
+    int result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    SOCKET socketValue,
+    const sockaddr* address,
+    int addressLength)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::Connect, "ws2_32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(static_cast<std::uintptr_t>(socketValue));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(address));
+        record->Values32[0] = static_cast<std::uint32_t>(addressLength);
+        record->Values32[4] = CopyConnectEndpointText(
+            record->Text0,
+            &record->Text0Length,
+            sizeof(record->Text0),
+            address,
+            addressLength,
+            &record->Values32[1],
+            &record->Values32[2],
+            &record->Values32[3]);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void EmitClosesocketEvent(
     int result,
     DWORD errorCode,
@@ -5872,6 +6033,7 @@ int WINAPI HookedWSAStartup(WORD versionRequested, LPWSADATA data);
 int WINAPI HookedWSACleanup();
 SOCKET WINAPI HookedSocket(int af, int type, int protocol);
 int WINAPI HookedClosesocket(SOCKET socketValue);
+int WINAPI HookedConnect(SOCKET socketValue, const sockaddr* address, int addressLength);
 int WINAPI HookedGetAddrInfo(PCSTR nodeName, PCSTR serviceName, const ADDRINFOA* hints, PADDRINFOA* result);
 void WINAPI HookedFreeAddrInfo(PADDRINFOA addrInfo);
 int WINAPI HookedWSAGetLastError();
@@ -5987,6 +6149,7 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "ws2_32.dll", "WSACleanup", reinterpret_cast<void*>(HookedWSACleanup), reinterpret_cast<void**>(&g_originalWSACleanup), false, true, false, 116, 0 },
         HookDefinition { "ws2_32.dll", "socket", reinterpret_cast<void*>(HookedSocket), reinterpret_cast<void**>(&g_originalSocket), false, true, false, 23, 0 },
         HookDefinition { "ws2_32.dll", "closesocket", reinterpret_cast<void*>(HookedClosesocket), reinterpret_cast<void**>(&g_originalClosesocket), false, true, false, 3, 0 },
+        HookDefinition { "ws2_32.dll", "connect", reinterpret_cast<void*>(HookedConnect), reinterpret_cast<void**>(&g_originalConnect), false, true, false, 4, 0 },
         HookDefinition { "ws2_32.dll", "getaddrinfo", reinterpret_cast<void*>(HookedGetAddrInfo), reinterpret_cast<void**>(&g_originalGetAddrInfo), false, true, false, 0, 0 },
         HookDefinition { "ws2_32.dll", "freeaddrinfo", reinterpret_cast<void*>(HookedFreeAddrInfo), reinterpret_cast<void**>(&g_originalFreeAddrInfo), false, true, false, 0, 0 },
         HookDefinition { "ws2_32.dll", "WSAGetLastError", reinterpret_cast<void*>(HookedWSAGetLastError), reinterpret_cast<void**>(&g_originalWSAGetLastError), false, true, false, 111, 0 },
@@ -9601,6 +9764,34 @@ int WINAPI HookedClosesocket(SOCKET socketValue)
     if (HooksEnabled())
     {
         EmitClosesocketEvent(result, errorCode, start, end, socketValue);
+    }
+
+    return result;
+}
+
+int WINAPI HookedConnect(SOCKET socketValue, const sockaddr* address, int addressLength)
+{
+    if (g_inHook || !HooksEnabled() || g_originalConnect == nullptr)
+    {
+        if (g_originalConnect == nullptr)
+        {
+            return SOCKET_ERROR;
+        }
+
+        return g_originalConnect(socketValue, address, addressLength);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const int result = g_originalConnect(socketValue, address, addressLength);
+    const DWORD errorCode = result == SOCKET_ERROR && g_originalWSAGetLastError != nullptr ? static_cast<DWORD>(g_originalWSAGetLastError()) : 0;
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitConnectEvent(result, errorCode, start, end, socketValue, address, addressLength);
     }
 
     return result;

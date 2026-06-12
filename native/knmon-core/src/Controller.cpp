@@ -3814,6 +3814,19 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "SOCKET", "s", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture));
         payload = ApiCallPayload(result, record, SignedIntValue(record.ReturnValue), args.str(), "");
         break;
+    case KnMonTransportApiId::Connect:
+    {
+        const std::string socketValue = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string addressPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string addressDecoded = text0.empty() ?
+            (DecodeStatusName(record.Values32[4]) + ";family=" + SignedIntValue32(record.Values32[1])) :
+            text0;
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "SOCKET", "s", "in", socketValue, socketValue, socketValue) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "const sockaddr*", "name", "in", addressPointer, addressPointer, addressDecoded, DecodeStatusName(record.Values32[4])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "int", "namelen", "in", SignedIntValue32(record.Values32[0]), SignedIntValue32(record.Values32[0]), SignedIntValue32(record.Values32[0]));
+        payload = ApiCallPayload(result, record, SignedIntValue(record.ReturnValue), args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::GetAddrInfo:
     {
         const std::string hintsPointer = HexPointerValue(record.Values64[0], result.Architecture);

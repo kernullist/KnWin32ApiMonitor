@@ -330,7 +330,7 @@ Current verified behavior:
 4. API hook fast paths no longer write API event JSON to the named pipe.
 5. Named pipe remains for low-volume HELLO, hook install status, dropped-event summary, and shutdown lifecycle messages.
 6. The controller drains binary records and normalizes them into the existing `api_call` JSON shape outside the target process.
-7. Healthy x64/x86 captures consume shared-memory API records for File I/O, loader-aware sample events, resolver events, the selected registry slice, the selected advapi32 token query/privilege lookup slice, the selected Winsock slice, the selected RPCRT4 binding and UUID helper slices, the selected bcrypt CNG provider/RNG slice, the selected crypt32 certificate-store/message-handle slice, the selected WinHTTP session-handle slice, the selected WinINet session-handle slice, and the selected Wave 3 low-payload metadata slices with zero dropped events.
+7. Healthy x64/x86 captures consume shared-memory API records for File I/O, loader-aware sample events, resolver events, the selected registry slice, the selected advapi32 token query/privilege lookup slice, the selected Winsock bootstrap/address-resolution/connect metadata slice, the selected RPCRT4 binding and UUID helper slices, the selected bcrypt CNG provider/RNG slice, the selected crypt32 certificate-store/message-handle slice, the selected WinHTTP session-handle slice, the selected WinINet session-handle slice, and the selected Wave 3 low-payload metadata slices with zero dropped events.
 8. Backpressure smoke with `KNMON_TRANSPORT_CAPACITY=2` completes capture, retains bounded records, and reports dropped transport events.
 9. Capture results expose transport capacity, produced/consumed/dropped counts, high-water mark, and min/average/max hook overhead metrics.
 10. Session write, validation, and replay remain compatible with shared-memory-normalized `api_call` events.
@@ -405,11 +405,12 @@ Current verified behavior:
 9. `GetProcAddress` and `LdrGetProcedureAddress` resolver calls for `KnMonDynamicProbe` are captured as resolver-tagged shared-memory `api_call` events.
 10. Resolver records include bounded function-name evidence and return/status values without claiming returned-pointer instrumentation.
 11. Unloaded owner-module restoration races are handled without stale writes and healthy shutdown reports `restoredHooks=installedHooks`.
-12. The first Wave 2 live slice captures selected `ws2_32.dll` Winsock bootstrap and address-resolution APIs through the same shared-memory transport:
+12. The first Wave 2 live slice captures selected `ws2_32.dll` Winsock bootstrap, connect metadata, and address-resolution APIs through the same shared-memory transport:
    - `WSAStartup`
    - `WSACleanup`
    - `socket`
    - `closesocket`
+   - `connect`
    - `getaddrinfo`
    - `freeaddrinfo`
    - `WSAGetLastError`
@@ -545,11 +546,11 @@ Current verified behavior:
    - `GetModuleFileNameW`
    - `FreeLibrary`
 56. KERNEL32 module lifecycle records render generated metadata, module-name input strings, module handles, `GetModuleHandleExW` flags, bounded module file-name output text, return/error evidence, and timing outside the target process. They intentionally do not enumerate remote modules, dump loaded-module lists, inspect module memory, parse PE headers or directories, hash files, validate signatures, capture command lines or environments, force unload/reference-count probe behavior, inspect remote memory, inspect thread context/stacks, or emit arbitrary payload previews.
-57. `WS2_32.dll` ordinal imports for the selected Winsock APIs are matched only through explicit hook-definition ordinals; broad ordinal patching remains out of scope.
+57. `WS2_32.dll` ordinal imports for the selected Winsock APIs are matched only through explicit hook-definition ordinals, including ordinal `4` for `connect`; broad ordinal patching remains out of scope.
 
 Next implementation focus:
 
-1. Keep the selected Winsock, registry, advapi32 token query/privilege lookup, RPCRT4 binding/UUID helper, bcrypt CNG provider/RNG, crypt32 certificate-store/message-handle, WinHTTP session-handle, WinINet session-handle, User32/GDI32 metadata, PSAPI module-query, Version resource metadata, Shell known-folder metadata, OLE32 COM lifecycle/GUID helper, COMBASE-backed WinRT lifecycle, KERNEL32 memory protection, KERNEL32 thread lifecycle, KERNEL32 event synchronization, KERNEL32 mutex/semaphore synchronization, KERNEL32 file-mapping, KERNEL32 process/thread identity, KERNEL32 handle metadata, and KERNEL32 module lifecycle slices under shared-memory backpressure and hook-overhead gates.
+1. Keep the selected Winsock bootstrap/address-resolution/connect metadata, registry, advapi32 token query/privilege lookup, RPCRT4 binding/UUID helper, bcrypt CNG provider/RNG, crypt32 certificate-store/message-handle, WinHTTP session-handle, WinINet session-handle, User32/GDI32 metadata, PSAPI module-query, Version resource metadata, Shell known-folder metadata, OLE32 COM lifecycle/GUID helper, COMBASE-backed WinRT lifecycle, KERNEL32 memory protection, KERNEL32 thread lifecycle, KERNEL32 event synchronization, KERNEL32 mutex/semaphore synchronization, KERNEL32 file-mapping, KERNEL32 process/thread identity, KERNEL32 handle metadata, and KERNEL32 module lifecycle slices under shared-memory backpressure and hook-overhead gates.
 2. Design payload-heavy network hooks (`send`, `recv`, `sendto`, `recvfrom`) and WinHTTP/WinINet connection, request, transfer, option, header, cookie, credential, and body capture separately before enabling buffer capture at scale.
 3. Stage the next Wave 3 DLL/API family only after deterministic smoke evidence and transport-budget checks exist; prefer another low-volume handle/lifecycle or explicitly reviewed metadata slice before payload-heavy or secret-bearing APIs.
 4. Keep returned-pointer instrumentation as a separate reviewed design item.
@@ -590,12 +591,12 @@ Current verified behavior:
 11. `npm run defs:coverage` reports by DLL, family, risk, hook policy, coverage status, and decode quality.
 12. Wave 2 metadata is committed for `advapi32.dll`, `bcrypt.dll`, `crypt32.dll`, `rpcrt4.dll`, `ws2_32.dll`, `wininet.dll`, and `winhttp.dll`; Phase 13B adds Wave 3 metadata for `user32.dll` and `gdi32.dll`; Phase 13C adds Wave 3 metadata for `psapi.dll`; Phase 13D adds Wave 3 metadata for `version.dll`; Phase 13E adds Wave 3 metadata for `shell32.dll`; Phase 13F adds Wave 3 metadata for `ole32.dll`; Phase 13G promotes `UuidCreate` and adds RPCRT4 UUID helper metadata; Phase 13H adds COMBASE-backed WinRT lifecycle metadata through the observed API-set provider; Phase 13I adds KERNEL32 memory protection metadata; Phase 13J adds KERNEL32 thread lifecycle metadata; Phase 13K adds KERNEL32 event synchronization metadata; Phase 13L adds KERNEL32 mutex/semaphore synchronization metadata; Phase 13M adds KERNEL32 file-mapping metadata; Phase 13N adds KERNEL32 process/thread identity metadata; Phase 13O adds KERNEL32 handle metadata; Phase 13P adds KERNEL32 module lifecycle metadata.
 13. Stable generated IDs now cover 17 modules and 153 APIs, with Wave 2 API IDs `14` through `90`, Phase 13B Wave 3 API IDs `91` through `97`, Phase 13C PSAPI API IDs `98` through `101`, Phase 13D Version API IDs `102` through `104`, Phase 13E Shell API IDs `105` through `106`, Phase 13F OLE32 API IDs `107` through `110`, Phase 13G RPCRT4 UUID helper API IDs `111` through `112` while `UuidCreate` preserves stable API ID `58`, Phase 13H WinRT lifecycle API IDs `113` through `115`, Phase 13I KERNEL32 memory API IDs `116` through `119`, Phase 13J KERNEL32 thread lifecycle API IDs `120` through `123`, Phase 13K KERNEL32 event synchronization API IDs `124` through `128`, Phase 13L KERNEL32 mutex/semaphore synchronization API IDs `129` through `135`, Phase 13M KERNEL32 file-mapping API IDs `136` through `139`, Phase 13N KERNEL32 process/thread identity API IDs `140` through `145`, Phase 13O KERNEL32 handle metadata API IDs `146` through `149`, and Phase 13P KERNEL32 module lifecycle API IDs `150` through `153`.
-14. The coverage report currently totals 45 `definition_only`, 4 `hooked`, and 104 `smoke_verified` APIs.
+14. The coverage report currently totals 44 `definition_only`, 4 `hooked`, and 105 `smoke_verified` APIs.
 15. `npm run defs:generate` emits deterministic controller-side decoder metadata:
    - `generated/definition-decoder-tables.json`
    - `native/knmon-common/include/knmon/common/GeneratedApiMetadata.h`
 16. The controller uses generated metadata for API/module names, family/category tags, argument names/types/directions, decode aliases, and capture timing while preserving explicit per-API shared-memory slot interpretation.
-17. The selected `advapi32.dll` registry slice, selected `advapi32.dll` token query/privilege lookup slice, `bcrypt.dll` CNG provider/RNG slice, `crypt32.dll` certificate-store/message-handle slice, `rpcrt4.dll` local binding and UUID helper slices, `ws2_32.dll` Winsock slice, `winhttp.dll` session-handle slice, `wininet.dll` session-handle slice, Phase 13B `user32.dll`/`gdi32.dll` metadata slice, Phase 13C `psapi.dll` module-query slice, Phase 13D `version.dll` resource metadata slice, Phase 13E `shell32.dll` known-folder metadata slice, Phase 13F `ole32.dll` COM lifecycle/GUID helper slice, Phase 13H `api-ms-win-core-winrt-l1-1-0.dll` WinRT lifecycle slice, Phase 13I KERNEL32 memory protection slice, Phase 13J KERNEL32 thread lifecycle slice, Phase 13K KERNEL32 event synchronization slice, Phase 13L KERNEL32 mutex/semaphore synchronization slice, Phase 13M KERNEL32 file-mapping slice, Phase 13N KERNEL32 process/thread identity slice, Phase 13O KERNEL32 handle metadata slice, and Phase 13P KERNEL32 module lifecycle slice are marked `iat` and `smoke_verified`; unimplemented Wave 2 APIs remain `definition_only`.
+17. The selected `advapi32.dll` registry slice, selected `advapi32.dll` token query/privilege lookup slice, `bcrypt.dll` CNG provider/RNG slice, `crypt32.dll` certificate-store/message-handle slice, `rpcrt4.dll` local binding and UUID helper slices, `ws2_32.dll` Winsock bootstrap/address-resolution/connect metadata slice, `winhttp.dll` session-handle slice, `wininet.dll` session-handle slice, Phase 13B `user32.dll`/`gdi32.dll` metadata slice, Phase 13C `psapi.dll` module-query slice, Phase 13D `version.dll` resource metadata slice, Phase 13E `shell32.dll` known-folder metadata slice, Phase 13F `ole32.dll` COM lifecycle/GUID helper slice, Phase 13H `api-ms-win-core-winrt-l1-1-0.dll` WinRT lifecycle slice, Phase 13I KERNEL32 memory protection slice, Phase 13J KERNEL32 thread lifecycle slice, Phase 13K KERNEL32 event synchronization slice, Phase 13L KERNEL32 mutex/semaphore synchronization slice, Phase 13M KERNEL32 file-mapping slice, Phase 13N KERNEL32 process/thread identity slice, Phase 13O KERNEL32 handle metadata slice, and Phase 13P KERNEL32 module lifecycle slice are marked `iat` and `smoke_verified`; unimplemented Wave 2 APIs remain `definition_only`.
 
 Next implementation focus:
 
@@ -967,6 +968,18 @@ Current verified Phase 13P behavior:
 7. The controller renders module-name input strings, `GetModuleHandleExW` flags, module handles, bounded module path output, return/error evidence, and timing metadata while keeping `bufferPreview` empty for the selected module lifecycle records.
 8. `tools/native-smoke/wave3-kernel32-module-lifecycle-smoke.ps1` verifies shared-memory `api_call` records for all selected module lifecycle APIs, generated module metadata, stable ID evidence, module handle/path decoding, zero healthy-path transport drops, `restoredHooks=installedHooks`, `failedHooks=0`, and absence of module memory, PE/header/import/export/resource/relocation/debug, file hash/signature, module enumeration, command-line, environment, remote-memory, remote-thread, stack, injection, credential, or byte-preview evidence.
 9. The optional x86 smoke expectation now includes the same selected KERNEL32 module lifecycle slice after a Win32 helper/target/agent build.
+
+Current verified Wave 2 Winsock connect behavior:
+
+1. `definitions/win32/ws2_32.json` promotes the existing `connect` definition at stable API ID `63` to `hookPolicy: "iat"` and `coverageStatus: "smoke_verified"` without allocating a new ID.
+2. Generated metadata keeps `ws2_32.dll` at module ID `8` and reuses the existing `socket_handle`, `sockaddr`, and `byte_count` decode aliases for controller rendering.
+3. `dumpbin` provider inspection verifies that the controlled x64 and x86 samples import `connect` through `WS2_32.dll` as ordinal `4`; the agent hook definition therefore matches both by name and explicit ordinal.
+4. The sample creates a local loopback listener with `bind`, `getsockname`, `listen`, `connect`, and `accept`, then closes both sockets without calling `send`, `recv`, `sendto`, or `recvfrom`.
+5. The agent records `connect` through the existing eligible-module IAT sweep and dynamic re-sweep path.
+6. The hook fast path emits a fixed shared-memory record with socket handle, raw `sockaddr` pointer, `namelen`, decoded AF_INET loopback endpoint, return/error/timing, and hook lifecycle evidence only.
+7. The controller renders `s`, `name`, and `namelen` arguments with generated metadata and keeps `bufferPreview` empty for `connect`.
+8. `tools/native-smoke/wave2-winsock-smoke.ps1` verifies stable module/API IDs, shared-memory events for the selected Winsock slice including `connect`, decoded loopback endpoint evidence, empty payload previews, zero healthy-path drops, and no HTTP/body/header/cookie/credential/network-inventory/remote-memory/thread/stack/injection evidence.
+9. The optional x86 smoke expectation now includes the same selected Winsock `connect` metadata slice after a Win32 helper/target/agent build.
 
 Current verified Phase 12A behavior:
 

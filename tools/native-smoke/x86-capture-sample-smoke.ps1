@@ -106,6 +106,7 @@ $requiredApis = @(
     "WSACleanup",
     "socket",
     "closesocket",
+    "connect",
     "getaddrinfo",
     "freeaddrinfo",
     "WSAGetLastError"
@@ -177,6 +178,59 @@ foreach ($api in $requiredApis)
     {
         throw "x86 capture missing API: $api"
     }
+}
+
+$connectEvent = @($result.capturedEvents | Where-Object { $_.api -eq "connect" } | Select-Object -First 1)
+if ($connectEvent.Count -ne 1)
+{
+    throw "x86 capture did not include Winsock connect."
+}
+
+if ($connectEvent[0].module -ne "ws2_32.dll" -or
+    $connectEvent[0].apiFamily -ne "network" -or
+    $connectEvent[0].apiCategory -ne "socket_connect" -or
+    $connectEvent[0].hookPolicy -ne "iat" -or
+    $connectEvent[0].coverageStatus -ne "smoke_verified" -or
+    ($connectEvent[0].returnValue -ne "0" -and $connectEvent[0].returnValue -ne "0 (0x00000000)"))
+{
+    throw "x86 Winsock connect metadata or return evidence mismatch: $($connectEvent | ConvertTo-Json -Depth 8)"
+}
+
+if (-not [string]::IsNullOrEmpty($connectEvent[0].bufferPreview))
+{
+    throw "x86 Winsock connect exposed bufferPreview: $($connectEvent | ConvertTo-Json -Depth 8)"
+}
+
+$connectSocket = @($connectEvent[0].arguments | Where-Object { $_.name -eq "s" } | Select-Object -First 1)
+if ($connectSocket.Count -ne 1 -or
+    $connectSocket[0].decodeAlias -ne "socket_handle" -or
+    $connectSocket[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 Winsock connect socket evidence mismatch: $($connectSocket | ConvertTo-Json -Depth 8)"
+}
+
+$connectAddress = @($connectEvent[0].arguments | Where-Object { $_.name -eq "name" } | Select-Object -First 1)
+if ($connectAddress.Count -ne 1 -or
+    $connectAddress[0].decodeAlias -ne "sockaddr" -or
+    $connectAddress[0].decodeStatus -ne "decoded" -or
+    $connectAddress[0].rawValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $connectAddress[0].decodedValue -notmatch "^127\.0\.0\.1:[0-9]+$")
+{
+    throw "x86 Winsock connect sockaddr evidence mismatch: $($connectAddress | ConvertTo-Json -Depth 8)"
+}
+
+$connectLength = @($connectEvent[0].arguments | Where-Object { $_.name -eq "namelen" } | Select-Object -First 1)
+if ($connectLength.Count -ne 1 -or
+    $connectLength[0].decodeAlias -ne "byte_count" -or
+    ($connectLength[0].decodedValue -ne "16" -and $connectLength[0].decodedValue -notmatch "^16 "))
+{
+    throw "x86 Winsock connect namelen evidence mismatch: $($connectLength | ConvertTo-Json -Depth 8)"
+}
+
+$connectPayload = $connectEvent[0] | ConvertTo-Json -Depth 12
+if ($connectPayload -cmatch "socket_send|socket_recv|sendto|recvfrom|WSASend|WSARecv|WinHttp|InternetOpenUrl|HttpSend|Header|Cookie|Authorization|Password|Credential|Proxy|DNS|Adapter|RouteTable|CommandLine|Environment|TOKEN_|SecurityDescriptor|SID|ACL|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|Injection|BEGIN CERTIFICATE|PRIVATE KEY|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 Winsock connect event appears to expose payload-heavy, credential, inventory, remote-memory, stack, injection, or byte-preview evidence: $connectPayload"
 }
 
 $ntEvents = @($result.capturedEvents | Where-Object { $_.api -eq "NtCreateFile" })

@@ -1875,6 +1875,8 @@ bool RunWinsockProbe()
     ADDRINFOA hints = {};
     PADDRINFOA results = nullptr;
     SOCKET socketHandle = INVALID_SOCKET;
+    SOCKET listenerSocket = INVALID_SOCKET;
+    SOCKET acceptedSocket = INVALID_SOCKET;
 
     do
     {
@@ -1904,11 +1906,68 @@ bool RunWinsockProbe()
             break;
         }
 
+        listenerSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (listenerSocket == INVALID_SOCKET)
+        {
+            std::cout << "listener socket failed with " << WSAGetLastError() << "\n";
+            break;
+        }
+
+        sockaddr_in listenerAddress = {};
+        listenerAddress.sin_family = AF_INET;
+        listenerAddress.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        listenerAddress.sin_port = 0;
+
+        if (bind(listenerSocket, reinterpret_cast<const sockaddr*>(&listenerAddress), sizeof(listenerAddress)) == SOCKET_ERROR)
+        {
+            std::cout << "bind failed with " << WSAGetLastError() << "\n";
+            break;
+        }
+
+        int listenerAddressLength = sizeof(listenerAddress);
+        if (getsockname(listenerSocket, reinterpret_cast<sockaddr*>(&listenerAddress), &listenerAddressLength) == SOCKET_ERROR)
+        {
+            std::cout << "getsockname failed with " << WSAGetLastError() << "\n";
+            break;
+        }
+
+        if (listen(listenerSocket, 1) == SOCKET_ERROR)
+        {
+            std::cout << "listen failed with " << WSAGetLastError() << "\n";
+            break;
+        }
+
+        if (connect(socketHandle, reinterpret_cast<const sockaddr*>(&listenerAddress), listenerAddressLength) == SOCKET_ERROR)
+        {
+            std::cout << "connect failed with " << WSAGetLastError() << "\n";
+            break;
+        }
+
+        acceptedSocket = accept(listenerSocket, nullptr, nullptr);
+        if (acceptedSocket == INVALID_SOCKET)
+        {
+            std::cout << "accept failed with " << WSAGetLastError() << "\n";
+            break;
+        }
+
+        std::cout << "winsock connect port=" << ntohs(listenerAddress.sin_port) << "\n";
+
         const int lastError = WSAGetLastError();
         std::cout << "winsock probe last_error=" << lastError << "\n";
         success = true;
     }
     while (false);
+
+    if (acceptedSocket != INVALID_SOCKET)
+    {
+        const int closeResult = closesocket(acceptedSocket);
+        acceptedSocket = INVALID_SOCKET;
+        if (closeResult == SOCKET_ERROR)
+        {
+            std::cout << "accepted closesocket failed with " << WSAGetLastError() << "\n";
+            success = false;
+        }
+    }
 
     if (socketHandle != INVALID_SOCKET)
     {
@@ -1917,6 +1976,17 @@ bool RunWinsockProbe()
         if (closeResult == SOCKET_ERROR)
         {
             std::cout << "closesocket failed with " << WSAGetLastError() << "\n";
+            success = false;
+        }
+    }
+
+    if (listenerSocket != INVALID_SOCKET)
+    {
+        const int closeResult = closesocket(listenerSocket);
+        listenerSocket = INVALID_SOCKET;
+        if (closeResult == SOCKET_ERROR)
+        {
+            std::cout << "listener closesocket failed with " << WSAGetLastError() << "\n";
             success = false;
         }
     }
