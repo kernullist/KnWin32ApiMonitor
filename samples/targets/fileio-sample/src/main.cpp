@@ -1424,6 +1424,54 @@ bool RunFileMappingProbe()
     return success;
 }
 
+bool RunProcessThreadIdentityProbe()
+{
+    bool success = false;
+
+    do
+    {
+        HANDLE currentProcess = GetCurrentProcess();
+        const DWORD currentProcessId = GetCurrentProcessId();
+        const DWORD processIdFromHandle = GetProcessId(currentProcess);
+        HANDLE currentThread = GetCurrentThread();
+        const DWORD currentThreadId = GetCurrentThreadId();
+        const DWORD threadIdFromHandle = GetThreadId(currentThread);
+
+        if (currentProcess == nullptr)
+        {
+            std::cout << "GetCurrentProcess returned null\n";
+            break;
+        }
+
+        if (currentThread == nullptr)
+        {
+            std::cout << "GetCurrentThread returned null\n";
+            break;
+        }
+
+        if (currentProcessId == 0 || processIdFromHandle == 0 || currentProcessId != processIdFromHandle)
+        {
+            std::cout << "process identity mismatch current=" << currentProcessId
+                      << " handle=" << processIdFromHandle << "\n";
+            break;
+        }
+
+        if (currentThreadId == 0 || threadIdFromHandle == 0 || currentThreadId != threadIdFromHandle)
+        {
+            std::cout << "thread identity mismatch current=" << currentThreadId
+                      << " handle=" << threadIdFromHandle << "\n";
+            break;
+        }
+
+        std::cout << "process/thread identity pid=" << currentProcessId
+                  << " tid=" << currentThreadId << "\n";
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
 DWORD WINAPI ThreadLifecycleProbeThreadProc(LPVOID parameter)
 {
     DWORD* value = static_cast<DWORD*>(parameter);
@@ -2173,6 +2221,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunFileMappingProbe())
+        {
+            break;
+        }
+
+        if (!RunProcessThreadIdentityProbe())
         {
             break;
         }

@@ -146,6 +146,12 @@ enum class KnMonTransportApiId : std::uint16_t
     OpenFileMappingW = 137,
     MapViewOfFile = 138,
     UnmapViewOfFile = 139,
+    GetCurrentProcess = 140,
+    GetCurrentProcessId = 141,
+    GetCurrentThread = 142,
+    GetCurrentThreadId = 143,
+    GetProcessId = 144,
+    GetThreadId = 145,
 };
 
 enum class KnMonTransportModuleId : std::uint16_t

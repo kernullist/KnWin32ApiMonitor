@@ -27,7 +27,8 @@ Current verification gates include:
 21. Wave 3 KERNEL32 event synchronization smoke through `tools\native-smoke\wave3-kernel32-event-sync-smoke.ps1`.
 22. Wave 3 KERNEL32 mutex/semaphore synchronization smoke through `tools\native-smoke\wave3-kernel32-mutex-semaphore-smoke.ps1`.
 23. Wave 3 KERNEL32 file-mapping smoke through `tools\native-smoke\wave3-kernel32-file-mapping-smoke.ps1`.
-24. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
+24. Wave 3 KERNEL32 process/thread identity smoke through `tools\native-smoke\wave3-kernel32-process-thread-identity-smoke.ps1`.
+25. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
 25. Collector fixture and native smoke validation through `npm run collector:validate`.
 
 Run repeated lifecycle smoke:
@@ -182,6 +183,14 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave3-kernel32-file-
 
 The KERNEL32 file-mapping smoke verifies selected `CreateFileMappingW`, `OpenFileMappingW`, `MapViewOfFile`, and `UnmapViewOfFile` calls, generated memory metadata, stable API IDs `136` through `139`, protection/access/size/offset/view-pointer decoding, pointer-only name/security evidence, shared-memory transport mode, zero dropped events, clean hook restore, and no mapping-name, object-namespace, mapped-memory, security-descriptor, stack, injection, PE/file/hash, credential, or byte-preview payload evidence.
 
+Run Wave 3 KERNEL32 process/thread identity smoke:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave3-kernel32-process-thread-identity-smoke.ps1
+```
+
+The KERNEL32 process/thread identity smoke verifies selected `GetCurrentProcess`, `GetCurrentProcessId`, `GetCurrentThread`, `GetCurrentThreadId`, `GetProcessId`, and `GetThreadId` calls, generated process metadata, stable API IDs `140` through `145`, pseudo/current handle evidence, matching PID/TID values, shared-memory transport mode, zero dropped events, clean hook restore, and no process enumeration, command-line, environment, token/security, remote-memory, remote-thread, stack, injection, PE/file/hash, credential, or byte-preview payload evidence.
+
 Run optional Win32/x86 capture smoke:
 
 ```powershell
@@ -190,7 +199,7 @@ cmake --build build/native-win32 --config Debug
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-smoke.ps1
 ```
 
-The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence, selected RPCRT4 UUID helper evidence, selected User32/GDI32 evidence, selected PSAPI module-query evidence, selected Version resource evidence, selected Shell known-folder evidence, selected OLE32 COM lifecycle evidence, selected COMBASE-backed WinRT lifecycle evidence, selected KERNEL32 memory protection evidence, selected KERNEL32 thread lifecycle evidence, selected KERNEL32 event synchronization evidence, selected KERNEL32 mutex/semaphore synchronization evidence, selected KERNEL32 file-mapping evidence, zero dropped events, and clean hook restore.
+The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence, selected RPCRT4 UUID helper evidence, selected User32/GDI32 evidence, selected PSAPI module-query evidence, selected Version resource evidence, selected Shell known-folder evidence, selected OLE32 COM lifecycle evidence, selected COMBASE-backed WinRT lifecycle evidence, selected KERNEL32 memory protection evidence, selected KERNEL32 thread lifecycle evidence, selected KERNEL32 event synchronization evidence, selected KERNEL32 mutex/semaphore synchronization evidence, selected KERNEL32 file-mapping evidence, selected KERNEL32 process/thread identity evidence, zero dropped events, and clean hook restore.
 
 Run collector backpressure smoke:
 

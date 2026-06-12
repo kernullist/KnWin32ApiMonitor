@@ -20,6 +20,12 @@ $requiredApis = @(
     "OpenFileMappingW",
     "MapViewOfFile",
     "UnmapViewOfFile",
+    "GetCurrentProcess",
+    "GetCurrentProcessId",
+    "GetCurrentThread",
+    "GetCurrentThreadId",
+    "GetProcessId",
+    "GetThreadId",
     "CreateThread",
     "OpenThread",
     "WaitForSingleObject",
@@ -96,6 +102,27 @@ $requiredApis = @(
     "freeaddrinfo",
     "WSAGetLastError"
 )
+
+function ConvertFrom-DwordDecimalHex
+{
+    param(
+        [string]$Value,
+        [string]$Name
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value) -or $Value -notmatch "^([0-9]+) \(0x[0-9a-fA-F]{8}\)$")
+    {
+        throw "$Name is not a DWORD decimal/hex value: $Value"
+    }
+
+    $parsed = [UInt64]$Matches[1]
+    if ($parsed -eq 0 -or $parsed -gt [UInt32]::MaxValue)
+    {
+        throw "$Name is outside nonzero DWORD range: $Value"
+    }
+
+    return [UInt32]$parsed
+}
 
 if (-not (Test-Path -LiteralPath $helperPath))
 {
@@ -1213,6 +1240,131 @@ $fileMappingPayload = $fileMappingEvents | ConvertTo-Json -Depth 12
 if ($fileMappingPayload -cmatch "KnMonFileMappingProbe|Global\\|Local\\|BaseNamedObjects|ObjectName|ObjectDirectory|ObjectManager|SecurityDescriptor|SECURITY_DESCRIPTOR|SID|ACL|TOKEN_|Privilege|Integrity|DuplicateHandle|NtMapViewOfSection|VirtualAllocEx|VirtualFreeEx|VirtualProtectEx|ReadProcessMemory|WriteProcessMemory|CreateRemoteThread|QueueUserAPC|NtQueueApcThread|SuspendThread|ResumeThread|GetThreadContext|SetThreadContext|TerminateThread|CONTEXT|Eip|Rip|Rsp|CallStack|StackTrace|StackWalk|StackFrame|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 KERNEL32 file-mapping events appear to expose mapping-name, namespace, mapped memory, security, stack, injection, PE/file/hash, credential, or byte-preview evidence: $fileMappingPayload"
+}
+
+$identityApis = @(
+    "GetCurrentProcess",
+    "GetCurrentProcessId",
+    "GetCurrentThread",
+    "GetCurrentThreadId",
+    "GetProcessId",
+    "GetThreadId"
+)
+
+$identityEvents = @($result.capturedEvents | Where-Object { $identityApis -contains $_.api })
+if ($identityEvents.Count -lt $identityApis.Count)
+{
+    throw "x86 capture did not include the selected KERNEL32 process/thread identity API slice."
+}
+
+$identityExpected = @(
+    @{ Api = "GetCurrentProcess"; Family = "process"; Category = "process_identity"; Args = @() },
+    @{ Api = "GetCurrentProcessId"; Family = "process"; Category = "process_identity"; Args = @() },
+    @{ Api = "GetCurrentThread"; Family = "process"; Category = "thread_identity"; Args = @() },
+    @{ Api = "GetCurrentThreadId"; Family = "process"; Category = "thread_identity"; Args = @() },
+    @{ Api = "GetProcessId"; Family = "process"; Category = "process_identity"; Args = @(
+        @{ Name = "Process"; Alias = "process_handle_value"; Timing = "pre" }
+    ) },
+    @{ Api = "GetThreadId"; Family = "process"; Category = "thread_identity"; Args = @(
+        @{ Name = "Thread"; Alias = "thread_handle_value"; Timing = "pre" }
+    ) }
+)
+
+foreach ($expectedIdentity in $identityExpected)
+{
+    $event = @($identityEvents | Where-Object { $_.api -eq $expectedIdentity.Api } | Select-Object -First 1)
+    if ($event.Count -ne 1 -or
+        $event[0].module -ne "kernel32.dll" -or
+        $event[0].apiFamily -ne $expectedIdentity.Family -or
+        $event[0].apiCategory -ne $expectedIdentity.Category -or
+        $event[0].hookPolicy -ne "iat" -or
+        $event[0].coverageStatus -ne "smoke_verified" -or
+        $null -eq $event[0].durationUs -or
+        $event[0].durationUs -lt 0)
+    {
+        throw "x86 $($expectedIdentity.Api) identity metadata mismatch: $($event | ConvertTo-Json -Depth 8)"
+    }
+
+    if (-not [string]::IsNullOrEmpty($event[0].bufferPreview))
+    {
+        throw "x86 $($expectedIdentity.Api) exposed bufferPreview: $($event[0] | ConvertTo-Json -Depth 8)"
+    }
+
+    if ($expectedIdentity.Args.Count -eq 0 -and @($event[0].arguments).Count -ne 0)
+    {
+        throw "x86 $($expectedIdentity.Api) unexpectedly captured arguments: $($event[0].arguments | ConvertTo-Json -Depth 8)"
+    }
+
+    foreach ($expectedArg in $expectedIdentity.Args)
+    {
+        $argument = @($event[0].arguments | Where-Object { $_.name -eq $expectedArg.Name } | Select-Object -First 1)
+        if ($argument.Count -ne 1 -or
+            $argument[0].decodeAlias -ne $expectedArg.Alias -or
+            $argument[0].captureTiming -ne $expectedArg.Timing)
+        {
+            throw "x86 $($expectedIdentity.Api) $($expectedArg.Name) metadata mismatch: $($argument | ConvertTo-Json -Depth 8)"
+        }
+    }
+}
+
+$currentProcess = @($identityEvents | Where-Object { $_.api -eq "GetCurrentProcess" } | Select-Object -First 1)
+if ($currentProcess.Count -ne 1 -or $currentProcess[0].returnValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 GetCurrentProcess return evidence mismatch: $($currentProcess | ConvertTo-Json -Depth 8)"
+}
+
+$currentProcessIds = @($identityEvents |
+    Where-Object { $_.api -eq "GetCurrentProcessId" } |
+    ForEach-Object { ConvertFrom-DwordDecimalHex -Value $_.returnValue -Name "x86 GetCurrentProcessId returnValue" })
+if ($currentProcessIds.Count -lt 1)
+{
+    throw "x86 GetCurrentProcessId returned no current PID values."
+}
+
+$processId = @($identityEvents | Where-Object { $_.api -eq "GetProcessId" } | Select-Object -First 1)
+$handleProcessId = ConvertFrom-DwordDecimalHex -Value $processId[0].returnValue -Name "x86 GetProcessId returnValue"
+if ($currentProcessIds -notcontains $handleProcessId)
+{
+    throw "x86 GetProcessId did not match captured current PID values: handle=$handleProcessId current=$($currentProcessIds -join ',')"
+}
+
+$processHandle = @($processId[0].arguments | Where-Object { $_.name -eq "Process" } | Select-Object -First 1)
+if ($processHandle.Count -ne 1 -or $processHandle[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 GetProcessId did not capture a process handle value: $($processHandle | ConvertTo-Json -Depth 8)"
+}
+
+$currentThread = @($identityEvents | Where-Object { $_.api -eq "GetCurrentThread" } | Select-Object -First 1)
+if ($currentThread.Count -ne 1 -or $currentThread[0].returnValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 GetCurrentThread return evidence mismatch: $($currentThread | ConvertTo-Json -Depth 8)"
+}
+
+$currentThreadIds = @($identityEvents |
+    Where-Object { $_.api -eq "GetCurrentThreadId" } |
+    ForEach-Object { ConvertFrom-DwordDecimalHex -Value $_.returnValue -Name "x86 GetCurrentThreadId returnValue" })
+if ($currentThreadIds.Count -lt 1)
+{
+    throw "x86 GetCurrentThreadId returned no current TID values."
+}
+
+$threadId = @($identityEvents | Where-Object { $_.api -eq "GetThreadId" } | Select-Object -First 1)
+$handleThreadId = ConvertFrom-DwordDecimalHex -Value $threadId[0].returnValue -Name "x86 GetThreadId returnValue"
+if ($currentThreadIds -notcontains $handleThreadId)
+{
+    throw "x86 GetThreadId did not match captured current TID values: handle=$handleThreadId current=$($currentThreadIds -join ',')"
+}
+
+$threadHandle = @($threadId[0].arguments | Where-Object { $_.name -eq "Thread" } | Select-Object -First 1)
+if ($threadHandle.Count -ne 1 -or $threadHandle[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 GetThreadId did not capture a thread handle value: $($threadHandle | ConvertTo-Json -Depth 8)"
+}
+
+$identityPayload = $identityEvents | ConvertTo-Json -Depth 12
+if ($identityPayload -cmatch "CommandLine|Environment|GetEnvironment|TOKEN_|TokenPrivileges|LookupAccount|SecurityDescriptor|SECURITY_DESCRIPTOR|\bSID\b|\bACL\b|Process32First|Process32Next|CreateToolhelp32Snapshot|EnumProcesses|OpenProcess|CreateProcessW|TerminateProcess|DuplicateHandle|OpenThread|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|VirtualFreeEx|VirtualProtectEx|CreateRemoteThread|QueueUserAPC|NtQueueApcThread|SuspendThread|ResumeThread|GetThreadContext|SetThreadContext|CONTEXT|Eip|Rip|Rsp|CallStack|StackTrace|StackWalk|StackFrame|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 KERNEL32 process/thread identity events appear to expose command-line, environment, token, security, enumeration, remote-memory, remote-thread, stack, injection, PE/file/hash, credential, or byte-preview evidence: $identityPayload"
 }
 
 $threadEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "thread" })

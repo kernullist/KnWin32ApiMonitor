@@ -1,0 +1,107 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "process",
+  "description": "Wave 3 low-payload current process and thread identity metadata hooks.",
+  "apis": [
+    {
+      "module": "KERNEL32.dll",
+      "name": "GetCurrentProcess",
+      "family": "process",
+      "category": "process_identity",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HANDLE",
+      "errorSource": "none",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": []
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "GetCurrentProcessId",
+      "family": "process",
+      "category": "process_identity",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "DWORD",
+      "errorSource": "none",
+      "success": { "returnNotEqual": 0 },
+      "failure": { "returnEqual": 0 },
+      "parameters": []
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "GetCurrentThread",
+      "family": "process",
+      "category": "thread_identity",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HANDLE",
+      "errorSource": "none",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": []
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "GetCurrentThreadId",
+      "family": "process",
+      "category": "thread_identity",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "DWORD",
+      "errorSource": "none",
+      "success": { "returnNotEqual": 0 },
+      "failure": { "returnEqual": 0 },
+      "parameters": []
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "GetProcessId",
+      "family": "process",
+      "category": "process_identity",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "DWORD",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": 0 },
+      "failure": { "returnEqual": 0 },
+      "parameters": [
+        { "name": "Process", "type": "HANDLE", "direction": "in", "decode": "process_handle_value" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "GetThreadId",
+      "family": "process",
+      "category": "thread_identity",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "DWORD",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": 0 },
+      "failure": { "returnEqual": 0 },
+      "parameters": [
+        { "name": "Thread", "type": "HANDLE", "direction": "in", "decode": "thread_handle_value" }
+      ]
+    }
+  ]
+}

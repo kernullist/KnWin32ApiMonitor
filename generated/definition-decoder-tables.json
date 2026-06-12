@@ -3317,6 +3317,150 @@
         "returnNotEqual": 0
       },
       "symbol": "UnmapViewOfFile"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "process_identity",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "none",
+      "failure": {
+        "returnEqual": "NULL"
+      },
+      "family": "process",
+      "firstParameterIndex": 510,
+      "hookPolicy": "iat",
+      "id": 140,
+      "module": "kernel32.dll",
+      "moduleId": 1,
+      "name": "GetCurrentProcess",
+      "parameterCount": 0,
+      "returnType": "HANDLE",
+      "risk": "low",
+      "source": "definitions/win32/process.json",
+      "success": {
+        "returnNotEqual": "NULL"
+      },
+      "symbol": "GetCurrentProcess"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "process_identity",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "none",
+      "failure": {
+        "returnEqual": 0
+      },
+      "family": "process",
+      "firstParameterIndex": 510,
+      "hookPolicy": "iat",
+      "id": 141,
+      "module": "kernel32.dll",
+      "moduleId": 1,
+      "name": "GetCurrentProcessId",
+      "parameterCount": 0,
+      "returnType": "DWORD",
+      "risk": "low",
+      "source": "definitions/win32/process.json",
+      "success": {
+        "returnNotEqual": 0
+      },
+      "symbol": "GetCurrentProcessId"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "thread_identity",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "none",
+      "failure": {
+        "returnEqual": "NULL"
+      },
+      "family": "process",
+      "firstParameterIndex": 510,
+      "hookPolicy": "iat",
+      "id": 142,
+      "module": "kernel32.dll",
+      "moduleId": 1,
+      "name": "GetCurrentThread",
+      "parameterCount": 0,
+      "returnType": "HANDLE",
+      "risk": "low",
+      "source": "definitions/win32/process.json",
+      "success": {
+        "returnNotEqual": "NULL"
+      },
+      "symbol": "GetCurrentThread"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "thread_identity",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "none",
+      "failure": {
+        "returnEqual": 0
+      },
+      "family": "process",
+      "firstParameterIndex": 510,
+      "hookPolicy": "iat",
+      "id": 143,
+      "module": "kernel32.dll",
+      "moduleId": 1,
+      "name": "GetCurrentThreadId",
+      "parameterCount": 0,
+      "returnType": "DWORD",
+      "risk": "low",
+      "source": "definitions/win32/process.json",
+      "success": {
+        "returnNotEqual": 0
+      },
+      "symbol": "GetCurrentThreadId"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "process_identity",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "GetLastError",
+      "failure": {
+        "returnEqual": 0
+      },
+      "family": "process",
+      "firstParameterIndex": 510,
+      "hookPolicy": "iat",
+      "id": 144,
+      "module": "kernel32.dll",
+      "moduleId": 1,
+      "name": "GetProcessId",
+      "parameterCount": 1,
+      "returnType": "DWORD",
+      "risk": "low",
+      "source": "definitions/win32/process.json",
+      "success": {
+        "returnNotEqual": 0
+      },
+      "symbol": "GetProcessId"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "thread_identity",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "GetLastError",
+      "failure": {
+        "returnEqual": 0
+      },
+      "family": "process",
+      "firstParameterIndex": 511,
+      "hookPolicy": "iat",
+      "id": 145,
+      "module": "kernel32.dll",
+      "moduleId": 1,
+      "name": "GetThreadId",
+      "parameterCount": 1,
+      "returnType": "DWORD",
+      "risk": "low",
+      "source": "definitions/win32/process.json",
+      "success": {
+        "returnNotEqual": 0
+      },
+      "symbol": "GetThreadId"
     }
   ],
   "decodeAliases": [
@@ -3906,6 +4050,24 @@
       "readsTargetMemory": true
     },
     {
+      "enum": "",
+      "flags": "",
+      "kind": "handle",
+      "maxPreviewBytes": 0,
+      "name": "process_handle_value",
+      "preview": "process_handle",
+      "readsTargetMemory": false
+    },
+    {
+      "enum": "",
+      "flags": "",
+      "kind": "count",
+      "maxPreviewBytes": 0,
+      "name": "process_id_value",
+      "preview": "decimal",
+      "readsTargetMemory": false
+    },
+    {
       "enum": "ro_init_type",
       "flags": "",
       "kind": "enum",
@@ -4070,11 +4232,29 @@
     {
       "enum": "",
       "flags": "",
+      "kind": "handle",
+      "maxPreviewBytes": 0,
+      "name": "thread_handle_value",
+      "preview": "thread_handle",
+      "readsTargetMemory": false
+    },
+    {
+      "enum": "",
+      "flags": "",
       "kind": "pointer",
       "maxPreviewBytes": 4,
       "name": "thread_id_pointer",
       "preview": "thread_id_pointer",
       "readsTargetMemory": true
+    },
+    {
+      "enum": "",
+      "flags": "",
+      "kind": "count",
+      "maxPreviewBytes": 0,
+      "name": "thread_id_value",
+      "preview": "decimal",
+      "readsTargetMemory": false
     },
     {
       "enum": "",
@@ -12969,6 +13149,40 @@
       "name": "lpBaseAddress",
       "nullable": false,
       "type": "LPCVOID"
+    },
+    {
+      "absoluteIndex": 510,
+      "apiId": 144,
+      "captureTiming": "pre",
+      "decode": "process_handle_value",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "Process",
+      "nullable": false,
+      "type": "HANDLE"
+    },
+    {
+      "absoluteIndex": 511,
+      "apiId": 145,
+      "captureTiming": "pre",
+      "decode": "thread_handle_value",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "Thread",
+      "nullable": false,
+      "type": "HANDLE"
     }
   ],
   "schemaVersion": "0.1.0",
@@ -12983,6 +13197,7 @@
       "definitions/win32/loader.json",
       "definitions/win32/memory.json",
       "definitions/win32/ole32.json",
+      "definitions/win32/process.json",
       "definitions/win32/psapi.json",
       "definitions/win32/resolver.json",
       "definitions/win32/rpcrt4.json",

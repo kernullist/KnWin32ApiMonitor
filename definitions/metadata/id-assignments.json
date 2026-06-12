@@ -159,6 +159,12 @@
     { "id": 136, "module": "kernel32.dll", "name": "CreateFileMappingW", "symbol": "CreateFileMappingW" },
     { "id": 137, "module": "kernel32.dll", "name": "OpenFileMappingW", "symbol": "OpenFileMappingW" },
     { "id": 138, "module": "kernel32.dll", "name": "MapViewOfFile", "symbol": "MapViewOfFile" },
-    { "id": 139, "module": "kernel32.dll", "name": "UnmapViewOfFile", "symbol": "UnmapViewOfFile" }
+    { "id": 139, "module": "kernel32.dll", "name": "UnmapViewOfFile", "symbol": "UnmapViewOfFile" },
+    { "id": 140, "module": "kernel32.dll", "name": "GetCurrentProcess", "symbol": "GetCurrentProcess" },
+    { "id": 141, "module": "kernel32.dll", "name": "GetCurrentProcessId", "symbol": "GetCurrentProcessId" },
+    { "id": 142, "module": "kernel32.dll", "name": "GetCurrentThread", "symbol": "GetCurrentThread" },
+    { "id": 143, "module": "kernel32.dll", "name": "GetCurrentThreadId", "symbol": "GetCurrentThreadId" },
+    { "id": 144, "module": "kernel32.dll", "name": "GetProcessId", "symbol": "GetProcessId" },
+    { "id": 145, "module": "kernel32.dll", "name": "GetThreadId", "symbol": "GetThreadId" }
   ]
 }

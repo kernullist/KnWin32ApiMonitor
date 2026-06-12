@@ -2854,6 +2854,34 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
         break;
     }
+    case KnMonTransportApiId::GetCurrentProcess:
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    case KnMonTransportApiId::GetCurrentProcessId:
+        payload = ApiCallPayload(result, record, DwordDecimalHexText(static_cast<std::uint32_t>(record.ReturnValue)), args.str(), "");
+        break;
+    case KnMonTransportApiId::GetCurrentThread:
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    case KnMonTransportApiId::GetCurrentThreadId:
+        payload = ApiCallPayload(result, record, DwordDecimalHexText(static_cast<std::uint32_t>(record.ReturnValue)), args.str(), "");
+        break;
+    case KnMonTransportApiId::GetProcessId:
+    {
+        const std::string processHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string processIdValue = DwordDecimalHexText(static_cast<std::uint32_t>(record.ReturnValue));
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "Process", "in", processHandle, processHandle, processHandle);
+        payload = ApiCallPayload(result, record, processIdValue, args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::GetThreadId:
+    {
+        const std::string threadHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string threadIdValue = DwordDecimalHexText(static_cast<std::uint32_t>(record.ReturnValue));
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "Thread", "in", threadHandle, threadHandle, threadHandle);
+        payload = ApiCallPayload(result, record, threadIdValue, args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::CreateThread:
     {
         const std::string attributesPointer = HexPointerValue(record.Values64[0], result.Architecture);
