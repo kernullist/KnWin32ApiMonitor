@@ -2396,6 +2396,18 @@ std::string HandleInformationFlagsText(std::uint32_t value)
     return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
 }
 
+std::string GetModuleHandleExFlagsText(std::uint32_t value)
+{
+    static constexpr FlagName Flags[] =
+    {
+        { 0x00000001U, "GET_MODULE_HANDLE_EX_FLAG_PIN" },
+        { 0x00000002U, "GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT" },
+        { 0x00000004U, "GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS" },
+    };
+
+    return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
+}
+
 std::string BoolText(std::uint32_t value)
 {
     return value == 0 ? "FALSE" : "TRUE";
@@ -3013,6 +3025,48 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hObject", "in", objectHandle, objectHandle, objectHandle) << ",";
         args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "dwMask", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HandleInformationFlagsText(record.Values32[0])) << ",";
         args << ArgumentJsonFromMetadata(record.ApiId, 2, "DWORD", "dwFlags", "in", HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]), HandleInformationFlagsText(record.Values32[1]));
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::GetModuleHandleW:
+    {
+        const std::string moduleNamePointer = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPCWSTR", "lpModuleName", "in", moduleNamePointer, text0, text0, DecodeStatusName(record.Values32[0]));
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::GetModuleHandleExW:
+    {
+        const bool fromAddress = (record.Values32[0] & 0x00000004U) != 0;
+        const std::string moduleNamePointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string moduleNameValue = fromAddress ? moduleNamePointer : text0;
+        const std::string modulePointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const bool moduleDecoded = static_cast<KnMonDecodeStatus>(record.Values32[2]) == KnMonDecodeStatus::Decoded;
+        const std::string modulePost = moduleDecoded ? HexPointerValue(record.Values64[2], result.Architecture) : modulePointer;
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "DWORD", "dwFlags", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), GetModuleHandleExFlagsText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPCWSTR", "lpModuleName", "in", moduleNamePointer, moduleNameValue, moduleNameValue, DecodeStatusName(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "HMODULE*", "phModule", "out", modulePointer, modulePost, modulePost, DecodeStatusName(record.Values32[2]));
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::GetModuleFileNameW:
+    {
+        const std::string moduleHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string fileNamePointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const bool fileNameDecoded = static_cast<KnMonDecodeStatus>(record.Values32[1]) == KnMonDecodeStatus::Decoded ||
+            static_cast<KnMonDecodeStatus>(record.Values32[1]) == KnMonDecodeStatus::Truncated ||
+            static_cast<KnMonDecodeStatus>(record.Values32[1]) == KnMonDecodeStatus::Partial;
+        const std::string fileNamePost = fileNameDecoded ? text0 : fileNamePointer;
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HMODULE", "hModule", "in", moduleHandle, moduleHandle, moduleHandle) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPWSTR", "lpFilename", "out", fileNamePointer, fileNamePost, fileNamePost, DecodeStatusName(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "DWORD", "nSize", "in", std::to_string(record.Values32[0]), std::to_string(record.Values32[0]), DwordDecimalHexText(record.Values32[0]));
+        payload = ApiCallPayload(result, record, DwordDecimalHexText(static_cast<std::uint32_t>(record.ReturnValue)), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::FreeLibrary:
+    {
+        const std::string moduleHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HMODULE", "hLibModule", "in", moduleHandle, moduleHandle, moduleHandle);
         payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
         break;
     }

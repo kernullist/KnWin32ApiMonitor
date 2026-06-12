@@ -156,6 +156,10 @@ enum class KnMonTransportApiId : std::uint16_t
     GetFileType = 147,
     GetHandleInformation = 148,
     SetHandleInformation = 149,
+    GetModuleHandleW = 150,
+    GetModuleHandleExW = 151,
+    GetModuleFileNameW = 152,
+    FreeLibrary = 153,
 };
 
 enum class KnMonTransportModuleId : std::uint16_t

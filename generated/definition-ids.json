@@ -893,6 +893,30 @@
       "module": "kernel32.dll",
       "name": "SetHandleInformation",
       "symbol": "SetHandleInformation"
+    },
+    {
+      "id": 150,
+      "module": "kernel32.dll",
+      "name": "GetModuleHandleW",
+      "symbol": "GetModuleHandleW"
+    },
+    {
+      "id": 151,
+      "module": "kernel32.dll",
+      "name": "GetModuleHandleExW",
+      "symbol": "GetModuleHandleExW"
+    },
+    {
+      "id": 152,
+      "module": "kernel32.dll",
+      "name": "GetModuleFileNameW",
+      "symbol": "GetModuleFileNameW"
+    },
+    {
+      "id": 153,
+      "module": "kernel32.dll",
+      "name": "FreeLibrary",
+      "symbol": "FreeLibrary"
     }
   ],
   "modules": [

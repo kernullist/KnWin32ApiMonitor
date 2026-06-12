@@ -156,6 +156,14 @@
       ]
     },
     {
+      "name": "get_module_handle_ex_flags",
+      "values": [
+        { "name": "GET_MODULE_HANDLE_EX_FLAG_PIN", "value": "0x00000001" },
+        { "name": "GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT", "value": "0x00000002" },
+        { "name": "GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS", "value": "0x00000004" }
+      ]
+    },
+    {
       "name": "memory_allocation_type",
       "values": [
         { "name": "MEM_COMMIT", "value": "0x00001000" },

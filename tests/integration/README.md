@@ -200,6 +200,14 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave3-kernel32-handl
 
 The KERNEL32 handle metadata smoke verifies selected `GetStdHandle`, `GetFileType`, `GetHandleInformation`, and `SetHandleInformation` calls, generated handle metadata, stable API IDs `146` through `149`, standard-handle selector, file-type, handle, and handle-flag evidence, shared-memory transport mode, zero dropped events, clean hook restore, and no object-name/security/handle-duplication/system-handle/file-payload/command-line/environment/remote-memory/remote-thread/stack/injection/PE/file/hash/credential/byte-preview payload evidence.
 
+Run Wave 3 KERNEL32 module lifecycle smoke:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave3-kernel32-module-lifecycle-smoke.ps1
+```
+
+The KERNEL32 module lifecycle smoke verifies selected `GetModuleHandleW`, `GetModuleHandleExW`, `GetModuleFileNameW`, and `FreeLibrary` calls, generated module metadata, stable API IDs `150` through `153`, module-name, flag, module-handle, bounded module-path, and release evidence, shared-memory transport mode, zero dropped events, clean hook restore, and no module-memory/PE/hash/signature/enumeration/command-line/environment/remote-memory/remote-thread/stack/injection/credential/byte-preview payload evidence.
+
 Run optional Win32/x86 capture smoke:
 
 ```powershell
@@ -208,7 +216,7 @@ cmake --build build/native-win32 --config Debug
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-smoke.ps1
 ```
 
-The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence, selected RPCRT4 UUID helper evidence, selected User32/GDI32 evidence, selected PSAPI module-query evidence, selected Version resource evidence, selected Shell known-folder evidence, selected OLE32 COM lifecycle evidence, selected COMBASE-backed WinRT lifecycle evidence, selected KERNEL32 memory protection evidence, selected KERNEL32 thread lifecycle evidence, selected KERNEL32 event synchronization evidence, selected KERNEL32 mutex/semaphore synchronization evidence, selected KERNEL32 file-mapping evidence, selected KERNEL32 process/thread identity evidence, selected KERNEL32 handle metadata evidence, zero dropped events, and clean hook restore.
+The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence, selected RPCRT4 UUID helper evidence, selected User32/GDI32 evidence, selected PSAPI module-query evidence, selected Version resource evidence, selected Shell known-folder evidence, selected OLE32 COM lifecycle evidence, selected COMBASE-backed WinRT lifecycle evidence, selected KERNEL32 memory protection evidence, selected KERNEL32 thread lifecycle evidence, selected KERNEL32 event synchronization evidence, selected KERNEL32 mutex/semaphore synchronization evidence, selected KERNEL32 file-mapping evidence, selected KERNEL32 process/thread identity evidence, selected KERNEL32 handle metadata evidence, selected KERNEL32 module lifecycle evidence, zero dropped events, and clean hook restore.
 
 Run collector backpressure smoke:
 

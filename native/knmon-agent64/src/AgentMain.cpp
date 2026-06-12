@@ -148,6 +148,10 @@ using GetStdHandleFn = HANDLE(WINAPI*)(DWORD);
 using GetFileTypeFn = DWORD(WINAPI*)(HANDLE);
 using GetHandleInformationFn = BOOL(WINAPI*)(HANDLE, LPDWORD);
 using SetHandleInformationFn = BOOL(WINAPI*)(HANDLE, DWORD, DWORD);
+using GetModuleHandleWFn = HMODULE(WINAPI*)(LPCWSTR);
+using GetModuleHandleExWFn = BOOL(WINAPI*)(DWORD, LPCWSTR, HMODULE*);
+using GetModuleFileNameWFn = DWORD(WINAPI*)(HMODULE, LPWSTR, DWORD);
+using FreeLibraryFn = BOOL(WINAPI*)(HMODULE);
 using CreateThreadFn = HANDLE(WINAPI*)(LPSECURITY_ATTRIBUTES, SIZE_T, LPTHREAD_START_ROUTINE, LPVOID, DWORD, LPDWORD);
 using OpenThreadFn = HANDLE(WINAPI*)(DWORD, BOOL, DWORD);
 using WaitForSingleObjectFn = DWORD(WINAPI*)(HANDLE, DWORD);
@@ -276,6 +280,10 @@ GetStdHandleFn g_originalGetStdHandle = nullptr;
 GetFileTypeFn g_originalGetFileType = nullptr;
 GetHandleInformationFn g_originalGetHandleInformation = nullptr;
 SetHandleInformationFn g_originalSetHandleInformation = nullptr;
+GetModuleHandleWFn g_originalGetModuleHandleW = nullptr;
+GetModuleHandleExWFn g_originalGetModuleHandleExW = nullptr;
+GetModuleFileNameWFn g_originalGetModuleFileNameW = nullptr;
+FreeLibraryFn g_originalFreeLibrary = nullptr;
 CreateThreadFn g_originalCreateThread = nullptr;
 OpenThreadFn g_originalOpenThread = nullptr;
 WaitForSingleObjectFn g_originalWaitForSingleObject = nullptr;
@@ -436,7 +444,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 104;
+constexpr std::size_t HookDefinitionCount = 108;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1027,6 +1035,67 @@ std::uint32_t CopyWidePointerText(char* destination, std::uint32_t* length, std:
         if (!terminated && status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+        }
+
+        CopyWideCountText(destination, capacity, localBuffer.data(), copiedChars);
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = destination == nullptr ? 0 : static_cast<std::uint32_t>(std::strlen(destination));
+    }
+
+    return status;
+}
+
+std::uint32_t CopyWideResultText(char* destination, std::uint32_t* length, std::size_t capacity, const wchar_t* source, DWORD charCount)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::array<wchar_t, MaxRegistryStringChars + 1> localBuffer = {};
+    std::uint32_t copiedChars = 0;
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        if (charCount == 0)
+        {
+            break;
+        }
+
+        DWORD boundedChars = charCount;
+        if (boundedChars > MaxRegistryStringChars)
+        {
+            boundedChars = MaxRegistryStringChars;
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+        }
+
+        while (copiedChars < boundedChars)
+        {
+            wchar_t ch = L'\0';
+            SIZE_T bytesRead = 0;
+            if (!ReadProcessMemory(GetCurrentProcess(), source + copiedChars, &ch, sizeof(ch), &bytesRead) || bytesRead != sizeof(ch))
+            {
+                status = copiedChars == 0 ?
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory) :
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+                break;
+            }
+
+            localBuffer[copiedChars] = ch;
+            ++copiedChars;
         }
 
         CopyWideCountText(destination, capacity, localBuffer.data(), copiedChars);
@@ -2591,6 +2660,130 @@ void EmitSetHandleInformationEvent(
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(object));
         record->Values32[0] = mask;
         record->Values32[1] = flags;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetModuleHandleWEvent(
+    HMODULE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPCWSTR moduleName)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetModuleHandleW, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(moduleName));
+        record->Values32[0] = CopyWidePointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), moduleName);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetModuleHandleExWEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    DWORD flags,
+    LPCWSTR moduleName,
+    HMODULE* module)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        std::uint32_t moduleStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        HMODULE localModule = nullptr;
+
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetModuleHandleExW, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result ? 1 : 0;
+        record->Values32[0] = flags;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(moduleName));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(module));
+
+        if ((flags & GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS) == 0)
+        {
+            record->Values32[1] = CopyWidePointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), moduleName);
+        }
+        else
+        {
+            record->Values32[1] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+        }
+
+        if (result)
+        {
+            if (module == nullptr)
+            {
+                moduleStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            }
+            else if (ReadCurrentProcessValue(module, &localModule))
+            {
+                record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(localModule));
+                moduleStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+            }
+            else
+            {
+                moduleStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            }
+        }
+
+        record->Values32[2] = moduleStatus;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetModuleFileNameWEvent(
+    DWORD result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HMODULE module,
+    LPWSTR fileName,
+    DWORD sizeChars)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        std::uint32_t fileNameStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetModuleFileNameW, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(module));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(fileName));
+        record->Values32[0] = sizeChars;
+        if (result != 0)
+        {
+            fileNameStatus = CopyWideResultText(record->Text0, &record->Text0Length, sizeof(record->Text0), fileName, result);
+        }
+
+        record->Values32[1] = fileNameStatus;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitFreeLibraryEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HMODULE module)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::FreeLibrary, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result ? 1 : 0;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(module));
         CommitTransportRecord(record, overheadStart);
     }
 }
@@ -5616,6 +5809,10 @@ HANDLE WINAPI HookedCreateSemaphoreW(LPSECURITY_ATTRIBUTES semaphoreAttributes, 
 HANDLE WINAPI HookedOpenSemaphoreW(DWORD desiredAccess, BOOL inheritHandle, LPCWSTR name);
 BOOL WINAPI HookedReleaseSemaphore(HANDLE semaphoreHandle, LONG releaseCount, LPLONG previousCount);
 DWORD WINAPI HookedWaitForMultipleObjectsEx(DWORD count, const HANDLE* handles, BOOL waitAll, DWORD milliseconds, BOOL alertable);
+HMODULE WINAPI HookedGetModuleHandleW(LPCWSTR moduleName);
+BOOL WINAPI HookedGetModuleHandleExW(DWORD flags, LPCWSTR moduleName, HMODULE* module);
+DWORD WINAPI HookedGetModuleFileNameW(HMODULE module, LPWSTR fileName, DWORD sizeChars);
+BOOL WINAPI HookedFreeLibrary(HMODULE module);
 HMODULE WINAPI HookedLoadLibraryW(LPCWSTR fileName);
 HMODULE WINAPI HookedLoadLibraryA(LPCSTR fileName);
 HMODULE WINAPI HookedLoadLibraryExW(LPCWSTR fileName, HANDLE file, DWORD flags);
@@ -5708,6 +5905,10 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "kernel32.dll", "GetFileType", reinterpret_cast<void*>(HookedGetFileType), reinterpret_cast<void**>(&g_originalGetFileType), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetHandleInformation", reinterpret_cast<void*>(HookedGetHandleInformation), reinterpret_cast<void**>(&g_originalGetHandleInformation), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "SetHandleInformation", reinterpret_cast<void*>(HookedSetHandleInformation), reinterpret_cast<void**>(&g_originalSetHandleInformation), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "GetModuleHandleW", reinterpret_cast<void*>(HookedGetModuleHandleW), reinterpret_cast<void**>(&g_originalGetModuleHandleW), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "GetModuleHandleExW", reinterpret_cast<void*>(HookedGetModuleHandleExW), reinterpret_cast<void**>(&g_originalGetModuleHandleExW), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "GetModuleFileNameW", reinterpret_cast<void*>(HookedGetModuleFileNameW), reinterpret_cast<void**>(&g_originalGetModuleFileNameW), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "FreeLibrary", reinterpret_cast<void*>(HookedFreeLibrary), reinterpret_cast<void**>(&g_originalFreeLibrary), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "CreateThread", reinterpret_cast<void*>(HookedCreateThread), reinterpret_cast<void**>(&g_originalCreateThread), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "OpenThread", reinterpret_cast<void*>(HookedOpenThread), reinterpret_cast<void**>(&g_originalOpenThread), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "WaitForSingleObject", reinterpret_cast<void*>(HookedWaitForSingleObject), reinterpret_cast<void**>(&g_originalWaitForSingleObject), false, true, false, 0, 0 },
@@ -6843,6 +7044,130 @@ BOOL WINAPI HookedSetHandleInformation(HANDLE object, DWORD mask, DWORD flags)
     if (HooksEnabled())
     {
         EmitSetHandleInformationEvent(result, eventError, start, end, object, mask, flags);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HMODULE WINAPI HookedGetModuleHandleW(LPCWSTR moduleName)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetModuleHandleW == nullptr)
+    {
+        if (g_originalGetModuleHandleW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalGetModuleHandleW(moduleName);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HMODULE result = g_originalGetModuleHandleW(moduleName);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitGetModuleHandleWEvent(result, eventError, start, end, moduleName);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedGetModuleHandleExW(DWORD flags, LPCWSTR moduleName, HMODULE* module)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetModuleHandleExW == nullptr)
+    {
+        if (g_originalGetModuleHandleExW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalGetModuleHandleExW(flags, moduleName, module);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    BOOL result = g_originalGetModuleHandleExW(flags, moduleName, module);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitGetModuleHandleExWEvent(result, eventError, start, end, flags, moduleName, module);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+DWORD WINAPI HookedGetModuleFileNameW(HMODULE module, LPWSTR fileName, DWORD sizeChars)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetModuleFileNameW == nullptr)
+    {
+        if (g_originalGetModuleFileNameW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return 0;
+        }
+
+        return g_originalGetModuleFileNameW(module, fileName, sizeChars);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    DWORD result = g_originalGetModuleFileNameW(module, fileName, sizeChars);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == 0 ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitGetModuleFileNameWEvent(result, eventError, start, end, module, fileName, sizeChars);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedFreeLibrary(HMODULE module)
+{
+    if (g_inHook || !HooksEnabled() || g_originalFreeLibrary == nullptr)
+    {
+        if (g_originalFreeLibrary == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalFreeLibrary(module);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    BOOL result = g_originalFreeLibrary(module);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitFreeLibraryEvent(result, eventError, start, end, module);
     }
 
     SetLastError(lastError);

@@ -1546,6 +1546,73 @@ bool RunHandleMetadataProbe()
     return success;
 }
 
+bool RunModuleLifecycleProbe()
+{
+    bool success = false;
+    HMODULE loadedModule = nullptr;
+
+    do
+    {
+        loadedModule = LoadLibraryW(L"version.dll");
+        if (loadedModule == nullptr)
+        {
+            LogLastError("LoadLibraryW(module-lifecycle)");
+            break;
+        }
+
+        HMODULE moduleFromHandle = GetModuleHandleW(L"version.dll");
+        if (moduleFromHandle == nullptr)
+        {
+            LogLastError("GetModuleHandleW(module-lifecycle)");
+            break;
+        }
+
+        HMODULE moduleFromEx = nullptr;
+        if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, L"version.dll", &moduleFromEx))
+        {
+            LogLastError("GetModuleHandleExW(module-lifecycle)");
+            break;
+        }
+
+        if (moduleFromHandle != loadedModule || moduleFromEx != loadedModule)
+        {
+            std::cout << "module handle mismatch\n";
+            break;
+        }
+
+        std::array<wchar_t, MAX_PATH> modulePath = {};
+        const DWORD pathChars = GetModuleFileNameW(loadedModule, modulePath.data(), static_cast<DWORD>(modulePath.size()));
+        if (pathChars == 0 || pathChars >= modulePath.size())
+        {
+            LogLastError("GetModuleFileNameW(module-lifecycle)");
+            break;
+        }
+
+        const wchar_t* moduleName = std::wcsrchr(modulePath.data(), L'\\');
+        moduleName = moduleName == nullptr ? modulePath.data() : moduleName + 1;
+        if (_wcsicmp(moduleName, L"version.dll") != 0)
+        {
+            std::wcout << L"unexpected module lifecycle path=" << modulePath.data() << L"\n";
+            break;
+        }
+
+        std::cout << "module lifecycle path chars=" << pathChars << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (loadedModule != nullptr)
+    {
+        if (!FreeLibrary(loadedModule))
+        {
+            LogLastError("FreeLibrary(module-lifecycle)");
+            success = false;
+        }
+    }
+
+    return success;
+}
+
 DWORD WINAPI ThreadLifecycleProbeThreadProc(LPVOID parameter)
 {
     DWORD* value = static_cast<DWORD*>(parameter);
@@ -2300,6 +2367,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunHandleMetadataProbe())
+        {
+            break;
+        }
+
+        if (!RunModuleLifecycleProbe())
         {
             break;
         }

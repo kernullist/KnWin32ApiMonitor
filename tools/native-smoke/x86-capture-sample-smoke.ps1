@@ -30,6 +30,10 @@ $requiredApis = @(
     "GetFileType",
     "GetHandleInformation",
     "SetHandleInformation",
+    "GetModuleHandleW",
+    "GetModuleHandleExW",
+    "GetModuleFileNameW",
+    "FreeLibrary",
     "CreateThread",
     "OpenThread",
     "WaitForSingleObject",
@@ -1509,6 +1513,143 @@ if ($handlePayload -cmatch "ObjectName|ObjectType|NtQueryObject|SystemHandle|Sys
     throw "x86 KERNEL32 handle metadata events appear to expose object-name, security, duplication, payload, command-line, environment, remote-memory, remote-thread, stack, injection, PE/file/hash, credential, or byte-preview evidence: $handlePayload"
 }
 
+$moduleApis = @(
+    "GetModuleHandleW",
+    "GetModuleHandleExW",
+    "GetModuleFileNameW",
+    "FreeLibrary"
+)
+
+$moduleEvents = @($result.capturedEvents | Where-Object { $moduleApis -contains $_.api })
+if ($moduleEvents.Count -lt $moduleApis.Count)
+{
+    throw "x86 capture did not include the selected KERNEL32 module lifecycle API slice."
+}
+
+$moduleExpected = @(
+    @{ Api = "GetModuleHandleW"; Family = "module"; Category = "module_lookup"; Args = @(
+        @{ Name = "lpModuleName"; Alias = "module_lookup_name"; Timing = "pre" }
+    ) },
+    @{ Api = "GetModuleHandleExW"; Family = "module"; Category = "module_lookup"; Args = @(
+        @{ Name = "dwFlags"; Alias = "get_module_handle_ex_flags"; Timing = "pre" },
+        @{ Name = "lpModuleName"; Alias = "module_lookup_name"; Timing = "pre" },
+        @{ Name = "phModule"; Alias = "module_handle_pointer"; Timing = "post" }
+    ) },
+    @{ Api = "GetModuleFileNameW"; Family = "module"; Category = "module_path"; Args = @(
+        @{ Name = "hModule"; Alias = "module_handle"; Timing = "pre" },
+        @{ Name = "lpFilename"; Alias = "module_file_name_buffer_pointer"; Timing = "post" },
+        @{ Name = "nSize"; Alias = "byte_count"; Timing = "pre" }
+    ) },
+    @{ Api = "FreeLibrary"; Family = "module"; Category = "module_lifecycle"; Args = @(
+        @{ Name = "hLibModule"; Alias = "module_handle"; Timing = "pre" }
+    ) }
+)
+
+foreach ($expectedModule in $moduleExpected)
+{
+    $events = @($moduleEvents | Where-Object { $_.api -eq $expectedModule.Api })
+    if ($events.Count -lt 1)
+    {
+        throw "x86 capture did not include $($expectedModule.Api)."
+    }
+
+    foreach ($event in $events)
+    {
+        if ($event.module -ne "kernel32.dll" -or
+            $event.apiFamily -ne $expectedModule.Family -or
+            $event.apiCategory -ne $expectedModule.Category -or
+            $event.hookPolicy -ne "iat" -or
+            $event.coverageStatus -ne "smoke_verified" -or
+            $null -eq $event.durationUs -or
+            $event.durationUs -lt 0)
+        {
+            throw "x86 $($expectedModule.Api) module lifecycle metadata mismatch: $($event | ConvertTo-Json -Depth 8)"
+        }
+
+        if (-not [string]::IsNullOrEmpty($event.bufferPreview))
+        {
+            throw "x86 $($expectedModule.Api) exposed bufferPreview: $($event | ConvertTo-Json -Depth 8)"
+        }
+
+        foreach ($expectedArg in $expectedModule.Args)
+        {
+            $argument = @($event.arguments | Where-Object { $_.name -eq $expectedArg.Name } | Select-Object -First 1)
+            if ($argument.Count -ne 1 -or
+                $argument[0].decodeAlias -ne $expectedArg.Alias -or
+                $argument[0].captureTiming -ne $expectedArg.Timing)
+            {
+                throw "x86 $($expectedModule.Api) $($expectedArg.Name) metadata mismatch: $($argument | ConvertTo-Json -Depth 8)"
+            }
+        }
+    }
+}
+
+$moduleHandle = @($moduleEvents | Where-Object {
+    $argument = @($_.arguments | Where-Object { $_.name -eq "lpModuleName" } | Select-Object -First 1)
+    $_.api -eq "GetModuleHandleW" -and $argument.Count -eq 1 -and $argument[0].decodedValue -ieq "version.dll"
+} | Select-Object -First 1)
+if ($moduleHandle.Count -ne 1 -or $moduleHandle[0].returnValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 GetModuleHandleW did not capture version.dll lookup: $($moduleHandle | ConvertTo-Json -Depth 8)"
+}
+
+$moduleHandleEx = @($moduleEvents | Where-Object {
+    $argument = @($_.arguments | Where-Object { $_.name -eq "lpModuleName" } | Select-Object -First 1)
+    $_.api -eq "GetModuleHandleExW" -and $argument.Count -eq 1 -and $argument[0].decodedValue -ieq "version.dll"
+} | Select-Object -First 1)
+if ($moduleHandleEx.Count -ne 1 -or $moduleHandleEx[0].returnValue -ne "TRUE")
+{
+    throw "x86 GetModuleHandleExW did not capture successful version.dll lookup: $($moduleHandleEx | ConvertTo-Json -Depth 8)"
+}
+
+$moduleFlags = @($moduleHandleEx[0].arguments | Where-Object { $_.name -eq "dwFlags" } | Select-Object -First 1)
+$modulePointer = @($moduleHandleEx[0].arguments | Where-Object { $_.name -eq "phModule" } | Select-Object -First 1)
+if ($moduleFlags.Count -ne 1 -or
+    $moduleFlags[0].decodedValue -notmatch "GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT" -or
+    $modulePointer.Count -ne 1 -or
+    $modulePointer[0].rawValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $modulePointer[0].decodeStatus -ne "decoded" -or
+    $modulePointer[0].decodedValue -ne $moduleHandle[0].returnValue)
+{
+    throw "x86 GetModuleHandleExW handle evidence mismatch: $($moduleHandleEx | ConvertTo-Json -Depth 8)"
+}
+
+$moduleFileName = @($moduleEvents | Where-Object {
+    $argument = @($_.arguments | Where-Object { $_.name -eq "hModule" } | Select-Object -First 1)
+    $_.api -eq "GetModuleFileNameW" -and $argument.Count -eq 1 -and $argument[0].decodedValue -eq $moduleHandle[0].returnValue
+} | Select-Object -First 1)
+if ($moduleFileName.Count -ne 1 -or $moduleFileName[0].returnValue -notmatch "^[1-9][0-9]* \(0x[0-9a-fA-F]{8}\)$")
+{
+    throw "x86 GetModuleFileNameW did not capture positive version.dll path length: $($moduleFileName | ConvertTo-Json -Depth 8)"
+}
+
+$fileName = @($moduleFileName[0].arguments | Where-Object { $_.name -eq "lpFilename" } | Select-Object -First 1)
+$fileNameSize = @($moduleFileName[0].arguments | Where-Object { $_.name -eq "nSize" } | Select-Object -First 1)
+if ($fileName.Count -ne 1 -or
+    $fileName[0].rawValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $fileName[0].decodeStatus -ne "decoded" -or
+    $fileName[0].decodedValue -notmatch "(?i)version\.dll" -or
+    $fileNameSize.Count -ne 1 -or
+    $fileNameSize[0].decodedValue -notmatch "^260 ")
+{
+    throw "x86 GetModuleFileNameW path evidence mismatch: $($moduleFileName | ConvertTo-Json -Depth 8)"
+}
+
+$freeLibrary = @($moduleEvents | Where-Object {
+    $argument = @($_.arguments | Where-Object { $_.name -eq "hLibModule" } | Select-Object -First 1)
+    $_.api -eq "FreeLibrary" -and $argument.Count -eq 1 -and $argument[0].decodedValue -eq $moduleHandle[0].returnValue
+} | Select-Object -First 1)
+if ($freeLibrary.Count -ne 1 -or $freeLibrary[0].returnValue -ne "TRUE")
+{
+    throw "x86 FreeLibrary did not release the deterministic version.dll handle: $($freeLibrary | ConvertTo-Json -Depth 8)"
+}
+
+$modulePayload = $moduleEvents | ConvertTo-Json -Depth 12
+if ($modulePayload -cmatch "IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SectionHeader|CodeBytes|Disassembly|SHA256|SHA1|MD5|Authenticode|WinVerifyTrust|CertVerify|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b|CreateToolhelp32Snapshot|Module32First|Module32Next|EnumProcesses|PEB|LDR_DATA_TABLE_ENTRY|InLoadOrderModuleList|CommandLine|Environment|GetEnvironment|TOKEN_|TokenPrivileges|LookupAccount|SecurityDescriptor|SECURITY_DESCRIPTOR|\bSID\b|\bACL\b|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|VirtualFreeEx|VirtualProtectEx|CreateRemoteThread|QueueUserAPC|NtQueueApcThread|SuspendThread|ResumeThread|GetThreadContext|SetThreadContext|CONTEXT|Eip|Rip|Rsp|CallStack|StackTrace|StackWalk|StackFrame|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential")
+{
+    throw "x86 KERNEL32 module lifecycle events appear to expose module-memory, PE/hash/signature, enumeration, command-line, environment, token/security, remote-memory, remote-thread, stack, injection, credential, or byte-preview evidence: $modulePayload"
+}
+
 $threadEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "thread" })
 if ($threadEvents.Count -lt 4)
 {
@@ -2160,13 +2301,14 @@ if ($uuidPayload -cmatch "RpcMgmtEp|RpcBindingSetAuth|RpcBindingSetOption|Endpoi
     throw "x86 RPCRT4 UUID helper events appear to expose endpoint, auth, network, COM, credential, path, PE/file/hash, or byte-preview evidence: $uuidPayload"
 }
 
-$dynamicSweep = @($result.agentMessages | Where-Object { $_.messageType -eq "iat_sweep" -and $_.reason -eq "dynamic_load" } | Select-Object -Last 1)
-if ($dynamicSweep.Count -ne 1)
+$dynamicSweeps = @($result.agentMessages | Where-Object { $_.messageType -eq "iat_sweep" -and $_.reason -eq "dynamic_load" })
+if ($dynamicSweeps.Count -lt 1)
 {
     throw "x86 capture did not include dynamic-load re-hook sweep evidence."
 }
 
-if ($dynamicSweep[0].patchedSlots -lt 1)
+$patchedDynamicSweep = @($dynamicSweeps | Where-Object { $_.patchedSlots -ge 1 } | Select-Object -First 1)
+if ($patchedDynamicSweep.Count -ne 1)
 {
     throw "x86 dynamic-load sweep did not patch any new slots."
 }
