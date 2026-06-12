@@ -142,6 +142,10 @@ enum class KnMonTransportApiId : std::uint16_t
     OpenSemaphoreW = 133,
     ReleaseSemaphore = 134,
     WaitForMultipleObjectsEx = 135,
+    CreateFileMappingW = 136,
+    OpenFileMappingW = 137,
+    MapViewOfFile = 138,
+    UnmapViewOfFile = 139,
 };
 
 enum class KnMonTransportModuleId : std::uint16_t

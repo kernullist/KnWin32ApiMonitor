@@ -2239,6 +2239,39 @@ std::string MemoryProtectionFlagsText(std::uint32_t value)
     return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
 }
 
+std::string FileMappingProtectionFlagsText(std::uint32_t value)
+{
+    static constexpr FlagName Flags[] =
+    {
+        { 0x00000002U, "PAGE_READONLY" },
+        { 0x00000004U, "PAGE_READWRITE" },
+        { 0x00000008U, "PAGE_WRITECOPY" },
+        { 0x00000020U, "PAGE_EXECUTE_READ" },
+        { 0x00000040U, "PAGE_EXECUTE_READWRITE" },
+        { 0x00000080U, "PAGE_EXECUTE_WRITECOPY" },
+        { 0x04000000U, "SEC_RESERVE" },
+        { 0x08000000U, "SEC_COMMIT" },
+        { 0x10000000U, "SEC_NOCACHE" },
+        { 0x80000000U, "SEC_LARGE_PAGES" },
+    };
+
+    return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
+}
+
+std::string FileMappingAccessFlagsText(std::uint32_t value)
+{
+    static constexpr FlagName Flags[] =
+    {
+        { 0x00000001U, "FILE_MAP_COPY" },
+        { 0x00000002U, "FILE_MAP_WRITE" },
+        { 0x00000004U, "FILE_MAP_READ" },
+        { 0x00000020U, "FILE_MAP_EXECUTE" },
+        { 0x000f001fU, "FILE_MAP_ALL_ACCESS" },
+    };
+
+    return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
+}
+
 std::string MemoryStateText(std::uint32_t value)
 {
     static constexpr FlagName Flags[] =
@@ -2778,6 +2811,47 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 1, "PMEMORY_BASIC_INFORMATION", "lpBuffer", "out", bufferPointer, bufferValue, bufferValue, DecodeStatusName(record.Values32[0])) << ",";
         args << ArgumentJsonFromMetadata(record.ApiId, 2, "SIZE_T", "dwLength", "in", std::to_string(record.Values64[2]), std::to_string(record.Values64[2]), std::to_string(record.Values64[2]));
         payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::CreateFileMappingW:
+    {
+        const std::string fileHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string attributesPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string namePointer = HexPointerValue(record.Values64[2], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hFile", "in", fileHandle, fileHandle, fileHandle) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPSECURITY_ATTRIBUTES", "lpFileMappingAttributes", "in", attributesPointer, attributesPointer, attributesPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "DWORD", "flProtect", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), FileMappingProtectionFlagsText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "DWORD", "dwMaximumSizeHigh", "in", std::to_string(record.Values32[1]), std::to_string(record.Values32[1]), DwordDecimalHexText(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 4, "DWORD", "dwMaximumSizeLow", "in", std::to_string(record.Values32[2]), std::to_string(record.Values32[2]), DwordDecimalHexText(record.Values32[2])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 5, "LPCWSTR", "lpName", "in", namePointer, namePointer, namePointer);
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::OpenFileMappingW:
+    {
+        const std::string namePointer = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "DWORD", "dwDesiredAccess", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), FileMappingAccessFlagsText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "BOOL", "bInheritHandle", "in", std::to_string(record.Values32[1]), std::to_string(record.Values32[1]), BoolText(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "LPCWSTR", "lpName", "in", namePointer, namePointer, namePointer);
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::MapViewOfFile:
+    {
+        const std::string mappingHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hFileMappingObject", "in", mappingHandle, mappingHandle, mappingHandle) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "dwDesiredAccess", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), FileMappingAccessFlagsText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "DWORD", "dwFileOffsetHigh", "in", std::to_string(record.Values32[1]), std::to_string(record.Values32[1]), DwordDecimalHexText(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "DWORD", "dwFileOffsetLow", "in", std::to_string(record.Values32[2]), std::to_string(record.Values32[2]), DwordDecimalHexText(record.Values32[2])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 4, "SIZE_T", "dwNumberOfBytesToMap", "in", std::to_string(record.Values64[1]), std::to_string(record.Values64[1]), std::to_string(record.Values64[1]));
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::UnmapViewOfFile:
+    {
+        const std::string baseAddress = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPCVOID", "lpBaseAddress", "in", baseAddress, baseAddress, baseAddress);
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
         break;
     }
     case KnMonTransportApiId::CreateThread:

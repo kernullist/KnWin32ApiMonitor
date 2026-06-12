@@ -101,6 +101,13 @@ $expectedIds = @(
     @{ Api = "VirtualQuery"; Id = 119 }
 )
 
+$memoryProtectionApis = @(
+    "VirtualAlloc",
+    "VirtualFree",
+    "VirtualProtect",
+    "VirtualQuery"
+)
+
 foreach ($expectedId in $expectedIds)
 {
     $entry = @($ids.apis | Where-Object { $_.module -eq $ProviderModule -and $_.name -eq $expectedId.Api } | Select-Object -First 1)
@@ -255,7 +262,7 @@ if ($freeType.decodedValue -notmatch "MEM_RELEASE")
     throw "VirtualFree did not decode free type: $($freeType | ConvertTo-Json -Depth 8)"
 }
 
-$memoryEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "memory" })
+$memoryEvents = @($result.capturedEvents | Where-Object { $memoryProtectionApis -contains $_.api })
 if ($memoryEvents.Count -lt 4)
 {
     throw "Wave 3 KERNEL32 memory capture did not include all memory events."

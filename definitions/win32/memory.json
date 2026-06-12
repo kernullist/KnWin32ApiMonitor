@@ -84,6 +84,89 @@
         { "name": "lpBuffer", "type": "PMEMORY_BASIC_INFORMATION", "direction": "out", "decode": "memory_basic_information_pointer", "captureTiming": "post" },
         { "name": "dwLength", "type": "SIZE_T", "direction": "in", "decode": "byte_count" }
       ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "CreateFileMappingW",
+      "family": "memory",
+      "category": "file_mapping_create",
+      "risk": "medium",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HANDLE",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "hFile", "type": "HANDLE", "direction": "in", "decode": "handle" },
+        { "name": "lpFileMappingAttributes", "type": "LPSECURITY_ATTRIBUTES", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "flProtect", "type": "DWORD", "direction": "in", "decode": "file_mapping_protection_flags", "flags": "file_mapping_protection_flags" },
+        { "name": "dwMaximumSizeHigh", "type": "DWORD", "direction": "in", "decode": "file_mapping_size_high" },
+        { "name": "dwMaximumSizeLow", "type": "DWORD", "direction": "in", "decode": "file_mapping_size_low" },
+        { "name": "lpName", "type": "LPCWSTR", "direction": "in", "decode": "file_mapping_name_pointer", "nullable": true }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "OpenFileMappingW",
+      "family": "memory",
+      "category": "file_mapping_open",
+      "risk": "medium",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HANDLE",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "dwDesiredAccess", "type": "DWORD", "direction": "in", "decode": "file_mapping_access_flags", "flags": "file_mapping_access_flags" },
+        { "name": "bInheritHandle", "type": "BOOL", "direction": "in", "decode": "dword_value" },
+        { "name": "lpName", "type": "LPCWSTR", "direction": "in", "decode": "file_mapping_name_pointer" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "MapViewOfFile",
+      "family": "memory",
+      "category": "file_mapping_map_view",
+      "risk": "medium",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "LPVOID",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "hFileMappingObject", "type": "HANDLE", "direction": "in", "decode": "handle" },
+        { "name": "dwDesiredAccess", "type": "DWORD", "direction": "in", "decode": "file_mapping_access_flags", "flags": "file_mapping_access_flags" },
+        { "name": "dwFileOffsetHigh", "type": "DWORD", "direction": "in", "decode": "file_mapping_offset_high" },
+        { "name": "dwFileOffsetLow", "type": "DWORD", "direction": "in", "decode": "file_mapping_offset_low" },
+        { "name": "dwNumberOfBytesToMap", "type": "SIZE_T", "direction": "in", "decode": "file_mapping_view_size" }
+      ]
+    },
+    {
+      "module": "KERNEL32.dll",
+      "name": "UnmapViewOfFile",
+      "family": "memory",
+      "category": "file_mapping_unmap_view",
+      "risk": "medium",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": 0 },
+      "failure": { "returnEqual": 0 },
+      "parameters": [
+        { "name": "lpBaseAddress", "type": "LPCVOID", "direction": "in", "decode": "mapped_view_pointer" }
+      ]
     }
   ]
 }

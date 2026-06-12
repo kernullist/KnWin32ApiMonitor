@@ -44,6 +44,31 @@
       ]
     },
     {
+      "name": "file_mapping_access_flags",
+      "values": [
+        { "name": "FILE_MAP_COPY", "value": "0x00000001" },
+        { "name": "FILE_MAP_WRITE", "value": "0x00000002" },
+        { "name": "FILE_MAP_READ", "value": "0x00000004" },
+        { "name": "FILE_MAP_EXECUTE", "value": "0x00000020" },
+        { "name": "FILE_MAP_ALL_ACCESS", "value": "0x000f001f" }
+      ]
+    },
+    {
+      "name": "file_mapping_protection_flags",
+      "values": [
+        { "name": "PAGE_READONLY", "value": "0x00000002" },
+        { "name": "PAGE_READWRITE", "value": "0x00000004" },
+        { "name": "PAGE_WRITECOPY", "value": "0x00000008" },
+        { "name": "PAGE_EXECUTE_READ", "value": "0x00000020" },
+        { "name": "PAGE_EXECUTE_READWRITE", "value": "0x00000040" },
+        { "name": "PAGE_EXECUTE_WRITECOPY", "value": "0x00000080" },
+        { "name": "SEC_COMMIT", "value": "0x08000000" },
+        { "name": "SEC_NOCACHE", "value": "0x10000000" },
+        { "name": "SEC_RESERVE", "value": "0x04000000" },
+        { "name": "SEC_LARGE_PAGES", "value": "0x80000000" }
+      ]
+    },
+    {
       "name": "file_flags_attributes",
       "values": [
         { "name": "FILE_ATTRIBUTE_READONLY", "value": "0x00000001" },

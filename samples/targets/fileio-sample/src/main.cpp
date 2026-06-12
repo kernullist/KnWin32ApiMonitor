@@ -1347,6 +1347,83 @@ bool RunMemoryProtectionProbe()
     return success;
 }
 
+bool RunFileMappingProbe()
+{
+    bool success = false;
+    HANDLE createdMapping = nullptr;
+    HANDLE openedMapping = nullptr;
+    void* view = nullptr;
+    const std::wstring mappingName = L"Local\\KnMonFileMappingProbe_" + std::to_wstring(GetCurrentProcessId());
+
+    do
+    {
+        constexpr DWORD MappingSize = 4096;
+
+        createdMapping = CreateFileMappingW(
+            INVALID_HANDLE_VALUE,
+            nullptr,
+            PAGE_READWRITE,
+            0,
+            MappingSize,
+            mappingName.c_str());
+
+        if (createdMapping == nullptr)
+        {
+            LogLastError("CreateFileMappingW(mapping)");
+            break;
+        }
+
+        openedMapping = OpenFileMappingW(FILE_MAP_READ | FILE_MAP_WRITE, FALSE, mappingName.c_str());
+        if (openedMapping == nullptr)
+        {
+            LogLastError("OpenFileMappingW(mapping)");
+            break;
+        }
+
+        view = MapViewOfFile(openedMapping, FILE_MAP_WRITE, 0, 0, MappingSize);
+        if (view == nullptr)
+        {
+            LogLastError("MapViewOfFile(mapping)");
+            break;
+        }
+
+        volatile unsigned char* bytes = static_cast<volatile unsigned char*>(view);
+        bytes[0] = 0x4D;
+
+        if (!UnmapViewOfFile(view))
+        {
+            LogLastError("UnmapViewOfFile(mapping)");
+            break;
+        }
+
+        view = nullptr;
+        std::cout << "file mapping roundtrip size=" << MappingSize << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (view != nullptr)
+    {
+        if (!UnmapViewOfFile(view))
+        {
+            LogLastError("UnmapViewOfFile(cleanup)");
+            success = false;
+        }
+    }
+
+    if (openedMapping != nullptr)
+    {
+        CloseHandle(openedMapping);
+    }
+
+    if (createdMapping != nullptr)
+    {
+        CloseHandle(createdMapping);
+    }
+
+    return success;
+}
+
 DWORD WINAPI ThreadLifecycleProbeThreadProc(LPVOID parameter)
 {
     DWORD* value = static_cast<DWORD*>(parameter);
@@ -2091,6 +2168,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunMemoryProtectionProbe())
+        {
+            break;
+        }
+
+        if (!RunFileMappingProbe())
         {
             break;
         }

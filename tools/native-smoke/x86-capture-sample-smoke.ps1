@@ -16,6 +16,10 @@ $requiredApis = @(
     "VirtualFree",
     "VirtualProtect",
     "VirtualQuery",
+    "CreateFileMappingW",
+    "OpenFileMappingW",
+    "MapViewOfFile",
+    "UnmapViewOfFile",
     "CreateThread",
     "OpenThread",
     "WaitForSingleObject",
@@ -959,12 +963,19 @@ if ($comArgs -cmatch "CoCreateInstance|CoGetClassObject|CoGetObject|RoGetActivat
 }
 
 $memoryEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "memory" })
-if ($memoryEvents.Count -lt 4)
+$memoryProtectionApis = @(
+    "VirtualAlloc",
+    "VirtualFree",
+    "VirtualProtect",
+    "VirtualQuery"
+)
+$memoryProtectionEvents = @($memoryEvents | Where-Object { $memoryProtectionApis -contains $_.api })
+if ($memoryProtectionEvents.Count -lt $memoryProtectionApis.Count)
 {
     throw "x86 capture did not include the selected KERNEL32 memory protection API slice."
 }
 
-$virtualAlloc = @($memoryEvents | Where-Object { $_.api -eq "VirtualAlloc" } | Select-Object -First 1)
+$virtualAlloc = @($memoryProtectionEvents | Where-Object { $_.api -eq "VirtualAlloc" } | Select-Object -First 1)
 if ($virtualAlloc.Count -ne 1 -or
     $virtualAlloc[0].module -ne "kernel32.dll" -or
     $virtualAlloc[0].apiCategory -ne "memory_allocate" -or
@@ -986,7 +997,7 @@ if ($virtualAllocArgs -notmatch "memory_allocation_type" -or
     throw "x86 VirtualAlloc arguments did not include expected allocation metadata: $virtualAllocArgs"
 }
 
-$virtualProtect = @($memoryEvents | Where-Object { $_.api -eq "VirtualProtect" } | Select-Object -First 1)
+$virtualProtect = @($memoryProtectionEvents | Where-Object { $_.api -eq "VirtualProtect" } | Select-Object -First 1)
 if ($virtualProtect.Count -ne 1 -or
     $virtualProtect[0].module -ne "kernel32.dll" -or
     $virtualProtect[0].apiCategory -ne "memory_protect" -or
@@ -1010,7 +1021,7 @@ if ($newProtectArg.Count -ne 1 -or
     throw "x86 VirtualProtect did not include expected protection transition metadata: $($virtualProtect[0].arguments | ConvertTo-Json -Depth 8)"
 }
 
-$virtualQuery = @($memoryEvents | Where-Object { $_.api -eq "VirtualQuery" } | Select-Object -First 1)
+$virtualQuery = @($memoryProtectionEvents | Where-Object { $_.api -eq "VirtualQuery" } | Select-Object -First 1)
 if ($virtualQuery.Count -ne 1 -or
     $virtualQuery[0].module -ne "kernel32.dll" -or
     $virtualQuery[0].apiCategory -ne "memory_query" -or
@@ -1034,7 +1045,7 @@ if ($queryBufferArg.Count -ne 1 -or
     throw "x86 VirtualQuery did not include decoded MEMORY_BASIC_INFORMATION metadata: $($queryBufferArg | ConvertTo-Json -Depth 8)"
 }
 
-$virtualFree = @($memoryEvents | Where-Object { $_.api -eq "VirtualFree" } | Select-Object -First 1)
+$virtualFree = @($memoryProtectionEvents | Where-Object { $_.api -eq "VirtualFree" } | Select-Object -First 1)
 if ($virtualFree.Count -ne 1 -or
     $virtualFree[0].module -ne "kernel32.dll" -or
     $virtualFree[0].apiCategory -ne "memory_free" -or
@@ -1051,10 +1062,157 @@ if ($freeTypeArg.Count -ne 1 -or
     throw "x86 VirtualFree did not include expected free metadata: $($freeTypeArg | ConvertTo-Json -Depth 8)"
 }
 
-$memoryPayload = $memoryEvents | ConvertTo-Json -Depth 12
+$memoryPayload = $memoryProtectionEvents | ConvertTo-Json -Depth 12
 if ($memoryPayload -cmatch "VirtualAllocEx|VirtualFreeEx|VirtualProtectEx|ReadProcessMemory|WriteProcessMemory|CreateRemoteThread|QueueUserAPC|NtMapViewOfSection|MapViewOfFile|SECTION_|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 KERNEL32 memory events appear to expose remote-memory, injection, file/PE/hash, credential, or byte-preview evidence: $memoryPayload"
+}
+
+$fileMappingApis = @(
+    "CreateFileMappingW",
+    "OpenFileMappingW",
+    "MapViewOfFile",
+    "UnmapViewOfFile"
+)
+
+$fileMappingEvents = @($result.capturedEvents | Where-Object { $fileMappingApis -contains $_.api })
+if ($fileMappingEvents.Count -lt $fileMappingApis.Count)
+{
+    throw "x86 capture did not include the selected KERNEL32 file-mapping API slice."
+}
+
+$createMapping = @($fileMappingEvents | Where-Object { $_.api -eq "CreateFileMappingW" } | Select-Object -First 1)
+if ($createMapping.Count -ne 1 -or
+    $createMapping[0].module -ne "kernel32.dll" -or
+    $createMapping[0].apiCategory -ne "file_mapping_create" -or
+    $createMapping[0].hookPolicy -ne "iat" -or
+    $createMapping[0].coverageStatus -ne "smoke_verified" -or
+    $createMapping[0].returnValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 CreateFileMappingW metadata or return evidence mismatch."
+}
+
+$createMappingFileArg = @($createMapping[0].arguments | Where-Object { $_.name -eq "hFile" } | Select-Object -First 1)
+$createMappingAttributesArg = @($createMapping[0].arguments | Where-Object { $_.name -eq "lpFileMappingAttributes" } | Select-Object -First 1)
+$createMappingProtectArg = @($createMapping[0].arguments | Where-Object { $_.name -eq "flProtect" } | Select-Object -First 1)
+$createMappingHighArg = @($createMapping[0].arguments | Where-Object { $_.name -eq "dwMaximumSizeHigh" } | Select-Object -First 1)
+$createMappingLowArg = @($createMapping[0].arguments | Where-Object { $_.name -eq "dwMaximumSizeLow" } | Select-Object -First 1)
+$createMappingNameArg = @($createMapping[0].arguments | Where-Object { $_.name -eq "lpName" } | Select-Object -First 1)
+if ($createMappingFileArg.Count -ne 1 -or
+    $createMappingFileArg[0].decodeAlias -ne "handle" -or
+    $createMappingFileArg[0].decodedValue -notmatch "^0x[fF]+$" -or
+    $createMappingAttributesArg.Count -ne 1 -or
+    $createMappingAttributesArg[0].decodeAlias -ne "pointer" -or
+    $createMappingAttributesArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]+$" -or
+    $createMappingProtectArg.Count -ne 1 -or
+    $createMappingProtectArg[0].decodeAlias -ne "file_mapping_protection_flags" -or
+    $createMappingProtectArg[0].decodedValue -notmatch "PAGE_READWRITE" -or
+    $createMappingHighArg.Count -ne 1 -or
+    $createMappingHighArg[0].decodeAlias -ne "file_mapping_size_high" -or
+    $createMappingHighArg[0].decodedValue -notmatch "^0" -or
+    $createMappingLowArg.Count -ne 1 -or
+    $createMappingLowArg[0].decodeAlias -ne "file_mapping_size_low" -or
+    $createMappingLowArg[0].decodedValue -notmatch "4096" -or
+    $createMappingLowArg[0].decodedValue -notmatch "0x00001000" -or
+    $createMappingNameArg.Count -ne 1 -or
+    $createMappingNameArg[0].decodeAlias -ne "file_mapping_name_pointer" -or
+    $createMappingNameArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 CreateFileMappingW did not include expected mapping create metadata: $($createMapping[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$openMapping = @($fileMappingEvents | Where-Object { $_.api -eq "OpenFileMappingW" } | Select-Object -First 1)
+if ($openMapping.Count -ne 1 -or
+    $openMapping[0].module -ne "kernel32.dll" -or
+    $openMapping[0].apiCategory -ne "file_mapping_open" -or
+    $openMapping[0].hookPolicy -ne "iat" -or
+    $openMapping[0].coverageStatus -ne "smoke_verified" -or
+    $openMapping[0].returnValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 OpenFileMappingW metadata or return evidence mismatch."
+}
+
+$openMappingAccessArg = @($openMapping[0].arguments | Where-Object { $_.name -eq "dwDesiredAccess" } | Select-Object -First 1)
+$openMappingInheritArg = @($openMapping[0].arguments | Where-Object { $_.name -eq "bInheritHandle" } | Select-Object -First 1)
+$openMappingNameArg = @($openMapping[0].arguments | Where-Object { $_.name -eq "lpName" } | Select-Object -First 1)
+if ($openMappingAccessArg.Count -ne 1 -or
+    $openMappingAccessArg[0].decodeAlias -ne "file_mapping_access_flags" -or
+    $openMappingAccessArg[0].decodedValue -notmatch "FILE_MAP_READ" -or
+    $openMappingAccessArg[0].decodedValue -notmatch "FILE_MAP_WRITE" -or
+    $openMappingInheritArg.Count -ne 1 -or
+    $openMappingInheritArg[0].decodeAlias -ne "dword_value" -or
+    $openMappingInheritArg[0].decodedValue -ne "FALSE" -or
+    $openMappingNameArg.Count -ne 1 -or
+    $openMappingNameArg[0].decodeAlias -ne "file_mapping_name_pointer" -or
+    $openMappingNameArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 OpenFileMappingW did not include expected mapping open metadata: $($openMapping[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$mapView = @($fileMappingEvents | Where-Object { $_.api -eq "MapViewOfFile" } | Select-Object -First 1)
+if ($mapView.Count -ne 1 -or
+    $mapView[0].module -ne "kernel32.dll" -or
+    $mapView[0].apiCategory -ne "file_mapping_map_view" -or
+    $mapView[0].hookPolicy -ne "iat" -or
+    $mapView[0].coverageStatus -ne "smoke_verified" -or
+    $mapView[0].returnValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 MapViewOfFile metadata or return evidence mismatch."
+}
+
+$mapViewHandleArg = @($mapView[0].arguments | Where-Object { $_.name -eq "hFileMappingObject" } | Select-Object -First 1)
+$mapViewAccessArg = @($mapView[0].arguments | Where-Object { $_.name -eq "dwDesiredAccess" } | Select-Object -First 1)
+$mapViewOffsetHighArg = @($mapView[0].arguments | Where-Object { $_.name -eq "dwFileOffsetHigh" } | Select-Object -First 1)
+$mapViewOffsetLowArg = @($mapView[0].arguments | Where-Object { $_.name -eq "dwFileOffsetLow" } | Select-Object -First 1)
+$mapViewSizeArg = @($mapView[0].arguments | Where-Object { $_.name -eq "dwNumberOfBytesToMap" } | Select-Object -First 1)
+if ($mapViewHandleArg.Count -ne 1 -or
+    $mapViewHandleArg[0].decodeAlias -ne "handle" -or
+    $mapViewHandleArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $mapViewAccessArg.Count -ne 1 -or
+    $mapViewAccessArg[0].decodeAlias -ne "file_mapping_access_flags" -or
+    $mapViewAccessArg[0].decodedValue -notmatch "FILE_MAP_WRITE" -or
+    $mapViewOffsetHighArg.Count -ne 1 -or
+    $mapViewOffsetHighArg[0].decodeAlias -ne "file_mapping_offset_high" -or
+    $mapViewOffsetHighArg[0].decodedValue -notmatch "^0" -or
+    $mapViewOffsetLowArg.Count -ne 1 -or
+    $mapViewOffsetLowArg[0].decodeAlias -ne "file_mapping_offset_low" -or
+    $mapViewOffsetLowArg[0].decodedValue -notmatch "^0" -or
+    $mapViewSizeArg.Count -ne 1 -or
+    $mapViewSizeArg[0].decodeAlias -ne "file_mapping_view_size" -or
+    $mapViewSizeArg[0].decodedValue -ne "4096")
+{
+    throw "x86 MapViewOfFile did not include expected view metadata: $($mapView[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+$unmapView = @($fileMappingEvents | Where-Object { $_.api -eq "UnmapViewOfFile" } | Select-Object -First 1)
+if ($unmapView.Count -ne 1 -or
+    $unmapView[0].module -ne "kernel32.dll" -or
+    $unmapView[0].apiCategory -ne "file_mapping_unmap_view" -or
+    $unmapView[0].returnValue -ne "TRUE")
+{
+    throw "x86 UnmapViewOfFile metadata or return evidence mismatch."
+}
+
+$unmapViewBaseArg = @($unmapView[0].arguments | Where-Object { $_.name -eq "lpBaseAddress" } | Select-Object -First 1)
+if ($unmapViewBaseArg.Count -ne 1 -or
+    $unmapViewBaseArg[0].decodeAlias -ne "mapped_view_pointer" -or
+    $unmapViewBaseArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 UnmapViewOfFile did not include expected base pointer metadata: $($unmapView[0].arguments | ConvertTo-Json -Depth 8)"
+}
+
+foreach ($fileMappingEvent in $fileMappingEvents)
+{
+    if (-not [string]::IsNullOrEmpty($fileMappingEvent.bufferPreview))
+    {
+        throw "x86 file-mapping event exposed bufferPreview: $($fileMappingEvent | ConvertTo-Json -Depth 8)"
+    }
+}
+
+$fileMappingPayload = $fileMappingEvents | ConvertTo-Json -Depth 12
+if ($fileMappingPayload -cmatch "KnMonFileMappingProbe|Global\\|Local\\|BaseNamedObjects|ObjectName|ObjectDirectory|ObjectManager|SecurityDescriptor|SECURITY_DESCRIPTOR|SID|ACL|TOKEN_|Privilege|Integrity|DuplicateHandle|NtMapViewOfSection|VirtualAllocEx|VirtualFreeEx|VirtualProtectEx|ReadProcessMemory|WriteProcessMemory|CreateRemoteThread|QueueUserAPC|NtQueueApcThread|SuspendThread|ResumeThread|GetThreadContext|SetThreadContext|TerminateThread|CONTEXT|Eip|Rip|Rsp|CallStack|StackTrace|StackWalk|StackFrame|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 KERNEL32 file-mapping events appear to expose mapping-name, namespace, mapped memory, security, stack, injection, PE/file/hash, credential, or byte-preview evidence: $fileMappingPayload"
 }
 
 $threadEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "thread" })

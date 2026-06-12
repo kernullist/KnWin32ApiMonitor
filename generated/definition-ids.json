@@ -809,6 +809,30 @@
       "module": "kernel32.dll",
       "name": "WaitForMultipleObjectsEx",
       "symbol": "WaitForMultipleObjectsEx"
+    },
+    {
+      "id": 136,
+      "module": "kernel32.dll",
+      "name": "CreateFileMappingW",
+      "symbol": "CreateFileMappingW"
+    },
+    {
+      "id": 137,
+      "module": "kernel32.dll",
+      "name": "OpenFileMappingW",
+      "symbol": "OpenFileMappingW"
+    },
+    {
+      "id": 138,
+      "module": "kernel32.dll",
+      "name": "MapViewOfFile",
+      "symbol": "MapViewOfFile"
+    },
+    {
+      "id": 139,
+      "module": "kernel32.dll",
+      "name": "UnmapViewOfFile",
+      "symbol": "UnmapViewOfFile"
     }
   ],
   "modules": [

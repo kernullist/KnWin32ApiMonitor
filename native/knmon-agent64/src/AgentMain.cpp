@@ -134,6 +134,10 @@ using VirtualAllocFn = LPVOID(WINAPI*)(LPVOID, SIZE_T, DWORD, DWORD);
 using VirtualFreeFn = BOOL(WINAPI*)(LPVOID, SIZE_T, DWORD);
 using VirtualProtectFn = BOOL(WINAPI*)(LPVOID, SIZE_T, DWORD, PDWORD);
 using VirtualQueryFn = SIZE_T(WINAPI*)(LPCVOID, PMEMORY_BASIC_INFORMATION, SIZE_T);
+using CreateFileMappingWFn = HANDLE(WINAPI*)(HANDLE, LPSECURITY_ATTRIBUTES, DWORD, DWORD, DWORD, LPCWSTR);
+using OpenFileMappingWFn = HANDLE(WINAPI*)(DWORD, BOOL, LPCWSTR);
+using MapViewOfFileFn = LPVOID(WINAPI*)(HANDLE, DWORD, DWORD, DWORD, SIZE_T);
+using UnmapViewOfFileFn = BOOL(WINAPI*)(LPCVOID);
 using CreateThreadFn = HANDLE(WINAPI*)(LPSECURITY_ATTRIBUTES, SIZE_T, LPTHREAD_START_ROUTINE, LPVOID, DWORD, LPDWORD);
 using OpenThreadFn = HANDLE(WINAPI*)(DWORD, BOOL, DWORD);
 using WaitForSingleObjectFn = DWORD(WINAPI*)(HANDLE, DWORD);
@@ -248,6 +252,10 @@ VirtualAllocFn g_originalVirtualAlloc = nullptr;
 VirtualFreeFn g_originalVirtualFree = nullptr;
 VirtualProtectFn g_originalVirtualProtect = nullptr;
 VirtualQueryFn g_originalVirtualQuery = nullptr;
+CreateFileMappingWFn g_originalCreateFileMappingW = nullptr;
+OpenFileMappingWFn g_originalOpenFileMappingW = nullptr;
+MapViewOfFileFn g_originalMapViewOfFile = nullptr;
+UnmapViewOfFileFn g_originalUnmapViewOfFile = nullptr;
 CreateThreadFn g_originalCreateThread = nullptr;
 OpenThreadFn g_originalOpenThread = nullptr;
 WaitForSingleObjectFn g_originalWaitForSingleObject = nullptr;
@@ -408,7 +416,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 90;
+constexpr std::size_t HookDefinitionCount = 94;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -2256,6 +2264,104 @@ void EmitVirtualQueryEvent(
         record->Values32[2] = localInfo.State;
         record->Values32[3] = localInfo.Protect;
         record->Values32[4] = localInfo.Type;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitCreateFileMappingWEvent(
+    HANDLE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE file,
+    LPSECURITY_ATTRIBUTES mappingAttributes,
+    DWORD protect,
+    DWORD maximumSizeHigh,
+    DWORD maximumSizeLow,
+    LPCWSTR name)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::CreateFileMappingW, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(mappingAttributes));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(name));
+        record->Values32[0] = protect;
+        record->Values32[1] = maximumSizeHigh;
+        record->Values32[2] = maximumSizeLow;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitOpenFileMappingWEvent(
+    HANDLE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    DWORD desiredAccess,
+    BOOL inheritHandle,
+    LPCWSTR name)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::OpenFileMappingW, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(name));
+        record->Values32[0] = desiredAccess;
+        record->Values32[1] = inheritHandle ? 1U : 0U;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitMapViewOfFileEvent(
+    LPVOID result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE mapping,
+    DWORD desiredAccess,
+    DWORD fileOffsetHigh,
+    DWORD fileOffsetLow,
+    SIZE_T bytesToMap)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::MapViewOfFile, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(mapping));
+        record->Values64[1] = static_cast<std::uint64_t>(bytesToMap);
+        record->Values32[0] = desiredAccess;
+        record->Values32[1] = fileOffsetHigh;
+        record->Values32[2] = fileOffsetLow;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitUnmapViewOfFileEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPCVOID baseAddress)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::UnmapViewOfFile, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result ? 1 : 0;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(baseAddress));
         CommitTransportRecord(record, overheadStart);
     }
 }
@@ -5251,6 +5357,10 @@ LPVOID WINAPI HookedVirtualAlloc(LPVOID address, SIZE_T size, DWORD allocationTy
 BOOL WINAPI HookedVirtualFree(LPVOID address, SIZE_T size, DWORD freeType);
 BOOL WINAPI HookedVirtualProtect(LPVOID address, SIZE_T size, DWORD newProtect, PDWORD oldProtect);
 SIZE_T WINAPI HookedVirtualQuery(LPCVOID address, PMEMORY_BASIC_INFORMATION buffer, SIZE_T length);
+HANDLE WINAPI HookedCreateFileMappingW(HANDLE file, LPSECURITY_ATTRIBUTES mappingAttributes, DWORD protect, DWORD maximumSizeHigh, DWORD maximumSizeLow, LPCWSTR name);
+HANDLE WINAPI HookedOpenFileMappingW(DWORD desiredAccess, BOOL inheritHandle, LPCWSTR name);
+LPVOID WINAPI HookedMapViewOfFile(HANDLE mapping, DWORD desiredAccess, DWORD fileOffsetHigh, DWORD fileOffsetLow, SIZE_T bytesToMap);
+BOOL WINAPI HookedUnmapViewOfFile(LPCVOID baseAddress);
 HANDLE WINAPI HookedCreateThread(LPSECURITY_ATTRIBUTES threadAttributes, SIZE_T stackSize, LPTHREAD_START_ROUTINE startAddress, LPVOID parameter, DWORD creationFlags, LPDWORD threadId);
 HANDLE WINAPI HookedOpenThread(DWORD desiredAccess, BOOL inheritHandle, DWORD threadId);
 DWORD WINAPI HookedWaitForSingleObject(HANDLE handle, DWORD milliseconds);
@@ -5345,6 +5455,10 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "kernel32.dll", "VirtualFree", reinterpret_cast<void*>(HookedVirtualFree), reinterpret_cast<void**>(&g_originalVirtualFree), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "VirtualProtect", reinterpret_cast<void*>(HookedVirtualProtect), reinterpret_cast<void**>(&g_originalVirtualProtect), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "VirtualQuery", reinterpret_cast<void*>(HookedVirtualQuery), reinterpret_cast<void**>(&g_originalVirtualQuery), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "CreateFileMappingW", reinterpret_cast<void*>(HookedCreateFileMappingW), reinterpret_cast<void**>(&g_originalCreateFileMappingW), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "OpenFileMappingW", reinterpret_cast<void*>(HookedOpenFileMappingW), reinterpret_cast<void**>(&g_originalOpenFileMappingW), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "MapViewOfFile", reinterpret_cast<void*>(HookedMapViewOfFile), reinterpret_cast<void**>(&g_originalMapViewOfFile), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "UnmapViewOfFile", reinterpret_cast<void*>(HookedUnmapViewOfFile), reinterpret_cast<void**>(&g_originalUnmapViewOfFile), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "CreateThread", reinterpret_cast<void*>(HookedCreateThread), reinterpret_cast<void**>(&g_originalCreateThread), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "OpenThread", reinterpret_cast<void*>(HookedOpenThread), reinterpret_cast<void**>(&g_originalOpenThread), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "WaitForSingleObject", reinterpret_cast<void*>(HookedWaitForSingleObject), reinterpret_cast<void**>(&g_originalWaitForSingleObject), false, true, false, 0, 0 },
@@ -6040,6 +6154,136 @@ SIZE_T WINAPI HookedVirtualQuery(LPCVOID address, PMEMORY_BASIC_INFORMATION buff
     if (HooksEnabled())
     {
         EmitVirtualQueryEvent(result, eventError, start, end, address, buffer, length);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HANDLE WINAPI HookedCreateFileMappingW(
+    HANDLE file,
+    LPSECURITY_ATTRIBUTES mappingAttributes,
+    DWORD protect,
+    DWORD maximumSizeHigh,
+    DWORD maximumSizeLow,
+    LPCWSTR name)
+{
+    if (g_inHook || !HooksEnabled() || g_originalCreateFileMappingW == nullptr)
+    {
+        if (g_originalCreateFileMappingW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalCreateFileMappingW(file, mappingAttributes, protect, maximumSizeHigh, maximumSizeLow, name);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HANDLE result = g_originalCreateFileMappingW(file, mappingAttributes, protect, maximumSizeHigh, maximumSizeLow, name);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitCreateFileMappingWEvent(result, eventError, start, end, file, mappingAttributes, protect, maximumSizeHigh, maximumSizeLow, name);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HANDLE WINAPI HookedOpenFileMappingW(DWORD desiredAccess, BOOL inheritHandle, LPCWSTR name)
+{
+    if (g_inHook || !HooksEnabled() || g_originalOpenFileMappingW == nullptr)
+    {
+        if (g_originalOpenFileMappingW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalOpenFileMappingW(desiredAccess, inheritHandle, name);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HANDLE result = g_originalOpenFileMappingW(desiredAccess, inheritHandle, name);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitOpenFileMappingWEvent(result, eventError, start, end, desiredAccess, inheritHandle, name);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+LPVOID WINAPI HookedMapViewOfFile(HANDLE mapping, DWORD desiredAccess, DWORD fileOffsetHigh, DWORD fileOffsetLow, SIZE_T bytesToMap)
+{
+    if (g_inHook || !HooksEnabled() || g_originalMapViewOfFile == nullptr)
+    {
+        if (g_originalMapViewOfFile == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return nullptr;
+        }
+
+        return g_originalMapViewOfFile(mapping, desiredAccess, fileOffsetHigh, fileOffsetLow, bytesToMap);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    LPVOID result = g_originalMapViewOfFile(mapping, desiredAccess, fileOffsetHigh, fileOffsetLow, bytesToMap);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitMapViewOfFileEvent(result, eventError, start, end, mapping, desiredAccess, fileOffsetHigh, fileOffsetLow, bytesToMap);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedUnmapViewOfFile(LPCVOID baseAddress)
+{
+    if (g_inHook || !HooksEnabled() || g_originalUnmapViewOfFile == nullptr)
+    {
+        if (g_originalUnmapViewOfFile == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalUnmapViewOfFile(baseAddress);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    BOOL result = g_originalUnmapViewOfFile(baseAddress);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitUnmapViewOfFileEvent(result, eventError, start, end, baseAddress);
     }
 
     SetLastError(lastError);
