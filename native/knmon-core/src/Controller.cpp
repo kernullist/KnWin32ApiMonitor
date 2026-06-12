@@ -2301,6 +2301,101 @@ std::string DwordDecimalHexText(std::uint32_t value)
     return std::to_string(value) + " (" + HexDwordValue(value) + ")";
 }
 
+std::string StdHandleText(std::uint32_t value)
+{
+    const char* name = nullptr;
+    switch (value)
+    {
+    case 0xFFFFFFF6U:
+        name = "STD_INPUT_HANDLE";
+        break;
+    case 0xFFFFFFF5U:
+        name = "STD_OUTPUT_HANDLE";
+        break;
+    case 0xFFFFFFF4U:
+        name = "STD_ERROR_HANDLE";
+        break;
+    default:
+        break;
+    }
+
+    if (name == nullptr)
+    {
+        return DwordDecimalHexText(value);
+    }
+
+    return HexDwordValue(value) + " (" + name + ")";
+}
+
+std::string FileTypeText(std::uint32_t value)
+{
+    const std::uint32_t baseType = value & 0x000000ffU;
+    const bool remote = (value & 0x00008000U) != 0;
+    const std::uint32_t remaining = value & ~(0x000000ffU | 0x00008000U);
+    const char* baseName = nullptr;
+
+    switch (baseType)
+    {
+    case 0x00000000U:
+        baseName = "FILE_TYPE_UNKNOWN";
+        break;
+    case 0x00000001U:
+        baseName = "FILE_TYPE_DISK";
+        break;
+    case 0x00000002U:
+        baseName = "FILE_TYPE_CHAR";
+        break;
+    case 0x00000003U:
+        baseName = "FILE_TYPE_PIPE";
+        break;
+    default:
+        break;
+    }
+
+    std::ostringstream stream;
+    stream << HexDwordValue(value) << " (";
+    bool hasName = false;
+    if (baseName != nullptr)
+    {
+        stream << baseName;
+        hasName = true;
+    }
+    else
+    {
+        stream << "base=" << HexDwordValue(baseType);
+        hasName = true;
+    }
+
+    if (remote)
+    {
+        stream << "|FILE_TYPE_REMOTE";
+    }
+
+    if (remaining != 0)
+    {
+        if (hasName)
+        {
+            stream << "|";
+        }
+
+        stream << "unknown=" << HexDwordValue(remaining);
+    }
+
+    stream << ")";
+    return stream.str();
+}
+
+std::string HandleInformationFlagsText(std::uint32_t value)
+{
+    static constexpr FlagName Flags[] =
+    {
+        { 0x00000001U, "HANDLE_FLAG_INHERIT" },
+        { 0x00000002U, "HANDLE_FLAG_PROTECT_FROM_CLOSE" },
+    };
+
+    return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
+}
+
 std::string BoolText(std::uint32_t value)
 {
     return value == 0 ? "FALSE" : "TRUE";
@@ -2880,6 +2975,45 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         const std::string threadIdValue = DwordDecimalHexText(static_cast<std::uint32_t>(record.ReturnValue));
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "Thread", "in", threadHandle, threadHandle, threadHandle);
         payload = ApiCallPayload(result, record, threadIdValue, args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::GetStdHandle:
+    {
+        const std::string stdHandleValue = StdHandleText(record.Values32[0]);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "DWORD", "nStdHandle", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), stdHandleValue);
+        payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::GetFileType:
+    {
+        const std::string fileHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string fileTypeValue = FileTypeText(static_cast<std::uint32_t>(record.ReturnValue));
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hFile", "in", fileHandle, fileHandle, fileHandle);
+        payload = ApiCallPayload(result, record, fileTypeValue, args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::GetHandleInformation:
+    {
+        const std::string objectHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string flagsPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const bool flagsDecoded = static_cast<KnMonDecodeStatus>(record.Values32[0]) == KnMonDecodeStatus::Decoded;
+        const std::string flagsValue = HexDwordValue(record.Values32[1]);
+        const std::string flagsPost = flagsDecoded ? flagsValue : flagsPointer;
+        const std::string flagsDecodedValue = flagsDecoded ?
+            HandleInformationFlagsText(record.Values32[1]) :
+            (DecodeStatusName(record.Values32[0]) + ";pointer=" + flagsPointer);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hObject", "in", objectHandle, objectHandle, objectHandle) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPDWORD", "lpdwFlags", "out", flagsPointer, flagsPost, flagsDecodedValue, DecodeStatusName(record.Values32[0]));
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::SetHandleInformation:
+    {
+        const std::string objectHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hObject", "in", objectHandle, objectHandle, objectHandle) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "dwMask", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HandleInformationFlagsText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "DWORD", "dwFlags", "in", HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]), HandleInformationFlagsText(record.Values32[1]));
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
         break;
     }
     case KnMonTransportApiId::CreateThread:

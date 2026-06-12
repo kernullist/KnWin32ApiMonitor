@@ -144,6 +144,10 @@ using GetCurrentThreadFn = HANDLE(WINAPI*)();
 using GetCurrentThreadIdFn = DWORD(WINAPI*)();
 using GetProcessIdFn = DWORD(WINAPI*)(HANDLE);
 using GetThreadIdFn = DWORD(WINAPI*)(HANDLE);
+using GetStdHandleFn = HANDLE(WINAPI*)(DWORD);
+using GetFileTypeFn = DWORD(WINAPI*)(HANDLE);
+using GetHandleInformationFn = BOOL(WINAPI*)(HANDLE, LPDWORD);
+using SetHandleInformationFn = BOOL(WINAPI*)(HANDLE, DWORD, DWORD);
 using CreateThreadFn = HANDLE(WINAPI*)(LPSECURITY_ATTRIBUTES, SIZE_T, LPTHREAD_START_ROUTINE, LPVOID, DWORD, LPDWORD);
 using OpenThreadFn = HANDLE(WINAPI*)(DWORD, BOOL, DWORD);
 using WaitForSingleObjectFn = DWORD(WINAPI*)(HANDLE, DWORD);
@@ -268,6 +272,10 @@ GetCurrentThreadFn g_originalGetCurrentThread = nullptr;
 GetCurrentThreadIdFn g_originalGetCurrentThreadId = nullptr;
 GetProcessIdFn g_originalGetProcessId = nullptr;
 GetThreadIdFn g_originalGetThreadId = nullptr;
+GetStdHandleFn g_originalGetStdHandle = nullptr;
+GetFileTypeFn g_originalGetFileType = nullptr;
+GetHandleInformationFn g_originalGetHandleInformation = nullptr;
+SetHandleInformationFn g_originalSetHandleInformation = nullptr;
 CreateThreadFn g_originalCreateThread = nullptr;
 OpenThreadFn g_originalOpenThread = nullptr;
 WaitForSingleObjectFn g_originalWaitForSingleObject = nullptr;
@@ -428,7 +436,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 100;
+constexpr std::size_t HookDefinitionCount = 104;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -2480,6 +2488,109 @@ void EmitGetThreadIdEvent(
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetThreadId, "kernel32.dll", start, end, errorCode);
         record->ReturnValue = result;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(thread));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetStdHandleEvent(
+    HANDLE result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    DWORD stdHandle)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetStdHandle, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values32[0] = stdHandle;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetFileTypeEvent(
+    DWORD result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE file)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetFileType, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetHandleInformationEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE object,
+    LPDWORD flags)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        DWORD flagsValue = 0;
+        std::uint32_t flagsStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+
+        if (result)
+        {
+            if (flags == nullptr)
+            {
+                flagsStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            }
+            else if (ReadCurrentProcessValue(flags, &flagsValue))
+            {
+                flagsStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+            }
+            else
+            {
+                flagsStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            }
+        }
+
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetHandleInformation, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result ? 1 : 0;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(object));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(flags));
+        record->Values32[0] = flagsStatus;
+        record->Values32[1] = flagsValue;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitSetHandleInformationEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE object,
+    DWORD mask,
+    DWORD flags)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::SetHandleInformation, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result ? 1 : 0;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(object));
+        record->Values32[0] = mask;
+        record->Values32[1] = flags;
         CommitTransportRecord(record, overheadStart);
     }
 }
@@ -5485,6 +5596,10 @@ HANDLE WINAPI HookedGetCurrentThread();
 DWORD WINAPI HookedGetCurrentThreadId();
 DWORD WINAPI HookedGetProcessId(HANDLE process);
 DWORD WINAPI HookedGetThreadId(HANDLE thread);
+HANDLE WINAPI HookedGetStdHandle(DWORD stdHandle);
+DWORD WINAPI HookedGetFileType(HANDLE file);
+BOOL WINAPI HookedGetHandleInformation(HANDLE object, LPDWORD flags);
+BOOL WINAPI HookedSetHandleInformation(HANDLE object, DWORD mask, DWORD flags);
 HANDLE WINAPI HookedCreateThread(LPSECURITY_ATTRIBUTES threadAttributes, SIZE_T stackSize, LPTHREAD_START_ROUTINE startAddress, LPVOID parameter, DWORD creationFlags, LPDWORD threadId);
 HANDLE WINAPI HookedOpenThread(DWORD desiredAccess, BOOL inheritHandle, DWORD threadId);
 DWORD WINAPI HookedWaitForSingleObject(HANDLE handle, DWORD milliseconds);
@@ -5589,6 +5704,10 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "kernel32.dll", "GetCurrentThreadId", reinterpret_cast<void*>(HookedGetCurrentThreadId), reinterpret_cast<void**>(&g_originalGetCurrentThreadId), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetProcessId", reinterpret_cast<void*>(HookedGetProcessId), reinterpret_cast<void**>(&g_originalGetProcessId), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetThreadId", reinterpret_cast<void*>(HookedGetThreadId), reinterpret_cast<void**>(&g_originalGetThreadId), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "GetStdHandle", reinterpret_cast<void*>(HookedGetStdHandle), reinterpret_cast<void**>(&g_originalGetStdHandle), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "GetFileType", reinterpret_cast<void*>(HookedGetFileType), reinterpret_cast<void**>(&g_originalGetFileType), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "GetHandleInformation", reinterpret_cast<void*>(HookedGetHandleInformation), reinterpret_cast<void**>(&g_originalGetHandleInformation), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "SetHandleInformation", reinterpret_cast<void*>(HookedSetHandleInformation), reinterpret_cast<void**>(&g_originalSetHandleInformation), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "CreateThread", reinterpret_cast<void*>(HookedCreateThread), reinterpret_cast<void**>(&g_originalCreateThread), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "OpenThread", reinterpret_cast<void*>(HookedOpenThread), reinterpret_cast<void**>(&g_originalOpenThread), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "WaitForSingleObject", reinterpret_cast<void*>(HookedWaitForSingleObject), reinterpret_cast<void**>(&g_originalWaitForSingleObject), false, true, false, 0, 0 },
@@ -6600,6 +6719,130 @@ DWORD WINAPI HookedGetThreadId(HANDLE thread)
     if (HooksEnabled())
     {
         EmitGetThreadIdEvent(result, eventError, start, end, thread);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HANDLE WINAPI HookedGetStdHandle(DWORD stdHandle)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetStdHandle == nullptr)
+    {
+        if (g_originalGetStdHandle == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return INVALID_HANDLE_VALUE;
+        }
+
+        return g_originalGetStdHandle(stdHandle);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HANDLE result = g_originalGetStdHandle(stdHandle);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == INVALID_HANDLE_VALUE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitGetStdHandleEvent(result, eventError, start, end, stdHandle);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+DWORD WINAPI HookedGetFileType(HANDLE file)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetFileType == nullptr)
+    {
+        if (g_originalGetFileType == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FILE_TYPE_UNKNOWN;
+        }
+
+        return g_originalGetFileType(file);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    DWORD result = g_originalGetFileType(file);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FILE_TYPE_UNKNOWN ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitGetFileTypeEvent(result, eventError, start, end, file);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedGetHandleInformation(HANDLE object, LPDWORD flags)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetHandleInformation == nullptr)
+    {
+        if (g_originalGetHandleInformation == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalGetHandleInformation(object, flags);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    BOOL result = g_originalGetHandleInformation(object, flags);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitGetHandleInformationEvent(result, eventError, start, end, object, flags);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedSetHandleInformation(HANDLE object, DWORD mask, DWORD flags)
+{
+    if (g_inHook || !HooksEnabled() || g_originalSetHandleInformation == nullptr)
+    {
+        if (g_originalSetHandleInformation == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalSetHandleInformation(object, mask, flags);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    BOOL result = g_originalSetHandleInformation(object, mask, flags);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitSetHandleInformationEvent(result, eventError, start, end, object, mask, flags);
     }
 
     SetLastError(lastError);

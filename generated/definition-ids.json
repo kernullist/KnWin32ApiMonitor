@@ -869,6 +869,30 @@
       "module": "kernel32.dll",
       "name": "GetThreadId",
       "symbol": "GetThreadId"
+    },
+    {
+      "id": 146,
+      "module": "kernel32.dll",
+      "name": "GetStdHandle",
+      "symbol": "GetStdHandle"
+    },
+    {
+      "id": 147,
+      "module": "kernel32.dll",
+      "name": "GetFileType",
+      "symbol": "GetFileType"
+    },
+    {
+      "id": 148,
+      "module": "kernel32.dll",
+      "name": "GetHandleInformation",
+      "symbol": "GetHandleInformation"
+    },
+    {
+      "id": 149,
+      "module": "kernel32.dll",
+      "name": "SetHandleInformation",
+      "symbol": "SetHandleInformation"
     }
   ],
   "modules": [

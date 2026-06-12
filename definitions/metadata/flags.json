@@ -54,6 +54,15 @@
       ]
     },
     {
+      "name": "file_type_flags",
+      "values": [
+        { "name": "FILE_TYPE_DISK", "value": "0x00000001" },
+        { "name": "FILE_TYPE_CHAR", "value": "0x00000002" },
+        { "name": "FILE_TYPE_PIPE", "value": "0x00000003" },
+        { "name": "FILE_TYPE_REMOTE", "value": "0x00008000" }
+      ]
+    },
+    {
       "name": "file_mapping_protection_flags",
       "values": [
         { "name": "PAGE_READONLY", "value": "0x00000002" },
@@ -137,6 +146,13 @@
         { "name": "LOAD_LIBRARY_SEARCH_SYSTEM32", "value": "0x00000800" },
         { "name": "LOAD_LIBRARY_SEARCH_DEFAULT_DIRS", "value": "0x00001000" },
         { "name": "LOAD_LIBRARY_SAFE_CURRENT_DIRS", "value": "0x00002000" }
+      ]
+    },
+    {
+      "name": "handle_information_flags",
+      "values": [
+        { "name": "HANDLE_FLAG_INHERIT", "value": "0x00000001" },
+        { "name": "HANDLE_FLAG_PROTECT_FROM_CLOSE", "value": "0x00000002" }
       ]
     },
     {

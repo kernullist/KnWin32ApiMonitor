@@ -1472,6 +1472,80 @@ bool RunProcessThreadIdentityProbe()
     return success;
 }
 
+bool RunHandleMetadataProbe()
+{
+    bool success = false;
+    HANDLE fileHandle = INVALID_HANDLE_VALUE;
+    const std::wstring path = BuildSamplePath();
+
+    do
+    {
+        fileHandle = CreateFileW(
+            path.c_str(),
+            GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_READ,
+            nullptr,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr);
+
+        if (fileHandle == INVALID_HANDLE_VALUE)
+        {
+            LogLastError("CreateFileW(handle-metadata)");
+            break;
+        }
+
+        HANDLE stdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+        (void)stdOutput;
+
+        const DWORD fileType = GetFileType(fileHandle);
+        if (fileType != FILE_TYPE_DISK)
+        {
+            std::cout << "GetFileType(handle-metadata) returned 0x"
+                      << std::hex << fileType << std::dec << "\n";
+            break;
+        }
+
+        DWORD flags = 0;
+        if (!GetHandleInformation(fileHandle, &flags))
+        {
+            LogLastError("GetHandleInformation(handle-metadata)");
+            break;
+        }
+
+        if (!SetHandleInformation(fileHandle, HANDLE_FLAG_INHERIT, 0))
+        {
+            LogLastError("SetHandleInformation(handle-metadata)");
+            break;
+        }
+
+        DWORD updatedFlags = 0;
+        if (!GetHandleInformation(fileHandle, &updatedFlags))
+        {
+            LogLastError("GetHandleInformation(handle-metadata-after-set)");
+            break;
+        }
+
+        if ((updatedFlags & HANDLE_FLAG_INHERIT) != 0)
+        {
+            std::cout << "handle inherit flag remained set\n";
+            break;
+        }
+
+        std::cout << "handle metadata flags=0x"
+                  << std::hex << updatedFlags << std::dec << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (fileHandle != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(fileHandle);
+    }
+
+    return success;
+}
+
 DWORD WINAPI ThreadLifecycleProbeThreadProc(LPVOID parameter)
 {
     DWORD* value = static_cast<DWORD*>(parameter);
@@ -2221,6 +2295,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunFileMappingProbe())
+        {
+            break;
+        }
+
+        if (!RunHandleMetadataProbe())
         {
             break;
         }

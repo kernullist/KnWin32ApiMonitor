@@ -152,6 +152,10 @@ enum class KnMonTransportApiId : std::uint16_t
     GetCurrentThreadId = 143,
     GetProcessId = 144,
     GetThreadId = 145,
+    GetStdHandle = 146,
+    GetFileType = 147,
+    GetHandleInformation = 148,
+    SetHandleInformation = 149,
 };
 
 enum class KnMonTransportModuleId : std::uint16_t

@@ -26,6 +26,10 @@ $requiredApis = @(
     "GetCurrentThreadId",
     "GetProcessId",
     "GetThreadId",
+    "GetStdHandle",
+    "GetFileType",
+    "GetHandleInformation",
+    "SetHandleInformation",
     "CreateThread",
     "OpenThread",
     "WaitForSingleObject",
@@ -1365,6 +1369,144 @@ $identityPayload = $identityEvents | ConvertTo-Json -Depth 12
 if ($identityPayload -cmatch "CommandLine|Environment|GetEnvironment|TOKEN_|TokenPrivileges|LookupAccount|SecurityDescriptor|SECURITY_DESCRIPTOR|\bSID\b|\bACL\b|Process32First|Process32Next|CreateToolhelp32Snapshot|EnumProcesses|OpenProcess|CreateProcessW|TerminateProcess|DuplicateHandle|OpenThread|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|VirtualFreeEx|VirtualProtectEx|CreateRemoteThread|QueueUserAPC|NtQueueApcThread|SuspendThread|ResumeThread|GetThreadContext|SetThreadContext|CONTEXT|Eip|Rip|Rsp|CallStack|StackTrace|StackWalk|StackFrame|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 KERNEL32 process/thread identity events appear to expose command-line, environment, token, security, enumeration, remote-memory, remote-thread, stack, injection, PE/file/hash, credential, or byte-preview evidence: $identityPayload"
+}
+
+$handleApis = @(
+    "GetStdHandle",
+    "GetFileType",
+    "GetHandleInformation",
+    "SetHandleInformation"
+)
+
+$handleEvents = @($result.capturedEvents | Where-Object { $handleApis -contains $_.api })
+if ($handleEvents.Count -lt $handleApis.Count)
+{
+    throw "x86 capture did not include the selected KERNEL32 handle metadata API slice."
+}
+
+$handleExpected = @(
+    @{ Api = "GetStdHandle"; Family = "handle"; Category = "standard_handle"; Args = @(
+        @{ Name = "nStdHandle"; Alias = "std_handle_selector"; Timing = "pre" }
+    ) },
+    @{ Api = "GetFileType"; Family = "handle"; Category = "handle_metadata"; Args = @(
+        @{ Name = "hFile"; Alias = "handle"; Timing = "pre" }
+    ) },
+    @{ Api = "GetHandleInformation"; Family = "handle"; Category = "handle_metadata"; Args = @(
+        @{ Name = "hObject"; Alias = "handle"; Timing = "pre" },
+        @{ Name = "lpdwFlags"; Alias = "handle_information_flags_pointer"; Timing = "post" }
+    ) },
+    @{ Api = "SetHandleInformation"; Family = "handle"; Category = "handle_metadata"; Args = @(
+        @{ Name = "hObject"; Alias = "handle"; Timing = "pre" },
+        @{ Name = "dwMask"; Alias = "handle_information_mask"; Timing = "pre" },
+        @{ Name = "dwFlags"; Alias = "handle_information_flags"; Timing = "pre" }
+    ) }
+)
+
+foreach ($expectedHandle in $handleExpected)
+{
+    $event = @($handleEvents | Where-Object { $_.api -eq $expectedHandle.Api } | Select-Object -First 1)
+    if ($event.Count -ne 1 -or
+        $event[0].module -ne "kernel32.dll" -or
+        $event[0].apiFamily -ne $expectedHandle.Family -or
+        $event[0].apiCategory -ne $expectedHandle.Category -or
+        $event[0].hookPolicy -ne "iat" -or
+        $event[0].coverageStatus -ne "smoke_verified" -or
+        $null -eq $event[0].durationUs -or
+        $event[0].durationUs -lt 0)
+    {
+        throw "x86 $($expectedHandle.Api) handle metadata mismatch: $($event | ConvertTo-Json -Depth 8)"
+    }
+
+    if (-not [string]::IsNullOrEmpty($event[0].bufferPreview))
+    {
+        throw "x86 $($expectedHandle.Api) exposed bufferPreview: $($event[0] | ConvertTo-Json -Depth 8)"
+    }
+
+    foreach ($expectedArg in $expectedHandle.Args)
+    {
+        $argument = @($event[0].arguments | Where-Object { $_.name -eq $expectedArg.Name } | Select-Object -First 1)
+        if ($argument.Count -ne 1 -or
+            $argument[0].decodeAlias -ne $expectedArg.Alias -or
+            $argument[0].captureTiming -ne $expectedArg.Timing)
+        {
+            throw "x86 $($expectedHandle.Api) $($expectedArg.Name) metadata mismatch: $($argument | ConvertTo-Json -Depth 8)"
+        }
+    }
+}
+
+$stdHandle = @($handleEvents | Where-Object { $_.api -eq "GetStdHandle" } | Select-Object -First 1)
+if ($stdHandle.Count -ne 1 -or $stdHandle[0].returnValue -notmatch "^0x[0-9a-fA-F]+$")
+{
+    throw "x86 GetStdHandle return evidence mismatch: $($stdHandle | ConvertTo-Json -Depth 8)"
+}
+
+$stdSelector = @($stdHandle[0].arguments | Where-Object { $_.name -eq "nStdHandle" } | Select-Object -First 1)
+if ($stdSelector.Count -ne 1 -or $stdSelector[0].decodedValue -notmatch "STD_OUTPUT_HANDLE")
+{
+    throw "x86 GetStdHandle did not capture STD_OUTPUT_HANDLE selector: $($stdSelector | ConvertTo-Json -Depth 8)"
+}
+
+$fileType = @($handleEvents | Where-Object { $_.api -eq "GetFileType" } | Select-Object -First 1)
+if ($fileType.Count -ne 1 -or $fileType[0].returnValue -notmatch "FILE_TYPE_DISK")
+{
+    throw "x86 GetFileType did not return FILE_TYPE_DISK: $($fileType | ConvertTo-Json -Depth 8)"
+}
+
+$fileTypeHandle = @($fileType[0].arguments | Where-Object { $_.name -eq "hFile" } | Select-Object -First 1)
+if ($fileTypeHandle.Count -ne 1 -or $fileTypeHandle[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 GetFileType did not capture a file handle: $($fileTypeHandle | ConvertTo-Json -Depth 8)"
+}
+
+$getHandleInfoEvents = @($handleEvents | Where-Object { $_.api -eq "GetHandleInformation" })
+if ($getHandleInfoEvents.Count -lt 2)
+{
+    throw "x86 expected at least two GetHandleInformation events, got $($getHandleInfoEvents.Count)."
+}
+
+foreach ($event in $getHandleInfoEvents)
+{
+    if ($event.returnValue -ne "TRUE")
+    {
+        throw "x86 GetHandleInformation did not succeed: $($event | ConvertTo-Json -Depth 8)"
+    }
+
+    $handleArg = @($event.arguments | Where-Object { $_.name -eq "hObject" } | Select-Object -First 1)
+    $flagsArg = @($event.arguments | Where-Object { $_.name -eq "lpdwFlags" } | Select-Object -First 1)
+    if ($handleArg.Count -ne 1 -or
+        $handleArg[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+        $flagsArg.Count -ne 1 -or
+        $flagsArg[0].rawValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+        $flagsArg[0].decodeStatus -ne "decoded" -or
+        $flagsArg[0].decodedValue -notmatch "0x[0-9a-fA-F]{8}")
+    {
+        throw "x86 GetHandleInformation handle/flags evidence mismatch: $($event | ConvertTo-Json -Depth 8)"
+    }
+}
+
+$setHandleInfo = @($handleEvents | Where-Object { $_.api -eq "SetHandleInformation" } | Select-Object -First 1)
+if ($setHandleInfo.Count -ne 1 -or $setHandleInfo[0].returnValue -ne "TRUE")
+{
+    throw "x86 SetHandleInformation did not succeed: $($setHandleInfo | ConvertTo-Json -Depth 8)"
+}
+
+$setHandle = @($setHandleInfo[0].arguments | Where-Object { $_.name -eq "hObject" } | Select-Object -First 1)
+$mask = @($setHandleInfo[0].arguments | Where-Object { $_.name -eq "dwMask" } | Select-Object -First 1)
+$flags = @($setHandleInfo[0].arguments | Where-Object { $_.name -eq "dwFlags" } | Select-Object -First 1)
+if ($setHandle.Count -ne 1 -or
+    $setHandle[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $mask.Count -ne 1 -or
+    $mask[0].decodedValue -notmatch "HANDLE_FLAG_INHERIT" -or
+    $flags.Count -ne 1 -or
+    $flags[0].decodedValue -notmatch "none")
+{
+    throw "x86 SetHandleInformation metadata mismatch: $($setHandleInfo | ConvertTo-Json -Depth 8)"
+}
+
+$handlePayload = $handleEvents | ConvertTo-Json -Depth 12
+if ($handlePayload -cmatch "ObjectName|ObjectType|NtQueryObject|SystemHandle|SystemExtendedHandle|DuplicateHandle|SecurityDescriptor|SECURITY_DESCRIPTOR|\bSID\b|\bACL\b|TOKEN_|TokenPrivileges|LookupAccount|CommandLine|Environment|GetEnvironment|Process32First|Process32Next|CreateToolhelp32Snapshot|EnumProcesses|OpenProcess|CreateProcessW|TerminateProcess|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|VirtualFreeEx|VirtualProtectEx|CreateRemoteThread|QueueUserAPC|NtQueueApcThread|SuspendThread|ResumeThread|GetThreadContext|SetThreadContext|CONTEXT|Eip|Rip|Rsp|CallStack|StackTrace|StackWalk|StackFrame|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 KERNEL32 handle metadata events appear to expose object-name, security, duplication, payload, command-line, environment, remote-memory, remote-thread, stack, injection, PE/file/hash, credential, or byte-preview evidence: $handlePayload"
 }
 
 $threadEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "thread" })

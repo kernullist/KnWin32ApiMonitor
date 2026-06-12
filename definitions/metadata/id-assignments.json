@@ -165,6 +165,10 @@
     { "id": 142, "module": "kernel32.dll", "name": "GetCurrentThread", "symbol": "GetCurrentThread" },
     { "id": 143, "module": "kernel32.dll", "name": "GetCurrentThreadId", "symbol": "GetCurrentThreadId" },
     { "id": 144, "module": "kernel32.dll", "name": "GetProcessId", "symbol": "GetProcessId" },
-    { "id": 145, "module": "kernel32.dll", "name": "GetThreadId", "symbol": "GetThreadId" }
+    { "id": 145, "module": "kernel32.dll", "name": "GetThreadId", "symbol": "GetThreadId" },
+    { "id": 146, "module": "kernel32.dll", "name": "GetStdHandle", "symbol": "GetStdHandle" },
+    { "id": 147, "module": "kernel32.dll", "name": "GetFileType", "symbol": "GetFileType" },
+    { "id": 148, "module": "kernel32.dll", "name": "GetHandleInformation", "symbol": "GetHandleInformation" },
+    { "id": 149, "module": "kernel32.dll", "name": "SetHandleInformation", "symbol": "SetHandleInformation" }
   ]
 }

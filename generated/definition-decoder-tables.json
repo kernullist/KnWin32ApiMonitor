@@ -3461,6 +3461,102 @@
         "returnNotEqual": 0
       },
       "symbol": "GetThreadId"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "standard_handle",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "GetLastError",
+      "failure": {
+        "returnEqual": "INVALID_HANDLE_VALUE"
+      },
+      "family": "handle",
+      "firstParameterIndex": 512,
+      "hookPolicy": "iat",
+      "id": 146,
+      "module": "kernel32.dll",
+      "moduleId": 1,
+      "name": "GetStdHandle",
+      "parameterCount": 1,
+      "returnType": "HANDLE",
+      "risk": "low",
+      "source": "definitions/win32/handle.json",
+      "success": {
+        "returnNotEqual": "INVALID_HANDLE_VALUE"
+      },
+      "symbol": "GetStdHandle"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "handle_metadata",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "GetLastError",
+      "failure": {
+        "returnEqual": "FILE_TYPE_UNKNOWN"
+      },
+      "family": "handle",
+      "firstParameterIndex": 513,
+      "hookPolicy": "iat",
+      "id": 147,
+      "module": "kernel32.dll",
+      "moduleId": 1,
+      "name": "GetFileType",
+      "parameterCount": 1,
+      "returnType": "DWORD",
+      "risk": "low",
+      "source": "definitions/win32/handle.json",
+      "success": {
+        "returnNotEqual": "FILE_TYPE_UNKNOWN"
+      },
+      "symbol": "GetFileType"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "handle_metadata",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "GetLastError",
+      "failure": {
+        "returnEqual": 0
+      },
+      "family": "handle",
+      "firstParameterIndex": 514,
+      "hookPolicy": "iat",
+      "id": 148,
+      "module": "kernel32.dll",
+      "moduleId": 1,
+      "name": "GetHandleInformation",
+      "parameterCount": 2,
+      "returnType": "BOOL",
+      "risk": "low",
+      "source": "definitions/win32/handle.json",
+      "success": {
+        "returnNotEqual": 0
+      },
+      "symbol": "GetHandleInformation"
+    },
+    {
+      "callingConvention": "stdcall",
+      "category": "handle_metadata",
+      "coverageStatus": "smoke_verified",
+      "errorSource": "GetLastError",
+      "failure": {
+        "returnEqual": 0
+      },
+      "family": "handle",
+      "firstParameterIndex": 516,
+      "hookPolicy": "iat",
+      "id": 149,
+      "module": "kernel32.dll",
+      "moduleId": 1,
+      "name": "SetHandleInformation",
+      "parameterCount": 3,
+      "returnType": "BOOL",
+      "risk": "low",
+      "source": "definitions/win32/handle.json",
+      "success": {
+        "returnNotEqual": 0
+      },
+      "symbol": "SetHandleInformation"
     }
   ],
   "decodeAliases": [
@@ -3754,6 +3850,15 @@
     },
     {
       "enum": "",
+      "flags": "file_type_flags",
+      "kind": "flags",
+      "maxPreviewBytes": 0,
+      "name": "file_type_value",
+      "preview": "symbolic_mask",
+      "readsTargetMemory": false
+    },
+    {
+      "enum": "",
       "flags": "",
       "kind": "object",
       "maxPreviewBytes": 64,
@@ -3795,6 +3900,33 @@
       "maxPreviewBytes": 0,
       "name": "handle",
       "preview": "pointer",
+      "readsTargetMemory": false
+    },
+    {
+      "enum": "",
+      "flags": "handle_information_flags",
+      "kind": "flags",
+      "maxPreviewBytes": 0,
+      "name": "handle_information_flags",
+      "preview": "symbolic_mask",
+      "readsTargetMemory": false
+    },
+    {
+      "enum": "",
+      "flags": "",
+      "kind": "pointer",
+      "maxPreviewBytes": 4,
+      "name": "handle_information_flags_pointer",
+      "preview": "handle_information_flags_pointer",
+      "readsTargetMemory": true
+    },
+    {
+      "enum": "",
+      "flags": "handle_information_flags",
+      "kind": "flags",
+      "maxPreviewBytes": 0,
+      "name": "handle_information_mask",
+      "preview": "symbolic_mask",
       "readsTargetMemory": false
     },
     {
@@ -4182,6 +4314,15 @@
       "maxPreviewBytes": 0,
       "name": "socket_handle",
       "preview": "socket_handle",
+      "readsTargetMemory": false
+    },
+    {
+      "enum": "std_handle_selector",
+      "flags": "",
+      "kind": "enum",
+      "maxPreviewBytes": 0,
+      "name": "std_handle_selector",
+      "preview": "symbolic_enum",
       "readsTargetMemory": false
     },
     {
@@ -13183,6 +13324,125 @@
       "name": "Thread",
       "nullable": false,
       "type": "HANDLE"
+    },
+    {
+      "absoluteIndex": 512,
+      "apiId": 146,
+      "captureTiming": "pre",
+      "decode": "std_handle_selector",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "nStdHandle",
+      "nullable": false,
+      "type": "DWORD"
+    },
+    {
+      "absoluteIndex": 513,
+      "apiId": 147,
+      "captureTiming": "pre",
+      "decode": "handle",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "hFile",
+      "nullable": false,
+      "type": "HANDLE"
+    },
+    {
+      "absoluteIndex": 514,
+      "apiId": 148,
+      "captureTiming": "pre",
+      "decode": "handle",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "hObject",
+      "nullable": false,
+      "type": "HANDLE"
+    },
+    {
+      "absoluteIndex": 515,
+      "apiId": 148,
+      "captureTiming": "post",
+      "decode": "handle_information_flags_pointer",
+      "direction": "out",
+      "enum": "",
+      "flags": "",
+      "index": 1,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 4,
+      "name": "lpdwFlags",
+      "nullable": false,
+      "type": "LPDWORD"
+    },
+    {
+      "absoluteIndex": 516,
+      "apiId": 149,
+      "captureTiming": "pre",
+      "decode": "handle",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 0,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "hObject",
+      "nullable": false,
+      "type": "HANDLE"
+    },
+    {
+      "absoluteIndex": 517,
+      "apiId": 149,
+      "captureTiming": "pre",
+      "decode": "handle_information_mask",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 1,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "dwMask",
+      "nullable": false,
+      "type": "DWORD"
+    },
+    {
+      "absoluteIndex": 518,
+      "apiId": 149,
+      "captureTiming": "pre",
+      "decode": "handle_information_flags",
+      "direction": "in",
+      "enum": "",
+      "flags": "",
+      "index": 2,
+      "lengthExpression": "",
+      "lengthFrom": "",
+      "lengthFromIndex": -1,
+      "maxBytes": 0,
+      "name": "dwFlags",
+      "nullable": false,
+      "type": "DWORD"
     }
   ],
   "schemaVersion": "0.1.0",
@@ -13194,6 +13454,7 @@
       "definitions/win32/crypt32.json",
       "definitions/win32/file-io.json",
       "definitions/win32/gdi32.json",
+      "definitions/win32/handle.json",
       "definitions/win32/loader.json",
       "definitions/win32/memory.json",
       "definitions/win32/ole32.json",

@@ -31,6 +31,14 @@
       ]
     },
     {
+      "name": "std_handle_selector",
+      "values": [
+        { "name": "STD_INPUT_HANDLE", "value": "0xFFFFFFF6" },
+        { "name": "STD_OUTPUT_HANDLE", "value": "0xFFFFFFF5" },
+        { "name": "STD_ERROR_HANDLE", "value": "0xFFFFFFF4" }
+      ]
+    },
+    {
       "name": "wait_result",
       "values": [
         { "name": "WAIT_OBJECT_0", "value": "0x00000000" },

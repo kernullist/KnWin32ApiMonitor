@@ -28,8 +28,9 @@ Current verification gates include:
 22. Wave 3 KERNEL32 mutex/semaphore synchronization smoke through `tools\native-smoke\wave3-kernel32-mutex-semaphore-smoke.ps1`.
 23. Wave 3 KERNEL32 file-mapping smoke through `tools\native-smoke\wave3-kernel32-file-mapping-smoke.ps1`.
 24. Wave 3 KERNEL32 process/thread identity smoke through `tools\native-smoke\wave3-kernel32-process-thread-identity-smoke.ps1`.
-25. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
-25. Collector fixture and native smoke validation through `npm run collector:validate`.
+25. Wave 3 KERNEL32 handle metadata smoke through `tools\native-smoke\wave3-kernel32-handle-metadata-smoke.ps1`.
+26. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
+27. Collector fixture and native smoke validation through `npm run collector:validate`.
 
 Run repeated lifecycle smoke:
 
@@ -191,6 +192,14 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave3-kernel32-proce
 
 The KERNEL32 process/thread identity smoke verifies selected `GetCurrentProcess`, `GetCurrentProcessId`, `GetCurrentThread`, `GetCurrentThreadId`, `GetProcessId`, and `GetThreadId` calls, generated process metadata, stable API IDs `140` through `145`, pseudo/current handle evidence, matching PID/TID values, shared-memory transport mode, zero dropped events, clean hook restore, and no process enumeration, command-line, environment, token/security, remote-memory, remote-thread, stack, injection, PE/file/hash, credential, or byte-preview payload evidence.
 
+Run Wave 3 KERNEL32 handle metadata smoke:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave3-kernel32-handle-metadata-smoke.ps1
+```
+
+The KERNEL32 handle metadata smoke verifies selected `GetStdHandle`, `GetFileType`, `GetHandleInformation`, and `SetHandleInformation` calls, generated handle metadata, stable API IDs `146` through `149`, standard-handle selector, file-type, handle, and handle-flag evidence, shared-memory transport mode, zero dropped events, clean hook restore, and no object-name/security/handle-duplication/system-handle/file-payload/command-line/environment/remote-memory/remote-thread/stack/injection/PE/file/hash/credential/byte-preview payload evidence.
+
 Run optional Win32/x86 capture smoke:
 
 ```powershell
@@ -199,7 +208,7 @@ cmake --build build/native-win32 --config Debug
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\x86-capture-sample-smoke.ps1
 ```
 
-The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence, selected RPCRT4 UUID helper evidence, selected User32/GDI32 evidence, selected PSAPI module-query evidence, selected Version resource evidence, selected Shell known-folder evidence, selected OLE32 COM lifecycle evidence, selected COMBASE-backed WinRT lifecycle evidence, selected KERNEL32 memory protection evidence, selected KERNEL32 thread lifecycle evidence, selected KERNEL32 event synchronization evidence, selected KERNEL32 mutex/semaphore synchronization evidence, selected KERNEL32 file-mapping evidence, selected KERNEL32 process/thread identity evidence, zero dropped events, and clean hook restore.
+The x86 smoke verifies same-bitness Win32 helper/target/agent capture, HELLO `architecture = "x86"`, shared-memory transport mode, the required File I/O APIs, `LoadLibraryW` dynamic-load evidence, `NtCreateFile` NTSTATUS evidence, selected Wave 2 evidence, selected RPCRT4 UUID helper evidence, selected User32/GDI32 evidence, selected PSAPI module-query evidence, selected Version resource evidence, selected Shell known-folder evidence, selected OLE32 COM lifecycle evidence, selected COMBASE-backed WinRT lifecycle evidence, selected KERNEL32 memory protection evidence, selected KERNEL32 thread lifecycle evidence, selected KERNEL32 event synchronization evidence, selected KERNEL32 mutex/semaphore synchronization evidence, selected KERNEL32 file-mapping evidence, selected KERNEL32 process/thread identity evidence, selected KERNEL32 handle metadata evidence, zero dropped events, and clean hook restore.
 
 Run collector backpressure smoke:
 
