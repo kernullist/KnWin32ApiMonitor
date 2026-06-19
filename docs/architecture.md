@@ -136,7 +136,7 @@ Current responsibilities:
 3. Implement controlled launch-time early-bird APC agent load for the sample target.
 4. Implement bounded controlled File I/O capture for the sample target.
 5. Select the same-bitness x86/x64 agent DLL for controlled launch.
-6. Run target/agent architecture preflight before remote mutation.
+6. Run target/agent architecture, process liveness, PID identity, protection, mitigation, and access preflight before remote mutation.
 7. Implement bounded same-bitness `attach-capture --pid` for already-running non-protected sample targets.
 8. Implement bounded helper-side `supervise-tree --pid` process-tree discovery and child policy evaluation.
 9. Implement cancellation checks and cleanup accounting for bounded attach and process-tree operations.

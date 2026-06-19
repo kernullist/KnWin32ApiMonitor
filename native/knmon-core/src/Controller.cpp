@@ -525,6 +525,75 @@ struct AttachPreflightResult
     KnMonAgentArchitecture TargetArchitecture = KnMonAgentArchitecture::Unknown;
 };
 
+std::uint64_t FileTimeToUInt64(const FILETIME& fileTime)
+{
+    ULARGE_INTEGER value = {};
+    value.LowPart = fileTime.dwLowDateTime;
+    value.HighPart = fileTime.dwHighDateTime;
+    return value.QuadPart;
+}
+
+bool QueryProcessCreationTime(HANDLE processHandle, std::uint64_t* creationTime, DWORD* errorCode)
+{
+    bool queried = false;
+
+    do
+    {
+        if (creationTime != nullptr)
+        {
+            *creationTime = 0;
+        }
+
+        if (errorCode != nullptr)
+        {
+            *errorCode = 0;
+        }
+
+        if (processHandle == nullptr)
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = ERROR_INVALID_HANDLE;
+            }
+            break;
+        }
+
+        FILETIME created = {};
+        FILETIME exited = {};
+        FILETIME kernel = {};
+        FILETIME user = {};
+        if (!GetProcessTimes(processHandle, &created, &exited, &kernel, &user))
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
+
+        if (creationTime != nullptr)
+        {
+            *creationTime = FileTimeToUInt64(created);
+        }
+        queried = true;
+    }
+    while (false);
+
+    return queried;
+}
+
+bool IsProcessHandleExited(HANDLE processHandle)
+{
+    bool exited = false;
+
+    if (processHandle != nullptr)
+    {
+        exited = WaitForSingleObject(processHandle, 0) == WAIT_OBJECT_0;
+    }
+
+    return exited;
+}
+
 bool FindProcessSnapshotInfo(DWORD processId, ProcessSnapshotInfo* info, DWORD* errorCode)
 {
     bool found = false;
@@ -810,6 +879,19 @@ AttachPreflightResult RunAttachPreflight(
         DWORD snapshotError = 0;
         if (!FindProcessSnapshotInfo(request.ProcessId, &snapshotInfo, &snapshotError))
         {
+            HANDLE staleProcessHandle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, FALSE, request.ProcessId);
+            if (staleProcessHandle != nullptr)
+            {
+                if (IsProcessHandleExited(staleProcessHandle))
+                {
+                    CloseHandle(staleProcessHandle);
+                    SetAttachPreflightError(result, ERROR_PROCESS_ABORTED, "target_exited_before_mutation", "Target process exited before attach preflight could acquire a live snapshot.");
+                    break;
+                }
+
+                CloseHandle(staleProcessHandle);
+            }
+
             const DWORD errorCode = snapshotError == 0 ? ERROR_INVALID_PARAMETER : snapshotError;
             SetAttachPreflightError(result, errorCode, "missing_target_process", "Target process was not found in the process snapshot.");
             break;
@@ -843,12 +925,27 @@ AttachPreflightResult RunAttachPreflight(
             break;
         }
 
-        queryHandle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, request.ProcessId);
+        queryHandle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, FALSE, request.ProcessId);
         if (queryHandle == nullptr)
         {
             const DWORD errorCode = GetLastError();
             const std::string operation = errorCode == ERROR_ACCESS_DENIED ? "access_denied" : "target_process_open";
             SetAttachPreflightError(result, errorCode, operation, "Failed to open target process for query: " + FormatWindowsError(errorCode));
+            break;
+        }
+
+        if (IsProcessHandleExited(queryHandle))
+        {
+            SetAttachPreflightError(result, ERROR_PROCESS_ABORTED, "target_exited_before_mutation", "Target process exited before attach preflight completed.");
+            break;
+        }
+
+        std::uint64_t queryCreationTime = 0;
+        DWORD creationTimeError = 0;
+        if (!QueryProcessCreationTime(queryHandle, &queryCreationTime, &creationTimeError))
+        {
+            const DWORD errorCode = creationTimeError == 0 ? ERROR_INVALID_PARAMETER : creationTimeError;
+            SetAttachPreflightError(result, errorCode, "target_identity_query", "Failed to query target process creation time before attach mutation: " + FormatWindowsError(errorCode));
             break;
         }
 
@@ -908,6 +1005,29 @@ AttachPreflightResult RunAttachPreflight(
             const DWORD errorCode = GetLastError();
             const std::string operation = errorCode == ERROR_ACCESS_DENIED ? "access_denied" : "target_process_open";
             SetAttachPreflightError(result, errorCode, operation, "Failed to open target process for attach mutation: " + FormatWindowsError(errorCode));
+            break;
+        }
+
+        if (IsProcessHandleExited(processHandle))
+        {
+            CloseHandle(processHandle);
+            SetAttachPreflightError(result, ERROR_PROCESS_ABORTED, "target_exited_before_mutation", "Target process exited before remote attach mutation.");
+            break;
+        }
+
+        std::uint64_t attachCreationTime = 0;
+        if (!QueryProcessCreationTime(processHandle, &attachCreationTime, &creationTimeError))
+        {
+            const DWORD errorCode = creationTimeError == 0 ? ERROR_INVALID_PARAMETER : creationTimeError;
+            CloseHandle(processHandle);
+            SetAttachPreflightError(result, errorCode, "target_identity_query", "Failed to re-query target process creation time before attach mutation: " + FormatWindowsError(errorCode));
+            break;
+        }
+
+        if (queryCreationTime != attachCreationTime)
+        {
+            CloseHandle(processHandle);
+            SetAttachPreflightError(result, ERROR_PROCESS_ABORTED, "target_identity_changed", "Target process identity changed before attach mutation; PID reuse is not accepted.");
             break;
         }
 

@@ -640,7 +640,7 @@ Current verified Phase 11A behavior:
 
 1. `knmon-native-helper.exe attach-capture --pid <pid>` attaches to an already-running repository sample target without relaunching it.
 2. x64 helper -> x64 target -> `knmon-agent64.dll` and Win32 helper -> x86 target -> `knmon-agent32.dll` paths are smoke-verified.
-3. Attach preflight rejects PID `0`, PID `4`, helper self, missing targets, missing agents, helper/agent architecture mismatch, and helper/target architecture mismatch before remote mutation.
+3. Attach preflight rejects PID `0`, PID `4`, helper self, missing targets, exited/stale PIDs, missing agents, helper/agent architecture mismatch, helper/target architecture mismatch, and PID creation-time identity changes before remote mutation.
 4. Protection, process signature mitigation, and access checks run before remote mutation where the current user-mode helper can detect them.
 5. Supported attach uses remote `LoadLibraryW`; manual mapping, stealth loading, APC injection into arbitrary existing threads, cross-bitness attach, and protected-process bypass remain out of scope.
 6. The running target receives configuration through the versioned `KnMonAttachConfigV1` ABI and exported `KnMonAgentInitialize`; launch-time environment variables are not required for attach.
@@ -1106,8 +1106,9 @@ Current definition coverage:
 Safe implementation queue:
 
 1. Injection preflight hardening for supported same-bitness paths:
-   - Continue typed pre-mutation diagnostics for unsupported protected/PPL, architecture mismatch, missing helper/agent, access-denied, mitigation-policy conflict, and early target-exit states.
+   - Attach preflight keeps typed pre-mutation diagnostics for unsupported protected/PPL, architecture mismatch, missing helper/agent, access-denied, mitigation-policy conflict, stale/exited PID, and PID identity-change states.
    - Attach preflight now checks process signature mitigation policy where available and fails as `mitigation_policy_conflict` before remote mutation when the target requires Microsoft- or Store-signed images.
+   - Recent hardening adds process creation-time identity comparison between query and full attach handles, plus signaled-process checks before remote writes/thread creation.
    - Keep all unsupported outcomes before remote memory writes, thread/APC/context mutation, or helper-side attach mutation.
 2. Host-side event-level replay indexing and full-text trace search:
    - Implemented as Phase 13R with separate `trace-index-*` commands, `winsqlite3-fts5`, Tauri wrappers, UI trace search controls, explicit replay-by-path from hits, and focused smoke coverage.

@@ -72,6 +72,28 @@ function Start-AttachSample {
     return $process
 }
 
+function Start-ExitedSample {
+    param(
+        [string]$SamplePath,
+        [string]$Label
+    )
+
+    $tmpDir = Join-Path (Get-Location) ".tmp"
+    New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
+    $stdoutPath = Join-Path $tmpDir "attach-negative-exited-$Label.stdout.txt"
+    $stderrPath = Join-Path $tmpDir "attach-negative-exited-$Label.stderr.txt"
+    Remove-Item -Force -ErrorAction SilentlyContinue $stdoutPath,$stderrPath
+
+    $process = Start-Process -FilePath $SamplePath -ArgumentList "--attach-loop --iterations 1 --delay-ms 1" -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -PassThru -WindowStyle Hidden
+    if (-not $process.WaitForExit(5000))
+    {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        throw "Timed out waiting for exited sample fixture."
+    }
+
+    return $process
+}
+
 $helper = Join-Path $BuildDir "knmon-native-helper.exe"
 $samplePath = Join-Path $BuildDir "knmon-sample-fileio.exe"
 $agentPath = Join-Path $BuildDir "knmon-agent64.dll"
@@ -86,6 +108,9 @@ Invoke-ExpectAttachFailure -HelperPath $helper -Arguments @("attach-capture", "-
 Invoke-ExpectAttachFailure -HelperPath $helper -Arguments @("attach-capture", "--pid", "0") -ExpectedOperations @("missing_target_process") -Label "pid-zero" | Out-Null
 Invoke-ExpectAttachFailure -HelperPath $helper -Arguments @("attach-capture", "--pid", "4") -ExpectedOperations @("missing_target_process") -Label "pid-four" | Out-Null
 Invoke-ExpectAttachFailure -HelperPath $helper -Arguments @("attach-capture", "--pid", "self") -ExpectedOperations @("missing_target_process") -Label "helper-self" | Out-Null
+
+$exitedSample = Start-ExitedSample -SamplePath $samplePath -Label "x64"
+Invoke-ExpectAttachFailure -HelperPath $helper -Arguments @("attach-capture", "--pid", "$($exitedSample.Id)", "--agent", $agentPath) -ExpectedOperations @("target_exited_before_mutation") -Label "exited-before-mutation" | Out-Null
 
 $sample = $null
 try
