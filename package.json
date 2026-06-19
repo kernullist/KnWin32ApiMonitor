@@ -20,6 +20,7 @@
     "trace-index:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/trace-index-smoke.ps1",
     "wave4-oleaut32:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/wave4-oleaut32-lifecycle-smoke.ps1",
     "wave4-dnsapi:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/wave4-dnsapi-record-free-smoke.ps1",
+    "wave4-setupapi:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/wave4-setupapi-device-info-close-smoke.ps1",
     "wave4-dbghelp:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/wave4-dbghelp-symbol-session-smoke.ps1",
     "defs:generate": "node tools/def-validator/generate-definition-ids.mjs --write",
     "defs:coverage": "node tools/def-validator/report-definition-coverage.mjs",

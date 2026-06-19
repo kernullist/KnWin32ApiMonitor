@@ -4083,6 +4083,13 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         payload = ApiCallPayload(result, record, "void", args.str(), "");
         break;
     }
+    case KnMonTransportApiId::SetupDiDestroyDeviceInfoList:
+    {
+        const std::string deviceInfoSet = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HDEVINFO", "DeviceInfoSet", "in", deviceInfoSet, deviceInfoSet, deviceInfoSet);
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::SymInitializeW:
     {
         const std::string processHandle = HexPointerValue(record.Values64[0], result.Architecture);

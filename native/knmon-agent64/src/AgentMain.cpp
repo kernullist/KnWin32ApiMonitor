@@ -16,6 +16,7 @@
 #include <shlobj.h>
 #include <wincrypt.h>
 #include <windns.h>
+#include <setupapi.h>
 #include <winver.h>
 #include <winhttp.h>
 #include <wininet.h>
@@ -225,6 +226,7 @@ using RoGetApartmentIdentifierFn = HRESULT(WINAPI*)(UINT64*);
 using VariantClearFn = HRESULT(WINAPI*)(VARIANTARG*);
 using SafeArrayDestroyFn = HRESULT(WINAPI*)(SAFEARRAY*);
 using DnsFreeFn = void(WINAPI*)(PVOID, DNS_FREE_TYPE);
+using SetupDiDestroyDeviceInfoListFn = BOOL(WINAPI*)(HDEVINFO);
 using SymInitializeWFn = BOOL(WINAPI*)(HANDLE, PCWSTR, BOOL);
 using SymCleanupFn = BOOL(WINAPI*)(HANDLE);
 using RpcStringBindingComposeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR*);
@@ -368,6 +370,7 @@ RoGetApartmentIdentifierFn g_originalRoGetApartmentIdentifier = nullptr;
 VariantClearFn g_originalVariantClear = nullptr;
 SafeArrayDestroyFn g_originalSafeArrayDestroy = nullptr;
 DnsFreeFn g_originalDnsFree = nullptr;
+SetupDiDestroyDeviceInfoListFn g_originalSetupDiDestroyDeviceInfoList = nullptr;
 SymInitializeWFn g_originalSymInitializeW = nullptr;
 SymCleanupFn g_originalSymCleanup = nullptr;
 RpcStringBindingComposeWFn g_originalRpcStringBindingComposeW = nullptr;
@@ -468,7 +471,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 119;
+constexpr std::size_t HookDefinitionCount = 120;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1792,6 +1795,10 @@ std::uint16_t ModuleId(const char* moduleName)
     else if (_stricmp(moduleName, "dnsapi.dll") == 0)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Dnsapi);
+    }
+    else if (_stricmp(moduleName, "setupapi.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Setupapi);
     }
     else if (_stricmp(moduleName, "dbghelp.dll") == 0)
     {
@@ -5462,6 +5469,25 @@ void EmitDnsRecordListFreeEvent(
     }
 }
 
+void EmitSetupDiDestroyDeviceInfoListEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HDEVINFO deviceInfoSet)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::SetupDiDestroyDeviceInfoList, "setupapi.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(deviceInfoSet));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void EmitSymInitializeWEvent(
     BOOL result,
     DWORD errorCode,
@@ -6466,6 +6492,7 @@ HRESULT WINAPI HookedRoGetApartmentIdentifier(UINT64* apartmentIdentifier);
 HRESULT WINAPI HookedVariantClear(VARIANTARG* variant);
 HRESULT WINAPI HookedSafeArrayDestroy(SAFEARRAY* safeArray);
 void WINAPI HookedDnsFree(PVOID data, DNS_FREE_TYPE freeType);
+BOOL WINAPI HookedSetupDiDestroyDeviceInfoList(HDEVINFO deviceInfoSet);
 BOOL WINAPI HookedSymInitializeW(HANDLE process, PCWSTR userSearchPath, BOOL invadeProcess);
 BOOL WINAPI HookedSymCleanup(HANDLE process);
 RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR protSeq, RPC_WSTR networkAddr, RPC_WSTR endpoint, RPC_WSTR options, RPC_WSTR* stringBinding);
@@ -6592,6 +6619,7 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "oleaut32.dll", "VariantClear", reinterpret_cast<void*>(HookedVariantClear), reinterpret_cast<void**>(&g_originalVariantClear), false, true, false, 9, 0 },
         HookDefinition { "oleaut32.dll", "SafeArrayDestroy", reinterpret_cast<void*>(HookedSafeArrayDestroy), reinterpret_cast<void**>(&g_originalSafeArrayDestroy), false, true, false, 16, 0 },
         HookDefinition { "dnsapi.dll", "DnsFree", reinterpret_cast<void*>(HookedDnsFree), reinterpret_cast<void**>(&g_originalDnsFree), false, true, false, 0, 0 },
+        HookDefinition { "setupapi.dll", "SetupDiDestroyDeviceInfoList", reinterpret_cast<void*>(HookedSetupDiDestroyDeviceInfoList), reinterpret_cast<void**>(&g_originalSetupDiDestroyDeviceInfoList), false, true, false, 0, 0 },
         HookDefinition { "dbghelp.dll", "SymInitializeW", reinterpret_cast<void*>(HookedSymInitializeW), reinterpret_cast<void**>(&g_originalSymInitializeW), false, true, false, 0, 0 },
         HookDefinition { "dbghelp.dll", "SymCleanup", reinterpret_cast<void*>(HookedSymCleanup), reinterpret_cast<void**>(&g_originalSymCleanup), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringBindingComposeW", reinterpret_cast<void*>(HookedRpcStringBindingComposeW), reinterpret_cast<void**>(&g_originalRpcStringBindingComposeW), false, true, false, 0, 0 },
@@ -10112,6 +10140,37 @@ void WINAPI HookedDnsFree(PVOID data, DNS_FREE_TYPE freeType)
     }
 
     SetLastError(lastError);
+}
+
+BOOL WINAPI HookedSetupDiDestroyDeviceInfoList(HDEVINFO deviceInfoSet)
+{
+    if (g_inHook || !HooksEnabled() || g_originalSetupDiDestroyDeviceInfoList == nullptr)
+    {
+        if (g_originalSetupDiDestroyDeviceInfoList == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalSetupDiDestroyDeviceInfoList(deviceInfoSet);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalSetupDiDestroyDeviceInfoList(deviceInfoSet);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FALSE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitSetupDiDestroyDeviceInfoListEvent(result, eventError, start, end, deviceInfoSet);
+    }
+
+    SetLastError(lastError);
+    return result;
 }
 
 BOOL WINAPI HookedSymInitializeW(HANDLE process, PCWSTR userSearchPath, BOOL invadeProcess)

@@ -102,6 +102,7 @@ $requiredApis = @(
     "VariantClear",
     "SafeArrayDestroy",
     "DnsRecordListFree",
+    "SetupDiDestroyDeviceInfoList",
     "SymInitializeW",
     "SymCleanup",
     "RpcStringBindingComposeW",
@@ -309,6 +310,37 @@ $dnsPayload = $dnsRecordFree[0] | ConvertTo-Json -Depth 12
 if ($dnsPayload -cmatch "DnsQuery|pszName|ppQueryResults|pReserved|DNS_RECORDW|DnsRecordSet|DnsExtract|DnsModify|[a-zA-Z0-9_-]+\.(com|net|org|local|test)|127\.0\.0\.1|Adapter|RouteTable|C:\\Users|AppData|ProgramData|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 DnsRecordListFree event appears to expose query, record, hostname, inventory, payload, stack, injection, credential, or byte-preview evidence: $dnsPayload"
+}
+
+$setupDestroy = @($result.capturedEvents | Where-Object { $_.module -eq "setupapi.dll" -and $_.api -eq "SetupDiDestroyDeviceInfoList" } | Select-Object -First 1)
+if ($setupDestroy.Count -ne 1 -or
+    $setupDestroy[0].apiFamily -ne "device-setup" -or
+    $setupDestroy[0].apiCategory -ne "device_info_set_close" -or
+    $setupDestroy[0].hookPolicy -ne "iat" -or
+    $setupDestroy[0].coverageStatus -ne "smoke_verified" -or
+    $setupDestroy[0].returnValue -ne "TRUE")
+{
+    throw "x86 SetupDiDestroyDeviceInfoList metadata or return evidence mismatch: $($setupDestroy | ConvertTo-Json -Depth 8)"
+}
+
+if (-not [string]::IsNullOrEmpty($setupDestroy[0].bufferPreview))
+{
+    throw "x86 SetupDiDestroyDeviceInfoList exposed bufferPreview: $($setupDestroy[0] | ConvertTo-Json -Depth 8)"
+}
+
+$setupDeviceInfoSet = @($setupDestroy[0].arguments | Where-Object { $_.name -eq "DeviceInfoSet" } | Select-Object -First 1)
+if ($setupDeviceInfoSet.Count -ne 1 -or
+    $setupDeviceInfoSet[0].decodeAlias -ne "handle" -or
+    $setupDeviceInfoSet[0].captureTiming -ne "pre")
+{
+    throw "x86 SetupDiDestroyDeviceInfoList DeviceInfoSet evidence mismatch: $($setupDeviceInfoSet | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $setupDeviceInfoSet[0].decodedValue -Name "x86 SetupDiDestroyDeviceInfoList DeviceInfoSet"
+
+$setupPayload = $setupDestroy[0] | ConvertTo-Json -Depth 12
+if ($setupPayload -cmatch "SetupDiGetClassDevs|SetupDiEnum|SetupDiGetDevice|ClassGuid|Enumerator|DeviceInstance|HardwareID|CompatibleID|SP_DEVINFO_DATA|GUID_DEVCLASS|PCI\\|USB\\|ROOT\\|SWD\\|DISPLAY|C:\\Users|AppData|ProgramData|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 SetupDiDestroyDeviceInfoList event appears to expose device inventory, payload, stack, injection, credential, or byte-preview evidence: $setupPayload"
 }
 
 $dbghelpEvents = @($result.capturedEvents | Where-Object { $_.module -eq "dbghelp.dll" -and $_.api -in @("SymInitializeW", "SymCleanup") })

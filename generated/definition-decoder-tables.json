@@ -4113,14 +4113,14 @@
     {
       "callingConvention": "stdcall",
       "category": "device_info_set_close",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "GetLastError",
       "failure": {
         "returnEqual": "FALSE"
       },
       "family": "device-setup",
       "firstParameterIndex": 587,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 173,
       "module": "setupapi.dll",
       "moduleId": 23,

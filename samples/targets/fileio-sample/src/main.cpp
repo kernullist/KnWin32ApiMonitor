@@ -14,6 +14,7 @@
 #include <shlobj.h>
 #include <wincrypt.h>
 #include <windns.h>
+#include <setupapi.h>
 #include <winver.h>
 #include <winhttp.h>
 #include <wininet.h>
@@ -1285,6 +1286,44 @@ bool RunDnsRecordLifecycleProbe()
     DnsRecordListFree(nullptr, DnsFreeRecordList);
     std::cout << "dnsapi record list free lifecycle completed\n";
     return true;
+}
+
+bool RunSetupApiDeviceInfoSetLifecycleProbe()
+{
+    bool success = false;
+    HDEVINFO deviceInfoSet = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        deviceInfoSet = SetupDiCreateDeviceInfoList(nullptr, nullptr);
+        if (deviceInfoSet == INVALID_HANDLE_VALUE)
+        {
+            LogLastError("SetupDiCreateDeviceInfoList");
+            break;
+        }
+
+        if (!SetupDiDestroyDeviceInfoList(deviceInfoSet))
+        {
+            LogLastError("SetupDiDestroyDeviceInfoList");
+            break;
+        }
+
+        deviceInfoSet = INVALID_HANDLE_VALUE;
+        std::cout << "setupapi device info set lifecycle completed\n";
+        success = true;
+    }
+    while (false);
+
+    if (deviceInfoSet != INVALID_HANDLE_VALUE)
+    {
+        if (!SetupDiDestroyDeviceInfoList(deviceInfoSet))
+        {
+            LogLastError("SetupDiDestroyDeviceInfoList(cleanup)");
+            success = false;
+        }
+    }
+
+    return success;
 }
 
 DWORD WINAPI CombaseWinRtLifecycleThreadProc(LPVOID)
@@ -2624,6 +2663,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunDnsRecordLifecycleProbe())
+        {
+            break;
+        }
+
+        if (!RunSetupApiDeviceInfoSetLifecycleProbe())
         {
             break;
         }
