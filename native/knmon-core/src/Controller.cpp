@@ -4060,6 +4060,24 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         payload = ApiCallPayload(result, record, HexHResultValue(record.ReturnCode), args.str(), "");
         break;
     }
+    case KnMonTransportApiId::SymInitializeW:
+    {
+        const std::string processHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string searchPathPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string invadeProcess = std::to_string(record.Values32[0]);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hProcess", "in", processHandle, processHandle, processHandle) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "PCWSTR", "UserSearchPath", "in", searchPathPointer, searchPathPointer, searchPathPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "BOOL", "fInvadeProcess", "in", invadeProcess, invadeProcess, BoolText(record.Values32[0]));
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::SymCleanup:
+    {
+        const std::string processHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hProcess", "in", processHandle, processHandle, processHandle);
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::RpcStringBindingComposeW:
     {
         const std::string objUuidPointer = HexPointerValue(record.Values64[0], result.Architecture);

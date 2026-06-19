@@ -6,6 +6,7 @@
 #endif
 #include <psapi.h>
 #include <bcrypt.h>
+#include <dbghelp.h>
 #include <objbase.h>
 #include <rpc.h>
 #include <roapi.h>
@@ -1659,6 +1660,33 @@ bool RunFileMetadataProbe()
     return success;
 }
 
+bool RunDbgHelpSymbolSessionProbe()
+{
+    bool success = false;
+    const HANDLE process = GetCurrentProcess();
+
+    do
+    {
+        if (!SymInitializeW(process, nullptr, FALSE))
+        {
+            LogLastError("SymInitializeW(symbol-session)");
+            break;
+        }
+
+        if (!SymCleanup(process))
+        {
+            LogLastError("SymCleanup(symbol-session)");
+            break;
+        }
+
+        std::cout << "dbghelp symbol session initialized and cleaned\n";
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
 bool RunModuleLifecycleProbe()
 {
     bool success = false;
@@ -2555,6 +2583,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunFileMetadataProbe())
+        {
+            break;
+        }
+
+        if (!RunDbgHelpSymbolSessionProbe())
         {
             break;
         }

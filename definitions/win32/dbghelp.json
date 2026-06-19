@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "module": "dbghelp",
-  "description": "Wave 4 definition-only metadata for DbgHelp symbol-session lifecycle APIs.",
+  "description": "Wave 4 metadata for low-payload DbgHelp symbol-session lifecycle APIs.",
   "apis": [
     {
       "module": "DBGHELP.dll",
@@ -9,8 +9,8 @@
       "family": "symbols",
       "category": "symbol_session_initialize",
       "risk": "medium",
-      "hookPolicy": "definition_only",
-      "coverageStatus": "definition_only",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
       "architectures": ["x86", "x64"],
       "callingConvention": "stdcall",
       "returnType": "BOOL",
@@ -19,7 +19,7 @@
       "failure": { "returnEqual": "FALSE" },
       "parameters": [
         { "name": "hProcess", "type": "HANDLE", "direction": "in", "decode": "handle" },
-        { "name": "UserSearchPath", "type": "PCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 1024 },
+        { "name": "UserSearchPath", "type": "PCWSTR", "direction": "in", "decode": "pointer", "nullable": true },
         { "name": "fInvadeProcess", "type": "BOOL", "direction": "in", "decode": "byte_count" }
       ]
     },
@@ -29,8 +29,8 @@
       "family": "symbols",
       "category": "symbol_session_cleanup",
       "risk": "medium",
-      "hookPolicy": "definition_only",
-      "coverageStatus": "definition_only",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
       "architectures": ["x86", "x64"],
       "callingConvention": "stdcall",
       "returnType": "BOOL",

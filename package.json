@@ -18,6 +18,7 @@
     "daemon-recovery-apply:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/daemon-recovery-apply-smoke.ps1",
     "catalog-index:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/catalog-index-smoke.ps1",
     "trace-index:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/trace-index-smoke.ps1",
+    "wave4-dbghelp:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/wave4-dbghelp-symbol-session-smoke.ps1",
     "defs:generate": "node tools/def-validator/generate-definition-ids.mjs --write",
     "defs:coverage": "node tools/def-validator/report-definition-coverage.mjs",
     "defs:decoder-tables": "node tools/def-validator/validate-generated-decoder-tables.mjs",

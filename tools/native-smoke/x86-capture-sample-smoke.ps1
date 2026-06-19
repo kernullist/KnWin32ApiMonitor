@@ -99,6 +99,8 @@ $requiredApis = @(
     "RoInitialize",
     "RoUninitialize",
     "RoGetApartmentIdentifier",
+    "SymInitializeW",
+    "SymCleanup",
     "RpcStringBindingComposeW",
     "RpcBindingFromStringBindingW",
     "RpcStringFreeW",
@@ -153,6 +155,25 @@ function ConvertFrom-UInt64DecimalHex
     return [UInt64]$Matches[1]
 }
 
+function Assert-PointerValue
+{
+    param(
+        [string]$Value,
+        [string]$Name,
+        [bool]$AllowNull = $false
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value) -or $Value -notmatch "^0x[0-9a-fA-F]+$")
+    {
+        throw "$Name is not a pointer value: $Value"
+    }
+
+    if (-not $AllowNull -and $Value -match "^0x0+$")
+    {
+        throw "$Name unexpectedly used a null pointer."
+    }
+}
+
 if (-not (Test-Path -LiteralPath $helperPath))
 {
     throw "x86 helper not found: $helperPath"
@@ -198,6 +219,72 @@ foreach ($api in $requiredApis)
     {
         throw "x86 capture missing API: $api"
     }
+}
+
+$dbghelpEvents = @($result.capturedEvents | Where-Object { $_.module -eq "dbghelp.dll" -and $_.api -in @("SymInitializeW", "SymCleanup") })
+if ($dbghelpEvents.Count -lt 2)
+{
+    throw "x86 capture did not include the selected DBGHELP symbol-session API slice."
+}
+
+$symInitialize = @($dbghelpEvents | Where-Object { $_.api -eq "SymInitializeW" } | Select-Object -First 1)
+if ($symInitialize.Count -ne 1 -or
+    $symInitialize[0].apiFamily -ne "symbols" -or
+    $symInitialize[0].apiCategory -ne "symbol_session_initialize" -or
+    $symInitialize[0].hookPolicy -ne "iat" -or
+    $symInitialize[0].coverageStatus -ne "smoke_verified" -or
+    $symInitialize[0].returnValue -ne "TRUE")
+{
+    throw "x86 SymInitializeW metadata or return evidence mismatch: $($symInitialize | ConvertTo-Json -Depth 8)"
+}
+
+$symInitProcess = @($symInitialize[0].arguments | Where-Object { $_.name -eq "hProcess" } | Select-Object -First 1)
+if ($symInitProcess.Count -ne 1 -or $symInitProcess[0].decodeAlias -ne "handle")
+{
+    throw "x86 SymInitializeW process handle metadata mismatch: $($symInitProcess | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $symInitProcess[0].decodedValue -Name "x86 SymInitializeW hProcess"
+
+$symSearchPath = @($symInitialize[0].arguments | Where-Object { $_.name -eq "UserSearchPath" } | Select-Object -First 1)
+if ($symSearchPath.Count -ne 1 -or
+    $symSearchPath[0].decodeAlias -ne "pointer" -or
+    $symSearchPath[0].rawValue -notmatch "^0x0+$" -or
+    $symSearchPath[0].decodedValue -notmatch "^0x0+$")
+{
+    throw "x86 SymInitializeW search path was not null pointer-only evidence: $($symSearchPath | ConvertTo-Json -Depth 8)"
+}
+
+$symInvade = @($symInitialize[0].arguments | Where-Object { $_.name -eq "fInvadeProcess" } | Select-Object -First 1)
+if ($symInvade.Count -ne 1 -or
+    $symInvade[0].decodeAlias -ne "byte_count" -or
+    $symInvade[0].decodedValue -ne "FALSE")
+{
+    throw "x86 SymInitializeW invade flag evidence mismatch: $($symInvade | ConvertTo-Json -Depth 8)"
+}
+
+$symCleanup = @($dbghelpEvents | Where-Object { $_.api -eq "SymCleanup" } | Select-Object -First 1)
+if ($symCleanup.Count -ne 1 -or
+    $symCleanup[0].apiFamily -ne "symbols" -or
+    $symCleanup[0].apiCategory -ne "symbol_session_cleanup" -or
+    $symCleanup[0].hookPolicy -ne "iat" -or
+    $symCleanup[0].coverageStatus -ne "smoke_verified" -or
+    $symCleanup[0].returnValue -ne "TRUE")
+{
+    throw "x86 SymCleanup metadata or return evidence mismatch: $($symCleanup | ConvertTo-Json -Depth 8)"
+}
+
+$symCleanupProcess = @($symCleanup[0].arguments | Where-Object { $_.name -eq "hProcess" } | Select-Object -First 1)
+if ($symCleanupProcess.Count -ne 1 -or
+    $symCleanupProcess[0].decodeAlias -ne "handle" -or
+    $symCleanupProcess[0].decodedValue -ne $symInitProcess[0].decodedValue)
+{
+    throw "x86 SymCleanup process handle evidence mismatch: $($symCleanupProcess | ConvertTo-Json -Depth 8)"
+}
+
+$dbghelpPayload = $dbghelpEvents | ConvertTo-Json -Depth 12
+if ($dbghelpPayload -cmatch "\.pdb|PDB|SymbolPath|SymEnum|SymFrom|SymLoad|LoadedModule|srv\*|symsrv|C:\\Users|AppData|ProgramData|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 DBGHELP events appear to expose symbol path, PDB, module, payload, stack, injection, credential, or byte-preview evidence: $dbghelpPayload"
 }
 
 $bindingSetOptionEvent = @($result.capturedEvents | Where-Object { $_.api -eq "RpcBindingSetOption" } | Select-Object -First 1)

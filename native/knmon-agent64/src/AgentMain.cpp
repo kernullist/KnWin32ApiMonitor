@@ -220,6 +220,8 @@ using StringFromGUID2Fn = int(WINAPI*)(REFGUID, LPOLESTR, int);
 using RoInitializeFn = HRESULT(WINAPI*)(RO_INIT_TYPE);
 using RoUninitializeFn = void(WINAPI*)();
 using RoGetApartmentIdentifierFn = HRESULT(WINAPI*)(UINT64*);
+using SymInitializeWFn = BOOL(WINAPI*)(HANDLE, PCWSTR, BOOL);
+using SymCleanupFn = BOOL(WINAPI*)(HANDLE);
 using RpcStringBindingComposeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR*);
 using RpcBindingFromStringBindingWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_BINDING_HANDLE*);
 using RpcStringFreeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR*);
@@ -358,6 +360,8 @@ StringFromGUID2Fn g_originalStringFromGUID2 = nullptr;
 RoInitializeFn g_originalRoInitialize = nullptr;
 RoUninitializeFn g_originalRoUninitialize = nullptr;
 RoGetApartmentIdentifierFn g_originalRoGetApartmentIdentifier = nullptr;
+SymInitializeWFn g_originalSymInitializeW = nullptr;
+SymCleanupFn g_originalSymCleanup = nullptr;
 RpcStringBindingComposeWFn g_originalRpcStringBindingComposeW = nullptr;
 RpcBindingFromStringBindingWFn g_originalRpcBindingFromStringBindingW = nullptr;
 RpcStringFreeWFn g_originalRpcStringFreeW = nullptr;
@@ -456,7 +460,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 114;
+constexpr std::size_t HookDefinitionCount = 116;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1772,6 +1776,10 @@ std::uint16_t ModuleId(const char* moduleName)
     else if (_stricmp(moduleName, "api-ms-win-core-winrt-l1-1-0.dll") == 0)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::ApiMsWinCoreWinrtL110);
+    }
+    else if (_stricmp(moduleName, "dbghelp.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Dbghelp);
     }
 
     return result;
@@ -5380,6 +5388,48 @@ void EmitRoGetApartmentIdentifierEvent(
     }
 }
 
+void EmitSymInitializeWEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE process,
+    PCWSTR userSearchPath,
+    BOOL invadeProcess)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::SymInitializeW, "dbghelp.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(process));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(userSearchPath));
+        record->Values32[0] = static_cast<std::uint32_t>(invadeProcess);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitSymCleanupEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE process)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::SymCleanup, "dbghelp.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(process));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 std::uint32_t CopyRpcWideStringText(char* destination, std::uint32_t* length, std::size_t capacity, RPC_WSTR source)
 {
     return CopyWidePointerText(destination, length, capacity, reinterpret_cast<const wchar_t*>(source));
@@ -6339,6 +6389,8 @@ int WINAPI HookedStringFromGUID2(REFGUID guid, LPOLESTR string, int cchMax);
 HRESULT WINAPI HookedRoInitialize(RO_INIT_TYPE initType);
 void WINAPI HookedRoUninitialize();
 HRESULT WINAPI HookedRoGetApartmentIdentifier(UINT64* apartmentIdentifier);
+BOOL WINAPI HookedSymInitializeW(HANDLE process, PCWSTR userSearchPath, BOOL invadeProcess);
+BOOL WINAPI HookedSymCleanup(HANDLE process);
 RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR protSeq, RPC_WSTR networkAddr, RPC_WSTR endpoint, RPC_WSTR options, RPC_WSTR* stringBinding);
 RPC_STATUS RPC_ENTRY HookedRpcBindingFromStringBindingW(RPC_WSTR stringBinding, RPC_BINDING_HANDLE* binding);
 RPC_STATUS RPC_ENTRY HookedRpcStringFreeW(RPC_WSTR* string);
@@ -6460,6 +6512,8 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "api-ms-win-core-winrt-l1-1-0.dll", "RoInitialize", reinterpret_cast<void*>(HookedRoInitialize), reinterpret_cast<void**>(&g_originalRoInitialize), false, true, false, 0, 0 },
         HookDefinition { "api-ms-win-core-winrt-l1-1-0.dll", "RoUninitialize", reinterpret_cast<void*>(HookedRoUninitialize), reinterpret_cast<void**>(&g_originalRoUninitialize), false, true, false, 0, 0 },
         HookDefinition { "api-ms-win-core-winrt-l1-1-0.dll", "RoGetApartmentIdentifier", reinterpret_cast<void*>(HookedRoGetApartmentIdentifier), reinterpret_cast<void**>(&g_originalRoGetApartmentIdentifier), false, true, false, 0, 0 },
+        HookDefinition { "dbghelp.dll", "SymInitializeW", reinterpret_cast<void*>(HookedSymInitializeW), reinterpret_cast<void**>(&g_originalSymInitializeW), false, true, false, 0, 0 },
+        HookDefinition { "dbghelp.dll", "SymCleanup", reinterpret_cast<void*>(HookedSymCleanup), reinterpret_cast<void**>(&g_originalSymCleanup), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringBindingComposeW", reinterpret_cast<void*>(HookedRpcStringBindingComposeW), reinterpret_cast<void**>(&g_originalRpcStringBindingComposeW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcBindingFromStringBindingW", reinterpret_cast<void*>(HookedRpcBindingFromStringBindingW), reinterpret_cast<void**>(&g_originalRpcBindingFromStringBindingW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringFreeW", reinterpret_cast<void*>(HookedRpcStringFreeW), reinterpret_cast<void**>(&g_originalRpcStringFreeW), false, true, false, 0, 0 },
@@ -9886,6 +9940,68 @@ HRESULT WINAPI HookedRoGetApartmentIdentifier(UINT64* apartmentIdentifier)
     if (HooksEnabled())
     {
         EmitRoGetApartmentIdentifierEvent(result, eventError, start, end, apartmentIdentifier);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedSymInitializeW(HANDLE process, PCWSTR userSearchPath, BOOL invadeProcess)
+{
+    if (g_inHook || !HooksEnabled() || g_originalSymInitializeW == nullptr)
+    {
+        if (g_originalSymInitializeW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalSymInitializeW(process, userSearchPath, invadeProcess);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalSymInitializeW(process, userSearchPath, invadeProcess);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FALSE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitSymInitializeWEvent(result, eventError, start, end, process, userSearchPath, invadeProcess);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedSymCleanup(HANDLE process)
+{
+    if (g_inHook || !HooksEnabled() || g_originalSymCleanup == nullptr)
+    {
+        if (g_originalSymCleanup == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalSymCleanup(process);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalSymCleanup(process);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FALSE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitSymCleanupEvent(result, eventError, start, end, process);
     }
 
     SetLastError(lastError);

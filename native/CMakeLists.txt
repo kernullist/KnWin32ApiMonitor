@@ -107,6 +107,7 @@ target_link_libraries(knmon-sample-fileio PRIVATE version)
 target_link_libraries(knmon-sample-fileio PRIVATE shell32)
 target_link_libraries(knmon-sample-fileio PRIVATE ole32)
 target_link_libraries(knmon-sample-fileio PRIVATE runtimeobject)
+target_link_libraries(knmon-sample-fileio PRIVATE dbghelp)
 target_compile_definitions(knmon-sample-fileio PRIVATE
     WIN32_LEAN_AND_MEAN
     NOMINMAX

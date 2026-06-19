@@ -4233,14 +4233,14 @@
     {
       "callingConvention": "stdcall",
       "category": "symbol_session_initialize",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "GetLastError",
       "failure": {
         "returnEqual": "FALSE"
       },
       "family": "symbols",
       "firstParameterIndex": 596,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 178,
       "module": "dbghelp.dll",
       "moduleId": 26,
@@ -4257,14 +4257,14 @@
     {
       "callingConvention": "stdcall",
       "category": "symbol_session_cleanup",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "GetLastError",
       "failure": {
         "returnEqual": "FALSE"
       },
       "family": "symbols",
       "firstParameterIndex": 599,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 179,
       "module": "dbghelp.dll",
       "moduleId": 26,
@@ -15611,7 +15611,7 @@
       "absoluteIndex": 597,
       "apiId": 178,
       "captureTiming": "pre",
-      "decode": "utf16_string_optional",
+      "decode": "pointer",
       "direction": "in",
       "enum": "",
       "flags": "",
@@ -15619,7 +15619,7 @@
       "lengthExpression": "",
       "lengthFrom": "",
       "lengthFromIndex": -1,
-      "maxBytes": 1024,
+      "maxBytes": 0,
       "name": "UserSearchPath",
       "nullable": true,
       "type": "PCWSTR"
