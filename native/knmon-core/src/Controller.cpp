@@ -4090,6 +4090,13 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
         break;
     }
+    case KnMonTransportApiId::DestroyEnvironmentBlock:
+    {
+        const std::string environment = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPVOID", "lpEnvironment", "in", environment, environment, environment);
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::SymInitializeW:
     {
         const std::string processHandle = HexPointerValue(record.Values64[0], result.Architecture);

@@ -3969,14 +3969,14 @@
     {
       "callingConvention": "stdcall",
       "category": "environment_block_destroy",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "GetLastError",
       "failure": {
         "returnEqual": "FALSE"
       },
       "family": "profile",
       "firstParameterIndex": 568,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 167,
       "module": "userenv.dll",
       "moduleId": 20,

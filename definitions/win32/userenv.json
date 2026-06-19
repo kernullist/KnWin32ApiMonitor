@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "module": "userenv",
-  "description": "Wave 4 definition-only metadata for user profile and environment-block APIs.",
+  "description": "Wave 4 metadata for user profile and environment-block APIs, with selected destroy-only smoke coverage.",
   "apis": [
     {
       "module": "USERENV.dll",
@@ -49,8 +49,8 @@
       "family": "profile",
       "category": "environment_block_destroy",
       "risk": "medium",
-      "hookPolicy": "definition_only",
-      "coverageStatus": "definition_only",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
       "architectures": ["x86", "x64"],
       "callingConvention": "stdcall",
       "returnType": "BOOL",

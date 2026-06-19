@@ -103,6 +103,7 @@ $requiredApis = @(
     "SafeArrayDestroy",
     "DnsRecordListFree",
     "SetupDiDestroyDeviceInfoList",
+    "DestroyEnvironmentBlock",
     "SymInitializeW",
     "SymCleanup",
     "RpcStringBindingComposeW",
@@ -341,6 +342,37 @@ $setupPayload = $setupDestroy[0] | ConvertTo-Json -Depth 12
 if ($setupPayload -cmatch "SetupDiGetClassDevs|SetupDiEnum|SetupDiGetDevice|ClassGuid|Enumerator|DeviceInstance|HardwareID|CompatibleID|SP_DEVINFO_DATA|GUID_DEVCLASS|PCI\\|USB\\|ROOT\\|SWD\\|DISPLAY|C:\\Users|AppData|ProgramData|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 SetupDiDestroyDeviceInfoList event appears to expose device inventory, payload, stack, injection, credential, or byte-preview evidence: $setupPayload"
+}
+
+$userenvDestroy = @($result.capturedEvents | Where-Object { $_.module -eq "userenv.dll" -and $_.api -eq "DestroyEnvironmentBlock" } | Select-Object -First 1)
+if ($userenvDestroy.Count -ne 1 -or
+    $userenvDestroy[0].apiFamily -ne "profile" -or
+    $userenvDestroy[0].apiCategory -ne "environment_block_destroy" -or
+    $userenvDestroy[0].hookPolicy -ne "iat" -or
+    $userenvDestroy[0].coverageStatus -ne "smoke_verified" -or
+    $userenvDestroy[0].returnValue -ne "TRUE")
+{
+    throw "x86 DestroyEnvironmentBlock metadata or return evidence mismatch: $($userenvDestroy | ConvertTo-Json -Depth 8)"
+}
+
+if (-not [string]::IsNullOrEmpty($userenvDestroy[0].bufferPreview))
+{
+    throw "x86 DestroyEnvironmentBlock exposed bufferPreview: $($userenvDestroy[0] | ConvertTo-Json -Depth 8)"
+}
+
+$userenvEnvironment = @($userenvDestroy[0].arguments | Where-Object { $_.name -eq "lpEnvironment" } | Select-Object -First 1)
+if ($userenvEnvironment.Count -ne 1 -or
+    $userenvEnvironment[0].decodeAlias -ne "pointer" -or
+    $userenvEnvironment[0].captureTiming -ne "pre")
+{
+    throw "x86 DestroyEnvironmentBlock lpEnvironment evidence mismatch: $($userenvEnvironment | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $userenvEnvironment[0].decodedValue -Name "x86 DestroyEnvironmentBlock lpEnvironment"
+
+$userenvPayload = $userenvDestroy[0] | ConvertTo-Json -Depth 12
+if ($userenvPayload -cmatch "CreateEnvironmentBlock|GetUserProfileDirectory|lpProfileDir|USERPROFILE=|APPDATA=|LOCALAPPDATA=|PATH=|SystemRoot=|USERNAME=|USERDOMAIN=|TEMP=|TMP=|ProgramFiles=|ComSpec=|HOMEDRIVE=|HOMEPATH=|LOGONSERVER=|C:\\Users|Desktop|Documents|Downloads|CommandLine|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 DestroyEnvironmentBlock event appears to expose environment strings, profile paths, payload, stack, injection, credential, or byte-preview evidence: $userenvPayload"
 }
 
 $dbghelpEvents = @($result.capturedEvents | Where-Object { $_.module -eq "dbghelp.dll" -and $_.api -in @("SymInitializeW", "SymCleanup") })

@@ -15,6 +15,7 @@
 #include <wincrypt.h>
 #include <windns.h>
 #include <setupapi.h>
+#include <userenv.h>
 #include <winver.h>
 #include <winhttp.h>
 #include <wininet.h>
@@ -1319,6 +1320,49 @@ bool RunSetupApiDeviceInfoSetLifecycleProbe()
         if (!SetupDiDestroyDeviceInfoList(deviceInfoSet))
         {
             LogLastError("SetupDiDestroyDeviceInfoList(cleanup)");
+            success = false;
+        }
+    }
+
+    return success;
+}
+
+bool RunUserenvEnvironmentBlockLifecycleProbe()
+{
+    bool success = false;
+    LPVOID environment = nullptr;
+
+    do
+    {
+        if (!CreateEnvironmentBlock(&environment, nullptr, FALSE))
+        {
+            LogLastError("CreateEnvironmentBlock");
+            break;
+        }
+
+        if (environment == nullptr)
+        {
+            std::cout << "CreateEnvironmentBlock returned null environment\n";
+            break;
+        }
+
+        if (!DestroyEnvironmentBlock(environment))
+        {
+            LogLastError("DestroyEnvironmentBlock");
+            break;
+        }
+
+        environment = nullptr;
+        std::cout << "userenv environment block lifecycle completed\n";
+        success = true;
+    }
+    while (false);
+
+    if (environment != nullptr)
+    {
+        if (!DestroyEnvironmentBlock(environment))
+        {
+            LogLastError("DestroyEnvironmentBlock(cleanup)");
             success = false;
         }
     }
@@ -2668,6 +2712,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunSetupApiDeviceInfoSetLifecycleProbe())
+        {
+            break;
+        }
+
+        if (!RunUserenvEnvironmentBlockLifecycleProbe())
         {
             break;
         }
