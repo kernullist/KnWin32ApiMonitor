@@ -17,6 +17,7 @@ use knmon_tauri::{
     replay_last_session,
     replay_session_path as replay_session_path_backend,
     native_daemon_audit as native_daemon_audit_backend,
+    native_daemon_recovery_plan as native_daemon_recovery_plan_backend,
     native_daemon_sessions,
     native_daemon_status as native_daemon_status_backend,
     prune_stale_daemon_sessions as prune_stale_daemon_sessions_backend,
@@ -37,6 +38,7 @@ use knmon_tauri::{
     CaptureResult,
     LaunchResult,
     NativeDaemonAudit,
+    NativeDaemonRecoveryPlan,
     NativeDaemonStatus,
     NativeOperation,
     NativeSession,
@@ -154,6 +156,12 @@ fn list_daemon_sessions() -> Result<Vec<NativeSession>, String>
 fn audit_daemon_sessions() -> Result<NativeDaemonAudit, String>
 {
     native_daemon_audit_backend()
+}
+
+#[tauri::command]
+fn plan_daemon_recovery() -> Result<NativeDaemonRecoveryPlan, String>
+{
+    native_daemon_recovery_plan_backend()
 }
 
 #[tauri::command]
@@ -289,6 +297,7 @@ fn main()
             native_daemon_status,
             list_daemon_sessions,
             audit_daemon_sessions,
+            plan_daemon_recovery,
             prune_stale_daemon_sessions,
             catalog_native_sessions,
             query_native_session_catalog,

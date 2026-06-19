@@ -186,6 +186,47 @@ pub struct NativeDaemonAudit
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct NativeDaemonRecoveryPlanItem
+{
+    pub schema_version: String,
+    pub session_id: String,
+    pub recovery_state: String,
+    pub recovery_reason: String,
+    pub recommended_action: String,
+    pub safety_state: String,
+    pub automatic_recovery_allowed: bool,
+    pub target_mutation_allowed: bool,
+    pub registry_prune_allowed: bool,
+    pub replay_allowed: bool,
+    pub blocked_mutations: Vec<String>,
+    pub operator_runbook: Vec<String>,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeDaemonRecoveryPlan
+{
+    pub schema_version: String,
+    pub success: bool,
+    pub backend_mode: String,
+    pub operation: String,
+    pub daemon: NativeDaemonStatus,
+    pub sessions: Vec<NativeSession>,
+    pub recovery_plans: Vec<NativeDaemonRecoveryPlanItem>,
+    pub recovery_plan_count: u64,
+    pub registry_prune_allowed_count: u64,
+    pub blocked_mutation_count: u64,
+    pub automatic_recovery_allowed: bool,
+    pub target_mutation_allowed: bool,
+    pub dry_run: bool,
+    pub mutation_attempted: bool,
+    pub win32_error_code: u32,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NativeSessionCatalogRow
 {
     pub path: String,
@@ -1463,6 +1504,16 @@ pub fn native_daemon_audit() -> Result<NativeDaemonAudit, String>
         default_daemon_runtime_path().to_string_lossy().to_string(),
     ])?;
     parse_helper_json(&helper_output, "daemon-audit")
+}
+
+pub fn native_daemon_recovery_plan() -> Result<NativeDaemonRecoveryPlan, String>
+{
+    let helper_output = run_helper_args(&[
+        "daemon-recovery-plan".to_string(),
+        "--runtime-dir".to_string(),
+        default_daemon_runtime_path().to_string_lossy().to_string(),
+    ])?;
+    parse_helper_json(&helper_output, "daemon-recovery-plan")
 }
 
 pub fn prune_stale_daemon_sessions(dry_run: bool) -> Result<NativeDaemonAudit, String>

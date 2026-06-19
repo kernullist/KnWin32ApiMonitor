@@ -14,6 +14,7 @@
     "tauri:build": "npm --workspace apps/knmon-ui run tauri:build",
     "native:configure": "cmake -S native -B build/native",
     "native:build": "cmake --build build/native --config Debug",
+    "daemon-recovery-plan:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/daemon-recovery-plan-smoke.ps1",
     "catalog-index:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/catalog-index-smoke.ps1",
     "trace-index:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/trace-index-smoke.ps1",
     "defs:generate": "node tools/def-validator/generate-definition-ids.mjs --write",

@@ -65,7 +65,7 @@ Current backend modes:
 
 - `mock`: Browser/Vite mode and mock Tauri target list.
 - `native-enum`: Tauri command calls `knmon-native-helper.exe list-targets`.
-- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof, `capture-sample` for bounded controlled File I/O capture, `capture-sample --write-session` for persisted legacy sessions, `replay-session` for legacy or `.knapm` disk replay, `attach-capture --pid` for bounded selected-target attach, `attach-session --stream-batches` for bounded UI streaming attach sessions, `attach-session --stream-batches --write-knapm [--knapm-compression none|zstd]` for durable chunk writing, `daemon-start-session --write-knapm [--knapm-compression none|zstd]` for daemon-owned durable sessions, `catalog-sessions`/`catalog-query`/`catalog-remove-missing` for host-side JSON replay catalog management, `catalog-index-build`/`catalog-index-query`/`catalog-index-remove-missing` for host-side database-backed catalog indexing, `daemon-audit`/`daemon-prune-stale` for daemon registry inspection and stale cleanup, or `supervise-tree --pid` for process-tree observation/attach-supported policy evaluation.
+- `native-capture`: Tauri commands call `knmon-native-helper.exe launch-sample` for HELLO-only proof, `capture-sample` for bounded controlled File I/O capture, `capture-sample --write-session` for persisted legacy sessions, `replay-session` for legacy or `.knapm` disk replay, `attach-capture --pid` for bounded selected-target attach, `attach-session --stream-batches` for bounded UI streaming attach sessions, `attach-session --stream-batches --write-knapm [--knapm-compression none|zstd]` for durable chunk writing, `daemon-start-session --write-knapm [--knapm-compression none|zstd]` for daemon-owned durable sessions, `catalog-sessions`/`catalog-query`/`catalog-remove-missing` for host-side JSON replay catalog management, `catalog-index-build`/`catalog-index-query`/`catalog-index-remove-missing` for host-side database-backed catalog indexing, `daemon-audit`/`daemon-recovery-plan`/`daemon-prune-stale` for daemon registry inspection, dry-run operator recovery planning, and stale cleanup, or `supervise-tree --pid` for process-tree observation/attach-supported policy evaluation.
 
 ## Rust/Tauri Command Layer
 
@@ -98,30 +98,32 @@ Current commands:
 20. `native_daemon_status`
 21. `list_daemon_sessions`
 22. `audit_daemon_sessions`
-23. `prune_stale_daemon_sessions`
-24. `start_daemon_supervised_session`
-25. `stop_daemon_session`
-26. `catalog_native_sessions`
-27. `query_native_session_catalog`
-28. `remove_missing_native_session_catalog_entries`
-29. `build_native_session_catalog_index`
-30. `query_native_session_catalog_index`
-31. `remove_missing_native_session_catalog_index_entries`
+23. `plan_daemon_recovery`
+24. `prune_stale_daemon_sessions`
+25. `start_daemon_supervised_session`
+26. `stop_daemon_session`
+27. `catalog_native_sessions`
+28. `query_native_session_catalog`
+29. `remove_missing_native_session_catalog_entries`
+30. `build_native_session_catalog_index`
+31. `query_native_session_catalog_index`
+32. `remove_missing_native_session_catalog_index_entries`
 
-These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, bounded sample File I/O capture, bounded same-bitness selected-target attach, helper-side process-tree supervision, cancellation-safe ownership for bounded helper operations, host-side session state visibility, bounded streaming trace batches for a selected same-bitness attach session, daemon-owned durable `.knapm` session supervision, compressed chunk validation/replay, read-only replay catalog build/query, database-backed catalog index build/query/prune, read-only daemon audit, stale registry pruning, and replay by explicit session path. The daemon and catalog commands use a normal user-mode helper process and local files; the Phase 12A UI calls only these existing host-side catalog/replay commands for replay browsing, and Phase 13A adds only host-side `winsqlite3` metadata indexing over `.knapm` rows. They do not create a Windows service, injected command channel, cross-bitness broker, protected-process bypass, automatic writer recovery, orphan repair path, or target mutation during replay/catalog/index operations.
+These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, bounded sample File I/O capture, bounded same-bitness selected-target attach, helper-side process-tree supervision, cancellation-safe ownership for bounded helper operations, host-side session state visibility, bounded streaming trace batches for a selected same-bitness attach session, daemon-owned durable `.knapm` session supervision, compressed chunk validation/replay, read-only replay catalog build/query, database-backed catalog index build/query/prune, read-only daemon audit, dry-run daemon recovery planning, stale registry pruning, and replay by explicit session path. The daemon and catalog commands use a normal user-mode helper process and local files; the Phase 12A UI calls only these existing host-side catalog/replay commands for replay browsing, and Phase 13A adds only host-side `winsqlite3` metadata indexing over `.knapm` rows. They do not create a Windows service, injected command channel, cross-bitness broker, protected-process bypass, automatic writer recovery, orphan repair path, or target mutation during replay/catalog/index/plan operations.
 
 Current daemon hardening boundary:
 
 1. `daemon-status` reports `daemonState=stale` when a registry state exists but the daemon PID is dead.
 2. `daemon-audit` classifies daemon sessions as `healthy`, `finalized`, `stale`, `daemon_crashed`, `writer_crashed`, `orphaned_agent_risk`, or `malformed` without target mutation.
-3. `daemon-prune-stale --dry-run` reports only `pruneEligible` registry records; non-dry-run pruning removes daemon registry JSON records only.
-4. Duplicate daemon starts reject live target, live session id, live `.knapm` path, and stale registry conflicts before launching a new attach helper.
+3. `daemon-recovery-plan` returns dry-run operator runbooks, allowed registry-prune hints, and blocked mutation lists without target, agent, registry, or `.knapm` mutation.
+4. `daemon-prune-stale --dry-run` reports only `pruneEligible` registry records; non-dry-run pruning removes daemon registry JSON records only.
+5. Duplicate daemon starts reject live target, live session id, live `.knapm` path, and stale registry conflicts before launching a new attach helper.
 
 Future work:
 
 1. Add explicit command allowlists for future export operations.
 2. Preserve subsystem, operation, and native error codes in all failures.
-3. Design automatic daemon recovery only after orphaned active-agent operations have a separate safety review.
+3. Design automatic daemon recovery only after orphaned active-agent operations have a separate safety review and the dry-run plan contract has negative mutation regression coverage.
 
 ## Native Controller
 
@@ -140,7 +142,7 @@ Current responsibilities:
 9. Implement cancellation checks and cleanup accounting for bounded attach and process-tree operations.
 10. Populate additive host-side session state fields for bounded attach and process-tree results.
 11. Emit bounded host-side trace batch callbacks for attach-session streaming without adding agent hook-path work.
-12. Keep broad arbitrary attach, Windows service mode, daemon crash recovery, and UI-driven child auto-attach outside the current controller surface.
+12. Keep broad arbitrary attach, Windows service mode, automatic daemon crash recovery, and UI-driven child auto-attach outside the current controller surface.
 
 The controller is wired into Tauri through `knmon-native-helper.exe` for native enumeration, controlled launch-time early-bird agent loading, bounded sample File I/O capture, Phase 11A attach, Phase 11B process-tree supervision, Phase 11D loaded-agent reattach state, Phase 11E collector-reader backed shared-memory drain, Phase 11F named-event cancellation, Phase 11G session-state evidence, Phase 11H streaming `trace_batch` frames, Phase 11I `.knapm` chunk persistence, Phase 11J `.knapm` recovery classification, Phase 11K daemon-owned session supervision, Phase 11L daemon audit/stale-registry cleanup, and Phase 11M zstd/catalog replay metadata. The UI-visible Phase 11C/11F/11G/11H/11K/11L/11M/12A path uses the same helper JSON/JSONL as the smoke scripts.
 
@@ -148,7 +150,7 @@ Future responsibilities:
 
 1. Launch suspended targets.
 2. Design large-scale database-backed replay indexing after the JSON catalog contract remains stable.
-3. Design automatic daemon crash recovery and orphaned agent repair behind a separate safety boundary.
+3. Design automatic daemon crash recovery and orphaned agent repair behind a separate safety boundary after dry-run plan evidence remains stable.
 4. Manage persistent child process auto-attach policy.
 5. Promote host-side threaded reader output to full UI event streaming after daemon ownership is reviewed.
 
@@ -534,9 +536,10 @@ Current contract artifacts:
 26. `knapm-index.schema.json`
 27. `native-daemon-status.schema.json`
 28. `native-daemon-audit.schema.json`
-29. `session-catalog.schema.json`
+29. `native-daemon-recovery-plan.schema.json`
+30. `session-catalog.schema.json`
 
-The TypeScript event model and C++ `Protocol.h` are aligned around these fields, including `bounded-native-capture`, `bounded-native-attach`, `early-bird APC`, `remote LoadLibraryW`, `attachProcessId`, `detachPolicy`, `process-tree`, `observe`, `attach-supported`, child eligibility, child policy decisions, native session ownership, bounded `trace_batch` streaming frames, `.knapm` indexed replay metadata, `.knapm` compression metadata, `.knapm` recovery classification metadata, replay catalog rows, additive catalog index metadata, and daemon audit/prune state.
+The TypeScript event model and C++ `Protocol.h` are aligned around these fields, including `bounded-native-capture`, `bounded-native-attach`, `early-bird APC`, `remote LoadLibraryW`, `attachProcessId`, `detachPolicy`, `process-tree`, `observe`, `attach-supported`, child eligibility, child policy decisions, native session ownership, bounded `trace_batch` streaming frames, `.knapm` indexed replay metadata, `.knapm` compression metadata, `.knapm` recovery classification metadata, replay catalog rows, additive catalog index metadata, daemon audit/prune state, and dry-run daemon recovery plan state.
 
 ## Definition System
 
@@ -584,7 +587,7 @@ Current export:
 Future session work:
 
 - Event-level trace payload indexing and full-text replay search after a separate storage and privacy review.
-- Automatic daemon crash recovery and export tools built on the Phase 11M daemon-owned `.knapm` and catalog contract.
+- Automatic daemon crash recovery and export tools built on the Phase 11M/11N daemon-owned `.knapm`, catalog, and dry-run recovery-plan contracts.
 
 ## Safety Rules
 

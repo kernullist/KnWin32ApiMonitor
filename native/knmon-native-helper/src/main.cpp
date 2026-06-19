@@ -130,6 +130,24 @@ std::string Q(const std::string& value)
     return "\"" + JsonEscape(value) + "\"";
 }
 
+std::string JsonStringArray(const std::vector<std::string>& values)
+{
+    std::ostringstream stream;
+
+    stream << "[";
+    for (std::size_t index = 0; index < values.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+
+        stream << Q(values[index]);
+    }
+    stream << "]";
+    return stream.str();
+}
+
 std::string NowUtc()
 {
     SYSTEMTIME time = {};
@@ -7630,6 +7648,22 @@ struct DaemonSessionRecord
     std::string RegistryError;
 };
 
+struct DaemonRecoveryPlanItem
+{
+    std::string SessionId;
+    std::string RecoveryState;
+    std::string RecoveryReason;
+    std::string RecommendedAction;
+    std::string SafetyState = "dry_run_only";
+    bool AutomaticRecoveryAllowed = false;
+    bool TargetMutationAllowed = false;
+    bool RegistryPruneAllowed = false;
+    bool ReplayAllowed = false;
+    std::vector<std::string> BlockedMutations;
+    std::vector<std::string> OperatorRunbook;
+    std::string Message;
+};
+
 std::string ToJson(const DaemonStatusInfo& status)
 {
     std::ostringstream stream;
@@ -7669,6 +7703,27 @@ std::string ToJson(const DaemonSessionRecord& record)
     stream << "\"cancellationEventName\":" << Q(record.CancellationEventName) << ",";
     stream << "\"startedUtc\":" << Q(record.StartedUtc) << ",";
     stream << "\"durationMs\":" << record.DurationMs;
+    stream << "}";
+    return stream.str();
+}
+
+std::string ToJson(const DaemonRecoveryPlanItem& plan)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"sessionId\":" << Q(plan.SessionId) << ",";
+    stream << "\"recoveryState\":" << Q(plan.RecoveryState) << ",";
+    stream << "\"recoveryReason\":" << Q(plan.RecoveryReason) << ",";
+    stream << "\"recommendedAction\":" << Q(plan.RecommendedAction) << ",";
+    stream << "\"safetyState\":" << Q(plan.SafetyState) << ",";
+    stream << "\"automaticRecoveryAllowed\":" << (plan.AutomaticRecoveryAllowed ? "true" : "false") << ",";
+    stream << "\"targetMutationAllowed\":" << (plan.TargetMutationAllowed ? "true" : "false") << ",";
+    stream << "\"registryPruneAllowed\":" << (plan.RegistryPruneAllowed ? "true" : "false") << ",";
+    stream << "\"replayAllowed\":" << (plan.ReplayAllowed ? "true" : "false") << ",";
+    stream << "\"blockedMutations\":" << JsonStringArray(plan.BlockedMutations) << ",";
+    stream << "\"operatorRunbook\":" << JsonStringArray(plan.OperatorRunbook) << ",";
+    stream << "\"message\":" << Q(plan.Message);
     stream << "}";
     return stream.str();
 }
@@ -8495,6 +8550,119 @@ std::uint64_t CountPruneEligibleSessions(const std::vector<NativeSessionInfo>& s
     return count;
 }
 
+std::vector<std::string> DefaultBlockedRecoveryMutations()
+{
+    return {
+        "kill_target_process",
+        "unload_agent_module",
+        "remote_thread_repair",
+        "reinjection_repair",
+        "delete_knapm_data"
+    };
+}
+
+DaemonRecoveryPlanItem BuildDaemonRecoveryPlanItem(const NativeSessionInfo& session)
+{
+    DaemonRecoveryPlanItem plan;
+    plan.SessionId = session.SessionId;
+    plan.RecoveryState = session.RecoveryState;
+    plan.RecoveryReason = session.RecoveryReason;
+    plan.RegistryPruneAllowed = session.PruneEligible;
+    plan.ReplayAllowed = session.KnapmExists && session.KnapmValid;
+    plan.BlockedMutations = DefaultBlockedRecoveryMutations();
+
+    if (session.RecoveryState == "healthy")
+    {
+        plan.RecommendedAction = "continue_monitoring";
+        plan.OperatorRunbook = {"daemon_audit_periodic", "operator_stop_session_only_on_explicit_request"};
+        plan.Message = "Session is healthy; no recovery action is planned.";
+    }
+    else if (session.RecoveryState == "finalized")
+    {
+        plan.RecommendedAction = session.PruneEligible ? "replay_then_prune_registry_record" : "replay_only";
+        plan.OperatorRunbook = {"validate_session", "replay_session", "daemon_prune_stale_dry_run_before_registry_cleanup"};
+        plan.Message = "Session is finalized; only replay and registry cleanup are in scope.";
+    }
+    else if (session.RecoveryState == "stale")
+    {
+        plan.RecommendedAction = session.PruneEligible ? "prune_registry_record_after_dry_run" : "manual_stale_registry_review";
+        plan.OperatorRunbook = {"preserve_knapm", "validate_session", "daemon_prune_stale_dry_run", "daemon_prune_stale_if_registry_only_cleanup_is_accepted"};
+        plan.Message = "Session is stale; plan allows registry cleanup only.";
+    }
+    else if (session.RecoveryState == "daemon_crashed")
+    {
+        plan.RecommendedAction = "operator_restart_daemon_then_audit";
+        plan.OperatorRunbook = {"preserve_knapm", "start_daemon_if_needed", "daemon_audit", "operator_stop_session_if_shutdown_is_required"};
+        plan.Message = "Daemon is gone while writer is alive; automatic recovery is not enabled.";
+    }
+    else if (session.RecoveryState == "writer_crashed")
+    {
+        plan.RecommendedAction = "manual_orphan_triage_preserve_evidence";
+        plan.OperatorRunbook = {"preserve_knapm", "validate_session", "replay_session_if_valid", "daemon_prune_stale_dry_run", "manual_target_restart_for_agent_eviction"};
+        plan.Message = "Writer is gone while target is alive; do not attempt agent unload or target mutation.";
+    }
+    else if (session.RecoveryState == "orphaned_agent_risk")
+    {
+        plan.RecommendedAction = "manual_orphan_risk_triage";
+        plan.OperatorRunbook = {"preserve_knapm", "validate_session", "replay_session_if_valid", "daemon_prune_stale_dry_run", "manual_target_restart_required_for_agent_eviction"};
+        plan.Message = "Daemon and writer are gone while target is alive; active-agent repair remains blocked.";
+    }
+    else if (session.RecoveryState == "malformed")
+    {
+        plan.RecommendedAction = session.PruneEligible ? "manual_inspection_then_registry_prune" : "manual_registry_inspection";
+        plan.OperatorRunbook = {"inspect_registry_record", "validate_or_archive_knapm", "daemon_prune_stale_dry_run_if_terminal"};
+        plan.Message = "Registry or KNAPM metadata is malformed; operator inspection is required.";
+    }
+    else
+    {
+        plan.RecommendedAction = "manual_inspection";
+        plan.OperatorRunbook = {"daemon_audit", "preserve_knapm", "manual_review"};
+        plan.Message = "Recovery state is unknown; no automatic action is allowed.";
+    }
+
+    return plan;
+}
+
+std::vector<DaemonRecoveryPlanItem> BuildDaemonRecoveryPlanItems(const std::vector<NativeSessionInfo>& sessions)
+{
+    std::vector<DaemonRecoveryPlanItem> plans;
+    plans.reserve(sessions.size());
+
+    for (const NativeSessionInfo& session : sessions)
+    {
+        plans.push_back(BuildDaemonRecoveryPlanItem(session));
+    }
+
+    return plans;
+}
+
+std::uint64_t CountRegistryPruneAllowedPlans(const std::vector<DaemonRecoveryPlanItem>& plans)
+{
+    std::uint64_t count = 0;
+
+    for (const DaemonRecoveryPlanItem& plan : plans)
+    {
+        if (plan.RegistryPruneAllowed)
+        {
+            ++count;
+        }
+    }
+
+    return count;
+}
+
+std::uint64_t CountBlockedRecoveryMutations(const std::vector<DaemonRecoveryPlanItem>& plans)
+{
+    std::uint64_t count = 0;
+
+    for (const DaemonRecoveryPlanItem& plan : plans)
+    {
+        count += plan.BlockedMutations.size();
+    }
+
+    return count;
+}
+
 std::string DaemonAuditResultJson(
     const std::string& operation,
     const DaemonStatusInfo& status,
@@ -8542,6 +8710,54 @@ std::string DaemonAuditResultJson(
     return stream.str();
 }
 
+std::string DaemonRecoveryPlanResultJson(
+    const DaemonStatusInfo& status,
+    const std::vector<NativeSessionInfo>& sessions,
+    const std::vector<DaemonRecoveryPlanItem>& plans,
+    bool success,
+    std::uint32_t win32ErrorCode,
+    const std::string& message)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"success\":" << (success ? "true" : "false") << ",";
+    stream << "\"backendMode\":\"native-capture\",";
+    stream << "\"operation\":\"daemon_recovery_plan\",";
+    stream << "\"daemon\":" << ToJson(status) << ",";
+    stream << "\"sessions\":[";
+    for (std::size_t index = 0; index < sessions.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << ToJson(sessions[index]);
+    }
+    stream << "],";
+    stream << "\"recoveryPlans\":[";
+    for (std::size_t index = 0; index < plans.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << ToJson(plans[index]);
+    }
+    stream << "],";
+    stream << "\"recoveryPlanCount\":" << plans.size() << ",";
+    stream << "\"registryPruneAllowedCount\":" << CountRegistryPruneAllowedPlans(plans) << ",";
+    stream << "\"blockedMutationCount\":" << CountBlockedRecoveryMutations(plans) << ",";
+    stream << "\"automaticRecoveryAllowed\":false,";
+    stream << "\"targetMutationAllowed\":false,";
+    stream << "\"dryRun\":true,";
+    stream << "\"mutationAttempted\":false,";
+    stream << "\"win32ErrorCode\":" << win32ErrorCode << ",";
+    stream << "\"message\":" << Q(message);
+    stream << "}";
+    return stream.str();
+}
+
 std::string DaemonAuditJson(const std::vector<std::string>& args)
 {
     const std::filesystem::path runtimeDirectory = DaemonRuntimeDirectoryFromArgs(args);
@@ -8558,6 +8774,22 @@ std::string DaemonAuditJson(const std::vector<std::string>& args)
         true,
         0,
         "Daemon registry audited.");
+}
+
+std::string DaemonRecoveryPlanJson(const std::vector<std::string>& args)
+{
+    const std::filesystem::path runtimeDirectory = DaemonRuntimeDirectoryFromArgs(args);
+    DaemonStatusInfo status = ReadDaemonStatus(runtimeDirectory);
+    const auto records = ReadAllDaemonSessionRecords(runtimeDirectory);
+    const auto sessions = DaemonAuditSessionsFromRecords(records);
+    const auto plans = BuildDaemonRecoveryPlanItems(sessions);
+    return DaemonRecoveryPlanResultJson(
+        status,
+        sessions,
+        plans,
+        true,
+        0,
+        "Daemon recovery plan generated without mutation.");
 }
 
 std::string DaemonPruneStaleJson(const std::vector<std::string>& args)
@@ -8932,7 +9164,7 @@ void PrintUsage()
     std::cout << "{";
     std::cout << "\"schemaVersion\":\"0.1.0\",";
     std::cout << "\"success\":false,";
-    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] [--knapm-compression none|zstd] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-audit [--runtime-dir dir] | daemon-prune-stale [--runtime-dir dir] [--dry-run] | daemon-start-session --pid pid --write-knapm path [--knapm-compression none|zstd] [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | catalog-sessions --root dir [--catalog path] [--rebuild] | catalog-query --catalog path [--limit n] [--state state] [--target pid-or-text] | catalog-remove-missing --catalog path [--dry-run] | catalog-index-build --root dir --database path [--rebuild] | catalog-index-query --database path [--limit n] [--state state] [--target pid-or-text] | catalog-index-remove-missing --database path [--dry-run] | trace-index-build --root dir --database path [--rebuild] | trace-index-query --database path [--text text] [--api api] [--module module] [--session id-or-path] [--pid pid] [--limit n] | trace-index-remove-missing --database path [--dry-run] | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
+    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] [--knapm-compression none|zstd] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-audit [--runtime-dir dir] | daemon-recovery-plan [--runtime-dir dir] | daemon-prune-stale [--runtime-dir dir] [--dry-run] | daemon-start-session --pid pid --write-knapm path [--knapm-compression none|zstd] [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | catalog-sessions --root dir [--catalog path] [--rebuild] | catalog-query --catalog path [--limit n] [--state state] [--target pid-or-text] | catalog-remove-missing --catalog path [--dry-run] | catalog-index-build --root dir --database path [--rebuild] | catalog-index-query --database path [--limit n] [--state state] [--target pid-or-text] | catalog-index-remove-missing --database path [--dry-run] | trace-index-build --root dir --database path [--rebuild] | trace-index-query --database path [--text text] [--api api] [--module module] [--session id-or-path] [--pid pid] [--limit n] | trace-index-remove-missing --database path [--dry-run] | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
     std::cout << "}\n";
 }
 }
@@ -9000,6 +9232,12 @@ int wmain(int argc, wchar_t** argv)
     if (args[0] == "daemon-audit")
     {
         std::cout << DaemonAuditJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "daemon-recovery-plan")
+    {
+        std::cout << DaemonRecoveryPlanJson(args) << "\n";
         return 0;
     }
 

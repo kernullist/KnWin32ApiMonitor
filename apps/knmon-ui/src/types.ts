@@ -110,6 +110,41 @@ export interface NativeDaemonAudit {
   message: string;
 }
 
+export interface NativeDaemonRecoveryPlanItem {
+  schemaVersion: string;
+  sessionId: string;
+  recoveryState: string;
+  recoveryReason: string;
+  recommendedAction: string;
+  safetyState: string;
+  automaticRecoveryAllowed: boolean;
+  targetMutationAllowed: boolean;
+  registryPruneAllowed: boolean;
+  replayAllowed: boolean;
+  blockedMutations: string[];
+  operatorRunbook: string[];
+  message: string;
+}
+
+export interface NativeDaemonRecoveryPlan {
+  schemaVersion: string;
+  success: boolean;
+  backendMode: BackendMode;
+  operation: string;
+  daemon: NativeDaemonStatus;
+  sessions: NativeSession[];
+  recoveryPlans: NativeDaemonRecoveryPlanItem[];
+  recoveryPlanCount: number;
+  registryPruneAllowedCount: number;
+  blockedMutationCount: number;
+  automaticRecoveryAllowed: boolean;
+  targetMutationAllowed: boolean;
+  dryRun: boolean;
+  mutationAttempted: boolean;
+  win32ErrorCode: number;
+  message: string;
+}
+
 export interface NativeSessionCatalogRow {
   path: string;
   format: string;

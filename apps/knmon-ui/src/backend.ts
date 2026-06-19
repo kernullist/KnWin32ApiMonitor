@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { mockTargets } from "./mockData";
-import type { CaptureResult, CaptureSessionState, LaunchResult, NativeDaemonAudit, NativeDaemonStatus, NativeOperation, NativeSession, NativeSessionCatalog, NativeTraceBatch, NativeTraceIndex, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
+import type { CaptureResult, CaptureSessionState, LaunchResult, NativeDaemonAudit, NativeDaemonRecoveryPlan, NativeDaemonStatus, NativeOperation, NativeSession, NativeSessionCatalog, NativeTraceBatch, NativeTraceIndex, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
 
 function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -183,6 +183,14 @@ export async function auditDaemonSessions(): Promise<NativeDaemonAudit> {
   }
 
   return invoke<NativeDaemonAudit>("audit_daemon_sessions");
+}
+
+export async function planDaemonRecovery(): Promise<NativeDaemonRecoveryPlan> {
+  if (!isTauriRuntime()) {
+    throw new Error("Daemon recovery planning requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeDaemonRecoveryPlan>("plan_daemon_recovery");
 }
 
 export async function pruneStaleDaemonSessions(dryRun: boolean): Promise<NativeDaemonAudit> {

@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/native-daemon-recovery-plan.schema.json",
+  "title": "KnMonNativeDaemonRecoveryPlan",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "success",
+    "backendMode",
+    "operation",
+    "daemon",
+    "sessions",
+    "recoveryPlans",
+    "recoveryPlanCount",
+    "registryPruneAllowedCount",
+    "blockedMutationCount",
+    "automaticRecoveryAllowed",
+    "targetMutationAllowed",
+    "dryRun",
+    "mutationAttempted",
+    "win32ErrorCode",
+    "message"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "success": { "type": "boolean" },
+    "backendMode": { "enum": ["native-capture"] },
+    "operation": { "enum": ["daemon_recovery_plan"] },
+    "daemon": { "$ref": "native-daemon-status.schema.json" },
+    "sessions": {
+      "type": "array",
+      "items": { "$ref": "native-session.schema.json" }
+    },
+    "recoveryPlans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "sessionId",
+          "recoveryState",
+          "recoveryReason",
+          "recommendedAction",
+          "safetyState",
+          "automaticRecoveryAllowed",
+          "targetMutationAllowed",
+          "registryPruneAllowed",
+          "replayAllowed",
+          "blockedMutations",
+          "operatorRunbook",
+          "message"
+        ],
+        "properties": {
+          "schemaVersion": { "type": "string" },
+          "sessionId": { "type": "string" },
+          "recoveryState": {
+            "enum": [
+              "",
+              "healthy",
+              "finalized",
+              "stale",
+              "daemon_crashed",
+              "writer_crashed",
+              "orphaned_agent_risk",
+              "malformed"
+            ]
+          },
+          "recoveryReason": { "type": "string" },
+          "recommendedAction": { "type": "string" },
+          "safetyState": { "enum": ["dry_run_only"] },
+          "automaticRecoveryAllowed": { "const": false },
+          "targetMutationAllowed": { "const": false },
+          "registryPruneAllowed": { "type": "boolean" },
+          "replayAllowed": { "type": "boolean" },
+          "blockedMutations": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "kill_target_process",
+                "unload_agent_module",
+                "remote_thread_repair",
+                "reinjection_repair",
+                "delete_knapm_data"
+              ]
+            }
+          },
+          "operatorRunbook": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "message": { "type": "string" }
+        }
+      }
+    },
+    "recoveryPlanCount": { "type": "integer", "minimum": 0 },
+    "registryPruneAllowedCount": { "type": "integer", "minimum": 0 },
+    "blockedMutationCount": { "type": "integer", "minimum": 0 },
+    "automaticRecoveryAllowed": { "const": false },
+    "targetMutationAllowed": { "const": false },
+    "dryRun": { "const": true },
+    "mutationAttempted": { "const": false },
+    "win32ErrorCode": { "type": "integer", "minimum": 0 },
+    "message": { "type": "string" }
+  }
+}
