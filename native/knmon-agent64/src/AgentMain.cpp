@@ -11,6 +11,7 @@
 #include <bcrypt.h>
 #include <rpc.h>
 #include <objbase.h>
+#include <oleauto.h>
 #include <roapi.h>
 #include <shlobj.h>
 #include <wincrypt.h>
@@ -220,6 +221,8 @@ using StringFromGUID2Fn = int(WINAPI*)(REFGUID, LPOLESTR, int);
 using RoInitializeFn = HRESULT(WINAPI*)(RO_INIT_TYPE);
 using RoUninitializeFn = void(WINAPI*)();
 using RoGetApartmentIdentifierFn = HRESULT(WINAPI*)(UINT64*);
+using VariantClearFn = HRESULT(WINAPI*)(VARIANTARG*);
+using SafeArrayDestroyFn = HRESULT(WINAPI*)(SAFEARRAY*);
 using SymInitializeWFn = BOOL(WINAPI*)(HANDLE, PCWSTR, BOOL);
 using SymCleanupFn = BOOL(WINAPI*)(HANDLE);
 using RpcStringBindingComposeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR*);
@@ -360,6 +363,8 @@ StringFromGUID2Fn g_originalStringFromGUID2 = nullptr;
 RoInitializeFn g_originalRoInitialize = nullptr;
 RoUninitializeFn g_originalRoUninitialize = nullptr;
 RoGetApartmentIdentifierFn g_originalRoGetApartmentIdentifier = nullptr;
+VariantClearFn g_originalVariantClear = nullptr;
+SafeArrayDestroyFn g_originalSafeArrayDestroy = nullptr;
 SymInitializeWFn g_originalSymInitializeW = nullptr;
 SymCleanupFn g_originalSymCleanup = nullptr;
 RpcStringBindingComposeWFn g_originalRpcStringBindingComposeW = nullptr;
@@ -460,7 +465,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 116;
+constexpr std::size_t HookDefinitionCount = 118;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1776,6 +1781,10 @@ std::uint16_t ModuleId(const char* moduleName)
     else if (_stricmp(moduleName, "api-ms-win-core-winrt-l1-1-0.dll") == 0)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::ApiMsWinCoreWinrtL110);
+    }
+    else if (_stricmp(moduleName, "oleaut32.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Oleaut32);
     }
     else if (_stricmp(moduleName, "dbghelp.dll") == 0)
     {
@@ -5388,6 +5397,46 @@ void EmitRoGetApartmentIdentifierEvent(
     }
 }
 
+void EmitVariantClearEvent(
+    HRESULT result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    VARIANTARG* variant)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::VariantClear, "oleaut32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->ReturnCode = static_cast<std::uint32_t>(result);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(variant));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitSafeArrayDestroyEvent(
+    HRESULT result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    SAFEARRAY* safeArray)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::SafeArrayDestroy, "oleaut32.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->ReturnCode = static_cast<std::uint32_t>(result);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(safeArray));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void EmitSymInitializeWEvent(
     BOOL result,
     DWORD errorCode,
@@ -6389,6 +6438,8 @@ int WINAPI HookedStringFromGUID2(REFGUID guid, LPOLESTR string, int cchMax);
 HRESULT WINAPI HookedRoInitialize(RO_INIT_TYPE initType);
 void WINAPI HookedRoUninitialize();
 HRESULT WINAPI HookedRoGetApartmentIdentifier(UINT64* apartmentIdentifier);
+HRESULT WINAPI HookedVariantClear(VARIANTARG* variant);
+HRESULT WINAPI HookedSafeArrayDestroy(SAFEARRAY* safeArray);
 BOOL WINAPI HookedSymInitializeW(HANDLE process, PCWSTR userSearchPath, BOOL invadeProcess);
 BOOL WINAPI HookedSymCleanup(HANDLE process);
 RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR protSeq, RPC_WSTR networkAddr, RPC_WSTR endpoint, RPC_WSTR options, RPC_WSTR* stringBinding);
@@ -6512,6 +6563,8 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "api-ms-win-core-winrt-l1-1-0.dll", "RoInitialize", reinterpret_cast<void*>(HookedRoInitialize), reinterpret_cast<void**>(&g_originalRoInitialize), false, true, false, 0, 0 },
         HookDefinition { "api-ms-win-core-winrt-l1-1-0.dll", "RoUninitialize", reinterpret_cast<void*>(HookedRoUninitialize), reinterpret_cast<void**>(&g_originalRoUninitialize), false, true, false, 0, 0 },
         HookDefinition { "api-ms-win-core-winrt-l1-1-0.dll", "RoGetApartmentIdentifier", reinterpret_cast<void*>(HookedRoGetApartmentIdentifier), reinterpret_cast<void**>(&g_originalRoGetApartmentIdentifier), false, true, false, 0, 0 },
+        HookDefinition { "oleaut32.dll", "VariantClear", reinterpret_cast<void*>(HookedVariantClear), reinterpret_cast<void**>(&g_originalVariantClear), false, true, false, 9, 0 },
+        HookDefinition { "oleaut32.dll", "SafeArrayDestroy", reinterpret_cast<void*>(HookedSafeArrayDestroy), reinterpret_cast<void**>(&g_originalSafeArrayDestroy), false, true, false, 16, 0 },
         HookDefinition { "dbghelp.dll", "SymInitializeW", reinterpret_cast<void*>(HookedSymInitializeW), reinterpret_cast<void**>(&g_originalSymInitializeW), false, true, false, 0, 0 },
         HookDefinition { "dbghelp.dll", "SymCleanup", reinterpret_cast<void*>(HookedSymCleanup), reinterpret_cast<void**>(&g_originalSymCleanup), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringBindingComposeW", reinterpret_cast<void*>(HookedRpcStringBindingComposeW), reinterpret_cast<void**>(&g_originalRpcStringBindingComposeW), false, true, false, 0, 0 },
@@ -9940,6 +9993,66 @@ HRESULT WINAPI HookedRoGetApartmentIdentifier(UINT64* apartmentIdentifier)
     if (HooksEnabled())
     {
         EmitRoGetApartmentIdentifierEvent(result, eventError, start, end, apartmentIdentifier);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HRESULT WINAPI HookedVariantClear(VARIANTARG* variant)
+{
+    if (g_inHook || !HooksEnabled() || g_originalVariantClear == nullptr)
+    {
+        if (g_originalVariantClear == nullptr)
+        {
+            return HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND);
+        }
+
+        return g_originalVariantClear(variant);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const HRESULT result = g_originalVariantClear(variant);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = FAILED(result) ? static_cast<DWORD>(result) : 0;
+    if (HooksEnabled())
+    {
+        EmitVariantClearEvent(result, eventError, start, end, variant);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+HRESULT WINAPI HookedSafeArrayDestroy(SAFEARRAY* safeArray)
+{
+    if (g_inHook || !HooksEnabled() || g_originalSafeArrayDestroy == nullptr)
+    {
+        if (g_originalSafeArrayDestroy == nullptr)
+        {
+            return HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND);
+        }
+
+        return g_originalSafeArrayDestroy(safeArray);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const HRESULT result = g_originalSafeArrayDestroy(safeArray);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = FAILED(result) ? static_cast<DWORD>(result) : 0;
+    if (HooksEnabled())
+    {
+        EmitSafeArrayDestroyEvent(result, eventError, start, end, safeArray);
     }
 
     SetLastError(lastError);

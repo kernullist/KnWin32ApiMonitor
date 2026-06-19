@@ -8,6 +8,7 @@
 #include <bcrypt.h>
 #include <dbghelp.h>
 #include <objbase.h>
+#include <oleauto.h>
 #include <rpc.h>
 #include <roapi.h>
 #include <shlobj.h>
@@ -1226,6 +1227,53 @@ bool RunOle32ComLifecycleProbe()
     if (threadHandle != nullptr)
     {
         CloseHandle(threadHandle);
+    }
+
+    return success;
+}
+
+bool RunOleAutomationLifecycleProbe()
+{
+    bool success = false;
+    SAFEARRAY* safeArray = nullptr;
+
+    do
+    {
+        VARIANT variant = {};
+        VariantInit(&variant);
+        variant.vt = VT_I4;
+        variant.lVal = 42;
+
+        HRESULT result = VariantClear(&variant);
+        if (FAILED(result))
+        {
+            std::cout << "VariantClear failed with " << HexHResult(result) << "\n";
+            break;
+        }
+
+        safeArray = SafeArrayCreateVector(VT_UI1, 0, 4);
+        if (safeArray == nullptr)
+        {
+            std::cout << "SafeArrayCreateVector failed\n";
+            break;
+        }
+
+        result = SafeArrayDestroy(safeArray);
+        safeArray = nullptr;
+        if (FAILED(result))
+        {
+            std::cout << "SafeArrayDestroy failed with " << HexHResult(result) << "\n";
+            break;
+        }
+
+        std::cout << "oleaut32 variant and safe array lifecycle completed\n";
+        success = true;
+    }
+    while (false);
+
+    if (safeArray != nullptr)
+    {
+        SafeArrayDestroy(safeArray);
     }
 
     return success;
@@ -2558,6 +2606,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunOle32ComLifecycleProbe())
+        {
+            break;
+        }
+
+        if (!RunOleAutomationLifecycleProbe())
         {
             break;
         }

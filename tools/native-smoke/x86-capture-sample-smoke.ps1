@@ -99,6 +99,8 @@ $requiredApis = @(
     "RoInitialize",
     "RoUninitialize",
     "RoGetApartmentIdentifier",
+    "VariantClear",
+    "SafeArrayDestroy",
     "SymInitializeW",
     "SymCleanup",
     "RpcStringBindingComposeW",
@@ -219,6 +221,54 @@ foreach ($api in $requiredApis)
     {
         throw "x86 capture missing API: $api"
     }
+}
+
+$oleautEvents = @($result.capturedEvents | Where-Object { $_.module -eq "oleaut32.dll" -and $_.api -in @("VariantClear", "SafeArrayDestroy") })
+if ($oleautEvents.Count -lt 2)
+{
+    throw "x86 capture did not include the selected OLEAUT32 lifecycle API slice."
+}
+
+$variantClear = @($oleautEvents | Where-Object { $_.api -eq "VariantClear" } | Select-Object -First 1)
+if ($variantClear.Count -ne 1 -or
+    $variantClear[0].apiFamily -ne "ole-automation" -or
+    $variantClear[0].apiCategory -ne "variant_clear" -or
+    $variantClear[0].hookPolicy -ne "iat" -or
+    $variantClear[0].coverageStatus -ne "smoke_verified" -or
+    $variantClear[0].returnValue -ne "0x00000000")
+{
+    throw "x86 VariantClear metadata or return evidence mismatch: $($variantClear | ConvertTo-Json -Depth 8)"
+}
+
+$variantPointer = @($variantClear[0].arguments | Where-Object { $_.name -eq "pvarg" } | Select-Object -First 1)
+if ($variantPointer.Count -ne 1 -or $variantPointer[0].decodeAlias -ne "pointer")
+{
+    throw "x86 VariantClear pointer metadata mismatch: $($variantPointer | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $variantPointer[0].decodedValue -Name "x86 VariantClear pvarg"
+
+$safeArrayDestroy = @($oleautEvents | Where-Object { $_.api -eq "SafeArrayDestroy" } | Select-Object -First 1)
+if ($safeArrayDestroy.Count -ne 1 -or
+    $safeArrayDestroy[0].apiFamily -ne "ole-automation" -or
+    $safeArrayDestroy[0].apiCategory -ne "safe_array_destroy" -or
+    $safeArrayDestroy[0].hookPolicy -ne "iat" -or
+    $safeArrayDestroy[0].coverageStatus -ne "smoke_verified" -or
+    $safeArrayDestroy[0].returnValue -ne "0x00000000")
+{
+    throw "x86 SafeArrayDestroy metadata or return evidence mismatch: $($safeArrayDestroy | ConvertTo-Json -Depth 8)"
+}
+
+$safeArrayPointer = @($safeArrayDestroy[0].arguments | Where-Object { $_.name -eq "psa" } | Select-Object -First 1)
+if ($safeArrayPointer.Count -ne 1 -or $safeArrayPointer[0].decodeAlias -ne "pointer")
+{
+    throw "x86 SafeArrayDestroy pointer metadata mismatch: $($safeArrayPointer | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $safeArrayPointer[0].decodedValue -Name "x86 SafeArrayDestroy psa"
+
+$oleautPayload = $oleautEvents | ConvertTo-Json -Depth 12
+if ($oleautPayload -cmatch "SysAllocString|SysFreeString|VT_BSTR|BSTR|bstrString|SafeArrayAccessData|SafeArrayGetElement|SafeArrayPtrOfIndex|VariantChangeType|C:\\Users|AppData|ProgramData|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 OLEAUT32 events appear to expose BSTR, SAFEARRAY content, payload, stack, injection, credential, or byte-preview evidence: $oleautPayload"
 }
 
 $dbghelpEvents = @($result.capturedEvents | Where-Object { $_.module -eq "dbghelp.dll" -and $_.api -in @("SymInitializeW", "SymCleanup") })

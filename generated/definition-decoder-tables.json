@@ -3777,14 +3777,14 @@
     {
       "callingConvention": "stdcall",
       "category": "variant_clear",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "HRESULT",
       "failure": {
         "returnNotEqual": "S_OK"
       },
       "family": "ole-automation",
       "firstParameterIndex": 537,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 159,
       "module": "oleaut32.dll",
       "moduleId": 18,
@@ -3801,14 +3801,14 @@
     {
       "callingConvention": "stdcall",
       "category": "safe_array_destroy",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "HRESULT",
       "failure": {
         "returnNotEqual": "S_OK"
       },
       "family": "ole-automation",
       "firstParameterIndex": 538,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 160,
       "module": "oleaut32.dll",
       "moduleId": 18,
@@ -14590,7 +14590,7 @@
     {
       "absoluteIndex": 537,
       "apiId": 159,
-      "captureTiming": "pre_post",
+      "captureTiming": "pre",
       "decode": "pointer",
       "direction": "inout",
       "enum": "",

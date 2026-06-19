@@ -4060,6 +4060,20 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         payload = ApiCallPayload(result, record, HexHResultValue(record.ReturnCode), args.str(), "");
         break;
     }
+    case KnMonTransportApiId::VariantClear:
+    {
+        const std::string variantPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "VARIANTARG*", "pvarg", "inout", variantPointer, variantPointer, variantPointer);
+        payload = ApiCallPayload(result, record, HexHResultValue(record.ReturnCode), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::SafeArrayDestroy:
+    {
+        const std::string safeArrayPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "SAFEARRAY*", "psa", "in", safeArrayPointer, safeArrayPointer, safeArrayPointer);
+        payload = ApiCallPayload(result, record, HexHResultValue(record.ReturnCode), args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::SymInitializeW:
     {
         const std::string processHandle = HexPointerValue(record.Values64[0], result.Architecture);
