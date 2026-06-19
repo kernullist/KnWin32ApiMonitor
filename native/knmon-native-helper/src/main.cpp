@@ -8758,6 +8758,67 @@ std::string DaemonRecoveryPlanResultJson(
     return stream.str();
 }
 
+std::string DaemonRecoveryApplyResultJson(
+    const DaemonStatusInfo& status,
+    const std::vector<NativeSessionInfo>& sessions,
+    const std::vector<DaemonRecoveryPlanItem>& plans,
+    bool dryRun,
+    bool mutationAttempted,
+    const std::vector<std::string>& prunedSessionIds,
+    bool success,
+    std::uint32_t win32ErrorCode,
+    const std::string& message)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"success\":" << (success ? "true" : "false") << ",";
+    stream << "\"backendMode\":\"native-capture\",";
+    stream << "\"operation\":\"daemon_recovery_apply\",";
+    stream << "\"daemon\":" << ToJson(status) << ",";
+    stream << "\"sessions\":[";
+    for (std::size_t index = 0; index < sessions.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << ToJson(sessions[index]);
+    }
+    stream << "],";
+    stream << "\"recoveryPlans\":[";
+    for (std::size_t index = 0; index < plans.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << ToJson(plans[index]);
+    }
+    stream << "],";
+    stream << "\"recoveryPlanCount\":" << plans.size() << ",";
+    stream << "\"registryPruneAllowedCount\":" << CountRegistryPruneAllowedPlans(plans) << ",";
+    stream << "\"blockedMutationCount\":" << CountBlockedRecoveryMutations(plans) << ",";
+    stream << "\"automaticRecoveryAllowed\":false,";
+    stream << "\"targetMutationAllowed\":false,";
+    stream << "\"dryRun\":" << (dryRun ? "true" : "false") << ",";
+    stream << "\"mutationAttempted\":" << (mutationAttempted ? "true" : "false") << ",";
+    stream << "\"prunedSessionIds\":[";
+    for (std::size_t index = 0; index < prunedSessionIds.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << Q(prunedSessionIds[index]);
+    }
+    stream << "],";
+    stream << "\"win32ErrorCode\":" << win32ErrorCode << ",";
+    stream << "\"message\":" << Q(message);
+    stream << "}";
+    return stream.str();
+}
+
 std::string DaemonAuditJson(const std::vector<std::string>& args)
 {
     const std::filesystem::path runtimeDirectory = DaemonRuntimeDirectoryFromArgs(args);
@@ -8842,6 +8903,69 @@ std::string DaemonPruneStaleJson(const std::vector<std::string>& args)
         "daemon_prune_stale",
         refreshedStatus,
         sessions,
+        dryRun,
+        !dryRun && !prunedSessionIds.empty(),
+        prunedSessionIds,
+        success,
+        win32ErrorCode,
+        message);
+}
+
+std::string DaemonRecoveryApplyJson(const std::vector<std::string>& args)
+{
+    const std::filesystem::path runtimeDirectory = DaemonRuntimeDirectoryFromArgs(args);
+    const bool applyRegistryPrune = HasOption(args, "--apply-registry-prune");
+    const bool dryRun = HasOption(args, "--dry-run") || !applyRegistryPrune;
+    DaemonStatusInfo status = ReadDaemonStatus(runtimeDirectory);
+    const auto records = ReadAllDaemonSessionRecords(runtimeDirectory);
+    std::vector<NativeSessionInfo> sessions;
+    std::vector<DaemonRecoveryPlanItem> plans;
+    std::vector<std::string> prunedSessionIds;
+    bool success = true;
+    std::uint32_t win32ErrorCode = 0;
+    std::string message = dryRun ? "Daemon recovery apply dry-run completed." : "Daemon recovery apply completed with registry-only cleanup.";
+
+    sessions.reserve(records.size());
+    plans.reserve(records.size());
+    for (const DaemonSessionRecord& record : records)
+    {
+        NativeSessionInfo session = NativeSessionFromDaemonRecord(record);
+        DaemonRecoveryPlanItem plan = BuildDaemonRecoveryPlanItem(session);
+        sessions.push_back(session);
+        plans.push_back(plan);
+        if (!plan.RegistryPruneAllowed)
+        {
+            continue;
+        }
+
+        prunedSessionIds.push_back(session.SessionId);
+        if (dryRun)
+        {
+            continue;
+        }
+
+        const std::filesystem::path recordPath = record.RegistryPath.empty() ? DaemonSessionRecordPath(runtimeDirectory, record.SessionId) : record.RegistryPath;
+        std::error_code removeError;
+        std::filesystem::remove(recordPath, removeError);
+        if (removeError)
+        {
+            success = false;
+            win32ErrorCode = ERROR_DELETE_PENDING;
+            message = "failed_to_apply_daemon_recovery_registry_prune";
+            break;
+        }
+    }
+
+    DaemonStatusInfo refreshedStatus = ReadDaemonStatus(runtimeDirectory);
+    if (dryRun)
+    {
+        refreshedStatus = status;
+    }
+
+    return DaemonRecoveryApplyResultJson(
+        refreshedStatus,
+        sessions,
+        plans,
         dryRun,
         !dryRun && !prunedSessionIds.empty(),
         prunedSessionIds,
@@ -9164,7 +9288,7 @@ void PrintUsage()
     std::cout << "{";
     std::cout << "\"schemaVersion\":\"0.1.0\",";
     std::cout << "\"success\":false,";
-    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] [--knapm-compression none|zstd] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-audit [--runtime-dir dir] | daemon-recovery-plan [--runtime-dir dir] | daemon-prune-stale [--runtime-dir dir] [--dry-run] | daemon-start-session --pid pid --write-knapm path [--knapm-compression none|zstd] [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | catalog-sessions --root dir [--catalog path] [--rebuild] | catalog-query --catalog path [--limit n] [--state state] [--target pid-or-text] | catalog-remove-missing --catalog path [--dry-run] | catalog-index-build --root dir --database path [--rebuild] | catalog-index-query --database path [--limit n] [--state state] [--target pid-or-text] | catalog-index-remove-missing --database path [--dry-run] | trace-index-build --root dir --database path [--rebuild] | trace-index-query --database path [--text text] [--api api] [--module module] [--session id-or-path] [--pid pid] [--limit n] | trace-index-remove-missing --database path [--dry-run] | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
+    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] [--knapm-compression none|zstd] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-audit [--runtime-dir dir] | daemon-recovery-plan [--runtime-dir dir] | daemon-recovery-apply [--runtime-dir dir] [--dry-run|--apply-registry-prune] | daemon-prune-stale [--runtime-dir dir] [--dry-run] | daemon-start-session --pid pid --write-knapm path [--knapm-compression none|zstd] [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | catalog-sessions --root dir [--catalog path] [--rebuild] | catalog-query --catalog path [--limit n] [--state state] [--target pid-or-text] | catalog-remove-missing --catalog path [--dry-run] | catalog-index-build --root dir --database path [--rebuild] | catalog-index-query --database path [--limit n] [--state state] [--target pid-or-text] | catalog-index-remove-missing --database path [--dry-run] | trace-index-build --root dir --database path [--rebuild] | trace-index-query --database path [--text text] [--api api] [--module module] [--session id-or-path] [--pid pid] [--limit n] | trace-index-remove-missing --database path [--dry-run] | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
     std::cout << "}\n";
 }
 }
@@ -9238,6 +9362,12 @@ int wmain(int argc, wchar_t** argv)
     if (args[0] == "daemon-recovery-plan")
     {
         std::cout << DaemonRecoveryPlanJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "daemon-recovery-apply")
+    {
+        std::cout << DaemonRecoveryApplyJson(args) << "\n";
         return 0;
     }
 

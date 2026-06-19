@@ -67,6 +67,7 @@ contracts/
   native-daemon-status.schema.json
   native-daemon-audit.schema.json
   native-daemon-recovery-plan.schema.json
+  native-daemon-recovery-apply.schema.json
 ```
 
 `capture-result.schema.json` currently accepts both `bounded-native-capture` with `early-bird APC` and `bounded-native-attach` with `remote LoadLibraryW`. Attach results may include `attachProcessId` and `detachPolicy`, with Phase 11A using `self-disable-no-unload`.
@@ -82,6 +83,8 @@ contracts/
 `native-daemon-audit.schema.json` describes Phase 11L `daemon-audit` and `daemon-prune-stale` results. It wraps daemon status, audited daemon sessions, `pruneEligibleCount`, dry-run and mutation-attempt flags, pruned session ids, and the command message. `daemon-audit` is read-only; `daemon-prune-stale` removes only daemon registry record JSON files selected by `pruneEligible`.
 
 `native-daemon-recovery-plan.schema.json` describes Phase 11N `daemon-recovery-plan` results. It wraps daemon status, audited daemon sessions, session-level dry-run recovery plan items, operator runbook action ids, allowed registry-prune hints, blocked mutation ids, and global safety flags. The command always returns `dryRun=true`, `mutationAttempted=false`, `automaticRecoveryAllowed=false`, and `targetMutationAllowed=false`; it does not recover writers, unload agents, kill targets, reinject, delete `.knapm` data, or mutate daemon registry records.
+
+`native-daemon-recovery-apply.schema.json` describes Phase 11O `daemon-recovery-apply` results. The command is dry-run by default; it mutates host state only when `--apply-registry-prune` is explicit, and even then it can remove only daemon registry records whose recovery plan marks `registryPruneAllowed=true`. It preserves `.knapm` data, does not recover writers, does not unload agents, does not kill or restart targets, and does not reinject.
 
 `process-tree-node.schema.json` and `process-tree-result.schema.json` describe Phase 11B helper-side process-tree supervision. They cover root/child process metadata, child policies `observe` and `attach-supported`, eligibility states, policy decisions, audit events, and optional embedded Phase 11A child attach results.
 

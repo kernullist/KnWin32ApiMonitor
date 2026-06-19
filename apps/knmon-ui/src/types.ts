@@ -145,6 +145,26 @@ export interface NativeDaemonRecoveryPlan {
   message: string;
 }
 
+export interface NativeDaemonRecoveryApply {
+  schemaVersion: string;
+  success: boolean;
+  backendMode: BackendMode;
+  operation: string;
+  daemon: NativeDaemonStatus;
+  sessions: NativeSession[];
+  recoveryPlans: NativeDaemonRecoveryPlanItem[];
+  recoveryPlanCount: number;
+  registryPruneAllowedCount: number;
+  blockedMutationCount: number;
+  automaticRecoveryAllowed: boolean;
+  targetMutationAllowed: boolean;
+  dryRun: boolean;
+  mutationAttempted: boolean;
+  prunedSessionIds: string[];
+  win32ErrorCode: number;
+  message: string;
+}
+
 export interface NativeSessionCatalogRow {
   path: string;
   format: string;

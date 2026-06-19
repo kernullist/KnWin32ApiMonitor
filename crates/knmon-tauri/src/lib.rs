@@ -227,6 +227,29 @@ pub struct NativeDaemonRecoveryPlan
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct NativeDaemonRecoveryApply
+{
+    pub schema_version: String,
+    pub success: bool,
+    pub backend_mode: String,
+    pub operation: String,
+    pub daemon: NativeDaemonStatus,
+    pub sessions: Vec<NativeSession>,
+    pub recovery_plans: Vec<NativeDaemonRecoveryPlanItem>,
+    pub recovery_plan_count: u64,
+    pub registry_prune_allowed_count: u64,
+    pub blocked_mutation_count: u64,
+    pub automatic_recovery_allowed: bool,
+    pub target_mutation_allowed: bool,
+    pub dry_run: bool,
+    pub mutation_attempted: bool,
+    pub pruned_session_ids: Vec<String>,
+    pub win32_error_code: u32,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NativeSessionCatalogRow
 {
     pub path: String,
@@ -1514,6 +1537,26 @@ pub fn native_daemon_recovery_plan() -> Result<NativeDaemonRecoveryPlan, String>
         default_daemon_runtime_path().to_string_lossy().to_string(),
     ])?;
     parse_helper_json(&helper_output, "daemon-recovery-plan")
+}
+
+pub fn apply_daemon_recovery(dry_run: bool) -> Result<NativeDaemonRecoveryApply, String>
+{
+    let mut args = vec![
+        "daemon-recovery-apply".to_string(),
+        "--runtime-dir".to_string(),
+        default_daemon_runtime_path().to_string_lossy().to_string(),
+    ];
+    if dry_run
+    {
+        args.push("--dry-run".to_string());
+    }
+    else
+    {
+        args.push("--apply-registry-prune".to_string());
+    }
+
+    let helper_output = run_helper_args(&args)?;
+    parse_helper_json(&helper_output, "daemon-recovery-apply")
 }
 
 pub fn prune_stale_daemon_sessions(dry_run: bool) -> Result<NativeDaemonAudit, String>
