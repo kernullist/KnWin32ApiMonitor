@@ -13,6 +13,7 @@
 #include <roapi.h>
 #include <shlobj.h>
 #include <wincrypt.h>
+#include <windns.h>
 #include <winver.h>
 #include <winhttp.h>
 #include <wininet.h>
@@ -1277,6 +1278,13 @@ bool RunOleAutomationLifecycleProbe()
     }
 
     return success;
+}
+
+bool RunDnsRecordLifecycleProbe()
+{
+    DnsRecordListFree(nullptr, DnsFreeRecordList);
+    std::cout << "dnsapi record list free lifecycle completed\n";
+    return true;
 }
 
 DWORD WINAPI CombaseWinRtLifecycleThreadProc(LPVOID)
@@ -2611,6 +2619,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunOleAutomationLifecycleProbe())
+        {
+            break;
+        }
+
+        if (!RunDnsRecordLifecycleProbe())
         {
             break;
         }

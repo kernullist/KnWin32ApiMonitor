@@ -4017,14 +4017,14 @@
     {
       "callingConvention": "stdcall",
       "category": "dns_record_list_free",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnEqual": "void"
       },
       "family": "dns",
       "firstParameterIndex": 575,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 169,
       "module": "dnsapi.dll",
       "moduleId": 21,

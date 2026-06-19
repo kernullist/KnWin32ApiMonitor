@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "module": "dnsapi",
-  "description": "Wave 4 definition-only metadata for DNS query and record-list lifecycle APIs.",
+  "description": "Wave 4 DNS metadata, with a selected low-payload record-list lifecycle hook.",
   "apis": [
     {
       "module": "DNSAPI.dll",
@@ -32,8 +32,8 @@
       "family": "dns",
       "category": "dns_record_list_free",
       "risk": "medium",
-      "hookPolicy": "definition_only",
-      "coverageStatus": "definition_only",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
       "architectures": ["x86", "x64"],
       "callingConvention": "stdcall",
       "returnType": "VOID",

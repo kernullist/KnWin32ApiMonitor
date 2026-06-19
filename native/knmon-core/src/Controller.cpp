@@ -4074,6 +4074,15 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         payload = ApiCallPayload(result, record, HexHResultValue(record.ReturnCode), args.str(), "");
         break;
     }
+    case KnMonTransportApiId::DnsRecordListFree:
+    {
+        const std::string recordListPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string freeTypeValue = DwordDecimalHexText(record.Values32[0]);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "PDNS_RECORD", "pRecordList", "in", recordListPointer, recordListPointer, recordListPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "DNS_FREE_TYPE", "FreeType", "in", std::to_string(record.Values32[0]), std::to_string(record.Values32[0]), freeTypeValue);
+        payload = ApiCallPayload(result, record, "void", args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::SymInitializeW:
     {
         const std::string processHandle = HexPointerValue(record.Values64[0], result.Architecture);

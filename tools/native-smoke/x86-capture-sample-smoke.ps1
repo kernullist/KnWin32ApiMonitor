@@ -101,6 +101,7 @@ $requiredApis = @(
     "RoGetApartmentIdentifier",
     "VariantClear",
     "SafeArrayDestroy",
+    "DnsRecordListFree",
     "SymInitializeW",
     "SymCleanup",
     "RpcStringBindingComposeW",
@@ -269,6 +270,45 @@ $oleautPayload = $oleautEvents | ConvertTo-Json -Depth 12
 if ($oleautPayload -cmatch "SysAllocString|SysFreeString|VT_BSTR|BSTR|bstrString|SafeArrayAccessData|SafeArrayGetElement|SafeArrayPtrOfIndex|VariantChangeType|C:\\Users|AppData|ProgramData|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 OLEAUT32 events appear to expose BSTR, SAFEARRAY content, payload, stack, injection, credential, or byte-preview evidence: $oleautPayload"
+}
+
+$dnsRecordFree = @($result.capturedEvents | Where-Object { $_.module -eq "dnsapi.dll" -and $_.api -eq "DnsRecordListFree" } | Select-Object -First 1)
+if ($dnsRecordFree.Count -ne 1 -or
+    $dnsRecordFree[0].apiFamily -ne "dns" -or
+    $dnsRecordFree[0].apiCategory -ne "dns_record_list_free" -or
+    $dnsRecordFree[0].hookPolicy -ne "iat" -or
+    $dnsRecordFree[0].coverageStatus -ne "smoke_verified" -or
+    $dnsRecordFree[0].returnValue -ne "void")
+{
+    throw "x86 DnsRecordListFree metadata or return evidence mismatch: $($dnsRecordFree | ConvertTo-Json -Depth 8)"
+}
+
+if (-not [string]::IsNullOrEmpty($dnsRecordFree[0].bufferPreview))
+{
+    throw "x86 DnsRecordListFree exposed bufferPreview: $($dnsRecordFree[0] | ConvertTo-Json -Depth 8)"
+}
+
+$dnsRecordList = @($dnsRecordFree[0].arguments | Where-Object { $_.name -eq "pRecordList" } | Select-Object -First 1)
+if ($dnsRecordList.Count -ne 1 -or
+    $dnsRecordList[0].decodeAlias -ne "pointer" -or
+    $dnsRecordList[0].rawValue -notmatch "^0x0+$" -or
+    $dnsRecordList[0].decodedValue -notmatch "^0x0+$")
+{
+    throw "x86 DnsRecordListFree record-list pointer evidence mismatch: $($dnsRecordList | ConvertTo-Json -Depth 8)"
+}
+
+$dnsFreeType = @($dnsRecordFree[0].arguments | Where-Object { $_.name -eq "FreeType" } | Select-Object -First 1)
+if ($dnsFreeType.Count -ne 1 -or
+    $dnsFreeType[0].decodeAlias -ne "dword_value" -or
+    $dnsFreeType[0].decodedValue -notmatch "^1( \(0x00000001\))?$")
+{
+    throw "x86 DnsRecordListFree FreeType evidence mismatch: $($dnsFreeType | ConvertTo-Json -Depth 8)"
+}
+
+$dnsPayload = $dnsRecordFree[0] | ConvertTo-Json -Depth 12
+if ($dnsPayload -cmatch "DnsQuery|pszName|ppQueryResults|pReserved|DNS_RECORDW|DnsRecordSet|DnsExtract|DnsModify|[a-zA-Z0-9_-]+\.(com|net|org|local|test)|127\.0\.0\.1|Adapter|RouteTable|C:\\Users|AppData|ProgramData|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 DnsRecordListFree event appears to expose query, record, hostname, inventory, payload, stack, injection, credential, or byte-preview evidence: $dnsPayload"
 }
 
 $dbghelpEvents = @($result.capturedEvents | Where-Object { $_.module -eq "dbghelp.dll" -and $_.api -in @("SymInitializeW", "SymCleanup") })
