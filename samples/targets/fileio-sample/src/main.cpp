@@ -740,6 +740,13 @@ bool RunWinHttpProbe()
             break;
         }
 
+        DWORD timeoutMs = 5000;
+        if (!WinHttpSetOption(session, WINHTTP_OPTION_RECEIVE_TIMEOUT, &timeoutMs, sizeof(timeoutMs)))
+        {
+            LogLastError("WinHttpSetOption");
+            break;
+        }
+
         if (!WinHttpCloseHandle(session))
         {
             LogLastError("WinHttpCloseHandle");
@@ -1541,6 +1548,105 @@ bool RunHandleMetadataProbe()
 
         std::cout << "handle metadata flags=0x"
                   << std::hex << updatedFlags << std::dec << "\n";
+        success = true;
+    }
+    while (false);
+
+    if (fileHandle != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(fileHandle);
+    }
+
+    return success;
+}
+
+bool RunFileMetadataProbe()
+{
+    bool success = false;
+    HANDLE fileHandle = INVALID_HANDLE_VALUE;
+    const std::wstring path = BuildSamplePath();
+    constexpr char metadataBytes[] = "knmon file metadata sample\n";
+    constexpr DWORD expectedBytes = static_cast<DWORD>(sizeof(metadataBytes) - 1);
+
+    do
+    {
+        fileHandle = CreateFileW(
+            path.c_str(),
+            GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_READ,
+            nullptr,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr);
+
+        if (fileHandle == INVALID_HANDLE_VALUE)
+        {
+            LogLastError("CreateFileW(file-metadata)");
+            break;
+        }
+
+        DWORD bytesWritten = 0;
+        if (!WriteFile(fileHandle, metadataBytes, expectedBytes, &bytesWritten, nullptr) ||
+            bytesWritten != expectedBytes)
+        {
+            LogLastError("WriteFile(file-metadata)");
+            break;
+        }
+
+        LARGE_INTEGER fileSize = {};
+        if (!GetFileSizeEx(fileHandle, &fileSize))
+        {
+            LogLastError("GetFileSizeEx(file-metadata)");
+            break;
+        }
+
+        if (fileSize.QuadPart != expectedBytes)
+        {
+            std::cout << "GetFileSizeEx(file-metadata) size mismatch "
+                      << fileSize.QuadPart << " expected=" << expectedBytes << "\n";
+            break;
+        }
+
+        FILETIME creationTime = {};
+        FILETIME lastAccessTime = {};
+        FILETIME lastWriteTime = {};
+        if (!GetFileTime(fileHandle, &creationTime, &lastAccessTime, &lastWriteTime))
+        {
+            LogLastError("GetFileTime(file-metadata)");
+            break;
+        }
+
+        BY_HANDLE_FILE_INFORMATION fileInformation = {};
+        if (!GetFileInformationByHandle(fileHandle, &fileInformation))
+        {
+            LogLastError("GetFileInformationByHandle(file-metadata)");
+            break;
+        }
+
+        const ULONGLONG infoSize =
+            (static_cast<ULONGLONG>(fileInformation.nFileSizeHigh) << 32) |
+            static_cast<ULONGLONG>(fileInformation.nFileSizeLow);
+        if (infoSize != expectedBytes)
+        {
+            std::cout << "GetFileInformationByHandle(file-metadata) size mismatch "
+                      << infoSize << " expected=" << expectedBytes << "\n";
+            break;
+        }
+
+        if ((fileInformation.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
+        {
+            std::cout << "GetFileInformationByHandle(file-metadata) returned directory attribute\n";
+            break;
+        }
+
+        if (fileInformation.nNumberOfLinks == 0)
+        {
+            std::cout << "GetFileInformationByHandle(file-metadata) link count was zero\n";
+            break;
+        }
+
+        std::cout << "file metadata size=" << fileSize.QuadPart
+                  << " links=" << fileInformation.nNumberOfLinks << "\n";
         success = true;
     }
     while (false);
@@ -2444,6 +2550,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunHandleMetadataProbe())
+        {
+            break;
+        }
+
+        if (!RunFileMetadataProbe())
         {
             break;
         }

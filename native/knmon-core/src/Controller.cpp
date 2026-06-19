@@ -5,6 +5,7 @@
 #include <knmon/collector/SharedTransportReader.h>
 
 #include <Windows.h>
+#include <winhttp.h>
 #include <TlHelp32.h>
 
 #include <array>
@@ -710,6 +711,67 @@ bool QueryProcessProtection(HANDLE processHandle, bool* protectedProcess)
     return queried;
 }
 
+struct ProcessSignaturePolicyInfo
+{
+    bool Queried = false;
+    bool MicrosoftSignedOnly = false;
+    bool StoreSignedOnly = false;
+    DWORD ErrorCode = 0;
+    std::string Message;
+};
+
+ProcessSignaturePolicyInfo QueryProcessSignaturePolicy(HANDLE processHandle)
+{
+    ProcessSignaturePolicyInfo result;
+
+    do
+    {
+        if (processHandle == nullptr)
+        {
+            result.ErrorCode = ERROR_INVALID_HANDLE;
+            result.Message = "Target process handle is invalid.";
+            break;
+        }
+
+        HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
+        if (kernel32 == nullptr)
+        {
+            result.ErrorCode = GetLastError();
+            result.Message = "kernel32.dll is not available for mitigation policy query.";
+            break;
+        }
+
+        using GetProcessMitigationPolicyFn = BOOL(WINAPI*)(HANDLE, PROCESS_MITIGATION_POLICY, PVOID, SIZE_T);
+        auto getProcessMitigationPolicy = reinterpret_cast<GetProcessMitigationPolicyFn>(GetProcAddress(kernel32, "GetProcessMitigationPolicy"));
+        if (getProcessMitigationPolicy == nullptr)
+        {
+            result.ErrorCode = ERROR_PROC_NOT_FOUND;
+            result.Message = "GetProcessMitigationPolicy is not available on this host.";
+            break;
+        }
+
+        PROCESS_MITIGATION_BINARY_SIGNATURE_POLICY policy = {};
+        if (!getProcessMitigationPolicy(processHandle, ProcessSignaturePolicy, &policy, sizeof(policy)))
+        {
+            result.ErrorCode = GetLastError();
+            result.Message = "GetProcessMitigationPolicy(ProcessSignaturePolicy) failed: " + FormatWindowsError(result.ErrorCode);
+            break;
+        }
+
+        result.Queried = true;
+        result.MicrosoftSignedOnly = policy.MicrosoftSignedOnly != 0;
+        result.StoreSignedOnly = policy.StoreSignedOnly != 0;
+
+        std::ostringstream stream;
+        stream << "Process signature policy: MicrosoftSignedOnly=" << (result.MicrosoftSignedOnly ? "true" : "false")
+               << " StoreSignedOnly=" << (result.StoreSignedOnly ? "true" : "false") << ".";
+        result.Message = stream.str();
+    }
+    while (false);
+
+    return result;
+}
+
 void SetAttachPreflightError(
     KnMonCaptureResult& result,
     DWORD errorCode,
@@ -809,6 +871,23 @@ AttachPreflightResult RunAttachPreflight(
         {
             SetAttachPreflightError(result, ERROR_ACCESS_DENIED, "protected_process", "Target process reports a protected-process protection level.");
             break;
+        }
+
+        ProcessSignaturePolicyInfo signaturePolicy = QueryProcessSignaturePolicy(queryHandle);
+        if (signaturePolicy.Queried)
+        {
+            AddAudit(result, "attach_mitigation_policy_checked", "GetProcessMitigationPolicy", signaturePolicy.Message);
+
+            if (signaturePolicy.MicrosoftSignedOnly || signaturePolicy.StoreSignedOnly)
+            {
+                SetAttachPreflightError(result, ERROR_ACCESS_DENIED, "mitigation_policy_conflict", "Target process signature mitigation policy blocks loading the unsigned KNMon agent DLL.");
+                break;
+            }
+        }
+        else
+        {
+            const DWORD mitigationError = signaturePolicy.ErrorCode == 0 ? ERROR_NOT_SUPPORTED : signaturePolicy.ErrorCode;
+            AddAudit(result, "attach_mitigation_policy_unavailable", "GetProcessMitigationPolicy", signaturePolicy.Message, mitigationError, "win32");
         }
 
         CloseHandle(queryHandle);
@@ -2004,6 +2083,35 @@ std::string HexDwordValue(std::uint32_t value)
     return HexFixed(value, 8);
 }
 
+std::string WinHttpOptionText(std::uint32_t value)
+{
+    std::ostringstream stream;
+    stream << HexDwordValue(value);
+
+    switch (value)
+    {
+    case WINHTTP_OPTION_RESOLVE_TIMEOUT:
+        stream << " (WINHTTP_OPTION_RESOLVE_TIMEOUT)";
+        break;
+    case WINHTTP_OPTION_CONNECT_TIMEOUT:
+        stream << " (WINHTTP_OPTION_CONNECT_TIMEOUT)";
+        break;
+    case WINHTTP_OPTION_SEND_TIMEOUT:
+        stream << " (WINHTTP_OPTION_SEND_TIMEOUT)";
+        break;
+    case WINHTTP_OPTION_RECEIVE_TIMEOUT:
+        stream << " (WINHTTP_OPTION_RECEIVE_TIMEOUT)";
+        break;
+    case WINHTTP_OPTION_CONNECT_RETRIES:
+        stream << " (WINHTTP_OPTION_CONNECT_RETRIES)";
+        break;
+    default:
+        break;
+    }
+
+    return stream.str();
+}
+
 std::string LStatusValue(std::uint64_t value)
 {
     const std::uint32_t code = static_cast<std::uint32_t>(value);
@@ -2301,6 +2409,11 @@ std::string DwordDecimalHexText(std::uint32_t value)
     return std::to_string(value) + " (" + HexDwordValue(value) + ")";
 }
 
+std::string UInt64DecimalHexText(std::uint64_t value)
+{
+    return std::to_string(value) + " (" + HexFixed(value, 16) + ")";
+}
+
 std::string StdHandleText(std::uint32_t value)
 {
     const char* name = nullptr;
@@ -2383,6 +2496,35 @@ std::string FileTypeText(std::uint32_t value)
 
     stream << ")";
     return stream.str();
+}
+
+std::string FileAttributesText(std::uint32_t value)
+{
+    static constexpr FlagName Flags[] =
+    {
+        { 0x00000001U, "FILE_ATTRIBUTE_READONLY" },
+        { 0x00000002U, "FILE_ATTRIBUTE_HIDDEN" },
+        { 0x00000004U, "FILE_ATTRIBUTE_SYSTEM" },
+        { 0x00000010U, "FILE_ATTRIBUTE_DIRECTORY" },
+        { 0x00000020U, "FILE_ATTRIBUTE_ARCHIVE" },
+        { 0x00000040U, "FILE_ATTRIBUTE_DEVICE" },
+        { 0x00000080U, "FILE_ATTRIBUTE_NORMAL" },
+        { 0x00000100U, "FILE_ATTRIBUTE_TEMPORARY" },
+        { 0x00000400U, "FILE_ATTRIBUTE_REPARSE_POINT" },
+        { 0x00000800U, "FILE_ATTRIBUTE_COMPRESSED" },
+        { 0x00001000U, "FILE_ATTRIBUTE_OFFLINE" },
+        { 0x00002000U, "FILE_ATTRIBUTE_NOT_CONTENT_INDEXED" },
+        { 0x00004000U, "FILE_ATTRIBUTE_ENCRYPTED" },
+        { 0x00008000U, "FILE_ATTRIBUTE_INTEGRITY_STREAM" },
+        { 0x00020000U, "FILE_ATTRIBUTE_NO_SCRUB_DATA" },
+        { 0x00040000U, "FILE_ATTRIBUTE_EA" },
+        { 0x00080000U, "FILE_ATTRIBUTE_PINNED" },
+        { 0x00100000U, "FILE_ATTRIBUTE_UNPINNED" },
+        { 0x00400000U, "FILE_ATTRIBUTE_RECALL_ON_OPEN" },
+        { 0x00800000U, "FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS" },
+    };
+
+    return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
 }
 
 std::string HandleInformationFlagsText(std::uint32_t value)
@@ -3028,6 +3170,75 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
         break;
     }
+    case KnMonTransportApiId::GetFileSizeEx:
+    {
+        const std::string fileHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string fileSizePointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const bool sizeDecoded = static_cast<KnMonDecodeStatus>(record.Values32[0]) == KnMonDecodeStatus::Decoded;
+        const std::string fileSizeValue = UInt64DecimalHexText(record.Values64[2]);
+        const std::string fileSizePost = sizeDecoded ? fileSizeValue : fileSizePointer;
+        const std::string fileSizeDecodedValue = sizeDecoded ?
+            fileSizeValue :
+            (DecodeStatusName(record.Values32[0]) + ";pointer=" + fileSizePointer);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hFile", "in", fileHandle, fileHandle, fileHandle) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "PLARGE_INTEGER", "lpFileSize", "out", fileSizePointer, fileSizePost, fileSizeDecodedValue, DecodeStatusName(record.Values32[0]));
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::GetFileTime:
+    {
+        const std::string fileHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string creationTimePointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string lastAccessTimePointer = HexPointerValue(record.Values64[2], result.Architecture);
+        const std::string lastWriteTimePointer = HexPointerValue(record.Values64[3], result.Architecture);
+        const bool creationTimeDecoded = static_cast<KnMonDecodeStatus>(record.Values32[0]) == KnMonDecodeStatus::Decoded;
+        const bool lastAccessTimeDecoded = static_cast<KnMonDecodeStatus>(record.Values32[1]) == KnMonDecodeStatus::Decoded;
+        const bool lastWriteTimeDecoded = static_cast<KnMonDecodeStatus>(record.Values32[2]) == KnMonDecodeStatus::Decoded;
+        const std::string creationTimeValue = std::to_string(record.Values64[4]);
+        const std::string lastAccessTimeValue = std::to_string(record.Values64[5]);
+        const std::string lastWriteTimeValue = std::to_string(record.Values64[6]);
+        const std::string creationTimePost = creationTimeDecoded ? creationTimeValue : creationTimePointer;
+        const std::string lastAccessTimePost = lastAccessTimeDecoded ? lastAccessTimeValue : lastAccessTimePointer;
+        const std::string lastWriteTimePost = lastWriteTimeDecoded ? lastWriteTimeValue : lastWriteTimePointer;
+        const std::string creationTimeDecodedValue = creationTimeDecoded ?
+            creationTimeValue :
+            (DecodeStatusName(record.Values32[0]) + ";pointer=" + creationTimePointer);
+        const std::string lastAccessTimeDecodedValue = lastAccessTimeDecoded ?
+            lastAccessTimeValue :
+            (DecodeStatusName(record.Values32[1]) + ";pointer=" + lastAccessTimePointer);
+        const std::string lastWriteTimeDecodedValue = lastWriteTimeDecoded ?
+            lastWriteTimeValue :
+            (DecodeStatusName(record.Values32[2]) + ";pointer=" + lastWriteTimePointer);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hFile", "in", fileHandle, fileHandle, fileHandle) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPFILETIME", "lpCreationTime", "out", creationTimePointer, creationTimePost, creationTimeDecodedValue, DecodeStatusName(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "LPFILETIME", "lpLastAccessTime", "out", lastAccessTimePointer, lastAccessTimePost, lastAccessTimeDecodedValue, DecodeStatusName(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "LPFILETIME", "lpLastWriteTime", "out", lastWriteTimePointer, lastWriteTimePost, lastWriteTimeDecodedValue, DecodeStatusName(record.Values32[2]));
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::GetFileInformationByHandle:
+    {
+        const std::string fileHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string infoPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const bool infoDecoded = static_cast<KnMonDecodeStatus>(record.Values32[0]) == KnMonDecodeStatus::Decoded;
+        std::ostringstream infoDecodedStream;
+        infoDecodedStream << "dwFileAttributes=" << FileAttributesText(record.Values32[1])
+                          << ";dwVolumeSerialNumber=" << DwordDecimalHexText(record.Values32[2])
+                          << ";nFileSize=" << UInt64DecimalHexText(record.Values64[2])
+                          << ";nNumberOfLinks=" << DwordDecimalHexText(record.Values32[3])
+                          << ";nFileIndex=" << UInt64DecimalHexText(record.Values64[3])
+                          << ";ftCreationTime=" << record.Values64[4]
+                          << ";ftLastAccessTime=" << record.Values64[5]
+                          << ";ftLastWriteTime=" << record.Values64[6];
+        const std::string infoDecodedValue = infoDecoded ?
+            infoDecodedStream.str() :
+            (DecodeStatusName(record.Values32[0]) + ";pointer=" + infoPointer);
+        const std::string infoPost = infoDecoded ? infoDecodedStream.str() : infoPointer;
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hFile", "in", fileHandle, fileHandle, fileHandle) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "LPBY_HANDLE_FILE_INFORMATION", "lpFileInformation", "out", infoPointer, infoPost, infoDecodedValue, DecodeStatusName(record.Values32[0]));
+        payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::GetModuleHandleW:
     {
         const std::string moduleNamePointer = HexPointerValue(record.Values64[0], result.Architecture);
@@ -3469,6 +3680,22 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "HINTERNET", "hInternet", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture));
         payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
         break;
+    case KnMonTransportApiId::WinHttpSetOption:
+    {
+        const std::string internetHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string bufferPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const bool optionDecoded = static_cast<KnMonDecodeStatus>(record.Values32[2]) == KnMonDecodeStatus::Decoded;
+        const std::string optionValue = std::to_string(record.Values64[2]);
+        const std::string bufferDecoded = optionDecoded ?
+            ("status=decoded;value=" + optionValue) :
+            (DecodeStatusName(record.Values32[2]) + ";pointer=" + bufferPointer);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HINTERNET", "hInternet", "in", internetHandle, internetHandle, internetHandle) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "dwOption", "in", WinHttpOptionText(record.Values32[0]), WinHttpOptionText(record.Values32[0]), WinHttpOptionText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "LPVOID", "lpBuffer", "in", bufferPointer, bufferPointer, bufferDecoded, DecodeStatusName(record.Values32[2])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "DWORD", "dwBufferLength", "in", std::to_string(record.Values32[1]), std::to_string(record.Values32[1]), std::to_string(record.Values32[1]));
+        payload = ApiCallPayload(result, record, std::to_string(record.ReturnValue), args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::GetSystemMetrics:
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "int", "nIndex", "in", SignedIntValue32(record.Values32[0]), SignedIntValue32(record.Values32[0]), SignedIntValue32(record.Values32[0]));
         payload = ApiCallPayload(result, record, SignedIntValue(record.ReturnValue), args.str(), "");

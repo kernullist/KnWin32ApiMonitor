@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "dnsapi",
+  "description": "Wave 4 definition-only metadata for DNS query and record-list lifecycle APIs.",
+  "apis": [
+    {
+      "module": "DNSAPI.dll",
+      "name": "DnsQuery_W",
+      "family": "dns",
+      "category": "dns_query",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "DNS_STATUS",
+      "errorSource": "none",
+      "success": { "returnEqual": "ERROR_SUCCESS" },
+      "failure": { "returnNotEqual": "ERROR_SUCCESS" },
+      "parameters": [
+        { "name": "pszName", "type": "PCWSTR", "direction": "in", "decode": "utf16_string", "maxBytes": 512 },
+        { "name": "wType", "type": "WORD", "direction": "in", "decode": "byte_count" },
+        { "name": "Options", "type": "DWORD", "direction": "in", "decode": "dword_value" },
+        { "name": "pExtra", "type": "PVOID", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "ppQueryResults", "type": "PDNS_RECORD*", "direction": "out", "decode": "pointer_pointer", "captureTiming": "post" },
+        { "name": "pReserved", "type": "PVOID*", "direction": "out", "decode": "pointer_pointer", "nullable": true, "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "DNSAPI.dll",
+      "name": "DnsRecordListFree",
+      "family": "dns",
+      "category": "dns_record_list_free",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "VOID",
+      "errorSource": "none",
+      "success": { "returnEqual": "void" },
+      "failure": { "returnEqual": "void" },
+      "parameters": [
+        { "name": "pRecordList", "type": "PDNS_RECORD", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "FreeType", "type": "DNS_FREE_TYPE", "direction": "in", "decode": "dword_value" }
+      ]
+    }
+  ]
+}

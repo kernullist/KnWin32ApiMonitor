@@ -148,6 +148,9 @@ using GetStdHandleFn = HANDLE(WINAPI*)(DWORD);
 using GetFileTypeFn = DWORD(WINAPI*)(HANDLE);
 using GetHandleInformationFn = BOOL(WINAPI*)(HANDLE, LPDWORD);
 using SetHandleInformationFn = BOOL(WINAPI*)(HANDLE, DWORD, DWORD);
+using GetFileSizeExFn = BOOL(WINAPI*)(HANDLE, PLARGE_INTEGER);
+using GetFileTimeFn = BOOL(WINAPI*)(HANDLE, LPFILETIME, LPFILETIME, LPFILETIME);
+using GetFileInformationByHandleFn = BOOL(WINAPI*)(HANDLE, LPBY_HANDLE_FILE_INFORMATION);
 using GetModuleHandleWFn = HMODULE(WINAPI*)(LPCWSTR);
 using GetModuleHandleExWFn = BOOL(WINAPI*)(DWORD, LPCWSTR, HMODULE*);
 using GetModuleFileNameWFn = DWORD(WINAPI*)(HMODULE, LPWSTR, DWORD);
@@ -193,6 +196,7 @@ using InternetOpenWFn = HINTERNET(WINAPI*)(LPCWSTR, DWORD, LPCWSTR, LPCWSTR, DWO
 using InternetCloseHandleFn = BOOL(WINAPI*)(HINTERNET);
 using WinHttpOpenFn = HINTERNET(WINAPI*)(LPCWSTR, DWORD, LPCWSTR, LPCWSTR, DWORD);
 using WinHttpCloseHandleFn = BOOL(WINAPI*)(HINTERNET);
+using WinHttpSetOptionFn = BOOL(WINAPI*)(HINTERNET, DWORD, LPVOID, DWORD);
 using GetSystemMetricsFn = int(WINAPI*)(int);
 using GetDesktopWindowFn = HWND(WINAPI*)();
 using GetForegroundWindowFn = HWND(WINAPI*)();
@@ -282,6 +286,9 @@ GetStdHandleFn g_originalGetStdHandle = nullptr;
 GetFileTypeFn g_originalGetFileType = nullptr;
 GetHandleInformationFn g_originalGetHandleInformation = nullptr;
 SetHandleInformationFn g_originalSetHandleInformation = nullptr;
+GetFileSizeExFn g_originalGetFileSizeEx = nullptr;
+GetFileTimeFn g_originalGetFileTime = nullptr;
+GetFileInformationByHandleFn g_originalGetFileInformationByHandle = nullptr;
 GetModuleHandleWFn g_originalGetModuleHandleW = nullptr;
 GetModuleHandleExWFn g_originalGetModuleHandleExW = nullptr;
 GetModuleFileNameWFn g_originalGetModuleFileNameW = nullptr;
@@ -327,6 +334,7 @@ InternetOpenWFn g_originalInternetOpenW = nullptr;
 InternetCloseHandleFn g_originalInternetCloseHandle = nullptr;
 WinHttpOpenFn g_originalWinHttpOpen = nullptr;
 WinHttpCloseHandleFn g_originalWinHttpCloseHandle = nullptr;
+WinHttpSetOptionFn g_originalWinHttpSetOption = nullptr;
 GetSystemMetricsFn g_originalGetSystemMetrics = nullptr;
 GetDesktopWindowFn g_originalGetDesktopWindow = nullptr;
 GetForegroundWindowFn g_originalGetForegroundWindow = nullptr;
@@ -448,7 +456,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 110;
+constexpr std::size_t HookDefinitionCount = 114;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -2668,6 +2676,182 @@ void EmitSetHandleInformationEvent(
     }
 }
 
+std::uint64_t FileTimeToUInt64(const FILETIME& value)
+{
+    return (static_cast<std::uint64_t>(value.dwHighDateTime) << 32) |
+        static_cast<std::uint64_t>(value.dwLowDateTime);
+}
+
+std::uint64_t DwordPairToUInt64(DWORD high, DWORD low)
+{
+    return (static_cast<std::uint64_t>(high) << 32) |
+        static_cast<std::uint64_t>(low);
+}
+
+std::uint32_t CaptureFileTimeValue(BOOL result, const FILETIME* fileTime, std::uint64_t* value)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+
+    if (result)
+    {
+        if (fileTime == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+        }
+        else
+        {
+            FILETIME localTime = {};
+            if (ReadCurrentProcessValue(fileTime, &localTime))
+            {
+                *value = FileTimeToUInt64(localTime);
+                status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+            }
+            else
+            {
+                status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            }
+        }
+    }
+
+    return status;
+}
+
+void EmitGetFileSizeExEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE file,
+    PLARGE_INTEGER fileSize)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        LARGE_INTEGER localSize = {};
+        std::uint32_t sizeStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+
+        if (result)
+        {
+            if (fileSize == nullptr)
+            {
+                sizeStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            }
+            else
+            {
+                if (ReadCurrentProcessValue(fileSize, &localSize))
+                {
+                    sizeStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+                }
+                else
+                {
+                    sizeStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+                }
+            }
+        }
+
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetFileSizeEx, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result ? 1 : 0;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(fileSize));
+        record->Values64[2] = static_cast<std::uint64_t>(localSize.QuadPart);
+        record->Values32[0] = sizeStatus;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetFileTimeEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE file,
+    LPFILETIME creationTime,
+    LPFILETIME lastAccessTime,
+    LPFILETIME lastWriteTime)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        std::uint64_t creationTimeValue = 0;
+        std::uint64_t lastAccessTimeValue = 0;
+        std::uint64_t lastWriteTimeValue = 0;
+
+        const std::uint32_t creationStatus = CaptureFileTimeValue(result, creationTime, &creationTimeValue);
+        const std::uint32_t lastAccessStatus = CaptureFileTimeValue(result, lastAccessTime, &lastAccessTimeValue);
+        const std::uint32_t lastWriteStatus = CaptureFileTimeValue(result, lastWriteTime, &lastWriteTimeValue);
+
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetFileTime, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result ? 1 : 0;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(creationTime));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(lastAccessTime));
+        record->Values64[3] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(lastWriteTime));
+        record->Values64[4] = creationTimeValue;
+        record->Values64[5] = lastAccessTimeValue;
+        record->Values64[6] = lastWriteTimeValue;
+        record->Values32[0] = creationStatus;
+        record->Values32[1] = lastAccessStatus;
+        record->Values32[2] = lastWriteStatus;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGetFileInformationByHandleEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE file,
+    LPBY_HANDLE_FILE_INFORMATION fileInformation)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        BY_HANDLE_FILE_INFORMATION localInfo = {};
+        std::uint32_t infoStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+
+        if (result)
+        {
+            if (fileInformation == nullptr)
+            {
+                infoStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            }
+            else
+            {
+                if (ReadCurrentProcessValue(fileInformation, &localInfo))
+                {
+                    infoStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+                }
+                else
+                {
+                    infoStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+                }
+            }
+        }
+
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetFileInformationByHandle, "kernel32.dll", start, end, errorCode);
+        record->ReturnValue = result ? 1 : 0;
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(fileInformation));
+        record->Values64[2] = DwordPairToUInt64(localInfo.nFileSizeHigh, localInfo.nFileSizeLow);
+        record->Values64[3] = DwordPairToUInt64(localInfo.nFileIndexHigh, localInfo.nFileIndexLow);
+        record->Values64[4] = FileTimeToUInt64(localInfo.ftCreationTime);
+        record->Values64[5] = FileTimeToUInt64(localInfo.ftLastAccessTime);
+        record->Values64[6] = FileTimeToUInt64(localInfo.ftLastWriteTime);
+        record->Values32[0] = infoStatus;
+        record->Values32[1] = localInfo.dwFileAttributes;
+        record->Values32[2] = localInfo.dwVolumeSerialNumber;
+        record->Values32[3] = localInfo.nNumberOfLinks;
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void EmitGetModuleHandleWEvent(
     HMODULE result,
     DWORD errorCode,
@@ -4025,6 +4209,111 @@ void EmitWinHttpCloseHandleEvent(
         FillTransportCommon(record, knmon::KnMonTransportApiId::WinHttpCloseHandle, "winhttp.dll", start, end, errorCode);
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(internet));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+bool IsWinHttpScalarDwordOption(DWORD option)
+{
+    bool scalar = false;
+
+    switch (option)
+    {
+    case WINHTTP_OPTION_RESOLVE_TIMEOUT:
+    case WINHTTP_OPTION_CONNECT_TIMEOUT:
+    case WINHTTP_OPTION_SEND_TIMEOUT:
+    case WINHTTP_OPTION_RECEIVE_TIMEOUT:
+    case WINHTTP_OPTION_CONNECT_RETRIES:
+        scalar = true;
+        break;
+    default:
+        scalar = false;
+        break;
+    }
+
+    return scalar;
+}
+
+std::uint32_t CaptureWinHttpOptionDwordValue(
+    BOOL result,
+    DWORD option,
+    LPVOID buffer,
+    DWORD bufferLength,
+    std::uint64_t* value)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+
+    do
+    {
+        if (value == nullptr)
+        {
+            break;
+        }
+
+        *value = 0;
+
+        if (result == FALSE)
+        {
+            break;
+        }
+
+        if (!IsWinHttpScalarDwordOption(option))
+        {
+            break;
+        }
+
+        if (buffer == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        if (bufferLength != sizeof(DWORD))
+        {
+            break;
+        }
+
+        DWORD localValue = 0;
+        if (ReadCurrentProcessValue(static_cast<const DWORD*>(buffer), &localValue))
+        {
+            *value = static_cast<std::uint64_t>(localValue);
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+        }
+        else
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+        }
+    }
+    while (false);
+
+    return status;
+}
+
+void EmitWinHttpSetOptionEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HINTERNET internet,
+    DWORD option,
+    LPVOID buffer,
+    DWORD bufferLength)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        std::uint64_t optionValue = 0;
+        const std::uint32_t optionValueStatus = CaptureWinHttpOptionDwordValue(result, option, buffer, bufferLength, &optionValue);
+        FillTransportCommon(record, knmon::KnMonTransportApiId::WinHttpSetOption, "winhttp.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(internet));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(buffer));
+        record->Values64[2] = optionValue;
+        record->Values32[0] = option;
+        record->Values32[1] = bufferLength;
+        record->Values32[2] = optionValueStatus;
         CommitTransportRecord(record, overheadStart);
     }
 }
@@ -5978,6 +6267,9 @@ HANDLE WINAPI HookedGetStdHandle(DWORD stdHandle);
 DWORD WINAPI HookedGetFileType(HANDLE file);
 BOOL WINAPI HookedGetHandleInformation(HANDLE object, LPDWORD flags);
 BOOL WINAPI HookedSetHandleInformation(HANDLE object, DWORD mask, DWORD flags);
+BOOL WINAPI HookedGetFileSizeEx(HANDLE file, PLARGE_INTEGER fileSize);
+BOOL WINAPI HookedGetFileTime(HANDLE file, LPFILETIME creationTime, LPFILETIME lastAccessTime, LPFILETIME lastWriteTime);
+BOOL WINAPI HookedGetFileInformationByHandle(HANDLE file, LPBY_HANDLE_FILE_INFORMATION fileInformation);
 HANDLE WINAPI HookedCreateThread(LPSECURITY_ATTRIBUTES threadAttributes, SIZE_T stackSize, LPTHREAD_START_ROUTINE startAddress, LPVOID parameter, DWORD creationFlags, LPDWORD threadId);
 HANDLE WINAPI HookedOpenThread(DWORD desiredAccess, BOOL inheritHandle, DWORD threadId);
 DWORD WINAPI HookedWaitForSingleObject(HANDLE handle, DWORD milliseconds);
@@ -6023,6 +6315,7 @@ HINTERNET WINAPI HookedInternetOpenW(LPCWSTR agent, DWORD accessType, LPCWSTR pr
 BOOL WINAPI HookedInternetCloseHandle(HINTERNET internet);
 HINTERNET WINAPI HookedWinHttpOpen(LPCWSTR agent, DWORD accessType, LPCWSTR proxy, LPCWSTR proxyBypass, DWORD flags);
 BOOL WINAPI HookedWinHttpCloseHandle(HINTERNET internet);
+BOOL WINAPI HookedWinHttpSetOption(HINTERNET internet, DWORD option, LPVOID buffer, DWORD bufferLength);
 int WINAPI HookedGetSystemMetrics(int index);
 HWND WINAPI HookedGetDesktopWindow();
 HWND WINAPI HookedGetForegroundWindow();
@@ -6092,6 +6385,9 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "kernel32.dll", "GetFileType", reinterpret_cast<void*>(HookedGetFileType), reinterpret_cast<void**>(&g_originalGetFileType), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetHandleInformation", reinterpret_cast<void*>(HookedGetHandleInformation), reinterpret_cast<void**>(&g_originalGetHandleInformation), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "SetHandleInformation", reinterpret_cast<void*>(HookedSetHandleInformation), reinterpret_cast<void**>(&g_originalSetHandleInformation), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "GetFileSizeEx", reinterpret_cast<void*>(HookedGetFileSizeEx), reinterpret_cast<void**>(&g_originalGetFileSizeEx), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "GetFileTime", reinterpret_cast<void*>(HookedGetFileTime), reinterpret_cast<void**>(&g_originalGetFileTime), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "GetFileInformationByHandle", reinterpret_cast<void*>(HookedGetFileInformationByHandle), reinterpret_cast<void**>(&g_originalGetFileInformationByHandle), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleHandleW", reinterpret_cast<void*>(HookedGetModuleHandleW), reinterpret_cast<void**>(&g_originalGetModuleHandleW), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleHandleExW", reinterpret_cast<void*>(HookedGetModuleHandleExW), reinterpret_cast<void**>(&g_originalGetModuleHandleExW), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleFileNameW", reinterpret_cast<void*>(HookedGetModuleFileNameW), reinterpret_cast<void**>(&g_originalGetModuleFileNameW), false, true, false, 0, 0 },
@@ -6140,6 +6436,7 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "wininet.dll", "InternetCloseHandle", reinterpret_cast<void*>(HookedInternetCloseHandle), reinterpret_cast<void**>(&g_originalInternetCloseHandle), false, true, false, 0, 0 },
         HookDefinition { "winhttp.dll", "WinHttpOpen", reinterpret_cast<void*>(HookedWinHttpOpen), reinterpret_cast<void**>(&g_originalWinHttpOpen), false, true, false, 0, 0 },
         HookDefinition { "winhttp.dll", "WinHttpCloseHandle", reinterpret_cast<void*>(HookedWinHttpCloseHandle), reinterpret_cast<void**>(&g_originalWinHttpCloseHandle), false, true, false, 0, 0 },
+        HookDefinition { "winhttp.dll", "WinHttpSetOption", reinterpret_cast<void*>(HookedWinHttpSetOption), reinterpret_cast<void**>(&g_originalWinHttpSetOption), false, true, false, 0, 0 },
         HookDefinition { "user32.dll", "GetSystemMetrics", reinterpret_cast<void*>(HookedGetSystemMetrics), reinterpret_cast<void**>(&g_originalGetSystemMetrics), false, true, false, 0, 0 },
         HookDefinition { "user32.dll", "GetDesktopWindow", reinterpret_cast<void*>(HookedGetDesktopWindow), reinterpret_cast<void**>(&g_originalGetDesktopWindow), false, true, false, 0, 0 },
         HookDefinition { "user32.dll", "GetForegroundWindow", reinterpret_cast<void*>(HookedGetForegroundWindow), reinterpret_cast<void**>(&g_originalGetForegroundWindow), false, true, false, 0, 0 },
@@ -7233,6 +7530,99 @@ BOOL WINAPI HookedSetHandleInformation(HANDLE object, DWORD mask, DWORD flags)
     if (HooksEnabled())
     {
         EmitSetHandleInformationEvent(result, eventError, start, end, object, mask, flags);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedGetFileSizeEx(HANDLE file, PLARGE_INTEGER fileSize)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetFileSizeEx == nullptr)
+    {
+        if (g_originalGetFileSizeEx == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalGetFileSizeEx(file, fileSize);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    BOOL result = g_originalGetFileSizeEx(file, fileSize);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitGetFileSizeExEvent(result, eventError, start, end, file, fileSize);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedGetFileTime(HANDLE file, LPFILETIME creationTime, LPFILETIME lastAccessTime, LPFILETIME lastWriteTime)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetFileTime == nullptr)
+    {
+        if (g_originalGetFileTime == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalGetFileTime(file, creationTime, lastAccessTime, lastWriteTime);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    BOOL result = g_originalGetFileTime(file, creationTime, lastAccessTime, lastWriteTime);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitGetFileTimeEvent(result, eventError, start, end, file, creationTime, lastAccessTime, lastWriteTime);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedGetFileInformationByHandle(HANDLE file, LPBY_HANDLE_FILE_INFORMATION fileInformation)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetFileInformationByHandle == nullptr)
+    {
+        if (g_originalGetFileInformationByHandle == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalGetFileInformationByHandle(file, fileInformation);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    BOOL result = g_originalGetFileInformationByHandle(file, fileInformation);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitGetFileInformationByHandleEvent(result, eventError, start, end, file, fileInformation);
     }
 
     SetLastError(lastError);
@@ -8765,6 +9155,37 @@ BOOL WINAPI HookedWinHttpCloseHandle(HINTERNET internet)
     if (HooksEnabled())
     {
         EmitWinHttpCloseHandleEvent(result, eventError, start, end, internet);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedWinHttpSetOption(HINTERNET internet, DWORD option, LPVOID buffer, DWORD bufferLength)
+{
+    if (g_inHook || !HooksEnabled() || g_originalWinHttpSetOption == nullptr)
+    {
+        if (g_originalWinHttpSetOption == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalWinHttpSetOption(internet, option, buffer, bufferLength);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalWinHttpSetOption(internet, option, buffer, bufferLength);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FALSE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitWinHttpSetOptionEvent(result, eventError, start, end, internet, option, buffer, bufferLength);
     }
 
     SetLastError(lastError);

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "wintrust",
+  "description": "Wave 4 definition-only metadata for WinTrust verification entrypoints.",
+  "apis": [
+    {
+      "module": "WINTRUST.dll",
+      "name": "WinVerifyTrust",
+      "family": "trust",
+      "category": "trust_verify",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "LONG",
+      "errorSource": "none",
+      "success": { "returnEqual": "ERROR_SUCCESS" },
+      "failure": { "returnNotEqual": "ERROR_SUCCESS" },
+      "parameters": [
+        { "name": "hwnd", "type": "HWND", "direction": "in", "decode": "hwnd_handle", "nullable": true },
+        { "name": "pgActionID", "type": "GUID*", "direction": "in", "decode": "guid_pointer" },
+        { "name": "pWVTData", "type": "LPVOID", "direction": "inout", "decode": "pointer", "nullable": true, "captureTiming": "pre_post" }
+      ]
+    },
+    {
+      "module": "WINTRUST.dll",
+      "name": "WTHelperProvDataFromStateData",
+      "family": "trust",
+      "category": "trust_state_query",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "CRYPT_PROVIDER_DATA*",
+      "errorSource": "none",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "hStateData", "type": "HANDLE", "direction": "in", "decode": "handle" }
+      ]
+    }
+  ]
+}

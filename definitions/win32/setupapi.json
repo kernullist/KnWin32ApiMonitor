@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "setupapi",
+  "description": "Wave 4 definition-only metadata for device-info set lifecycle APIs.",
+  "apis": [
+    {
+      "module": "SETUPAPI.dll",
+      "name": "SetupDiGetClassDevsW",
+      "family": "device-setup",
+      "category": "device_info_set_open",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "HDEVINFO",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "INVALID_HANDLE_VALUE" },
+      "failure": { "returnEqual": "INVALID_HANDLE_VALUE" },
+      "parameters": [
+        { "name": "ClassGuid", "type": "const GUID*", "direction": "in", "decode": "guid_pointer", "nullable": true },
+        { "name": "Enumerator", "type": "PCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "hwndParent", "type": "HWND", "direction": "in", "decode": "hwnd_handle", "nullable": true },
+        { "name": "Flags", "type": "DWORD", "direction": "in", "decode": "dword_value" }
+      ]
+    },
+    {
+      "module": "SETUPAPI.dll",
+      "name": "SetupDiDestroyDeviceInfoList",
+      "family": "device-setup",
+      "category": "device_info_set_close",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "FALSE" },
+      "failure": { "returnEqual": "FALSE" },
+      "parameters": [
+        { "name": "DeviceInfoSet", "type": "HDEVINFO", "direction": "in", "decode": "handle" }
+      ]
+    }
+  ]
+}

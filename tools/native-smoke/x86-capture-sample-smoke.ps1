@@ -30,6 +30,9 @@ $requiredApis = @(
     "GetFileType",
     "GetHandleInformation",
     "SetHandleInformation",
+    "GetFileSizeEx",
+    "GetFileTime",
+    "GetFileInformationByHandle",
     "GetModuleHandleW",
     "GetModuleHandleExW",
     "GetModuleFileNameW",
@@ -72,6 +75,7 @@ $requiredApis = @(
     "InternetCloseHandle",
     "WinHttpOpen",
     "WinHttpCloseHandle",
+    "WinHttpSetOption",
     "GetSystemMetrics",
     "GetDesktopWindow",
     "GetForegroundWindow",
@@ -132,6 +136,21 @@ function ConvertFrom-DwordDecimalHex
     }
 
     return [UInt32]$parsed
+}
+
+function ConvertFrom-UInt64DecimalHex
+{
+    param(
+        [string]$Value,
+        [string]$Name
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value) -or $Value -notmatch "^([0-9]+) \(0x[0-9a-fA-F]{16}\)$")
+    {
+        throw "$Name is not a UINT64 decimal/hex value: $Value"
+    }
+
+    return [UInt64]$Matches[1]
 }
 
 if (-not (Test-Path -LiteralPath $helperPath))
@@ -521,9 +540,9 @@ if ($crypt32Args -match "BEGIN CERTIFICATE|PRIVATE KEY|plaintext|ciphertext|\b[0
 }
 
 $httpEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "http" })
-if ($httpEvents.Count -lt 2)
+if ($httpEvents.Count -lt 3)
 {
-    throw "x86 capture did not include the selected WinHTTP session API family slice."
+    throw "x86 capture did not include the selected WinHTTP session and option API family slice."
 }
 
 $winHttpOpen = @($httpEvents | Where-Object { $_.api -eq "WinHttpOpen" } | Select-Object -First 1)
@@ -553,10 +572,50 @@ if ($winHttpClose.Count -ne 1)
     throw "x86 capture did not include WinHttpCloseHandle."
 }
 
-$winHttpArgs = @($result.capturedEvents | Where-Object { $_.module -eq "winhttp.dll" } | ForEach-Object { $_.arguments } | ConvertTo-Json -Depth 8)
-if ($winHttpArgs -cmatch "https?://|Authorization|Cookie|Set-Cookie|POST|GET /|BEGIN CERTIFICATE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+$winHttpSetOption = @($httpEvents | Where-Object { $_.api -eq "WinHttpSetOption" } | Select-Object -First 1)
+if ($winHttpSetOption.Count -ne 1 -or $winHttpSetOption[0].module -ne "winhttp.dll" -or $winHttpSetOption[0].apiCategory -ne "winhttp_option_set" -or $winHttpSetOption[0].hookPolicy -ne "iat" -or $winHttpSetOption[0].coverageStatus -ne "smoke_verified")
 {
-    throw "x86 WinHTTP events appear to expose URL/header/body/credential or byte-preview evidence: $winHttpArgs"
+    throw "x86 WinHttpSetOption metadata mismatch."
+}
+
+if ([string]$winHttpSetOption[0].returnValue -ne "1")
+{
+    throw "x86 WinHttpSetOption did not return BOOL true: $($winHttpSetOption[0].returnValue)"
+}
+
+$winHttpSetOptionHandle = @($winHttpSetOption[0].arguments | Where-Object { $_.name -eq "hInternet" } | Select-Object -First 1)
+if ($winHttpSetOptionHandle.Count -ne 1 -or $winHttpSetOptionHandle[0].rawValue -match "^0x0+$")
+{
+    throw "x86 WinHttpSetOption missing non-null hInternet evidence."
+}
+
+$winHttpSetOptionOption = @($winHttpSetOption[0].arguments | Where-Object { $_.name -eq "dwOption" } | Select-Object -First 1)
+if ($winHttpSetOptionOption.Count -ne 1 -or $winHttpSetOptionOption[0].decodedValue -notmatch "WINHTTP_OPTION_RECEIVE_TIMEOUT")
+{
+    throw "x86 WinHttpSetOption option mismatch: $($winHttpSetOptionOption[0] | ConvertTo-Json -Depth 8)"
+}
+
+$winHttpSetOptionBuffer = @($winHttpSetOption[0].arguments | Where-Object { $_.name -eq "lpBuffer" } | Select-Object -First 1)
+if ($winHttpSetOptionBuffer.Count -ne 1 -or $winHttpSetOptionBuffer[0].rawValue -match "^0x0+$")
+{
+    throw "x86 WinHttpSetOption missing non-null lpBuffer pointer evidence."
+}
+
+if ($winHttpSetOptionBuffer[0].decodeStatus -ne "decoded" -or $winHttpSetOptionBuffer[0].decodedValue -notmatch "value=5000")
+{
+    throw "x86 WinHttpSetOption scalar option value mismatch: $($winHttpSetOptionBuffer[0] | ConvertTo-Json -Depth 8)"
+}
+
+$winHttpSetOptionLength = @($winHttpSetOption[0].arguments | Where-Object { $_.name -eq "dwBufferLength" } | Select-Object -First 1)
+if ($winHttpSetOptionLength.Count -ne 1 -or $winHttpSetOptionLength[0].decodedValue -ne "4")
+{
+    throw "x86 WinHttpSetOption buffer length mismatch: $($winHttpSetOptionLength[0] | ConvertTo-Json -Depth 8)"
+}
+
+$winHttpPayload = @($result.capturedEvents | Where-Object { $_.module -eq "winhttp.dll" } | ConvertTo-Json -Depth 10)
+if ($winHttpPayload -cmatch "WinHttpConnect|WinHttpOpenRequest|WinHttpSendRequest|WinHttpReceiveResponse|WinHttpReadData|WinHttpWriteData|WinHttpQueryHeaders|InternetOpenUrl|HttpSend|send|recv|Authorization|Cookie|Set-Cookie|Password|Credential|Proxy-Authorization|https?://|POST|GET /|BEGIN CERTIFICATE|PRIVATE KEY|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|Injection|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 WinHTTP events appear to expose forbidden payload evidence: $winHttpPayload"
 }
 
 $internetEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "internet" })
@@ -1617,6 +1676,152 @@ $handlePayload = $handleEvents | ConvertTo-Json -Depth 12
 if ($handlePayload -cmatch "ObjectName|ObjectType|NtQueryObject|SystemHandle|SystemExtendedHandle|DuplicateHandle|SecurityDescriptor|SECURITY_DESCRIPTOR|\bSID\b|\bACL\b|TOKEN_|TokenPrivileges|LookupAccount|CommandLine|Environment|GetEnvironment|Process32First|Process32Next|CreateToolhelp32Snapshot|EnumProcesses|OpenProcess|CreateProcessW|TerminateProcess|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|VirtualFreeEx|VirtualProtectEx|CreateRemoteThread|QueueUserAPC|NtQueueApcThread|SuspendThread|ResumeThread|GetThreadContext|SetThreadContext|CONTEXT|Eip|Rip|Rsp|CallStack|StackTrace|StackWalk|StackFrame|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 KERNEL32 handle metadata events appear to expose object-name, security, duplication, payload, command-line, environment, remote-memory, remote-thread, stack, injection, PE/file/hash, credential, or byte-preview evidence: $handlePayload"
+}
+
+$fileMetadataApis = @(
+    "GetFileSizeEx",
+    "GetFileTime",
+    "GetFileInformationByHandle"
+)
+
+$fileMetadataEvents = @($result.capturedEvents | Where-Object { $fileMetadataApis -contains $_.api })
+if ($fileMetadataEvents.Count -lt $fileMetadataApis.Count)
+{
+    throw "x86 capture did not include the selected KERNEL32 file metadata API slice."
+}
+
+$fileMetadataExpected = @(
+    @{ Api = "GetFileSizeEx"; Family = "file"; Category = "file_size_query"; Args = @(
+        @{ Name = "hFile"; Alias = "handle"; Timing = "pre" },
+        @{ Name = "lpFileSize"; Alias = "file_size_pointer"; Timing = "post" }
+    ) },
+    @{ Api = "GetFileTime"; Family = "file"; Category = "file_time_query"; Args = @(
+        @{ Name = "hFile"; Alias = "handle"; Timing = "pre" },
+        @{ Name = "lpCreationTime"; Alias = "file_time_pointer"; Timing = "post" },
+        @{ Name = "lpLastAccessTime"; Alias = "file_time_pointer"; Timing = "post" },
+        @{ Name = "lpLastWriteTime"; Alias = "file_time_pointer"; Timing = "post" }
+    ) },
+    @{ Api = "GetFileInformationByHandle"; Family = "file"; Category = "file_information_query"; Args = @(
+        @{ Name = "hFile"; Alias = "handle"; Timing = "pre" },
+        @{ Name = "lpFileInformation"; Alias = "by_handle_file_information_pointer"; Timing = "post" }
+    ) }
+)
+
+foreach ($expectedFileMetadata in $fileMetadataExpected)
+{
+    $event = @($fileMetadataEvents | Where-Object { $_.api -eq $expectedFileMetadata.Api } | Select-Object -First 1)
+    if ($event.Count -ne 1 -or
+        $event[0].module -ne "kernel32.dll" -or
+        $event[0].apiFamily -ne $expectedFileMetadata.Family -or
+        $event[0].apiCategory -ne $expectedFileMetadata.Category -or
+        $event[0].hookPolicy -ne "iat" -or
+        $event[0].coverageStatus -ne "smoke_verified" -or
+        $null -eq $event[0].durationUs -or
+        $event[0].durationUs -lt 0)
+    {
+        throw "x86 $($expectedFileMetadata.Api) file metadata mismatch: $($event | ConvertTo-Json -Depth 8)"
+    }
+
+    if (-not [string]::IsNullOrEmpty($event[0].bufferPreview))
+    {
+        throw "x86 $($expectedFileMetadata.Api) exposed bufferPreview: $($event[0] | ConvertTo-Json -Depth 8)"
+    }
+
+    foreach ($expectedArg in $expectedFileMetadata.Args)
+    {
+        $argument = @($event[0].arguments | Where-Object { $_.name -eq $expectedArg.Name } | Select-Object -First 1)
+        if ($argument.Count -ne 1 -or
+            $argument[0].decodeAlias -ne $expectedArg.Alias -or
+            $argument[0].captureTiming -ne $expectedArg.Timing)
+        {
+            throw "x86 $($expectedFileMetadata.Api) $($expectedArg.Name) metadata mismatch: $($argument | ConvertTo-Json -Depth 8)"
+        }
+    }
+}
+
+$fileSizeEx = @($fileMetadataEvents | Where-Object { $_.api -eq "GetFileSizeEx" } | Select-Object -First 1)
+if ($fileSizeEx.Count -ne 1 -or $fileSizeEx[0].returnValue -ne "TRUE")
+{
+    throw "x86 GetFileSizeEx did not succeed: $($fileSizeEx | ConvertTo-Json -Depth 8)"
+}
+
+$fileSizeHandle = @($fileSizeEx[0].arguments | Where-Object { $_.name -eq "hFile" } | Select-Object -First 1)
+$fileSizePointer = @($fileSizeEx[0].arguments | Where-Object { $_.name -eq "lpFileSize" } | Select-Object -First 1)
+if ($fileSizeHandle.Count -ne 1 -or
+    $fileSizeHandle[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $fileSizePointer.Count -ne 1 -or
+    $fileSizePointer[0].rawValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $fileSizePointer[0].decodeStatus -ne "decoded")
+{
+    throw "x86 GetFileSizeEx handle/size evidence mismatch: $($fileSizeEx | ConvertTo-Json -Depth 8)"
+}
+
+$fileSizeValue = ConvertFrom-UInt64DecimalHex -Value $fileSizePointer[0].decodedValue -Name "x86 GetFileSizeEx lpFileSize decodedValue"
+
+$fileTime = @($fileMetadataEvents | Where-Object { $_.api -eq "GetFileTime" } | Select-Object -First 1)
+if ($fileTime.Count -ne 1 -or $fileTime[0].returnValue -ne "TRUE")
+{
+    throw "x86 GetFileTime did not succeed: $($fileTime | ConvertTo-Json -Depth 8)"
+}
+
+$fileTimeHandle = @($fileTime[0].arguments | Where-Object { $_.name -eq "hFile" } | Select-Object -First 1)
+if ($fileTimeHandle.Count -ne 1 -or $fileTimeHandle[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$")
+{
+    throw "x86 GetFileTime did not capture a file handle: $($fileTime | ConvertTo-Json -Depth 8)"
+}
+
+foreach ($timeArgumentName in @("lpCreationTime", "lpLastAccessTime", "lpLastWriteTime"))
+{
+    $timeArgument = @($fileTime[0].arguments | Where-Object { $_.name -eq $timeArgumentName } | Select-Object -First 1)
+    if ($timeArgument.Count -ne 1 -or
+        $timeArgument[0].rawValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+        $timeArgument[0].decodeStatus -ne "decoded" -or
+        $timeArgument[0].decodedValue -notmatch "^[0-9]+$")
+    {
+        throw "x86 GetFileTime $timeArgumentName evidence mismatch: $($timeArgument | ConvertTo-Json -Depth 8)"
+    }
+}
+
+$fileInfo = @($fileMetadataEvents | Where-Object { $_.api -eq "GetFileInformationByHandle" } | Select-Object -First 1)
+if ($fileInfo.Count -ne 1 -or $fileInfo[0].returnValue -ne "TRUE")
+{
+    throw "x86 GetFileInformationByHandle did not succeed: $($fileInfo | ConvertTo-Json -Depth 8)"
+}
+
+$fileInfoHandle = @($fileInfo[0].arguments | Where-Object { $_.name -eq "hFile" } | Select-Object -First 1)
+$fileInfoPointer = @($fileInfo[0].arguments | Where-Object { $_.name -eq "lpFileInformation" } | Select-Object -First 1)
+if ($fileInfoHandle.Count -ne 1 -or
+    $fileInfoHandle[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $fileInfoPointer.Count -ne 1 -or
+    $fileInfoPointer[0].rawValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $fileInfoPointer[0].decodeStatus -ne "decoded")
+{
+    throw "x86 GetFileInformationByHandle handle/info evidence mismatch: $($fileInfo | ConvertTo-Json -Depth 8)"
+}
+
+$fileInfoSizeMatch = [regex]::Match($fileInfoPointer[0].decodedValue, "nFileSize=([0-9]+) \(0x[0-9a-fA-F]{16}\)")
+if ($fileInfoPointer[0].decodedValue -notmatch "dwFileAttributes=0x[0-9a-fA-F]{8}" -or
+    $fileInfoPointer[0].decodedValue -notmatch "dwVolumeSerialNumber=[0-9]+ \(0x[0-9a-fA-F]{8}\)" -or
+    -not $fileInfoSizeMatch.Success -or
+    $fileInfoPointer[0].decodedValue -notmatch "nNumberOfLinks=[0-9]+ \(0x[0-9a-fA-F]{8}\)" -or
+    $fileInfoPointer[0].decodedValue -notmatch "nFileIndex=[0-9]+ \(0x[0-9a-fA-F]{16}\)" -or
+    $fileInfoPointer[0].decodedValue -notmatch "ftCreationTime=[0-9]+" -or
+    $fileInfoPointer[0].decodedValue -notmatch "ftLastAccessTime=[0-9]+" -or
+    $fileInfoPointer[0].decodedValue -notmatch "ftLastWriteTime=[0-9]+")
+{
+    throw "x86 GetFileInformationByHandle scalar metadata missing: $($fileInfoPointer | ConvertTo-Json -Depth 8)"
+}
+
+$fileInfoSize = [UInt64]$fileInfoSizeMatch.Groups[1].Value
+if ($fileSizeValue -ne $fileInfoSize)
+{
+    throw "x86 file size mismatch between GetFileSizeEx and GetFileInformationByHandle: sizeEx=$fileSizeValue info=$fileInfoSize"
+}
+
+$fileMetadataPayload = $fileMetadataEvents | ConvertTo-Json -Depth 12
+if ($fileMetadataPayload -cmatch "GetFinalPathNameByHandle|GetFileInformationByHandleEx|FileNameInfo|FileStreamInfo|FileIdInfo|FileIdBothDirectoryInfo|FindFirstFile|FindNextFile|DirectoryListing|ObjectName|ObjectType|NtQueryObject|SystemHandle|SystemExtendedHandle|DuplicateHandle|SecurityDescriptor|SECURITY_DESCRIPTOR|\bSID\b|\bACL\b|TOKEN_|TokenPrivileges|LookupAccount|CommandLine|Environment|GetEnvironment|Process32First|Process32Next|CreateToolhelp32Snapshot|EnumProcesses|OpenProcess|CreateProcessW|TerminateProcess|ReadFile|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|VirtualFreeEx|VirtualProtectEx|CreateRemoteThread|QueueUserAPC|NtQueueApcThread|SuspendThread|ResumeThread|GetThreadContext|SetThreadContext|CONTEXT|Eip|Rip|Rsp|CallStack|StackTrace|StackWalk|StackFrame|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|IMAGE_DOS_HEADER|IMAGE_NT_HEADERS|ImportDirectory|ExportDirectory|ResourceDirectory|Relocation|DebugDirectory|SHA256|SHA1|MD5|MZ.{0,8}PE|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 KERNEL32 file metadata events appear to expose path/name/content, object-name, security, duplication, command-line, environment, remote-memory, remote-thread, stack, injection, PE/file/hash, credential, or byte-preview evidence: $fileMetadataPayload"
 }
 
 $moduleApis = @(

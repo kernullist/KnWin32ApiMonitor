@@ -917,6 +917,162 @@
       "module": "kernel32.dll",
       "name": "FreeLibrary",
       "symbol": "FreeLibrary"
+    },
+    {
+      "id": 154,
+      "module": "kernel32.dll",
+      "name": "GetFileSizeEx",
+      "symbol": "GetFileSizeEx"
+    },
+    {
+      "id": 155,
+      "module": "kernel32.dll",
+      "name": "GetFileTime",
+      "symbol": "GetFileTime"
+    },
+    {
+      "id": 156,
+      "module": "kernel32.dll",
+      "name": "GetFileInformationByHandle",
+      "symbol": "GetFileInformationByHandle"
+    },
+    {
+      "id": 157,
+      "module": "oleaut32.dll",
+      "name": "SysAllocString",
+      "symbol": "SysAllocString"
+    },
+    {
+      "id": 158,
+      "module": "oleaut32.dll",
+      "name": "SysFreeString",
+      "symbol": "SysFreeString"
+    },
+    {
+      "id": 159,
+      "module": "oleaut32.dll",
+      "name": "VariantClear",
+      "symbol": "VariantClear"
+    },
+    {
+      "id": 160,
+      "module": "oleaut32.dll",
+      "name": "SafeArrayDestroy",
+      "symbol": "SafeArrayDestroy"
+    },
+    {
+      "id": 161,
+      "module": "secur32.dll",
+      "name": "AcquireCredentialsHandleW",
+      "symbol": "AcquireCredentialsHandleW"
+    },
+    {
+      "id": 162,
+      "module": "secur32.dll",
+      "name": "FreeCredentialsHandle",
+      "symbol": "FreeCredentialsHandle"
+    },
+    {
+      "id": 163,
+      "module": "secur32.dll",
+      "name": "InitializeSecurityContextW",
+      "symbol": "InitializeSecurityContextW"
+    },
+    {
+      "id": 164,
+      "module": "secur32.dll",
+      "name": "DeleteSecurityContext",
+      "symbol": "DeleteSecurityContext"
+    },
+    {
+      "id": 165,
+      "module": "userenv.dll",
+      "name": "GetUserProfileDirectoryW",
+      "symbol": "GetUserProfileDirectoryW"
+    },
+    {
+      "id": 166,
+      "module": "userenv.dll",
+      "name": "CreateEnvironmentBlock",
+      "symbol": "CreateEnvironmentBlock"
+    },
+    {
+      "id": 167,
+      "module": "userenv.dll",
+      "name": "DestroyEnvironmentBlock",
+      "symbol": "DestroyEnvironmentBlock"
+    },
+    {
+      "id": 168,
+      "module": "dnsapi.dll",
+      "name": "DnsQuery_W",
+      "symbol": "DnsQuery_W"
+    },
+    {
+      "id": 169,
+      "module": "dnsapi.dll",
+      "name": "DnsRecordListFree",
+      "symbol": "DnsRecordListFree"
+    },
+    {
+      "id": 170,
+      "module": "iphlpapi.dll",
+      "name": "GetAdaptersAddresses",
+      "symbol": "GetAdaptersAddresses"
+    },
+    {
+      "id": 171,
+      "module": "iphlpapi.dll",
+      "name": "GetIfEntry2",
+      "symbol": "GetIfEntry2"
+    },
+    {
+      "id": 172,
+      "module": "setupapi.dll",
+      "name": "SetupDiGetClassDevsW",
+      "symbol": "SetupDiGetClassDevsW"
+    },
+    {
+      "id": 173,
+      "module": "setupapi.dll",
+      "name": "SetupDiDestroyDeviceInfoList",
+      "symbol": "SetupDiDestroyDeviceInfoList"
+    },
+    {
+      "id": 174,
+      "module": "shlwapi.dll",
+      "name": "PathFileExistsW",
+      "symbol": "PathFileExistsW"
+    },
+    {
+      "id": 175,
+      "module": "shlwapi.dll",
+      "name": "PathCombineW",
+      "symbol": "PathCombineW"
+    },
+    {
+      "id": 176,
+      "module": "wintrust.dll",
+      "name": "WinVerifyTrust",
+      "symbol": "WinVerifyTrust"
+    },
+    {
+      "id": 177,
+      "module": "wintrust.dll",
+      "name": "WTHelperProvDataFromStateData",
+      "symbol": "WTHelperProvDataFromStateData"
+    },
+    {
+      "id": 178,
+      "module": "dbghelp.dll",
+      "name": "SymInitializeW",
+      "symbol": "SymInitializeW"
+    },
+    {
+      "id": 179,
+      "module": "dbghelp.dll",
+      "name": "SymCleanup",
+      "symbol": "SymCleanup"
     }
   ],
   "modules": [
@@ -1004,6 +1160,51 @@
       "id": 17,
       "name": "api-ms-win-core-winrt-l1-1-0.dll",
       "symbol": "ApiMsWinCoreWinrtL110"
+    },
+    {
+      "id": 18,
+      "name": "oleaut32.dll",
+      "symbol": "Oleaut32"
+    },
+    {
+      "id": 19,
+      "name": "secur32.dll",
+      "symbol": "Secur32"
+    },
+    {
+      "id": 20,
+      "name": "userenv.dll",
+      "symbol": "Userenv"
+    },
+    {
+      "id": 21,
+      "name": "dnsapi.dll",
+      "symbol": "Dnsapi"
+    },
+    {
+      "id": 22,
+      "name": "iphlpapi.dll",
+      "symbol": "Iphlpapi"
+    },
+    {
+      "id": 23,
+      "name": "setupapi.dll",
+      "symbol": "Setupapi"
+    },
+    {
+      "id": 24,
+      "name": "shlwapi.dll",
+      "symbol": "Shlwapi"
+    },
+    {
+      "id": 25,
+      "name": "wintrust.dll",
+      "symbol": "Wintrust"
+    },
+    {
+      "id": 26,
+      "name": "dbghelp.dll",
+      "symbol": "Dbghelp"
     }
   ],
   "schemaVersion": "0.1.0",

@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "userenv",
+  "description": "Wave 4 definition-only metadata for user profile and environment-block APIs.",
+  "apis": [
+    {
+      "module": "USERENV.dll",
+      "name": "GetUserProfileDirectoryW",
+      "family": "profile",
+      "category": "profile_directory_query",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "FALSE" },
+      "failure": { "returnEqual": "FALSE" },
+      "parameters": [
+        { "name": "hToken", "type": "HANDLE", "direction": "in", "decode": "handle" },
+        { "name": "lpProfileDir", "type": "LPWSTR", "direction": "out", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512, "captureTiming": "post" },
+        { "name": "lpcchSize", "type": "LPDWORD", "direction": "inout", "decode": "dword_pointer", "captureTiming": "pre_post" }
+      ]
+    },
+    {
+      "module": "USERENV.dll",
+      "name": "CreateEnvironmentBlock",
+      "family": "profile",
+      "category": "environment_block_create",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "FALSE" },
+      "failure": { "returnEqual": "FALSE" },
+      "parameters": [
+        { "name": "lpEnvironment", "type": "LPVOID*", "direction": "out", "decode": "pointer_pointer", "captureTiming": "post" },
+        { "name": "hToken", "type": "HANDLE", "direction": "in", "decode": "handle", "nullable": true },
+        { "name": "bInherit", "type": "BOOL", "direction": "in", "decode": "byte_count" }
+      ]
+    },
+    {
+      "module": "USERENV.dll",
+      "name": "DestroyEnvironmentBlock",
+      "family": "profile",
+      "category": "environment_block_destroy",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "GetLastError",
+      "success": { "returnNotEqual": "FALSE" },
+      "failure": { "returnEqual": "FALSE" },
+      "parameters": [
+        { "name": "lpEnvironment", "type": "LPVOID", "direction": "in", "decode": "pointer" }
+      ]
+    }
+  ]
+}

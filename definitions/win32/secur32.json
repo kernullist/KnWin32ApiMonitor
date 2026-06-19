@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "secur32",
+  "description": "Wave 4 definition-only metadata for SSPI credential and security-context lifecycle APIs.",
+  "apis": [
+    {
+      "module": "SECUR32.dll",
+      "name": "AcquireCredentialsHandleW",
+      "family": "sspi",
+      "category": "credential_acquire",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "SECURITY_STATUS",
+      "errorSource": "none",
+      "success": { "returnEqual": "SEC_E_OK" },
+      "failure": { "returnNotEqual": "SEC_E_OK" },
+      "parameters": [
+        { "name": "pszPrincipal", "type": "LPWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "pszPackage", "type": "LPWSTR", "direction": "in", "decode": "utf16_string", "maxBytes": 128 },
+        { "name": "fCredentialUse", "type": "ULONG", "direction": "in", "decode": "dword_value" },
+        { "name": "pvLogonId", "type": "PLUID", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "pAuthData", "type": "PVOID", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "pGetKeyFn", "type": "SEC_GET_KEY_FN", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "pvGetKeyArgument", "type": "PVOID", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "phCredential", "type": "PCredHandle", "direction": "out", "decode": "handle_pointer", "captureTiming": "post" },
+        { "name": "ptsExpiry", "type": "PTimeStamp", "direction": "out", "decode": "uint64_pointer", "nullable": true, "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "SECUR32.dll",
+      "name": "FreeCredentialsHandle",
+      "family": "sspi",
+      "category": "credential_free",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "SECURITY_STATUS",
+      "errorSource": "none",
+      "success": { "returnEqual": "SEC_E_OK" },
+      "failure": { "returnNotEqual": "SEC_E_OK" },
+      "parameters": [
+        { "name": "phCredential", "type": "PCredHandle", "direction": "in", "decode": "handle_pointer" }
+      ]
+    },
+    {
+      "module": "SECUR32.dll",
+      "name": "InitializeSecurityContextW",
+      "family": "sspi",
+      "category": "security_context_initialize",
+      "risk": "high",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "SECURITY_STATUS",
+      "errorSource": "none",
+      "success": { "returnEqual": "SEC_E_OK" },
+      "failure": { "returnNotEqual": "SEC_E_OK" },
+      "parameters": [
+        { "name": "phCredential", "type": "PCredHandle", "direction": "in", "decode": "handle_pointer", "nullable": true },
+        { "name": "phContext", "type": "PCtxtHandle", "direction": "in", "decode": "handle_pointer", "nullable": true },
+        { "name": "pszTargetName", "type": "SEC_WCHAR*", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "fContextReq", "type": "ULONG", "direction": "in", "decode": "dword_value" },
+        { "name": "Reserved1", "type": "ULONG", "direction": "in", "decode": "dword_value" },
+        { "name": "TargetDataRep", "type": "ULONG", "direction": "in", "decode": "dword_value" },
+        { "name": "pInput", "type": "PSecBufferDesc", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "Reserved2", "type": "ULONG", "direction": "in", "decode": "dword_value" },
+        { "name": "phNewContext", "type": "PCtxtHandle", "direction": "out", "decode": "handle_pointer", "captureTiming": "post" },
+        { "name": "pOutput", "type": "PSecBufferDesc", "direction": "out", "decode": "pointer", "nullable": true, "captureTiming": "post" },
+        { "name": "pfContextAttr", "type": "PULONG", "direction": "out", "decode": "dword_pointer", "nullable": true, "captureTiming": "post" },
+        { "name": "ptsExpiry", "type": "PTimeStamp", "direction": "out", "decode": "uint64_pointer", "nullable": true, "captureTiming": "post" }
+      ]
+    },
+    {
+      "module": "SECUR32.dll",
+      "name": "DeleteSecurityContext",
+      "family": "sspi",
+      "category": "security_context_delete",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "SECURITY_STATUS",
+      "errorSource": "none",
+      "success": { "returnEqual": "SEC_E_OK" },
+      "failure": { "returnNotEqual": "SEC_E_OK" },
+      "parameters": [
+        { "name": "phContext", "type": "PCtxtHandle", "direction": "in", "decode": "handle_pointer" }
+      ]
+    }
+  ]
+}

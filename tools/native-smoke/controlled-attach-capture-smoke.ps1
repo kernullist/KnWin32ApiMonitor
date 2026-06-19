@@ -135,6 +135,12 @@ function Invoke-AttachSmoke {
             }
         }
 
+        $mitigationAudit = @($json.auditEvents | Where-Object { $_.eventType -eq "attach_mitigation_policy_checked" -or $_.eventType -eq "attach_mitigation_policy_unavailable" })
+        if ($mitigationAudit.Count -lt 1)
+        {
+            throw "$Architecture attach did not report mitigation policy preflight evidence."
+        }
+
         $namedPipeApiEvents = @($json.auditEvents | Where-Object { $_.eventType -eq "api_call_received" -and $_.operation -eq "agent_event_read" })
         if ($namedPipeApiEvents.Count -ne 0)
         {

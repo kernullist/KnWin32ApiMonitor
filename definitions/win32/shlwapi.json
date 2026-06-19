@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "shlwapi",
+  "description": "Wave 4 definition-only metadata for shell lightweight path helper APIs.",
+  "apis": [
+    {
+      "module": "SHLWAPI.dll",
+      "name": "PathFileExistsW",
+      "family": "shell-path",
+      "category": "path_exists_query",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "BOOL",
+      "errorSource": "none",
+      "success": { "returnNotEqual": "FALSE" },
+      "failure": { "returnEqual": "FALSE" },
+      "parameters": [
+        { "name": "pszPath", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string", "maxBytes": 1024 }
+      ]
+    },
+    {
+      "module": "SHLWAPI.dll",
+      "name": "PathCombineW",
+      "family": "shell-path",
+      "category": "path_combine",
+      "risk": "medium",
+      "hookPolicy": "definition_only",
+      "coverageStatus": "definition_only",
+      "architectures": ["x86", "x64"],
+      "callingConvention": "stdcall",
+      "returnType": "LPWSTR",
+      "errorSource": "none",
+      "success": { "returnNotEqual": "NULL" },
+      "failure": { "returnEqual": "NULL" },
+      "parameters": [
+        { "name": "pszDest", "type": "LPWSTR", "direction": "out", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 1024, "captureTiming": "post" },
+        { "name": "pszDir", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 1024 },
+        { "name": "pszFile", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 1024 }
+      ]
+    }
+  ]
+}
