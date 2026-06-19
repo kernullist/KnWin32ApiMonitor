@@ -4097,6 +4097,13 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
         break;
     }
+    case KnMonTransportApiId::GetIfEntry2:
+    {
+        const std::string row = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "PMIB_IF_ROW2", "Row", "inout", row, row, row);
+        payload = ApiCallPayload(result, record, DwordDecimalHexText(record.ReturnCode), args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::SymInitializeW:
     {
         const std::string processHandle = HexPointerValue(record.Values64[0], result.Architecture);

@@ -104,6 +104,7 @@ $requiredApis = @(
     "DnsRecordListFree",
     "SetupDiDestroyDeviceInfoList",
     "DestroyEnvironmentBlock",
+    "GetIfEntry2",
     "SymInitializeW",
     "SymCleanup",
     "RpcStringBindingComposeW",
@@ -373,6 +374,37 @@ $userenvPayload = $userenvDestroy[0] | ConvertTo-Json -Depth 12
 if ($userenvPayload -cmatch "CreateEnvironmentBlock|GetUserProfileDirectory|lpProfileDir|USERPROFILE=|APPDATA=|LOCALAPPDATA=|PATH=|SystemRoot=|USERNAME=|USERDOMAIN=|TEMP=|TMP=|ProgramFiles=|ComSpec=|HOMEDRIVE=|HOMEPATH=|LOGONSERVER=|C:\\Users|Desktop|Documents|Downloads|CommandLine|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 DestroyEnvironmentBlock event appears to expose environment strings, profile paths, payload, stack, injection, credential, or byte-preview evidence: $userenvPayload"
+}
+
+$iphlpapiEntry = @($result.capturedEvents | Where-Object { $_.module -eq "iphlpapi.dll" -and $_.api -eq "GetIfEntry2" } | Select-Object -First 1)
+if ($iphlpapiEntry.Count -ne 1 -or
+    $iphlpapiEntry[0].apiFamily -ne "network-metadata" -or
+    $iphlpapiEntry[0].apiCategory -ne "interface_entry_query" -or
+    $iphlpapiEntry[0].hookPolicy -ne "iat" -or
+    $iphlpapiEntry[0].coverageStatus -ne "smoke_verified" -or
+    $iphlpapiEntry[0].returnValue -notmatch "^0 \(0x00000000\)$")
+{
+    throw "x86 GetIfEntry2 metadata or return evidence mismatch: $($iphlpapiEntry | ConvertTo-Json -Depth 8)"
+}
+
+if (-not [string]::IsNullOrEmpty($iphlpapiEntry[0].bufferPreview))
+{
+    throw "x86 GetIfEntry2 exposed bufferPreview: $($iphlpapiEntry[0] | ConvertTo-Json -Depth 8)"
+}
+
+$iphlpapiRow = @($iphlpapiEntry[0].arguments | Where-Object { $_.name -eq "Row" } | Select-Object -First 1)
+if ($iphlpapiRow.Count -ne 1 -or
+    $iphlpapiRow[0].decodeAlias -ne "pointer" -or
+    $iphlpapiRow[0].captureTiming -ne "pre_post")
+{
+    throw "x86 GetIfEntry2 Row evidence mismatch: $($iphlpapiRow | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $iphlpapiRow[0].decodedValue -Name "x86 GetIfEntry2 Row"
+
+$iphlpapiPayload = $iphlpapiEntry[0] | ConvertTo-Json -Depth 12
+if ($iphlpapiPayload -cmatch "GetAdaptersAddresses|GetIfTable2|FriendlyName|Description|PhysicalAddress|PermanentPhysicalAddress|Unicast|Anycast|Multicast|DnsSuffix|Gateway|TransmitLinkSpeed|ReceiveLinkSpeed|InOctets|OutOctets|NetworkGuid|AdapterName|InterfaceAlias|IfDescr|MAC|([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 GetIfEntry2 event appears to expose adapter inventory, interface payload, stack, injection, credential, or byte-preview evidence: $iphlpapiPayload"
 }
 
 $dbghelpEvents = @($result.capturedEvents | Where-Object { $_.module -eq "dbghelp.dll" -and $_.api -in @("SymInitializeW", "SymCleanup") })

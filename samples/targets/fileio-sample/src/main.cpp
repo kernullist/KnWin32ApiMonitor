@@ -16,6 +16,8 @@
 #include <windns.h>
 #include <setupapi.h>
 #include <userenv.h>
+#include <iphlpapi.h>
+#include <netioapi.h>
 #include <winver.h>
 #include <winhttp.h>
 #include <wininet.h>
@@ -1370,6 +1372,47 @@ bool RunUserenvEnvironmentBlockLifecycleProbe()
     return success;
 }
 
+bool RunIphlpapiInterfaceEntryQueryProbe()
+{
+    bool success = false;
+    MIB_IF_TABLE2* table = nullptr;
+
+    do
+    {
+        NETIO_STATUS status = GetIfTable2(&table);
+        if (status != NO_ERROR)
+        {
+            std::cout << "GetIfTable2 failed with " << status << "\n";
+            break;
+        }
+
+        if (table == nullptr || table->NumEntries == 0)
+        {
+            std::cout << "GetIfTable2 returned no interfaces\n";
+            break;
+        }
+
+        MIB_IF_ROW2 row = table->Table[0];
+        status = GetIfEntry2(&row);
+        if (status != NO_ERROR)
+        {
+            std::cout << "GetIfEntry2 failed with " << status << "\n";
+            break;
+        }
+
+        std::cout << "iphlpapi interface entry query completed\n";
+        success = true;
+    }
+    while (false);
+
+    if (table != nullptr)
+    {
+        FreeMibTable(table);
+    }
+
+    return success;
+}
+
 DWORD WINAPI CombaseWinRtLifecycleThreadProc(LPVOID)
 {
     bool success = false;
@@ -2717,6 +2760,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunUserenvEnvironmentBlockLifecycleProbe())
+        {
+            break;
+        }
+
+        if (!RunIphlpapiInterfaceEntryQueryProbe())
         {
             break;
         }

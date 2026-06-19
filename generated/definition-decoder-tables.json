@@ -4065,14 +4065,14 @@
     {
       "callingConvention": "stdcall",
       "category": "interface_entry_query",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": "NO_ERROR"
       },
       "family": "network-metadata",
       "firstParameterIndex": 582,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 171,
       "module": "iphlpapi.dll",
       "moduleId": 22,

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "module": "iphlpapi",
-  "description": "Wave 4 definition-only metadata for IP helper adapter and interface metadata APIs.",
+  "description": "Wave 4 metadata for IP helper adapter and interface metadata APIs, with selected pointer-only interface-entry query coverage.",
   "apis": [
     {
       "module": "IPHLPAPI.dll",
@@ -31,8 +31,8 @@
       "family": "network-metadata",
       "category": "interface_entry_query",
       "risk": "medium",
-      "hookPolicy": "definition_only",
-      "coverageStatus": "definition_only",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
       "architectures": ["x86", "x64"],
       "callingConvention": "stdcall",
       "returnType": "NETIO_STATUS",
