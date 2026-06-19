@@ -26,6 +26,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   attachTargetProcessCapture,
   buildNativeSessionCatalogIndex,
+  buildNativeTraceIndex,
   cancelNativeOperation,
   catalogNativeSessions,
   captureSampleFileIoEvents,
@@ -39,8 +40,10 @@ import {
   listTargetProcesses,
   queryNativeSessionCatalog,
   queryNativeSessionCatalogIndex,
+  queryNativeTraceIndex,
   removeMissingNativeSessionCatalogIndexEntries,
   removeMissingNativeSessionCatalogEntries,
+  removeMissingNativeTraceIndexEntries,
   replayLastSampleSession,
   replaySessionPath,
   startBackendSession,
@@ -53,7 +56,7 @@ import {
 } from "./backend";
 import { apiTree, captureProfiles, createMockFileIoEvent, initialTraceEvents } from "./mockData";
 import { downloadJsonl, estimateSessionBytes } from "./session";
-import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, NativeOperation, NativeSession, NativeSessionCatalog, NativeSessionCatalogRow, NativeTraceBatch, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
+import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, NativeOperation, NativeSession, NativeSessionCatalog, NativeSessionCatalogRow, NativeTraceBatch, NativeTraceIndex, NativeTraceIndexEvent, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
 import {
   buildTraceIssueGroups,
   compileTraceQuery,
@@ -356,6 +359,14 @@ function catalogRowLabel(row: NativeSessionCatalogRow): string {
   return row.targetImage || row.sessionId || fileNameFromPath(row.path);
 }
 
+function traceIndexEventKey(event: NativeTraceIndexEvent): string {
+  return `${event.sessionPath}:${event.eventId}:${event.recordSequence}`;
+}
+
+function traceIndexEventLabel(event: NativeTraceIndexEvent): string {
+  return `${event.api || "api"} / ${event.module || "module"}`;
+}
+
 function App() {
   const [leftTab, setLeftTab] = useState<LeftTab>("targets");
   const [targetSource, setTargetSource] = useState<TargetSource>("mock");
@@ -389,6 +400,12 @@ function App() {
   const [catalogTargetFilter, setCatalogTargetFilter] = useState("");
   const [catalogLimit, setCatalogLimit] = useState(50);
   const [selectedCatalogPath, setSelectedCatalogPath] = useState("");
+  const [traceIndex, setTraceIndex] = useState<NativeTraceIndex | null>(null);
+  const [traceIndexText, setTraceIndexText] = useState("");
+  const [traceIndexApi, setTraceIndexApi] = useState("");
+  const [traceIndexModule, setTraceIndexModule] = useState("");
+  const [traceIndexLimit, setTraceIndexLimit] = useState(50);
+  const [selectedTraceIndexEventKey, setSelectedTraceIndexEventKey] = useState("");
   const [replaySource, setReplaySource] = useState<ReplaySource | null>(null);
   const [traceScrollTop, setTraceScrollTop] = useState(0);
   const [traceViewportHeight, setTraceViewportHeight] = useState(0);
@@ -533,6 +550,17 @@ function App() {
       }
 
       return catalog.sessions[0]?.path ?? "";
+    });
+  }
+
+  function applyTraceIndexResult(result: NativeTraceIndex) {
+    setTraceIndex(result);
+    setSelectedTraceIndexEventKey((current) => {
+      if (current && result.events.some((event) => traceIndexEventKey(event) === current)) {
+        return current;
+      }
+
+      return result.events[0] ? traceIndexEventKey(result.events[0]) : "";
     });
   }
 
@@ -728,6 +756,7 @@ function App() {
   const processTreeSummary = summarizeProcessTree(processTreeResult);
   const sessionBytes = useMemo(() => estimateSessionBytes(events), [events]);
   const selectedCatalogRow = sessionCatalog?.sessions.find((row) => row.path === selectedCatalogPath) ?? null;
+  const selectedTraceIndexEvent = traceIndex?.events.find((event) => traceIndexEventKey(event) === selectedTraceIndexEventKey) ?? null;
   const virtualTraceWindow = useMemo(() => {
     return computeVirtualTraceWindow({
       itemCount: filteredEvents.length,
@@ -1095,6 +1124,128 @@ function App() {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       appendOutput([makeAuditEvent("session_catalog_index_prune_blocked", "remove_missing_native_session_catalog_index_entries", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
+  async function handleBuildTraceIndex(rebuild: boolean) {
+    setNativeBusy(true);
+
+    try {
+      appendOutput([makeAuditEvent("trace_index_requested", "build_native_trace_index", rebuild ? "Trace DB index rebuild requested from UI." : "Trace DB index build requested from UI.")]);
+      const result = await buildNativeTraceIndex(rebuild);
+      applyTraceIndexResult(result);
+      appendOutput([
+        makeAuditEvent(
+          result.success ? "trace_index_built" : "trace_index_failed",
+          "build_native_trace_index",
+          `${result.message}; db=${result.databasePath || "n/a"}; backend=${result.indexBackend}; sessions=${result.indexedSessionCount}/${result.sessionCount}; events=${result.eventCount}; invalid=${result.invalidSessionCount}`
+        )
+      ]);
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("trace_index_blocked", "build_native_trace_index", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
+  async function handleQueryTraceIndex() {
+    setNativeBusy(true);
+
+    try {
+      appendOutput([
+        makeAuditEvent(
+          "trace_index_query_requested",
+          "query_native_trace_index",
+          `text=${traceIndexText || "*"}; api=${traceIndexApi || "*"}; module=${traceIndexModule || "*"}; limit=${traceIndexLimit}`
+        )
+      ]);
+      const result = await queryNativeTraceIndex(
+        traceIndexLimit,
+        traceIndexText.trim(),
+        traceIndexApi.trim(),
+        traceIndexModule.trim(),
+        "",
+        ""
+      );
+      applyTraceIndexResult(result);
+      appendOutput([
+        makeAuditEvent(
+          result.success ? "trace_index_queried" : "trace_index_query_failed",
+          "query_native_trace_index",
+          `${result.message}; matches=${result.matchedEventCount}; indexedEvents=${result.eventCount}; sessions=${result.indexedSessionCount}/${result.sessionCount}`
+        )
+      ]);
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("trace_index_query_blocked", "query_native_trace_index", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
+  async function handleRemoveMissingTraceIndexEntries(dryRun: boolean) {
+    setNativeBusy(true);
+
+    try {
+      appendOutput([makeAuditEvent("trace_index_prune_requested", "remove_missing_native_trace_index_entries", dryRun ? "Dry-run trace DB missing-row prune requested from UI." : "Trace DB missing-row prune requested from UI.")]);
+      const result = await removeMissingNativeTraceIndexEntries(dryRun);
+      applyTraceIndexResult(result);
+      appendOutput([
+        makeAuditEvent(
+          result.success ? "trace_index_pruned" : "trace_index_prune_failed",
+          "remove_missing_native_trace_index_entries",
+          `${result.message}; dryRun=${result.dryRun}; mutation=${result.mutationAttempted}; missing=${result.missingSessionPaths.length}; sessions=${result.indexedSessionCount}`
+        )
+      ]);
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("trace_index_prune_blocked", "remove_missing_native_trace_index_entries", message)]);
+      setInspectorTab("output");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
+  async function handleReplayTraceIndexEvent(event: NativeTraceIndexEvent) {
+    setNativeBusy(true);
+    setSelectedTraceIndexEventKey(traceIndexEventKey(event));
+
+    try {
+      appendOutput([makeAuditEvent("trace_index_replay_requested", "replay_session_path", `Trace hit replay requested for ${event.api} event ${event.eventId} from ${event.sessionPath}.`)]);
+      const result = await replaySessionPath(event.sessionPath);
+      setBackendMode(result.backendMode);
+      setLastSession(result.session);
+      setDroppedCount(result.session.droppedEvents);
+      setEvents(result.traceEvents);
+      nextEventId.current = nextTraceEventId(result.traceEvents);
+      setSelectedEventId(event.eventId);
+      setReplaySource({
+        kind: "catalog",
+        label: traceIndexEventLabel(event),
+        path: event.sessionPath,
+        validationStatus: result.session.success ? "valid" : "invalid"
+      });
+      appendOutput([
+        makeAuditEvent(
+          result.success ? "trace_index_replayed" : "trace_index_replay_failed",
+          "replay_session_path",
+          `${result.message}; path=${event.sessionPath}; hit=${event.api}#${event.eventId}; traceEvents=${result.traceEvents.length}`,
+          result.session.win32ErrorCode
+        )
+      ]);
+      setInspectorTab("output");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("trace_index_replay_blocked", "replay_session_path", message)]);
       setInspectorTab("output");
     } finally {
       setNativeBusy(false);
@@ -1770,6 +1921,106 @@ function App() {
                       selected {catalogRowLabel(selectedCatalogRow)} / {selectedCatalogRow.validationStatus} / {selectedCatalogRow.recoveryState || selectedCatalogRow.writerState || "n/a"}
                     </div>
                   ) : null}
+                  <div className="trace-index-panel">
+                    <div className="trace-index-summary">
+                      <Search size={14} />
+                      <strong>{traceIndex ? `${traceIndex.matchedEventCount} hits` : "Trace Search"}</strong>
+                      <span>{traceIndex ? `${traceIndex.eventCount} indexed` : "0 indexed"}</span>
+                      <span>{traceIndex ? `${traceIndex.indexedSessionCount}/${traceIndex.sessionCount} sessions` : "0 sessions"}</span>
+                    </div>
+                    <div className="trace-index-controls">
+                      <label htmlFor="trace-index-text">Text</label>
+                      <input
+                        id="trace-index-text"
+                        type="search"
+                        value={traceIndexText}
+                        onChange={(event) => setTraceIndexText(event.target.value)}
+                        placeholder="api arg tag"
+                      />
+                      <label htmlFor="trace-index-api">API</label>
+                      <input
+                        id="trace-index-api"
+                        type="search"
+                        value={traceIndexApi}
+                        onChange={(event) => setTraceIndexApi(event.target.value)}
+                        placeholder="CreateFileW"
+                      />
+                      <label htmlFor="trace-index-module">Module</label>
+                      <input
+                        id="trace-index-module"
+                        type="search"
+                        value={traceIndexModule}
+                        onChange={(event) => setTraceIndexModule(event.target.value)}
+                        placeholder="kernel32.dll"
+                      />
+                      <label htmlFor="trace-index-limit">Limit</label>
+                      <input
+                        id="trace-index-limit"
+                        type="number"
+                        min={1}
+                        max={1000}
+                        value={traceIndexLimit}
+                        onChange={(event) => setTraceIndexLimit(Math.min(1000, Math.max(1, Number.parseInt(event.target.value, 10) || 1)))}
+                      />
+                    </div>
+                    <div className="trace-index-actions">
+                      <button type="button" className="tool-button" onClick={() => handleBuildTraceIndex(false)} disabled={nativeBusy}>
+                        <Database size={13} />
+                        <span>Build Trace DB</span>
+                      </button>
+                      <button type="button" className="tool-button" onClick={() => handleBuildTraceIndex(true)} disabled={nativeBusy}>
+                        <RefreshCcw size={13} />
+                        <span>Rebuild Trace DB</span>
+                      </button>
+                      <button type="button" className="tool-button" onClick={handleQueryTraceIndex} disabled={nativeBusy}>
+                        <Search size={13} />
+                        <span>Search Trace</span>
+                      </button>
+                      <button type="button" className="tool-button" onClick={() => handleRemoveMissingTraceIndexEntries(true)} disabled={nativeBusy}>
+                        <Trash2 size={13} />
+                        <span>Dry Trace</span>
+                      </button>
+                      <button type="button" className="tool-button danger" onClick={() => handleRemoveMissingTraceIndexEntries(false)} disabled={nativeBusy}>
+                        <Trash2 size={13} />
+                        <span>Prune Trace</span>
+                      </button>
+                    </div>
+                    {traceIndex?.databasePath ? (
+                      <div className="catalog-selected" title={traceIndex.databasePath}>
+                        trace index {traceIndex.indexSchemaVersion} / {traceIndex.indexBackend} / {traceIndex.databasePath}
+                      </div>
+                    ) : null}
+                    {traceIndex && traceIndex.events.length > 0 ? (
+                      <div className="trace-index-row-list" aria-label="Trace index search results">
+                        {traceIndex.events.map((event) => {
+                          const key = traceIndexEventKey(event);
+                          return (
+                            <div className={selectedTraceIndexEventKey === key ? "trace-index-row selected" : "trace-index-row"} key={key}>
+                              <button type="button" className="trace-index-row-main" title={event.excerpt} onClick={() => setSelectedTraceIndexEventKey(key)}>
+                                <strong>{traceIndexEventLabel(event)}</strong>
+                                <span>PID {event.pid || event.targetProcessId || "n/a"} / TID {event.tid || "n/a"}</span>
+                                <span>{event.sessionId || "session n/a"}</span>
+                                <span>event {event.eventId}</span>
+                                <span>{event.durationUs} us</span>
+                                <small>{event.excerpt}</small>
+                              </button>
+                              <button type="button" className="tool-button" onClick={() => handleReplayTraceIndexEvent(event)} disabled={nativeBusy}>
+                                <FolderOpen size={13} />
+                                <span>Replay</span>
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="catalog-empty">No trace index hits loaded.</div>
+                    )}
+                    {selectedTraceIndexEvent ? (
+                      <div className="catalog-selected" title={selectedTraceIndexEvent.sessionPath}>
+                        selected {traceIndexEventLabel(selectedTraceIndexEvent)} / event {selectedTraceIndexEvent.eventId} / {fileNameFromPath(selectedTraceIndexEvent.sessionPath)}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </section>

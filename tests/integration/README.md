@@ -35,7 +35,8 @@ Current verification gates include:
 29. Wave 3 KERNEL32 module lifecycle smoke through `tools\native-smoke\wave3-kernel32-module-lifecycle-smoke.ps1`.
 30. Wave 3 KERNEL32 file metadata smoke through `tools\native-smoke\wave3-kernel32-file-metadata-smoke.ps1`.
 31. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
-32. Collector fixture and native smoke validation through `npm run collector:validate`.
+32. Trace index smoke through `tools\native-smoke\trace-index-smoke.ps1`.
+33. Collector fixture and native smoke validation through `npm run collector:validate`.
 
 Run repeated lifecycle smoke:
 
@@ -252,6 +253,14 @@ powershell -ExecutionPolicy Bypass -File tools\native-smoke\wave3-kernel32-file-
 ```
 
 The KERNEL32 file metadata smoke verifies selected `GetFileSizeEx`, `GetFileTime`, and `GetFileInformationByHandle` calls, generated file metadata, stable API IDs `154` through `156`, handle, output pointer, file size, FILETIME, attributes, volume serial, link count, and file-index scalar evidence, shared-memory transport mode, zero dropped events, clean hook restore, and no file-content/path/name/directory/object-namespace/security/remote-memory/remote-thread/stack/injection/PE/file/hash/credential/byte-preview payload evidence.
+
+Run trace index smoke:
+
+```powershell
+npm run trace-index:smoke
+```
+
+The trace index smoke verifies host-side `trace-index-*` build/query/prune over `.knapm` replay chunks, FTS text search, API/module/PID/session filters, malformed and format-mismatch DB rejection, missing-row cleanup, and no `.knapm` data deletion.
 
 Run optional Win32/x86 capture smoke:
 

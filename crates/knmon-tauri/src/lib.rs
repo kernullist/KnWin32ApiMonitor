@@ -252,6 +252,60 @@ pub struct NativeSessionCatalog
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct NativeTraceIndexEvent
+{
+    pub session_path: String,
+    pub session_id: String,
+    pub operation_id: String,
+    pub event_id: u64,
+    pub record_sequence: u64,
+    pub chunk_sequence: u64,
+    pub batch_sequence: u64,
+    pub target_process_id: u32,
+    pub pid: u32,
+    pub tid: u32,
+    pub process: String,
+    pub module: String,
+    pub api: String,
+    pub return_value: String,
+    pub error_text: String,
+    pub duration_us: u64,
+    pub relative_time_ms: u64,
+    pub tags_text: String,
+    pub arguments_text: String,
+    pub buffer_preview: String,
+    pub excerpt: String,
+    pub event_json: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeTraceIndex
+{
+    pub schema_version: String,
+    pub format: String,
+    pub build_time_utc: String,
+    pub backend_mode: String,
+    pub operation: String,
+    pub success: bool,
+    pub root_path: String,
+    pub database_path: String,
+    pub index_backend: String,
+    pub index_schema_version: u32,
+    pub session_count: u64,
+    pub indexed_session_count: u64,
+    pub invalid_session_count: u64,
+    pub event_count: u64,
+    pub matched_event_count: u64,
+    pub dry_run: bool,
+    pub mutation_attempted: bool,
+    pub missing_session_paths: Vec<String>,
+    pub events: Vec<NativeTraceIndexEvent>,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NativeTraceBatch
 {
     pub schema_version: String,
@@ -1605,6 +1659,118 @@ pub fn remove_missing_native_session_catalog_index_entries(dry_run: bool) -> Res
     Ok(result)
 }
 
+pub fn build_native_trace_index(rebuild: bool) -> Result<NativeTraceIndex, String>
+{
+    let root_path = repo_root_path().join("captures");
+    let database_path = default_session_trace_index_path();
+    let mut args = vec![
+        "trace-index-build".to_string(),
+        "--root".to_string(),
+        root_path.to_string_lossy().to_string(),
+        "--database".to_string(),
+        database_path.to_string_lossy().to_string(),
+    ];
+    if rebuild
+    {
+        args.push("--rebuild".to_string());
+    }
+
+    let helper_output = run_helper_args(&args)?;
+    let result: NativeTraceIndex = parse_helper_json(&helper_output, "trace-index-build")?;
+    if !result.success
+    {
+        return Err(result.message);
+    }
+
+    Ok(result)
+}
+
+pub fn query_native_trace_index(
+    limit: u32,
+    text: String,
+    api: String,
+    module: String,
+    session: String,
+    pid: String,
+) -> Result<NativeTraceIndex, String>
+{
+    let database_path = default_session_trace_index_path();
+    if !database_path.is_file()
+    {
+        let _ = build_native_trace_index(true)?;
+    }
+
+    let mut args = vec![
+        "trace-index-query".to_string(),
+        "--database".to_string(),
+        database_path.to_string_lossy().to_string(),
+        "--limit".to_string(),
+        limit.to_string(),
+    ];
+    if !text.trim().is_empty()
+    {
+        args.push("--text".to_string());
+        args.push(text);
+    }
+    if !api.trim().is_empty()
+    {
+        args.push("--api".to_string());
+        args.push(api);
+    }
+    if !module.trim().is_empty()
+    {
+        args.push("--module".to_string());
+        args.push(module);
+    }
+    if !session.trim().is_empty()
+    {
+        args.push("--session".to_string());
+        args.push(session);
+    }
+    if !pid.trim().is_empty()
+    {
+        args.push("--pid".to_string());
+        args.push(pid);
+    }
+
+    let helper_output = run_helper_args(&args)?;
+    let result: NativeTraceIndex = parse_helper_json(&helper_output, "trace-index-query")?;
+    if !result.success
+    {
+        return Err(result.message);
+    }
+
+    Ok(result)
+}
+
+pub fn remove_missing_native_trace_index_entries(dry_run: bool) -> Result<NativeTraceIndex, String>
+{
+    let database_path = default_session_trace_index_path();
+    if !database_path.is_file()
+    {
+        let _ = build_native_trace_index(true)?;
+    }
+
+    let mut args = vec![
+        "trace-index-remove-missing".to_string(),
+        "--database".to_string(),
+        database_path.to_string_lossy().to_string(),
+    ];
+    if dry_run
+    {
+        args.push("--dry-run".to_string());
+    }
+
+    let helper_output = run_helper_args(&args)?;
+    let result: NativeTraceIndex = parse_helper_json(&helper_output, "trace-index-remove-missing")?;
+    if !result.success
+    {
+        return Err(result.message);
+    }
+
+    Ok(result)
+}
+
 pub fn stop_daemon_session(session_id: String) -> Result<NativeSession, String>
 {
     let helper_output = run_helper_args(&[
@@ -2085,6 +2251,11 @@ fn default_session_catalog_path() -> PathBuf
 fn default_session_catalog_index_path() -> PathBuf
 {
     repo_root_path().join("captures").join("session-catalog.db")
+}
+
+fn default_session_trace_index_path() -> PathBuf
+{
+    repo_root_path().join("captures").join("session-trace-index.db")
 }
 
 fn default_daemon_session_path(session_id: &str) -> PathBuf

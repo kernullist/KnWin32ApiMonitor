@@ -4,6 +4,7 @@ use knmon_tauri::{
     attach_target_process_capture as attach_target_process_capture_backend,
     backend_status,
     build_native_session_catalog_index as build_native_session_catalog_index_backend,
+    build_native_trace_index as build_native_trace_index_backend,
     capture_sample_fileio,
     capture_sample_fileio_session,
     catalog_native_sessions as catalog_native_sessions_backend,
@@ -21,8 +22,10 @@ use knmon_tauri::{
     prune_stale_daemon_sessions as prune_stale_daemon_sessions_backend,
     query_native_session_catalog as query_native_session_catalog_backend,
     query_native_session_catalog_index as query_native_session_catalog_index_backend,
+    query_native_trace_index as query_native_trace_index_backend,
     remove_missing_native_session_catalog_entries as remove_missing_native_session_catalog_entries_backend,
     remove_missing_native_session_catalog_index_entries as remove_missing_native_session_catalog_index_entries_backend,
+    remove_missing_native_trace_index_entries as remove_missing_native_trace_index_entries_backend,
     start_streaming_attach_session as start_streaming_attach_session_backend,
     start_daemon_if_needed as start_daemon_if_needed_backend,
     start_daemon_supervised_session as start_daemon_supervised_session_backend,
@@ -38,6 +41,7 @@ use knmon_tauri::{
     NativeOperation,
     NativeSession,
     NativeSessionCatalog,
+    NativeTraceIndex,
     NativeTraceBatch,
     ProcessTreeResult,
     SessionReplayResult,
@@ -201,6 +205,33 @@ fn remove_missing_native_session_catalog_index_entries(
 }
 
 #[tauri::command]
+fn build_native_trace_index(rebuild: bool) -> Result<NativeTraceIndex, String>
+{
+    build_native_trace_index_backend(rebuild)
+}
+
+#[tauri::command]
+fn query_native_trace_index(
+    limit: u32,
+    text: String,
+    api: String,
+    module: String,
+    session: String,
+    pid: String,
+) -> Result<NativeTraceIndex, String>
+{
+    query_native_trace_index_backend(limit, text, api, module, session, pid)
+}
+
+#[tauri::command]
+fn remove_missing_native_trace_index_entries(
+    dry_run: bool,
+) -> Result<NativeTraceIndex, String>
+{
+    remove_missing_native_trace_index_entries_backend(dry_run)
+}
+
+#[tauri::command]
 fn start_daemon_supervised_session(pid: u32, duration_ms: u32) -> Result<NativeSession, String>
 {
     start_daemon_supervised_session_backend(pid, duration_ms)
@@ -265,6 +296,9 @@ fn main()
             build_native_session_catalog_index,
             query_native_session_catalog_index,
             remove_missing_native_session_catalog_index_entries,
+            build_native_trace_index,
+            query_native_trace_index,
+            remove_missing_native_trace_index_entries,
             start_daemon_supervised_session,
             stop_daemon_session,
             drain_native_trace_batches,

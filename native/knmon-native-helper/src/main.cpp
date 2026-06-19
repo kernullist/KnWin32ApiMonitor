@@ -4354,6 +4354,7 @@ std::vector<KnapmCatalogRow> KnapmCatalogRowsFromJson(const std::string& json)
 }
 
 constexpr std::uint32_t CatalogIndexSchemaVersion = 1;
+constexpr std::uint32_t TraceIndexSchemaVersion = 1;
 
 struct SqliteStatement
 {
@@ -5368,6 +5369,1398 @@ std::string CatalogIndexRemoveMissingJson(const std::vector<std::string>& args)
         databaseOption,
         "winsqlite3",
         CatalogIndexSchemaVersion);
+}
+
+struct KnapmTraceIndexEvent
+{
+    std::string SessionPath;
+    std::string SessionId;
+    std::string OperationId;
+    std::uint64_t EventId = 0;
+    std::uint64_t RecordSequence = 0;
+    std::uint64_t ChunkSequence = 0;
+    std::uint64_t BatchSequence = 0;
+    std::uint32_t TargetProcessId = 0;
+    std::uint32_t Pid = 0;
+    std::uint32_t Tid = 0;
+    std::string Process;
+    std::string Module;
+    std::string Api;
+    std::string ReturnValue;
+    std::string ErrorText;
+    std::uint64_t DurationUs = 0;
+    std::uint64_t RelativeTimeMs = 0;
+    std::string TagsText;
+    std::string ArgumentsText;
+    std::string BufferPreview;
+    std::string EventJson;
+    std::string Excerpt;
+};
+
+std::string TrimAscii(const std::string& value)
+{
+    std::size_t first = 0;
+    while (first < value.size())
+    {
+        const char ch = value[first];
+        if (ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n')
+        {
+            break;
+        }
+
+        ++first;
+    }
+
+    std::size_t last = value.size();
+    while (last > first)
+    {
+        const char ch = value[last - 1];
+        if (ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n')
+        {
+            break;
+        }
+
+        --last;
+    }
+
+    return value.substr(first, last - first);
+}
+
+std::string TraceIndexExcerpt(const std::string& value)
+{
+    const std::size_t limit = 240;
+    if (value.size() <= limit)
+    {
+        return value;
+    }
+
+    return value.substr(0, limit) + "...";
+}
+
+std::string TraceIndexFtsQueryFromText(const std::string& value)
+{
+    std::ostringstream stream;
+    const std::string trimmed = TrimAscii(value);
+    std::size_t position = 0;
+    std::size_t tokenCount = 0;
+
+    while (position < trimmed.size())
+    {
+        while (position < trimmed.size())
+        {
+            const char ch = trimmed[position];
+            if (ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n')
+            {
+                break;
+            }
+
+            ++position;
+        }
+
+        const std::size_t start = position;
+        while (position < trimmed.size())
+        {
+            const char ch = trimmed[position];
+            if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n')
+            {
+                break;
+            }
+
+            ++position;
+        }
+
+        if (position <= start)
+        {
+            continue;
+        }
+
+        if (tokenCount != 0)
+        {
+            stream << " AND ";
+        }
+
+        stream << "\"";
+        const std::string token = trimmed.substr(start, position - start);
+        for (const char ch : token)
+        {
+            if (ch == '"')
+            {
+                stream << "\"\"";
+            }
+            else
+            {
+                stream << ch;
+            }
+        }
+        stream << "\"";
+        ++tokenCount;
+    }
+
+    return stream.str();
+}
+
+std::string TraceIndexFormat()
+{
+    return "knapm-trace-index";
+}
+
+std::string ToJson(const KnapmTraceIndexEvent& event)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"sessionPath\":" << Q(event.SessionPath) << ",";
+    stream << "\"sessionId\":" << Q(event.SessionId) << ",";
+    stream << "\"operationId\":" << Q(event.OperationId) << ",";
+    stream << "\"eventId\":" << event.EventId << ",";
+    stream << "\"recordSequence\":" << event.RecordSequence << ",";
+    stream << "\"chunkSequence\":" << event.ChunkSequence << ",";
+    stream << "\"batchSequence\":" << event.BatchSequence << ",";
+    stream << "\"targetProcessId\":" << event.TargetProcessId << ",";
+    stream << "\"pid\":" << event.Pid << ",";
+    stream << "\"tid\":" << event.Tid << ",";
+    stream << "\"process\":" << Q(event.Process) << ",";
+    stream << "\"module\":" << Q(event.Module) << ",";
+    stream << "\"api\":" << Q(event.Api) << ",";
+    stream << "\"returnValue\":" << Q(event.ReturnValue) << ",";
+    stream << "\"errorText\":" << Q(event.ErrorText) << ",";
+    stream << "\"durationUs\":" << event.DurationUs << ",";
+    stream << "\"relativeTimeMs\":" << event.RelativeTimeMs << ",";
+    stream << "\"tagsText\":" << Q(event.TagsText) << ",";
+    stream << "\"argumentsText\":" << Q(event.ArgumentsText) << ",";
+    stream << "\"bufferPreview\":" << Q(event.BufferPreview) << ",";
+    stream << "\"excerpt\":" << Q(event.Excerpt) << ",";
+    stream << "\"eventJson\":" << Q(event.EventJson);
+    stream << "}";
+    return stream.str();
+}
+
+std::string TraceIndexJson(
+    const std::string& operation,
+    const std::string& rootPath,
+    const std::string& databasePath,
+    bool success,
+    const std::string& message,
+    std::uint64_t sessionCount,
+    std::uint64_t indexedSessionCount,
+    std::uint64_t invalidSessionCount,
+    std::uint64_t eventCount,
+    bool dryRun,
+    bool mutationAttempted,
+    const std::vector<std::string>& missingSessionPaths,
+    const std::vector<KnapmTraceIndexEvent>& events)
+{
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"format\":" << Q(TraceIndexFormat()) << ",";
+    stream << "\"buildTimeUtc\":" << Q(NowUtc()) << ",";
+    stream << "\"backendMode\":\"native-capture\",";
+    stream << "\"operation\":" << Q(operation) << ",";
+    stream << "\"success\":" << (success ? "true" : "false") << ",";
+    stream << "\"rootPath\":" << Q(rootPath) << ",";
+    stream << "\"databasePath\":" << Q(databasePath) << ",";
+    stream << "\"indexBackend\":\"winsqlite3-fts5\",";
+    stream << "\"indexSchemaVersion\":" << TraceIndexSchemaVersion << ",";
+    stream << "\"sessionCount\":" << sessionCount << ",";
+    stream << "\"indexedSessionCount\":" << indexedSessionCount << ",";
+    stream << "\"invalidSessionCount\":" << invalidSessionCount << ",";
+    stream << "\"eventCount\":" << eventCount << ",";
+    stream << "\"matchedEventCount\":" << events.size() << ",";
+    stream << "\"dryRun\":" << (dryRun ? "true" : "false") << ",";
+    stream << "\"mutationAttempted\":" << (mutationAttempted ? "true" : "false") << ",";
+    stream << "\"missingSessionPaths\":[";
+    for (std::size_t index = 0; index < missingSessionPaths.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << Q(missingSessionPaths[index]);
+    }
+    stream << "],";
+    stream << "\"events\":[";
+    for (std::size_t index = 0; index < events.size(); ++index)
+    {
+        if (index != 0)
+        {
+            stream << ",";
+        }
+        stream << ToJson(events[index]);
+    }
+    stream << "],";
+    stream << "\"message\":" << Q(message);
+    stream << "}";
+    return stream.str();
+}
+
+KnapmTraceIndexEvent TraceIndexEventFromJson(
+    const KnapmCatalogRow& session,
+    const KnapmChunkInfo& chunk,
+    std::uint64_t lineIndex,
+    const std::string& line)
+{
+    KnapmTraceIndexEvent event;
+    event.SessionPath = session.SessionPath;
+    event.SessionId = session.SessionId;
+    event.OperationId = session.OperationId;
+    event.EventId = ExtractJsonUInt64(line, "eventId");
+    event.RecordSequence = chunk.FirstRecordSequence == 0 ? lineIndex + 1 : chunk.FirstRecordSequence + lineIndex;
+    event.ChunkSequence = chunk.ChunkSequence;
+    event.BatchSequence = chunk.BatchSequence;
+    event.TargetProcessId = session.TargetProcessId;
+    event.Pid = static_cast<std::uint32_t>(ExtractJsonUInt64(line, "pid"));
+    event.Tid = static_cast<std::uint32_t>(ExtractJsonUInt64(line, "tid"));
+    event.Process = ExtractJsonString(line, "process");
+    event.Module = ExtractJsonString(line, "module");
+    event.Api = ExtractJsonString(line, "api");
+    event.ReturnValue = ExtractJsonString(line, "returnValue");
+    event.ErrorText = ExtractJsonObject(line, "error");
+    event.DurationUs = ExtractJsonUInt64(line, "durationUs");
+    event.RelativeTimeMs = ExtractJsonUInt64(line, "relativeTimeMs");
+    event.TagsText = ExtractJsonArray(line, "tags");
+    event.ArgumentsText = ExtractJsonArray(line, "arguments");
+    event.BufferPreview = ExtractJsonString(line, "bufferPreview");
+    event.EventJson = line;
+    event.Excerpt = TraceIndexExcerpt(line);
+    return event;
+}
+
+bool ReadKnapmTraceIndexEvents(
+    const std::filesystem::path& sessionPath,
+    const KnapmCatalogRow& session,
+    std::vector<KnapmTraceIndexEvent>* events,
+    std::string* error)
+{
+    bool success = false;
+
+    do
+    {
+        if (events == nullptr)
+        {
+            if (error != nullptr)
+            {
+                *error = "trace index event output is null.";
+            }
+            break;
+        }
+
+        std::string indexText;
+        std::string readError;
+        if (!ReadTextFile(KnapmChildPath(sessionPath, "index.json"), &indexText, &readError))
+        {
+            if (error != nullptr)
+            {
+                *error = readError;
+            }
+            break;
+        }
+
+        const auto chunkObjects = SplitJsonObjectArray(ExtractJsonArray(indexText, "chunks"));
+        for (const auto& chunkJson : chunkObjects)
+        {
+            const KnapmChunkInfo chunk = KnapmChunkFromJson(chunkJson);
+            std::string chunkText;
+            if (!ReadKnapmChunkDecoded(sessionPath, chunk, &chunkText, &readError))
+            {
+                if (error != nullptr)
+                {
+                    *error = readError;
+                }
+                break;
+            }
+
+            const auto lines = SplitJsonl(chunkText);
+            for (std::size_t lineIndex = 0; lineIndex < lines.size(); ++lineIndex)
+            {
+                const std::string& line = lines[lineIndex];
+                if (ExtractJsonString(line, "schemaVersion") != "0.1.0" || ExtractJsonString(line, "api").empty())
+                {
+                    if (error != nullptr)
+                    {
+                        *error = "trace index received a malformed trace event.";
+                    }
+                    break;
+                }
+
+                events->push_back(TraceIndexEventFromJson(session, chunk, static_cast<std::uint64_t>(lineIndex), line));
+            }
+
+            if (error != nullptr && !error->empty())
+            {
+                break;
+            }
+        }
+
+        if (error == nullptr || error->empty())
+        {
+            success = true;
+        }
+    }
+    while (false);
+
+    return success;
+}
+
+bool EnsureTraceIndexSchema(sqlite3* database, std::string* error)
+{
+    bool success = false;
+
+    do
+    {
+        if (!ExecSql(database, "PRAGMA foreign_keys = ON;", error))
+        {
+            break;
+        }
+
+        if (!ExecSql(
+            database,
+            "CREATE TABLE IF NOT EXISTS metadata("
+            "key TEXT PRIMARY KEY NOT NULL,"
+            "value TEXT NOT NULL"
+            ");",
+            error))
+        {
+            break;
+        }
+
+        bool foundSchema = false;
+        const std::string schemaVersion = ReadCatalogIndexMetadata(database, "schema_version", &foundSchema, error);
+        if (foundSchema && schemaVersion != std::to_string(TraceIndexSchemaVersion))
+        {
+            if (error != nullptr)
+            {
+                *error = "unsupported trace index schema version " + schemaVersion + ".";
+            }
+            break;
+        }
+
+        bool foundFormat = false;
+        const std::string format = ReadCatalogIndexMetadata(database, "format", &foundFormat, error);
+        if (foundFormat && format != TraceIndexFormat())
+        {
+            if (error != nullptr)
+            {
+                *error = "database format is " + format + ", not " + TraceIndexFormat() + ".";
+            }
+            break;
+        }
+
+        if (!ExecSql(
+            database,
+            "CREATE TABLE IF NOT EXISTS sessions("
+            "path TEXT PRIMARY KEY NOT NULL,"
+            "session_id TEXT NOT NULL,"
+            "operation_id TEXT NOT NULL,"
+            "target_process_id INTEGER NOT NULL,"
+            "target_image TEXT NOT NULL,"
+            "target_path TEXT NOT NULL,"
+            "target_architecture TEXT NOT NULL,"
+            "validation_status TEXT NOT NULL,"
+            "recovery_state TEXT NOT NULL,"
+            "writer_state TEXT NOT NULL,"
+            "content_identity TEXT NOT NULL,"
+            "trace_event_count INTEGER NOT NULL,"
+            "last_validated_utc TEXT NOT NULL"
+            ");",
+            error))
+        {
+            break;
+        }
+
+        if (!ExecSql(
+            database,
+            "CREATE TABLE IF NOT EXISTS trace_events("
+            "session_path TEXT NOT NULL,"
+            "session_id TEXT NOT NULL,"
+            "operation_id TEXT NOT NULL,"
+            "event_id INTEGER NOT NULL,"
+            "record_sequence INTEGER NOT NULL,"
+            "chunk_sequence INTEGER NOT NULL,"
+            "batch_sequence INTEGER NOT NULL,"
+            "target_process_id INTEGER NOT NULL,"
+            "pid INTEGER NOT NULL,"
+            "tid INTEGER NOT NULL,"
+            "process TEXT NOT NULL,"
+            "module TEXT NOT NULL,"
+            "api TEXT NOT NULL,"
+            "return_value TEXT NOT NULL,"
+            "error_text TEXT NOT NULL,"
+            "duration_us INTEGER NOT NULL,"
+            "relative_time_ms INTEGER NOT NULL,"
+            "tags_text TEXT NOT NULL,"
+            "arguments_text TEXT NOT NULL,"
+            "buffer_preview TEXT NOT NULL,"
+            "event_json TEXT NOT NULL,"
+            "FOREIGN KEY(session_path) REFERENCES sessions(path) ON DELETE CASCADE"
+            ");",
+            error))
+        {
+            break;
+        }
+
+        if (!ExecSql(
+            database,
+            "CREATE VIRTUAL TABLE IF NOT EXISTS trace_events_fts USING fts5("
+            "module,"
+            "api,"
+            "process,"
+            "tags_text,"
+            "arguments_text,"
+            "error_text,"
+            "buffer_preview,"
+            "event_json,"
+            "session_path UNINDEXED,"
+            "event_rowid UNINDEXED"
+            ");",
+            error))
+        {
+            break;
+        }
+
+        if (!ExecSql(database, "CREATE INDEX IF NOT EXISTS idx_trace_events_session ON trace_events(session_path, event_id);", error))
+        {
+            break;
+        }
+        if (!ExecSql(database, "CREATE INDEX IF NOT EXISTS idx_trace_events_api_module ON trace_events(api, module);", error))
+        {
+            break;
+        }
+        if (!ExecSql(database, "CREATE INDEX IF NOT EXISTS idx_trace_events_pid ON trace_events(pid, target_process_id);", error))
+        {
+            break;
+        }
+        if (!SetCatalogIndexMetadata(database, "schema_version", std::to_string(TraceIndexSchemaVersion), error))
+        {
+            break;
+        }
+        if (!SetCatalogIndexMetadata(database, "format", TraceIndexFormat(), error))
+        {
+            break;
+        }
+        if (!ExecSql(database, "PRAGMA user_version = 1;", error))
+        {
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
+bool ValidateTraceIndexSchema(sqlite3* database, std::string* error)
+{
+    bool success = false;
+
+    do
+    {
+        bool foundSchema = false;
+        const std::string schemaVersion = ReadCatalogIndexMetadata(database, "schema_version", &foundSchema, error);
+        if (!foundSchema)
+        {
+            if (error != nullptr && error->empty())
+            {
+                *error = "trace index schema metadata is missing.";
+            }
+            break;
+        }
+
+        if (schemaVersion != std::to_string(TraceIndexSchemaVersion))
+        {
+            if (error != nullptr)
+            {
+                *error = "unsupported trace index schema version " + schemaVersion + ".";
+            }
+            break;
+        }
+
+        bool foundFormat = false;
+        const std::string format = ReadCatalogIndexMetadata(database, "format", &foundFormat, error);
+        if (!foundFormat || format != TraceIndexFormat())
+        {
+            if (error != nullptr && error->empty())
+            {
+                *error = foundFormat ? "database is not a trace index." : "trace index format metadata is missing.";
+            }
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
+bool DeleteTraceIndexSessionRows(sqlite3* database, const std::string& sessionPath, std::string* error)
+{
+    bool success = false;
+
+    do
+    {
+        SqliteStatement ftsStatement;
+        if (!PrepareSql(database, "DELETE FROM trace_events_fts WHERE session_path = ?;", &ftsStatement, error))
+        {
+            break;
+        }
+        if (!BindText(ftsStatement.Statement, 1, sessionPath, error))
+        {
+            break;
+        }
+        if (sqlite3_step(ftsStatement.Statement) != SQLITE_DONE)
+        {
+            if (error != nullptr)
+            {
+                *error = SqliteError(database);
+            }
+            break;
+        }
+
+        SqliteStatement eventsStatement;
+        if (!PrepareSql(database, "DELETE FROM trace_events WHERE session_path = ?;", &eventsStatement, error))
+        {
+            break;
+        }
+        if (!BindText(eventsStatement.Statement, 1, sessionPath, error))
+        {
+            break;
+        }
+        if (sqlite3_step(eventsStatement.Statement) != SQLITE_DONE)
+        {
+            if (error != nullptr)
+            {
+                *error = SqliteError(database);
+            }
+            break;
+        }
+
+        SqliteStatement sessionsStatement;
+        if (!PrepareSql(database, "DELETE FROM sessions WHERE path = ?;", &sessionsStatement, error))
+        {
+            break;
+        }
+        if (!BindText(sessionsStatement.Statement, 1, sessionPath, error))
+        {
+            break;
+        }
+        if (sqlite3_step(sessionsStatement.Statement) != SQLITE_DONE)
+        {
+            if (error != nullptr)
+            {
+                *error = SqliteError(database);
+            }
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
+bool InsertTraceIndexSessionRow(sqlite3* database, const KnapmCatalogRow& row, std::string* error)
+{
+    bool success = false;
+
+    do
+    {
+        SqliteStatement statement;
+        if (!PrepareSql(
+            database,
+            "INSERT OR REPLACE INTO sessions("
+            "path,session_id,operation_id,target_process_id,target_image,target_path,target_architecture,"
+            "validation_status,recovery_state,writer_state,content_identity,trace_event_count,last_validated_utc"
+            ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?);",
+            &statement,
+            error))
+        {
+            break;
+        }
+
+        int index = 1;
+        if (!BindText(statement.Statement, index++, row.SessionPath, error) ||
+            !BindText(statement.Statement, index++, row.SessionId, error) ||
+            !BindText(statement.Statement, index++, row.OperationId, error) ||
+            !BindUInt64(statement.Statement, index++, row.TargetProcessId, error) ||
+            !BindText(statement.Statement, index++, row.TargetImage, error) ||
+            !BindText(statement.Statement, index++, row.TargetPath, error) ||
+            !BindText(statement.Statement, index++, row.TargetArchitecture, error) ||
+            !BindText(statement.Statement, index++, row.ValidationStatus, error) ||
+            !BindText(statement.Statement, index++, row.RecoveryState, error) ||
+            !BindText(statement.Statement, index++, row.WriterState, error) ||
+            !BindText(statement.Statement, index++, row.ContentIdentity, error) ||
+            !BindUInt64(statement.Statement, index++, row.TraceEventCount, error) ||
+            !BindText(statement.Statement, index++, row.LastValidatedUtc, error))
+        {
+            break;
+        }
+
+        const int rc = sqlite3_step(statement.Statement);
+        if (rc != SQLITE_DONE)
+        {
+            if (error != nullptr)
+            {
+                *error = SqliteError(database);
+            }
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
+bool InsertTraceIndexEventRow(sqlite3* database, const KnapmTraceIndexEvent& event, std::string* error)
+{
+    bool success = false;
+
+    do
+    {
+        SqliteStatement statement;
+        if (!PrepareSql(
+            database,
+            "INSERT INTO trace_events("
+            "session_path,session_id,operation_id,event_id,record_sequence,chunk_sequence,batch_sequence,"
+            "target_process_id,pid,tid,process,module,api,return_value,error_text,duration_us,"
+            "relative_time_ms,tags_text,arguments_text,buffer_preview,event_json"
+            ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);",
+            &statement,
+            error))
+        {
+            break;
+        }
+
+        int index = 1;
+        if (!BindText(statement.Statement, index++, event.SessionPath, error) ||
+            !BindText(statement.Statement, index++, event.SessionId, error) ||
+            !BindText(statement.Statement, index++, event.OperationId, error) ||
+            !BindUInt64(statement.Statement, index++, event.EventId, error) ||
+            !BindUInt64(statement.Statement, index++, event.RecordSequence, error) ||
+            !BindUInt64(statement.Statement, index++, event.ChunkSequence, error) ||
+            !BindUInt64(statement.Statement, index++, event.BatchSequence, error) ||
+            !BindUInt64(statement.Statement, index++, event.TargetProcessId, error) ||
+            !BindUInt64(statement.Statement, index++, event.Pid, error) ||
+            !BindUInt64(statement.Statement, index++, event.Tid, error) ||
+            !BindText(statement.Statement, index++, event.Process, error) ||
+            !BindText(statement.Statement, index++, event.Module, error) ||
+            !BindText(statement.Statement, index++, event.Api, error) ||
+            !BindText(statement.Statement, index++, event.ReturnValue, error) ||
+            !BindText(statement.Statement, index++, event.ErrorText, error) ||
+            !BindUInt64(statement.Statement, index++, event.DurationUs, error) ||
+            !BindUInt64(statement.Statement, index++, event.RelativeTimeMs, error) ||
+            !BindText(statement.Statement, index++, event.TagsText, error) ||
+            !BindText(statement.Statement, index++, event.ArgumentsText, error) ||
+            !BindText(statement.Statement, index++, event.BufferPreview, error) ||
+            !BindText(statement.Statement, index++, event.EventJson, error))
+        {
+            break;
+        }
+
+        const int rc = sqlite3_step(statement.Statement);
+        if (rc != SQLITE_DONE)
+        {
+            if (error != nullptr)
+            {
+                *error = SqliteError(database);
+            }
+            break;
+        }
+
+        const sqlite3_int64 rowId = sqlite3_last_insert_rowid(database);
+        SqliteStatement ftsStatement;
+        if (!PrepareSql(
+            database,
+            "INSERT INTO trace_events_fts("
+            "module,api,process,tags_text,arguments_text,error_text,buffer_preview,event_json,session_path,event_rowid"
+            ") VALUES(?,?,?,?,?,?,?,?,?,?);",
+            &ftsStatement,
+            error))
+        {
+            break;
+        }
+
+        index = 1;
+        if (!BindText(ftsStatement.Statement, index++, event.Module, error) ||
+            !BindText(ftsStatement.Statement, index++, event.Api, error) ||
+            !BindText(ftsStatement.Statement, index++, event.Process, error) ||
+            !BindText(ftsStatement.Statement, index++, event.TagsText, error) ||
+            !BindText(ftsStatement.Statement, index++, event.ArgumentsText, error) ||
+            !BindText(ftsStatement.Statement, index++, event.ErrorText, error) ||
+            !BindText(ftsStatement.Statement, index++, event.BufferPreview, error) ||
+            !BindText(ftsStatement.Statement, index++, event.EventJson, error) ||
+            !BindText(ftsStatement.Statement, index++, event.SessionPath, error) ||
+            !BindUInt64(ftsStatement.Statement, index++, static_cast<std::uint64_t>(rowId), error))
+        {
+            break;
+        }
+
+        if (sqlite3_step(ftsStatement.Statement) != SQLITE_DONE)
+        {
+            if (error != nullptr)
+            {
+                *error = SqliteError(database);
+            }
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
+const char* TraceIndexSelectColumns()
+{
+    return
+        "e.session_path,e.session_id,e.operation_id,e.event_id,e.record_sequence,e.chunk_sequence,e.batch_sequence,"
+        "e.target_process_id,e.pid,e.tid,e.process,e.module,e.api,e.return_value,e.error_text,e.duration_us,"
+        "e.relative_time_ms,e.tags_text,e.arguments_text,e.buffer_preview,e.event_json";
+}
+
+KnapmTraceIndexEvent TraceIndexEventFromStatement(sqlite3_stmt* statement)
+{
+    KnapmTraceIndexEvent event;
+    int index = 0;
+    event.SessionPath = ColumnText(statement, index++);
+    event.SessionId = ColumnText(statement, index++);
+    event.OperationId = ColumnText(statement, index++);
+    event.EventId = ColumnUInt64(statement, index++);
+    event.RecordSequence = ColumnUInt64(statement, index++);
+    event.ChunkSequence = ColumnUInt64(statement, index++);
+    event.BatchSequence = ColumnUInt64(statement, index++);
+    event.TargetProcessId = static_cast<std::uint32_t>(ColumnUInt64(statement, index++));
+    event.Pid = static_cast<std::uint32_t>(ColumnUInt64(statement, index++));
+    event.Tid = static_cast<std::uint32_t>(ColumnUInt64(statement, index++));
+    event.Process = ColumnText(statement, index++);
+    event.Module = ColumnText(statement, index++);
+    event.Api = ColumnText(statement, index++);
+    event.ReturnValue = ColumnText(statement, index++);
+    event.ErrorText = ColumnText(statement, index++);
+    event.DurationUs = ColumnUInt64(statement, index++);
+    event.RelativeTimeMs = ColumnUInt64(statement, index++);
+    event.TagsText = ColumnText(statement, index++);
+    event.ArgumentsText = ColumnText(statement, index++);
+    event.BufferPreview = ColumnText(statement, index++);
+    event.EventJson = ColumnText(statement, index++);
+    event.Excerpt = TraceIndexExcerpt(event.EventJson);
+    return event;
+}
+
+std::uint64_t ReadTraceIndexMetadataUInt64(sqlite3* database, const std::string& key)
+{
+    std::uint64_t result = 0;
+    bool found = false;
+    std::string error;
+    const std::string value = ReadCatalogIndexMetadata(database, key, &found, &error);
+
+    do
+    {
+        if (!found || !error.empty())
+        {
+            break;
+        }
+
+        char* end = nullptr;
+        const unsigned long long parsed = std::strtoull(value.c_str(), &end, 10);
+        if (end == value.c_str() || end == nullptr || *end != '\0')
+        {
+            break;
+        }
+
+        result = static_cast<std::uint64_t>(parsed);
+    }
+    while (false);
+
+    return result;
+}
+
+bool QueryTraceIndexEvents(
+    sqlite3* database,
+    const std::string& text,
+    const std::string& api,
+    const std::string& module,
+    const std::string& session,
+    const std::string& pidText,
+    std::uint32_t limit,
+    std::vector<KnapmTraceIndexEvent>* events,
+    std::string* error)
+{
+    bool success = false;
+
+    do
+    {
+        if (events == nullptr)
+        {
+            if (error != nullptr)
+            {
+                *error = "trace index query output is null.";
+            }
+            break;
+        }
+
+        const std::string ftsQuery = TraceIndexFtsQueryFromText(text);
+        const bool hasText = !ftsQuery.empty();
+        const bool hasApi = !TrimAscii(api).empty();
+        const bool hasModule = !TrimAscii(module).empty();
+        const bool hasSession = !TrimAscii(session).empty();
+        std::uint32_t pid = 0;
+        const bool hasPid = TryParseCatalogTargetPid(pidText, &pid);
+
+        std::string sql = std::string("SELECT ") + TraceIndexSelectColumns() + " FROM trace_events e";
+        if (hasText)
+        {
+            sql += " JOIN trace_events_fts ON trace_events_fts.event_rowid = e.rowid";
+        }
+
+        std::vector<std::string> predicates;
+        if (hasText)
+        {
+            predicates.push_back("trace_events_fts MATCH ?");
+        }
+        if (hasApi)
+        {
+            predicates.push_back("lower(e.api) = ?");
+        }
+        if (hasModule)
+        {
+            predicates.push_back("lower(e.module) = ?");
+        }
+        if (hasSession)
+        {
+            predicates.push_back("(e.session_id = ? OR instr(lower(e.session_path), ?) > 0)");
+        }
+        if (hasPid)
+        {
+            predicates.push_back("(e.pid = ? OR e.target_process_id = ?)");
+        }
+
+        if (!predicates.empty())
+        {
+            sql += " WHERE ";
+            for (std::size_t index = 0; index < predicates.size(); ++index)
+            {
+                if (index != 0)
+                {
+                    sql += " AND ";
+                }
+                sql += predicates[index];
+            }
+        }
+
+        sql += " ORDER BY e.session_path ASC, e.event_id ASC, e.record_sequence ASC";
+        if (limit != 0)
+        {
+            sql += " LIMIT ?";
+        }
+        sql += ";";
+
+        SqliteStatement statement;
+        if (!PrepareSql(database, sql, &statement, error))
+        {
+            break;
+        }
+
+        int bindIndex = 1;
+        if (hasText && !BindText(statement.Statement, bindIndex++, ftsQuery, error))
+        {
+            break;
+        }
+        if (hasApi && !BindText(statement.Statement, bindIndex++, LowerAsciiPathKey(api), error))
+        {
+            break;
+        }
+        if (hasModule && !BindText(statement.Statement, bindIndex++, LowerAsciiPathKey(module), error))
+        {
+            break;
+        }
+        if (hasSession)
+        {
+            const std::string sessionNeedle = LowerAsciiPathKey(session);
+            if (!BindText(statement.Statement, bindIndex++, session, error) ||
+                !BindText(statement.Statement, bindIndex++, sessionNeedle, error))
+            {
+                break;
+            }
+        }
+        if (hasPid)
+        {
+            if (!BindUInt64(statement.Statement, bindIndex++, pid, error) ||
+                !BindUInt64(statement.Statement, bindIndex++, pid, error))
+            {
+                break;
+            }
+        }
+        if (limit != 0 && !BindUInt64(statement.Statement, bindIndex++, limit, error))
+        {
+            break;
+        }
+
+        while (true)
+        {
+            const int rc = sqlite3_step(statement.Statement);
+            if (rc == SQLITE_ROW)
+            {
+                events->push_back(TraceIndexEventFromStatement(statement.Statement));
+                continue;
+            }
+
+            if (rc == SQLITE_DONE)
+            {
+                success = true;
+            }
+            else if (error != nullptr)
+            {
+                *error = SqliteError(database);
+            }
+            break;
+        }
+    }
+    while (false);
+
+    return success;
+}
+
+bool ReadTraceIndexSessionPaths(sqlite3* database, std::vector<std::string>* paths, std::string* error)
+{
+    bool success = false;
+
+    do
+    {
+        if (paths == nullptr)
+        {
+            if (error != nullptr)
+            {
+                *error = "trace index session path output is null.";
+            }
+            break;
+        }
+
+        SqliteStatement statement;
+        if (!PrepareSql(database, "SELECT path FROM sessions ORDER BY path ASC;", &statement, error))
+        {
+            break;
+        }
+
+        while (true)
+        {
+            const int rc = sqlite3_step(statement.Statement);
+            if (rc == SQLITE_ROW)
+            {
+                paths->push_back(ColumnText(statement.Statement, 0));
+                continue;
+            }
+
+            if (rc == SQLITE_DONE)
+            {
+                success = true;
+            }
+            else if (error != nullptr)
+            {
+                *error = SqliteError(database);
+            }
+            break;
+        }
+    }
+    while (false);
+
+    return success;
+}
+
+std::string TraceIndexBuildJson(const std::vector<std::string>& args)
+{
+    const std::string rootOption = GetOption(args, "--root");
+    const std::string databaseOption = GetOption(args, "--database");
+    const bool rebuild = HasOption(args, "--rebuild");
+    sqlite3* database = nullptr;
+    std::string error;
+    std::uint64_t sessionCount = 0;
+    std::uint64_t indexedSessionCount = 0;
+    std::uint64_t invalidSessionCount = 0;
+    std::uint64_t eventCount = 0;
+
+    do
+    {
+        if (rootOption.empty())
+        {
+            return TraceIndexJson("trace-index-build", "", databaseOption, false, "missing --root.", 0, 0, 0, 0, false, false, {}, {});
+        }
+        if (databaseOption.empty())
+        {
+            return TraceIndexJson("trace-index-build", rootOption, "", false, "missing --database.", 0, 0, 0, 0, false, false, {}, {});
+        }
+
+        const std::filesystem::path rootPath = PathFromUtf8(rootOption);
+        std::error_code rootError;
+        if (!std::filesystem::exists(rootPath, rootError))
+        {
+            return TraceIndexJson("trace-index-build", rootOption, databaseOption, false, "root does not exist.", 0, 0, 0, 0, false, false, {}, {});
+        }
+
+        if (!OpenCatalogIndexDatabase(PathFromUtf8(databaseOption), SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, &database, &error))
+        {
+            break;
+        }
+        if (!EnsureTraceIndexSchema(database, &error))
+        {
+            break;
+        }
+
+        bool rootFound = false;
+        const std::string existingRoot = ReadCatalogIndexMetadata(database, "root_path", &rootFound, &error);
+        if (rootFound && existingRoot != rootOption && !rebuild)
+        {
+            error = "trace index root mismatch; rebuild required.";
+            break;
+        }
+
+        const auto sessionPaths = DiscoverKnapmSessionPaths(rootPath);
+        sessionCount = static_cast<std::uint64_t>(sessionPaths.size());
+
+        if (!ExecSql(database, "BEGIN IMMEDIATE TRANSACTION;", &error))
+        {
+            break;
+        }
+
+        bool transactionActive = true;
+        bool transactionSuccess = false;
+        do
+        {
+            if (rebuild)
+            {
+                if (!ExecSql(database, "DELETE FROM trace_events_fts;", &error) ||
+                    !ExecSql(database, "DELETE FROM trace_events;", &error) ||
+                    !ExecSql(database, "DELETE FROM sessions;", &error))
+                {
+                    break;
+                }
+            }
+
+            for (const std::filesystem::path& sessionPath : sessionPaths)
+            {
+                KnapmCatalogRow row = BuildKnapmCatalogRow(sessionPath);
+                if (!DeleteTraceIndexSessionRows(database, row.SessionPath, &error))
+                {
+                    break;
+                }
+
+                if (!row.ValidationSuccess || row.Format != "knapm")
+                {
+                    ++invalidSessionCount;
+                    continue;
+                }
+
+                std::vector<KnapmTraceIndexEvent> events;
+                if (!ReadKnapmTraceIndexEvents(sessionPath, row, &events, &error))
+                {
+                    break;
+                }
+
+                if (!InsertTraceIndexSessionRow(database, row, &error))
+                {
+                    break;
+                }
+
+                for (const KnapmTraceIndexEvent& event : events)
+                {
+                    if (!InsertTraceIndexEventRow(database, event, &error))
+                    {
+                        break;
+                    }
+                }
+                if (!error.empty())
+                {
+                    break;
+                }
+
+                ++indexedSessionCount;
+                eventCount += static_cast<std::uint64_t>(events.size());
+            }
+            if (!error.empty())
+            {
+                break;
+            }
+
+            const std::string buildTimeUtc = NowUtc();
+            if (!SetCatalogIndexMetadata(database, "schema_version", std::to_string(TraceIndexSchemaVersion), &error) ||
+                !SetCatalogIndexMetadata(database, "format", TraceIndexFormat(), &error) ||
+                !SetCatalogIndexMetadata(database, "root_path", rootOption, &error) ||
+                !SetCatalogIndexMetadata(database, "build_time_utc", buildTimeUtc, &error) ||
+                !SetCatalogIndexMetadata(database, "session_count", std::to_string(sessionCount), &error) ||
+                !SetCatalogIndexMetadata(database, "indexed_session_count", std::to_string(indexedSessionCount), &error) ||
+                !SetCatalogIndexMetadata(database, "invalid_session_count", std::to_string(invalidSessionCount), &error) ||
+                !SetCatalogIndexMetadata(database, "event_count", std::to_string(eventCount), &error))
+            {
+                break;
+            }
+
+            if (!ExecSql(database, "COMMIT;", &error))
+            {
+                transactionActive = false;
+                break;
+            }
+
+            transactionActive = false;
+            transactionSuccess = true;
+        }
+        while (false);
+
+        if (transactionActive)
+        {
+            std::string rollbackError;
+            ExecSql(database, "ROLLBACK;", &rollbackError);
+        }
+
+        if (!transactionSuccess)
+        {
+            break;
+        }
+    }
+    while (false);
+
+    if (database != nullptr)
+    {
+        sqlite3_close(database);
+        database = nullptr;
+    }
+
+    if (!error.empty())
+    {
+        return TraceIndexJson("trace-index-build", rootOption, databaseOption, false, error, sessionCount, indexedSessionCount, invalidSessionCount, eventCount, false, true, {}, {});
+    }
+
+    return TraceIndexJson("trace-index-build", rootOption, databaseOption, true, "Trace event index built.", sessionCount, indexedSessionCount, invalidSessionCount, eventCount, false, true, {}, {});
+}
+
+std::string TraceIndexQueryJson(const std::vector<std::string>& args)
+{
+    const std::string databaseOption = GetOption(args, "--database");
+    const std::string text = GetOption(args, "--text");
+    const std::string api = GetOption(args, "--api");
+    const std::string module = GetOption(args, "--module");
+    const std::string session = GetOption(args, "--session");
+    const std::string pid = GetOption(args, "--pid");
+    const std::uint32_t limit = GetUInt32Option(args, "--limit", 100);
+    sqlite3* database = nullptr;
+    std::string error;
+    std::string rootPath;
+    std::vector<KnapmTraceIndexEvent> events;
+    std::uint64_t sessionCount = 0;
+    std::uint64_t indexedSessionCount = 0;
+    std::uint64_t invalidSessionCount = 0;
+    std::uint64_t eventCount = 0;
+
+    do
+    {
+        if (databaseOption.empty())
+        {
+            return TraceIndexJson("trace-index-query", "", "", false, "missing --database.", 0, 0, 0, 0, false, false, {}, {});
+        }
+
+        if (!OpenCatalogIndexDatabase(PathFromUtf8(databaseOption), SQLITE_OPEN_READONLY, &database, &error))
+        {
+            break;
+        }
+        if (!ValidateTraceIndexSchema(database, &error))
+        {
+            break;
+        }
+
+        bool rootFound = false;
+        rootPath = ReadCatalogIndexMetadata(database, "root_path", &rootFound, &error);
+        if (!rootFound)
+        {
+            rootPath.clear();
+        }
+
+        sessionCount = ReadTraceIndexMetadataUInt64(database, "session_count");
+        indexedSessionCount = ReadTraceIndexMetadataUInt64(database, "indexed_session_count");
+        invalidSessionCount = ReadTraceIndexMetadataUInt64(database, "invalid_session_count");
+        eventCount = ReadTraceIndexMetadataUInt64(database, "event_count");
+
+        if (!QueryTraceIndexEvents(database, text, api, module, session, pid, limit, &events, &error))
+        {
+            break;
+        }
+    }
+    while (false);
+
+    if (database != nullptr)
+    {
+        sqlite3_close(database);
+        database = nullptr;
+    }
+
+    if (!error.empty())
+    {
+        return TraceIndexJson("trace-index-query", rootPath, databaseOption, false, error, sessionCount, indexedSessionCount, invalidSessionCount, eventCount, false, false, {}, events);
+    }
+
+    return TraceIndexJson("trace-index-query", rootPath, databaseOption, true, "Trace event index query completed.", sessionCount, indexedSessionCount, invalidSessionCount, eventCount, false, false, {}, events);
+}
+
+std::string TraceIndexRemoveMissingJson(const std::vector<std::string>& args)
+{
+    const std::string databaseOption = GetOption(args, "--database");
+    const bool dryRun = HasOption(args, "--dry-run");
+    sqlite3* database = nullptr;
+    std::string error;
+    std::string rootPath;
+    std::vector<std::string> sessionPaths;
+    std::vector<std::string> missingSessionPaths;
+    std::uint64_t sessionCount = 0;
+    std::uint64_t indexedSessionCount = 0;
+    std::uint64_t invalidSessionCount = 0;
+    std::uint64_t eventCount = 0;
+
+    do
+    {
+        if (databaseOption.empty())
+        {
+            return TraceIndexJson("trace-index-remove-missing", "", "", false, "missing --database.", 0, 0, 0, 0, dryRun, false, {}, {});
+        }
+
+        if (!OpenCatalogIndexDatabase(PathFromUtf8(databaseOption), SQLITE_OPEN_READWRITE, &database, &error))
+        {
+            break;
+        }
+        if (!ValidateTraceIndexSchema(database, &error))
+        {
+            break;
+        }
+
+        bool rootFound = false;
+        rootPath = ReadCatalogIndexMetadata(database, "root_path", &rootFound, &error);
+        if (!rootFound)
+        {
+            rootPath.clear();
+        }
+
+        if (!ReadTraceIndexSessionPaths(database, &sessionPaths, &error))
+        {
+            break;
+        }
+
+        for (const std::string& path : sessionPaths)
+        {
+            std::error_code existsError;
+            if (path.empty() || !std::filesystem::exists(PathFromUtf8(path), existsError))
+            {
+                missingSessionPaths.push_back(path);
+            }
+        }
+
+        if (!dryRun)
+        {
+            if (!ExecSql(database, "BEGIN IMMEDIATE TRANSACTION;", &error))
+            {
+                break;
+            }
+
+            bool transactionActive = true;
+            bool transactionSuccess = false;
+            do
+            {
+                for (const std::string& path : missingSessionPaths)
+                {
+                    if (!DeleteTraceIndexSessionRows(database, path, &error))
+                    {
+                        break;
+                    }
+                }
+                if (!error.empty())
+                {
+                    break;
+                }
+
+                sessionCount = sessionPaths.size() - missingSessionPaths.size();
+                indexedSessionCount = sessionCount;
+                invalidSessionCount = ReadTraceIndexMetadataUInt64(database, "invalid_session_count");
+                SqliteStatement countStatement;
+                if (!PrepareSql(database, "SELECT COUNT(*) FROM trace_events;", &countStatement, &error))
+                {
+                    break;
+                }
+                if (sqlite3_step(countStatement.Statement) == SQLITE_ROW)
+                {
+                    eventCount = ColumnUInt64(countStatement.Statement, 0);
+                }
+                else
+                {
+                    error = SqliteError(database);
+                    break;
+                }
+
+                if (!SetCatalogIndexMetadata(database, "session_count", std::to_string(sessionCount), &error) ||
+                    !SetCatalogIndexMetadata(database, "indexed_session_count", std::to_string(indexedSessionCount), &error) ||
+                    !SetCatalogIndexMetadata(database, "event_count", std::to_string(eventCount), &error) ||
+                    !SetCatalogIndexMetadata(database, "build_time_utc", NowUtc(), &error))
+                {
+                    break;
+                }
+
+                if (!ExecSql(database, "COMMIT;", &error))
+                {
+                    transactionActive = false;
+                    break;
+                }
+
+                transactionActive = false;
+                transactionSuccess = true;
+            }
+            while (false);
+
+            if (transactionActive)
+            {
+                std::string rollbackError;
+                ExecSql(database, "ROLLBACK;", &rollbackError);
+            }
+
+            if (!transactionSuccess)
+            {
+                break;
+            }
+        }
+
+        if (dryRun)
+        {
+            sessionCount = ReadTraceIndexMetadataUInt64(database, "session_count");
+            indexedSessionCount = ReadTraceIndexMetadataUInt64(database, "indexed_session_count");
+            invalidSessionCount = ReadTraceIndexMetadataUInt64(database, "invalid_session_count");
+            eventCount = ReadTraceIndexMetadataUInt64(database, "event_count");
+        }
+    }
+    while (false);
+
+    if (database != nullptr)
+    {
+        sqlite3_close(database);
+        database = nullptr;
+    }
+
+    if (!error.empty())
+    {
+        return TraceIndexJson("trace-index-remove-missing", rootPath, databaseOption, false, error, sessionCount, indexedSessionCount, invalidSessionCount, eventCount, dryRun, !dryRun, missingSessionPaths, {});
+    }
+
+    return TraceIndexJson(
+        "trace-index-remove-missing",
+        rootPath,
+        databaseOption,
+        true,
+        dryRun ? "Missing trace index rows identified." : "Missing trace index rows removed.",
+        sessionCount,
+        indexedSessionCount,
+        invalidSessionCount,
+        eventCount,
+        dryRun,
+        !dryRun,
+        missingSessionPaths,
+        {});
 }
 
 bool CatalogRowMatchesState(const KnapmCatalogRow& row, const std::string& state)
@@ -7539,7 +8932,7 @@ void PrintUsage()
     std::cout << "{";
     std::cout << "\"schemaVersion\":\"0.1.0\",";
     std::cout << "\"success\":false,";
-    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] [--knapm-compression none|zstd] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-audit [--runtime-dir dir] | daemon-prune-stale [--runtime-dir dir] [--dry-run] | daemon-start-session --pid pid --write-knapm path [--knapm-compression none|zstd] [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | catalog-sessions --root dir [--catalog path] [--rebuild] | catalog-query --catalog path [--limit n] [--state state] [--target pid-or-text] | catalog-remove-missing --catalog path [--dry-run] | catalog-index-build --root dir --database path [--rebuild] | catalog-index-query --database path [--limit n] [--state state] [--target pid-or-text] | catalog-index-remove-missing --database path [--dry-run] | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
+    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] [--knapm-compression none|zstd] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-audit [--runtime-dir dir] | daemon-prune-stale [--runtime-dir dir] [--dry-run] | daemon-start-session --pid pid --write-knapm path [--knapm-compression none|zstd] [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | catalog-sessions --root dir [--catalog path] [--rebuild] | catalog-query --catalog path [--limit n] [--state state] [--target pid-or-text] | catalog-remove-missing --catalog path [--dry-run] | catalog-index-build --root dir --database path [--rebuild] | catalog-index-query --database path [--limit n] [--state state] [--target pid-or-text] | catalog-index-remove-missing --database path [--dry-run] | trace-index-build --root dir --database path [--rebuild] | trace-index-query --database path [--text text] [--api api] [--module module] [--session id-or-path] [--pid pid] [--limit n] | trace-index-remove-missing --database path [--dry-run] | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
     std::cout << "}\n";
 }
 }
@@ -7691,6 +9084,24 @@ int wmain(int argc, wchar_t** argv)
     if (args[0] == "catalog-index-remove-missing")
     {
         std::cout << CatalogIndexRemoveMissingJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "trace-index-build")
+    {
+        std::cout << TraceIndexBuildJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "trace-index-query")
+    {
+        std::cout << TraceIndexQueryJson(args) << "\n";
+        return 0;
+    }
+
+    if (args[0] == "trace-index-remove-missing")
+    {
+        std::cout << TraceIndexRemoveMissingJson(args) << "\n";
         return 0;
     }
 

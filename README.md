@@ -30,6 +30,7 @@ This repository is bootstrapping a new API Monitor inspired by Rohitab API Monit
 - Wave 2/3 metadata for registry, security, crypto, certificate, RPC, Winsock, WinINet, WinHTTP, User32, GDI32, PSAPI, Version, Shell, OLE32, COMBASE-backed WinRT, and KERNEL32 metadata APIs, with smoke-verified Winsock bootstrap/address-resolution/connect metadata, HKCU-safe registry, selected token query/privilege lookup, local RPCRT4 binding, binding option, and UUID helper, CNG provider/RNG, `crypt32.dll` certificate-store/message-handle, `wininet.dll` session-handle, `winhttp.dll` session/option metadata, low-payload User32/GDI32 metadata, low-payload PSAPI module-query, low-payload Version resource metadata, allowlisted Shell known-folder metadata, OLE32 COM lifecycle/GUID helper, API-set WinRT lifecycle, KERNEL32 memory protection, KERNEL32 thread lifecycle, KERNEL32 event synchronization, KERNEL32 mutex/semaphore synchronization, KERNEL32 file-mapping, KERNEL32 process/thread identity, KERNEL32 handle metadata, KERNEL32 module lifecycle, and KERNEL32 file metadata hook slices.
 - Wave 4 definition-only metadata for `oleaut32.dll`, `secur32.dll`, `userenv.dll`, `dnsapi.dll`, `iphlpapi.dll`, `setupapi.dll`, `shlwapi.dll`, `wintrust.dll`, and `dbghelp.dll`, with stable generated IDs and no new live hooks.
 - Host-side `.knapm` replay catalog indexing through a local `winsqlite3` database cache that never launches, injects, repairs, or deletes replay data.
+- Host-side event-level `.knapm` trace indexing and full-text replay search through a separate `winsqlite3` FTS5 database cache, with explicit replay-by-path from search hits.
 
 ## Current Status
 
@@ -107,6 +108,7 @@ Implemented now:
 68. Phase 13P low-payload Wave 3 KERNEL32 current-process module lifecycle slice for `GetModuleHandleW`, `GetModuleHandleExW`, `GetModuleFileNameW`, and `FreeLibrary`, with stable IDs `150` through `153`, bounded module-name, module-handle, flag, module-path, and release evidence, no module memory, PE parsing, file hashing, signature validation, full module inventory, remote module enumeration, command-line, environment, remote-memory, remote-thread, stack, credential, or byte-preview payload capture, and focused x64/x86 smoke coverage.
 69. Phase 13Q low-payload Wave 3 KERNEL32 current-process file metadata slice for `GetFileSizeEx`, `GetFileTime`, and `GetFileInformationByHandle`, with stable IDs `154` through `156`, bounded file handle, output pointer, file size, FILETIME, file attributes, volume serial, link count, and file-index scalar evidence, no file contents, paths, directory enumeration, object namespace, PE/file/hash/signature, handle duplication, security descriptor, remote-memory, remote-thread, injection, or byte-preview payload capture, and focused x64/x86 smoke coverage.
 70. Wave 4 definition-only metadata expansion for `oleaut32.dll`, `secur32.dll`, `userenv.dll`, `dnsapi.dll`, `iphlpapi.dll`, `setupapi.dll`, `shlwapi.dll`, `wintrust.dll`, and `dbghelp.dll`, with stable API IDs `157` through `179`, generated controller metadata, and no new target-process hooks.
+71. Phase 13R host-side event-level replay indexing and full-text trace search, including native `trace-index-*` commands, a separate `winsqlite3-fts5` DB, Tauri wrappers, UI trace search controls, explicit replay from selected hits, missing-row pruning, and focused smoke coverage without target mutation.
 
 Not implemented yet:
 
@@ -117,7 +119,7 @@ Not implemented yet:
 5. Breakpoint mutation.
 6. Broad COM/WinRT activation, object, interface, vtable, marshaling, storage, HSTRING, runtime-class, or restricted-error-info monitoring beyond the current lifecycle/GUID slices.
 7. Kernel-mode helper.
-8. Event-level trace payload indexing and full-text replay search beyond session metadata catalogs.
+8. Semantic ranking, saved cross-session investigations, and automatic trace-index refresh scheduling.
 
 ## Current Native Capture Snapshot
 
@@ -217,7 +219,7 @@ The Phase 11J/11K/11L supervision path separates restart ownership from replay v
 7. Audit states cover `healthy`, `finalized`, `stale`, `daemon_crashed`, `writer_crashed`, `orphaned_agent_risk`, and `malformed`. Prune removes only daemon registry records marked `pruneEligible`; it does not delete `.knapm` data, recover writers, unload agents, or mutate target processes.
 8. The daemon is not a Windows service and does not add cross-bitness attach, PPL bypass, manual mapping, stealth loading, automatic crash recovery, or orphaned active-agent repair.
 
-The Phase 11M compression/catalog path and Phase 13A catalog-index path keep replay target-free:
+The Phase 11M compression/catalog path, Phase 13A catalog-index path, and Phase 13R trace-index path keep replay target-free:
 
 1. `attach-session --write-knapm <path.knapm> --knapm-compression zstd` and `daemon-start-session --write-knapm <path.knapm> --knapm-compression zstd` write `.jsonl.zst` chunks using a standards-compatible zstd raw-block frame.
 2. `index.json` records stored `byteLength`/`sha256` and, for zstd chunks, required `uncompressedByteLength`/`uncompressedSha256` integrity fields.
@@ -234,6 +236,10 @@ The Phase 11M compression/catalog path and Phase 13A catalog-index path keep rep
 13. `catalog-index-query --database <path>` filters DB rows by validation/recovery/writer state and target PID or image/path text without touching session directories.
 14. `catalog-index-remove-missing --database <path> [--dry-run]` reports or removes only missing DB rows; it never deletes `.knapm` data, recovers writers, unloads agents, launches targets, or attaches to targets.
 15. Tauri and the UI expose DB index build/rebuild/query/dry-run/prune controls while preserving explicit replay-by-path behavior.
+16. `trace-index-build --root <dir> --database <path> [--rebuild]` validates `.knapm` sessions, decodes chunks, and stores normalized trace-event rows plus FTS5 text rows in a separate DB.
+17. `trace-index-query --database <path> [--text text] [--api api] [--module module] [--session id-or-path] [--pid pid] [--limit n]` searches replay events without reading target memory or relaunching sessions.
+18. `trace-index-remove-missing --database <path> [--dry-run]` removes only missing trace-index DB rows and never deletes `.knapm` data.
+19. Tauri and the UI expose trace DB build/rebuild/search/dry-run/prune controls; a selected hit replays its `.knapm` path explicitly through the existing replay command.
 
 Verified live hook coverage:
 
@@ -469,6 +475,7 @@ build\native\Debug\knmon-collector.exe smoke-shared-transport-reader --capacity 
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\collector-backpressure-smoke.ps1
 powershell -ExecutionPolicy Bypass -File tools\native-smoke\shared-transport-reader-smoke.ps1
 npm run catalog-index:smoke
+npm run trace-index:smoke
 ```
 
 Run optional Win32/x86 smoke after building `build/native-win32`:

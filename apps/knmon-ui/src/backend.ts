@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { mockTargets } from "./mockData";
-import type { CaptureResult, CaptureSessionState, LaunchResult, NativeDaemonAudit, NativeDaemonStatus, NativeOperation, NativeSession, NativeSessionCatalog, NativeTraceBatch, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
+import type { CaptureResult, CaptureSessionState, LaunchResult, NativeDaemonAudit, NativeDaemonStatus, NativeOperation, NativeSession, NativeSessionCatalog, NativeTraceBatch, NativeTraceIndex, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
 
 function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -253,6 +253,41 @@ export async function removeMissingNativeSessionCatalogIndexEntries(dryRun: bool
   }
 
   return invoke<NativeSessionCatalog>("remove_missing_native_session_catalog_index_entries", {
+    dryRun
+  });
+}
+
+export async function buildNativeTraceIndex(rebuild: boolean): Promise<NativeTraceIndex> {
+  if (!isTauriRuntime()) {
+    throw new Error("Trace index requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeTraceIndex>("build_native_trace_index", {
+    rebuild
+  });
+}
+
+export async function queryNativeTraceIndex(limit: number, text: string, api: string, module: string, session: string, pid: string): Promise<NativeTraceIndex> {
+  if (!isTauriRuntime()) {
+    throw new Error("Trace index query requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeTraceIndex>("query_native_trace_index", {
+    limit,
+    text,
+    api,
+    module,
+    session,
+    pid
+  });
+}
+
+export async function removeMissingNativeTraceIndexEntries(dryRun: boolean): Promise<NativeTraceIndex> {
+  if (!isTauriRuntime()) {
+    throw new Error("Trace index pruning requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeTraceIndex>("remove_missing_native_trace_index_entries", {
     dryRun
   });
 }

@@ -166,6 +166,54 @@ export interface NativeSessionCatalog {
   message: string;
 }
 
+export interface NativeTraceIndexEvent {
+  sessionPath: string;
+  sessionId: string;
+  operationId: string;
+  eventId: number;
+  recordSequence: number;
+  chunkSequence: number;
+  batchSequence: number;
+  targetProcessId: number;
+  pid: number;
+  tid: number;
+  process: string;
+  module: string;
+  api: string;
+  returnValue: string;
+  errorText: string;
+  durationUs: number;
+  relativeTimeMs: number;
+  tagsText: string;
+  argumentsText: string;
+  bufferPreview: string;
+  excerpt: string;
+  eventJson: string;
+}
+
+export interface NativeTraceIndex {
+  schemaVersion: string;
+  format: string;
+  buildTimeUtc: string;
+  backendMode: BackendMode;
+  operation: string;
+  success: boolean;
+  rootPath: string;
+  databasePath: string;
+  indexBackend: string;
+  indexSchemaVersion: number;
+  sessionCount: number;
+  indexedSessionCount: number;
+  invalidSessionCount: number;
+  eventCount: number;
+  matchedEventCount: number;
+  dryRun: boolean;
+  mutationAttempted: boolean;
+  missingSessionPaths: string[];
+  events: NativeTraceIndexEvent[];
+  message: string;
+}
+
 export interface AuditEvent {
   schemaVersion: string;
   operationId: string;

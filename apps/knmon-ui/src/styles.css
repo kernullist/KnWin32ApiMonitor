@@ -853,6 +853,117 @@ button:disabled {
   border-radius: 4px;
 }
 
+.trace-index-panel {
+  display: grid;
+  gap: 6px;
+  padding-top: 7px;
+  border-top: 1px solid #edf1f5;
+}
+
+.trace-index-summary {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.trace-index-controls {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 34px minmax(0, 1fr);
+  gap: 5px;
+  align-items: center;
+}
+
+.trace-index-controls label {
+  color: #344456;
+  font-weight: 650;
+}
+
+.trace-index-controls input {
+  min-width: 0;
+  height: 26px;
+  padding: 0 6px;
+  color: var(--text);
+  background: #ffffff;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+}
+
+.trace-index-actions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.trace-index-actions .tool-button {
+  min-width: 0;
+}
+
+.trace-index-row-list {
+  display: grid;
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  background: #ffffff;
+}
+
+.trace-index-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px;
+  gap: 5px;
+  align-items: center;
+  min-height: 74px;
+  padding: 5px;
+  border-bottom: 1px solid #e4eaf0;
+}
+
+.trace-index-row.selected {
+  background: var(--row-selected);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.trace-index-row .tool-button {
+  width: 100%;
+  min-width: 0;
+}
+
+.trace-index-row-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) 112px minmax(88px, 1fr) 62px 58px;
+  gap: 4px;
+  min-width: 0;
+  padding: 0;
+  color: var(--text);
+  text-align: left;
+  background: transparent;
+  border: 0;
+}
+
+.trace-index-row-main:hover strong {
+  color: var(--accent-strong);
+}
+
+.trace-index-summary span,
+.trace-index-summary strong,
+.trace-index-row-main span,
+.trace-index-row-main strong,
+.trace-index-row-main small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trace-index-row-main strong {
+  color: #0b5f83;
+}
+
+.trace-index-row-main small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
+
 .main-panel {
   display: grid;
   grid-template-rows: 38px auto minmax(0, 1fr) 260px;
