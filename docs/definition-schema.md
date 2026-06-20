@@ -103,11 +103,14 @@ Generated Microsoft-source API inventory artifacts live under:
 generated/api-inventory.json
 generated/api-inventory-coverage.json
 generated/tier1-hook-plan.json
+generated/tier2-hook-plan.json
 ```
 
 `generated/api-inventory.json` is generated from `Microsoft.Windows.SDK.Win32Metadata`, Microsoft Learn Win32 API documentation URLs embedded in the metadata, Microsoft Learn API index/header pages, and installed Windows SDK headers. It preserves the existing definition catalog by linking matching `module!api` rows back to their committed definition source, hook policy, coverage status, stable ID, and decoder parameter count instead of rewriting definition JSON.
 
 `generated/tier1-hook-plan.json` is generated from the Microsoft-source inventory. It records every Tier 1 `module!api` row as an opt-in hook-plan entry with module, API name, entry point, header, family/category, calling convention, return type, parameter schema, ANSI/Unicode alias family, risk, default hook profile, decoder readiness, and runtime policy. It does not promote these APIs into the compact generated Tier 0 transport ID enum, and it does not install broad Tier 1 hooks by default.
+
+`generated/tier2-hook-plan.json` is generated from the same inventory. It records every Tier 2 row as an opt-in hook-plan entry and classifies it as `api_set_forwarder`, `missing_parameter_metadata`, `ordinal_or_export_probe_candidate`, or `blocked_requires_manual_definition`. API-set rows include Windows loader runtime evidence from `LoadLibraryW`, `GetProcAddress`, and `GetModuleHandleExW(FROM_ADDRESS)` and store the resolved host DLL when available. Missing-parameter rows are limited to generic return-only events when the inventory has no arguments. Tier 2 does not install broad hooks by default and does not promote these APIs into the compact Tier 0 transport ID enum.
 
 ## Current Required Fields
 
@@ -186,6 +189,7 @@ Allowed directions:
 13. Definition coverage bucket check.
 14. Microsoft-source API inventory validation, including deterministic JSON ordering, duplicate `module!api` rejection, ANSI/Unicode alias-family checks, module-name validation, next-family coverage guidance, and no regression of smoke-verified APIs to a non-zero hook tier.
 15. Tier 1 hook-plan validation, including 100% Tier 1 plan coverage, duplicate hook-row rejection, Tier 3 exclusion, ANSI/Unicode alias-family grouping, Tier 0 metadata preservation, and deterministic JSON ordering.
+16. Tier 2 hook-plan validation, including 100% Tier 2 plan coverage, duplicate hook-row rejection, API-set resolution evidence checks, missing-parameter return-only checks, default-disabled policy checks, and deterministic JSON ordering.
 
 The restricted `lengthExpression` grammar supports only:
 
@@ -274,11 +278,13 @@ Existing transport IDs are preserved:
    - `wintrust.dll = 25`
    - `dbghelp.dll = 26`
 
-The native agent and controller use generated compile-time enum constants through `GeneratedApiIds.h`. The controller also uses `GeneratedApiMetadata.h` for API/module names, API family/category/risk labels, argument names/types/directions, decode aliases, and capture timing. Target hook fast paths still do not parse definitions or metadata. Tier 1 generic events use a separate transport record flag and carry the inventory API name plus pointer/scalar slots without changing existing Tier 0 IDs.
+The native agent and controller use generated compile-time enum constants through `GeneratedApiIds.h`. The controller also uses `GeneratedApiMetadata.h` for API/module names, API family/category/risk labels, argument names/types/directions, decode aliases, and capture timing. Target hook fast paths still do not parse definitions or metadata. Tier 1 and Tier 2 generic events use a separate transport record flag and carry the inventory API name plus pointer/scalar slots without changing existing Tier 0 IDs.
 
 `generated/definition-decoder-tables.json` is the deterministic JSON view for tooling. It contains module rows, API rows through ID `179`, flattened parameter rows, decode alias rows, and source file lists without wall-clock timestamps or local machine paths.
 
 `generated/tier1-hook-plan.json` currently plans all 15,939 Tier 1 APIs. The plan marks 15,535 APIs as generic pointer/scalar fallback ready, 404 APIs as blocked by the current generic ABI slot policy, and 1,795 APIs as requiring explicit allowlist before installation because of risk policy. The default profile installs zero Tier 1 hooks; broad coverage requires an explicit profile, module/family/risk selector, or allowlist.
+
+`generated/tier2-hook-plan.json` currently plans all 655 Tier 2 APIs. The plan classifies 279 rows as API-set forwarders, resolves 277 of them to concrete host DLLs on the current Windows runtime, classifies 376 rows as missing-parameter return-only candidates, and enables zero Tier 2 hooks by default. Runtime smoke coverage currently proves `WindowsGetStringLen` through `api-ms-win-core-winrt-string-l1-1-0.dll` with resolved host `combase.dll`, and `RevertToSelf` as a generic return-only event.
 
 ## File I/O, Loader, Resolver, And Wave 2/3/4 Metadata Coverage
 
@@ -494,7 +500,7 @@ The current Microsoft-source inventory report totals 18,086 monitorable catalog 
 
 1. `tier 0`: 122 currently emitted and decoded agent-hook APIs.
 2. `tier 1`: 15,939 DLL-export APIs with parameter metadata that need hook/decoder implementation.
-3. `tier 2`: 655 APIs deferred to dynamic resolver, API-set host resolution, or export-hook strategy.
+3. `tier 2`: 655 APIs deferred to API-set host resolution, missing-parameter return-only capture, dynamic resolver correlation, or export-hook strategy.
 4. `tier 3`: 1,370 callback, COM-interface, message/hook, or otherwise unsupported signatures for the current user-mode IAT hook path.
 
 Risk buckets are also generated from existing definition risk metadata plus broad metadata-driven signature/namespace rules: 708 `critical`, 1,238 `high`, 16,088 `medium`, and 52 `low`.

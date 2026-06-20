@@ -11,6 +11,7 @@
 #include <oleauto.h>
 #include <rpc.h>
 #include <roapi.h>
+#include <winstring.h>
 #include <shlobj.h>
 #include <wincrypt.h>
 #include <windns.h>
@@ -2662,6 +2663,57 @@ bool RunTier1GraphicsProbe()
     return object != nullptr;
 }
 
+bool RunTier2ApiSetProbe()
+{
+    bool success = false;
+    HSTRING value = nullptr;
+
+    do
+    {
+        const HRESULT createResult = WindowsCreateString(L"knmon", 5, &value);
+        if (FAILED(createResult))
+        {
+            std::cout << "WindowsCreateString failed with " << HexHResult(createResult) << "\n";
+            break;
+        }
+
+        const UINT32 length = WindowsGetStringLen(value);
+        std::cout << "tier2 api-set probe length=" << length << "\n";
+        if (length != 5)
+        {
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    if (value != nullptr)
+    {
+        const HRESULT deleteResult = WindowsDeleteString(value);
+        if (FAILED(deleteResult))
+        {
+            std::cout << "WindowsDeleteString failed with " << HexHResult(deleteResult) << "\n";
+            success = false;
+        }
+    }
+
+    return success;
+}
+
+bool RunTier2MissingMetadataProbe()
+{
+    const BOOL result = RevertToSelf();
+    const DWORD lastError = GetLastError();
+    std::cout << "tier2 missing-metadata probe revert=" << result << "\n";
+    if (!result)
+    {
+        std::cout << "RevertToSelf failed with " << lastError << "\n";
+    }
+
+    return result != FALSE;
+}
+
 int RunFileIo(bool slow)
 {
     int exitCode = 1;
@@ -2700,6 +2752,16 @@ int RunFileIo(bool slow)
         }
 
         if (!RunTier1GraphicsProbe())
+        {
+            break;
+        }
+
+        if (!RunTier2ApiSetProbe())
+        {
+            break;
+        }
+
+        if (!RunTier2MissingMetadataProbe())
         {
             break;
         }

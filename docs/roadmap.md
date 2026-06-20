@@ -554,12 +554,14 @@ Current verified behavior:
    - `GetFileInformationByHandle`
 58. KERNEL32 file metadata records render generated metadata, file handle values, output pointer values, decoded file size, FILETIME scalar values, file attributes, volume serial, link count, file index, return/error evidence, and timing outside the target process. They intentionally do not copy file contents, enumerate directories, resolve paths or object-manager names, inspect PE metadata, hash files, validate signatures, duplicate handles, query security descriptors, capture command lines or environments, inspect remote memory, inspect thread context/stacks, or emit arbitrary payload previews.
 59. `WS2_32.dll` ordinal imports for the selected Winsock APIs are matched only through explicit hook-definition ordinals, including ordinal `4` for `connect`; broad ordinal patching remains out of scope.
+60. `generated/tier2-hook-plan.json` plans all 655 Tier 2 APIs with zero hooks enabled by default, including 279 API-set forwarder rows, 277 Windows-loader-resolved host rows, and 376 missing-parameter return-only rows.
+61. The Tier 2 generic profile smoke verifies `api-ms-win-core-winrt-string-l1-1-0.dll!WindowsGetStringLen` through resolved host `combase.dll`, verifies `advapi32.dll!RevertToSelf` as a no-argument return-only event, and re-checks resolver visibility for `GetProcAddress` and `LdrGetProcedureAddress`.
 
 Next implementation focus:
 
-1. Keep the selected Winsock bootstrap/address-resolution/connect metadata, registry, advapi32 token query/privilege lookup, RPCRT4 binding/option/UUID helper, bcrypt CNG provider/RNG, crypt32 certificate-store/message-handle, WinHTTP session/scalar-option, WinINet session-handle, User32/GDI32 metadata, PSAPI module-query, Version resource metadata, Shell known-folder metadata, OLE32 COM lifecycle/GUID helper, COMBASE-backed WinRT lifecycle, KERNEL32 memory protection, KERNEL32 thread lifecycle, KERNEL32 event synchronization, KERNEL32 mutex/semaphore synchronization, KERNEL32 file-mapping, KERNEL32 process/thread identity, KERNEL32 handle metadata, KERNEL32 module lifecycle, KERNEL32 file metadata, OLEAUT32 lifecycle, USERENV environment-block destroy, DNSAPI record-list free, IPHLPAPI interface-entry query, SETUPAPI device-info close, and DbgHelp symbol-session slices under shared-memory backpressure and hook-overhead gates.
+1. Keep the selected Winsock bootstrap/address-resolution/connect metadata, registry, advapi32 token query/privilege lookup, RPCRT4 binding/option/UUID helper, bcrypt CNG provider/RNG, crypt32 certificate-store/message-handle, WinHTTP session/scalar-option, WinINet session-handle, User32/GDI32 metadata, PSAPI module-query, Version resource metadata, Shell known-folder metadata, OLE32 COM lifecycle/GUID helper, COMBASE-backed WinRT lifecycle, KERNEL32 memory protection, KERNEL32 thread lifecycle, KERNEL32 event synchronization, KERNEL32 mutex/semaphore synchronization, KERNEL32 file-mapping, KERNEL32 process/thread identity, KERNEL32 handle metadata, KERNEL32 module lifecycle, KERNEL32 file metadata, OLEAUT32 lifecycle, USERENV environment-block destroy, DNSAPI record-list free, IPHLPAPI interface-entry query, SETUPAPI device-info close, DbgHelp symbol-session, and Tier 2 generic representative hooks under shared-memory backpressure and hook-overhead gates.
 2. Design payload-heavy network hooks (`send`, `recv`, `sendto`, `recvfrom`), WinHTTP connection/request/transfer/header/body/cookie/credential capture, WinHTTP non-scalar option buffers, and WinINet connection/request/transfer/option/header/cookie/credential/body capture separately before enabling buffer capture at scale.
-3. Stage the next Wave 3 DLL/API family only after deterministic smoke evidence and transport-budget checks exist; prefer another low-volume handle/lifecycle or explicitly reviewed metadata slice before payload-heavy or secret-bearing APIs.
+3. Stage broader Tier 2 coverage only through explicit profiles, resolved host DLL selection, module/family/risk/allowlist gates, and representative native smoke evidence; do not enable broad API-set or missing-parameter hooks by default.
 4. Keep returned-pointer instrumentation as a separate reviewed design item.
 
 ## Phase 10: Definition System V1
@@ -1104,7 +1106,7 @@ Next implementation focus:
 
 ## Remaining Roadmap Review
 
-Status: refreshed on 2026-06-20 after low-payload IPHLPAPI interface-entry query coverage.
+Status: refreshed on 2026-06-20 after Tier 2 coverage planning foundation and representative generic smoke coverage.
 
 Current definition coverage:
 
@@ -1112,6 +1114,8 @@ Current definition coverage:
 2. `smoke_verified`: 118.
 3. `hooked`: 4.
 4. `definition_only`: 57.
+5. Microsoft-source inventory: 18,086 APIs, with 122 Tier 0 rows, 15,939 Tier 1 rows, 655 Tier 2 rows, and 1,370 Tier 3 rows.
+6. Tier 2 hook plan: 279 API-set forwarders, 277 resolved host rows, 376 missing-parameter return-only rows, and zero hooks enabled by default.
 
 Safe implementation queue:
 
@@ -1128,12 +1132,18 @@ Safe implementation queue:
    - Registry-only recovery apply is implemented as Phase 11O through dry-run-by-default `daemon-recovery-apply` plus explicit `--apply-registry-prune` for records already marked `registryPruneAllowed=true`.
    - Actual automatic recovery, writer restart, agent unload, reinjection repair, target kill/restart, and orphaned active-agent repair remain blocked until recovery invariants are separately proven.
 4. Continue low-payload metadata slices only when the candidate API family has bounded scalar/pointer outputs, deterministic sample probes, x64/x86 smoke evidence, zero healthy-path drops, and no sensitive payload capture.
+5. Expand Tier 2 only through explicit opt-in selectors:
+   - API-set forwarders require resolved host evidence and target import/provider verification.
+   - Missing-parameter APIs remain return-only unless a reviewed manual definition adds safe argument metadata.
+   - High-risk Tier 2 rows require explicit allowlist or risk override before installation.
+   - Representative native smokes must prove at least one API-set generic event, one return-only event, and preserved resolver visibility before adding broader profiles.
 
 Remaining definition-only expansion queue:
 
 1. Wave 4 now has stable metadata for `oleaut32.dll`, `secur32.dll`, `userenv.dll`, `dnsapi.dll`, `iphlpapi.dll`, `setupapi.dll`, `shlwapi.dll`, `wintrust.dll`, and `dbghelp.dll`; `VariantClear`/`SafeArrayDestroy` are already promoted to low-payload OLEAUT32 lifecycle hooks, `DestroyEnvironmentBlock` is promoted to low-payload USERENV environment-block destroy coverage, `DnsRecordListFree` is promoted to low-payload DNSAPI record-list free coverage through the modern `DnsFree` import provider, `GetIfEntry2` is promoted to low-payload IPHLPAPI interface-entry query coverage, `SetupDiDestroyDeviceInfoList` is promoted to low-payload SETUPAPI device-info close coverage, and `SymInitializeW`/`SymCleanup` are already promoted to low-payload DbgHelp symbol-session hooks.
 2. The remaining unselected Wave 4 APIs stay `definition_only` until each family has a hook ABI review, provider/import verification, sample design, payload-safety boundaries, and performance gate.
 3. Good first live candidates are low-volume lifecycle/query calls whose hooks can emit scalar handles, flags, return values, and pointer-only evidence without copying arbitrary payload buffers.
+4. Tier 2 API-set forwarders should be grouped by resolved host DLL and profile before implementation; do not add broad API-set hooks just because the host module resolves on the current OS.
 
 Design-only high-risk queue:
 

@@ -8,6 +8,11 @@ import {
   validateTier1HookPlan
 } from "./tier1-hook-plan-system.mjs";
 import {
+  loadTier2HookPlan,
+  tier2HookPlanToMarkdown,
+  validateTier2HookPlan
+} from "./tier2-hook-plan-system.mjs";
+import {
   buildCoverageReport,
   coverageReportToMarkdown,
   stableStringify,
@@ -28,6 +33,7 @@ if (result.errors.length > 0) {
 const report = buildCoverageReport(result.apiDocuments, result.metadataIndex);
 const inventory = loadApiInventory();
 const tier1HookPlan = loadTier1HookPlan();
+const tier2HookPlan = loadTier2HookPlan();
 
 if (args.has("--check")) {
   const requiredStatuses = ["definition_only", "hooked", "smoke_verified"];
@@ -74,12 +80,22 @@ if (args.has("--check")) {
     process.exit(1);
   }
 
+  const tier2PlanErrors = validateTier2HookPlan(tier2HookPlan, inventory);
+  if (tier2PlanErrors.length > 0) {
+    console.error("Tier 2 hook plan report check failed:");
+    for (const error of tier2PlanErrors) {
+      console.error(`- ${error}`);
+    }
+    process.exit(1);
+  }
+
   console.log("Definition coverage report check passed.");
 } else if (args.has("--json")) {
   process.stdout.write(stableStringify({
     definitions: report,
     microsoftSourceInventory: inventory,
-    tier1HookPlan
+    tier1HookPlan,
+    tier2HookPlan
   }));
 } else {
   process.stdout.write(coverageReportToMarkdown(report));
@@ -89,4 +105,5 @@ if (args.has("--check")) {
     process.stdout.write(`\n${apiInventoryReportToMarkdown(inventory)}`);
   }
   process.stdout.write(`\n${tier1HookPlanToMarkdown(tier1HookPlan)}`);
+  process.stdout.write(`\n${tier2HookPlanToMarkdown(tier2HookPlan)}`);
 }

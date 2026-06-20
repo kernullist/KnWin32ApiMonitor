@@ -3217,6 +3217,25 @@ std::string GenericReturnValueText(const KnMonCaptureResult& result, const KnMon
     return value;
 }
 
+std::string DefaultGenericHookPolicy(const std::string& tier, const std::string& coverageStatus)
+{
+    std::string policy = "tier1_generic_iat";
+
+    if (tier == "tier2")
+    {
+        if (coverageStatus == "api_set_generic")
+        {
+            policy = "tier2_api_set_iat";
+        }
+        else
+        {
+            policy = "tier2_return_only_iat";
+        }
+    }
+
+    return policy;
+}
+
 std::string GenericTransportApiPayload(
     const KnMonCaptureResult& result,
     const KnMonTransportRecord& record,
@@ -3225,30 +3244,40 @@ std::string GenericTransportApiPayload(
     const std::string& text2)
 {
     const std::string apiName = text0.empty() ? TransportApiName(record.ApiId) : text0;
-    const std::string moduleName = TransportModuleName(record.ModuleId);
+    const std::string moduleName = MetadataTokenValue(text1, "module", TransportModuleName(record.ModuleId));
+    const std::string tier = MetadataTokenValue(text1, "tier", "tier1");
     const std::string apiFamily = MetadataTokenValue(text1, "family", "tier1");
     const std::string apiCategory = MetadataTokenValue(text1, "category", "tier1/generic");
     const std::string profile = MetadataTokenValue(text1, "profile", "tier1");
+    const std::string apiRisk = MetadataTokenValue(text1, "risk", "medium");
+    const std::string coverageStatus = MetadataTokenValue(text1, "coverage", "generic_decoded");
+    const std::string hookPolicy = MetadataTokenValue(text1, "policy", DefaultGenericHookPolicy(tier, coverageStatus));
+    const std::string resolvedHostModule = MetadataTokenValue(text1, "host", "");
     const std::string inventoryKey = MetadataTokenValue(text1, "inventoryKey", moduleName + "!" + apiName);
-    const GenericArgumentSchema schema = ParseGenericArgumentSchema(text2);
-    const bool scalarArgument = schema.DecodeHint == "raw" || schema.DecodeHint == "scalar" || schema.DecodeHint == "object";
-    const std::string argumentValue = scalarArgument ?
-        DwordDecimalHexText(static_cast<std::uint32_t>(record.Values64[0])) :
-        HexPointerValue(record.Values64[0], result.Architecture);
-    const std::string decoded = scalarArgument ? argumentValue : (schema.DecodeHint + ";pointer=" + argumentValue);
     const std::string agentName = FileNameFromPath(result.AgentPath);
     std::ostringstream args;
-    args << ArgumentJson(
-        0,
-        schema.Type,
-        schema.Name,
-        schema.Direction,
-        argumentValue,
-        argumentValue,
-        decoded,
-        DecodeStatusName(record.Values32[1]),
-        "generic_pointer",
-        "pre_post");
+
+    if (record.Values32[0] > 0)
+    {
+        const GenericArgumentSchema schema = ParseGenericArgumentSchema(text2);
+        const bool scalarArgument = schema.DecodeHint == "raw" || schema.DecodeHint == "scalar" || schema.DecodeHint == "object";
+        const std::string argumentValue = scalarArgument ?
+            DwordDecimalHexText(static_cast<std::uint32_t>(record.Values64[0])) :
+            HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string decoded = scalarArgument ? argumentValue : (schema.DecodeHint + ";pointer=" + argumentValue);
+
+        args << ArgumentJson(
+            0,
+            schema.Type,
+            schema.Name,
+            schema.Direction,
+            argumentValue,
+            argumentValue,
+            decoded,
+            DecodeStatusName(record.Values32[1]),
+            "generic_pointer",
+            "pre_post");
+    }
 
     std::ostringstream stream;
     stream << "{";
@@ -3261,21 +3290,39 @@ std::string GenericTransportApiPayload(
     stream << "\"sequence\":" << record.Sequence << ",";
     stream << "\"api\":" << Q(apiName) << ",";
     stream << "\"module\":" << Q(moduleName) << ",";
+    if (!resolvedHostModule.empty())
+    {
+        stream << "\"resolvedHostModule\":" << Q(resolvedHostModule) << ",";
+    }
     stream << "\"process\":\"knmon-sample-fileio.exe\",";
     stream << "\"apiFamily\":" << Q(apiFamily) << ",";
     stream << "\"apiCategory\":" << Q(apiCategory) << ",";
-    stream << "\"apiRisk\":\"medium\",";
-    stream << "\"hookPolicy\":\"tier1_generic_iat\",";
-    stream << "\"coverageStatus\":\"generic_decoded\",";
+    stream << "\"apiRisk\":" << Q(apiRisk) << ",";
+    stream << "\"hookPolicy\":" << Q(hookPolicy) << ",";
+    stream << "\"coverageStatus\":" << Q(coverageStatus) << ",";
     stream << "\"inventoryKey\":" << Q(inventoryKey) << ",";
-    stream << "\"tier1Profile\":" << Q(profile) << ",";
+    stream << "\"monitorTier\":" << Q(tier) << ",";
+    stream << "\"hookProfile\":" << Q(profile) << ",";
+    if (tier == "tier2")
+    {
+        stream << "\"tier2Profile\":" << Q(profile) << ",";
+    }
+    else
+    {
+        stream << "\"tier1Profile\":" << Q(profile) << ",";
+    }
     stream << "\"returnValue\":" << Q(GenericReturnValueText(result, record)) << ",";
     stream << "\"lastErrorCode\":" << record.LastErrorCode << ",";
     stream << "\"lastErrorMessage\":" << Q(record.LastErrorCode == 0 ? "success" : FormatWindowsError(record.LastErrorCode)) << ",";
     stream << "\"durationUs\":" << record.DurationUs << ",";
     stream << "\"arguments\":[" << args.str() << "],";
-    stream << "\"tags\":[\"native-capture\",\"tier1\",\"generic\"," << Q(profile) << "," << Q(apiFamily) << ",\"hook\",\"shared-memory\"],";
-    stream << "\"stack\":[" << Q(agentName + "!IatHook") << "," << Q(moduleName + "!" + apiName) << "],";
+    stream << "\"tags\":[\"native-capture\"," << Q(tier) << ",\"generic\"," << Q(profile) << "," << Q(apiFamily) << ",\"hook\",\"shared-memory\"],";
+    stream << "\"stack\":[" << Q(agentName + "!IatHook") << "," << Q(moduleName + "!" + apiName);
+    if (!resolvedHostModule.empty())
+    {
+        stream << "," << Q(resolvedHostModule + "!" + apiName);
+    }
+    stream << "],";
     stream << "\"bufferPreview\":\"\"";
     stream << "}";
     return stream.str();
