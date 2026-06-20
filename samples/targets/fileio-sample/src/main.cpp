@@ -27,6 +27,7 @@
 #include <winver.h>
 #include <winhttp.h>
 #include <wininet.h>
+#include <wintrust.h>
 #include <winternl.h>
 #include <winuser.h>
 #include <wingdi.h>
@@ -2029,6 +2030,19 @@ bool RunShlwapiPathExistsProbe()
     return true;
 }
 
+bool RunWintrustStateQueryProbe()
+{
+    CRYPT_PROVIDER_DATA* providerData = WTHelperProvDataFromStateData(nullptr);
+    if (providerData != nullptr)
+    {
+        std::cout << "WTHelperProvDataFromStateData returned provider data for null state\n";
+        return false;
+    }
+
+    std::cout << "wintrust null state query completed\n";
+    return true;
+}
+
 bool RunDbgHelpSymbolSessionProbe()
 {
     bool success = false;
@@ -3097,6 +3111,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunShlwapiPathExistsProbe())
+        {
+            break;
+        }
+
+        if (!RunWintrustStateQueryProbe())
         {
             break;
         }

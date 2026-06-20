@@ -4209,14 +4209,14 @@
     {
       "callingConvention": "stdcall",
       "category": "trust_state_query",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnEqual": "NULL"
       },
       "family": "trust",
       "firstParameterIndex": 595,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 177,
       "module": "wintrust.dll",
       "moduleId": 25,

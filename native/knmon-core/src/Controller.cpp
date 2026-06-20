@@ -4651,6 +4651,14 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
         break;
     }
+    case KnMonTransportApiId::WTHelperProvDataFromStateData:
+    {
+        const std::string stateData = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string providerData = HexPointerValue(record.Values64[1], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "HANDLE", "hStateData", "in", stateData, stateData, stateData);
+        payload = ApiCallPayload(result, record, providerData, args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::SymInitializeW:
     {
         const std::string processHandle = HexPointerValue(record.Values64[0], result.Architecture);

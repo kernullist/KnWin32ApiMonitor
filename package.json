@@ -24,6 +24,7 @@
     "wave4-setupapi:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/wave4-setupapi-device-info-close-smoke.ps1",
     "wave4-userenv:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/wave4-userenv-environment-block-destroy-smoke.ps1",
     "wave4-iphlpapi:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/wave4-iphlpapi-interface-entry-smoke.ps1",
+    "wave4-wintrust:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/wave4-wintrust-state-query-smoke.ps1",
     "wave4-dbghelp:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/wave4-dbghelp-symbol-session-smoke.ps1",
     "tier1-generic:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/tier1-generic-profile-smoke.ps1",
     "tier2-generic:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/tier2-generic-profile-smoke.ps1",

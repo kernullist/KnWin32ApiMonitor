@@ -49,28 +49,6 @@ const manualApiBoundaries = new Map([
         "A runtime hook must not infer endpoint inventory from the inquiry handle."
       ]
     }
-  ],
-  [
-    "wintrust.dll!WTHelperProvDataFromStateData",
-    {
-      allowedEvidence: [
-        "state-data HANDLE value",
-        "returned CRYPT_PROVIDER_DATA pointer value",
-        "NULL/non-NULL return classification",
-        "duration and hook lifecycle metadata"
-      ],
-      forbiddenEvidence: [
-        "CRYPT_PROVIDER_DATA structure dereference",
-        "signer, certificate, chain, or catalog structure traversal",
-        "file path or subject/issuer string capture",
-        "hash, signature, or policy payload capture",
-        "WinVerifyTrust state mutation"
-      ],
-      reviewNotes: [
-        "This helper exposes a provider-data pointer; any dereference requires a separate trust payload design.",
-        "Do not promote it as a standalone hook without reviewing the paired WinVerifyTrust state lifecycle."
-      ]
-    }
   ]
 ]);
 

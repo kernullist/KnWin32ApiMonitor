@@ -113,6 +113,7 @@ target_link_libraries(knmon-sample-fileio PRIVATE setupapi)
 target_link_libraries(knmon-sample-fileio PRIVATE userenv)
 target_link_libraries(knmon-sample-fileio PRIVATE iphlpapi)
 target_link_libraries(knmon-sample-fileio PRIVATE shlwapi)
+target_link_libraries(knmon-sample-fileio PRIVATE wintrust)
 target_link_libraries(knmon-sample-fileio PRIVATE runtimeobject)
 target_link_libraries(knmon-sample-fileio PRIVATE dbghelp)
 target_compile_definitions(knmon-sample-fileio PRIVATE

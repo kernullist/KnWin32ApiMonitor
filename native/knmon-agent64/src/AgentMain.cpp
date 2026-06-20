@@ -21,6 +21,7 @@
 #include <winstring.h>
 #include <shlobj.h>
 #include <wincrypt.h>
+#include <wintrust.h>
 #include <windns.h>
 #include <setupapi.h>
 #include <userenv.h>
@@ -251,6 +252,7 @@ using DestroyEnvironmentBlockFn = BOOL(WINAPI*)(LPVOID);
 using GetAdaptersAddressesFn = ULONG(WINAPI*)(ULONG, ULONG, PVOID, PIP_ADAPTER_ADDRESSES, PULONG);
 using GetIfEntry2Fn = NETIO_STATUS(WINAPI*)(PMIB_IF_ROW2);
 using PathFileExistsWFn = BOOL(WINAPI*)(LPCWSTR);
+using WTHelperProvDataFromStateDataFn = CRYPT_PROVIDER_DATA*(WINAPI*)(HANDLE);
 using SymInitializeWFn = BOOL(WINAPI*)(HANDLE, PCWSTR, BOOL);
 using SymCleanupFn = BOOL(WINAPI*)(HANDLE);
 using RpcStringBindingComposeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR*);
@@ -410,6 +412,7 @@ DestroyEnvironmentBlockFn g_originalDestroyEnvironmentBlock = nullptr;
 GetAdaptersAddressesFn g_originalGetAdaptersAddresses = nullptr;
 GetIfEntry2Fn g_originalGetIfEntry2 = nullptr;
 PathFileExistsWFn g_originalPathFileExistsW = nullptr;
+WTHelperProvDataFromStateDataFn g_originalWTHelperProvDataFromStateData = nullptr;
 SymInitializeWFn g_originalSymInitializeW = nullptr;
 SymCleanupFn g_originalSymCleanup = nullptr;
 RpcStringBindingComposeWFn g_originalRpcStringBindingComposeW = nullptr;
@@ -532,7 +535,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 136;
+constexpr std::size_t HookDefinitionCount = 137;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -6050,6 +6053,25 @@ void EmitPathFileExistsWEvent(
     }
 }
 
+void EmitWTHelperProvDataFromStateDataEvent(
+    CRYPT_PROVIDER_DATA* providerData,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    HANDLE stateData)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::WTHelperProvDataFromStateData, "wintrust.dll", start, end, 0);
+        record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(providerData));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(stateData));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(providerData));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void EmitSymInitializeWEvent(
     BOOL result,
     DWORD errorCode,
@@ -7076,6 +7098,7 @@ BOOL WINAPI HookedDestroyEnvironmentBlock(LPVOID environment);
 ULONG WINAPI HookedGetAdaptersAddresses(ULONG family, ULONG flags, PVOID reserved, PIP_ADAPTER_ADDRESSES adapterAddresses, PULONG sizePointer);
 NETIO_STATUS WINAPI HookedGetIfEntry2(PMIB_IF_ROW2 row);
 BOOL WINAPI HookedPathFileExistsW(LPCWSTR path);
+CRYPT_PROVIDER_DATA* WINAPI HookedWTHelperProvDataFromStateData(HANDLE stateData);
 BOOL WINAPI HookedSymInitializeW(HANDLE process, PCWSTR userSearchPath, BOOL invadeProcess);
 BOOL WINAPI HookedSymCleanup(HANDLE process);
 RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR protSeq, RPC_WSTR networkAddr, RPC_WSTR endpoint, RPC_WSTR options, RPC_WSTR* stringBinding);
@@ -7219,6 +7242,7 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "iphlpapi.dll", "GetAdaptersAddresses", reinterpret_cast<void*>(HookedGetAdaptersAddresses), reinterpret_cast<void**>(&g_originalGetAdaptersAddresses), false, true, false, 0, 0 },
         HookDefinition { "iphlpapi.dll", "GetIfEntry2", reinterpret_cast<void*>(HookedGetIfEntry2), reinterpret_cast<void**>(&g_originalGetIfEntry2), false, true, false, 0, 0 },
         HookDefinition { "shlwapi.dll", "PathFileExistsW", reinterpret_cast<void*>(HookedPathFileExistsW), reinterpret_cast<void**>(&g_originalPathFileExistsW), false, true, false, 0, 0 },
+        HookDefinition { "wintrust.dll", "WTHelperProvDataFromStateData", reinterpret_cast<void*>(HookedWTHelperProvDataFromStateData), reinterpret_cast<void**>(&g_originalWTHelperProvDataFromStateData), false, true, false, 0, 0 },
         HookDefinition { "dbghelp.dll", "SymInitializeW", reinterpret_cast<void*>(HookedSymInitializeW), reinterpret_cast<void**>(&g_originalSymInitializeW), false, true, false, 0, 0 },
         HookDefinition { "dbghelp.dll", "SymCleanup", reinterpret_cast<void*>(HookedSymCleanup), reinterpret_cast<void**>(&g_originalSymCleanup), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringBindingComposeW", reinterpret_cast<void*>(HookedRpcStringBindingComposeW), reinterpret_cast<void**>(&g_originalRpcStringBindingComposeW), false, true, false, 0, 0 },
@@ -11746,6 +11770,33 @@ BOOL WINAPI HookedPathFileExistsW(LPCWSTR path)
 
     SetLastError(lastError);
     return result;
+}
+
+CRYPT_PROVIDER_DATA* WINAPI HookedWTHelperProvDataFromStateData(HANDLE stateData)
+{
+    if (g_inHook || !HooksEnabled() || g_originalWTHelperProvDataFromStateData == nullptr)
+    {
+        if (g_originalWTHelperProvDataFromStateData == nullptr)
+        {
+            return nullptr;
+        }
+
+        return g_originalWTHelperProvDataFromStateData(stateData);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    CRYPT_PROVIDER_DATA* providerData = g_originalWTHelperProvDataFromStateData(stateData);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitWTHelperProvDataFromStateDataEvent(providerData, start, end, stateData);
+    }
+
+    return providerData;
 }
 
 BOOL WINAPI HookedSymInitializeW(HANDLE process, PCWSTR userSearchPath, BOOL invadeProcess)

@@ -99,78 +99,6 @@
         "definitions/win32/rpcrt4.json"
       ],
       "totalApis": 1
-    },
-    {
-      "apis": [
-        {
-          "allowedEvidence": [
-            "state-data HANDLE value",
-            "returned CRYPT_PROVIDER_DATA pointer value",
-            "NULL/non-NULL return classification",
-            "duration and hook lifecycle metadata"
-          ],
-          "apiName": "WTHelperProvDataFromStateData",
-          "callingConvention": "stdcall",
-          "category": "trust_state_query",
-          "classification": "manual_decoder_required",
-          "designStatus": "review_required",
-          "family": "trust",
-          "forbiddenEvidence": [
-            "CRYPT_PROVIDER_DATA structure dereference",
-            "signer, certificate, chain, or catalog structure traversal",
-            "file path or subject/issuer string capture",
-            "hash, signature, or policy payload capture",
-            "WinVerifyTrust state mutation"
-          ],
-          "id": 177,
-          "key": "wintrust.dll!WTHelperProvDataFromStateData",
-          "module": "wintrust.dll",
-          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
-          "parameterCount": 1,
-          "payloadSensitiveParameters": [],
-          "pointerOnlyParameters": [],
-          "reasons": [
-            "manual_family_boundary_review"
-          ],
-          "requiredEvidence": [
-            "x64_native_smoke",
-            "x86_native_smoke",
-            "zero_healthy_path_drops",
-            "payload_absence_assertions",
-            "hook_overhead_gate",
-            "same_dll_batch_review"
-          ],
-          "returnType": "CRYPT_PROVIDER_DATA*",
-          "reviewNotes": [
-            "This helper exposes a provider-data pointer; any dereference requires a separate trust payload design.",
-            "Do not promote it as a standalone hook without reviewing the paired WinVerifyTrust state lifecycle."
-          ],
-          "risk": "medium",
-          "runtimeHookPolicy": "blocked_by_default"
-        }
-      ],
-      "manualDecoderRequired": 1,
-      "module": "wintrust.dll",
-      "payloadBlockedApis": [
-        {
-          "apiName": "WinVerifyTrust",
-          "category": "trust_verify",
-          "family": "trust",
-          "id": 176,
-          "key": "wintrust.dll!WinVerifyTrust",
-          "reasons": [
-            "payload_risk_policy"
-          ],
-          "risk": "high"
-        }
-      ],
-      "payloadBlockedInSameDll": 1,
-      "recommendation": "design_manual_decoder_batch_before_runtime_promotion",
-      "runtimeHooksEnabledByDefault": false,
-      "sourceFiles": [
-        "definitions/win32/wintrust.json"
-      ],
-      "totalApis": 1
     }
   ],
   "policy": {
@@ -185,10 +113,10 @@
     "policyInput": "classification == manual_decoder_required"
   },
   "summary": {
-    "manualDecoderRequired": 2,
-    "payloadBlockedInManualDlls": 4,
+    "manualDecoderRequired": 1,
+    "payloadBlockedInManualDlls": 3,
     "runtimeHooksEnabledByDefault": 0,
-    "totalApis": 2,
-    "totalDlls": 2
+    "totalApis": 1,
+    "totalDlls": 1
   }
 }

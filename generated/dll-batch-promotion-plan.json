@@ -4676,7 +4676,7 @@
       "unsupported": 0
     },
     {
-      "alreadyLive": 0,
+      "alreadyLive": 1,
       "apis": [
         {
           "apiName": "WinVerifyTrust",
@@ -4707,11 +4707,11 @@
           "apiName": "WTHelperProvDataFromStateData",
           "callingConvention": "stdcall",
           "category": "trust_state_query",
-          "classification": "manual_decoder_required",
-          "coverageStatus": "definition_only",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
           "errorSource": "none",
           "family": "trust",
-          "hookPolicy": "definition_only",
+          "hookPolicy": "iat",
           "id": 177,
           "key": "wintrust.dll!WTHelperProvDataFromStateData",
           "module": "wintrust.dll",
@@ -4719,9 +4719,9 @@
           "payloadSensitiveParameters": [],
           "pointerOnlyParameters": [],
           "reasons": [
-            "manual_family_boundary_review"
+            "already_live_iat_coverage"
           ],
-          "recommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "recommendation": "keep_in_dll_batch_smoke",
           "returnType": "CRYPT_PROVIDER_DATA*",
           "risk": "medium",
           "sourceFile": "definitions/win32/wintrust.json"
@@ -4729,9 +4729,9 @@
       ],
       "autoPromotable": 0,
       "blockedByPayloadPolicy": 1,
-      "manualDecoderRequired": 1,
+      "manualDecoderRequired": 0,
       "module": "wintrust.dll",
-      "recommendation": "design_manual_decoder_batch",
+      "recommendation": "document_payload_boundary_only",
       "sourceFiles": [
         "definitions/win32/wintrust.json"
       ],
@@ -5073,12 +5073,12 @@
     "metadata": "definitions/metadata"
   },
   "summary": {
-    "alreadyLive": 128,
+    "alreadyLive": 129,
     "autoPromotable": 0,
     "blockedByPayloadPolicy": 49,
-    "dllsFullyTriaged": 23,
+    "dllsFullyTriaged": 24,
     "dllsWithAutoPromotableApis": 0,
-    "manualDecoderRequired": 2,
+    "manualDecoderRequired": 1,
     "totalApis": 179,
     "totalDlls": 25,
     "unsupported": 0

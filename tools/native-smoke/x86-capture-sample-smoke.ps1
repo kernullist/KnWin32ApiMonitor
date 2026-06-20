@@ -111,6 +111,7 @@ $requiredApis = @(
     "GetAdaptersAddresses",
     "GetIfEntry2",
     "PathFileExistsW",
+    "WTHelperProvDataFromStateData",
     "SymInitializeW",
     "SymCleanup",
     "RpcStringBindingComposeW",
@@ -600,6 +601,38 @@ $shlwapiPayload = $shlwapiPathExists[0] | ConvertTo-Json -Depth 12
 if ($shlwapiPayload -cmatch "C:\\Windows|Windows|System32|Users|AppData|ProgramData|Desktop|Documents|Downloads|PathCombine|PathCanonicalize|ShellExecute|PIDL|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 PathFileExistsW event appears to expose path text, shell payload, stack, injection, credential, or byte-preview evidence: $shlwapiPayload"
+}
+
+$wintrustStateQuery = @($result.capturedEvents | Where-Object { $_.module -eq "wintrust.dll" -and $_.api -eq "WTHelperProvDataFromStateData" } | Select-Object -First 1)
+if ($wintrustStateQuery.Count -ne 1 -or
+    $wintrustStateQuery[0].apiFamily -ne "trust" -or
+    $wintrustStateQuery[0].apiCategory -ne "trust_state_query" -or
+    $wintrustStateQuery[0].hookPolicy -ne "iat" -or
+    $wintrustStateQuery[0].coverageStatus -ne "smoke_verified" -or
+    $wintrustStateQuery[0].returnValue -notmatch "^0x0+$")
+{
+    throw "x86 WTHelperProvDataFromStateData metadata or return evidence mismatch: $($wintrustStateQuery | ConvertTo-Json -Depth 8)"
+}
+
+if (-not [string]::IsNullOrEmpty($wintrustStateQuery[0].bufferPreview))
+{
+    throw "x86 WTHelperProvDataFromStateData exposed bufferPreview: $($wintrustStateQuery[0] | ConvertTo-Json -Depth 8)"
+}
+
+$stateData = @($wintrustStateQuery[0].arguments | Where-Object { $_.name -eq "hStateData" } | Select-Object -First 1)
+if ($stateData.Count -ne 1 -or
+    $stateData[0].decodeAlias -ne "handle" -or
+    $stateData[0].captureTiming -ne "pre" -or
+    $stateData[0].rawValue -notmatch "^0x0+$" -or
+    $stateData[0].decodedValue -notmatch "^0x0+$")
+{
+    throw "x86 WTHelperProvDataFromStateData hStateData evidence mismatch: $($stateData | ConvertTo-Json -Depth 8)"
+}
+
+$wintrustPayload = $wintrustStateQuery[0] | ConvertTo-Json -Depth 12
+if ($wintrustPayload -cmatch "WINTRUST_DATA|WIN_CERTIFICATE|Signer|Certificate|CertChain|Catalog|Subject|Issuer|Thumbprint|SHA256|SHA1|MD5|Authenticode|WinVerifyTrust|FilePath|C:\\Users|AppData|ProgramData|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 WTHelperProvDataFromStateData event appears to expose trust state, certificate, catalog, path, payload, stack, injection, credential, or byte-preview evidence: $wintrustPayload"
 }
 
 $dbghelpEvents = @($result.capturedEvents | Where-Object { $_.module -eq "dbghelp.dll" -and $_.api -in @("SymInitializeW", "SymCleanup") })
