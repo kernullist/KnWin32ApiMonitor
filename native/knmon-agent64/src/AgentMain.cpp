@@ -178,6 +178,16 @@ using AcmGetVersionFn = UINT(WINAPI*)();
 using GdipCreateHalftonePaletteFn = HPALETTE(WINAPI*)();
 using OaBuildVersionFn = ULONG(WINAPI*)();
 using OaEnablePerUserTLibRegistrationFn = void(WINAPI*)();
+using DXGIDeclareAdapterRemovalSupportFn = HRESULT(WINAPI*)();
+using DXGIDisableVBlankVirtualizationFn = HRESULT(WINAPI*)();
+using MagInitializeFn = BOOL(WINAPI*)();
+using MagUninitializeFn = BOOL(WINAPI*)();
+using MsiCloseAllHandlesFn = UINT(WINAPI*)();
+using MsiGetLastErrorRecordFn = UINT(WINAPI*)();
+using ODBCGetTryWaitValueFn = DWORD(WINAPI*)();
+using SnmpSvcGetUptimeFn = DWORD(WINAPI*)();
+using WinHttpCheckPlatformFn = BOOL(WINAPI*)();
+using LdapGetLastErrorFn = ULONG(__cdecl*)();
 using GetModuleHandleWFn = HMODULE(WINAPI*)(LPCWSTR);
 using GetModuleHandleExWFn = BOOL(WINAPI*)(DWORD, LPCWSTR, HMODULE*);
 using GetModuleFileNameWFn = DWORD(WINAPI*)(HMODULE, LPWSTR, DWORD);
@@ -345,6 +355,16 @@ AcmGetVersionFn g_originalAcmGetVersion = nullptr;
 GdipCreateHalftonePaletteFn g_originalGdipCreateHalftonePalette = nullptr;
 OaBuildVersionFn g_originalOaBuildVersion = nullptr;
 OaEnablePerUserTLibRegistrationFn g_originalOaEnablePerUserTLibRegistration = nullptr;
+DXGIDeclareAdapterRemovalSupportFn g_originalDXGIDeclareAdapterRemovalSupport = nullptr;
+DXGIDisableVBlankVirtualizationFn g_originalDXGIDisableVBlankVirtualization = nullptr;
+MagInitializeFn g_originalMagInitialize = nullptr;
+MagUninitializeFn g_originalMagUninitialize = nullptr;
+MsiCloseAllHandlesFn g_originalMsiCloseAllHandles = nullptr;
+MsiGetLastErrorRecordFn g_originalMsiGetLastErrorRecord = nullptr;
+ODBCGetTryWaitValueFn g_originalODBCGetTryWaitValue = nullptr;
+SnmpSvcGetUptimeFn g_originalSnmpSvcGetUptime = nullptr;
+WinHttpCheckPlatformFn g_originalWinHttpCheckPlatform = nullptr;
+LdapGetLastErrorFn g_originalLdapGetLastError = nullptr;
 GetModuleHandleWFn g_originalGetModuleHandleW = nullptr;
 GetModuleHandleExWFn g_originalGetModuleHandleExW = nullptr;
 GetModuleFileNameWFn g_originalGetModuleFileNameW = nullptr;
@@ -550,7 +570,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 144;
+constexpr std::size_t HookDefinitionCount = 154;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -7060,6 +7080,16 @@ UINT WINAPI HookedAcmGetVersion();
 HPALETTE WINAPI HookedGdipCreateHalftonePalette();
 ULONG WINAPI HookedOaBuildVersion();
 void WINAPI HookedOaEnablePerUserTLibRegistration();
+HRESULT WINAPI HookedDXGIDeclareAdapterRemovalSupport();
+HRESULT WINAPI HookedDXGIDisableVBlankVirtualization();
+BOOL WINAPI HookedMagInitialize();
+BOOL WINAPI HookedMagUninitialize();
+UINT WINAPI HookedMsiCloseAllHandles();
+UINT WINAPI HookedMsiGetLastErrorRecord();
+DWORD WINAPI HookedODBCGetTryWaitValue();
+DWORD WINAPI HookedSnmpSvcGetUptime();
+BOOL WINAPI HookedWinHttpCheckPlatform();
+ULONG __cdecl HookedLdapGetLastError();
 HANDLE WINAPI HookedCreateThread(LPSECURITY_ATTRIBUTES threadAttributes, SIZE_T stackSize, LPTHREAD_START_ROUTINE startAddress, LPVOID parameter, DWORD creationFlags, LPDWORD threadId);
 HANDLE WINAPI HookedOpenThread(DWORD desiredAccess, BOOL inheritHandle, DWORD threadId);
 DWORD WINAPI HookedWaitForSingleObject(HANDLE handle, DWORD milliseconds);
@@ -7208,6 +7238,16 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "gdiplus.dll", "GdipCreateHalftonePalette", reinterpret_cast<void*>(HookedGdipCreateHalftonePalette), reinterpret_cast<void**>(&g_originalGdipCreateHalftonePalette), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "oleaut32.dll", "OaBuildVersion", reinterpret_cast<void*>(HookedOaBuildVersion), reinterpret_cast<void**>(&g_originalOaBuildVersion), false, true, false, 170, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "oleaut32.dll", "OaEnablePerUserTLibRegistration", reinterpret_cast<void*>(HookedOaEnablePerUserTLibRegistration), reinterpret_cast<void**>(&g_originalOaEnablePerUserTLibRegistration), false, true, false, 444, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "dxgi.dll", "DXGIDeclareAdapterRemovalSupport", reinterpret_cast<void*>(HookedDXGIDeclareAdapterRemovalSupport), reinterpret_cast<void**>(&g_originalDXGIDeclareAdapterRemovalSupport), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "dxgi.dll", "DXGIDisableVBlankVirtualization", reinterpret_cast<void*>(HookedDXGIDisableVBlankVirtualization), reinterpret_cast<void**>(&g_originalDXGIDisableVBlankVirtualization), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "magnification.dll", "MagInitialize", reinterpret_cast<void*>(HookedMagInitialize), reinterpret_cast<void**>(&g_originalMagInitialize), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "magnification.dll", "MagUninitialize", reinterpret_cast<void*>(HookedMagUninitialize), reinterpret_cast<void**>(&g_originalMagUninitialize), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "msi.dll", "MsiCloseAllHandles", reinterpret_cast<void*>(HookedMsiCloseAllHandles), reinterpret_cast<void**>(&g_originalMsiCloseAllHandles), false, true, false, 7, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "msi.dll", "MsiGetLastErrorRecord", reinterpret_cast<void*>(HookedMsiGetLastErrorRecord), reinterpret_cast<void**>(&g_originalMsiGetLastErrorRecord), false, true, false, 48, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "odbc32.dll", "ODBCGetTryWaitValue", reinterpret_cast<void*>(HookedODBCGetTryWaitValue), reinterpret_cast<void**>(&g_originalODBCGetTryWaitValue), false, true, false, 84, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "snmpapi.dll", "SnmpSvcGetUptime", reinterpret_cast<void*>(HookedSnmpSvcGetUptime), reinterpret_cast<void**>(&g_originalSnmpSvcGetUptime), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "winhttp.dll", "WinHttpCheckPlatform", reinterpret_cast<void*>(HookedWinHttpCheckPlatform), reinterpret_cast<void**>(&g_originalWinHttpCheckPlatform), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "wldap32.dll", "LdapGetLastError", reinterpret_cast<void*>(HookedLdapGetLastError), reinterpret_cast<void**>(&g_originalLdapGetLastError), false, true, false, 16, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "kernel32.dll", "GetModuleHandleW", reinterpret_cast<void*>(HookedGetModuleHandleW), reinterpret_cast<void**>(&g_originalGetModuleHandleW), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleHandleExW", reinterpret_cast<void*>(HookedGetModuleHandleExW), reinterpret_cast<void**>(&g_originalGetModuleHandleExW), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleFileNameW", reinterpret_cast<void*>(HookedGetModuleFileNameW), reinterpret_cast<void**>(&g_originalGetModuleFileNameW), false, true, false, 0, 0 },
@@ -9207,6 +9247,11 @@ DWORD Tier2ReturnOnlyErrorCode(const Tier2ReturnOnlyMetadata& metadata, std::uin
         errorCode = lastError;
     }
 
+    if (metadata.ReturnFormat == GenericReturnFormat::Bool && returnValue == 0)
+    {
+        errorCode = lastError;
+    }
+
     return errorCode;
 }
 
@@ -9270,6 +9315,50 @@ ReturnT InvokeTier2ReturnOnlyHook(ReturnT(WINAPI* original)(), ReturnT missingVa
     return result;
 }
 
+HRESULT InvokeTier2ReturnOnlyHResultHook(HRESULT(WINAPI* original)(), const Tier2ReturnOnlyMetadata& metadata)
+{
+    if (g_inHook || !HooksEnabled() || original == nullptr)
+    {
+        if (original == nullptr)
+        {
+            return HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND);
+        }
+
+        return original();
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const HRESULT result = original();
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitGenericReturnOnlyEvent(
+            metadata.ModuleName,
+            metadata.ApiName,
+            "tier2",
+            "tier2-initial-return-only",
+            metadata.Family,
+            metadata.Category,
+            metadata.Risk,
+            "generic_return_only",
+            "",
+            metadata.InventoryKey,
+            static_cast<std::uint64_t>(static_cast<std::uint32_t>(result)),
+            metadata.ReturnFormat,
+            Tier2ReturnOnlyHResultErrorCode(result),
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
 void InvokeTier2ReturnOnlyVoidHook(void(WINAPI* original)(), const Tier2ReturnOnlyMetadata& metadata)
 {
     if (g_inHook || !HooksEnabled() || original == nullptr)
@@ -9313,6 +9402,54 @@ void InvokeTier2ReturnOnlyVoidHook(void(WINAPI* original)(), const Tier2ReturnOn
     SetLastError(lastError);
 }
 
+template <typename ReturnT>
+ReturnT InvokeTier2ReturnOnlyCdeclHook(ReturnT(__cdecl* original)(), ReturnT missingValue, const Tier2ReturnOnlyMetadata& metadata)
+{
+    if (g_inHook || !HooksEnabled() || original == nullptr)
+    {
+        if (original == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return missingValue;
+        }
+
+        return original();
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const ReturnT result = original();
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const std::uint64_t returnValue = Tier2ReturnOnlyValue(result);
+    const DWORD eventError = Tier2ReturnOnlyErrorCode(metadata, returnValue, lastError);
+    if (HooksEnabled())
+    {
+        EmitGenericReturnOnlyEvent(
+            metadata.ModuleName,
+            metadata.ApiName,
+            "tier2",
+            "tier2-initial-return-only",
+            metadata.Family,
+            metadata.Category,
+            metadata.Risk,
+            "generic_return_only",
+            "",
+            metadata.InventoryKey,
+            returnValue,
+            metadata.ReturnFormat,
+            eventError,
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
 DWORD WINAPI HookedCommDlgExtendedError()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
@@ -9340,46 +9477,7 @@ HRESULT WINAPI HookedDwmFlush()
         GenericReturnFormat::UInt32
     };
 
-    if (g_inHook || !HooksEnabled() || g_originalDwmFlush == nullptr)
-    {
-        if (g_originalDwmFlush == nullptr)
-        {
-            return HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND);
-        }
-
-        return g_originalDwmFlush();
-    }
-
-    HookReentryGuard guard;
-    LARGE_INTEGER start = {};
-    LARGE_INTEGER end = {};
-    QueryPerformanceCounter(&start);
-    const HRESULT result = g_originalDwmFlush();
-    const DWORD lastError = GetLastError();
-    QueryPerformanceCounter(&end);
-
-    if (HooksEnabled())
-    {
-        EmitGenericReturnOnlyEvent(
-            Metadata.ModuleName,
-            Metadata.ApiName,
-            "tier2",
-            "tier2-initial-return-only",
-            Metadata.Family,
-            Metadata.Category,
-            Metadata.Risk,
-            "generic_return_only",
-            "",
-            Metadata.InventoryKey,
-            static_cast<std::uint64_t>(static_cast<std::uint32_t>(result)),
-            Metadata.ReturnFormat,
-            Tier2ReturnOnlyHResultErrorCode(result),
-            start,
-            end);
-    }
-
-    SetLastError(lastError);
-    return result;
+    return InvokeTier2ReturnOnlyHResultHook(g_originalDwmFlush, Metadata);
 }
 
 UINT WINAPI HookedAcmGetVersion()
@@ -9440,6 +9538,156 @@ void WINAPI HookedOaEnablePerUserTLibRegistration()
     };
 
     InvokeTier2ReturnOnlyVoidHook(g_originalOaEnablePerUserTLibRegistration, Metadata);
+}
+
+HRESULT WINAPI HookedDXGIDeclareAdapterRemovalSupport()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "dxgi.dll",
+        "DXGIDeclareAdapterRemovalSupport",
+        "graphics",
+        "graphics/dxgi",
+        "medium",
+        "dxgi.dll!DXGIDeclareAdapterRemovalSupport",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHResultHook(g_originalDXGIDeclareAdapterRemovalSupport, Metadata);
+}
+
+HRESULT WINAPI HookedDXGIDisableVBlankVirtualization()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "dxgi.dll",
+        "DXGIDisableVBlankVirtualization",
+        "graphics",
+        "graphics/dxgi",
+        "medium",
+        "dxgi.dll!DXGIDisableVBlankVirtualization",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHResultHook(g_originalDXGIDisableVBlankVirtualization, Metadata);
+}
+
+BOOL WINAPI HookedMagInitialize()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "magnification.dll",
+        "MagInitialize",
+        "ui",
+        "ui/magnification",
+        "medium",
+        "magnification.dll!MagInitialize",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalMagInitialize, FALSE, Metadata);
+}
+
+BOOL WINAPI HookedMagUninitialize()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "magnification.dll",
+        "MagUninitialize",
+        "ui",
+        "ui/magnification",
+        "medium",
+        "magnification.dll!MagUninitialize",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalMagUninitialize, FALSE, Metadata);
+}
+
+UINT WINAPI HookedMsiCloseAllHandles()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "msi.dll",
+        "MsiCloseAllHandles",
+        "system",
+        "system/application-installation-and-servicing",
+        "medium",
+        "msi.dll!MsiCloseAllHandles",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalMsiCloseAllHandles, static_cast<UINT>(0), Metadata);
+}
+
+UINT WINAPI HookedMsiGetLastErrorRecord()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "msi.dll",
+        "MsiGetLastErrorRecord",
+        "system",
+        "system/application-installation-and-servicing",
+        "medium",
+        "msi.dll!MsiGetLastErrorRecord",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalMsiGetLastErrorRecord, static_cast<UINT>(0), Metadata);
+}
+
+DWORD WINAPI HookedODBCGetTryWaitValue()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "odbc32.dll",
+        "ODBCGetTryWaitValue",
+        "system",
+        "system/search",
+        "medium",
+        "odbc32.dll!ODBCGetTryWaitValue",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalODBCGetTryWaitValue, static_cast<DWORD>(0), Metadata);
+}
+
+DWORD WINAPI HookedSnmpSvcGetUptime()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "snmpapi.dll",
+        "SnmpSvcGetUptime",
+        "network-management",
+        "network-management/snmp",
+        "medium",
+        "snmpapi.dll!SnmpSvcGetUptime",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalSnmpSvcGetUptime, static_cast<DWORD>(0), Metadata);
+}
+
+BOOL WINAPI HookedWinHttpCheckPlatform()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "winhttp.dll",
+        "WinHttpCheckPlatform",
+        "networking",
+        "networking/win-http",
+        "medium",
+        "winhttp.dll!WinHttpCheckPlatform",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalWinHttpCheckPlatform, FALSE, Metadata);
+}
+
+ULONG __cdecl HookedLdapGetLastError()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "wldap32.dll",
+        "LdapGetLastError",
+        "networking",
+        "networking/ldap",
+        "medium",
+        "wldap32.dll!LdapGetLastError",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyCdeclHook(g_originalLdapGetLastError, static_cast<ULONG>(0), Metadata);
 }
 
 HMODULE WINAPI HookedGetModuleHandleW(LPCWSTR moduleName)

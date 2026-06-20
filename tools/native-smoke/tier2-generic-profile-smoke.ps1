@@ -81,6 +81,16 @@ try
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "GdipCreateHalftonePalette" -Module "gdiplus.dll" -InventoryKey "gdiplus.dll!GdipCreateHalftonePalette" -Family "graphics"
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "OaBuildVersion" -Module "oleaut32.dll" -InventoryKey "oleaut32.dll!OaBuildVersion" -Family "com"
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "OaEnablePerUserTLibRegistration" -Module "oleaut32.dll" -InventoryKey "oleaut32.dll!OaEnablePerUserTLibRegistration" -Family "com"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "DXGIDeclareAdapterRemovalSupport" -Module "dxgi.dll" -InventoryKey "dxgi.dll!DXGIDeclareAdapterRemovalSupport" -Family "graphics"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "DXGIDisableVBlankVirtualization" -Module "dxgi.dll" -InventoryKey "dxgi.dll!DXGIDisableVBlankVirtualization" -Family "graphics"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "MagInitialize" -Module "magnification.dll" -InventoryKey "magnification.dll!MagInitialize" -Family "ui"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "MagUninitialize" -Module "magnification.dll" -InventoryKey "magnification.dll!MagUninitialize" -Family "ui"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "MsiCloseAllHandles" -Module "msi.dll" -InventoryKey "msi.dll!MsiCloseAllHandles" -Family "system"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "MsiGetLastErrorRecord" -Module "msi.dll" -InventoryKey "msi.dll!MsiGetLastErrorRecord" -Family "system"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "ODBCGetTryWaitValue" -Module "odbc32.dll" -InventoryKey "odbc32.dll!ODBCGetTryWaitValue" -Family "system"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "SnmpSvcGetUptime" -Module "snmpapi.dll" -InventoryKey "snmpapi.dll!SnmpSvcGetUptime" -Family "network-management"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "WinHttpCheckPlatform" -Module "winhttp.dll" -InventoryKey "winhttp.dll!WinHttpCheckPlatform" -Family "networking"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "LdapGetLastError" -Module "wldap32.dll" -InventoryKey "wldap32.dll!LdapGetLastError" -Family "networking"
 
     $getProcEvent = @($result.capturedEvents | Where-Object { $_.api -eq "GetProcAddress" } | Select-Object -First 1)
     $ldrProcEvent = @($result.capturedEvents | Where-Object { $_.api -eq "LdrGetProcedureAddress" } | Select-Object -First 1)

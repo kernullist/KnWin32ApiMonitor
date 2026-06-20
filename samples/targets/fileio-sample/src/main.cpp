@@ -72,6 +72,15 @@ extern "C" __declspec(dllimport) DWORD WINAPI CommDlgExtendedError();
 extern "C" __declspec(dllimport) HRESULT WINAPI DwmFlush();
 extern "C" __declspec(dllimport) UINT WINAPI acmGetVersion();
 extern "C" __declspec(dllimport) HPALETTE WINAPI GdipCreateHalftonePalette();
+extern "C" __declspec(dllimport) HRESULT WINAPI DXGIDeclareAdapterRemovalSupport();
+extern "C" __declspec(dllimport) HRESULT WINAPI DXGIDisableVBlankVirtualization();
+extern "C" __declspec(dllimport) BOOL WINAPI MagInitialize();
+extern "C" __declspec(dllimport) BOOL WINAPI MagUninitialize();
+extern "C" __declspec(dllimport) UINT WINAPI MsiCloseAllHandles();
+extern "C" __declspec(dllimport) UINT WINAPI MsiGetLastErrorRecord();
+extern "C" __declspec(dllimport) DWORD WINAPI ODBCGetTryWaitValue();
+extern "C" __declspec(dllimport) DWORD WINAPI SnmpSvcGetUptime();
+extern "C" __declspec(dllimport) ULONG __cdecl LdapGetLastError();
 
 namespace
 {
@@ -2975,6 +2984,16 @@ bool RunTier2InitialReturnOnlyBatchProbe()
         const HRESULT dwmResult = DwmFlush();
         const UINT acmVersion = acmGetVersion();
         const ULONG oleAutomationBuild = OaBuildVersion();
+        const HRESULT dxgiAdapterRemoval = DXGIDeclareAdapterRemovalSupport();
+        const HRESULT dxgiVBlank = DXGIDisableVBlankVirtualization();
+        const BOOL magnificationInitialized = MagInitialize();
+        const BOOL magnificationUninitialized = MagUninitialize();
+        const UINT msiErrorRecord = MsiGetLastErrorRecord();
+        const UINT msiClosedHandles = MsiCloseAllHandles();
+        const DWORD odbcTryWait = ODBCGetTryWaitValue();
+        const DWORD snmpUptime = SnmpSvcGetUptime();
+        const BOOL winHttpPlatform = WinHttpCheckPlatform();
+        const ULONG ldapLastError = LdapGetLastError();
         OaEnablePerUserTLibRegistration();
         palette = GdipCreateHalftonePalette();
 
@@ -2982,6 +3001,16 @@ bool RunTier2InitialReturnOnlyBatchProbe()
                   << " dwm=" << HexHResult(dwmResult)
                   << " acm_version=" << acmVersion
                   << " oleaut32_build=" << oleAutomationBuild
+                  << " dxgi_adapter=" << HexHResult(dxgiAdapterRemoval)
+                  << " dxgi_vblank=" << HexHResult(dxgiVBlank)
+                  << " mag_init=" << magnificationInitialized
+                  << " mag_uninit=" << magnificationUninitialized
+                  << " msi_record=" << msiErrorRecord
+                  << " msi_closed=" << msiClosedHandles
+                  << " odbc_wait=" << odbcTryWait
+                  << " snmp_uptime=" << snmpUptime
+                  << " winhttp_platform=" << winHttpPlatform
+                  << " ldap_error=" << ldapLastError
                   << " palette=" << palette << "\n";
 
         if (acmVersion == 0)
