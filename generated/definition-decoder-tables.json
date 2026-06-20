@@ -4041,14 +4041,14 @@
     {
       "callingConvention": "stdcall",
       "category": "adapter_addresses_query",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": "ERROR_SUCCESS"
       },
       "family": "network-metadata",
       "firstParameterIndex": 577,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 170,
       "module": "iphlpapi.dll",
       "moduleId": 22,

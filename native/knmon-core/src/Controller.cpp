@@ -4,7 +4,9 @@
 #include <knmon/common/GeneratedApiMetadata.h>
 #include <knmon/collector/SharedTransportReader.h>
 
+#include <WinSock2.h>
 #include <Windows.h>
+#include <iphlpapi.h>
 #include <winhttp.h>
 #include <TlHelp32.h>
 
@@ -2738,6 +2740,51 @@ std::string DwordDecimalHexText(std::uint32_t value)
     return std::to_string(value) + " (" + HexDwordValue(value) + ")";
 }
 
+std::string AdapterAddressFamilyText(std::uint32_t value)
+{
+    const char* name = nullptr;
+    switch (value)
+    {
+    case AF_UNSPEC:
+        name = "AF_UNSPEC";
+        break;
+    case AF_INET:
+        name = "AF_INET";
+        break;
+    case AF_INET6:
+        name = "AF_INET6";
+        break;
+    default:
+        break;
+    }
+
+    if (name == nullptr)
+    {
+        return DwordDecimalHexText(value);
+    }
+
+    return DwordDecimalHexText(value) + " (" + name + ")";
+}
+
+std::string AdapterAddressFlagsText(std::uint32_t value)
+{
+    static const FlagName Flags[] = {
+        { GAA_FLAG_SKIP_UNICAST, "GAA_FLAG_SKIP_UNICAST" },
+        { GAA_FLAG_SKIP_ANYCAST, "GAA_FLAG_SKIP_ANYCAST" },
+        { GAA_FLAG_SKIP_MULTICAST, "GAA_FLAG_SKIP_MULTICAST" },
+        { GAA_FLAG_SKIP_DNS_SERVER, "GAA_FLAG_SKIP_DNS_SERVER" },
+        { GAA_FLAG_INCLUDE_PREFIX, "GAA_FLAG_INCLUDE_PREFIX" },
+        { GAA_FLAG_SKIP_FRIENDLY_NAME, "GAA_FLAG_SKIP_FRIENDLY_NAME" },
+        { GAA_FLAG_INCLUDE_WINS_INFO, "GAA_FLAG_INCLUDE_WINS_INFO" },
+        { GAA_FLAG_INCLUDE_GATEWAYS, "GAA_FLAG_INCLUDE_GATEWAYS" },
+        { GAA_FLAG_INCLUDE_ALL_INTERFACES, "GAA_FLAG_INCLUDE_ALL_INTERFACES" },
+        { GAA_FLAG_INCLUDE_ALL_COMPARTMENTS, "GAA_FLAG_INCLUDE_ALL_COMPARTMENTS" },
+        { GAA_FLAG_INCLUDE_TUNNEL_BINDINGORDER, "GAA_FLAG_INCLUDE_TUNNEL_BINDINGORDER" },
+    };
+
+    return FlagMaskText(value, Flags, sizeof(Flags) / sizeof(Flags[0]));
+}
+
 std::string UInt64DecimalHexText(std::uint64_t value)
 {
     return std::to_string(value) + " (" + HexFixed(value, 16) + ")";
@@ -4572,6 +4619,22 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         const std::string environment = HexPointerValue(record.Values64[0], result.Architecture);
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPVOID", "lpEnvironment", "in", environment, environment, environment);
         payload = ApiCallPayload(result, record, record.ReturnValue == 0 ? "FALSE" : "TRUE", args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::GetAdaptersAddresses:
+    {
+        const std::string reservedPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string adapterAddressesPointer = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string sizePointer = HexPointerValue(record.Values64[2], result.Architecture);
+        const std::string preSize = DwordDecimalHexText(record.Values32[3]);
+        const std::string postSize = DwordDecimalHexText(record.Values32[4]);
+        const std::string sizeDecoded = DecodeStatusName(record.Values32[2]) + ";pre=" + preSize + ";post=" + postSize;
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "ULONG", "Family", "in", std::to_string(record.Values32[0]), std::to_string(record.Values32[0]), AdapterAddressFamilyText(record.Values32[0])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 1, "ULONG", "Flags", "in", HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]), AdapterAddressFlagsText(record.Values32[1])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 2, "PVOID", "Reserved", "in", reservedPointer, reservedPointer, reservedPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "PIP_ADAPTER_ADDRESSES", "AdapterAddresses", "out", adapterAddressesPointer, adapterAddressesPointer, adapterAddressesPointer) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 4, "PULONG", "SizePointer", "inout", sizePointer, postSize, sizeDecoded, DecodeStatusName(record.Values32[2]));
+        payload = ApiCallPayload(result, record, DwordDecimalHexText(record.ReturnCode), args.str(), "");
         break;
     }
     case KnMonTransportApiId::GetIfEntry2:

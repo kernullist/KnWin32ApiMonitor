@@ -248,6 +248,7 @@ using DeleteSecurityContextFn = SECURITY_STATUS(WINAPI*)(PCtxtHandle);
 using DnsFreeFn = void(WINAPI*)(PVOID, DNS_FREE_TYPE);
 using SetupDiDestroyDeviceInfoListFn = BOOL(WINAPI*)(HDEVINFO);
 using DestroyEnvironmentBlockFn = BOOL(WINAPI*)(LPVOID);
+using GetAdaptersAddressesFn = ULONG(WINAPI*)(ULONG, ULONG, PVOID, PIP_ADAPTER_ADDRESSES, PULONG);
 using GetIfEntry2Fn = NETIO_STATUS(WINAPI*)(PMIB_IF_ROW2);
 using PathFileExistsWFn = BOOL(WINAPI*)(LPCWSTR);
 using SymInitializeWFn = BOOL(WINAPI*)(HANDLE, PCWSTR, BOOL);
@@ -406,6 +407,7 @@ DeleteSecurityContextFn g_originalDeleteSecurityContext = nullptr;
 DnsFreeFn g_originalDnsFree = nullptr;
 SetupDiDestroyDeviceInfoListFn g_originalSetupDiDestroyDeviceInfoList = nullptr;
 DestroyEnvironmentBlockFn g_originalDestroyEnvironmentBlock = nullptr;
+GetAdaptersAddressesFn g_originalGetAdaptersAddresses = nullptr;
 GetIfEntry2Fn g_originalGetIfEntry2 = nullptr;
 PathFileExistsWFn g_originalPathFileExistsW = nullptr;
 SymInitializeWFn g_originalSymInitializeW = nullptr;
@@ -530,7 +532,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 135;
+constexpr std::size_t HookDefinitionCount = 136;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -5965,6 +5967,52 @@ void EmitDestroyEnvironmentBlockEvent(
     }
 }
 
+void EmitGetAdaptersAddressesEvent(
+    ULONG result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    ULONG family,
+    ULONG flags,
+    PVOID reserved,
+    PIP_ADAPTER_ADDRESSES adapterAddresses,
+    PULONG sizePointer,
+    ULONG preSize)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        ULONG postSize = 0;
+        std::uint32_t sizeStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+
+        if (sizePointer == nullptr)
+        {
+            sizeStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+        }
+        else if (ReadCurrentProcessValue(sizePointer, &postSize))
+        {
+            sizeStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+        }
+        else
+        {
+            sizeStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+        }
+
+        FillTransportCommon(record, knmon::KnMonTransportApiId::GetAdaptersAddresses, "iphlpapi.dll", start, end, result == ERROR_SUCCESS ? 0 : result);
+        record->ReturnCode = static_cast<std::uint32_t>(result);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(reserved));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(adapterAddresses));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(sizePointer));
+        record->Values32[0] = static_cast<std::uint32_t>(family);
+        record->Values32[1] = static_cast<std::uint32_t>(flags);
+        record->Values32[2] = sizeStatus;
+        record->Values32[3] = static_cast<std::uint32_t>(preSize);
+        record->Values32[4] = static_cast<std::uint32_t>(postSize);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void EmitGetIfEntry2Event(
     NETIO_STATUS status,
     const LARGE_INTEGER& start,
@@ -7025,6 +7073,7 @@ SECURITY_STATUS WINAPI HookedDeleteSecurityContext(PCtxtHandle context);
 void WINAPI HookedDnsFree(PVOID data, DNS_FREE_TYPE freeType);
 BOOL WINAPI HookedSetupDiDestroyDeviceInfoList(HDEVINFO deviceInfoSet);
 BOOL WINAPI HookedDestroyEnvironmentBlock(LPVOID environment);
+ULONG WINAPI HookedGetAdaptersAddresses(ULONG family, ULONG flags, PVOID reserved, PIP_ADAPTER_ADDRESSES adapterAddresses, PULONG sizePointer);
 NETIO_STATUS WINAPI HookedGetIfEntry2(PMIB_IF_ROW2 row);
 BOOL WINAPI HookedPathFileExistsW(LPCWSTR path);
 BOOL WINAPI HookedSymInitializeW(HANDLE process, PCWSTR userSearchPath, BOOL invadeProcess);
@@ -7167,6 +7216,7 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "dnsapi.dll", "DnsFree", reinterpret_cast<void*>(HookedDnsFree), reinterpret_cast<void**>(&g_originalDnsFree), false, true, false, 0, 0 },
         HookDefinition { "setupapi.dll", "SetupDiDestroyDeviceInfoList", reinterpret_cast<void*>(HookedSetupDiDestroyDeviceInfoList), reinterpret_cast<void**>(&g_originalSetupDiDestroyDeviceInfoList), false, true, false, 0, 0 },
         HookDefinition { "userenv.dll", "DestroyEnvironmentBlock", reinterpret_cast<void*>(HookedDestroyEnvironmentBlock), reinterpret_cast<void**>(&g_originalDestroyEnvironmentBlock), false, true, false, 0, 0 },
+        HookDefinition { "iphlpapi.dll", "GetAdaptersAddresses", reinterpret_cast<void*>(HookedGetAdaptersAddresses), reinterpret_cast<void**>(&g_originalGetAdaptersAddresses), false, true, false, 0, 0 },
         HookDefinition { "iphlpapi.dll", "GetIfEntry2", reinterpret_cast<void*>(HookedGetIfEntry2), reinterpret_cast<void**>(&g_originalGetIfEntry2), false, true, false, 0, 0 },
         HookDefinition { "shlwapi.dll", "PathFileExistsW", reinterpret_cast<void*>(HookedPathFileExistsW), reinterpret_cast<void**>(&g_originalPathFileExistsW), false, true, false, 0, 0 },
         HookDefinition { "dbghelp.dll", "SymInitializeW", reinterpret_cast<void*>(HookedSymInitializeW), reinterpret_cast<void**>(&g_originalSymInitializeW), false, true, false, 0, 0 },
@@ -11595,6 +11645,48 @@ BOOL WINAPI HookedDestroyEnvironmentBlock(LPVOID environment)
     }
 
     SetLastError(lastError);
+    return result;
+}
+
+ULONG WINAPI HookedGetAdaptersAddresses(
+    ULONG family,
+    ULONG flags,
+    PVOID reserved,
+    PIP_ADAPTER_ADDRESSES adapterAddresses,
+    PULONG sizePointer)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetAdaptersAddresses == nullptr)
+    {
+        if (g_originalGetAdaptersAddresses == nullptr)
+        {
+            return ERROR_PROC_NOT_FOUND;
+        }
+
+        return g_originalGetAdaptersAddresses(family, flags, reserved, adapterAddresses, sizePointer);
+    }
+
+    HookReentryGuard guard;
+    ULONG preSize = 0;
+    if (sizePointer != nullptr)
+    {
+        ULONG localSize = 0;
+        if (ReadCurrentProcessValue(sizePointer, &localSize))
+        {
+            preSize = localSize;
+        }
+    }
+
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const ULONG result = g_originalGetAdaptersAddresses(family, flags, reserved, adapterAddresses, sizePointer);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitGetAdaptersAddressesEvent(result, start, end, family, flags, reserved, adapterAddresses, sizePointer, preSize);
+    }
+
     return result;
 }
 

@@ -5,7 +5,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $ProviderModule = "iphlpapi.dll"
-$SelectedApi = "GetIfEntry2"
+$SelectedApis = @("GetAdaptersAddresses", "GetIfEntry2")
 
 function Assert-PointerValue
 {
@@ -60,10 +60,18 @@ if ($provider.Count -ne 1 -or $provider[0].id -ne 22)
     throw "Generated provider module mismatch for $ProviderModule`: $($provider | ConvertTo-Json -Depth 4)"
 }
 
-$entry = @($ids.apis | Where-Object { $_.module -eq $ProviderModule -and $_.name -eq $SelectedApi } | Select-Object -First 1)
-if ($entry.Count -ne 1 -or $entry[0].id -ne 171)
+$expectedIds = @{
+    GetAdaptersAddresses = 170
+    GetIfEntry2 = 171
+}
+
+foreach ($apiName in $SelectedApis)
 {
-    throw "Generated ID mismatch for $SelectedApi`: expected=171 actual=$($entry | ConvertTo-Json -Depth 4)"
+    $entry = @($ids.apis | Where-Object { $_.module -eq $ProviderModule -and $_.name -eq $apiName } | Select-Object -First 1)
+    if ($entry.Count -ne 1 -or $entry[0].id -ne $expectedIds[$apiName])
+    {
+        throw "Generated ID mismatch for $apiName`: expected=$($expectedIds[$apiName]) actual=$($entry | ConvertTo-Json -Depth 4)"
+    }
 }
 
 $result = & $HelperPath capture-sample | ConvertFrom-Json
@@ -84,66 +92,142 @@ if ($droppedEvents -ne 0)
     throw "Wave 4 IPHLPAPI healthy capture dropped transport events: $droppedEvents"
 }
 
-$iphlpapiEvents = @($result.capturedEvents | Where-Object { $_.module -eq $ProviderModule -and $_.api -eq $SelectedApi })
-if ($iphlpapiEvents.Count -lt 1)
+$adapterEvents = @($result.capturedEvents | Where-Object { $_.module -eq $ProviderModule -and $_.api -eq "GetAdaptersAddresses" })
+if ($adapterEvents.Count -lt 1)
 {
-    throw "Wave 4 IPHLPAPI capture did not include $SelectedApi."
+    throw "Wave 4 IPHLPAPI capture did not include GetAdaptersAddresses."
 }
 
-$event = $iphlpapiEvents[0]
+$adapterEvent = @($adapterEvents | Where-Object { $_.returnValue -match "^0 \(0x00000000\)$" } | Select-Object -First 1)
+if ($adapterEvent.Count -ne 1)
+{
+    $adapterEvent = @($adapterEvents | Select-Object -First 1)
+}
+
+if ($adapterEvent[0].apiFamily -ne "network-metadata" -or $adapterEvent[0].apiCategory -ne "adapter_addresses_query")
+{
+    throw "GetAdaptersAddresses metadata mismatch: family=$($adapterEvent[0].apiFamily) category=$($adapterEvent[0].apiCategory)"
+}
+
+if ($adapterEvent[0].hookPolicy -ne "iat" -or $adapterEvent[0].coverageStatus -ne "smoke_verified")
+{
+    throw "GetAdaptersAddresses hook metadata mismatch: hook=$($adapterEvent[0].hookPolicy) coverage=$($adapterEvent[0].coverageStatus)"
+}
+
+if ($adapterEvent[0].returnValue -notmatch "^(0 \(0x00000000\)|111 \(0x0000006[fF]\)|232 \(0x000000[eE]8\))$")
+{
+    throw "GetAdaptersAddresses return evidence mismatch: $($adapterEvent[0] | ConvertTo-Json -Depth 8)"
+}
+
+if ($null -eq $adapterEvent[0].durationUs -or $adapterEvent[0].durationUs -lt 0)
+{
+    throw "GetAdaptersAddresses missing duration evidence."
+}
+
+if (-not [string]::IsNullOrEmpty($adapterEvent[0].bufferPreview))
+{
+    throw "GetAdaptersAddresses exposed bufferPreview: $($adapterEvent[0].bufferPreview)"
+}
+
+$family = Get-ArgumentByName -Event $adapterEvent[0] -Name "Family"
+if ($family.decodeAlias -ne "dword_value" -or $family.decodedValue -notmatch "AF_UNSPEC")
+{
+    throw "GetAdaptersAddresses Family metadata mismatch: $($family | ConvertTo-Json -Depth 8)"
+}
+
+$flags = Get-ArgumentByName -Event $adapterEvent[0] -Name "Flags"
+if ($flags.decodeAlias -ne "dword_value" -or $flags.decodedValue -notmatch "GAA_FLAG_SKIP_UNICAST")
+{
+    throw "GetAdaptersAddresses Flags metadata mismatch: $($flags | ConvertTo-Json -Depth 8)"
+}
+
+$reserved = Get-ArgumentByName -Event $adapterEvent[0] -Name "Reserved"
+if ($reserved.decodeAlias -ne "pointer" -or $reserved.captureTiming -ne "pre")
+{
+    throw "GetAdaptersAddresses Reserved metadata mismatch: $($reserved | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $reserved.decodedValue -Name "GetAdaptersAddresses Reserved" -AllowNull $true
+
+$addresses = Get-ArgumentByName -Event $adapterEvent[0] -Name "AdapterAddresses"
+if ($addresses.decodeAlias -ne "pointer" -or $addresses.captureTiming -ne "post")
+{
+    throw "GetAdaptersAddresses AdapterAddresses metadata mismatch: $($addresses | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $addresses.decodedValue -Name "GetAdaptersAddresses AdapterAddresses" -AllowNull $true
+
+$sizePointer = Get-ArgumentByName -Event $adapterEvent[0] -Name "SizePointer"
+if ($sizePointer.decodeAlias -ne "dword_pointer" -or
+    $sizePointer.captureTiming -ne "pre_post" -or
+    $sizePointer.decodeStatus -ne "decoded" -or
+    $sizePointer.decodedValue -notmatch "pre=.*post=")
+{
+    throw "GetAdaptersAddresses SizePointer evidence mismatch: $($sizePointer | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $sizePointer.rawValue -Name "GetAdaptersAddresses SizePointer"
+
+$interfaceEvents = @($result.capturedEvents | Where-Object { $_.module -eq $ProviderModule -and $_.api -eq "GetIfEntry2" })
+if ($interfaceEvents.Count -lt 1)
+{
+    throw "Wave 4 IPHLPAPI capture did not include GetIfEntry2."
+}
+
+$event = $interfaceEvents[0]
 if ($event.apiFamily -ne "network-metadata" -or $event.apiCategory -ne "interface_entry_query")
 {
-    throw "$SelectedApi metadata mismatch: family=$($event.apiFamily) category=$($event.apiCategory)"
+    throw "GetIfEntry2 metadata mismatch: family=$($event.apiFamily) category=$($event.apiCategory)"
 }
 
 if ($event.hookPolicy -ne "iat" -or $event.coverageStatus -ne "smoke_verified")
 {
-    throw "$SelectedApi hook metadata mismatch: hook=$($event.hookPolicy) coverage=$($event.coverageStatus)"
+    throw "GetIfEntry2 hook metadata mismatch: hook=$($event.hookPolicy) coverage=$($event.coverageStatus)"
 }
 
 if ($event.returnValue -notmatch "^0 \(0x00000000\)$")
 {
-    throw "$SelectedApi return evidence mismatch: $($event | ConvertTo-Json -Depth 8)"
+    throw "GetIfEntry2 return evidence mismatch: $($event | ConvertTo-Json -Depth 8)"
 }
 
 if ($event.lastErrorCode -ne 0)
 {
-    throw "$SelectedApi unexpected lastErrorCode: $($event.lastErrorCode)"
+    throw "GetIfEntry2 unexpected lastErrorCode: $($event.lastErrorCode)"
 }
 
 if ($null -eq $event.durationUs -or $event.durationUs -lt 0)
 {
-    throw "$SelectedApi missing duration evidence."
+    throw "GetIfEntry2 missing duration evidence."
 }
 
 if (-not [string]::IsNullOrEmpty($event.bufferPreview))
 {
-    throw "$SelectedApi exposed bufferPreview: $($event.bufferPreview)"
+    throw "GetIfEntry2 exposed bufferPreview: $($event.bufferPreview)"
 }
 
 $row = Get-ArgumentByName -Event $event -Name "Row"
 if ($row.decodeAlias -ne "pointer" -or $row.captureTiming -ne "pre_post")
 {
-    throw "$SelectedApi Row metadata mismatch: $($row | ConvertTo-Json -Depth 8)"
+    throw "GetIfEntry2 Row metadata mismatch: $($row | ConvertTo-Json -Depth 8)"
 }
 
-Assert-PointerValue -Value $row.rawValue -Name "$SelectedApi Row rawValue"
-Assert-PointerValue -Value $row.decodedValue -Name "$SelectedApi Row decodedValue"
+Assert-PointerValue -Value $row.rawValue -Name "GetIfEntry2 Row rawValue"
+Assert-PointerValue -Value $row.decodedValue -Name "GetIfEntry2 Row decodedValue"
 
-$eventData = $iphlpapiEvents | ConvertTo-Json -Depth 12
-if ($eventData -cmatch "GetAdaptersAddresses|GetIfTable2|FriendlyName|Description|PhysicalAddress|PermanentPhysicalAddress|Unicast|Anycast|Multicast|DnsSuffix|Gateway|TransmitLinkSpeed|ReceiveLinkSpeed|InOctets|OutOctets|NetworkGuid|AdapterName|InterfaceAlias|IfDescr|MAC|([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+$eventData = @($adapterEvents + $interfaceEvents) | ConvertTo-Json -Depth 12
+if ($eventData -cmatch "GetIfTable2|FriendlyName|Description|PhysicalAddress|PermanentPhysicalAddress|Unicast|Anycast|Multicast|DnsSuffix|Gateway|TransmitLinkSpeed|ReceiveLinkSpeed|InOctets|OutOctets|NetworkGuid|AdapterName|InterfaceAlias|IfDescr|MAC|([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "Wave 4 IPHLPAPI event appears to expose adapter inventory, interface payload, stack, injection, credential, or byte-preview evidence: $eventData"
 }
 
-$installed = @($result.agentMessages | Where-Object {
-    $_.messageType -eq "hook_installed" -and
-    $_.module -eq $ProviderModule -and
-    $_.api -eq $SelectedApi
-})
-if ($installed.Count -lt 1)
+foreach ($apiName in $SelectedApis)
 {
-    throw "Wave 4 IPHLPAPI hook install evidence is incomplete."
+    $installed = @($result.agentMessages | Where-Object {
+        $_.messageType -eq "hook_installed" -and
+        $_.module -eq $ProviderModule -and
+        $_.api -eq $apiName
+    })
+    if ($installed.Count -lt 1)
+    {
+        throw "Wave 4 IPHLPAPI hook install evidence is incomplete for $apiName."
+    }
 }
 
 $shutdown = @($result.agentMessages | Where-Object { $_.messageType -eq "agent_shutdown" } | Select-Object -Last 1)
@@ -157,4 +241,4 @@ if ($shutdown[0].restoredHooks -ne $shutdown[0].installedHooks -or $shutdown[0].
     throw "Unexpected hook lifecycle counts: installed=$($shutdown[0].installedHooks) restored=$($shutdown[0].restoredHooks) failed=$($shutdown[0].failedHooks)"
 }
 
-Write-Host "Wave 4 IPHLPAPI interface-entry smoke passed: events=$($iphlpapiEvents.Count) installed=$($installed.Count) restored=$($shutdown[0].restoredHooks)"
+Write-Host "Wave 4 IPHLPAPI adapter/interface smoke passed: adapterEvents=$($adapterEvents.Count) interfaceEvents=$($interfaceEvents.Count) restored=$($shutdown[0].restoredHooks)"

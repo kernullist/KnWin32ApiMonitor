@@ -1306,17 +1306,17 @@
       "unsupported": 0
     },
     {
-      "alreadyLive": 1,
+      "alreadyLive": 2,
       "apis": [
         {
           "apiName": "GetAdaptersAddresses",
           "callingConvention": "stdcall",
           "category": "adapter_addresses_query",
-          "classification": "manual_decoder_required",
-          "coverageStatus": "definition_only",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
           "errorSource": "none",
           "family": "network-metadata",
-          "hookPolicy": "definition_only",
+          "hookPolicy": "iat",
           "id": 170,
           "key": "iphlpapi.dll!GetAdaptersAddresses",
           "module": "iphlpapi.dll",
@@ -1328,10 +1328,9 @@
             "SizePointer"
           ],
           "reasons": [
-            "manual_family_boundary_review",
-            "manual_output_pointer_memory_boundary"
+            "already_live_iat_coverage"
           ],
-          "recommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "recommendation": "keep_in_dll_batch_smoke",
           "returnType": "ULONG",
           "risk": "medium",
           "sourceFile": "definitions/win32/iphlpapi.json"
@@ -1364,9 +1363,9 @@
       ],
       "autoPromotable": 0,
       "blockedByPayloadPolicy": 0,
-      "manualDecoderRequired": 1,
+      "manualDecoderRequired": 0,
       "module": "iphlpapi.dll",
-      "recommendation": "design_manual_decoder_batch",
+      "recommendation": "fully_triaged",
       "sourceFiles": [
         "definitions/win32/iphlpapi.json"
       ],
@@ -5074,12 +5073,12 @@
     "metadata": "definitions/metadata"
   },
   "summary": {
-    "alreadyLive": 127,
+    "alreadyLive": 128,
     "autoPromotable": 0,
     "blockedByPayloadPolicy": 49,
-    "dllsFullyTriaged": 22,
+    "dllsFullyTriaged": 23,
     "dllsWithAutoPromotableApis": 0,
-    "manualDecoderRequired": 3,
+    "manualDecoderRequired": 2,
     "totalApis": 179,
     "totalDlls": 25,
     "unsupported": 0

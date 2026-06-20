@@ -108,6 +108,7 @@ $requiredApis = @(
     "DnsRecordListFree",
     "SetupDiDestroyDeviceInfoList",
     "DestroyEnvironmentBlock",
+    "GetAdaptersAddresses",
     "GetIfEntry2",
     "PathFileExistsW",
     "SymInitializeW",
@@ -460,6 +461,83 @@ $userenvPayload = $userenvDestroy[0] | ConvertTo-Json -Depth 12
 if ($userenvPayload -cmatch "CreateEnvironmentBlock|GetUserProfileDirectory|lpProfileDir|USERPROFILE=|APPDATA=|LOCALAPPDATA=|PATH=|SystemRoot=|USERNAME=|USERDOMAIN=|TEMP=|TMP=|ProgramFiles=|ComSpec=|HOMEDRIVE=|HOMEPATH=|LOGONSERVER=|C:\\Users|Desktop|Documents|Downloads|CommandLine|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 DestroyEnvironmentBlock event appears to expose environment strings, profile paths, payload, stack, injection, credential, or byte-preview evidence: $userenvPayload"
+}
+
+$iphlpapiAdapters = @($result.capturedEvents | Where-Object { $_.module -eq "iphlpapi.dll" -and $_.api -eq "GetAdaptersAddresses" })
+if ($iphlpapiAdapters.Count -lt 1)
+{
+    throw "x86 capture did not include GetAdaptersAddresses."
+}
+
+$iphlpapiAdapter = @($iphlpapiAdapters | Where-Object { $_.returnValue -match "^0 \(0x00000000\)$" } | Select-Object -First 1)
+if ($iphlpapiAdapter.Count -ne 1)
+{
+    $iphlpapiAdapter = @($iphlpapiAdapters | Select-Object -First 1)
+}
+
+if ($iphlpapiAdapter[0].apiFamily -ne "network-metadata" -or
+    $iphlpapiAdapter[0].apiCategory -ne "adapter_addresses_query" -or
+    $iphlpapiAdapter[0].hookPolicy -ne "iat" -or
+    $iphlpapiAdapter[0].coverageStatus -ne "smoke_verified" -or
+    $iphlpapiAdapter[0].returnValue -notmatch "^(0 \(0x00000000\)|111 \(0x0000006[fF]\)|232 \(0x000000[eE]8\))$")
+{
+    throw "x86 GetAdaptersAddresses metadata or return evidence mismatch: $($iphlpapiAdapter | ConvertTo-Json -Depth 8)"
+}
+
+if (-not [string]::IsNullOrEmpty($iphlpapiAdapter[0].bufferPreview))
+{
+    throw "x86 GetAdaptersAddresses exposed bufferPreview: $($iphlpapiAdapter[0] | ConvertTo-Json -Depth 8)"
+}
+
+$iphlpapiFamily = @($iphlpapiAdapter[0].arguments | Where-Object { $_.name -eq "Family" } | Select-Object -First 1)
+if ($iphlpapiFamily.Count -ne 1 -or
+    $iphlpapiFamily[0].decodeAlias -ne "dword_value" -or
+    $iphlpapiFamily[0].decodedValue -notmatch "AF_UNSPEC")
+{
+    throw "x86 GetAdaptersAddresses Family evidence mismatch: $($iphlpapiFamily | ConvertTo-Json -Depth 8)"
+}
+
+$iphlpapiFlags = @($iphlpapiAdapter[0].arguments | Where-Object { $_.name -eq "Flags" } | Select-Object -First 1)
+if ($iphlpapiFlags.Count -ne 1 -or
+    $iphlpapiFlags[0].decodeAlias -ne "dword_value" -or
+    $iphlpapiFlags[0].decodedValue -notmatch "GAA_FLAG_SKIP_UNICAST")
+{
+    throw "x86 GetAdaptersAddresses Flags evidence mismatch: $($iphlpapiFlags | ConvertTo-Json -Depth 8)"
+}
+
+$iphlpapiReserved = @($iphlpapiAdapter[0].arguments | Where-Object { $_.name -eq "Reserved" } | Select-Object -First 1)
+if ($iphlpapiReserved.Count -ne 1 -or
+    $iphlpapiReserved[0].decodeAlias -ne "pointer" -or
+    $iphlpapiReserved[0].captureTiming -ne "pre")
+{
+    throw "x86 GetAdaptersAddresses Reserved evidence mismatch: $($iphlpapiReserved | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $iphlpapiReserved[0].decodedValue -Name "x86 GetAdaptersAddresses Reserved" -AllowNull $true
+
+$iphlpapiAddresses = @($iphlpapiAdapter[0].arguments | Where-Object { $_.name -eq "AdapterAddresses" } | Select-Object -First 1)
+if ($iphlpapiAddresses.Count -ne 1 -or
+    $iphlpapiAddresses[0].decodeAlias -ne "pointer" -or
+    $iphlpapiAddresses[0].captureTiming -ne "post")
+{
+    throw "x86 GetAdaptersAddresses AdapterAddresses evidence mismatch: $($iphlpapiAddresses | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $iphlpapiAddresses[0].decodedValue -Name "x86 GetAdaptersAddresses AdapterAddresses" -AllowNull $true
+
+$iphlpapiSizePointer = @($iphlpapiAdapter[0].arguments | Where-Object { $_.name -eq "SizePointer" } | Select-Object -First 1)
+if ($iphlpapiSizePointer.Count -ne 1 -or
+    $iphlpapiSizePointer[0].decodeAlias -ne "dword_pointer" -or
+    $iphlpapiSizePointer[0].captureTiming -ne "pre_post" -or
+    $iphlpapiSizePointer[0].decodeStatus -ne "decoded" -or
+    $iphlpapiSizePointer[0].decodedValue -notmatch "pre=.*post=")
+{
+    throw "x86 GetAdaptersAddresses SizePointer evidence mismatch: $($iphlpapiSizePointer | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $iphlpapiSizePointer[0].rawValue -Name "x86 GetAdaptersAddresses SizePointer"
+
+$iphlpapiAdapterPayload = $iphlpapiAdapters | ConvertTo-Json -Depth 12
+if ($iphlpapiAdapterPayload -cmatch "FriendlyName|Description|PhysicalAddress|PermanentPhysicalAddress|Unicast|Anycast|Multicast|DnsSuffix|Gateway|TransmitLinkSpeed|ReceiveLinkSpeed|InOctets|OutOctets|NetworkGuid|AdapterName|InterfaceAlias|IfDescr|MAC|([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 GetAdaptersAddresses event appears to expose adapter inventory, stack, injection, credential, or byte-preview evidence: $iphlpapiAdapterPayload"
 }
 
 $iphlpapiEntry = @($result.capturedEvents | Where-Object { $_.module -eq "iphlpapi.dll" -and $_.api -eq "GetIfEntry2" } | Select-Object -First 1)

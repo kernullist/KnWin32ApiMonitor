@@ -1491,6 +1491,62 @@ bool RunUserenvEnvironmentBlockLifecycleProbe()
     return success;
 }
 
+bool RunIphlpapiAdapterAddressesProbe()
+{
+    bool success = false;
+    ULONG size = 0;
+    const ULONG flags =
+        GAA_FLAG_SKIP_UNICAST |
+        GAA_FLAG_SKIP_ANYCAST |
+        GAA_FLAG_SKIP_MULTICAST |
+        GAA_FLAG_SKIP_DNS_SERVER |
+        GAA_FLAG_SKIP_FRIENDLY_NAME;
+
+    do
+    {
+        ULONG status = GetAdaptersAddresses(AF_UNSPEC, flags, nullptr, nullptr, &size);
+        if (status == ERROR_NO_DATA)
+        {
+            std::cout << "GetAdaptersAddresses returned no adapter data\n";
+            success = true;
+            break;
+        }
+
+        if (status != ERROR_BUFFER_OVERFLOW && status != ERROR_SUCCESS)
+        {
+            std::cout << "GetAdaptersAddresses size query failed with " << status << "\n";
+            break;
+        }
+
+        if (size == 0)
+        {
+            std::cout << "GetAdaptersAddresses returned zero required size\n";
+            break;
+        }
+
+        if (size > 256U * 1024U)
+        {
+            std::cout << "GetAdaptersAddresses required size too large: " << size << "\n";
+            break;
+        }
+
+        std::vector<unsigned char> buffer(size);
+        PIP_ADAPTER_ADDRESSES addresses = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.data());
+        status = GetAdaptersAddresses(AF_UNSPEC, flags, nullptr, addresses, &size);
+        if (status != ERROR_SUCCESS && status != ERROR_NO_DATA)
+        {
+            std::cout << "GetAdaptersAddresses failed with " << status << "\n";
+            break;
+        }
+
+        std::cout << "iphlpapi adapter address size query completed size=" << size << "\n";
+        success = true;
+    }
+    while (false);
+
+    return success;
+}
+
 bool RunIphlpapiInterfaceEntryQueryProbe()
 {
     bool success = false;
@@ -3026,6 +3082,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunUserenvEnvironmentBlockLifecycleProbe())
+        {
+            break;
+        }
+
+        if (!RunIphlpapiAdapterAddressesProbe())
         {
             break;
         }
