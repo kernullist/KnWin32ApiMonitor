@@ -35,6 +35,8 @@ class Controller
 public:
     std::vector<KnMonTargetProcess> EnumerateTargets(KnMonError* error) const;
     KnMonLaunchResult LaunchWithEarlyBirdApc(const KnMonLaunchRequest& request) const;
+    KnMonCaptureResult LaunchCapture(const KnMonLaunchRequest& request) const;
+    KnMonCaptureResult LaunchCapture(const KnMonLaunchRequest& request, const KnMonCaptureStreamCallbacks* streamCallbacks) const;
     KnMonCaptureResult CaptureSampleFileIo(const KnMonLaunchRequest& request) const;
     KnMonCaptureResult AttachCapture(const KnMonAttachRequest& request) const;
     KnMonCaptureResult AttachCapture(const KnMonAttachRequest& request, const KnMonCaptureStreamCallbacks* streamCallbacks) const;

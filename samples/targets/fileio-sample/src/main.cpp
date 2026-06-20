@@ -15,6 +15,7 @@
 #include <wincrypt.h>
 #include <windns.h>
 #include <setupapi.h>
+#include <devguid.h>
 #include <userenv.h>
 #include <iphlpapi.h>
 #include <netioapi.h>
@@ -2617,6 +2618,50 @@ int RunSpawnChildLoop(int childCount, int childIterations, int delayMs, const st
     return exitCode;
 }
 
+bool RunTier1SystemProbe()
+{
+    SYSTEMTIME systemTime = {};
+    GetSystemTime(&systemTime);
+    std::cout << "tier1 system probe year=" << systemTime.wYear << "\n";
+    return systemTime.wYear >= 2024;
+}
+
+bool RunTier1DevicesProbe()
+{
+    std::array<wchar_t, 64> className = {};
+    DWORD requiredSize = 0;
+    const BOOL ok = SetupDiClassNameFromGuidW(
+        &GUID_DEVCLASS_DISKDRIVE,
+        className.data(),
+        static_cast<DWORD>(className.size()),
+        &requiredSize);
+    std::cout << "tier1 devices probe ok=" << ok << " required=" << requiredSize << "\n";
+    return ok != FALSE;
+}
+
+bool RunTier1UiProbe()
+{
+    POINT point = {};
+    const BOOL ok = GetCursorPos(&point);
+    std::cout << "tier1 ui probe ok=" << ok << "\n";
+    return ok != FALSE;
+}
+
+bool RunTier1NetworkManagementProbe()
+{
+    MIB_IPSTATS statistics = {};
+    const DWORD status = GetIpStatistics(&statistics);
+    std::cout << "tier1 network-management probe status=" << status << "\n";
+    return status == NO_ERROR;
+}
+
+bool RunTier1GraphicsProbe()
+{
+    HGDIOBJ object = GetStockObject(WHITE_BRUSH);
+    std::cout << "tier1 graphics probe object=" << object << "\n";
+    return object != nullptr;
+}
+
 int RunFileIo(bool slow)
 {
     int exitCode = 1;
@@ -2632,6 +2677,31 @@ int RunFileIo(bool slow)
         if (slow)
         {
             Sleep(500);
+        }
+
+        if (!RunTier1SystemProbe())
+        {
+            break;
+        }
+
+        if (!RunTier1DevicesProbe())
+        {
+            break;
+        }
+
+        if (!RunTier1UiProbe())
+        {
+            break;
+        }
+
+        if (!RunTier1NetworkManagementProbe())
+        {
+            break;
+        }
+
+        if (!RunTier1GraphicsProbe())
+        {
+            break;
         }
 
         fileHandle = CreateFileW(

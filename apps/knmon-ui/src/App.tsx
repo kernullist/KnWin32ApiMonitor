@@ -29,34 +29,28 @@ import {
   buildNativeTraceIndex,
   cancelNativeOperation,
   catalogNativeSessions,
-  captureSampleFileIoEvents,
-  captureSampleFileIoSession,
   drainNativeTraceBatches,
-  launchSampleEarlyBirdCapture,
   listDaemonSessions,
   listNativeSessions,
   listNativeTargetProcesses,
   listNativeOperations,
-  listTargetProcesses,
   queryNativeSessionCatalog,
   queryNativeSessionCatalogIndex,
   queryNativeTraceIndex,
   removeMissingNativeSessionCatalogIndexEntries,
   removeMissingNativeSessionCatalogEntries,
   removeMissingNativeTraceIndexEntries,
-  replayLastSampleSession,
   replaySessionPath,
-  startBackendSession,
   startDaemonSupervisedSession,
+  startLaunchMonitorSession,
   startStreamingAttachSession,
-  stopBackendSession,
   stopDaemonSession,
   stopNativeSession,
   superviseProcessTree
 } from "./backend";
-import { apiTree, captureProfiles, createMockFileIoEvent, initialTraceEvents } from "./mockData";
+import { apiTree, captureProfiles } from "./catalogData";
 import { downloadJsonl, estimateSessionBytes } from "./session";
-import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, LaunchResult, NativeOperation, NativeSession, NativeSessionCatalog, NativeSessionCatalogRow, NativeTraceBatch, NativeTraceIndex, NativeTraceIndexEvent, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
+import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, NativeOperation, NativeSession, NativeSessionCatalog, NativeSessionCatalogRow, NativeTraceBatch, NativeTraceIndex, NativeTraceIndexEvent, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
 import {
   buildTraceIssueGroups,
   compileTraceQuery,
@@ -74,7 +68,6 @@ import { computeVirtualTraceWindow } from "./virtualTrace";
 
 type LeftTab = "targets" | "apis" | "profiles";
 type TraceMode = "flat" | "call-tree" | "errors" | "threads" | "timeline";
-type TargetSource = "mock" | "native";
 type ChildPolicy = ProcessTreeResult["childPolicy"];
 
 const inspectorTabs: Array<{ id: InspectorTab; label: string }> = [
@@ -89,7 +82,6 @@ const traceRowHeight = 27;
 const traceOverscanRows = 6;
 
 type ReplaySource =
-  | { kind: "sample"; label: string; path: string; validationStatus: string }
   | { kind: "catalog"; label: string; path: string; validationStatus: string };
 
 function formatBytes(value: number): string {
@@ -146,70 +138,6 @@ function makeAuditEvent(eventType: string, operation: string, message: string, w
 function fileNameFromPath(value: string): string {
   const parts = value.split(/[\\/]/u);
   return parts[parts.length - 1] || value;
-}
-
-function createAgentLoadedEvent(result: LaunchResult, eventId: number): TraceEvent {
-  return {
-    schemaVersion: result.schemaVersion,
-    eventId,
-    relativeTimeMs: eventId * 137,
-    pid: result.targetProcessId,
-    tid: result.targetThreadId,
-    process: "knmon-sample-fileio.exe",
-    module: fileNameFromPath(result.agentPath),
-    api: result.handshake.received ? "agent_loaded" : "capture_backend_status",
-    arguments: [
-      {
-        index: 0,
-        type: "LPCWSTR",
-        name: "AgentPath",
-        direction: "in",
-        preCallValue: result.agentPath,
-        postCallValue: result.agentPath,
-        rawValue: result.agentPath,
-        decodedValue: result.agentPath,
-        decodeStatus: "decoded"
-      },
-      {
-        index: 1,
-        type: "LPCWSTR",
-        name: "InjectionMethod",
-        direction: "in",
-        preCallValue: result.injectionMethod,
-        postCallValue: result.injectionMethod,
-        rawValue: result.injectionMethod,
-        decodedValue: result.injectionMethod,
-        decodeStatus: "decoded"
-      },
-      {
-        index: 2,
-        type: "BOOL",
-        name: "HandshakeReceived",
-        direction: "out",
-        preCallValue: "FALSE",
-        postCallValue: result.handshake.received ? "TRUE" : "FALSE",
-        rawValue: result.handshake.received ? "1" : "0",
-        decodedValue: result.handshake.message,
-        decodeStatus: "decoded"
-      }
-    ],
-    returnValue: result.success ? "TRUE" : "FALSE",
-    error: result.success
-      ? null
-      : {
-          kind: "win32",
-          code: `0x${result.win32ErrorCode.toString(16).padStart(8, "0")}`,
-          message: result.message
-        },
-    durationUs: 0,
-    tags: ["native-capture", "early-bird", result.handshake.received ? "agent-hello" : "status"],
-    stack: [
-      "knmon-native-helper.exe!LaunchWithEarlyBirdApc",
-      "kernel32.dll!QueueUserAPC",
-      "kernel32.dll!ResumeThread"
-    ],
-    bufferPreview: result.handshake.rawPayload
-  };
 }
 
 function createTraceEventFromAgentApiCall(event: AgentApiCallEvent, eventId: number): TraceEvent {
@@ -291,13 +219,9 @@ function hookRestoreSummary(result: CaptureResult | null): string {
   return `agent_shutdown reason=${reason}; restored=${restoredHooks}/${installedHooks}; failed=${failedHooks}`;
 }
 
-function targetEligibilityReason(target: TargetProcess | null, source: TargetSource): string | null {
+function targetEligibilityReason(target: TargetProcess | null): string | null {
   if (!target) {
     return "Select a target row.";
-  }
-
-  if (source !== "native") {
-    return "Switch target source to Native.";
   }
 
   if (target.status !== "available") {
@@ -369,26 +293,27 @@ function traceIndexEventLabel(event: NativeTraceIndexEvent): string {
 
 function App() {
   const [leftTab, setLeftTab] = useState<LeftTab>("targets");
-  const [targetSource, setTargetSource] = useState<TargetSource>("mock");
   const [targets, setTargets] = useState<TargetProcess[]>([]);
   const [selectedTargetPid, setSelectedTargetPid] = useState<number | null>(null);
-  const [backendMode, setBackendMode] = useState<BackendMode>("mock");
-  const [events, setEvents] = useState<TraceEvent[]>(initialTraceEvents);
-  const [selectedEventId, setSelectedEventId] = useState<number>(initialTraceEvents[0]?.eventId ?? 0);
+  const [backendMode, setBackendMode] = useState<BackendMode>("native-enum");
+  const [events, setEvents] = useState<TraceEvent[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<number>(0);
   const [filter, setFilter] = useState("");
   const [traceQueryMatchMode, setTraceQueryMatchMode] = useState<TraceQueryMatchMode>("all");
   const [traceQueryClauses, setTraceQueryClauses] = useState<TraceQueryClause[]>([]);
   const [durationThresholdUs, setDurationThresholdUs] = useState(100);
   const [highlightingEnabled, setHighlightingEnabled] = useState(true);
-  const [running, setRunning] = useState(false);
   const [droppedCount, setDroppedCount] = useState(0);
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("parameters");
   const [traceMode, setTraceMode] = useState<TraceMode>("flat");
   const [nativeBusy, setNativeBusy] = useState(false);
+  const [launchTargetPath, setLaunchTargetPath] = useState("");
+  const [launchWorkingDirectory, setLaunchWorkingDirectory] = useState("");
+  const [launchDurationMs, setLaunchDurationMs] = useState(3000);
   const [attachDurationMs, setAttachDurationMs] = useState(3000);
   const [treeDurationMs, setTreeDurationMs] = useState(3000);
   const [childPolicy, setChildPolicy] = useState<ChildPolicy>("observe");
-  const [launchResult, setLaunchResult] = useState<LaunchResult | null>(null);
+  const [launchSession, setLaunchSession] = useState<NativeSession | null>(null);
   const [captureResult, setCaptureResult] = useState<CaptureResult | null>(null);
   const [attachResult, setAttachResult] = useState<CaptureResult | null>(null);
   const [processTreeResult, setProcessTreeResult] = useState<ProcessTreeResult | null>(null);
@@ -410,23 +335,45 @@ function App() {
   const [traceScrollTop, setTraceScrollTop] = useState(0);
   const [traceViewportHeight, setTraceViewportHeight] = useState(0);
   const [outputEvents, setOutputEvents] = useState<AuditEvent[]>([
-    makeAuditEvent("backend_ready", "mock_init", "Mock File I/O backend initialized.")
+    makeAuditEvent("backend_ready", "native_init", "Native desktop backend ready. Launch a target or attach to a running process.")
   ]);
-  const nextEventId = useRef(initialTraceEvents.length + 1);
+  const nextEventId = useRef(1);
   const nextQueryClauseId = useRef(1);
   const streamBatchCursors = useRef<Record<string, number>>({});
   const traceScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let active = true;
+    setNativeBusy(true);
 
-    listTargetProcesses().then((result) => {
-      if (active) {
+    listNativeTargetProcesses()
+      .then((result) => {
+        if (!active) {
+          return;
+        }
+
         setTargets(result.targets);
         setBackendMode(result.mode);
         setSelectedTargetPid(null);
-      }
-    });
+        appendOutput([makeAuditEvent("native_enum_completed", "list_native_target_processes", `Loaded ${result.targets.length} native target rows.`)]);
+      })
+      .catch((error) => {
+        if (!active) {
+          return;
+        }
+
+        const message = error instanceof Error ? error.message : String(error);
+        setTargets([]);
+        setBackendMode("native-enum");
+        setSelectedTargetPid(null);
+        appendOutput([makeAuditEvent("native_enum_blocked", "list_native_target_processes", message)]);
+        setInspectorTab("output");
+      })
+      .finally(() => {
+        if (active) {
+          setNativeBusy(false);
+        }
+      });
 
     return () => {
       active = false;
@@ -564,8 +511,7 @@ function App() {
     });
   }
 
-  function replaceTargets(nextTargets: TargetProcess[], nextSource: TargetSource, nextMode: BackendMode) {
-    setTargetSource(nextSource);
+  function replaceTargets(nextTargets: TargetProcess[], nextMode: BackendMode) {
     setTargets(nextTargets);
     setBackendMode(nextMode);
     setSelectedTargetPid((current) => {
@@ -610,45 +556,22 @@ function App() {
     streamBatchCursors.current[latest.sessionId] = latest.batchSequence;
   }
 
-  async function handleLoadMockTargets() {
-    const result = await listTargetProcesses();
-    replaceTargets(result.targets, "mock", result.mode);
-    appendOutput([makeAuditEvent("target_source_changed", "load_mock_targets", "Loaded mock target rows.")]);
-  }
-
   async function handleLoadNativeTargets() {
     setNativeBusy(true);
 
     try {
       const result = await listNativeTargetProcesses();
-      replaceTargets(result.targets, "native", result.mode);
+      replaceTargets(result.targets, result.mode);
       appendOutput([makeAuditEvent("native_enum_completed", "list_native_target_processes", `Loaded ${result.targets.length} native target rows.`)]);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      replaceTargets([], "native", "mock");
+      replaceTargets([], "native-enum");
       appendOutput([makeAuditEvent("native_enum_blocked", "list_native_target_processes", message)]);
       setInspectorTab("output");
     } finally {
       setNativeBusy(false);
     }
   }
-
-  useEffect(() => {
-    if (!running) {
-      return undefined;
-    }
-
-    const timer = window.setInterval(() => {
-      const next = createMockFileIoEvent(nextEventId.current);
-      nextEventId.current += 1;
-      setEvents((current) => [...current, next].slice(-400));
-      setSelectedEventId(next.eventId);
-    }, 900);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [running]);
 
   useEffect(() => {
     if (
@@ -749,9 +672,12 @@ function App() {
     ? traceHighlightState.eventHighlightsById.get(selectedEvent.eventId) ?? null
     : null;
   const selectedTarget = selectedTargetPid === null ? null : targets.find((target) => target.pid === selectedTargetPid) ?? null;
-  const targetBlockReason = targetEligibilityReason(selectedTarget, targetSource);
+  const targetBlockReason = targetEligibilityReason(selectedTarget);
   const activeNativeOperation = nativeOperations.find(isNativeOperationActive) ?? null;
   const activeNativeSession = nativeSessions.find(isNativeSessionActive) ?? null;
+  const currentLaunchSession = launchSession
+    ? nativeSessions.find((session) => session.sessionId === launchSession.sessionId) ?? launchSession
+    : null;
   const canRunTargetAction = targetBlockReason === null && !nativeBusy && activeNativeOperation === null && activeNativeSession === null;
   const processTreeSummary = summarizeProcessTree(processTreeResult);
   const sessionBytes = useMemo(() => estimateSessionBytes(events), [events]);
@@ -837,147 +763,38 @@ function App() {
     };
   }, [activeNativeSession?.sessionId]);
 
-  async function handleStartCapture() {
-    await startBackendSession();
-    setRunning(true);
-  }
-
-  async function handleStopCapture() {
-    await stopBackendSession();
-    setRunning(false);
-  }
-
   function handleClear() {
-    setRunning(false);
     setEvents([]);
     setSelectedEventId(0);
     setReplaySource(null);
     nextEventId.current = 1;
   }
 
-  async function handleLaunchSample() {
-    setNativeBusy(true);
-
-    try {
-      appendOutput([makeAuditEvent("launch_requested", "launch_sample_early_bird_capture", "Controlled sample launch requested from UI.")]);
-      const result = await launchSampleEarlyBirdCapture();
-      setLaunchResult(result);
-      setBackendMode(result.success ? "native-capture" : "native-enum");
-      appendOutput(result.auditEvents.length > 0 ? result.auditEvents : [makeAuditEvent("launch_result", result.operation, result.message, result.win32ErrorCode)]);
-
-      const traceEvent = createAgentLoadedEvent(result, nextEventId.current);
-      nextEventId.current += 1;
-      setEvents((current) => [...current, traceEvent]);
-      setSelectedEventId(traceEvent.eventId);
+  async function handleStartLaunchMonitor() {
+    const targetPath = launchTargetPath.trim();
+    if (!targetPath) {
+      appendOutput([makeAuditEvent("launch_blocked", "start_launch_monitor_session", "Launch target path is required.")]);
       setInspectorTab("output");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      appendOutput([makeAuditEvent("launch_blocked", "launch_sample_early_bird_capture", message)]);
-      setInspectorTab("output");
-    } finally {
-      setNativeBusy(false);
+      return;
     }
-  }
 
-  async function handleCaptureSampleFileIo() {
     setNativeBusy(true);
+    setLaunchSession(null);
 
     try {
-      appendOutput([makeAuditEvent("capture_requested", "capture_sample_fileio_events", "Controlled native File I/O capture requested from UI.")]);
-      const result = await captureSampleFileIoEvents();
-      setCaptureResult(result);
-      setBackendMode(result.success ? "native-capture" : "native-enum");
-      setDroppedCount(result.droppedEvents);
-      appendOutput(result.auditEvents.length > 0 ? result.auditEvents : [makeAuditEvent("capture_result", result.operation, result.message, result.win32ErrorCode)]);
-
-      if (result.capturedEvents.length > 0) {
-        appendCapturedEvents(result.capturedEvents, ["sample-capture", `target:${result.targetProcessId}`]);
-      }
-
-      setInspectorTab("output");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      appendOutput([makeAuditEvent("capture_blocked", "capture_sample_fileio_events", message)]);
-      setInspectorTab("output");
-    } finally {
-      setNativeBusy(false);
-    }
-  }
-
-  async function handleCaptureAndSaveSession() {
-    setNativeBusy(true);
-
-    try {
-      appendOutput([makeAuditEvent("session_capture_requested", "capture_sample_fileio_session_events", "Controlled native capture and session write requested from UI.")]);
-      const result = await captureSampleFileIoSession();
-      setCaptureResult(result);
-      setBackendMode(result.success ? "native-capture" : "native-enum");
-      setDroppedCount(result.droppedEvents);
-
-      if (result.session) {
-        setLastSession(result.session);
-        appendOutput([
-          makeAuditEvent(
-            result.session.success ? "session_written" : "session_write_failed",
-            "capture_sample_fileio_session_events",
-            `${result.session.sessionPath}; traceEvents=${result.session.traceEventCount}; dropped=${result.session.droppedEvents}`,
-            result.session.win32ErrorCode
-          )
-        ]);
-      }
-
-      appendOutput(result.auditEvents.length > 0 ? result.auditEvents : [makeAuditEvent("capture_result", result.operation, result.message, result.win32ErrorCode)]);
-
-      if (result.capturedEvents.length > 0) {
-        appendCapturedEvents(result.capturedEvents, ["sample-session", `target:${result.targetProcessId}`]);
-      }
-
-      setInspectorTab("output");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      appendOutput([makeAuditEvent("session_capture_blocked", "capture_sample_fileio_session_events", message)]);
-      setInspectorTab("output");
-    } finally {
-      setNativeBusy(false);
-    }
-  }
-
-  async function handleReplayLastSession() {
-    setNativeBusy(true);
-
-    try {
-      appendOutput([makeAuditEvent("session_replay_requested", "replay_last_sample_session", "Replay last saved sample session requested from UI.")]);
-      const result = await replayLastSampleSession();
-      setBackendMode(result.backendMode);
-      setLastSession(result.session);
-      setDroppedCount(result.session.droppedEvents);
-      appendOutput([
-        makeAuditEvent(
-          result.success ? "session_replayed" : "session_replay_failed",
-          "replay_last_sample_session",
-          `${result.message}; path=${result.session.sessionPath}; traceEvents=${result.traceEvents.length}; dropped=${result.session.droppedEvents}`,
-          result.session.win32ErrorCode
-        )
-      ]);
-
-      setEvents(result.traceEvents);
-      nextEventId.current = nextTraceEventId(result.traceEvents);
-      setSelectedEventId(result.traceEvents[result.traceEvents.length - 1]?.eventId ?? 0);
-      setReplaySource({
-        kind: "sample",
-        label: result.session.sessionId || "latest-sample-fileio",
-        path: result.session.sessionPath,
-        validationStatus: result.session.success ? "valid" : "invalid"
+      appendOutput([makeAuditEvent("launch_requested", "start_launch_monitor_session", `Early-bird launch monitor requested for ${targetPath}.`)]);
+      const session = await startLaunchMonitorSession(targetPath, launchWorkingDirectory.trim(), launchDurationMs);
+      streamBatchCursors.current[session.sessionId] = 0;
+      setLaunchSession(session);
+      setBackendMode("native-capture");
+      setNativeSessions((current) => {
+        const remaining = current.filter((item) => item.sessionId !== session.sessionId);
+        return [session, ...remaining];
       });
-
       setInspectorTab("output");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setEvents([]);
-      setSelectedEventId(0);
-      nextEventId.current = 1;
-      setReplaySource(null);
-      appendOutput([makeAuditEvent("session_replay_blocked", "replay_last_sample_session", message)]);
+      appendOutput([makeAuditEvent("launch_blocked", "start_launch_monitor_session", message)]);
       setInspectorTab("output");
     } finally {
       setNativeBusy(false);
@@ -1476,21 +1293,16 @@ function App() {
             <Download size={15} />
           </button>
           <span className="toolbar-separator" />
-          <button className="tool-button primary" type="button" title="Start capture" onClick={handleStartCapture} disabled={running}>
-            <Play size={15} />
-            <span>Start</span>
-          </button>
-          <button className="tool-button" type="button" title="Stop capture" onClick={handleStopCapture} disabled={!running}>
-            <Square size={14} />
-            <span>Stop</span>
+          <button className="tool-button" type="button" title="Refresh process list" onClick={handleLoadNativeTargets} disabled={nativeBusy}>
+            <RefreshCcw size={15} />
           </button>
           <button className="tool-button danger" type="button" title="Clear session" onClick={handleClear}>
             <Trash2 size={15} />
           </button>
         </div>
         <div className="topbar-status">
-          <span className={running ? "pulse running" : "pulse"} />
-          <span>{running ? "capturing" : "stopped"}</span>
+          <span className={activeNativeSession || nativeBusy ? "pulse running" : "pulse"} />
+          <span>{activeNativeSession ? activeNativeSession.sessionState : nativeBusy ? "working" : "idle"}</span>
         </div>
       </header>
 
@@ -1507,16 +1319,13 @@ function App() {
               <div className="source-panel">
                 <div className="source-title">
                   <Cpu size={14} />
-                  <span>Target Source</span>
+                  <span>Native Targets</span>
                 </div>
                 <div className="source-toggle">
-                  <button type="button" className={targetSource === "mock" ? "active" : ""} onClick={handleLoadMockTargets} disabled={nativeBusy}>
-                    Mock
+                  <button type="button" className="active" onClick={handleLoadNativeTargets} disabled={nativeBusy}>
+                    Desktop
                   </button>
-                  <button type="button" className={targetSource === "native" ? "active" : ""} onClick={handleLoadNativeTargets} disabled={nativeBusy}>
-                    Native
-                  </button>
-                  <button type="button" title="Refresh current target source" onClick={targetSource === "native" ? handleLoadNativeTargets : handleLoadMockTargets} disabled={nativeBusy}>
+                  <button type="button" title="Refresh native target list" onClick={handleLoadNativeTargets} disabled={nativeBusy}>
                     <RefreshCcw size={13} />
                   </button>
                 </div>
@@ -1735,61 +1544,69 @@ function App() {
               <div className="controlled-launch">
                 <div className="section-title">
                   <Rocket size={14} />
-                  <span>Controlled Launch</span>
+                  <span>Launch Target</span>
                 </div>
                 <div className="launch-grid">
-                  <label>Sample target</label>
-                  <span>knmon-sample-fileio.exe</span>
+                  <label htmlFor="launch-target-path">Executable</label>
+                  <input
+                    id="launch-target-path"
+                    type="text"
+                    value={launchTargetPath}
+                    onChange={(event) => setLaunchTargetPath(event.target.value)}
+                    placeholder="C:\\Path\\target.exe"
+                  />
+                  <label htmlFor="launch-working-directory">Working dir</label>
+                  <input
+                    id="launch-working-directory"
+                    type="text"
+                    value={launchWorkingDirectory}
+                    onChange={(event) => setLaunchWorkingDirectory(event.target.value)}
+                    placeholder="optional"
+                  />
+                  <label htmlFor="launch-duration">Duration</label>
+                  <input
+                    id="launch-duration"
+                    type="number"
+                    min={250}
+                    max={30000}
+                    step={250}
+                    value={launchDurationMs}
+                    onChange={(event) => setLaunchDurationMs(clampDurationMs(event.target.value, launchDurationMs))}
+                  />
                   <label>Agent</label>
-                  <span>{fileNameFromPath(captureResult?.agentPath ?? launchResult?.agentPath ?? "knmon-agent64.dll")}</span>
+                  <span>knmon-agent64.dll</span>
                   <label>Architecture</label>
-                  <span>{captureResult?.architecture ?? launchResult?.architecture ?? "x64"} exact match</span>
+                  <span>same-bitness only</span>
                   <label>Injection</label>
                   <span>early-bird APC</span>
-                  <label>Handshake</label>
-                  <span>{captureResult ? (captureResult.handshake.received ? "HELLO received" : "not received") : launchResult ? (launchResult.handshake.received ? "HELLO received" : "not received") : "not launched"}</span>
-                  <label>Captured rows</label>
-                  <span>{captureResult ? captureResult.capturedEvents.length : 0}</span>
-                  <label>Dropped</label>
-                  <span>{captureResult ? captureResult.droppedEvents : droppedCount}</span>
-                  <label>Transport</label>
-                  <span>{captureResult ? captureResult.transportMode : "not active"}</span>
-                  <label>Transport rows</label>
-                  <span>{captureResult ? `${captureResult.transportRecordsConsumed}/${captureResult.transportRecordsProduced}` : "0/0"}</span>
-                  <label>Hook avg</label>
-                  <span>{captureResult ? `${captureResult.hookOverheadAvgUs} us avg` : "not measured"}</span>
                   <label>Session</label>
-                  <span>{lastSession ? lastSession.sessionId || "latest-sample-fileio" : "not saved"}</span>
+                  <span>{currentLaunchSession ? currentLaunchSession.sessionId : "not started"}</span>
+                  <label>State</label>
+                  <span>{currentLaunchSession ? currentLaunchSession.sessionState : "idle"}</span>
+                  <label>Target PID</label>
+                  <span>{currentLaunchSession?.targetProcessId || "pending"}</span>
+                  <label>Streamed rows</label>
+                  <span>{currentLaunchSession ? currentLaunchSession.recordsStreamed : 0}</span>
+                  <label>Dropped</label>
+                  <span>{currentLaunchSession ? currentLaunchSession.transportDroppedEvents : droppedCount}</span>
                 </div>
                 <div className="launch-actions">
-                  <button type="button" className="tool-button primary" onClick={handleLaunchSample} disabled={nativeBusy}>
+                  <button type="button" className="tool-button primary" onClick={handleStartLaunchMonitor} disabled={nativeBusy || !!activeNativeSession || !!activeNativeOperation}>
                     <Play size={14} />
-                    <span>Launch Sample</span>
-                  </button>
-                  <button type="button" className="tool-button primary" onClick={handleCaptureSampleFileIo} disabled={nativeBusy}>
-                    <Activity size={14} />
-                    <span>Capture File I/O</span>
-                  </button>
-                  <button type="button" className="tool-button" onClick={handleCaptureAndSaveSession} disabled={nativeBusy}>
-                    <Database size={14} />
-                    <span>Capture And Save</span>
-                  </button>
-                  <button type="button" className="tool-button" onClick={handleReplayLastSession} disabled={nativeBusy}>
-                    <FolderOpen size={14} />
-                    <span>Replay Last</span>
+                    <span>Launch Monitor</span>
                   </button>
                   <button type="button" className="tool-button" onClick={handleRefreshSessionCatalog} disabled={nativeBusy}>
                     <RefreshCcw size={14} />
-                    <span>Build Catalog</span>
+                    <span>Refresh Catalog</span>
                   </button>
-                  <button type="button" className="tool-button" disabled title="Bounded sample capture owns target lifetime for this milestone; persistent terminate control is not implemented yet.">
+                  <button type="button" className="tool-button" onClick={handleStopNativeSession} disabled={!activeNativeSession || activeNativeSession.stopRequested}>
                     <Square size={13} />
-                    <span>Terminate</span>
+                    <span>Stop Session</span>
                   </button>
                 </div>
-                {launchResult ? (
-                  <div className={launchResult.success ? "launch-result success" : "launch-result failure"}>
-                    PID {launchResult.targetProcessId} / {launchResult.injectionMethod} / {launchResult.message}
+                {currentLaunchSession ? (
+                  <div className={currentLaunchSession.sessionState === "failed" || currentLaunchSession.sessionState === "recovery_required" ? "launch-result failure" : "launch-result success"}>
+                    {currentLaunchSession.sessionKind} / PID {currentLaunchSession.targetProcessId || "pending"} / {currentLaunchSession.recordsStreamed} records / {currentLaunchSession.sessionState}
                   </div>
                 ) : null}
                 {captureResult ? (
@@ -1799,7 +1616,7 @@ function App() {
                 ) : null}
                 {lastSession ? (
                   <div className={lastSession.success ? "launch-result success" : "launch-result failure"}>
-                    session {lastSession.sessionId || "latest-sample-fileio"} / events={lastSession.traceEventCount} / {lastSession.message}
+                    session {lastSession.sessionId || "replayed-session"} / events={lastSession.traceEventCount} / {lastSession.message}
                   </div>
                 ) : null}
                 <div className="catalog-browser">
@@ -2517,7 +2334,7 @@ function App() {
       </main>
 
       <footer className="statusbar">
-        <span>State: {running ? "running" : "stopped"}</span>
+        <span>State: {activeNativeSession ? activeNativeSession.sessionState : "idle"}</span>
         <span>Events: {events.length}</span>
         <span>Dropped: {droppedCount}</span>
         <span>Session: {formatBytes(sessionBytes)}</span>

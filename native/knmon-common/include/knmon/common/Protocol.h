@@ -22,22 +22,6 @@ enum class KnMonDecodeStatus : std::uint32_t
     Truncated = 5,
 };
 
-enum class KnMonCaptureSessionState : std::uint32_t
-{
-    Stopped = 0,
-    Starting = 1,
-    Running = 2,
-    Stopping = 3,
-    Failed = 4,
-};
-
-enum class KnMonBackendMode : std::uint32_t
-{
-    Mock = 0,
-    NativeEnum = 1,
-    NativeCapture = 2,
-};
-
 enum class KnMonAgentArchitecture : std::uint32_t
 {
     Unknown = 0,
@@ -107,6 +91,7 @@ inline constexpr std::uint32_t KnMonTransportText1Bytes = 160;
 inline constexpr std::uint32_t KnMonTransportText2Bytes = 80;
 inline constexpr std::uint32_t KnMonTransportSlotCount64 = 8;
 inline constexpr std::uint32_t KnMonTransportSlotCount32 = 8;
+inline constexpr std::uint32_t KnMonTransportRecordFlagGenericInventory = 0x00000001;
 
 enum class KnMonTransportRecordState : std::int32_t
 {
@@ -270,10 +255,17 @@ struct KnMonAgentHandshake
 struct KnMonLaunchRequest
 {
     std::string OperationId;
+    std::string SessionId;
+    std::string SessionKind;
+    std::string StartedUtc;
     std::string TargetPath;
     std::string AgentPath;
     std::string WorkingDirectory;
+    std::uint32_t OwnerProcessId = 0;
+    std::uint32_t HelperProcessId = 0;
+    std::string CancellationEventName;
     std::uint32_t TimeoutMs = 5000;
+    std::uint32_t DurationMs = 3000;
     KnMonAgentArchitecture Architecture = KnMonAgentArchitecture::X64;
     KnMonInjectionMethod InjectionMethod = KnMonInjectionMethod::EarlyBirdApc;
 };

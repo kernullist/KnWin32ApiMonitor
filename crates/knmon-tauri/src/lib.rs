@@ -28,16 +28,6 @@ pub struct TargetProcess
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CaptureSessionState
-{
-    pub state: String,
-    pub backend_mode: String,
-    pub event_count: u64,
-    pub dropped_events: u64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct NativeOperation
 {
     pub operation_id: String,
@@ -839,31 +829,6 @@ pub struct SessionReplayResult
     pub trace_events: Vec<TraceEvent>,
 }
 
-impl CaptureSessionState
-{
-    pub fn running_mock() -> Self
-    {
-        Self
-        {
-            state: "running".to_string(),
-            backend_mode: "mock".to_string(),
-            event_count: 0,
-            dropped_events: 0,
-        }
-    }
-
-    pub fn stopped_mock() -> Self
-    {
-        Self
-        {
-            state: "stopped".to_string(),
-            backend_mode: "mock".to_string(),
-            event_count: 0,
-            dropped_events: 0,
-        }
-    }
-}
-
 static NATIVE_OPERATIONS: OnceLock<Mutex<HashMap<String, NativeOperationRecord>>> = OnceLock::new();
 
 fn operation_registry() -> &'static Mutex<HashMap<String, NativeOperationRecord>>
@@ -1447,6 +1412,132 @@ pub fn start_streaming_attach_session(process_id: u32, duration_ms: u32) -> Resu
         .ok_or_else(|| format!("streaming session not found after start: {session_id}"))
 }
 
+pub fn start_launch_monitor_session(target_path: String, working_directory: String, duration_ms: u32) -> Result<NativeSession, String>
+{
+    let target = target_path.trim();
+    if target.is_empty()
+    {
+        return Err("launch target path is required".to_string());
+    }
+
+    let duration = normalize_duration_ms(duration_ms);
+    let helper_timeout = helper_inner_timeout_ms(duration);
+    let operation_id = new_operation_id("ui-launch", 0);
+    let session_id = new_session_id(&operation_id);
+    register_native_operation(&operation_id, "launch_capture_stream", 0, duration);
+
+    let helper_path = find_helper_path()
+        .ok_or_else(|| "knmon-native-helper.exe was not found. Run `npm run native:build` first.".to_string())?;
+
+    let mut args = vec![
+        "launch-session".to_string(),
+        "--target".to_string(),
+        target.to_string(),
+        "--duration-ms".to_string(),
+        duration.to_string(),
+        "--timeout-ms".to_string(),
+        helper_timeout.to_string(),
+        "--operation-id".to_string(),
+        operation_id.clone(),
+        "--session-id".to_string(),
+        session_id.clone(),
+        "--stream-batches".to_string(),
+        "--batch-size".to_string(),
+        "64".to_string(),
+    ];
+
+    let cwd = working_directory.trim();
+    if !cwd.is_empty()
+    {
+        args.push("--cwd".to_string());
+        args.push(cwd.to_string());
+    }
+
+    let mut child = Command::new(&helper_path)
+        .args(&args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| format!("failed to run {} launch-session: {error}", helper_path.display()))?;
+
+    mark_native_operation_helper_pid(&operation_id, child.id());
+
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "failed to capture launch-session stdout".to_string())?;
+    let stderr = child.stderr.take();
+    let worker_operation_id = operation_id.clone();
+    thread::spawn(move ||
+    {
+        let stderr_thread = stderr.map(|mut pipe| {
+            thread::spawn(move ||
+            {
+                let mut text = String::new();
+                let _ = pipe.read_to_string(&mut text);
+                text
+            })
+        });
+
+        let reader = BufReader::new(stdout);
+        for line_result in reader.lines()
+        {
+            match line_result
+            {
+                Ok(line) =>
+                {
+                    let trimmed = line.trim();
+                    if trimmed.is_empty()
+                    {
+                        continue;
+                    }
+
+                    if let Err(error) = process_streaming_frame_line(&worker_operation_id, trimmed)
+                    {
+                        update_streaming_error(&worker_operation_id, "failed", error);
+                    }
+                }
+                Err(error) =>
+                {
+                    update_streaming_error(&worker_operation_id, "failed", format!("streaming stdout read failed: {error}"));
+                    break;
+                }
+            }
+        }
+
+        let status = child.wait();
+        let stderr_text = match stderr_thread
+        {
+            Some(handle) => handle.join().unwrap_or_default(),
+            None => String::new(),
+        };
+
+        match status
+        {
+            Ok(exit_status) =>
+            {
+                if !exit_status.success()
+                {
+                    update_streaming_error(
+                        &worker_operation_id,
+                        "failed",
+                        format!("launch-session exited with {:?}; stderr={}", exit_status.code(), stderr_text.trim()));
+                }
+            }
+            Err(error) =>
+            {
+                update_streaming_error(&worker_operation_id, "failed", format!("failed to wait for launch-session: {error}"));
+            }
+        }
+    });
+
+    let registry = operation_registry().lock().unwrap();
+    registry
+        .get(&operation_id)
+        .map(session_view)
+        .ok_or_else(|| format!("launch session not found after start: {session_id}"))
+}
+
 pub fn start_daemon_if_needed() -> Result<NativeDaemonStatus, String>
 {
     let helper_output = run_helper_args(&[
@@ -1902,49 +1993,7 @@ pub fn drain_native_trace_batches(session_id: String, after_batch_sequence: u64)
 
 pub fn backend_status() -> &'static str
 {
-    "mock"
-}
-
-pub fn mock_target_processes() -> Vec<TargetProcess>
-{
-    vec![
-        TargetProcess
-        {
-            pid: 8840,
-            parent_pid: Some(672),
-            image_name: "notepad.exe".to_string(),
-            image_path: Some("C:\\Windows\\System32\\notepad.exe".to_string()),
-            architecture: "x64".to_string(),
-            status: "available".to_string(),
-        },
-        TargetProcess
-        {
-            pid: 4216,
-            parent_pid: Some(812),
-            image_name: "explorer.exe".to_string(),
-            image_path: Some("C:\\Windows\\explorer.exe".to_string()),
-            architecture: "x64".to_string(),
-            status: "available".to_string(),
-        },
-        TargetProcess
-        {
-            pid: 13064,
-            parent_pid: Some(8840),
-            image_name: "sample-fileio.exe".to_string(),
-            image_path: Some("F:\\kernullist\\kn-win32apimon\\samples\\targets\\sample-fileio.exe".to_string()),
-            architecture: "x64".to_string(),
-            status: "mock-target".to_string(),
-        },
-        TargetProcess
-        {
-            pid: 4,
-            parent_pid: None,
-            image_name: "System".to_string(),
-            image_path: None,
-            architecture: "kernel".to_string(),
-            status: "unsupported".to_string(),
-        },
-    ]
+    "native-capture"
 }
 
 pub fn native_target_processes() -> Result<Vec<TargetProcess>, String>

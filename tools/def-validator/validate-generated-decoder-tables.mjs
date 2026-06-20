@@ -26,7 +26,7 @@ if (errors.length === 0) {
   }
 
   const apiIds = new Set(actual.apis.map((api) => api.id));
-  for (let id = 1; id <= 90; ++id) {
+  for (let id = 1; id <= 179; ++id) {
     if (!apiIds.has(id)) {
       errors.push(`generated decoder metadata is missing API id ${id}`);
     }

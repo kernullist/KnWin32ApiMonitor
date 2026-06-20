@@ -7088,9 +7088,22 @@ NativeSessionInfo BuildAttachSessionInfo(
 NativeSessionInfo BuildSessionInfoFromCapture(const knmon::KnMonCaptureResult& result, const NativeSessionInfo& previous)
 {
     NativeSessionInfo session = previous;
+    if (result.TargetProcessId != 0)
+    {
+        session.TargetProcessId = result.TargetProcessId;
+    }
+
     session.SessionState = result.SessionState.empty() ? (result.Success ? "stopped" : "failed") : result.SessionState;
     session.UpdatedUtc = result.UpdatedUtc.empty() ? NowUtc() : result.UpdatedUtc;
-    session.StoppedUtc = result.StoppedUtc.empty() ? session.UpdatedUtc : result.StoppedUtc;
+    if (!result.StoppedUtc.empty())
+    {
+        session.StoppedUtc = result.StoppedUtc;
+    }
+    else if (session.SessionState == "stopped" || session.SessionState == "failed" || session.SessionState == "stale" || session.SessionState == "recovery_required")
+    {
+        session.StoppedUtc = session.UpdatedUtc;
+    }
+
     session.LastTransportSequence = result.LastTransportSequence;
     session.RecordsStreamed = result.RecordsStreamed;
     session.TransportDroppedEvents = result.TransportDroppedEvents;
@@ -7110,6 +7123,108 @@ NativeSessionInfo BuildSessionInfoFromCapture(const knmon::KnMonCaptureResult& r
     }
 
     return session;
+}
+
+int LaunchSessionCommand(const std::vector<std::string>& args)
+{
+    const auto helperDir = HelperDirectory();
+    const std::string defaultAgent = WideToUtf8((helperDir / DefaultAgentFileName()).wstring().c_str());
+    const std::string operationId = OperationIdFromArgs(args);
+    const std::string sessionId = SessionIdFromArgs(args, operationId);
+    const std::string startedUtc = NowUtc();
+    const std::string cancellationEventName = CancellationEventNameFromArgs(args, operationId);
+    const std::string targetPath = GetOption(args, "--target");
+    const bool streamBatches = HasOption(args, "--stream-batches");
+    std::uint32_t batchSize = GetUInt32Option(args, "--batch-size", 64);
+
+    if (batchSize == 0)
+    {
+        batchSize = 64;
+    }
+
+    NativeSessionInfo session = BuildAttachSessionInfo(
+        sessionId,
+        operationId,
+        0,
+        cancellationEventName,
+        "starting",
+        startedUtc);
+    session.SessionKind = streamBatches ? "launch_capture_stream" : "launch_capture";
+    session.OwnerProcessId = GetCurrentProcessId();
+    session.HelperProcessId = GetCurrentProcessId();
+
+    if (targetPath.empty())
+    {
+        session.SessionState = "failed";
+        session.LastError = "missing_target";
+        session.RecoveryAction = "fix_launch_target_path";
+        std::cout << SessionFrameJson("session_failed", session) << "\n";
+        return 1;
+    }
+
+    knmon::KnMonLaunchRequest request;
+    request.OperationId = operationId;
+    request.SessionId = sessionId;
+    request.SessionKind = session.SessionKind;
+    request.StartedUtc = startedUtc;
+    request.TargetPath = targetPath;
+    request.AgentPath = GetOption(args, "--agent");
+    request.WorkingDirectory = GetOption(args, "--cwd");
+    request.OwnerProcessId = GetCurrentProcessId();
+    request.HelperProcessId = GetCurrentProcessId();
+    request.CancellationEventName = cancellationEventName;
+    request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
+    request.DurationMs = GetUInt32Option(args, "--duration-ms", 3000);
+    request.Architecture = NativeHelperArchitecture();
+    request.InjectionMethod = knmon::KnMonInjectionMethod::EarlyBirdApc;
+
+    if (request.AgentPath.empty())
+    {
+        request.AgentPath = defaultAgent;
+    }
+
+    std::cout << SessionFrameJson("session_started", session) << "\n" << std::flush;
+    session.SessionState = "running";
+    session.UpdatedUtc = NowUtc();
+    std::cout << SessionFrameJson("session_state", session) << "\n" << std::flush;
+
+    knmon::Controller controller;
+    knmon::KnMonCaptureStreamCallbacks callbacks;
+    callbacks.MaxRecordsPerBatch = batchSize;
+    callbacks.OnTraceBatch = [&](const knmon::KnMonTraceBatch& batch) -> bool
+    {
+        session.LastTransportSequence = batch.LastRecordSequence;
+        session.RecordsStreamed = batch.RecordsStreamed;
+        session.TransportDroppedEvents = batch.DroppedEvents;
+        session.HostDroppedBatches = batch.HostDroppedBatches;
+        session.UpdatedUtc = NowUtc();
+        std::cout << TraceBatchFrameJson(batch) << "\n" << std::flush;
+        return true;
+    };
+    callbacks.OnSessionFrame = [&](const std::string& frameType, const knmon::KnMonCaptureResult& partialResult)
+    {
+        session = BuildSessionInfoFromCapture(partialResult, session);
+        session.SessionState = partialResult.SessionState.empty() ? session.SessionState : partialResult.SessionState;
+        std::cout << SessionFrameJson(frameType, session) << "\n" << std::flush;
+    };
+
+    const knmon::KnMonCaptureStreamCallbacks* callbackPtr = streamBatches ? &callbacks : nullptr;
+    knmon::KnMonCaptureResult result = controller.LaunchCapture(request, callbackPtr);
+    session = BuildSessionInfoFromCapture(result, session);
+
+    const std::string finalFrame = session.SessionState == "failed" ? "session_failed" : "session_stopped";
+    std::cout << SessionFrameJson(finalFrame, session) << "\n";
+
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"frameType\":\"capture_result\",";
+    stream << "\"session\":" << ToJson(session) << ",";
+    stream << "\"captureResult\":" << ToJson(result);
+    stream << "}";
+    std::cout << stream.str() << "\n";
+
+    return 0;
 }
 
 knmon::KnMonChildPolicy ParseChildPolicy(const std::string& value)
@@ -9288,7 +9403,7 @@ void PrintUsage()
     std::cout << "{";
     std::cout << "\"schemaVersion\":\"0.1.0\",";
     std::cout << "\"success\":false,";
-    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] [--knapm-compression none|zstd] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-audit [--runtime-dir dir] | daemon-recovery-plan [--runtime-dir dir] | daemon-recovery-apply [--runtime-dir dir] [--dry-run|--apply-registry-prune] | daemon-prune-stale [--runtime-dir dir] [--dry-run] | daemon-start-session --pid pid --write-knapm path [--knapm-compression none|zstd] [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | catalog-sessions --root dir [--catalog path] [--rebuild] | catalog-query --catalog path [--limit n] [--state state] [--target pid-or-text] | catalog-remove-missing --catalog path [--dry-run] | catalog-index-build --root dir --database path [--rebuild] | catalog-index-query --database path [--limit n] [--state state] [--target pid-or-text] | catalog-index-remove-missing --database path [--dry-run] | trace-index-build --root dir --database path [--rebuild] | trace-index-query --database path [--text text] [--api api] [--module module] [--session id-or-path] [--pid pid] [--limit n] | trace-index-remove-missing --database path [--dry-run] | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
+    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | launch-session --target path [--cwd dir] [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] [--knapm-compression none|zstd] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-audit [--runtime-dir dir] | daemon-recovery-plan [--runtime-dir dir] | daemon-recovery-apply [--runtime-dir dir] [--dry-run|--apply-registry-prune] | daemon-prune-stale [--runtime-dir dir] [--dry-run] | daemon-start-session --pid pid --write-knapm path [--knapm-compression none|zstd] [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | catalog-sessions --root dir [--catalog path] [--rebuild] | catalog-query --catalog path [--limit n] [--state state] [--target pid-or-text] | catalog-remove-missing --catalog path [--dry-run] | catalog-index-build --root dir --database path [--rebuild] | catalog-index-query --database path [--limit n] [--state state] [--target pid-or-text] | catalog-index-remove-missing --database path [--dry-run] | trace-index-build --root dir --database path [--rebuild] | trace-index-query --database path [--text text] [--api api] [--module module] [--session id-or-path] [--pid pid] [--limit n] | trace-index-remove-missing --database path [--dry-run] | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
     std::cout << "}\n";
 }
 }
@@ -9317,6 +9432,11 @@ int wmain(int argc, wchar_t** argv)
     {
         std::cout << LaunchSampleJson(args) << "\n";
         return 0;
+    }
+
+    if (args[0] == "launch-session")
+    {
+        return LaunchSessionCommand(args);
     }
 
     if (args[0] == "capture-sample")

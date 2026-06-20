@@ -3093,6 +3093,194 @@ std::string ApiCallPayload(
     return stream.str();
 }
 
+bool IsGenericInventoryRecord(const KnMonTransportRecord& record)
+{
+    return (record.Flags & KnMonTransportRecordFlagGenericInventory) != 0;
+}
+
+std::string MetadataTokenValue(const std::string& text, const std::string& key, const std::string& fallback)
+{
+    std::string result = fallback;
+    std::size_t start = 0;
+
+    while (start <= text.size())
+    {
+        std::size_t end = text.find(';', start);
+        if (end == std::string::npos)
+        {
+            end = text.size();
+        }
+
+        const std::string token = text.substr(start, end - start);
+        const std::size_t separator = token.find('=');
+        if (separator != std::string::npos && token.substr(0, separator) == key)
+        {
+            result = token.substr(separator + 1);
+            break;
+        }
+
+        if (end == text.size())
+        {
+            break;
+        }
+
+        start = end + 1;
+    }
+
+    return result;
+}
+
+struct GenericArgumentSchema
+{
+    std::string Name = "arg0";
+    std::string Type = "PVOID";
+    std::string Direction = "in";
+    std::string DecodeHint = "pointer";
+};
+
+GenericArgumentSchema ParseGenericArgumentSchema(const std::string& text)
+{
+    GenericArgumentSchema schema;
+    std::array<std::string*, 4> fields =
+    {{
+        &schema.Name,
+        &schema.Type,
+        &schema.Direction,
+        &schema.DecodeHint
+    }};
+    std::size_t start = 0;
+    std::size_t fieldIndex = 0;
+
+    while (fieldIndex < fields.size() && start <= text.size())
+    {
+        std::size_t end = text.find('|', start);
+        if (end == std::string::npos)
+        {
+            end = text.size();
+        }
+
+        *fields[fieldIndex] = text.substr(start, end - start);
+        ++fieldIndex;
+
+        if (end == text.size())
+        {
+            break;
+        }
+
+        start = end + 1;
+    }
+
+    if (schema.Name.empty())
+    {
+        schema.Name = "arg0";
+    }
+
+    if (schema.Type.empty())
+    {
+        schema.Type = "PVOID";
+    }
+
+    if (schema.Direction.empty())
+    {
+        schema.Direction = "in";
+    }
+
+    if (schema.DecodeHint.empty())
+    {
+        schema.DecodeHint = "pointer";
+    }
+
+    return schema;
+}
+
+std::string GenericReturnValueText(const KnMonCaptureResult& result, const KnMonTransportRecord& record)
+{
+    std::string value = "void";
+
+    switch (record.Values32[2])
+    {
+    case 1:
+        value = record.ReturnValue == 0 ? "FALSE" : "TRUE";
+        break;
+    case 2:
+        value = DwordDecimalHexText(static_cast<std::uint32_t>(record.ReturnValue));
+        break;
+    case 3:
+        value = HexPointerValue(record.ReturnValue, result.Architecture);
+        break;
+    case 0:
+    default:
+        value = "void";
+        break;
+    }
+
+    return value;
+}
+
+std::string GenericTransportApiPayload(
+    const KnMonCaptureResult& result,
+    const KnMonTransportRecord& record,
+    const std::string& text0,
+    const std::string& text1,
+    const std::string& text2)
+{
+    const std::string apiName = text0.empty() ? TransportApiName(record.ApiId) : text0;
+    const std::string moduleName = TransportModuleName(record.ModuleId);
+    const std::string apiFamily = MetadataTokenValue(text1, "family", "tier1");
+    const std::string apiCategory = MetadataTokenValue(text1, "category", "tier1/generic");
+    const std::string profile = MetadataTokenValue(text1, "profile", "tier1");
+    const std::string inventoryKey = MetadataTokenValue(text1, "inventoryKey", moduleName + "!" + apiName);
+    const GenericArgumentSchema schema = ParseGenericArgumentSchema(text2);
+    const bool scalarArgument = schema.DecodeHint == "raw" || schema.DecodeHint == "scalar" || schema.DecodeHint == "object";
+    const std::string argumentValue = scalarArgument ?
+        DwordDecimalHexText(static_cast<std::uint32_t>(record.Values64[0])) :
+        HexPointerValue(record.Values64[0], result.Architecture);
+    const std::string decoded = scalarArgument ? argumentValue : (schema.DecodeHint + ";pointer=" + argumentValue);
+    const std::string agentName = FileNameFromPath(result.AgentPath);
+    std::ostringstream args;
+    args << ArgumentJson(
+        0,
+        schema.Type,
+        schema.Name,
+        schema.Direction,
+        argumentValue,
+        argumentValue,
+        decoded,
+        DecodeStatusName(record.Values32[1]),
+        "generic_pointer",
+        "pre_post");
+
+    std::ostringstream stream;
+    stream << "{";
+    stream << "\"schemaVersion\":\"0.1.0\",";
+    stream << "\"messageType\":\"api_call\",";
+    stream << "\"operationId\":" << Q(result.OperationId) << ",";
+    stream << "\"pid\":" << record.ProcessId << ",";
+    stream << "\"tid\":" << record.ThreadId << ",";
+    stream << "\"timestampUtc\":" << Q(NowUtc()) << ",";
+    stream << "\"sequence\":" << record.Sequence << ",";
+    stream << "\"api\":" << Q(apiName) << ",";
+    stream << "\"module\":" << Q(moduleName) << ",";
+    stream << "\"process\":\"knmon-sample-fileio.exe\",";
+    stream << "\"apiFamily\":" << Q(apiFamily) << ",";
+    stream << "\"apiCategory\":" << Q(apiCategory) << ",";
+    stream << "\"apiRisk\":\"medium\",";
+    stream << "\"hookPolicy\":\"tier1_generic_iat\",";
+    stream << "\"coverageStatus\":\"generic_decoded\",";
+    stream << "\"inventoryKey\":" << Q(inventoryKey) << ",";
+    stream << "\"tier1Profile\":" << Q(profile) << ",";
+    stream << "\"returnValue\":" << Q(GenericReturnValueText(result, record)) << ",";
+    stream << "\"lastErrorCode\":" << record.LastErrorCode << ",";
+    stream << "\"lastErrorMessage\":" << Q(record.LastErrorCode == 0 ? "success" : FormatWindowsError(record.LastErrorCode)) << ",";
+    stream << "\"durationUs\":" << record.DurationUs << ",";
+    stream << "\"arguments\":[" << args.str() << "],";
+    stream << "\"tags\":[\"native-capture\",\"tier1\",\"generic\"," << Q(profile) << "," << Q(apiFamily) << ",\"hook\",\"shared-memory\"],";
+    stream << "\"stack\":[" << Q(agentName + "!IatHook") << "," << Q(moduleName + "!" + apiName) << "],";
+    stream << "\"bufferPreview\":\"\"";
+    stream << "}";
+    return stream.str();
+}
+
 std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnMonTransportRecord& record)
 {
     std::string payload;
@@ -3100,6 +3288,11 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
     const std::string text1 = TransportText(record.Text1, record.Text1Length, sizeof(record.Text1));
     const std::string text2 = TransportText(record.Text2, record.Text2Length, sizeof(record.Text2));
     std::ostringstream args;
+
+    if (IsGenericInventoryRecord(record))
+    {
+        return GenericTransportApiPayload(result, record, text0, text1, text2);
+    }
 
     switch (static_cast<KnMonTransportApiId>(record.ApiId))
     {
@@ -5285,6 +5478,637 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
     if (processInfo.hProcess != nullptr)
     {
         CloseHandle(processInfo.hProcess);
+    }
+
+    return result;
+}
+
+KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request) const
+{
+    return LaunchCapture(request, nullptr);
+}
+
+KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, const KnMonCaptureStreamCallbacks* streamCallbacks) const
+{
+    KnMonCaptureResult result;
+    const KnMonAgentArchitecture requestedArchitecture = RequestedArchitectureOrNative(request.Architecture);
+    result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
+    result.SessionId = request.SessionId;
+    result.SessionState = request.SessionId.empty() ? "" : "running";
+    result.SessionKind = request.SessionKind.empty() ? "launch_capture" : request.SessionKind;
+    result.OwnerProcessId = request.OwnerProcessId;
+    result.HelperProcessId = request.HelperProcessId;
+    result.StartedUtc = request.StartedUtc;
+    result.UpdatedUtc = NowUtc();
+    result.CancellationEventName = request.CancellationEventName;
+    result.TargetPath = request.TargetPath;
+    result.AgentPath = request.AgentPath;
+    result.Architecture = ArchitectureName(requestedArchitecture);
+    result.CaptureMode = "bounded-native-launch";
+    result.InjectionMethod = "early-bird APC";
+    result.DetachPolicy = "self-disable-no-unload";
+    result.AgentAbiVersion = KnMonAgentStateAbiVersion;
+    result.OperationState = "running";
+
+    PROCESS_INFORMATION processInfo = {};
+    STARTUPINFOW startupInfo = {};
+    startupInfo.cb = sizeof(startupInfo);
+    HANDLE pipeHandle = INVALID_HANDLE_VALUE;
+    SharedTransportSession transport;
+    void* remoteDllPath = nullptr;
+    std::uintptr_t remoteStopAddress = 0;
+    bool processCreated = false;
+    bool processResumed = false;
+    bool targetExited = false;
+    bool fatalError = false;
+    bool hookInstallFailed = false;
+    bool stopRequested = false;
+    bool agentShutdownReceived = false;
+    bool cancellationLogged = false;
+    std::uint64_t hookInstalledCount = 0;
+    std::uint64_t shutdownInstalledHooks = 0;
+    std::uint64_t shutdownRestoredHooks = 0;
+    std::uint64_t shutdownFailedHooks = 0;
+    std::string shutdownReason;
+    CancellationContext cancellationContext;
+    std::uint64_t streamBatchSequence = 0;
+
+    auto consumePayload = [&](const std::string& payload)
+    {
+        KnMonAgentMessage message = BuildAgentMessage(result, payload);
+        result.AgentMessages.push_back(message);
+
+        if (message.MessageType == "agent_hello" || PayloadContains(payload, "\"eventType\":\"agent_hello_received\""))
+        {
+            result.Handshake = BuildHandshake(result, payload);
+            AddAudit(result, "agent_hello_received", "agent_event_read", payload);
+        }
+        else if (message.MessageType == "hook_installed")
+        {
+            ++hookInstalledCount;
+            AddAudit(result, "hook_installed", "agent_event_read", payload);
+        }
+        else if (message.MessageType == "hook_install_failed")
+        {
+            hookInstallFailed = true;
+            AddAudit(result, "hook_install_failed", "agent_event_read", payload, ERROR_HOOK_NOT_INSTALLED);
+        }
+        else if (message.MessageType == "api_call")
+        {
+            result.CapturedEvents.push_back(message);
+            AddAudit(result, "api_call_received", "agent_event_read", message.RawPayload);
+        }
+        else if (message.MessageType == "dropped_events")
+        {
+            result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
+            AddAudit(result, "dropped_events_reported", "agent_event_read", payload);
+        }
+        else if (message.MessageType == "agent_shutdown")
+        {
+            agentShutdownReceived = true;
+            shutdownReason = ExtractJsonString(payload, "reason");
+            shutdownInstalledHooks = ExtractJsonUInt64(payload, "installedHooks");
+            shutdownRestoredHooks = ExtractJsonUInt64(payload, "restoredHooks");
+            shutdownFailedHooks = ExtractJsonUInt64(payload, "failedHooks");
+            result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
+            result.SessionShutdownEvidence = payload;
+            AddAudit(result, "agent_shutdown", "agent_event_read", payload);
+            if (shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0)
+            {
+                AddAudit(result, "agent_self_disabled", "agent_shutdown", payload);
+            }
+            else
+            {
+                AddAudit(result, "launch_cleanup_incomplete", "agent_shutdown", payload, ERROR_HOOK_NOT_INSTALLED);
+            }
+        }
+        else
+        {
+            AddAudit(result, "agent_message_received", "agent_event_read", payload);
+        }
+    };
+
+    auto observeCancellation = [&](const std::string& stage) -> bool
+    {
+        bool observed = false;
+
+        if (IsCancellationRequested(cancellationContext))
+        {
+            result.CancelRequested = true;
+            result.CancelObserved = true;
+            result.CancelStage = stage;
+            if (result.OperationState != "stopping_agent" && result.OperationState != "draining")
+            {
+                result.OperationState = "cancel_requested";
+            }
+
+            if (!cancellationLogged)
+            {
+                AddAudit(result, "operation_cancel_requested", stage, "Cancellation was requested for this launch capture operation.");
+                cancellationLogged = true;
+            }
+
+            observed = true;
+        }
+
+        return observed;
+    };
+
+    do
+    {
+        DWORD cancellationError = 0;
+        if (!OpenCancellationContext(request.CancellationEventName, &cancellationContext, &cancellationError))
+        {
+            SetResultError(result, cancellationError == 0 ? ERROR_INVALID_PARAMETER : cancellationError, "win32", "operation_cancellation_setup", "Failed to create launch cancellation event.");
+            fatalError = true;
+            break;
+        }
+
+        if (request.InjectionMethod != KnMonInjectionMethod::EarlyBirdApc)
+        {
+            SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "injection_method_check", "Only early-bird APC injection is supported by launch-capture.");
+            fatalError = true;
+            break;
+        }
+
+        if (observeCancellation("launch_preflight"))
+        {
+            SetResultError(result, ERROR_CANCELLED, "knmon-core", "operation_cancelled", "Launch capture was cancelled before process creation.");
+            result.OperationState = "cancelled";
+            fatalError = true;
+            break;
+        }
+
+        if (!RunSameBitnessPreflight(result, requestedArchitecture, request.TargetPath, request.AgentPath))
+        {
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "launch_capture_requested", "launch_capture", "Controlled early-bird launch capture requested.");
+
+        const std::wstring pipeName = L"\\\\.\\pipe\\knmon_agent_" + Utf8ToWide(result.OperationId);
+        pipeHandle = CreateNamedPipeW(
+            pipeName.c_str(),
+            PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
+            PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+            1,
+            65536,
+            65536,
+            request.TimeoutMs,
+            nullptr);
+
+        if (pipeHandle == INVALID_HANDLE_VALUE)
+        {
+            SetResultError(result, GetLastError(), "win32", "CreateNamedPipeW", "Failed to create launch agent event pipe.");
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "event_pipe_created", "CreateNamedPipeW", WideToUtf8(pipeName.c_str()));
+
+        DWORD transportError = 0;
+        if (!CreateSharedTransport(transport, result.OperationId, requestedArchitecture, &transportError))
+        {
+            SetResultError(result, transportError, "win32", "shared_memory_transport_create", "Failed to create launch shared-memory event transport.");
+            AddAudit(result, "transport_setup_failed", "shared_memory_transport_create", "Launch shared-memory event transport setup failed.", transportError, "win32");
+            fatalError = true;
+            break;
+        }
+
+        UpdateTransportMetrics(result, transport);
+        AddAudit(result, "launch_transport_created", "CreateFileMappingW", "Launch shared-memory event transport created.");
+
+        const std::wstring targetPath = Utf8ToWide(request.TargetPath);
+        const std::wstring agentPath = Utf8ToWide(request.AgentPath);
+        const std::wstring agentModuleName = std::filesystem::path(agentPath).filename().wstring();
+        const std::wstring workingDirectory = request.WorkingDirectory.empty() ? std::filesystem::path(targetPath).parent_path().wstring() : Utf8ToWide(request.WorkingDirectory);
+        std::wstring commandLine = QuoteArgument(targetPath);
+        std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
+        mutableCommandLine.push_back(L'\0');
+
+        EnvironmentOverride pipeEnv(L"KNMON_AGENT_PIPE", pipeName);
+        EnvironmentOverride operationEnv(L"KNMON_OPERATION_ID", Utf8ToWide(result.OperationId));
+        EnvironmentOverride modeEnv(L"KNMON_CAPTURE_MODE", L"launch");
+        EnvironmentOverride transportEnv(L"KNMON_TRANSPORT_NAME", transport.MappingName);
+        EnvironmentOverride transportRequiredEnv(L"KNMON_TRANSPORT_REQUIRED", L"1");
+
+        if (!CreateProcessW(
+            targetPath.c_str(),
+            mutableCommandLine.data(),
+            nullptr,
+            nullptr,
+            FALSE,
+            CREATE_SUSPENDED | CREATE_NO_WINDOW,
+            nullptr,
+            workingDirectory.empty() ? nullptr : workingDirectory.c_str(),
+            &startupInfo,
+            &processInfo))
+        {
+            SetResultError(result, GetLastError(), "win32", "CreateProcessW", "Failed to create target process suspended for launch capture.");
+            fatalError = true;
+            break;
+        }
+
+        processCreated = true;
+        result.TargetProcessId = processInfo.dwProcessId;
+        result.TargetThreadId = processInfo.dwThreadId;
+        AddAudit(result, "process_created_suspended", "CreateProcessW", "Target process created suspended for early-bird launch capture.");
+        EmitCaptureStreamSessionFrame(streamCallbacks, "session_state", result);
+
+        const std::uint64_t remoteSize = static_cast<std::uint64_t>((agentPath.size() + 1) * sizeof(wchar_t));
+        remoteDllPath = VirtualAllocEx(processInfo.hProcess, nullptr, static_cast<SIZE_T>(remoteSize), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+        if (remoteDllPath == nullptr)
+        {
+            SetResultError(result, GetLastError(), "win32", "VirtualAllocEx", "Failed to allocate remote agent path buffer.");
+            fatalError = true;
+            break;
+        }
+
+        SIZE_T bytesWritten = 0;
+        if (!WriteProcessMemory(processInfo.hProcess, remoteDllPath, agentPath.c_str(), static_cast<SIZE_T>(remoteSize), &bytesWritten))
+        {
+            SetResultError(result, GetLastError(), "win32", "WriteProcessMemory", "Failed to write agent path into target process.");
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "agent_path_written", "WriteProcessMemory", "Agent DLL path written into target process.");
+
+        HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
+        if (kernel32 == nullptr)
+        {
+            SetResultError(result, GetLastError(), "win32", "loader_failed", "Failed to resolve kernel32.dll before queuing LoadLibraryW.");
+            fatalError = true;
+            break;
+        }
+
+        FARPROC loadLibrary = GetProcAddress(kernel32, "LoadLibraryW");
+        if (loadLibrary == nullptr)
+        {
+            SetResultError(result, GetLastError(), "win32", "loader_failed", "Failed to resolve LoadLibraryW before queuing early-bird APC.");
+            fatalError = true;
+            break;
+        }
+
+        if (QueueUserAPC(reinterpret_cast<PAPCFUNC>(loadLibrary), processInfo.hThread, reinterpret_cast<ULONG_PTR>(remoteDllPath)) == 0)
+        {
+            SetResultError(result, GetLastError(), "win32", "QueueUserAPC", "Failed to queue early-bird APC.");
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "early_bird_apc_queued", "QueueUserAPC", "Early-bird LoadLibraryW APC queued on the suspended primary thread.");
+
+        if (ResumeThread(processInfo.hThread) == static_cast<DWORD>(-1))
+        {
+            SetResultError(result, GetLastError(), "win32", "ResumeThread", "Failed to resume target primary thread.");
+            fatalError = true;
+            break;
+        }
+
+        processResumed = true;
+        AddAudit(result, "primary_thread_resumed", "ResumeThread", "Target primary thread resumed.");
+
+        DWORD pipeError = 0;
+        if (!WaitForPipeConnection(pipeHandle, request.TimeoutMs, &pipeError))
+        {
+            if (processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
+            {
+                DWORD exitCode = 0;
+                GetExitCodeProcess(processInfo.hProcess, &exitCode);
+                const DWORD errorCode = exitCode == 0 ? ERROR_PROCESS_ABORTED : exitCode;
+                std::ostringstream stream;
+                stream << "Target exited before launch agent event pipe connection. exitCode=" << exitCode;
+                SetResultError(result, errorCode, "win32", "target_exited_early", stream.str());
+                AddAudit(result, "target_exited_early", "agent_pipe_connect", stream.str(), errorCode, "win32");
+            }
+            else
+            {
+                SetResultError(result, pipeError, "win32", "handshake_timeout", "Launch agent event pipe connection timed out or failed.");
+                AddAudit(result, "handshake_timeout", "agent_pipe_connect", "No agent connection was received before timeout.", pipeError, "win32");
+            }
+
+            fatalError = true;
+            break;
+        }
+
+        AddAudit(result, "agent_pipe_connected", "agent_pipe_connect", "Launch agent event pipe connected.");
+        AddAudit(result, "launch_capture_started", "launch_capture", "Bounded early-bird launch capture started.");
+
+        const ULONGLONG captureDeadline = GetTickCount64() + static_cast<ULONGLONG>(request.DurationMs);
+        while (GetTickCount64() < captureDeadline)
+        {
+            if (observeCancellation("launch_capture"))
+            {
+                break;
+            }
+
+            DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
+
+            std::string payload;
+            pipeError = 0;
+            if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError))
+            {
+                consumePayload(payload);
+                DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
+                continue;
+            }
+
+            DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
+            if (pipeError == ERROR_BROKEN_PIPE || pipeError == ERROR_HANDLE_EOF || pipeError == ERROR_NO_DATA)
+            {
+                AddAudit(result, agentShutdownReceived ? "pipe_closed_after_shutdown" : "pipe_closed_without_shutdown", "agent_event_read", "Launch agent event pipe closed.", pipeError, "win32");
+                break;
+            }
+
+            if (pipeError != WAIT_TIMEOUT)
+            {
+                SetResultError(result, pipeError, "win32", "agent_event_read", "Launch agent event stream read failed.");
+                fatalError = true;
+                break;
+            }
+
+            if (WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
+            {
+                targetExited = true;
+                AddAudit(result, "target_exited", "launch_capture", "Target exited before launch capture duration elapsed.");
+                break;
+            }
+        }
+
+        if (fatalError)
+        {
+            break;
+        }
+
+        DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
+        UpdateTransportMetrics(result, transport);
+        if (result.CancelObserved)
+        {
+            AddAudit(result, "launch_capture_cancelled", "launch_capture", "Bounded launch capture cancellation observed; cleanup follows.");
+            result.OperationState = "stopping_agent";
+            result.SessionState = result.SessionId.empty() ? result.SessionState : "stopping_agent";
+        }
+        else
+        {
+            AddAudit(result, "launch_capture_window_completed", "launch_capture", "Bounded launch capture window completed.");
+            result.OperationState = "stopping_agent";
+            result.SessionState = result.SessionId.empty() ? result.SessionState : "stopping_agent";
+        }
+
+        EmitCaptureStreamSessionFrame(streamCallbacks, "session_stopping", result);
+
+        if (!targetExited && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
+        {
+            targetExited = true;
+            AddAudit(result, "target_exited", "launch_cleanup", "Target exited before explicit launch cleanup was requested.");
+        }
+
+        if (!targetExited)
+        {
+            std::uintptr_t remoteAgentBase = 0;
+            DWORD moduleError = 0;
+            for (int attempt = 0; attempt < 20 && remoteAgentBase == 0; ++attempt)
+            {
+                if (FindRemoteModuleBase(processInfo.dwProcessId, agentModuleName, &remoteAgentBase, &moduleError))
+                {
+                    break;
+                }
+
+                Sleep(50);
+            }
+
+            if (remoteAgentBase == 0)
+            {
+                SetResultError(result, moduleError == 0 ? ERROR_MOD_NOT_FOUND : moduleError, "win32", "remote_agent_missing", "Agent module was not visible in the target before launch cleanup.");
+                fatalError = true;
+                break;
+            }
+
+            std::uintptr_t stopRva = 0;
+            DWORD remoteError = 0;
+            if (!ResolveImageExportRva(agentPath, "KnMonAgentStop", &stopRva, &remoteError))
+            {
+                SetResultError(result, remoteError == 0 ? ERROR_PROC_NOT_FOUND : remoteError, "win32", "remote_export_missing", "Failed to resolve KnMonAgentStop export RVA.");
+                fatalError = true;
+                break;
+            }
+
+            remoteStopAddress = remoteAgentBase + stopRva;
+            DWORD remoteExitCode = 0;
+            AddAudit(result, "agent_stop_requested", "CreateRemoteThread", "Requesting launch agent self-disable.");
+            stopRequested = true;
+            if (!WaitRemoteThread(processInfo.hProcess, reinterpret_cast<void*>(remoteStopAddress), nullptr, request.TimeoutMs, &remoteExitCode, &remoteError))
+            {
+                SetResultError(result, remoteError, "win32", "agent_stop_timeout", "Remote KnMonAgentStop thread failed or timed out.");
+                fatalError = true;
+                break;
+            }
+
+            if (remoteExitCode != static_cast<DWORD>(KnMonAgentControlStatus::Success))
+            {
+                std::ostringstream stream;
+                stream << "KnMonAgentStop returned status " << remoteExitCode << ".";
+                SetResultError(result, remoteExitCode, "knmon-agent", "detach_incomplete", stream.str());
+                fatalError = true;
+                break;
+            }
+
+            const ULONGLONG shutdownDeadline = GetTickCount64() + static_cast<ULONGLONG>(request.TimeoutMs);
+            result.OperationState = "draining";
+            result.SessionState = result.SessionId.empty() ? result.SessionState : "draining";
+            while (!agentShutdownReceived && GetTickCount64() < shutdownDeadline)
+            {
+                DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
+
+                std::string payload;
+                pipeError = 0;
+                if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError))
+                {
+                    consumePayload(payload);
+                    DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
+                    continue;
+                }
+
+                DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
+                if (pipeError == ERROR_BROKEN_PIPE || pipeError == ERROR_HANDLE_EOF || pipeError == ERROR_NO_DATA)
+                {
+                    AddAudit(result, agentShutdownReceived ? "pipe_closed_after_shutdown" : "pipe_closed_without_shutdown", "agent_event_read", "Launch agent event pipe closed.", pipeError, "win32");
+                    break;
+                }
+
+                if (pipeError != WAIT_TIMEOUT)
+                {
+                    SetResultError(result, pipeError, "win32", "agent_event_read", "Launch agent shutdown read failed.");
+                    fatalError = true;
+                    break;
+                }
+            }
+        }
+
+        DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
+        UpdateTransportMetrics(result, transport);
+
+        if (fatalError)
+        {
+            break;
+        }
+
+        if (!result.Handshake.Received)
+        {
+            SetResultError(result, WAIT_TIMEOUT, "knmon-core", "agent_hello_required", "Launch agent HELLO was not received.");
+            fatalError = true;
+            break;
+        }
+
+        if (!ValidateHandshakeEvidence(result, requestedArchitecture))
+        {
+            fatalError = true;
+            break;
+        }
+
+        if (hookInstallFailed)
+        {
+            SetResultError(result, ERROR_HOOK_NOT_INSTALLED, "knmon-core", "hook_install_required", "One or more selected hooks could not be installed.");
+            fatalError = true;
+            break;
+        }
+
+        if (hookInstalledCount < ExpectedFileIoHookCount)
+        {
+            SetResultError(result, ERROR_HOOK_NOT_INSTALLED, "knmon-core", "hook_install_count_required", "Launch capture did not report the required stable File I/O hooks.");
+            fatalError = true;
+            break;
+        }
+
+        if (!targetExited && !agentShutdownReceived)
+        {
+            SetResultError(result, WAIT_TIMEOUT, "knmon-core", "agent_shutdown_required", "Launch agent shutdown lifecycle event was not received.");
+            fatalError = true;
+            break;
+        }
+
+        if (agentShutdownReceived && (shutdownRestoredHooks < shutdownInstalledHooks || shutdownFailedHooks != 0))
+        {
+            SetResultError(result, ERROR_HOOK_NOT_INSTALLED, "knmon-core", "hook_uninstall_required", "Launch self-disable did not restore all installed hooks.");
+            fatalError = true;
+            break;
+        }
+
+        if (!shutdownReason.empty() && shutdownReason != "self_disable" && shutdownReason != "process_detach")
+        {
+            AddAudit(result, "detach_policy_note", "agent_shutdown", "Launch shutdown reason was " + shutdownReason + ".");
+        }
+
+        result.AgentCleanupAttempted = stopRequested;
+        result.AgentCleanupSucceeded = stopRequested ? agentShutdownReceived && shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0 : targetExited;
+
+        if (result.CancelObserved)
+        {
+            if (!result.AgentCleanupSucceeded && !targetExited)
+            {
+                result.OperationState = "cleanup_failed";
+                SetResultError(result, ERROR_CANCELLED, "knmon-core", "cleanup_failed", "Launch capture cancellation cleanup did not prove self-disable.");
+                fatalError = true;
+                break;
+            }
+
+            result.Success = false;
+            result.Win32ErrorCode = ERROR_CANCELLED;
+            result.NtStatus = "0x00000000";
+            result.Subsystem = "knmon-core";
+            result.Operation = "operation_cancelled";
+            result.OperationState = "cancelled";
+            result.SessionState = result.SessionId.empty() ? result.SessionState : "stopped";
+            result.StoppedUtc = NowUtc();
+            result.Message = "Launch capture cancelled after cleanup.";
+            break;
+        }
+
+        result.Success = true;
+        result.Win32ErrorCode = 0;
+        result.Subsystem = "knmon-core";
+        result.Operation = "launch_capture";
+        result.OperationState = "completed";
+        result.SessionState = result.SessionId.empty() ? result.SessionState : "stopped";
+        result.StoppedUtc = NowUtc();
+        result.Message = "Controlled early-bird launch capture completed.";
+        AddAudit(result, "launch_capture_completed", "launch_capture", "Bounded early-bird launch capture completed.");
+    }
+    while (false);
+
+    if (remoteDllPath != nullptr && processInfo.hProcess != nullptr)
+    {
+        if (VirtualFreeEx(processInfo.hProcess, remoteDllPath, 0, MEM_RELEASE))
+        {
+            AddAudit(result, "remote_buffer_released", "VirtualFreeEx", "Remote agent path buffer released.");
+        }
+        else
+        {
+            AddAudit(result, "cleanup_partial_failure", "VirtualFreeEx", "Remote agent path buffer cleanup failed.", GetLastError(), "win32");
+        }
+    }
+
+    if (processCreated && !processResumed && processInfo.hProcess != nullptr)
+    {
+        TerminateProcess(processInfo.hProcess, 1);
+        AddAudit(result, "cleanup_completed", "TerminateProcess", "Suspended target was terminated because launch failed before resume.");
+    }
+    else
+    {
+        AddAudit(result, "cleanup_completed", "handle_cleanup", "Launch controller handle cleanup completed.");
+    }
+
+    if (pipeHandle != INVALID_HANDLE_VALUE)
+    {
+        DisconnectNamedPipe(pipeHandle);
+        CloseHandle(pipeHandle);
+    }
+
+    DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
+    UpdateTransportMetrics(result, transport);
+    CloseSharedTransport(transport);
+
+    if (processInfo.hThread != nullptr)
+    {
+        CloseHandle(processInfo.hThread);
+    }
+
+    if (processInfo.hProcess != nullptr)
+    {
+        CloseHandle(processInfo.hProcess);
+    }
+
+    CloseCancellationContext(cancellationContext);
+
+    if (result.Operation.empty())
+    {
+        result.Operation = fatalError ? "launch_capture_failed" : "launch_capture";
+    }
+
+    if (result.Message.empty())
+    {
+        result.Message = fatalError ? "Controlled early-bird launch capture failed." : "Controlled early-bird launch capture finished.";
+    }
+
+    if (result.OperationState.empty() || (result.OperationState == "running" && !result.Success))
+    {
+        result.OperationState = fatalError ? "failed" : "completed";
+    }
+
+    if (!result.SessionId.empty())
+    {
+        result.UpdatedUtc = NowUtc();
+        if (result.SessionState.empty() || result.SessionState == "running" || result.SessionState == "stopping_agent" || result.SessionState == "draining")
+        {
+            result.SessionState = result.Success ? "stopped" : "failed";
+        }
+
+        if (result.StoppedUtc.empty() && (result.SessionState == "stopped" || result.SessionState == "failed"))
+        {
+            result.StoppedUtc = result.UpdatedUtc;
+        }
     }
 
     return result;

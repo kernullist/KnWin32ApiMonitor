@@ -1,4 +1,13 @@
 import {
+  apiInventoryReportToMarkdown,
+  loadApiInventory
+} from "./api-inventory-system.mjs";
+import {
+  loadTier1HookPlan,
+  tier1HookPlanToMarkdown,
+  validateTier1HookPlan
+} from "./tier1-hook-plan-system.mjs";
+import {
   buildCoverageReport,
   coverageReportToMarkdown,
   stableStringify,
@@ -17,6 +26,8 @@ if (result.errors.length > 0) {
 }
 
 const report = buildCoverageReport(result.apiDocuments, result.metadataIndex);
+const inventory = loadApiInventory();
+const tier1HookPlan = loadTier1HookPlan();
 
 if (args.has("--check")) {
   const requiredStatuses = ["definition_only", "hooked", "smoke_verified"];
@@ -39,9 +50,43 @@ if (args.has("--check")) {
     process.exit(1);
   }
 
+  if (inventory === null) {
+    console.error("Microsoft-source API inventory is missing; run npm run defs:inventory.");
+    process.exit(1);
+  }
+
+  if ((inventory.summary?.totalApis ?? 0) <= report.summary.totalApis) {
+    console.error("Microsoft-source API inventory does not expand beyond existing definitions.");
+    process.exit(1);
+  }
+
+  if (!Array.isArray(inventory.nextFamilies) || inventory.nextFamilies.length === 0) {
+    console.error("Microsoft-source API inventory does not report next API families.");
+    process.exit(1);
+  }
+
+  const tier1PlanErrors = validateTier1HookPlan(tier1HookPlan, inventory);
+  if (tier1PlanErrors.length > 0) {
+    console.error("Tier 1 hook plan report check failed:");
+    for (const error of tier1PlanErrors) {
+      console.error(`- ${error}`);
+    }
+    process.exit(1);
+  }
+
   console.log("Definition coverage report check passed.");
 } else if (args.has("--json")) {
-  process.stdout.write(stableStringify(report));
+  process.stdout.write(stableStringify({
+    definitions: report,
+    microsoftSourceInventory: inventory,
+    tier1HookPlan
+  }));
 } else {
   process.stdout.write(coverageReportToMarkdown(report));
+  if (inventory === null) {
+    process.stdout.write("\n# Microsoft Source API Inventory\n\nNot generated. Run `npm run defs:inventory`.\n");
+  } else {
+    process.stdout.write(`\n${apiInventoryReportToMarkdown(inventory)}`);
+  }
+  process.stdout.write(`\n${tier1HookPlanToMarkdown(tier1HookPlan)}`);
 }

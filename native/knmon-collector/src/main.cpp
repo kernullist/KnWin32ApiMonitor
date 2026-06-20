@@ -498,7 +498,7 @@ int main(int argc, char** argv)
         std::cout << "targets: " << targets.size() << "\n";
     }
 
-    std::cout << "capture backend: mock-only safe MVP\n";
+    std::cout << "capture backend: native shared transport\n";
     std::cout << "collector smoke: smoke-backpressure --capacity 4 --events 10\n";
     std::cout << "collector smoke: smoke-shared-transport-reader --capacity 4 --records 3\n";
     std::cout << "collector smoke: smoke-threaded-session-reader --capacity 8 --records 6\n";

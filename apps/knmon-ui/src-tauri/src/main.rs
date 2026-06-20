@@ -10,7 +10,6 @@ use knmon_tauri::{
     capture_sample_fileio_session,
     catalog_native_sessions as catalog_native_sessions_backend,
     launch_sample_early_bird,
-    mock_target_processes,
     drain_native_trace_batches as drain_native_trace_batches_backend,
     native_target_processes,
     native_operation_states,
@@ -28,6 +27,7 @@ use knmon_tauri::{
     remove_missing_native_session_catalog_entries as remove_missing_native_session_catalog_entries_backend,
     remove_missing_native_session_catalog_index_entries as remove_missing_native_session_catalog_index_entries_backend,
     remove_missing_native_trace_index_entries as remove_missing_native_trace_index_entries_backend,
+    start_launch_monitor_session as start_launch_monitor_session_backend,
     start_streaming_attach_session as start_streaming_attach_session_backend,
     start_daemon_if_needed as start_daemon_if_needed_backend,
     start_daemon_supervised_session as start_daemon_supervised_session_backend,
@@ -35,7 +35,6 @@ use knmon_tauri::{
     cancel_native_operation as cancel_native_operation_backend,
     stop_daemon_session as stop_daemon_session_backend,
     stop_native_session as stop_native_session_backend,
-    CaptureSessionState,
     CaptureResult,
     LaunchResult,
     NativeDaemonAudit,
@@ -51,12 +50,6 @@ use knmon_tauri::{
     SessionReplayResult,
     TargetProcess,
 };
-
-#[tauri::command]
-fn list_target_processes() -> Result<Vec<TargetProcess>, String>
-{
-    Ok(mock_target_processes())
-}
 
 #[tauri::command]
 fn list_native_target_processes() -> Result<Vec<TargetProcess>, String>
@@ -134,6 +127,12 @@ fn stop_native_session(session_id: String) -> Result<NativeSession, String>
 fn start_streaming_attach_session(pid: u32, duration_ms: u32) -> Result<NativeSession, String>
 {
     start_streaming_attach_session_backend(pid, duration_ms)
+}
+
+#[tauri::command]
+fn start_launch_monitor_session(target_path: String, working_directory: String, duration_ms: u32) -> Result<NativeSession, String>
+{
+    start_launch_monitor_session_backend(target_path, working_directory, duration_ms)
 }
 
 #[tauri::command]
@@ -271,23 +270,10 @@ fn get_backend_status() -> Result<String, String>
     Ok(backend_status().to_string())
 }
 
-#[tauri::command]
-fn start_mock_capture_session() -> Result<CaptureSessionState, String>
-{
-    Ok(CaptureSessionState::running_mock())
-}
-
-#[tauri::command]
-fn stop_mock_capture_session() -> Result<CaptureSessionState, String>
-{
-    Ok(CaptureSessionState::stopped_mock())
-}
-
 fn main()
 {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            list_target_processes,
             list_native_target_processes,
             launch_sample_early_bird_capture,
             capture_sample_fileio_events,
@@ -301,6 +287,7 @@ fn main()
             list_native_sessions,
             stop_native_session,
             start_streaming_attach_session,
+            start_launch_monitor_session,
             start_daemon_if_needed,
             native_daemon_status,
             list_daemon_sessions,
@@ -320,9 +307,7 @@ fn main()
             start_daemon_supervised_session,
             stop_daemon_session,
             drain_native_trace_batches,
-            get_backend_status,
-            start_mock_capture_session,
-            stop_mock_capture_session
+            get_backend_status
         ])
         .run(tauri::generate_context!())
         .expect("failed to run KN Win32 API Monitor");

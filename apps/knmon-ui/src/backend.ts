@@ -1,32 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
-import { mockTargets } from "./mockData";
-import type { CaptureResult, CaptureSessionState, LaunchResult, NativeDaemonAudit, NativeDaemonRecoveryApply, NativeDaemonRecoveryPlan, NativeDaemonStatus, NativeOperation, NativeSession, NativeSessionCatalog, NativeTraceBatch, NativeTraceIndex, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
+import type { CaptureResult, LaunchResult, NativeDaemonAudit, NativeDaemonRecoveryApply, NativeDaemonRecoveryPlan, NativeDaemonStatus, NativeOperation, NativeSession, NativeSessionCatalog, NativeTraceBatch, NativeTraceIndex, ProcessTreeResult, SessionReplayResult, TargetProcess } from "./types";
 
 function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-}
-
-export async function listTargetProcesses(): Promise<{ targets: TargetProcess[]; mode: "mock" | "native-enum" }> {
-  if (!isTauriRuntime()) {
-    return {
-      targets: mockTargets,
-      mode: "mock"
-    };
-  }
-
-  try {
-    const targets = await invoke<TargetProcess[]>("list_target_processes");
-    return {
-      targets,
-      mode: "mock"
-    };
-  } catch (error) {
-    console.warn("Falling back to mock targets", error);
-    return {
-      targets: mockTargets,
-      mode: "mock"
-    };
-  }
 }
 
 export async function listNativeTargetProcesses(): Promise<{ targets: TargetProcess[]; mode: "native-enum" }> {
@@ -149,6 +125,18 @@ export async function startStreamingAttachSession(pid: number, durationMs: numbe
 
   return invoke<NativeSession>("start_streaming_attach_session", {
     pid,
+    durationMs
+  });
+}
+
+export async function startLaunchMonitorSession(targetPath: string, workingDirectory: string, durationMs: number): Promise<NativeSession> {
+  if (!isTauriRuntime()) {
+    throw new Error("Launch monitoring requires the Tauri desktop runtime.");
+  }
+
+  return invoke<NativeSession>("start_launch_monitor_session", {
+    targetPath,
+    workingDirectory,
     durationMs
   });
 }
@@ -340,30 +328,4 @@ export async function drainNativeTraceBatches(sessionId: string, afterBatchSeque
     sessionId,
     afterBatchSequence
   });
-}
-
-export async function startBackendSession(): Promise<CaptureSessionState> {
-  if (!isTauriRuntime()) {
-    return {
-      state: "running",
-      backendMode: "mock",
-      eventCount: 0,
-      droppedEvents: 0
-    };
-  }
-
-  return invoke<CaptureSessionState>("start_mock_capture_session");
-}
-
-export async function stopBackendSession(): Promise<CaptureSessionState> {
-  if (!isTauriRuntime()) {
-    return {
-      state: "stopped",
-      backendMode: "mock",
-      eventCount: 0,
-      droppedEvents: 0
-    };
-  }
-
-  return invoke<CaptureSessionState>("stop_mock_capture_session");
 }

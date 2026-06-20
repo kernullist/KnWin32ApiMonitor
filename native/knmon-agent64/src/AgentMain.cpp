@@ -157,6 +157,11 @@ using SetHandleInformationFn = BOOL(WINAPI*)(HANDLE, DWORD, DWORD);
 using GetFileSizeExFn = BOOL(WINAPI*)(HANDLE, PLARGE_INTEGER);
 using GetFileTimeFn = BOOL(WINAPI*)(HANDLE, LPFILETIME, LPFILETIME, LPFILETIME);
 using GetFileInformationByHandleFn = BOOL(WINAPI*)(HANDLE, LPBY_HANDLE_FILE_INFORMATION);
+using GetSystemTimeFn = void(WINAPI*)(LPSYSTEMTIME);
+using SetupDiClassNameFromGuidWFn = BOOL(WINAPI*)(const GUID*, PWSTR, DWORD, PDWORD);
+using GetCursorPosFn = BOOL(WINAPI*)(LPPOINT);
+using GetIpStatisticsFn = ULONG(WINAPI*)(PMIB_IPSTATS);
+using GetStockObjectFn = HGDIOBJ(WINAPI*)(int);
 using GetModuleHandleWFn = HMODULE(WINAPI*)(LPCWSTR);
 using GetModuleHandleExWFn = BOOL(WINAPI*)(DWORD, LPCWSTR, HMODULE*);
 using GetModuleFileNameWFn = DWORD(WINAPI*)(HMODULE, LPWSTR, DWORD);
@@ -303,6 +308,11 @@ SetHandleInformationFn g_originalSetHandleInformation = nullptr;
 GetFileSizeExFn g_originalGetFileSizeEx = nullptr;
 GetFileTimeFn g_originalGetFileTime = nullptr;
 GetFileInformationByHandleFn g_originalGetFileInformationByHandle = nullptr;
+GetSystemTimeFn g_originalGetSystemTime = nullptr;
+SetupDiClassNameFromGuidWFn g_originalSetupDiClassNameFromGuidW = nullptr;
+GetCursorPosFn g_originalGetCursorPos = nullptr;
+GetIpStatisticsFn g_originalGetIpStatistics = nullptr;
+GetStockObjectFn g_originalGetStockObject = nullptr;
 GetModuleHandleWFn g_originalGetModuleHandleW = nullptr;
 GetModuleHandleExWFn g_originalGetModuleHandleExW = nullptr;
 GetModuleFileNameWFn g_originalGetModuleFileNameW = nullptr;
@@ -474,11 +484,13 @@ struct HookDefinition
     bool LoaderApi = false;
     WORD ImportOrdinal = 0;
     std::uint32_t LastPatchedSlots = 0;
+    bool Tier1Generic = false;
+    const char* Tier1Profile = "";
 };
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 122;
+constexpr std::size_t HookDefinitionCount = 127;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -620,6 +632,81 @@ bool EnvEnabled(const wchar_t* name)
 {
     const std::wstring value = ReadEnv(name);
     return value == L"1" || value == L"true" || value == L"TRUE";
+}
+
+std::string LowerAscii(std::string value)
+{
+    for (char& ch : value)
+    {
+        if (ch >= 'A' && ch <= 'Z')
+        {
+            ch = static_cast<char>(ch - 'A' + 'a');
+        }
+    }
+
+    return value;
+}
+
+bool HasProfileToken(const std::string& value, const char* profile)
+{
+    bool found = false;
+    std::size_t start = 0;
+    const std::string target = LowerAscii(profile == nullptr ? "" : profile);
+
+    while (start <= value.size())
+    {
+        std::size_t end = value.find_first_of(",; ", start);
+        if (end == std::string::npos)
+        {
+            end = value.size();
+        }
+
+        const std::string token = value.substr(start, end - start);
+        if (token == target)
+        {
+            found = true;
+            break;
+        }
+
+        if (end == value.size())
+        {
+            break;
+        }
+
+        start = end + 1;
+    }
+
+    return found;
+}
+
+bool Tier1ProfileEnabled(const char* profile)
+{
+    bool enabled = false;
+    const std::wstring value = ReadEnv(L"KNMON_TIER1_PROFILE");
+
+    do
+    {
+        if (value.empty())
+        {
+            break;
+        }
+
+        const std::string text = LowerAscii(WideToUtf8(value.c_str()));
+        enabled = HasProfileToken(text, profile) || HasProfileToken(text, "tier1-all");
+    }
+    while (false);
+
+    return enabled;
+}
+
+bool HookDefinitionEnabled(const HookDefinition& definition)
+{
+    if (!definition.Tier1Generic)
+    {
+        return true;
+    }
+
+    return Tier1ProfileEnabled(definition.Tier1Profile);
 }
 
 template <std::size_t Count>
@@ -2148,6 +2235,77 @@ void FillTransportCommon(
         record->DurationUs = DurationUs(start, end);
         record->LastErrorCode = errorCode;
     }
+}
+
+enum class GenericReturnFormat : std::uint32_t
+{
+    Void = 0,
+    Bool = 1,
+    UInt32 = 2,
+    Pointer = 3,
+};
+
+void EmitGenericSingleArgumentTier1Event(
+    const char* moduleName,
+    const char* apiName,
+    const char* profile,
+    const char* family,
+    const char* category,
+    const char* inventoryKey,
+    const char* argumentSchema,
+    std::uint64_t argumentValue,
+    std::uint64_t returnValue,
+    GenericReturnFormat returnFormat,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::Unknown, moduleName, start, end, errorCode);
+        record->Flags |= knmon::KnMonTransportRecordFlagGenericInventory;
+        record->ReturnValue = returnValue;
+        record->Values64[0] = argumentValue;
+        record->Values32[0] = 1;
+        record->Values32[1] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::DefinitionMissing);
+        record->Values32[2] = static_cast<std::uint32_t>(returnFormat);
+
+        std::ostringstream metadata;
+        metadata << "profile=" << (profile == nullptr ? "tier1" : profile)
+                 << ";family=" << (family == nullptr ? "tier1" : family)
+                 << ";category=" << (category == nullptr ? "tier1/generic" : category)
+                 << ";inventoryKey=" << (inventoryKey == nullptr ? "" : inventoryKey);
+
+        CopyAsciiText(record->Text0, &record->Text0Length, sizeof(record->Text0), apiName);
+        CopyAsciiText(record->Text1, &record->Text1Length, sizeof(record->Text1), metadata.str().c_str());
+        CopyAsciiText(record->Text2, &record->Text2Length, sizeof(record->Text2), argumentSchema);
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+void EmitGenericGetSystemTimeEvent(
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPSYSTEMTIME systemTime)
+{
+    EmitGenericSingleArgumentTier1Event(
+        "kernel32.dll",
+        "GetSystemTime",
+        "system-safe",
+        "system",
+        "system/system-information",
+        "kernel32.dll!GetSystemTime",
+        "lpSystemTime|LPSYSTEMTIME|out|pointer",
+        static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(systemTime)),
+        0,
+        GenericReturnFormat::Void,
+        errorCode,
+        start,
+        end);
 }
 
 void EmitCreateFileWEvent(
@@ -6472,6 +6630,11 @@ BOOL WINAPI HookedSetHandleInformation(HANDLE object, DWORD mask, DWORD flags);
 BOOL WINAPI HookedGetFileSizeEx(HANDLE file, PLARGE_INTEGER fileSize);
 BOOL WINAPI HookedGetFileTime(HANDLE file, LPFILETIME creationTime, LPFILETIME lastAccessTime, LPFILETIME lastWriteTime);
 BOOL WINAPI HookedGetFileInformationByHandle(HANDLE file, LPBY_HANDLE_FILE_INFORMATION fileInformation);
+void WINAPI HookedGetSystemTime(LPSYSTEMTIME systemTime);
+BOOL WINAPI HookedSetupDiClassNameFromGuidW(const GUID* classGuid, PWSTR className, DWORD classNameSize, PDWORD requiredSize);
+BOOL WINAPI HookedGetCursorPos(LPPOINT point);
+ULONG WINAPI HookedGetIpStatistics(PMIB_IPSTATS statistics);
+HGDIOBJ WINAPI HookedGetStockObject(int object);
 HANDLE WINAPI HookedCreateThread(LPSECURITY_ATTRIBUTES threadAttributes, SIZE_T stackSize, LPTHREAD_START_ROUTINE startAddress, LPVOID parameter, DWORD creationFlags, LPDWORD threadId);
 HANDLE WINAPI HookedOpenThread(DWORD desiredAccess, BOOL inheritHandle, DWORD threadId);
 DWORD WINAPI HookedWaitForSingleObject(HANDLE handle, DWORD milliseconds);
@@ -6598,6 +6761,11 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "kernel32.dll", "GetFileSizeEx", reinterpret_cast<void*>(HookedGetFileSizeEx), reinterpret_cast<void**>(&g_originalGetFileSizeEx), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetFileTime", reinterpret_cast<void*>(HookedGetFileTime), reinterpret_cast<void**>(&g_originalGetFileTime), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetFileInformationByHandle", reinterpret_cast<void*>(HookedGetFileInformationByHandle), reinterpret_cast<void**>(&g_originalGetFileInformationByHandle), false, true, false, 0, 0 },
+        HookDefinition { "kernel32.dll", "GetSystemTime", reinterpret_cast<void*>(HookedGetSystemTime), reinterpret_cast<void**>(&g_originalGetSystemTime), false, true, false, 0, 0, true, "system-safe" },
+        HookDefinition { "setupapi.dll", "SetupDiClassNameFromGuidW", reinterpret_cast<void*>(HookedSetupDiClassNameFromGuidW), reinterpret_cast<void**>(&g_originalSetupDiClassNameFromGuidW), false, true, false, 0, 0, true, "devices-safe" },
+        HookDefinition { "user32.dll", "GetCursorPos", reinterpret_cast<void*>(HookedGetCursorPos), reinterpret_cast<void**>(&g_originalGetCursorPos), false, true, false, 0, 0, true, "ui-safe" },
+        HookDefinition { "iphlpapi.dll", "GetIpStatistics", reinterpret_cast<void*>(HookedGetIpStatistics), reinterpret_cast<void**>(&g_originalGetIpStatistics), false, true, false, 0, 0, true, "network-management-safe" },
+        HookDefinition { "gdi32.dll", "GetStockObject", reinterpret_cast<void*>(HookedGetStockObject), reinterpret_cast<void**>(&g_originalGetStockObject), false, true, false, 0, 0, true, "graphics-safe" },
         HookDefinition { "kernel32.dll", "GetModuleHandleW", reinterpret_cast<void*>(HookedGetModuleHandleW), reinterpret_cast<void**>(&g_originalGetModuleHandleW), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleHandleExW", reinterpret_cast<void*>(HookedGetModuleHandleExW), reinterpret_cast<void**>(&g_originalGetModuleHandleExW), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleFileNameW", reinterpret_cast<void*>(HookedGetModuleFileNameW), reinterpret_cast<void**>(&g_originalGetModuleFileNameW), false, true, false, 0, 0 },
@@ -6746,6 +6914,11 @@ void PatchImportInModule(ModuleInfo& module, HookDefinition& definition, SweepSt
             break;
         }
 
+        if (!HookDefinitionEnabled(definition))
+        {
+            break;
+        }
+
         if (definition.OriginalFunction == nullptr || *definition.OriginalFunction == nullptr)
         {
             break;
@@ -6851,6 +7024,11 @@ void ResolveHookDefinitions(std::array<HookDefinition, HookDefinitionCount>& def
 {
     for (HookDefinition& definition : definitions)
     {
+        if (!HookDefinitionEnabled(definition))
+        {
+            continue;
+        }
+
         if (definition.OriginalFunction != nullptr && *definition.OriginalFunction == nullptr)
         {
             *definition.OriginalFunction = ResolveExport(definition.ImportModuleName, definition.ApiName);
@@ -7841,6 +8019,205 @@ BOOL WINAPI HookedGetFileInformationByHandle(HANDLE file, LPBY_HANDLE_FILE_INFOR
     if (HooksEnabled())
     {
         EmitGetFileInformationByHandleEvent(result, eventError, start, end, file, fileInformation);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+void WINAPI HookedGetSystemTime(LPSYSTEMTIME systemTime)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetSystemTime == nullptr)
+    {
+        if (g_originalGetSystemTime != nullptr)
+        {
+            g_originalGetSystemTime(systemTime);
+        }
+
+        return;
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    g_originalGetSystemTime(systemTime);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitGenericGetSystemTimeEvent(lastError, start, end, systemTime);
+    }
+
+    SetLastError(lastError);
+}
+
+BOOL WINAPI HookedSetupDiClassNameFromGuidW(const GUID* classGuid, PWSTR className, DWORD classNameSize, PDWORD requiredSize)
+{
+    if (g_inHook || !HooksEnabled() || g_originalSetupDiClassNameFromGuidW == nullptr)
+    {
+        if (g_originalSetupDiClassNameFromGuidW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalSetupDiClassNameFromGuidW(classGuid, className, classNameSize, requiredSize);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalSetupDiClassNameFromGuidW(classGuid, className, classNameSize, requiredSize);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitGenericSingleArgumentTier1Event(
+            "setupapi.dll",
+            "SetupDiClassNameFromGuidW",
+            "devices-safe",
+            "devices",
+            "devices/device-and-driver-installation",
+            "setupapi.dll!SetupDiClassNameFromGuidW",
+            "ClassGuid|GUID*|inout|pointer",
+            static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(classGuid)),
+            static_cast<std::uint64_t>(result),
+            GenericReturnFormat::Bool,
+            eventError,
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedGetCursorPos(LPPOINT point)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetCursorPos == nullptr)
+    {
+        if (g_originalGetCursorPos == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalGetCursorPos(point);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalGetCursorPos(point);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitGenericSingleArgumentTier1Event(
+            "user32.dll",
+            "GetCursorPos",
+            "ui-safe",
+            "ui",
+            "ui/windows-and-messaging",
+            "user32.dll!GetCursorPos",
+            "lpPoint|POINT*|out|pointer",
+            static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(point)),
+            static_cast<std::uint64_t>(result),
+            GenericReturnFormat::Bool,
+            eventError,
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+ULONG WINAPI HookedGetIpStatistics(PMIB_IPSTATS statistics)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetIpStatistics == nullptr)
+    {
+        if (g_originalGetIpStatistics == nullptr)
+        {
+            return ERROR_PROC_NOT_FOUND;
+        }
+
+        return g_originalGetIpStatistics(statistics);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const ULONG result = g_originalGetIpStatistics(statistics);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitGenericSingleArgumentTier1Event(
+            "iphlpapi.dll",
+            "GetIpStatistics",
+            "network-management-safe",
+            "network-management",
+            "network-management/ip-helper",
+            "iphlpapi.dll!GetIpStatistics",
+            "Statistics|MIB_IPSTATS*|out|pointer",
+            static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(statistics)),
+            static_cast<std::uint64_t>(result),
+            GenericReturnFormat::UInt32,
+            result,
+            start,
+            end);
+    }
+
+    return result;
+}
+
+HGDIOBJ WINAPI HookedGetStockObject(int object)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetStockObject == nullptr)
+    {
+        if (g_originalGetStockObject == nullptr)
+        {
+            return nullptr;
+        }
+
+        return g_originalGetStockObject(object);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    HGDIOBJ result = g_originalGetStockObject(object);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == nullptr ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitGenericSingleArgumentTier1Event(
+            "gdi32.dll",
+            "GetStockObject",
+            "graphics-safe",
+            "graphics",
+            "graphics/gdi",
+            "gdi32.dll!GetStockObject",
+            "i|GET_STOCK_OBJECT_FLAGS|in|raw",
+            static_cast<std::uint64_t>(static_cast<std::uint32_t>(object)),
+            static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result)),
+            GenericReturnFormat::Pointer,
+            eventError,
+            start,
+            end);
     }
 
     SetLastError(lastError);

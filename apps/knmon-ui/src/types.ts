@@ -1,6 +1,4 @@
-export type BackendMode = "mock" | "native-enum" | "native-capture";
-
-export type SessionStateName = "stopped" | "running";
+export type BackendMode = "native-enum" | "native-capture";
 
 export type InspectorTab =
   | "parameters"
@@ -16,13 +14,6 @@ export interface TargetProcess {
   imagePath?: string | null;
   architecture: string;
   status: string;
-}
-
-export interface CaptureSessionState {
-  state: SessionStateName;
-  backendMode: BackendMode;
-  eventCount: number;
-  droppedEvents: number;
 }
 
 export interface NativeOperation {
