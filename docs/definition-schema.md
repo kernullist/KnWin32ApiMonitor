@@ -106,6 +106,7 @@ generated/tier1-hook-plan.json
 generated/tier2-hook-plan.json
 generated/tier3-hook-plan.json
 generated/dll-batch-promotion-plan.json
+generated/manual-decoder-batch-plan.json
 ```
 
 `generated/api-inventory.json` is generated from `Microsoft.Windows.SDK.Win32Metadata`, Microsoft Learn Win32 API documentation URLs embedded in the metadata, Microsoft Learn API index/header pages, and installed Windows SDK headers. It preserves the existing definition catalog by linking matching `module!api` rows back to their committed definition source, hook policy, coverage status, stable ID, and decoder parameter count instead of rewriting definition JSON.
@@ -115,6 +116,8 @@ generated/dll-batch-promotion-plan.json
 `generated/tier2-hook-plan.json` is generated from the same inventory. It records every Tier 2 row as an opt-in hook-plan entry and classifies it as `api_set_forwarder`, `missing_parameter_metadata`, `ordinal_or_export_probe_candidate`, or `blocked_requires_manual_definition`. API-set rows include Windows loader runtime evidence from `LoadLibraryW`, `GetProcAddress`, and `GetModuleHandleExW(FROM_ADDRESS)` and store the resolved host DLL when available. Missing-parameter rows are limited to generic return-only events when the inventory has no arguments. Tier 2 does not install broad hooks by default and does not promote these APIs into the compact Tier 0 transport ID enum.
 
 `generated/dll-batch-promotion-plan.json` is generated from committed definition JSON plus decode metadata. It groups APIs by DLL and classifies each committed definition as `already_live`, `auto_promotable`, `manual_decoder_required`, `blocked_by_payload_policy`, or `unsupported`. This plan is the promotion queue for Tier 0 definitions: safe pointer/scalar APIs in the same DLL should be promoted together, while manual decoder and payload-blocked rows remain documented instead of being silently skipped.
+
+`generated/manual-decoder-batch-plan.json` is generated from the DLL batch promotion plan. It extracts only `manual_decoder_required` DLLs, records same-DLL payload-blocked siblings, fixes explicit allowed/forbidden evidence boundaries, and keeps every manual-decoder API blocked by default until same-DLL design review, x64/x86 smoke evidence, payload absence assertions, and hook-overhead gates pass.
 
 ## Current Required Fields
 
@@ -196,6 +199,7 @@ Allowed directions:
 16. Tier 2 hook-plan validation, including 100% Tier 2 plan coverage, duplicate hook-row rejection, API-set resolution evidence checks, missing-parameter return-only checks, default-disabled policy checks, and deterministic JSON ordering.
 17. Tier 3 hook-plan validation, including 100% Tier 3 plan coverage, callback/COM/message/buffer/security classification checks, default-disabled policy checks, and deterministic JSON ordering.
 18. DLL batch promotion plan validation, including 100% committed-definition coverage, same-DLL grouping, auto/manual/blocked classification checks, high-risk auto-promotion rejection, and deterministic JSON ordering.
+19. Manual decoder batch plan validation, including exact coverage of `manual_decoder_required` APIs from the DLL batch plan, blocked-by-default runtime policy checks, allowed/forbidden evidence boundary checks, same-DLL payload-blocked sibling tracking, and deterministic JSON ordering.
 
 The restricted `lengthExpression` grammar supports only:
 
@@ -292,7 +296,7 @@ The native agent and controller use generated compile-time enum constants throug
 
 `generated/tier2-hook-plan.json` currently plans all 655 Tier 2 APIs. The plan classifies 279 rows as API-set forwarders, resolves 277 of them to concrete host DLLs on the current Windows runtime, classifies 376 rows as missing-parameter return-only candidates, and enables zero Tier 2 hooks by default. Runtime smoke coverage currently proves `WindowsGetStringLen` through `api-ms-win-core-winrt-string-l1-1-0.dll` with resolved host `combase.dll`, and `RevertToSelf` as a generic return-only event.
 
-`generated/dll-batch-promotion-plan.json` currently groups 179 committed definitions across 25 DLLs. It records 128 already-live APIs, zero auto-promotable pointer/scalar APIs, 2 manual-decoder-required APIs, 49 payload-policy-blocked APIs, and zero unsupported committed definitions. The auto-promotable DLL queue is currently empty; the next runtime promotion should start from manual decoder batch design or explicitly reviewed payload-sensitive families instead of unrelated single-API work.
+`generated/dll-batch-promotion-plan.json` currently groups 179 committed definitions across 25 DLLs. It records 128 already-live APIs, zero auto-promotable pointer/scalar APIs, 2 manual-decoder-required APIs, 49 payload-policy-blocked APIs, and zero unsupported committed definitions. `generated/manual-decoder-batch-plan.json` currently groups the 2 manual-decoder-required APIs across `rpcrt4.dll` and `wintrust.dll`, tracks 4 payload-blocked sibling APIs in those same DLLs, and keeps both manual candidates blocked by default. The auto-promotable DLL queue is currently empty; the next runtime promotion should start from this manual decoder batch gate or explicitly reviewed payload-sensitive families instead of unrelated single-API work.
 
 ## File I/O, Loader, Resolver, And Wave 2/3/4 Metadata Coverage
 
@@ -694,6 +698,7 @@ npm run defs:tier1-plan:generate
 npm run defs:tier2-plan:generate
 npm run defs:tier3-plan:generate
 npm run defs:dll-batch-plan:generate
+npm run defs:manual-decoder-plan:generate
 npm run defs:validate
 npm run defs:decoder-tables
 npm run defs:coverage
@@ -701,7 +706,7 @@ npm run defs:coverage
 
 `defs:decoder-tables` verifies the generated decoder metadata artifact covers API IDs `1` through `179`, parameter rows, decode alias rows, and length-source resolution.
 
-`defs:inventory` regenerates the Microsoft-source inventory and its coverage report. `defs:dll-batch-plan:generate` regenerates the committed-definition DLL batch promotion queue. `defs:coverage` prints a deterministic Markdown report grouped by module, family, risk, hook policy, coverage status, and decode quality, then appends Microsoft-source inventory totals, hook tiers, next API families by coverage impact, and DLL batch auto/manual/blocked promotion buckets. The definition report explicitly separates:
+`defs:inventory` regenerates the Microsoft-source inventory and its coverage report. `defs:dll-batch-plan:generate` regenerates the committed-definition DLL batch promotion queue. `defs:manual-decoder-plan:generate` regenerates the manual-decoder batch gate from the DLL batch queue. `defs:coverage` prints a deterministic Markdown report grouped by module, family, risk, hook policy, coverage status, and decode quality, then appends Microsoft-source inventory totals, hook tiers, next API families by coverage impact, DLL batch auto/manual/blocked promotion buckets, and manual-decoder batch gates. The definition report explicitly separates:
 
 1. `definition_only`
 2. `hooked`
