@@ -261,6 +261,7 @@ struct KnMonLaunchRequest
     std::string TargetPath;
     std::string AgentPath;
     std::string WorkingDirectory;
+    std::string CommandLineArguments;
     std::uint32_t OwnerProcessId = 0;
     std::uint32_t HelperProcessId = 0;
     std::string CancellationEventName;

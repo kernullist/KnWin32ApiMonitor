@@ -1878,6 +1878,7 @@ input[type="checkbox"] {
 }
 
 .topbar {
+  grid-template-columns: 250px minmax(320px, 1fr) auto auto;
   min-height: 44px;
   border-bottom: 1px solid #28313b;
   background: linear-gradient(180deg, #1a1d22 0, #101318 100%);
@@ -1894,6 +1895,22 @@ input[type="checkbox"] {
 }
 
 .toolbar {
+  min-width: 0;
+}
+
+.primary-toolbar {
+  display: grid;
+  grid-template-columns: minmax(150px, 190px) minmax(140px, 176px) minmax(76px, 96px);
+  gap: 6px;
+  justify-content: start;
+}
+
+.utility-toolbar {
+  justify-self: end;
+}
+
+.command-button {
+  width: 100%;
   min-width: 0;
 }
 
@@ -1979,7 +1996,36 @@ input[type="checkbox"] {
 }
 
 .rail-section {
+  display: flex;
+  flex-direction: column;
   scrollbar-gutter: stable;
+}
+
+.rail-section > .controlled-launch {
+  order: 1;
+  border-top: 0;
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.rail-section > .source-panel {
+  order: 2;
+}
+
+.rail-section > .section-title {
+  order: 3;
+}
+
+.rail-section > .process-list {
+  order: 4;
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.rail-section > .target-actions-panel {
+  order: 5;
+}
+
+.rail-section > .session-catalog-panel {
+  order: 6;
 }
 
 .segmented,
@@ -2032,6 +2078,14 @@ input[type="checkbox"] {
 
 .controlled-launch {
   border-top-color: var(--border-strong);
+}
+
+.controlled-launch .section-title {
+  min-height: 34px;
+  border-top: 1px solid rgba(82, 199, 234, 0.28);
+  background:
+    linear-gradient(90deg, rgba(82, 199, 234, 0.18), rgba(82, 199, 234, 0.02) 62%),
+    linear-gradient(180deg, #18212a 0, #11171e 100%);
 }
 
 .source-toggle button,
@@ -2116,6 +2170,15 @@ input[type="checkbox"] {
   grid-template-columns: 112px minmax(0, 1fr);
 }
 
+.launch-grid input:focus,
+.action-controls input:focus,
+.catalog-controls input:focus,
+.catalog-controls select:focus,
+.trace-index-controls input:focus {
+  outline: 2px solid rgba(82, 199, 234, 0.48);
+  outline-offset: -2px;
+}
+
 .target-action-grid label,
 .launch-grid label,
 .return-grid label {
@@ -2130,7 +2193,8 @@ input[type="checkbox"] {
   background: var(--panel-strong);
 }
 
-.launch-grid input {
+.launch-grid input,
+.launch-selected-path {
   width: 100%;
   min-width: 0;
   min-height: 27px;
@@ -2139,6 +2203,35 @@ input[type="checkbox"] {
   background: var(--control);
   border: 0;
   border-radius: 0;
+}
+
+.launch-selected-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.launch-selected-path.empty {
+  color: var(--muted-soft);
+}
+
+.launch-mode-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 7px 8px 0;
+  background: var(--panel);
+}
+
+.launch-mode-strip span {
+  min-height: 23px;
+  padding: 4px 7px;
+  color: #a9dff0;
+  background: #0d2530;
+  border: 1px solid #214858;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
 }
 
 .eligibility-badge.ready,
@@ -2253,8 +2346,14 @@ input[type="checkbox"] {
 
 .launch-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
   gap: 6px;
+}
+
+.launch-primary-button {
+  grid-column: 1 / -1;
+  min-height: 34px;
+  font-weight: 700;
 }
 
 .launch-actions .tool-button,

@@ -130,9 +130,14 @@ fn start_streaming_attach_session(pid: u32, duration_ms: u32) -> Result<NativeSe
 }
 
 #[tauri::command]
-fn start_launch_monitor_session(target_path: String, working_directory: String, duration_ms: u32) -> Result<NativeSession, String>
+fn start_launch_monitor_session(
+    target_path: String,
+    working_directory: String,
+    launch_arguments: String,
+    duration_ms: u32,
+) -> Result<NativeSession, String>
 {
-    start_launch_monitor_session_backend(target_path, working_directory, duration_ms)
+    start_launch_monitor_session_backend(target_path, working_directory, launch_arguments, duration_ms)
 }
 
 #[tauri::command]
@@ -273,6 +278,7 @@ fn get_backend_status() -> Result<String, String>
 fn main()
 {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             list_native_target_processes,
             launch_sample_early_bird_capture,

@@ -7170,6 +7170,7 @@ int LaunchSessionCommand(const std::vector<std::string>& args)
     request.TargetPath = targetPath;
     request.AgentPath = GetOption(args, "--agent");
     request.WorkingDirectory = GetOption(args, "--cwd");
+    request.CommandLineArguments = GetOption(args, "--args");
     request.OwnerProcessId = GetCurrentProcessId();
     request.HelperProcessId = GetCurrentProcessId();
     request.CancellationEventName = cancellationEventName;

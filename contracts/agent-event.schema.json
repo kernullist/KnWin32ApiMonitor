@@ -19,6 +19,7 @@
         "agent_hello",
         "hook_installed",
         "hook_install_failed",
+        "hook_deferred",
         "api_call",
         "dropped_events",
         "agent_shutdown",

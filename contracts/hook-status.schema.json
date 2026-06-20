@@ -19,7 +19,7 @@
   "properties": {
     "schemaVersion": { "type": "string" },
     "messageType": {
-      "enum": ["hook_installed", "hook_install_failed"]
+      "enum": ["hook_installed", "hook_install_failed", "hook_deferred"]
     },
     "operationId": { "type": "string" },
     "pid": { "type": "integer", "minimum": 0 },

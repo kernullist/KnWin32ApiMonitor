@@ -1412,7 +1412,12 @@ pub fn start_streaming_attach_session(process_id: u32, duration_ms: u32) -> Resu
         .ok_or_else(|| format!("streaming session not found after start: {session_id}"))
 }
 
-pub fn start_launch_monitor_session(target_path: String, working_directory: String, duration_ms: u32) -> Result<NativeSession, String>
+pub fn start_launch_monitor_session(
+    target_path: String,
+    working_directory: String,
+    launch_arguments: String,
+    duration_ms: u32,
+) -> Result<NativeSession, String>
 {
     let target = target_path.trim();
     if target.is_empty()
@@ -1451,6 +1456,13 @@ pub fn start_launch_monitor_session(target_path: String, working_directory: Stri
     {
         args.push("--cwd".to_string());
         args.push(cwd.to_string());
+    }
+
+    let command_line_arguments = launch_arguments.trim();
+    if !command_line_arguments.is_empty()
+    {
+        args.push("--args".to_string());
+        args.push(command_line_arguments.to_string());
     }
 
     let mut child = Command::new(&helper_path)

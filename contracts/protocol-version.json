@@ -43,7 +43,7 @@
     "hookedApis": ["CreateFileW", "CreateFileA", "NtCreateFile", "ReadFile", "WriteFile", "CloseHandle", "LoadLibraryW", "LoadLibraryA", "LoadLibraryExW", "LoadLibraryExA", "LdrLoadDll"],
     "hookedModules": ["kernel32.dll", "kernelbase.dll", "ntdll.dll"],
     "minimumRequiredHookCount": 6,
-    "messageTypes": ["agent_hello", "hook_installed", "hook_install_failed", "api_call", "dropped_events", "agent_shutdown", "module_inventory", "iat_sweep"],
+    "messageTypes": ["agent_hello", "hook_installed", "hook_install_failed", "hook_deferred", "api_call", "dropped_events", "agent_shutdown", "module_inventory", "iat_sweep"],
     "lifecycleStates": ["starting", "running", "stopping", "disabled", "failed"],
     "shutdownFields": ["reason", "lifecycleState", "installedHooks", "restoredHooks", "failedHooks", "droppedCount"]
   },

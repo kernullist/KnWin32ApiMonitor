@@ -556,13 +556,15 @@ Current verified behavior:
 59. `WS2_32.dll` ordinal imports for the selected Winsock APIs are matched only through explicit hook-definition ordinals, including ordinal `4` for `connect`; broad ordinal patching remains out of scope.
 60. `generated/tier2-hook-plan.json` plans all 655 Tier 2 APIs with zero hooks enabled by default, including 279 API-set forwarder rows, 277 Windows-loader-resolved host rows, and 376 missing-parameter return-only rows.
 61. The Tier 2 generic profile smoke verifies `api-ms-win-core-winrt-string-l1-1-0.dll!WindowsGetStringLen` through resolved host `combase.dll`, verifies `advapi32.dll!RevertToSelf` as a no-argument return-only event, and re-checks resolver visibility for `GetProcAddress` and `LdrGetProcedureAddress`.
+62. `generated/tier3-hook-plan.json` plans all 1,370 Tier 3 APIs as design-review-only coverage with zero default-installable runtime hooks, including 1,192 COM/interface/vtable rows, 76 buffer-heavy rows, 67 callback rows, 27 window-message/hook-procedure rows, 5 WinRT/HSTRING rows, and 3 security-sensitive rows.
 
 Next implementation focus:
 
 1. Keep the selected Winsock bootstrap/address-resolution/connect metadata, registry, advapi32 token query/privilege lookup, RPCRT4 binding/option/UUID helper, bcrypt CNG provider/RNG, crypt32 certificate-store/message-handle, WinHTTP session/scalar-option, WinINet session-handle, User32/GDI32 metadata, PSAPI module-query, Version resource metadata, Shell known-folder metadata, OLE32 COM lifecycle/GUID helper, COMBASE-backed WinRT lifecycle, KERNEL32 memory protection, KERNEL32 thread lifecycle, KERNEL32 event synchronization, KERNEL32 mutex/semaphore synchronization, KERNEL32 file-mapping, KERNEL32 process/thread identity, KERNEL32 handle metadata, KERNEL32 module lifecycle, KERNEL32 file metadata, OLEAUT32 lifecycle, USERENV environment-block destroy, DNSAPI record-list free, IPHLPAPI interface-entry query, SETUPAPI device-info close, DbgHelp symbol-session, and Tier 2 generic representative hooks under shared-memory backpressure and hook-overhead gates.
 2. Design payload-heavy network hooks (`send`, `recv`, `sendto`, `recvfrom`), WinHTTP connection/request/transfer/header/body/cookie/credential capture, WinHTTP non-scalar option buffers, and WinINet connection/request/transfer/option/header/cookie/credential/body capture separately before enabling buffer capture at scale.
 3. Stage broader Tier 2 coverage only through explicit profiles, resolved host DLL selection, module/family/risk/allowlist gates, and representative native smoke evidence; do not enable broad API-set or missing-parameter hooks by default.
-4. Keep returned-pointer instrumentation as a separate reviewed design item.
+4. Stage Tier 3 work only as reviewed design slices first; do not enable callback, COM/interface/vtable, WinRT/HSTRING, window-message/hook-procedure, buffer-heavy, remote-process-sensitive, security-sensitive, or manual-strategy APIs as runtime hooks from the generated plan alone.
+5. Keep returned-pointer instrumentation as a separate reviewed design item.
 
 ## Phase 10: Definition System V1
 
@@ -606,13 +608,15 @@ Current verified behavior:
    - `native/knmon-common/include/knmon/common/GeneratedApiMetadata.h`
 16. The controller uses generated metadata for API/module names, family/category tags, argument names/types/directions, decode aliases, and capture timing while preserving explicit per-API shared-memory slot interpretation.
 17. The selected `advapi32.dll` registry slice, selected `advapi32.dll` token query/privilege lookup slice, `bcrypt.dll` CNG provider/RNG slice, `crypt32.dll` certificate-store/message-handle slice, `rpcrt4.dll` local binding/option and UUID helper slices, `ws2_32.dll` Winsock bootstrap/address-resolution/connect metadata slice, `winhttp.dll` session/scalar-option slice, `wininet.dll` session-handle slice, Phase 13B `user32.dll`/`gdi32.dll` metadata slice, Phase 13C `psapi.dll` module-query slice, Phase 13D `version.dll` resource metadata slice, Phase 13E `shell32.dll` known-folder metadata slice, Phase 13F `ole32.dll` COM lifecycle/GUID helper slice, Phase 13H `api-ms-win-core-winrt-l1-1-0.dll` WinRT lifecycle slice, Phase 13I KERNEL32 memory protection slice, Phase 13J KERNEL32 thread lifecycle slice, Phase 13K KERNEL32 event synchronization slice, Phase 13L KERNEL32 mutex/semaphore synchronization slice, Phase 13M KERNEL32 file-mapping slice, Phase 13N KERNEL32 process/thread identity slice, Phase 13O KERNEL32 handle metadata slice, Phase 13P KERNEL32 module lifecycle slice, Phase 13Q KERNEL32 file metadata slice, Wave 4 `oleaut32.dll` lifecycle slice, Wave 4 `userenv.dll` environment-block destroy slice, Wave 4 `dnsapi.dll` record-list free slice, Wave 4 `iphlpapi.dll` interface-entry query slice, Wave 4 `setupapi.dll` device-info close slice, and Wave 4 `dbghelp.dll` symbol-session slice are marked `iat` and `smoke_verified`; unimplemented Wave 2 APIs and unselected Wave 4 additions remain `definition_only`.
+18. `generated/tier3-hook-plan.json` is generated and validated as a planning artifact for all 1,370 Tier 3 APIs, keeping every row `blocked_by_default` and requiring explicit allowlist, design review, smoke evidence, and overhead review before any future runtime hook promotion.
 
 Next implementation focus:
 
 1. Expand Wave 2 live hooks only by small DLL/API-family slices with deterministic smoke evidence.
 2. Review a dedicated ABI and performance plan before enabling high-volume network payload hooks.
 3. Prefer the next low-volume API family before payload-heavy hooks, while keeping token mutation, service-control, crypto key/encrypt/decrypt/hash, certificate chain/query/decode, RPC auth/endpoint/sequential-UUID, WinINet connection/request/transfer/option, and WinHTTP connection/request/transfer/header/body/cookie/credential/non-scalar-option work behind separate smoke and transport-budget gates.
-4. Design returned-pointer instrumentation only after the IAT resolver monitoring path remains stable under transport and hook-overhead gates.
+4. Treat Tier 3 callback, COM/interface/vtable, WinRT/HSTRING, window-message/hook-procedure, buffer-heavy, remote-process-sensitive, and security-sensitive rows as design-only until a narrow slice proves ABI shape, payload boundaries, reentrancy behavior, and overhead.
+5. Design returned-pointer instrumentation only after the IAT resolver monitoring path remains stable under transport and hook-overhead gates.
 
 ## Phase 11: Controlled Attach And Process Tree Supervision
 
@@ -1144,6 +1148,7 @@ Remaining definition-only expansion queue:
 2. The remaining unselected Wave 4 APIs stay `definition_only` until each family has a hook ABI review, provider/import verification, sample design, payload-safety boundaries, and performance gate.
 3. Good first live candidates are low-volume lifecycle/query calls whose hooks can emit scalar handles, flags, return values, and pointer-only evidence without copying arbitrary payload buffers.
 4. Tier 2 API-set forwarders should be grouped by resolved host DLL and profile before implementation; do not add broad API-set hooks just because the host module resolves on the current OS.
+5. Tier 3 rows now have a generated planning artifact but remain design-only. COM payloads, object internals, callback payloads, UI text, pixels, raw buffers, credentials, remote memory, injection helper payloads, and arbitrary pointer memory are not default-capture candidates.
 
 Design-only high-risk queue:
 

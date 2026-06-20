@@ -129,7 +129,7 @@ export async function startStreamingAttachSession(pid: number, durationMs: numbe
   });
 }
 
-export async function startLaunchMonitorSession(targetPath: string, workingDirectory: string, durationMs: number): Promise<NativeSession> {
+export async function startLaunchMonitorSession(targetPath: string, workingDirectory: string, launchArguments: string, durationMs: number): Promise<NativeSession> {
   if (!isTauriRuntime()) {
     throw new Error("Launch monitoring requires the Tauri desktop runtime.");
   }
@@ -137,6 +137,7 @@ export async function startLaunchMonitorSession(targetPath: string, workingDirec
   return invoke<NativeSession>("start_launch_monitor_session", {
     targetPath,
     workingDirectory,
+    launchArguments,
     durationMs
   });
 }

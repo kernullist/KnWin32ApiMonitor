@@ -22,6 +22,7 @@ import {
   Square,
   Trash2
 } from "lucide-react";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   attachTargetProcessCapture,
@@ -291,6 +292,18 @@ function traceIndexEventLabel(event: NativeTraceIndexEvent): string {
   return `${event.api || "api"} / ${event.module || "module"}`;
 }
 
+function directoryNameFromPath(path: string): string {
+  const lastBackslash = path.lastIndexOf("\\");
+  const lastSlash = path.lastIndexOf("/");
+  const separatorIndex = Math.max(lastBackslash, lastSlash);
+
+  if (separatorIndex <= 0) {
+    return "";
+  }
+
+  return path.slice(0, separatorIndex);
+}
+
 function App() {
   const [leftTab, setLeftTab] = useState<LeftTab>("targets");
   const [targets, setTargets] = useState<TargetProcess[]>([]);
@@ -309,7 +322,9 @@ function App() {
   const [nativeBusy, setNativeBusy] = useState(false);
   const [launchTargetPath, setLaunchTargetPath] = useState("");
   const [launchWorkingDirectory, setLaunchWorkingDirectory] = useState("");
+  const [launchArguments, setLaunchArguments] = useState("");
   const [launchDurationMs, setLaunchDurationMs] = useState(3000);
+  const [launchDialogOpen, setLaunchDialogOpen] = useState(false);
   const [attachDurationMs, setAttachDurationMs] = useState(3000);
   const [treeDurationMs, setTreeDurationMs] = useState(3000);
   const [childPolicy, setChildPolicy] = useState<ChildPolicy>("observe");
@@ -678,6 +693,7 @@ function App() {
   const currentLaunchSession = launchSession
     ? nativeSessions.find((session) => session.sessionId === launchSession.sessionId) ?? launchSession
     : null;
+  const canLaunchMonitor = !launchDialogOpen && !nativeBusy && activeNativeOperation === null && activeNativeSession === null;
   const canRunTargetAction = targetBlockReason === null && !nativeBusy && activeNativeOperation === null && activeNativeSession === null;
   const processTreeSummary = summarizeProcessTree(processTreeResult);
   const sessionBytes = useMemo(() => estimateSessionBytes(events), [events]);
@@ -770,20 +786,13 @@ function App() {
     nextEventId.current = 1;
   }
 
-  async function handleStartLaunchMonitor() {
-    const targetPath = launchTargetPath.trim();
-    if (!targetPath) {
-      appendOutput([makeAuditEvent("launch_blocked", "start_launch_monitor_session", "Launch target path is required.")]);
-      setInspectorTab("output");
-      return;
-    }
-
+  async function startLaunchMonitorForTarget(targetPath: string, workingDirectory: string) {
     setNativeBusy(true);
     setLaunchSession(null);
 
     try {
       appendOutput([makeAuditEvent("launch_requested", "start_launch_monitor_session", `Early-bird launch monitor requested for ${targetPath}.`)]);
-      const session = await startLaunchMonitorSession(targetPath, launchWorkingDirectory.trim(), launchDurationMs);
+      const session = await startLaunchMonitorSession(targetPath, workingDirectory, launchArguments.trim(), launchDurationMs);
       streamBatchCursors.current[session.sessionId] = 0;
       setLaunchSession(session);
       setBackendMode("native-capture");
@@ -799,6 +808,54 @@ function App() {
     } finally {
       setNativeBusy(false);
     }
+  }
+
+  async function handleStartLaunchMonitor() {
+    setLeftTab("targets");
+    setLaunchDialogOpen(true);
+
+    let selectedPath = "";
+    try {
+      const selection = await openDialog({
+        title: "Select target executable",
+        multiple: false,
+        directory: false,
+        defaultPath: launchTargetPath.trim() || launchWorkingDirectory.trim() || undefined,
+        filters: [
+          {
+            name: "Windows executables",
+            extensions: ["exe"]
+          }
+        ]
+      });
+
+      if (typeof selection === "string") {
+        selectedPath = selection;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput([makeAuditEvent("launch_dialog_failed", "dialog.open", message)]);
+      setInspectorTab("output");
+      setLaunchDialogOpen(false);
+      return;
+    }
+
+    setLaunchDialogOpen(false);
+
+    if (!selectedPath) {
+      appendOutput([makeAuditEvent("launch_cancelled", "dialog.open", "Launch target selection was cancelled.")]);
+      setInspectorTab("output");
+      return;
+    }
+
+    const selectedWorkingDirectory = launchWorkingDirectory.trim() || directoryNameFromPath(selectedPath);
+    setLaunchTargetPath(selectedPath);
+
+    if (!launchWorkingDirectory.trim() && selectedWorkingDirectory) {
+      setLaunchWorkingDirectory(selectedWorkingDirectory);
+    }
+
+    await startLaunchMonitorForTarget(selectedPath, selectedWorkingDirectory);
   }
 
   async function handleRefreshSessionCatalog() {
@@ -1285,14 +1342,45 @@ function App() {
           <CircleDot size={16} />
           <span>KN Win32 API Monitor</span>
         </div>
-        <div className="toolbar" aria-label="Capture toolbar">
+        <div className="toolbar primary-toolbar" aria-label="Monitoring actions">
+          <button
+            className="tool-button primary command-button"
+            type="button"
+            title="Choose an executable and start monitoring"
+            onClick={handleStartLaunchMonitor}
+            disabled={!canLaunchMonitor}
+          >
+            <Rocket size={15} />
+            <span>Launch &amp; Monitor</span>
+          </button>
+          <button
+            className="tool-button command-button"
+            type="button"
+            title={targetBlockReason ?? "Attach to the selected running process"}
+            onClick={handleStartStreamingAttach}
+            disabled={!canRunTargetAction}
+          >
+            <Activity size={15} />
+            <span>Attach Selected</span>
+          </button>
+          <button
+            className="tool-button command-button"
+            type="button"
+            title={activeNativeSession?.recoveryAction || "Stop native session"}
+            onClick={handleStopNativeSession}
+            disabled={!activeNativeSession || activeNativeSession.stopRequested}
+          >
+            <Square size={14} />
+            <span>Stop</span>
+          </button>
+        </div>
+        <div className="toolbar utility-toolbar" aria-label="Session toolbar">
           <button className="tool-button" type="button" title="Open session">
             <FolderOpen size={15} />
           </button>
           <button className="tool-button" type="button" title="Export JSONL" onClick={() => downloadJsonl(events)}>
             <Download size={15} />
           </button>
-          <span className="toolbar-separator" />
           <button className="tool-button" type="button" title="Refresh process list" onClick={handleLoadNativeTargets} disabled={nativeBusy}>
             <RefreshCcw size={15} />
           </button>
@@ -1319,7 +1407,7 @@ function App() {
               <div className="source-panel">
                 <div className="source-title">
                   <Cpu size={14} />
-                  <span>Native Targets</span>
+                  <span>Running Process Attach</span>
                 </div>
                 <div className="source-toggle">
                   <button type="button" className="active" onClick={handleLoadNativeTargets} disabled={nativeBusy}>
@@ -1332,7 +1420,7 @@ function App() {
               </div>
               <div className="section-title">
                 <Server size={14} />
-                <span>Running Processes</span>
+                <span>Pick Running Process</span>
               </div>
               <div className="process-list">
                 {targets.map((target) => (
@@ -1358,7 +1446,7 @@ function App() {
               <div className="target-actions-panel">
                 <div className="section-title">
                   <GitBranch size={14} />
-                  <span>Selected Target</span>
+                  <span>Selected Process</span>
                 </div>
                 <div className="target-action-grid">
                   <label>PID</label>
@@ -1422,7 +1510,7 @@ function App() {
                 <div className="action-subpanel">
                   <div className="action-subtitle">
                     <Activity size={13} />
-                    <span>Bounded Attach</span>
+                    <span>Attach Monitor</span>
                   </div>
                   <div className="action-controls attach-controls">
                     <label htmlFor="attach-duration">Duration</label>
@@ -1437,11 +1525,11 @@ function App() {
                     />
                     <button type="button" className="tool-button primary" onClick={handleAttachSelectedTarget} disabled={!canRunTargetAction}>
                       <Play size={13} />
-                      <span>Attach Capture</span>
+                      <span>Capture Window</span>
                     </button>
                     <button type="button" className="tool-button" onClick={handleStartStreamingAttach} disabled={!canRunTargetAction}>
                       <Activity size={13} />
-                      <span>Start Stream</span>
+                      <span>Attach &amp; Monitor</span>
                     </button>
                     <button type="button" className="tool-button" onClick={handleStartDaemonSession} disabled={!canRunTargetAction}>
                       <HardDrive size={13} />
@@ -1544,24 +1632,28 @@ function App() {
               <div className="controlled-launch">
                 <div className="section-title">
                   <Rocket size={14} />
-                  <span>Launch Target</span>
+                  <span>Start New Process</span>
                 </div>
                 <div className="launch-grid">
-                  <label htmlFor="launch-target-path">Executable</label>
-                  <input
-                    id="launch-target-path"
-                    type="text"
-                    value={launchTargetPath}
-                    onChange={(event) => setLaunchTargetPath(event.target.value)}
-                    placeholder="C:\\Path\\target.exe"
-                  />
+                  <label>Executable</label>
+                  <div className={launchTargetPath ? "launch-selected-path" : "launch-selected-path empty"} title={launchTargetPath || "Choose an executable with Launch & Monitor"}>
+                    {launchTargetPath || "Choose with Launch & Monitor"}
+                  </div>
                   <label htmlFor="launch-working-directory">Working dir</label>
                   <input
                     id="launch-working-directory"
                     type="text"
                     value={launchWorkingDirectory}
                     onChange={(event) => setLaunchWorkingDirectory(event.target.value)}
-                    placeholder="optional"
+                    placeholder="defaults to executable folder"
+                  />
+                  <label htmlFor="launch-arguments">Arguments</label>
+                  <input
+                    id="launch-arguments"
+                    type="text"
+                    value={launchArguments}
+                    onChange={(event) => setLaunchArguments(event.target.value)}
+                    placeholder="optional command-line parameters"
                   />
                   <label htmlFor="launch-duration">Duration</label>
                   <input
@@ -1573,27 +1665,16 @@ function App() {
                     value={launchDurationMs}
                     onChange={(event) => setLaunchDurationMs(clampDurationMs(event.target.value, launchDurationMs))}
                   />
-                  <label>Agent</label>
-                  <span>knmon-agent64.dll</span>
-                  <label>Architecture</label>
-                  <span>same-bitness only</span>
-                  <label>Injection</label>
+                </div>
+                <div className="launch-mode-strip">
                   <span>early-bird APC</span>
-                  <label>Session</label>
-                  <span>{currentLaunchSession ? currentLaunchSession.sessionId : "not started"}</span>
-                  <label>State</label>
-                  <span>{currentLaunchSession ? currentLaunchSession.sessionState : "idle"}</span>
-                  <label>Target PID</label>
-                  <span>{currentLaunchSession?.targetProcessId || "pending"}</span>
-                  <label>Streamed rows</label>
-                  <span>{currentLaunchSession ? currentLaunchSession.recordsStreamed : 0}</span>
-                  <label>Dropped</label>
-                  <span>{currentLaunchSession ? currentLaunchSession.transportDroppedEvents : droppedCount}</span>
+                  <span>same-bitness</span>
+                  <span>agent64</span>
                 </div>
                 <div className="launch-actions">
-                  <button type="button" className="tool-button primary" onClick={handleStartLaunchMonitor} disabled={nativeBusy || !!activeNativeSession || !!activeNativeOperation}>
+                  <button type="button" className="tool-button primary launch-primary-button" onClick={handleStartLaunchMonitor} disabled={!canLaunchMonitor}>
                     <Play size={14} />
-                    <span>Launch Monitor</span>
+                    <span>Launch &amp; Monitor</span>
                   </button>
                   <button type="button" className="tool-button" onClick={handleRefreshSessionCatalog} disabled={nativeBusy}>
                     <RefreshCcw size={14} />
@@ -1619,7 +1700,8 @@ function App() {
                     session {lastSession.sessionId || "replayed-session"} / events={lastSession.traceEventCount} / {lastSession.message}
                   </div>
                 ) : null}
-                <div className="catalog-browser">
+              </div>
+              <div className="catalog-browser session-catalog-panel">
                   <div className="catalog-summary">
                     <Database size={14} />
                     <strong>{sessionCatalog ? `${sessionCatalog.sessionCount} sessions` : "Catalog"}</strong>
@@ -1838,7 +1920,6 @@ function App() {
                       </div>
                     ) : null}
                   </div>
-                </div>
               </div>
             </section>
           ) : null}

@@ -1210,6 +1210,123 @@ const ProcessSnapshotInfo* FindSnapshotProcess(const std::vector<ProcessSnapshot
     return found;
 }
 
+bool IsDescendantProcess(const std::vector<ProcessSnapshotInfo>& processes, DWORD rootProcessId, DWORD processId)
+{
+    bool descendant = false;
+    DWORD currentProcessId = processId;
+
+    for (std::size_t depth = 0; depth < 32; ++depth)
+    {
+        const ProcessSnapshotInfo* process = FindSnapshotProcess(processes, currentProcessId);
+        if (process == nullptr || process->ParentProcessId == 0 || process->ParentProcessId == currentProcessId)
+        {
+            break;
+        }
+
+        if (process->ParentProcessId == rootProcessId)
+        {
+            descendant = true;
+            break;
+        }
+
+        currentProcessId = process->ParentProcessId;
+    }
+
+    return descendant;
+}
+
+std::vector<DWORD> CollectProcessTreeIds(DWORD rootProcessId)
+{
+    std::vector<DWORD> processIds;
+    std::vector<ProcessSnapshotInfo> processes;
+    DWORD ignoredError = 0;
+
+    processIds.push_back(rootProcessId);
+    if (CollectProcessSnapshot(&processes, &ignoredError))
+    {
+        for (const ProcessSnapshotInfo& process : processes)
+        {
+            if (process.ProcessId != rootProcessId && IsDescendantProcess(processes, rootProcessId, process.ProcessId))
+            {
+                processIds.push_back(process.ProcessId);
+            }
+        }
+    }
+
+    return processIds;
+}
+
+struct ProcessWindowRevealResult
+{
+    std::uint32_t CandidateWindows = 0;
+    std::uint32_t VisibleWindows = 0;
+    std::uint32_t RestoredWindows = 0;
+};
+
+struct ProcessWindowRevealContext
+{
+    const std::vector<DWORD>* ProcessIds = nullptr;
+    ProcessWindowRevealResult Result;
+    bool ForegroundSet = false;
+};
+
+BOOL CALLBACK RevealProcessWindowProc(HWND window, LPARAM parameter)
+{
+    auto* context = reinterpret_cast<ProcessWindowRevealContext*>(parameter);
+    if (context == nullptr || context->ProcessIds == nullptr)
+    {
+        return TRUE;
+    }
+
+    DWORD processId = 0;
+    GetWindowThreadProcessId(window, &processId);
+    if (std::find(context->ProcessIds->begin(), context->ProcessIds->end(), processId) == context->ProcessIds->end())
+    {
+        return TRUE;
+    }
+
+    RECT rect = {};
+    if (!GetWindowRect(window, &rect))
+    {
+        return TRUE;
+    }
+
+    const LONG width = rect.right - rect.left;
+    const LONG height = rect.bottom - rect.top;
+    if (width <= 0 || height <= 0)
+    {
+        return TRUE;
+    }
+
+    ++context->Result.CandidateWindows;
+    if (IsWindowVisible(window))
+    {
+        ++context->Result.VisibleWindows;
+        return TRUE;
+    }
+
+    if (ShowWindowAsync(window, SW_RESTORE))
+    {
+        ++context->Result.RestoredWindows;
+        if (!context->ForegroundSet)
+        {
+            SetForegroundWindow(window);
+            context->ForegroundSet = true;
+        }
+    }
+
+    return TRUE;
+}
+
+ProcessWindowRevealResult RevealProcessTreeWindows(DWORD rootProcessId)
+{
+    ProcessWindowRevealContext context;
+    const std::vector<DWORD> processIds = CollectProcessTreeIds(rootProcessId);
+    context.ProcessIds = &processIds;
+    EnumWindows(RevealProcessWindowProc, reinterpret_cast<LPARAM>(&context));
+    return context.Result;
+}
+
 KnMonProcessTreeNode* FindProcessTreeNode(std::vector<KnMonProcessTreeNode>& nodes, DWORD processId)
 {
     KnMonProcessTreeNode* found = nullptr;
@@ -5600,6 +5717,10 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             hookInstallFailed = true;
             AddAudit(result, "hook_install_failed", "agent_event_read", payload, ERROR_HOOK_NOT_INSTALLED);
         }
+        else if (message.MessageType == "hook_deferred")
+        {
+            AddAudit(result, "hook_deferred", "agent_event_read", payload);
+        }
         else if (message.MessageType == "api_call")
         {
             result.CapturedEvents.push_back(message);
@@ -5731,6 +5852,11 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         const std::wstring agentModuleName = std::filesystem::path(agentPath).filename().wstring();
         const std::wstring workingDirectory = request.WorkingDirectory.empty() ? std::filesystem::path(targetPath).parent_path().wstring() : Utf8ToWide(request.WorkingDirectory);
         std::wstring commandLine = QuoteArgument(targetPath);
+        if (!request.CommandLineArguments.empty())
+        {
+            commandLine += L" ";
+            commandLine += Utf8ToWide(request.CommandLineArguments);
+        }
         std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
         mutableCommandLine.push_back(L'\0');
 
@@ -5740,13 +5866,16 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         EnvironmentOverride transportEnv(L"KNMON_TRANSPORT_NAME", transport.MappingName);
         EnvironmentOverride transportRequiredEnv(L"KNMON_TRANSPORT_REQUIRED", L"1");
 
+        startupInfo.dwFlags |= STARTF_USESHOWWINDOW;
+        startupInfo.wShowWindow = SW_SHOWNORMAL;
+
         if (!CreateProcessW(
             targetPath.c_str(),
             mutableCommandLine.data(),
             nullptr,
             nullptr,
             FALSE,
-            CREATE_SUSPENDED | CREATE_NO_WINDOW,
+            CREATE_SUSPENDED,
             nullptr,
             workingDirectory.empty() ? nullptr : workingDirectory.c_str(),
             &startupInfo,
@@ -5843,6 +5972,29 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         AddAudit(result, "agent_pipe_connected", "agent_pipe_connect", "Launch agent event pipe connected.");
         AddAudit(result, "launch_capture_started", "launch_capture", "Bounded early-bird launch capture started.");
 
+        bool launchWindowRevealCompleted = false;
+        ULONGLONG nextWindowRevealTick = GetTickCount64() + 250ULL;
+        auto revealLaunchWindows = [&]() -> bool
+        {
+            bool revealed = false;
+            const ProcessWindowRevealResult reveal = RevealProcessTreeWindows(processInfo.dwProcessId);
+            if (reveal.RestoredWindows > 0 || reveal.VisibleWindows > 0)
+            {
+                std::ostringstream revealMessage;
+                revealMessage << "Launch target window reveal checked; candidates="
+                              << reveal.CandidateWindows
+                              << "; visible="
+                              << reveal.VisibleWindows
+                              << "; restored="
+                              << reveal.RestoredWindows
+                              << ".";
+                AddAudit(result, reveal.RestoredWindows > 0 ? "launch_window_revealed" : "launch_window_visible", "ShowWindowAsync", revealMessage.str());
+                revealed = true;
+            }
+
+            return revealed;
+        };
+
         const ULONGLONG captureDeadline = GetTickCount64() + static_cast<ULONGLONG>(request.DurationMs);
         while (GetTickCount64() < captureDeadline)
         {
@@ -5852,6 +6004,14 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             }
 
             DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
+            if (!launchWindowRevealCompleted && GetTickCount64() >= nextWindowRevealTick)
+            {
+                launchWindowRevealCompleted = revealLaunchWindows();
+                if (!launchWindowRevealCompleted)
+                {
+                    nextWindowRevealTick = GetTickCount64() + 250ULL;
+                }
+            }
 
             std::string payload;
             pipeError = 0;
@@ -5891,6 +6051,34 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
         DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
         UpdateTransportMetrics(result, transport);
+        if (!launchWindowRevealCompleted && !targetExited && !result.CancelObserved)
+        {
+            const ULONGLONG revealDeadline = GetTickCount64() + 3000ULL;
+            while (GetTickCount64() < revealDeadline)
+            {
+                DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
+                launchWindowRevealCompleted = revealLaunchWindows();
+                if (launchWindowRevealCompleted)
+                {
+                    break;
+                }
+
+                if (WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
+                {
+                    targetExited = true;
+                    AddAudit(result, "target_exited", "launch_window_reveal", "Target exited before a launch window could be revealed.");
+                    break;
+                }
+
+                Sleep(100);
+            }
+
+            if (!launchWindowRevealCompleted && !targetExited)
+            {
+                AddAudit(result, "launch_window_not_found", "ShowWindowAsync", "No visible or restorable top-level target window was found after launch capture.");
+            }
+        }
+
         if (result.CancelObserved)
         {
             AddAudit(result, "launch_capture_cancelled", "launch_capture", "Bounded launch capture cancellation observed; cleanup follows.");
@@ -6380,6 +6568,10 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                     hookInstallFailed = true;
                     AddAudit(result, "hook_install_failed", "agent_event_read", payload, ERROR_HOOK_NOT_INSTALLED);
                 }
+                else if (message.MessageType == "hook_deferred")
+                {
+                    AddAudit(result, "hook_deferred", "agent_event_read", payload);
+                }
                 else if (message.MessageType == "api_call")
                 {
                     result.CapturedEvents.push_back(message);
@@ -6646,6 +6838,10 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         else if (message.MessageType == "hook_install_failed")
         {
             AddAudit(result, "hook_install_failed", "agent_event_read", payload, ERROR_HOOK_NOT_INSTALLED);
+        }
+        else if (message.MessageType == "hook_deferred")
+        {
+            AddAudit(result, "hook_deferred", "agent_event_read", payload);
         }
         else if (message.MessageType == "api_call")
         {

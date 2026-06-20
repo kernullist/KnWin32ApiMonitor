@@ -2163,6 +2163,19 @@ void SendHookStatus(const char* moduleName, const char* apiName, bool installed,
     SendJson(stream.str());
 }
 
+void SendHookDeferredStatus(const char* moduleName, const char* apiName, const std::string& message)
+{
+    const LONG64 sequence = NextSequence();
+    std::ostringstream stream;
+    stream << MessagePrefix("hook_deferred", sequence) << ",";
+    stream << "\"api\":" << Q(apiName) << ",";
+    stream << "\"module\":" << Q(moduleName) << ",";
+    stream << "\"hookMethod\":\"iat\",";
+    stream << "\"message\":" << Q(message);
+    stream << "}";
+    SendJson(stream.str());
+}
+
 void SendModuleInventoryStatus(const SweepStats& stats)
 {
     const LONG64 sequence = NextSequence();
@@ -7218,7 +7231,7 @@ bool AddressBelongsToLoadedModule(const void* address)
 
 bool SweepLoadedModules(const char* reason, bool reportHookStatus, SweepStats* outStats)
 {
-    bool requiredCoverage = true;
+    bool installedCoverage = false;
     SweepStats stats = {};
     std::array<ModuleInfo, MaxModuleRecords> modules = {};
     std::array<HookDefinition, HookDefinitionCount> definitions = BuildHookDefinitions();
@@ -7249,15 +7262,10 @@ bool SweepLoadedModules(const char* reason, bool reportHookStatus, SweepStats* o
     }
 
     SendIatSweepStatus(reason, stats);
+    installedCoverage = stats.PatchedSlots > 0;
 
     for (HookDefinition& definition : definitions)
     {
-        if (reportHookStatus && definition.Required && definition.LastPatchedSlots == 0)
-        {
-            requiredCoverage = false;
-            InterlockedIncrement(&g_failedHooks);
-        }
-
         if (reportHookStatus && definition.ReportStatus)
         {
             if (definition.LastPatchedSlots > 0)
@@ -7268,7 +7276,7 @@ bool SweepLoadedModules(const char* reason, bool reportHookStatus, SweepStats* o
             }
             else if (definition.Required)
             {
-                SendHookStatus(definition.ImportModuleName, definition.ApiName, false, "Required IAT entry was not found in eligible loaded modules.");
+                SendHookDeferredStatus(definition.ImportModuleName, definition.ApiName, "Required IAT entry is not present in eligible loaded modules yet.");
             }
         }
     }
@@ -7278,7 +7286,7 @@ bool SweepLoadedModules(const char* reason, bool reportHookStatus, SweepStats* o
         *outStats = stats;
     }
 
-    return requiredCoverage;
+    return installedCoverage;
 }
 
 HookLifecycleCounts UninstallHooks()
@@ -11443,15 +11451,16 @@ int WINAPI HookedWSAGetLastError()
 
 bool InstallHooks()
 {
-    const bool allInstalled = SweepLoadedModules("initial", true, nullptr);
+    SweepStats stats = {};
+    const bool installedCoverage = SweepLoadedModules("initial", true, &stats);
 
-    if (allInstalled)
+    if (installedCoverage)
     {
         SetLifecycleState(AgentLifecycleState::Running);
         InterlockedExchange(&g_hooksEnabled, 1);
     }
 
-    return allInstalled;
+    return installedCoverage;
 }
 
 void CloseAgentPipe()
