@@ -207,6 +207,7 @@ using BCryptOpenAlgorithmProviderFn = NTSTATUS(WINAPI*)(BCRYPT_ALG_HANDLE*, LPCW
 using BCryptCloseAlgorithmProviderFn = NTSTATUS(WINAPI*)(BCRYPT_ALG_HANDLE, ULONG);
 using BCryptGetPropertyFn = NTSTATUS(WINAPI*)(BCRYPT_HANDLE, LPCWSTR, PUCHAR, ULONG, ULONG*, ULONG);
 using BCryptGenRandomFn = NTSTATUS(WINAPI*)(BCRYPT_ALG_HANDLE, PUCHAR, ULONG, ULONG);
+using BCryptDestroyKeyFn = NTSTATUS(WINAPI*)(BCRYPT_KEY_HANDLE);
 using CertOpenStoreFn = HCERTSTORE(WINAPI*)(LPCSTR, DWORD, HCRYPTPROV_LEGACY, DWORD, const void*);
 using CertCloseStoreFn = BOOL(WINAPI*)(HCERTSTORE, DWORD);
 using CryptMsgOpenToDecodeFn = HCRYPTMSG(WINAPI*)(DWORD, DWORD, DWORD, HCRYPTPROV_LEGACY, PCERT_INFO, PCMSG_STREAM_INFO);
@@ -243,6 +244,7 @@ using SysFreeStringFn = void(WINAPI*)(BSTR);
 using VariantClearFn = HRESULT(WINAPI*)(VARIANTARG*);
 using SafeArrayDestroyFn = HRESULT(WINAPI*)(SAFEARRAY*);
 using FreeCredentialsHandleFn = SECURITY_STATUS(WINAPI*)(PCredHandle);
+using DeleteSecurityContextFn = SECURITY_STATUS(WINAPI*)(PCtxtHandle);
 using DnsFreeFn = void(WINAPI*)(PVOID, DNS_FREE_TYPE);
 using SetupDiDestroyDeviceInfoListFn = BOOL(WINAPI*)(HDEVINFO);
 using DestroyEnvironmentBlockFn = BOOL(WINAPI*)(LPVOID);
@@ -363,6 +365,7 @@ BCryptOpenAlgorithmProviderFn g_originalBCryptOpenAlgorithmProvider = nullptr;
 BCryptCloseAlgorithmProviderFn g_originalBCryptCloseAlgorithmProvider = nullptr;
 BCryptGetPropertyFn g_originalBCryptGetProperty = nullptr;
 BCryptGenRandomFn g_originalBCryptGenRandom = nullptr;
+BCryptDestroyKeyFn g_originalBCryptDestroyKey = nullptr;
 CertOpenStoreFn g_originalCertOpenStore = nullptr;
 CertCloseStoreFn g_originalCertCloseStore = nullptr;
 CryptMsgOpenToDecodeFn g_originalCryptMsgOpenToDecode = nullptr;
@@ -399,6 +402,7 @@ SysFreeStringFn g_originalSysFreeString = nullptr;
 VariantClearFn g_originalVariantClear = nullptr;
 SafeArrayDestroyFn g_originalSafeArrayDestroy = nullptr;
 FreeCredentialsHandleFn g_originalFreeCredentialsHandle = nullptr;
+DeleteSecurityContextFn g_originalDeleteSecurityContext = nullptr;
 DnsFreeFn g_originalDnsFree = nullptr;
 SetupDiDestroyDeviceInfoListFn g_originalSetupDiDestroyDeviceInfoList = nullptr;
 DestroyEnvironmentBlockFn g_originalDestroyEnvironmentBlock = nullptr;
@@ -526,7 +530,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 133;
+constexpr std::size_t HookDefinitionCount = 135;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -4430,6 +4434,25 @@ void EmitBCryptGenRandomEvent(
     }
 }
 
+void EmitBCryptDestroyKeyEvent(
+    NTSTATUS status,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    BCRYPT_KEY_HANDLE key)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::BCryptDestroyKey, "bcrypt.dll", start, end, errorCode);
+        record->ReturnCode = static_cast<std::uint32_t>(status);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(key));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void EmitCertOpenStoreEvent(
     HCERTSTORE result,
     DWORD errorCode,
@@ -5867,6 +5890,25 @@ void EmitFreeCredentialsHandleEvent(
     }
 }
 
+void EmitDeleteSecurityContextEvent(
+    SECURITY_STATUS status,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    PCtxtHandle context)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::DeleteSecurityContext, "secur32.dll", start, end, status == SEC_E_OK ? 0 : static_cast<DWORD>(status));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(status));
+        record->ReturnCode = static_cast<std::uint32_t>(status);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(context));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void EmitDnsRecordListFreeEvent(
     const LARGE_INTEGER& start,
     const LARGE_INTEGER& end,
@@ -6942,6 +6984,7 @@ NTSTATUS WINAPI HookedBCryptOpenAlgorithmProvider(BCRYPT_ALG_HANDLE* algorithm, 
 NTSTATUS WINAPI HookedBCryptCloseAlgorithmProvider(BCRYPT_ALG_HANDLE algorithm, ULONG flags);
 NTSTATUS WINAPI HookedBCryptGetProperty(BCRYPT_HANDLE object, LPCWSTR property, PUCHAR output, ULONG outputBytes, ULONG* resultBytes, ULONG flags);
 NTSTATUS WINAPI HookedBCryptGenRandom(BCRYPT_ALG_HANDLE algorithm, PUCHAR buffer, ULONG bufferBytes, ULONG flags);
+NTSTATUS WINAPI HookedBCryptDestroyKey(BCRYPT_KEY_HANDLE key);
 HCERTSTORE WINAPI HookedCertOpenStore(LPCSTR provider, DWORD encodingType, HCRYPTPROV_LEGACY cryptProvider, DWORD flags, const void* parameters);
 BOOL WINAPI HookedCertCloseStore(HCERTSTORE store, DWORD flags);
 HCRYPTMSG WINAPI HookedCryptMsgOpenToDecode(DWORD encodingType, DWORD flags, DWORD messageType, HCRYPTPROV_LEGACY cryptProvider, PCERT_INFO recipientInfo, PCMSG_STREAM_INFO streamInfo);
@@ -6978,6 +7021,7 @@ void WINAPI HookedSysFreeString(BSTR value);
 HRESULT WINAPI HookedVariantClear(VARIANTARG* variant);
 HRESULT WINAPI HookedSafeArrayDestroy(SAFEARRAY* safeArray);
 SECURITY_STATUS WINAPI HookedFreeCredentialsHandle(PCredHandle credential);
+SECURITY_STATUS WINAPI HookedDeleteSecurityContext(PCtxtHandle context);
 void WINAPI HookedDnsFree(PVOID data, DNS_FREE_TYPE freeType);
 BOOL WINAPI HookedSetupDiDestroyDeviceInfoList(HDEVINFO deviceInfoSet);
 BOOL WINAPI HookedDestroyEnvironmentBlock(LPVOID environment);
@@ -7082,6 +7126,7 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "bcrypt.dll", "BCryptCloseAlgorithmProvider", reinterpret_cast<void*>(HookedBCryptCloseAlgorithmProvider), reinterpret_cast<void**>(&g_originalBCryptCloseAlgorithmProvider), false, true, false, 0, 0 },
         HookDefinition { "bcrypt.dll", "BCryptGetProperty", reinterpret_cast<void*>(HookedBCryptGetProperty), reinterpret_cast<void**>(&g_originalBCryptGetProperty), false, true, false, 0, 0 },
         HookDefinition { "bcrypt.dll", "BCryptGenRandom", reinterpret_cast<void*>(HookedBCryptGenRandom), reinterpret_cast<void**>(&g_originalBCryptGenRandom), false, true, false, 0, 0 },
+        HookDefinition { "bcrypt.dll", "BCryptDestroyKey", reinterpret_cast<void*>(HookedBCryptDestroyKey), reinterpret_cast<void**>(&g_originalBCryptDestroyKey), false, true, false, 0, 0 },
         HookDefinition { "crypt32.dll", "CertOpenStore", reinterpret_cast<void*>(HookedCertOpenStore), reinterpret_cast<void**>(&g_originalCertOpenStore), false, true, false, 0, 0 },
         HookDefinition { "crypt32.dll", "CertCloseStore", reinterpret_cast<void*>(HookedCertCloseStore), reinterpret_cast<void**>(&g_originalCertCloseStore), false, true, false, 0, 0 },
         HookDefinition { "crypt32.dll", "CryptMsgOpenToDecode", reinterpret_cast<void*>(HookedCryptMsgOpenToDecode), reinterpret_cast<void**>(&g_originalCryptMsgOpenToDecode), false, true, false, 0, 0 },
@@ -7118,6 +7163,7 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "oleaut32.dll", "VariantClear", reinterpret_cast<void*>(HookedVariantClear), reinterpret_cast<void**>(&g_originalVariantClear), false, true, false, 9, 0 },
         HookDefinition { "oleaut32.dll", "SafeArrayDestroy", reinterpret_cast<void*>(HookedSafeArrayDestroy), reinterpret_cast<void**>(&g_originalSafeArrayDestroy), false, true, false, 16, 0 },
         HookDefinition { "secur32.dll", "FreeCredentialsHandle", reinterpret_cast<void*>(HookedFreeCredentialsHandle), reinterpret_cast<void**>(&g_originalFreeCredentialsHandle), false, true, false, 0, 0 },
+        HookDefinition { "secur32.dll", "DeleteSecurityContext", reinterpret_cast<void*>(HookedDeleteSecurityContext), reinterpret_cast<void**>(&g_originalDeleteSecurityContext), false, true, false, 0, 0 },
         HookDefinition { "dnsapi.dll", "DnsFree", reinterpret_cast<void*>(HookedDnsFree), reinterpret_cast<void**>(&g_originalDnsFree), false, true, false, 0, 0 },
         HookDefinition { "setupapi.dll", "SetupDiDestroyDeviceInfoList", reinterpret_cast<void*>(HookedSetupDiDestroyDeviceInfoList), reinterpret_cast<void**>(&g_originalSetupDiDestroyDeviceInfoList), false, true, false, 0, 0 },
         HookDefinition { "userenv.dll", "DestroyEnvironmentBlock", reinterpret_cast<void*>(HookedDestroyEnvironmentBlock), reinterpret_cast<void**>(&g_originalDestroyEnvironmentBlock), false, true, false, 0, 0 },
@@ -10307,6 +10353,34 @@ NTSTATUS WINAPI HookedBCryptGenRandom(BCRYPT_ALG_HANDLE algorithm, PUCHAR buffer
     return status;
 }
 
+NTSTATUS WINAPI HookedBCryptDestroyKey(BCRYPT_KEY_HANDLE key)
+{
+    if (g_inHook || !HooksEnabled() || g_originalBCryptDestroyKey == nullptr)
+    {
+        if (g_originalBCryptDestroyKey == nullptr)
+        {
+            return static_cast<NTSTATUS>(0xC000007AL);
+        }
+
+        return g_originalBCryptDestroyKey(key);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const NTSTATUS status = g_originalBCryptDestroyKey(key);
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = NtStatusToDosError(status);
+    if (HooksEnabled())
+    {
+        EmitBCryptDestroyKeyEvent(status, eventError, start, end, key);
+    }
+
+    return status;
+}
+
 HCERTSTORE WINAPI HookedCertOpenStore(LPCSTR provider, DWORD encodingType, HCRYPTPROV_LEGACY cryptProvider, DWORD flags, const void* parameters)
 {
     if (g_inHook || !HooksEnabled() || g_originalCertOpenStore == nullptr)
@@ -11402,6 +11476,33 @@ SECURITY_STATUS WINAPI HookedFreeCredentialsHandle(PCredHandle credential)
     if (HooksEnabled())
     {
         EmitFreeCredentialsHandleEvent(status, start, end, credential);
+    }
+
+    return status;
+}
+
+SECURITY_STATUS WINAPI HookedDeleteSecurityContext(PCtxtHandle context)
+{
+    if (g_inHook || !HooksEnabled() || g_originalDeleteSecurityContext == nullptr)
+    {
+        if (g_originalDeleteSecurityContext == nullptr)
+        {
+            return SEC_E_INTERNAL_ERROR;
+        }
+
+        return g_originalDeleteSecurityContext(context);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const SECURITY_STATUS status = g_originalDeleteSecurityContext(context);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitDeleteSecurityContextEvent(status, start, end, context);
     }
 
     return status;

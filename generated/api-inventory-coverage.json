@@ -1,5 +1,5 @@
 {
-  "blockedByMissingDecoderOrHookStrategy": 17961,
+  "blockedByMissingDecoderOrHookStrategy": 17959,
   "nextFamilies": [
     {
       "examples": [
@@ -290,22 +290,6 @@
     },
     {
       "examples": [
-        "bcrypt.dll!BCryptDecrypt",
-        "bcrypt.dll!BCryptDestroyKey",
-        "bcrypt.dll!BCryptEncrypt",
-        "bcrypt.dll!BCryptGenerateSymmetricKey",
-        "bcrypt.dll!BCryptHashData",
-        "bcrypt.dll!BCryptSetProperty"
-      ],
-      "family": "crypto",
-      "impact": 12,
-      "tier1": 6,
-      "tier2": 0,
-      "withParameters": 6,
-      "withSdkHeader": 6
-    },
-    {
-      "examples": [
         "winhttp.dll!WinHttpOpenRequest",
         "winhttp.dll!WinHttpQueryHeaders",
         "winhttp.dll!WinHttpReadData",
@@ -338,6 +322,21 @@
     },
     {
       "examples": [
+        "bcrypt.dll!BCryptDecrypt",
+        "bcrypt.dll!BCryptEncrypt",
+        "bcrypt.dll!BCryptGenerateSymmetricKey",
+        "bcrypt.dll!BCryptHashData",
+        "bcrypt.dll!BCryptSetProperty"
+      ],
+      "family": "crypto",
+      "impact": 10,
+      "tier1": 5,
+      "tier2": 0,
+      "withParameters": 5,
+      "withSdkHeader": 5
+    },
+    {
+      "examples": [
         "crypt32.dll!CertFindCertificateInStore",
         "crypt32.dll!CertFreeCertificateContext",
         "crypt32.dll!CertGetCertificateChain",
@@ -353,13 +352,13 @@
   ],
   "schemaVersion": "0.1.0",
   "summary": {
-    "blockedByMissingDecoder": 15936,
+    "blockedByMissingDecoder": 15934,
     "blockedByMissingHookStrategy": 2025,
     "byCoverageStatus": {
-      "definition_only": 54,
+      "definition_only": 52,
       "hooked": 4,
       "not_defined": 17907,
-      "smoke_verified": 121
+      "smoke_verified": 123
     },
     "byFamily": {
       "ai": 4,
@@ -412,8 +411,8 @@
       "web": 58
     },
     "byHookTier": {
-      "0": 125,
-      "1": 15936,
+      "0": 127,
+      "1": 15934,
       "2": 655,
       "3": 1370
     },
@@ -792,7 +791,7 @@
       "existingDefinitionOnly": 4,
       "win32Metadata": 18082
     },
-    "currentlyEmittedByAgentHooks": 125,
+    "currentlyEmittedByAgentHooks": 127,
     "totalApis": 18086,
     "withMicrosoftLearnDocs": 13819,
     "withModuleMapping": 18086,

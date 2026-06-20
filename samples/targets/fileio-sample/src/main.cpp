@@ -682,6 +682,9 @@ bool RunBcryptProbe()
             break;
         }
 
+        const NTSTATUS destroyKeyStatus = BCryptDestroyKey(nullptr);
+        std::cout << "bcrypt key destroy invalid-handle probe status=" << HexNtStatus(destroyKeyStatus) << "\n";
+
         status = BCryptCloseAlgorithmProvider(algorithm, 0);
         algorithm = nullptr;
         if (!NT_SUCCESS(status))
@@ -1379,6 +1382,10 @@ bool RunSecur32CredentialFreeProbe()
         }
 
         credentialAcquired = false;
+        CtxtHandle context = {};
+        status = DeleteSecurityContext(&context);
+        std::cout << "secur32 context delete invalid-handle probe status=" << HexHResult(status) << "\n";
+
         std::cout << "secur32 credential free lifecycle completed\n";
         success = true;
     }

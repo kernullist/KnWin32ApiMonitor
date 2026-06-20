@@ -795,14 +795,14 @@
     {
       "callingConvention": "stdcall",
       "category": "cng_key_destroy",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "return_ntstatus",
       "failure": {
         "ntSuccess": false
       },
       "family": "crypto",
       "firstParameterIndex": 145,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 34,
       "module": "bcrypt.dll",
       "moduleId": 5,
@@ -3897,14 +3897,14 @@
     {
       "callingConvention": "stdcall",
       "category": "security_context_delete",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": "SEC_E_OK"
       },
       "family": "sspi",
       "firstParameterIndex": 561,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 164,
       "module": "secur32.dll",
       "moduleId": 19,

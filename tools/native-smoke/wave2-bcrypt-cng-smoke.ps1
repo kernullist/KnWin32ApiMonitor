@@ -4,6 +4,25 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Assert-PointerValue
+{
+    param(
+        [string]$Value,
+        [string]$Name,
+        [bool]$AllowNull = $false
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value) -or $Value -notmatch "^0x[0-9a-fA-F]+$")
+    {
+        throw "$Name is not a pointer value: $Value"
+    }
+
+    if (-not $AllowNull -and $Value -match "^0x0+$")
+    {
+        throw "$Name unexpectedly used a null pointer."
+    }
+}
+
 if (-not (Test-Path -LiteralPath $HelperPath))
 {
     throw "Helper not found: $HelperPath"
@@ -30,7 +49,8 @@ $expected = @(
     @{ Api = "BCryptOpenAlgorithmProvider"; Category = "cng_algorithm_open"; Args = @("phAlgorithm", "pszAlgId", "pszImplementation", "dwFlags") },
     @{ Api = "BCryptCloseAlgorithmProvider"; Category = "cng_algorithm_close"; Args = @("hAlgorithm", "dwFlags") },
     @{ Api = "BCryptGetProperty"; Category = "cng_property_get"; Args = @("hObject", "pszProperty", "pbOutput", "cbOutput", "pcbResult", "dwFlags") },
-    @{ Api = "BCryptGenRandom"; Category = "cng_random"; Args = @("hAlgorithm", "pbBuffer", "cbBuffer", "dwFlags") }
+    @{ Api = "BCryptGenRandom"; Category = "cng_random"; Args = @("hAlgorithm", "pbBuffer", "cbBuffer", "dwFlags") },
+    @{ Api = "BCryptDestroyKey"; Category = "cng_key_destroy"; Args = @("hKey"); RequiresSuccess = $false }
 )
 
 foreach ($item in $expected)
@@ -56,9 +76,19 @@ foreach ($item in $expected)
         throw "$($item.Api) hook metadata mismatch: hook=$($event[0].hookPolicy) coverage=$($event[0].coverageStatus)"
     }
 
-    if ($event[0].returnValue -ne "0x00000000")
+    $requiresSuccess = $true
+    if ($item.ContainsKey("RequiresSuccess"))
+    {
+        $requiresSuccess = [bool]$item.RequiresSuccess
+    }
+
+    if ($requiresSuccess -and $event[0].returnValue -ne "0x00000000")
     {
         throw "$($item.Api) return value mismatch: $($event[0].returnValue)"
+    }
+    elseif (-not $requiresSuccess -and ([string]::IsNullOrWhiteSpace($event[0].returnValue) -or $event[0].returnValue -notmatch "^0x[0-9a-fA-F]{8}$"))
+    {
+        throw "$($item.Api) return evidence missing or malformed: $($event[0].returnValue)"
     }
 
     foreach ($argName in $item.Args)
@@ -112,6 +142,20 @@ if ($randomArgs -match "\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){3,}\b")
 {
     throw "BCryptGenRandom appears to expose byte preview evidence: $randomArgs"
 }
+
+$destroyEvent = @($result.capturedEvents | Where-Object { $_.api -eq "BCryptDestroyKey" } | Select-Object -First 1)
+if (-not [string]::IsNullOrEmpty($destroyEvent[0].bufferPreview))
+{
+    throw "BCryptDestroyKey exposed bufferPreview: $($destroyEvent[0].bufferPreview)"
+}
+
+$destroyKeyArg = @($destroyEvent[0].arguments | Where-Object { $_.name -eq "hKey" } | Select-Object -First 1)
+if ($destroyKeyArg.Count -ne 1 -or $destroyKeyArg[0].decodeAlias -ne "bcrypt_handle")
+{
+    throw "BCryptDestroyKey hKey evidence mismatch: $($destroyKeyArg | ConvertTo-Json -Depth 8)"
+}
+
+Assert-PointerValue -Value $destroyKeyArg[0].decodedValue -Name "BCryptDestroyKey hKey" -AllowNull $true
 
 $shutdown = @($result.agentMessages | Where-Object { $_.messageType -eq "agent_shutdown" } | Select-Object -Last 1)
 if ($shutdown.Count -ne 1)

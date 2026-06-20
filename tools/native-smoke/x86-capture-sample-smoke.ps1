@@ -67,6 +67,7 @@ $requiredApis = @(
     "BCryptCloseAlgorithmProvider",
     "BCryptGetProperty",
     "BCryptGenRandom",
+    "BCryptDestroyKey",
     "CertOpenStore",
     "CertCloseStore",
     "CryptMsgOpenToDecode",
@@ -103,6 +104,7 @@ $requiredApis = @(
     "VariantClear",
     "SafeArrayDestroy",
     "FreeCredentialsHandle",
+    "DeleteSecurityContext",
     "DnsRecordListFree",
     "SetupDiDestroyDeviceInfoList",
     "DestroyEnvironmentBlock",
@@ -325,6 +327,38 @@ $secur32Payload = $secur32Free[0] | ConvertTo-Json -Depth 12
 if ($secur32Payload -cmatch "AcquireCredentialsHandle|InitializeSecurityContext|DeleteSecurityContext|SecBuffer|pAuthData|AuthData|pszPackage|pszPrincipal|TargetName|LogonId|SEC_WINNT_AUTH_IDENTITY|Password|Secret|Kerberos|Negotiate|NTLM|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 FreeCredentialsHandle event appears to expose auth package, auth data, context buffers, payload, stack, injection, secret, or byte-preview evidence: $secur32Payload"
+}
+
+$secur32Delete = @($result.capturedEvents | Where-Object { $_.module -eq "secur32.dll" -and $_.api -eq "DeleteSecurityContext" } | Select-Object -First 1)
+if ($secur32Delete.Count -ne 1 -or
+    $secur32Delete[0].apiFamily -ne "sspi" -or
+    $secur32Delete[0].apiCategory -ne "security_context_delete" -or
+    $secur32Delete[0].hookPolicy -ne "iat" -or
+    $secur32Delete[0].coverageStatus -ne "smoke_verified" -or
+    [string]::IsNullOrWhiteSpace($secur32Delete[0].returnValue) -or
+    $secur32Delete[0].returnValue -notmatch "^0x[0-9a-fA-F]{8}$")
+{
+    throw "x86 DeleteSecurityContext metadata or return evidence mismatch: $($secur32Delete | ConvertTo-Json -Depth 8)"
+}
+
+if (-not [string]::IsNullOrEmpty($secur32Delete[0].bufferPreview))
+{
+    throw "x86 DeleteSecurityContext exposed bufferPreview: $($secur32Delete[0] | ConvertTo-Json -Depth 8)"
+}
+
+$contextPointer = @($secur32Delete[0].arguments | Where-Object { $_.name -eq "phContext" } | Select-Object -First 1)
+if ($contextPointer.Count -ne 1 -or
+    $contextPointer[0].decodeAlias -ne "handle_pointer" -or
+    $contextPointer[0].captureTiming -ne "pre")
+{
+    throw "x86 DeleteSecurityContext phContext evidence mismatch: $($contextPointer | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $contextPointer[0].decodedValue -Name "x86 DeleteSecurityContext phContext"
+
+$secur32DeletePayload = $secur32Delete[0] | ConvertTo-Json -Depth 12
+if ($secur32DeletePayload -cmatch "AcquireCredentialsHandle|InitializeSecurityContext|SecBuffer|pAuthData|AuthData|pszPackage|pszPrincipal|TargetName|LogonId|SEC_WINNT_AUTH_IDENTITY|Password|Secret|Kerberos|Negotiate|NTLM|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 DeleteSecurityContext event appears to expose auth package, auth data, context buffers, payload, stack, injection, secret, or byte-preview evidence: $secur32DeletePayload"
 }
 
 $dnsRecordFree = @($result.capturedEvents | Where-Object { $_.module -eq "dnsapi.dll" -and $_.api -eq "DnsRecordListFree" } | Select-Object -First 1)
@@ -797,7 +831,7 @@ if ($securityArgs -cmatch "TOKEN_PRIVILEGES|S-1-[0-9-]+|Password|Credential|PRIV
 }
 
 $cryptoEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "crypto" })
-if ($cryptoEvents.Count -lt 4)
+if ($cryptoEvents.Count -lt 5)
 {
     throw "x86 capture did not include the selected bcrypt CNG API family slice."
 }
@@ -831,6 +865,30 @@ if ($bcryptRandom.Count -ne 1 -or -not [string]::IsNullOrEmpty($bcryptRandom[0].
 {
     throw "x86 BCryptGenRandom exposed buffer preview or was not captured."
 }
+
+$bcryptDestroy = @($cryptoEvents | Where-Object { $_.api -eq "BCryptDestroyKey" } | Select-Object -First 1)
+if ($bcryptDestroy.Count -ne 1 -or
+    $bcryptDestroy[0].module -ne "bcrypt.dll" -or
+    $bcryptDestroy[0].apiCategory -ne "cng_key_destroy" -or
+    $bcryptDestroy[0].hookPolicy -ne "iat" -or
+    $bcryptDestroy[0].coverageStatus -ne "smoke_verified" -or
+    [string]::IsNullOrWhiteSpace($bcryptDestroy[0].returnValue) -or
+    $bcryptDestroy[0].returnValue -notmatch "^0x[0-9a-fA-F]{8}$")
+{
+    throw "x86 BCryptDestroyKey metadata or return evidence mismatch: $($bcryptDestroy | ConvertTo-Json -Depth 8)"
+}
+
+if (-not [string]::IsNullOrEmpty($bcryptDestroy[0].bufferPreview))
+{
+    throw "x86 BCryptDestroyKey exposed bufferPreview: $($bcryptDestroy[0] | ConvertTo-Json -Depth 8)"
+}
+
+$bcryptDestroyKey = @($bcryptDestroy[0].arguments | Where-Object { $_.name -eq "hKey" } | Select-Object -First 1)
+if ($bcryptDestroyKey.Count -ne 1 -or $bcryptDestroyKey[0].decodeAlias -ne "bcrypt_handle")
+{
+    throw "x86 BCryptDestroyKey hKey evidence mismatch: $($bcryptDestroyKey | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $bcryptDestroyKey[0].decodedValue -Name "x86 BCryptDestroyKey hKey" -AllowNull $true
 
 $certificateEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "certificate" })
 if ($certificateEvents.Count -lt 2)

@@ -503,7 +503,7 @@
       "unsupported": 0
     },
     {
-      "alreadyLive": 4,
+      "alreadyLive": 5,
       "apis": [
         {
           "apiName": "BCryptOpenAlgorithmProvider",
@@ -648,11 +648,11 @@
           "apiName": "BCryptDestroyKey",
           "callingConvention": "stdcall",
           "category": "cng_key_destroy",
-          "classification": "auto_promotable",
-          "coverageStatus": "definition_only",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
           "errorSource": "return_ntstatus",
           "family": "crypto",
-          "hookPolicy": "definition_only",
+          "hookPolicy": "iat",
           "id": 34,
           "key": "bcrypt.dll!BCryptDestroyKey",
           "module": "bcrypt.dll",
@@ -660,9 +660,9 @@
           "payloadSensitiveParameters": [],
           "pointerOnlyParameters": [],
           "reasons": [
-            "pointer_scalar_or_pointer_only_parameters"
+            "already_live_iat_coverage"
           ],
-          "recommendation": "promote_with_same_dll_pointer_scalar_batch",
+          "recommendation": "keep_in_dll_batch_smoke",
           "returnType": "NTSTATUS",
           "risk": "medium",
           "sourceFile": "definitions/win32/bcrypt.json"
@@ -783,11 +783,11 @@
           "sourceFile": "definitions/win32/bcrypt.json"
         }
       ],
-      "autoPromotable": 1,
+      "autoPromotable": 0,
       "blockedByPayloadPolicy": 5,
       "manualDecoderRequired": 0,
       "module": "bcrypt.dll",
-      "recommendation": "promote_auto_batch_before_single_api_work",
+      "recommendation": "document_payload_boundary_only",
       "sourceFiles": [
         "definitions/win32/bcrypt.json"
       ],
@@ -3434,7 +3434,7 @@
       "unsupported": 0
     },
     {
-      "alreadyLive": 1,
+      "alreadyLive": 2,
       "apis": [
         {
           "apiName": "AcquireCredentialsHandleW",
@@ -3540,11 +3540,11 @@
           "apiName": "DeleteSecurityContext",
           "callingConvention": "stdcall",
           "category": "security_context_delete",
-          "classification": "auto_promotable",
-          "coverageStatus": "definition_only",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
           "errorSource": "none",
           "family": "sspi",
-          "hookPolicy": "definition_only",
+          "hookPolicy": "iat",
           "id": 164,
           "key": "secur32.dll!DeleteSecurityContext",
           "module": "secur32.dll",
@@ -3554,19 +3554,19 @@
             "phContext"
           ],
           "reasons": [
-            "pointer_scalar_or_pointer_only_parameters"
+            "already_live_iat_coverage"
           ],
-          "recommendation": "promote_with_same_dll_pointer_scalar_batch",
+          "recommendation": "keep_in_dll_batch_smoke",
           "returnType": "SECURITY_STATUS",
           "risk": "medium",
           "sourceFile": "definitions/win32/secur32.json"
         }
       ],
-      "autoPromotable": 1,
+      "autoPromotable": 0,
       "blockedByPayloadPolicy": 2,
       "manualDecoderRequired": 0,
       "module": "secur32.dll",
-      "recommendation": "promote_auto_batch_before_single_api_work",
+      "recommendation": "document_payload_boundary_only",
       "sourceFiles": [
         "definitions/win32/secur32.json"
       ],
@@ -5074,11 +5074,11 @@
     "metadata": "definitions/metadata"
   },
   "summary": {
-    "alreadyLive": 125,
-    "autoPromotable": 2,
+    "alreadyLive": 127,
+    "autoPromotable": 0,
     "blockedByPayloadPolicy": 49,
-    "dllsFullyTriaged": 20,
-    "dllsWithAutoPromotableApis": 2,
+    "dllsFullyTriaged": 22,
+    "dllsWithAutoPromotableApis": 0,
     "manualDecoderRequired": 3,
     "totalApis": 179,
     "totalDlls": 25,

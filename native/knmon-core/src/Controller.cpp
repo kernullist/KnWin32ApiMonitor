@@ -4185,6 +4185,13 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 3, "ULONG", "dwFlags", "in", HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]));
         payload = ApiCallPayload(result, record, HexNtStatusValue(record.ReturnCode), args.str(), "");
         break;
+    case KnMonTransportApiId::BCryptDestroyKey:
+    {
+        const std::string keyHandle = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "BCRYPT_KEY_HANDLE", "hKey", "in", keyHandle, keyHandle, keyHandle);
+        payload = ApiCallPayload(result, record, HexNtStatusValue(record.ReturnCode), args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::CertOpenStore:
     {
         const std::string providerPointer = HexPointerValue(record.Values64[0], result.Architecture);
@@ -4534,6 +4541,13 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
     {
         const std::string credentialPointer = HexPointerValue(record.Values64[0], result.Architecture);
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "PCredHandle", "phCredential", "in", credentialPointer, credentialPointer, credentialPointer);
+        payload = ApiCallPayload(result, record, HexHResultValue(record.ReturnCode), args.str(), "");
+        break;
+    }
+    case KnMonTransportApiId::DeleteSecurityContext:
+    {
+        const std::string contextPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "PCtxtHandle", "phContext", "in", contextPointer, contextPointer, contextPointer);
         payload = ApiCallPayload(result, record, HexHResultValue(record.ReturnCode), args.str(), "");
         break;
     }

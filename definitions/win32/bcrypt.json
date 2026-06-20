@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "module": "bcrypt",
-  "description": "Wave 2 CNG metadata with a smoke-verified provider/RNG slice and definition-only key, encryption, decryption, and hash APIs.",
+  "description": "Wave 2 CNG metadata with smoke-verified provider/RNG/key-destroy hooks and definition-only key creation, encryption, decryption, and hash APIs.",
   "apis": [
     {
       "module": "BCRYPT.dll",
@@ -118,8 +118,8 @@
       "family": "crypto",
       "category": "cng_key_destroy",
       "risk": "medium",
-      "hookPolicy": "definition_only",
-      "coverageStatus": "definition_only",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
       "architectures": ["x86", "x64"],
       "callingConvention": "stdcall",
       "returnType": "NTSTATUS",

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "module": "secur32",
-  "description": "Wave 4 SSPI credential and security-context lifecycle metadata, with selected low-payload credential-free hooks.",
+  "description": "Wave 4 SSPI credential and security-context lifecycle metadata, with selected low-payload credential-free and context-delete hooks.",
   "apis": [
     {
       "module": "SECUR32.dll",
@@ -82,8 +82,8 @@
       "family": "sspi",
       "category": "security_context_delete",
       "risk": "medium",
-      "hookPolicy": "definition_only",
-      "coverageStatus": "definition_only",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
       "architectures": ["x86", "x64"],
       "callingConvention": "stdcall",
       "returnType": "SECURITY_STATUS",
