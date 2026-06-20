@@ -102,6 +102,7 @@ $requiredApis = @(
     "SysFreeString",
     "VariantClear",
     "SafeArrayDestroy",
+    "FreeCredentialsHandle",
     "DnsRecordListFree",
     "SetupDiDestroyDeviceInfoList",
     "DestroyEnvironmentBlock",
@@ -293,6 +294,37 @@ $oleautPayload = $oleautEvents | ConvertTo-Json -Depth 12
 if ($oleautPayload -cmatch "SysAllocString|KNMonBstrProbe|VT_BSTR|SafeArrayAccessData|SafeArrayGetElement|SafeArrayPtrOfIndex|VariantChangeType|C:\\Users|AppData|ProgramData|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 OLEAUT32 events appear to expose BSTR, SAFEARRAY content, payload, stack, injection, credential, or byte-preview evidence: $oleautPayload"
+}
+
+$secur32Free = @($result.capturedEvents | Where-Object { $_.module -eq "secur32.dll" -and $_.api -eq "FreeCredentialsHandle" } | Select-Object -First 1)
+if ($secur32Free.Count -ne 1 -or
+    $secur32Free[0].apiFamily -ne "sspi" -or
+    $secur32Free[0].apiCategory -ne "credential_free" -or
+    $secur32Free[0].hookPolicy -ne "iat" -or
+    $secur32Free[0].coverageStatus -ne "smoke_verified" -or
+    $secur32Free[0].returnValue -ne "0x00000000")
+{
+    throw "x86 FreeCredentialsHandle metadata or return evidence mismatch: $($secur32Free | ConvertTo-Json -Depth 8)"
+}
+
+if (-not [string]::IsNullOrEmpty($secur32Free[0].bufferPreview))
+{
+    throw "x86 FreeCredentialsHandle exposed bufferPreview: $($secur32Free[0] | ConvertTo-Json -Depth 8)"
+}
+
+$credentialPointer = @($secur32Free[0].arguments | Where-Object { $_.name -eq "phCredential" } | Select-Object -First 1)
+if ($credentialPointer.Count -ne 1 -or
+    $credentialPointer[0].decodeAlias -ne "handle_pointer" -or
+    $credentialPointer[0].captureTiming -ne "pre")
+{
+    throw "x86 FreeCredentialsHandle phCredential evidence mismatch: $($credentialPointer | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $credentialPointer[0].decodedValue -Name "x86 FreeCredentialsHandle phCredential"
+
+$secur32Payload = $secur32Free[0] | ConvertTo-Json -Depth 12
+if ($secur32Payload -cmatch "AcquireCredentialsHandle|InitializeSecurityContext|DeleteSecurityContext|SecBuffer|pAuthData|AuthData|pszPackage|pszPrincipal|TargetName|LogonId|SEC_WINNT_AUTH_IDENTITY|Password|Secret|Kerberos|Negotiate|NTLM|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 FreeCredentialsHandle event appears to expose auth package, auth data, context buffers, payload, stack, injection, secret, or byte-preview evidence: $secur32Payload"
 }
 
 $dnsRecordFree = @($result.capturedEvents | Where-Object { $_.module -eq "dnsapi.dll" -and $_.api -eq "DnsRecordListFree" } | Select-Object -First 1)

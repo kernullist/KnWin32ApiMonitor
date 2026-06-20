@@ -4530,6 +4530,13 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         payload = ApiCallPayload(result, record, HexHResultValue(record.ReturnCode), args.str(), "");
         break;
     }
+    case KnMonTransportApiId::FreeCredentialsHandle:
+    {
+        const std::string credentialPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "PCredHandle", "phCredential", "in", credentialPointer, credentialPointer, credentialPointer);
+        payload = ApiCallPayload(result, record, HexHResultValue(record.ReturnCode), args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::DnsRecordListFree:
     {
         const std::string recordListPointer = HexPointerValue(record.Values64[0], result.Architecture);

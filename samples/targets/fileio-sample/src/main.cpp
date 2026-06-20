@@ -10,6 +10,10 @@
 #include <objbase.h>
 #include <oleauto.h>
 #include <rpc.h>
+#ifndef SECURITY_WIN32
+#define SECURITY_WIN32
+#endif
+#include <security.h>
 #include <roapi.h>
 #include <winstring.h>
 #include <shlobj.h>
@@ -1335,6 +1339,58 @@ bool RunOleAutomationLifecycleProbe()
     if (safeArray != nullptr)
     {
         SafeArrayDestroy(safeArray);
+    }
+
+    return success;
+}
+
+bool RunSecur32CredentialFreeProbe()
+{
+    bool success = false;
+    bool credentialAcquired = false;
+    CredHandle credential = {};
+    TimeStamp expiry = {};
+    wchar_t packageName[] = L"Negotiate";
+
+    do
+    {
+        SECURITY_STATUS status = AcquireCredentialsHandleW(
+            nullptr,
+            packageName,
+            SECPKG_CRED_OUTBOUND,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            &credential,
+            &expiry);
+        if (status != SEC_E_OK)
+        {
+            std::cout << "AcquireCredentialsHandleW failed with " << HexHResult(status) << "\n";
+            break;
+        }
+
+        credentialAcquired = true;
+        status = FreeCredentialsHandle(&credential);
+        if (status != SEC_E_OK)
+        {
+            std::cout << "FreeCredentialsHandle failed with " << HexHResult(status) << "\n";
+            break;
+        }
+
+        credentialAcquired = false;
+        std::cout << "secur32 credential free lifecycle completed\n";
+        success = true;
+    }
+    while (false);
+
+    if (credentialAcquired)
+    {
+        const SECURITY_STATUS cleanupStatus = FreeCredentialsHandle(&credential);
+        if (cleanupStatus != SEC_E_OK)
+        {
+            std::cout << "FreeCredentialsHandle(cleanup) failed with " << HexHResult(cleanupStatus) << "\n";
+        }
     }
 
     return success;
@@ -2943,6 +2999,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunOleAutomationLifecycleProbe())
+        {
+            break;
+        }
+
+        if (!RunSecur32CredentialFreeProbe())
         {
             break;
         }

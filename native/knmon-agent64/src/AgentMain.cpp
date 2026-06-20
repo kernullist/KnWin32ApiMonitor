@@ -13,6 +13,10 @@
 #include <rpc.h>
 #include <objbase.h>
 #include <oleauto.h>
+#ifndef SECURITY_WIN32
+#define SECURITY_WIN32
+#endif
+#include <security.h>
 #include <roapi.h>
 #include <winstring.h>
 #include <shlobj.h>
@@ -238,6 +242,7 @@ using RoGetApartmentIdentifierFn = HRESULT(WINAPI*)(UINT64*);
 using SysFreeStringFn = void(WINAPI*)(BSTR);
 using VariantClearFn = HRESULT(WINAPI*)(VARIANTARG*);
 using SafeArrayDestroyFn = HRESULT(WINAPI*)(SAFEARRAY*);
+using FreeCredentialsHandleFn = SECURITY_STATUS(WINAPI*)(PCredHandle);
 using DnsFreeFn = void(WINAPI*)(PVOID, DNS_FREE_TYPE);
 using SetupDiDestroyDeviceInfoListFn = BOOL(WINAPI*)(HDEVINFO);
 using DestroyEnvironmentBlockFn = BOOL(WINAPI*)(LPVOID);
@@ -393,6 +398,7 @@ RoGetApartmentIdentifierFn g_originalRoGetApartmentIdentifier = nullptr;
 SysFreeStringFn g_originalSysFreeString = nullptr;
 VariantClearFn g_originalVariantClear = nullptr;
 SafeArrayDestroyFn g_originalSafeArrayDestroy = nullptr;
+FreeCredentialsHandleFn g_originalFreeCredentialsHandle = nullptr;
 DnsFreeFn g_originalDnsFree = nullptr;
 SetupDiDestroyDeviceInfoListFn g_originalSetupDiDestroyDeviceInfoList = nullptr;
 DestroyEnvironmentBlockFn g_originalDestroyEnvironmentBlock = nullptr;
@@ -520,7 +526,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 132;
+constexpr std::size_t HookDefinitionCount = 133;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -5842,6 +5848,25 @@ void EmitSysFreeStringEvent(
     }
 }
 
+void EmitFreeCredentialsHandleEvent(
+    SECURITY_STATUS status,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    PCredHandle credential)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::FreeCredentialsHandle, "secur32.dll", start, end, status == SEC_E_OK ? 0 : static_cast<DWORD>(status));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(status));
+        record->ReturnCode = static_cast<std::uint32_t>(status);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(credential));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void EmitDnsRecordListFreeEvent(
     const LARGE_INTEGER& start,
     const LARGE_INTEGER& end,
@@ -6952,6 +6977,7 @@ HRESULT WINAPI HookedRoGetApartmentIdentifier(UINT64* apartmentIdentifier);
 void WINAPI HookedSysFreeString(BSTR value);
 HRESULT WINAPI HookedVariantClear(VARIANTARG* variant);
 HRESULT WINAPI HookedSafeArrayDestroy(SAFEARRAY* safeArray);
+SECURITY_STATUS WINAPI HookedFreeCredentialsHandle(PCredHandle credential);
 void WINAPI HookedDnsFree(PVOID data, DNS_FREE_TYPE freeType);
 BOOL WINAPI HookedSetupDiDestroyDeviceInfoList(HDEVINFO deviceInfoSet);
 BOOL WINAPI HookedDestroyEnvironmentBlock(LPVOID environment);
@@ -7091,6 +7117,7 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "oleaut32.dll", "SysFreeString", reinterpret_cast<void*>(HookedSysFreeString), reinterpret_cast<void**>(&g_originalSysFreeString), false, true, false, 6, 0 },
         HookDefinition { "oleaut32.dll", "VariantClear", reinterpret_cast<void*>(HookedVariantClear), reinterpret_cast<void**>(&g_originalVariantClear), false, true, false, 9, 0 },
         HookDefinition { "oleaut32.dll", "SafeArrayDestroy", reinterpret_cast<void*>(HookedSafeArrayDestroy), reinterpret_cast<void**>(&g_originalSafeArrayDestroy), false, true, false, 16, 0 },
+        HookDefinition { "secur32.dll", "FreeCredentialsHandle", reinterpret_cast<void*>(HookedFreeCredentialsHandle), reinterpret_cast<void**>(&g_originalFreeCredentialsHandle), false, true, false, 0, 0 },
         HookDefinition { "dnsapi.dll", "DnsFree", reinterpret_cast<void*>(HookedDnsFree), reinterpret_cast<void**>(&g_originalDnsFree), false, true, false, 0, 0 },
         HookDefinition { "setupapi.dll", "SetupDiDestroyDeviceInfoList", reinterpret_cast<void*>(HookedSetupDiDestroyDeviceInfoList), reinterpret_cast<void**>(&g_originalSetupDiDestroyDeviceInfoList), false, true, false, 0, 0 },
         HookDefinition { "userenv.dll", "DestroyEnvironmentBlock", reinterpret_cast<void*>(HookedDestroyEnvironmentBlock), reinterpret_cast<void**>(&g_originalDestroyEnvironmentBlock), false, true, false, 0, 0 },
@@ -11351,6 +11378,33 @@ HRESULT WINAPI HookedSafeArrayDestroy(SAFEARRAY* safeArray)
 
     SetLastError(lastError);
     return result;
+}
+
+SECURITY_STATUS WINAPI HookedFreeCredentialsHandle(PCredHandle credential)
+{
+    if (g_inHook || !HooksEnabled() || g_originalFreeCredentialsHandle == nullptr)
+    {
+        if (g_originalFreeCredentialsHandle == nullptr)
+        {
+            return SEC_E_INTERNAL_ERROR;
+        }
+
+        return g_originalFreeCredentialsHandle(credential);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const SECURITY_STATUS status = g_originalFreeCredentialsHandle(credential);
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitFreeCredentialsHandleEvent(status, start, end, credential);
+    }
+
+    return status;
 }
 
 void WINAPI HookedDnsFree(PVOID data, DNS_FREE_TYPE freeType)

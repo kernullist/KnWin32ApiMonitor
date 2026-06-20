@@ -562,7 +562,7 @@ function apiSetResolverScript(inputPath)
 {
   return `
 $ErrorActionPreference = "Stop"
-Add-Type -TypeDefinition @"
+$source = @"
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -582,6 +582,27 @@ public static class KnMonApiSetResolver
     public static extern uint GetModuleFileNameW(IntPtr hModule, StringBuilder lpFilename, uint nSize);
 }
 "@
+
+$lastAddTypeError = $null
+for ($attempt = 1; $attempt -le 5; $attempt++)
+{
+    try
+    {
+        Add-Type -TypeDefinition $source -ErrorAction Stop
+        $lastAddTypeError = $null
+        break
+    }
+    catch
+    {
+        $lastAddTypeError = $_
+        Start-Sleep -Milliseconds (100 * $attempt)
+    }
+}
+
+if ($null -ne $lastAddTypeError)
+{
+    throw $lastAddTypeError
+}
 
 $items = Get-Content -Raw -LiteralPath ${powerShellString(inputPath)} | ConvertFrom-Json
 $results = New-Object System.Collections.Generic.List[object]

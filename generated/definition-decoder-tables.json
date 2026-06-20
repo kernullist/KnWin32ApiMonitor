@@ -3849,14 +3849,14 @@
     {
       "callingConvention": "stdcall",
       "category": "credential_free",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": "SEC_E_OK"
       },
       "family": "sspi",
       "firstParameterIndex": 548,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 162,
       "module": "secur32.dll",
       "moduleId": 19,
