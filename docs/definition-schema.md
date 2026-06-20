@@ -105,6 +105,7 @@ generated/api-inventory-coverage.json
 generated/tier1-hook-plan.json
 generated/tier2-hook-plan.json
 generated/tier2-profile-batch-plan.json
+generated/tier2-profile-review-manifest.json
 generated/tier3-hook-plan.json
 generated/dll-batch-promotion-plan.json
 generated/manual-decoder-batch-plan.json
@@ -117,6 +118,8 @@ generated/manual-decoder-batch-plan.json
 `generated/tier2-hook-plan.json` is generated from the same inventory. It records every Tier 2 row as an opt-in hook-plan entry and classifies it as `api_set_forwarder`, `missing_parameter_metadata`, `ordinal_or_export_probe_candidate`, or `blocked_requires_manual_definition`. API-set rows include Windows loader runtime evidence from `LoadLibraryW`, `GetProcAddress`, and `GetModuleHandleExW(FROM_ADDRESS)` and store the resolved host DLL when available. Missing-parameter rows are limited to generic return-only events when the inventory has no arguments. Tier 2 does not install broad hooks by default and does not promote these APIs into the compact Tier 0 transport ID enum.
 
 `generated/tier2-profile-batch-plan.json` is generated from the Tier 2 hook plan. It groups resolved API-set rows by concrete host DLL, groups missing-parameter return-only rows by source DLL, keeps unresolved API-set rows in explicit blocked batches, and records the review evidence required before any broader Tier 2 profile can become runtime-installable. `defs:tier2-profile-batch-plan:select` previews those batches by batch id, kind, profile, resolved host, source module, family, or risk. It is a planning and validation artifact only: runtime hooks remain disabled by default.
+
+`generated/tier2-profile-review-manifest.json` is generated from the Tier 2 profile batch plan. It ranks every Tier 2 batch into `initial_candidate`, `review_ready`, `explicit_allowlist_required`, or `blocked` review classes. Initial candidates are small no-allowlist batches only; every row still requires target provider evidence, x64 and x86 native smoke, zero healthy-path drops, and hook-overhead review before runtime promotion. It is a planning and validation artifact only: runtime hooks remain disabled by default.
 
 `generated/dll-batch-promotion-plan.json` is generated from committed definition JSON plus decode metadata. It groups APIs by DLL and classifies each committed definition as `already_live`, `auto_promotable`, `manual_decoder_required`, `blocked_by_payload_policy`, or `unsupported`. This plan is the promotion queue for Tier 0 definitions: safe pointer/scalar APIs in the same DLL should be promoted together, while manual decoder and payload-blocked rows remain documented instead of being silently skipped.
 
@@ -201,9 +204,10 @@ Allowed directions:
 15. Tier 1 hook-plan validation, including 100% Tier 1 plan coverage, duplicate hook-row rejection, Tier 3 exclusion, ANSI/Unicode alias-family grouping, Tier 0 metadata preservation, and deterministic JSON ordering.
 16. Tier 2 hook-plan validation, including 100% Tier 2 plan coverage, duplicate hook-row rejection, API-set resolution evidence checks, missing-parameter return-only checks, default-disabled policy checks, and deterministic JSON ordering.
 17. Tier 2 profile batch-plan validation, including exact Tier 2 coverage across resolved-host, return-only, and blocked batches, default-disabled runtime policy checks, high-risk allowlist accounting, and deterministic JSON ordering.
-18. Tier 3 hook-plan validation, including 100% Tier 3 plan coverage, callback/COM/message/buffer/security classification checks, default-disabled policy checks, and deterministic JSON ordering.
-19. DLL batch promotion plan validation, including 100% committed-definition coverage, same-DLL grouping, auto/manual/blocked classification checks, high-risk auto-promotion rejection, and deterministic JSON ordering.
-20. Manual decoder batch plan validation, including exact coverage of `manual_decoder_required` APIs from the DLL batch plan, blocked-by-default runtime policy checks, allowed/forbidden evidence boundary checks, same-DLL payload-blocked sibling tracking, and deterministic JSON ordering.
+18. Tier 2 profile review-manifest validation, including exact Tier 2 batch coverage, initial-candidate policy checks, allowlist-gated and blocked batch accounting, default-disabled runtime policy checks, and deterministic JSON ordering.
+19. Tier 3 hook-plan validation, including 100% Tier 3 plan coverage, callback/COM/message/buffer/security classification checks, default-disabled policy checks, and deterministic JSON ordering.
+20. DLL batch promotion plan validation, including 100% committed-definition coverage, same-DLL grouping, auto/manual/blocked classification checks, high-risk auto-promotion rejection, and deterministic JSON ordering.
+21. Manual decoder batch plan validation, including exact coverage of `manual_decoder_required` APIs from the DLL batch plan, blocked-by-default runtime policy checks, allowed/forbidden evidence boundary checks, same-DLL payload-blocked sibling tracking, and deterministic JSON ordering.
 
 The restricted `lengthExpression` grammar supports only:
 
@@ -301,6 +305,8 @@ The native agent and controller use generated compile-time enum constants throug
 `generated/tier2-hook-plan.json` currently plans all 655 Tier 2 APIs. The plan classifies 279 rows as API-set forwarders, resolves 277 of them to concrete host DLLs on the current Windows runtime, classifies 376 rows as missing-parameter return-only candidates, and enables zero Tier 2 hooks by default. Runtime smoke coverage currently proves `WindowsGetStringLen` through `api-ms-win-core-winrt-string-l1-1-0.dll` with resolved host `combase.dll`, and `RevertToSelf` as a generic return-only event.
 
 `generated/tier2-profile-batch-plan.json` currently groups all 655 Tier 2 APIs into 104 review batches with zero runtime hooks enabled by default: 16 resolved-host API-set batches covering 277 APIs, 87 missing-parameter return-only source-DLL batches covering 376 APIs, and 1 blocked unresolved API-set batch covering 2 APIs. The plan records 30 high/critical-risk APIs that still require explicit allowlist even inside an otherwise selected Tier 2 profile.
+
+`generated/tier2-profile-review-manifest.json` currently ranks all 104 Tier 2 batches into 42 initial candidates covering 55 APIs, 41 broader review-ready batches covering 452 APIs, 20 allowlist-gated batches covering 146 APIs with 30 explicit-allowlist-required APIs, and 1 blocked batch covering 2 APIs. The manifest enables zero runtime hooks by default and exists to keep future Tier 2 profile work tied to reviewed batch IDs instead of raw broad selectors.
 
 `generated/dll-batch-promotion-plan.json` currently groups 179 committed definitions across 25 DLLs. It records 130 already-live APIs, zero auto-promotable pointer/scalar APIs, zero manual-decoder-required APIs, 49 payload-policy-blocked APIs, and zero unsupported committed definitions. `generated/manual-decoder-batch-plan.json` currently has zero DLLs and zero APIs because the previous RPCRT4 endpoint inquiry cleanup candidate is now smoke-verified. The auto-promotable DLL queue is currently empty; the next runtime promotion should start from explicitly reviewed payload-sensitive families or Tier 2/Tier 3 design slices instead of unrelated single-API work.
 
@@ -703,6 +709,7 @@ npm run defs:inventory
 npm run defs:tier1-plan:generate
 npm run defs:tier2-plan:generate
 npm run defs:tier2-profile-batch-plan:generate
+npm run defs:tier2-profile-review:generate
 npm run defs:tier3-plan:generate
 npm run defs:dll-batch-plan:generate
 npm run defs:manual-decoder-plan:generate
@@ -713,7 +720,7 @@ npm run defs:coverage
 
 `defs:decoder-tables` verifies the generated decoder metadata artifact covers API IDs `1` through `179`, parameter rows, decode alias rows, and length-source resolution.
 
-`defs:inventory` regenerates the Microsoft-source inventory and its coverage report. `defs:tier2-profile-batch-plan:generate` regenerates the Tier 2 resolved-host/source-DLL review batches from the Tier 2 hook plan, and `defs:tier2-profile-batch-plan:select` previews candidate review batches without enabling runtime hooks. `defs:dll-batch-plan:generate` regenerates the committed-definition DLL batch promotion queue. `defs:manual-decoder-plan:generate` regenerates the manual-decoder batch gate from the DLL batch queue. `defs:coverage` prints a deterministic Markdown report grouped by module, family, risk, hook policy, coverage status, and decode quality, then appends Microsoft-source inventory totals, hook tiers, next API families by coverage impact, DLL batch auto/manual/blocked promotion buckets, and manual-decoder batch gates. The definition report explicitly separates:
+`defs:inventory` regenerates the Microsoft-source inventory and its coverage report. `defs:tier2-profile-batch-plan:generate` regenerates the Tier 2 resolved-host/source-DLL review batches from the Tier 2 hook plan, `defs:tier2-profile-batch-plan:select` previews candidate review batches without enabling runtime hooks, and `defs:tier2-profile-review:generate` regenerates the ranked Tier 2 batch review manifest. `defs:dll-batch-plan:generate` regenerates the committed-definition DLL batch promotion queue. `defs:manual-decoder-plan:generate` regenerates the manual-decoder batch gate from the DLL batch queue. `defs:coverage` prints a deterministic Markdown report grouped by module, family, risk, hook policy, coverage status, and decode quality, then appends Microsoft-source inventory totals, hook tiers, next API families by coverage impact, DLL batch auto/manual/blocked promotion buckets, and manual-decoder batch gates. The definition report explicitly separates:
 
 1. `definition_only`
 2. `hooked`

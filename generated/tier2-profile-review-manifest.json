@@ -1,0 +1,3897 @@
+{
+  "batches": [
+    {
+      "batchId": "tier2-batch-0007",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "api_set_resolved_host",
+      "priority": 11,
+      "profileSelectors": [
+        "api-set-safe",
+        "host:gdi32.dll",
+        "strategy:api_set_forwarder"
+      ],
+      "representativeApis": [
+        "api-ms-win-dx-d3dkmt-l1-1-0.dll!GdiEntry13"
+      ],
+      "requiredEvidence": [
+        "LoadLibraryW/GetProcAddress/GetModuleHandleExW(FROM_ADDRESS) host resolution",
+        "target import provider verification for the selected API-set DLL",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": "gdi32.dll",
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": "gdi32.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0014",
+      "blockedApis": 0,
+      "byFamily": {
+        "media": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "api_set_resolved_host",
+      "priority": 11,
+      "profileSelectors": [
+        "api-set-safe",
+        "host:winmmbase.dll",
+        "strategy:api_set_forwarder"
+      ],
+      "representativeApis": [
+        "api-ms-win-mm-misc-l1-1-1.dll!sndOpenSound"
+      ],
+      "requiredEvidence": [
+        "LoadLibraryW/GetProcAddress/GetModuleHandleExW(FROM_ADDRESS) host resolution",
+        "target import provider verification for the selected API-set DLL",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": "winmmbase.dll",
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": "winmmbase.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0010",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 2
+      },
+      "byRisk": {
+        "medium": 2
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 2,
+      "kind": "api_set_resolved_host",
+      "priority": 12,
+      "profileSelectors": [
+        "api-set-safe",
+        "host:ntdll.dll",
+        "strategy:api_set_forwarder"
+      ],
+      "representativeApis": [
+        "api-ms-win-core-synch-l1-2-0.dll!WakeByAddressAll",
+        "api-ms-win-core-synch-l1-2-0.dll!WakeByAddressSingle"
+      ],
+      "requiredEvidence": [
+        "LoadLibraryW/GetProcAddress/GetModuleHandleExW(FROM_ADDRESS) host resolution",
+        "target import provider verification for the selected API-set DLL",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": "ntdll.dll",
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": "ntdll.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0018",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:advpack.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "advpack.dll!NeedRebootInit"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "advpack.dll",
+      "targetModule": "advpack.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0023",
+      "blockedApis": 0,
+      "byFamily": {
+        "ui": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:comdlg32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "comdlg32.dll!CommDlgExtendedError"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "comdlg32.dll",
+      "targetModule": "comdlg32.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0024",
+      "blockedApis": 0,
+      "byFamily": {
+        "storage": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:cscapi.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "cscapi.dll!OfflineFilesStart"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "cscapi.dll",
+      "targetModule": "cscapi.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0027",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:dciman32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "dciman32.dll!DCIOpenProvider"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "dciman32.dll",
+      "targetModule": "dciman32.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0029",
+      "blockedApis": 0,
+      "byFamily": {
+        "network-management": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:dhcpcsvc6.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "dhcpcsvc6.dll!Dhcpv6CApiCleanup"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "dhcpcsvc6.dll",
+      "targetModule": "dhcpcsvc6.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0031",
+      "blockedApis": 0,
+      "byFamily": {
+        "graphics": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:dwmapi.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "dwmapi.dll!DwmFlush"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "dwmapi.dll",
+      "targetModule": "dwmapi.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0035",
+      "blockedApis": 0,
+      "byFamily": {
+        "networking": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:fwpuclnt.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "fwpuclnt.dll!WSARevertImpersonation"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "fwpuclnt.dll",
+      "targetModule": "fwpuclnt.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0036",
+      "blockedApis": 0,
+      "byFamily": {
+        "devices": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:fxsutility.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "fxsutility.dll!CanSendToFaxRecipient"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "fxsutility.dll",
+      "targetModule": "fxsutility.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0038",
+      "blockedApis": 0,
+      "byFamily": {
+        "graphics": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:gdiplus.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "gdiplus.dll!GdipCreateHalftonePalette"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "gdiplus.dll",
+      "targetModule": "gdiplus.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0050",
+      "blockedApis": 0,
+      "byFamily": {
+        "management": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:mdmlocalmanagement.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "mdmlocalmanagement.dll!UnregisterDeviceWithLocalManagement"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "mdmlocalmanagement.dll",
+      "targetModule": "mdmlocalmanagement.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0051",
+      "blockedApis": 0,
+      "byFamily": {
+        "management": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:mdmregistration.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "mdmregistration.dll!RegisterDeviceWithManagementUsingAADDeviceCredentials"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "mdmregistration.dll",
+      "targetModule": "mdmregistration.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0053",
+      "blockedApis": 0,
+      "byFamily": {
+        "media": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:msacm32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "msacm32.dll!acmGetVersion"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "msacm32.dll",
+      "targetModule": "msacm32.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0055",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:mscoree.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "mscoree.dll!CorMarkThreadInThreadPool"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "mscoree.dll",
+      "targetModule": "mscoree.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0057",
+      "blockedApis": 0,
+      "byFamily": {
+        "data": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:msdrm.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "msdrm.dll!DRMRepair"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "msdrm.dll",
+      "targetModule": "msdrm.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0062",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:ntdll.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "ntdll.dll!RtlGetReturnAddressHijackTarget"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "ntdll.dll",
+      "targetModule": "ntdll.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0063",
+      "blockedApis": 0,
+      "byFamily": {
+        "networking": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:ntlanman.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "ntlanman.dll!ResetAllAppInstanceVersions"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "ntlanman.dll",
+      "targetModule": "ntlanman.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0064",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:odbc32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "odbc32.dll!ODBCGetTryWaitValue"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "odbc32.dll",
+      "targetModule": "odbc32.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0069",
+      "blockedApis": 0,
+      "byFamily": {
+        "network-management": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:p2pgraph.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "p2pgraph.dll!PeerGraphShutdown"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "p2pgraph.dll",
+      "targetModule": "p2pgraph.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0071",
+      "blockedApis": 0,
+      "byFamily": {
+        "ui": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:propsys.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "propsys.dll!PSRefreshPropertySchema"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "propsys.dll",
+      "targetModule": "propsys.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0079",
+      "blockedApis": 0,
+      "byFamily": {
+        "network-management": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:snmpapi.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "snmpapi.dll!SnmpSvcGetUptime"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "snmpapi.dll",
+      "targetModule": "snmpapi.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0080",
+      "blockedApis": 0,
+      "byFamily": {
+        "graphics": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:spoolss.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "spoolss.dll!RevertToPrinterSelf"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "spoolss.dll",
+      "targetModule": "spoolss.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0086",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:urlmon.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "urlmon.dll!IEGetUserPrivateNamespaceName"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "urlmon.dll",
+      "targetModule": "urlmon.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0089",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:vertdll.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "vertdll.dll!EnclaveUsesAttestedKeys"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "vertdll.dll",
+      "targetModule": "vertdll.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0092",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:wer.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "wer.dll!WerStorePurge"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "wer.dll",
+      "targetModule": "wer.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0094",
+      "blockedApis": 0,
+      "byFamily": {
+        "networking": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:winhttp.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "winhttp.dll!WinHttpCheckPlatform"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "winhttp.dll",
+      "targetModule": "winhttp.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0098",
+      "blockedApis": 0,
+      "byFamily": {
+        "networking": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:wldap32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "wldap32.dll!LdapGetLastError"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "wldap32.dll",
+      "targetModule": "wldap32.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0100",
+      "blockedApis": 0,
+      "byFamily": {
+        "network-management": 1
+      },
+      "byRisk": {
+        "medium": 1
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 1,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 16,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:wnvapi.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "wnvapi.dll!WnvOpen"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "wnvapi.dll",
+      "targetModule": "wnvapi.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0021",
+      "blockedApis": 0,
+      "byFamily": {
+        "devices": 2
+      },
+      "byRisk": {
+        "medium": 2
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 2,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 17,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:cfgmgr32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "cfgmgr32.dll!CM_Get_Version",
+        "cfgmgr32.dll!CM_Request_Eject_PC"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "cfgmgr32.dll",
+      "targetModule": "cfgmgr32.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0030",
+      "blockedApis": 0,
+      "byFamily": {
+        "network-management": 2
+      },
+      "byRisk": {
+        "medium": 2
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 2,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 17,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:dhcpsapi.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "dhcpsapi.dll!DhcpDsCleanup",
+        "dhcpsapi.dll!DhcpDsInit"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "dhcpsapi.dll",
+      "targetModule": "dhcpsapi.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0032",
+      "blockedApis": 0,
+      "byFamily": {
+        "graphics": 2
+      },
+      "byRisk": {
+        "medium": 2
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 2,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 17,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:dxgi.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "dxgi.dll!DXGIDeclareAdapterRemovalSupport",
+        "dxgi.dll!DXGIDisableVBlankVirtualization"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "dxgi.dll",
+      "targetModule": "dxgi.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0043",
+      "blockedApis": 0,
+      "byFamily": {
+        "ui": 2
+      },
+      "byRisk": {
+        "medium": 2
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 2,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 17,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:imm32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "imm32.dll!ImmCreateContext",
+        "imm32.dll!ImmDisableLegacyIME"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "imm32.dll",
+      "targetModule": "imm32.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0048",
+      "blockedApis": 0,
+      "byFamily": {
+        "ui": 2
+      },
+      "byRisk": {
+        "medium": 2
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 2,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 17,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:magnification.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "magnification.dll!MagInitialize",
+        "magnification.dll!MagUninitialize"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "magnification.dll",
+      "targetModule": "magnification.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0058",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 2
+      },
+      "byRisk": {
+        "medium": 2
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 2,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 17,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:msi.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "msi.dll!MsiCloseAllHandles",
+        "msi.dll!MsiGetLastErrorRecord"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "msi.dll",
+      "targetModule": "msi.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0059",
+      "blockedApis": 0,
+      "byFamily": {
+        "web": 2
+      },
+      "byRisk": {
+        "medium": 2
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 2,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 17,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:msrating.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "msrating.dll!RatingEnabledQuery",
+        "msrating.dll!RatingInit"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "msrating.dll",
+      "targetModule": "msrating.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0066",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 2
+      },
+      "byRisk": {
+        "medium": 2
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 2,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 17,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:oleaut32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "oleaut32.dll!OaBuildVersion",
+        "oleaut32.dll!OaEnablePerUserTLibRegistration"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "oleaut32.dll",
+      "targetModule": "oleaut32.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0085",
+      "blockedApis": 0,
+      "byFamily": {
+        "ui": 2
+      },
+      "byRisk": {
+        "medium": 2
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 2,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 17,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:uiautomationcore.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "uiautomationcore.dll!UiaClientsAreListening",
+        "uiautomationcore.dll!UiaDisconnectAllProviders"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "uiautomationcore.dll",
+      "targetModule": "uiautomationcore.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0099",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 2
+      },
+      "byRisk": {
+        "medium": 2
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 2,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 17,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:wldp.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "wldp.dll!WldpResetProductionConfiguration",
+        "wldp.dll!WldpResetWcosProductionConfiguration"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "wldp.dll",
+      "targetModule": "wldp.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0102",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 2
+      },
+      "byRisk": {
+        "medium": 2
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 2,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 17,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:wscapi.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "wscapi.dll!WscQueryAntiMalwareUri",
+        "wscapi.dll!WscRegisterForUserNotifications"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "wscapi.dll",
+      "targetModule": "wscapi.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0103",
+      "blockedApis": 0,
+      "byFamily": {
+        "network-management": 2
+      },
+      "byRisk": {
+        "medium": 2
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 2,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 17,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:wsnmp32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "wsnmp32.dll!SnmpCleanup",
+        "wsnmp32.dll!SnmpCleanupEx"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "initial_candidate",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "wsnmp32.dll",
+      "targetModule": "wsnmp32.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0005",
+      "blockedApis": 0,
+      "byFamily": {
+        "gaming": 3
+      },
+      "byRisk": {
+        "medium": 3
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 3,
+      "kind": "api_set_resolved_host",
+      "priority": 43,
+      "profileSelectors": [
+        "api-set-safe",
+        "host:gamemode.dll",
+        "strategy:api_set_forwarder"
+      ],
+      "representativeApis": [
+        "api-ms-win-gaming-expandedresources-l1-1-0.dll!GetExpandedResourceExclusiveCpuCount",
+        "api-ms-win-gaming-expandedresources-l1-1-0.dll!HasExpandedResources",
+        "api-ms-win-gaming-expandedresources-l1-1-0.dll!ReleaseExclusiveCpuSets"
+      ],
+      "requiredEvidence": [
+        "LoadLibraryW/GetProcAddress/GetModuleHandleExW(FROM_ADDRESS) host resolution",
+        "target import provider verification for the selected API-set DLL",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": "gamemode.dll",
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": "gamemode.dll",
+      "totalApis": 3
+    },
+    {
+      "batchId": "tier2-batch-0013",
+      "blockedApis": 0,
+      "byFamily": {
+        "ui": 4
+      },
+      "byRisk": {
+        "medium": 4
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 4,
+      "kind": "api_set_resolved_host",
+      "priority": 44,
+      "profileSelectors": [
+        "api-set-safe",
+        "host:twinapi.appcore.dll",
+        "strategy:api_set_forwarder"
+      ],
+      "representativeApis": [
+        "api-ms-win-core-psm-appnotify-l1-1-0.dll!RegisterAppStateChangeNotification",
+        "api-ms-win-core-psm-appnotify-l1-1-0.dll!UnregisterAppStateChangeNotification",
+        "api-ms-win-core-psm-appnotify-l1-1-1.dll!RegisterAppConstrainedChangeNotification",
+        "api-ms-win-core-psm-appnotify-l1-1-1.dll!UnregisterAppConstrainedChangeNotification"
+      ],
+      "requiredEvidence": [
+        "LoadLibraryW/GetProcAddress/GetModuleHandleExW(FROM_ADDRESS) host resolution",
+        "target import provider verification for the selected API-set DLL",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": "twinapi.appcore.dll",
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": "twinapi.appcore.dll",
+      "totalApis": 4
+    },
+    {
+      "batchId": "tier2-batch-0016",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 7
+      },
+      "byRisk": {
+        "medium": 7
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 7,
+      "kind": "api_set_resolved_host",
+      "priority": 47,
+      "profileSelectors": [
+        "api-set-safe",
+        "host:wslapi.dll",
+        "strategy:api_set_forwarder"
+      ],
+      "representativeApis": [
+        "api-ms-win-wsl-api-l1-1-0.dll!WslConfigureDistribution",
+        "api-ms-win-wsl-api-l1-1-0.dll!WslGetDistributionConfiguration",
+        "api-ms-win-wsl-api-l1-1-0.dll!WslIsDistributionRegistered",
+        "api-ms-win-wsl-api-l1-1-0.dll!WslLaunch",
+        "api-ms-win-wsl-api-l1-1-0.dll!WslLaunchInteractive"
+      ],
+      "requiredEvidence": [
+        "LoadLibraryW/GetProcAddress/GetModuleHandleExW(FROM_ADDRESS) host resolution",
+        "target import provider verification for the selected API-set DLL",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": "wslapi.dll",
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": "wslapi.dll",
+      "totalApis": 7
+    },
+    {
+      "batchId": "tier2-batch-0004",
+      "blockedApis": 0,
+      "byFamily": {
+        "network-management": 8
+      },
+      "byRisk": {
+        "medium": 8
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 8,
+      "kind": "api_set_resolved_host",
+      "priority": 48,
+      "profileSelectors": [
+        "api-set-safe",
+        "host:firewallapi.dll",
+        "strategy:api_set_forwarder"
+      ],
+      "representativeApis": [
+        "api-ms-win-net-isolation-l1-1-0.dll!NetworkIsolationDiagnoseConnectFailureAndGetInfo",
+        "api-ms-win-net-isolation-l1-1-0.dll!NetworkIsolationEnumAppContainers",
+        "api-ms-win-net-isolation-l1-1-0.dll!NetworkIsolationFreeAppContainers",
+        "api-ms-win-net-isolation-l1-1-0.dll!NetworkIsolationGetAppContainerConfig",
+        "api-ms-win-net-isolation-l1-1-0.dll!NetworkIsolationRegisterForAppContainerChanges"
+      ],
+      "requiredEvidence": [
+        "LoadLibraryW/GetProcAddress/GetModuleHandleExW(FROM_ADDRESS) host resolution",
+        "target import provider verification for the selected API-set DLL",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": "firewallapi.dll",
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": "firewallapi.dll",
+      "totalApis": 8
+    },
+    {
+      "batchId": "tier2-batch-0015",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 8
+      },
+      "byRisk": {
+        "medium": 8
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 8,
+      "kind": "api_set_resolved_host",
+      "priority": 48,
+      "profileSelectors": [
+        "api-set-safe",
+        "host:wintypes.dll",
+        "strategy:api_set_forwarder"
+      ],
+      "representativeApis": [
+        "api-ms-win-core-winrt-robuffer-l1-1-0.dll!RoGetBufferMarshaler",
+        "api-ms-win-ro-typeresolution-l1-1-0.dll!RoGetMetaDataFile",
+        "api-ms-win-ro-typeresolution-l1-1-0.dll!RoParseTypeName",
+        "api-ms-win-ro-typeresolution-l1-1-0.dll!RoResolveNamespace",
+        "api-ms-win-ro-typeresolution-l1-1-1.dll!RoCreateNonAgilePropertySet"
+      ],
+      "requiredEvidence": [
+        "LoadLibraryW/GetProcAddress/GetModuleHandleExW(FROM_ADDRESS) host resolution",
+        "target import provider verification for the selected API-set DLL",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": "wintypes.dll",
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": "wintypes.dll",
+      "totalApis": 8
+    },
+    {
+      "batchId": "tier2-batch-0020",
+      "blockedApis": 0,
+      "byFamily": {
+        "media": 3
+      },
+      "byRisk": {
+        "medium": 3
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 3,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 48,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:avifil32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "avifil32.dll!AVIClearClipboard",
+        "avifil32.dll!AVIFileExit",
+        "avifil32.dll!AVIFileInit"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "avifil32.dll",
+      "targetModule": "avifil32.dll",
+      "totalApis": 3
+    },
+    {
+      "batchId": "tier2-batch-0022",
+      "blockedApis": 0,
+      "byFamily": {
+        "ui": 3
+      },
+      "byRisk": {
+        "medium": 3
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 3,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 48,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:comctl32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "comctl32.dll!GetMUILanguage",
+        "comctl32.dll!ImageList_EndDrag",
+        "comctl32.dll!InitCommonControls"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "comctl32.dll",
+      "targetModule": "comctl32.dll",
+      "totalApis": 3
+    },
+    {
+      "batchId": "tier2-batch-0025",
+      "blockedApis": 0,
+      "byFamily": {
+        "graphics": 3
+      },
+      "byRisk": {
+        "medium": 3
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 3,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 48,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:d3d9.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "d3d9.dll!D3DPERF_EndEvent",
+        "d3d9.dll!D3DPERF_GetStatus",
+        "d3d9.dll!D3DPERF_QueryRepeatFrame"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "d3d9.dll",
+      "targetModule": "d3d9.dll",
+      "totalApis": 3
+    },
+    {
+      "batchId": "tier2-batch-0028",
+      "blockedApis": 0,
+      "byFamily": {
+        "network-management": 3
+      },
+      "byRisk": {
+        "medium": 3
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 3,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 48,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:dhcpcsvc.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "dhcpcsvc.dll!DhcpCApiCleanup",
+        "dhcpcsvc.dll!DhcpRemoveDNSRegistrations",
+        "dhcpcsvc.dll!McastApiCleanup"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "dhcpcsvc.dll",
+      "targetModule": "dhcpcsvc.dll",
+      "totalApis": 3
+    },
+    {
+      "batchId": "tier2-batch-0039",
+      "blockedApis": 0,
+      "byFamily": {
+        "graphics": 3
+      },
+      "byRisk": {
+        "medium": 3
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 3,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 48,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:glu32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "glu32.dll!gluNewNurbsRenderer",
+        "glu32.dll!gluNewQuadric",
+        "glu32.dll!gluNewTess"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "glu32.dll",
+      "targetModule": "glu32.dll",
+      "totalApis": 3
+    },
+    {
+      "batchId": "tier2-batch-0046",
+      "blockedApis": 0,
+      "byFamily": {
+        "storage": 3
+      },
+      "byRisk": {
+        "medium": 3
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 3,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 48,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:iscsidsc.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "iscsidsc.dll!ClearPersistentIScsiDevices",
+        "iscsidsc.dll!SetupPersistentIScsiDevices",
+        "iscsidsc.dll!SetupPersistentIScsiVolumes"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "iscsidsc.dll",
+      "targetModule": "iscsidsc.dll",
+      "totalApis": 3
+    },
+    {
+      "batchId": "tier2-batch-0049",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 3
+      },
+      "byRisk": {
+        "medium": 3
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 3,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 48,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:mapi32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "mapi32.dll!DeinitMapiUtil",
+        "mapi32.dll!MAPIDeinitIdle",
+        "mapi32.dll!MAPIGetDefaultMalloc"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "mapi32.dll",
+      "targetModule": "mapi32.dll",
+      "totalApis": 3
+    },
+    {
+      "batchId": "tier2-batch-0061",
+      "blockedApis": 0,
+      "byFamily": {
+        "media": 3
+      },
+      "byRisk": {
+        "medium": 3
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 3,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 48,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:msvfw32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "msvfw32.dll!DrawDibOpen",
+        "msvfw32.dll!MCIWndRegisterClass",
+        "msvfw32.dll!VideoForWindowsVersion"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "msvfw32.dll",
+      "targetModule": "msvfw32.dll",
+      "totalApis": 3
+    },
+    {
+      "batchId": "tier2-batch-0068",
+      "blockedApis": 0,
+      "byFamily": {
+        "network-management": 3
+      },
+      "byRisk": {
+        "medium": 3
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 3,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 48,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:p2p.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "p2p.dll!PeerCollabShutdown",
+        "p2p.dll!PeerGroupShutdown",
+        "p2p.dll!PeerPnrpShutdown"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "p2p.dll",
+      "targetModule": "p2p.dll",
+      "totalApis": 3
+    },
+    {
+      "batchId": "tier2-batch-0078",
+      "blockedApis": 0,
+      "byFamily": {
+        "ui": 3
+      },
+      "byRisk": {
+        "medium": 3
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 3,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 48,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:shlwapi.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "shlwapi.dll!IsInternetESCEnabled",
+        "shlwapi.dll!SHReleaseThreadRef",
+        "shlwapi.dll!WhichPlatform"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "shlwapi.dll",
+      "targetModule": "shlwapi.dll",
+      "totalApis": 3
+    },
+    {
+      "batchId": "tier2-batch-0026",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 4
+      },
+      "byRisk": {
+        "medium": 4
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 4,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 49,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:dbghelp.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "dbghelp.dll!GetSymLoadError",
+        "dbghelp.dll!ImagehlpApiVersion",
+        "dbghelp.dll!RangeMapCreate",
+        "dbghelp.dll!SymGetOptions"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "dbghelp.dll",
+      "targetModule": "dbghelp.dll",
+      "totalApis": 4
+    },
+    {
+      "batchId": "tier2-batch-0037",
+      "blockedApis": 0,
+      "byFamily": {
+        "devices": 2,
+        "graphics": 2
+      },
+      "byRisk": {
+        "medium": 4
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 4,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 49,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:gdi32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "gdi32.dll!EngCreateClip",
+        "gdi32.dll!EngCreateSemaphore",
+        "gdi32.dll!GdiFlush",
+        "gdi32.dll!GdiGetBatchLimit"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "gdi32.dll",
+      "targetModule": "gdi32.dll",
+      "totalApis": 4
+    },
+    {
+      "batchId": "tier2-batch-0042",
+      "blockedApis": 0,
+      "byFamily": {
+        "web": 4
+      },
+      "byRisk": {
+        "medium": 4
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 4,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 49,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:ieframe.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "ieframe.dll!IEInPrivateFilteringEnabled",
+        "ieframe.dll!IEIsInPrivateBrowsing",
+        "ieframe.dll!IERefreshElevationPolicy",
+        "ieframe.dll!IETrackingProtectionEnabled"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "ieframe.dll",
+      "targetModule": "ieframe.dll",
+      "totalApis": 4
+    },
+    {
+      "batchId": "tier2-batch-0093",
+      "blockedApis": 0,
+      "byFamily": {
+        "devices": 4
+      },
+      "byRisk": {
+        "medium": 4
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 4,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 49,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:winbio.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "winbio.dll!WinBioAcquireFocus",
+        "winbio.dll!WinBioReleaseFocus",
+        "winbio.dll!WinBioRemoveAllCredentials",
+        "winbio.dll!WinBioRemoveAllDomainCredentials"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "winbio.dll",
+      "targetModule": "winbio.dll",
+      "totalApis": 4
+    },
+    {
+      "batchId": "tier2-batch-0101",
+      "blockedApis": 0,
+      "byFamily": {
+        "networking": 4
+      },
+      "byRisk": {
+        "medium": 4
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 4,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 49,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:ws2_32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "ws2_32.dll!WSACancelBlockingCall",
+        "ws2_32.dll!WSACreateEvent",
+        "ws2_32.dll!WSAIsBlocking",
+        "ws2_32.dll!WSAUnhookBlockingHook"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "ws2_32.dll",
+      "targetModule": "ws2_32.dll",
+      "totalApis": 4
+    },
+    {
+      "batchId": "tier2-batch-0073",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 5
+      },
+      "byRisk": {
+        "medium": 5
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 5,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 50,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:rtworkq.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "rtworkq.dll!RtwqLockPlatform",
+        "rtworkq.dll!RtwqShutdown",
+        "rtworkq.dll!RtwqStartup",
+        "rtworkq.dll!RtwqUnlockPlatform",
+        "rtworkq.dll!RtwqUnregisterPlatformFromMMCSS"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "rtworkq.dll",
+      "targetModule": "rtworkq.dll",
+      "totalApis": 5
+    },
+    {
+      "batchId": "tier2-batch-0077",
+      "blockedApis": 0,
+      "byFamily": {
+        "ui": 5
+      },
+      "byRisk": {
+        "medium": 5
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 5,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 50,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:shell32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "shell32.dll!DAD_DragLeave",
+        "shell32.dll!InitNetworkAddressControl",
+        "shell32.dll!IsUserAnAdmin",
+        "shell32.dll!SHFlushSFCache",
+        "shell32.dll!SHLoadNonloadedIconOverlayIdentifiers"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "shell32.dll",
+      "targetModule": "shell32.dll",
+      "totalApis": 5
+    },
+    {
+      "batchId": "tier2-batch-0040",
+      "blockedApis": 0,
+      "byFamily": {
+        "globalization": 6
+      },
+      "byRisk": {
+        "medium": 6
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 6,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 51,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:icuin.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "icuin.dll!ucal_countAvailable",
+        "icuin.dll!ucal_getNow",
+        "icuin.dll!ucol_countAvailable",
+        "icuin.dll!udat_countAvailable",
+        "icuin.dll!unum_countAvailable"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "icuin.dll",
+      "targetModule": "icuin.dll",
+      "totalApis": 6
+    },
+    {
+      "batchId": "tier2-batch-0045",
+      "blockedApis": 0,
+      "byFamily": {
+        "network-management": 6
+      },
+      "byRisk": {
+        "medium": 6
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 6,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 51,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:iphlpapi.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "iphlpapi.dll!GetAdapterOrderMap",
+        "iphlpapi.dll!GetCurrentThreadCompartmentId",
+        "iphlpapi.dll!GetDefaultCompartmentId",
+        "iphlpapi.dll!Icmp6CreateFile",
+        "iphlpapi.dll!IcmpCreateFile"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "iphlpapi.dll",
+      "targetModule": "iphlpapi.dll",
+      "totalApis": 6
+    },
+    {
+      "batchId": "tier2-batch-0052",
+      "blockedApis": 0,
+      "byFamily": {
+        "media": 6
+      },
+      "byRisk": {
+        "medium": 6
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 6,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 51,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:mfplat.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "mfplat.dll!MFGetSystemTime",
+        "mfplat.dll!MFLockPlatform",
+        "mfplat.dll!MFShutdown",
+        "mfplat.dll!MFUnlockDXGIDeviceManager",
+        "mfplat.dll!MFUnlockPlatform"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "mfplat.dll",
+      "targetModule": "mfplat.dll",
+      "totalApis": 6
+    },
+    {
+      "batchId": "tier2-batch-0076",
+      "blockedApis": 0,
+      "byFamily": {
+        "devices": 6
+      },
+      "byRisk": {
+        "medium": 6
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 6,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 51,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:setupapi.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "setupapi.dll!SetupCancelTemporarySourceList",
+        "setupapi.dll!SetupCloseLog",
+        "setupapi.dll!SetupGetNonInteractiveMode",
+        "setupapi.dll!SetupGetThreadLogToken",
+        "setupapi.dll!SetupOpenFileQueue"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "setupapi.dll",
+      "targetModule": "setupapi.dll",
+      "totalApis": 6
+    },
+    {
+      "batchId": "tier2-batch-0088",
+      "blockedApis": 0,
+      "byFamily": {
+        "ui": 6
+      },
+      "byRisk": {
+        "medium": 6
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 6,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 51,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:uxtheme.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "uxtheme.dll!BufferedPaintInit",
+        "uxtheme.dll!BufferedPaintUnInit",
+        "uxtheme.dll!GetThemeAppProperties",
+        "uxtheme.dll!IsAppThemed",
+        "uxtheme.dll!IsCompositionActive"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "uxtheme.dll",
+      "targetModule": "uxtheme.dll",
+      "totalApis": 6
+    },
+    {
+      "batchId": "tier2-batch-0095",
+      "blockedApis": 0,
+      "byFamily": {
+        "networking": 6
+      },
+      "byRisk": {
+        "medium": 6
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 6,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 51,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:wininet.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "wininet.dll!DoConnectoidsExist",
+        "wininet.dll!InternetClearAllPerSiteCookieDecisions",
+        "wininet.dll!IsProfilesEnabled",
+        "wininet.dll!LoadUrlCacheContent",
+        "wininet.dll!UrlCacheReloadSettings"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "wininet.dll",
+      "targetModule": "wininet.dll",
+      "totalApis": 6
+    },
+    {
+      "batchId": "tier2-batch-0070",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 8
+      },
+      "byRisk": {
+        "medium": 8
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 8,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 53,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:powrprof.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "powrprof.dll!CanUserWritePwrScheme",
+        "powrprof.dll!DevicePowerClose",
+        "powrprof.dll!IsPwrHibernateAllowed",
+        "powrprof.dll!IsPwrShutdownAllowed",
+        "powrprof.dll!IsPwrSuspendAllowed"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "powrprof.dll",
+      "targetModule": "powrprof.dll",
+      "totalApis": 8
+    },
+    {
+      "batchId": "tier2-batch-0001",
+      "blockedApis": 0,
+      "byFamily": {
+        "devices": 14
+      },
+      "byRisk": {
+        "medium": 14
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 14,
+      "kind": "api_set_resolved_host",
+      "priority": 54,
+      "profileSelectors": [
+        "api-set-safe",
+        "host:cfgmgr32.dll",
+        "strategy:api_set_forwarder"
+      ],
+      "representativeApis": [
+        "api-ms-win-devices-query-l1-1-0.dll!DevCloseObjectQuery",
+        "api-ms-win-devices-query-l1-1-0.dll!DevCreateObjectQuery",
+        "api-ms-win-devices-query-l1-1-0.dll!DevCreateObjectQueryFromId",
+        "api-ms-win-devices-query-l1-1-0.dll!DevCreateObjectQueryFromIds",
+        "api-ms-win-devices-query-l1-1-0.dll!DevFindProperty"
+      ],
+      "requiredEvidence": [
+        "LoadLibraryW/GetProcAddress/GetModuleHandleExW(FROM_ADDRESS) host resolution",
+        "target import provider verification for the selected API-set DLL",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": "cfgmgr32.dll",
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": "cfgmgr32.dll",
+      "totalApis": 14
+    },
+    {
+      "batchId": "tier2-batch-0096",
+      "blockedApis": 0,
+      "byFamily": {
+        "media": 10
+      },
+      "byRisk": {
+        "medium": 10
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 10,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 55,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:winmm.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "winmm.dll!auxGetNumDevs",
+        "winmm.dll!joyGetNumDevs",
+        "winmm.dll!midiInGetNumDevs",
+        "winmm.dll!midiOutGetNumDevs",
+        "winmm.dll!mixerGetNumDevs"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "winmm.dll",
+      "targetModule": "winmm.dll",
+      "totalApis": 10
+    },
+    {
+      "batchId": "tier2-batch-0041",
+      "blockedApis": 0,
+      "byFamily": {
+        "globalization": 13
+      },
+      "byRisk": {
+        "medium": 13
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 13,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 58,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:icuuc.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "icuuc.dll!u_cleanup",
+        "icuuc.dll!ubidi_open",
+        "icuuc.dll!ubrk_countAvailable",
+        "icuuc.dll!ucnv_countAvailable",
+        "icuuc.dll!ucnv_countStandards"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "icuuc.dll",
+      "targetModule": "icuuc.dll",
+      "totalApis": 13
+    },
+    {
+      "batchId": "tier2-batch-0067",
+      "blockedApis": 0,
+      "byFamily": {
+        "graphics": 14
+      },
+      "byRisk": {
+        "medium": 14
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 14,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 59,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:opengl32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "opengl32.dll!glEnd",
+        "opengl32.dll!glEndList",
+        "opengl32.dll!glFinish",
+        "opengl32.dll!glFlush",
+        "opengl32.dll!glGetError"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "opengl32.dll",
+      "targetModule": "opengl32.dll",
+      "totalApis": 14
+    },
+    {
+      "batchId": "tier2-batch-0065",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 15
+      },
+      "byRisk": {
+        "medium": 15
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 15,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 60,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:ole32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "ole32.dll!CoAddRefServerProcess",
+        "ole32.dll!CoBuildVersion",
+        "ole32.dll!CoFreeAllLibraries",
+        "ole32.dll!CoFreeUnusedLibraries",
+        "ole32.dll!CoGetCurrentProcess"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "ole32.dll",
+      "targetModule": "ole32.dll",
+      "totalApis": 15
+    },
+    {
+      "batchId": "tier2-batch-0054",
+      "blockedApis": 0,
+      "byFamily": {
+        "devices": 16
+      },
+      "byRisk": {
+        "medium": 16
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 16,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 61,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:msajapi.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "msajapi.dll!alljoyn_aboutdata_create_empty",
+        "msajapi.dll!alljoyn_abouticon_create",
+        "msajapi.dll!alljoyn_aboutobjectdescription_create",
+        "msajapi.dll!alljoyn_busattachment_gettimestamp",
+        "msajapi.dll!alljoyn_credentials_create"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "msajapi.dll",
+      "targetModule": "msajapi.dll",
+      "totalApis": 16
+    },
+    {
+      "batchId": "tier2-batch-0008",
+      "blockedApis": 0,
+      "byFamily": {
+        "storage": 22
+      },
+      "byRisk": {
+        "medium": 22
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 22,
+      "kind": "api_set_resolved_host",
+      "priority": 62,
+      "profileSelectors": [
+        "api-set-safe",
+        "host:kernel.appcore.dll",
+        "strategy:api_set_forwarder"
+      ],
+      "representativeApis": [
+        "api-ms-win-appmodel-runtime-l1-1-1.dll!GetApplicationUserModelIdFromToken",
+        "api-ms-win-appmodel-runtime-l1-1-1.dll!GetPackageFamilyNameFromToken",
+        "api-ms-win-appmodel-runtime-l1-1-1.dll!GetPackageFullNameFromToken",
+        "api-ms-win-appmodel-runtime-l1-1-1.dll!GetStagedPackageOrigin",
+        "api-ms-win-appmodel-runtime-l1-1-1.dll!OpenPackageInfoByFullNameForUser"
+      ],
+      "requiredEvidence": [
+        "LoadLibraryW/GetProcAddress/GetModuleHandleExW(FROM_ADDRESS) host resolution",
+        "target import provider verification for the selected API-set DLL",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": "kernel.appcore.dll",
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": "kernel.appcore.dll",
+      "totalApis": 22
+    },
+    {
+      "batchId": "tier2-batch-0006",
+      "blockedApis": 0,
+      "byFamily": {
+        "gaming": 26
+      },
+      "byRisk": {
+        "medium": 26
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 26,
+      "kind": "api_set_resolved_host",
+      "priority": 66,
+      "profileSelectors": [
+        "api-set-safe",
+        "host:gamingtcui.dll",
+        "strategy:api_set_forwarder"
+      ],
+      "representativeApis": [
+        "api-ms-win-gaming-tcui-l1-1-0.dll!ProcessPendingGameUI",
+        "api-ms-win-gaming-tcui-l1-1-0.dll!ShowChangeFriendRelationshipUI",
+        "api-ms-win-gaming-tcui-l1-1-0.dll!ShowGameInviteUI",
+        "api-ms-win-gaming-tcui-l1-1-0.dll!ShowPlayerPickerUI",
+        "api-ms-win-gaming-tcui-l1-1-0.dll!ShowProfileCardUI"
+      ],
+      "requiredEvidence": [
+        "LoadLibraryW/GetProcAddress/GetModuleHandleExW(FROM_ADDRESS) host resolution",
+        "target import provider verification for the selected API-set DLL",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": "gamingtcui.dll",
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": "gamingtcui.dll",
+      "totalApis": 26
+    },
+    {
+      "batchId": "tier2-batch-0072",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 21
+      },
+      "byRisk": {
+        "medium": 21
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 21,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 66,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:rpcrt4.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "rpcrt4.dll!I_RpcGetCurrentCallHandle",
+        "rpcrt4.dll!I_RpcGetExtendedError",
+        "rpcrt4.dll!I_RpcMgmtEnableDedicatedThreadPool",
+        "rpcrt4.dll!I_RpcServerDisableExceptionFilter",
+        "rpcrt4.dll!I_RpcServerInqAddressChangeFn"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "rpcrt4.dll",
+      "targetModule": "rpcrt4.dll",
+      "totalApis": 21
+    },
+    {
+      "batchId": "tier2-batch-0002",
+      "blockedApis": 0,
+      "byFamily": {
+        "security": 1
+      },
+      "byRisk": {
+        "high": 1
+      },
+      "explicitAllowlistRequired": 1,
+      "installableWithoutAllowlist": 0,
+      "kind": "api_set_resolved_host",
+      "priority": 81,
+      "profileSelectors": [
+        "api-set-safe",
+        "host:clipc.dll",
+        "strategy:api_set_forwarder"
+      ],
+      "representativeApis": [
+        "api-ms-win-core-slapi-l1-1-0.dll!SLQueryLicenseValueFromApp"
+      ],
+      "requiredEvidence": [
+        "LoadLibraryW/GetProcAddress/GetModuleHandleExW(FROM_ADDRESS) host resolution",
+        "target import provider verification for the selected API-set DLL",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": "clipc.dll",
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": "clipc.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0019",
+      "blockedApis": 0,
+      "byFamily": {
+        "security": 1
+      },
+      "byRisk": {
+        "high": 1
+      },
+      "explicitAllowlistRequired": 1,
+      "installableWithoutAllowlist": 0,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 86,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:authz.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "authz.dll!AuthzFreeCentralAccessPolicyCache"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "authz.dll",
+      "targetModule": "authz.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0044",
+      "blockedApis": 0,
+      "byFamily": {
+        "security": 1
+      },
+      "byRisk": {
+        "high": 1
+      },
+      "explicitAllowlistRequired": 1,
+      "installableWithoutAllowlist": 0,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 86,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:infocardapi.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "infocardapi.dll!ManageCardSpace"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "infocardapi.dll",
+      "targetModule": "infocardapi.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0056",
+      "blockedApis": 0,
+      "byFamily": {
+        "ui": 1
+      },
+      "byRisk": {
+        "critical": 1
+      },
+      "explicitAllowlistRequired": 1,
+      "installableWithoutAllowlist": 0,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 86,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:msctfmonitor.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "msctfmonitor.dll!UninitLocalMsCtfMonitor"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "msctfmonitor.dll",
+      "targetModule": "msctfmonitor.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0060",
+      "blockedApis": 0,
+      "byFamily": {
+        "security": 1
+      },
+      "byRisk": {
+        "high": 1
+      },
+      "explicitAllowlistRequired": 1,
+      "installableWithoutAllowlist": 0,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 86,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:mssign32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "mssign32.dll!SignError"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "mssign32.dll",
+      "targetModule": "mssign32.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0074",
+      "blockedApis": 0,
+      "byFamily": {
+        "security": 1
+      },
+      "byRisk": {
+        "high": 1
+      },
+      "explicitAllowlistRequired": 1,
+      "installableWithoutAllowlist": 0,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 86,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:scarddlg.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "scarddlg.dll!SCardDlgExtendedError"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "scarddlg.dll",
+      "targetModule": "scarddlg.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0081",
+      "blockedApis": 0,
+      "byFamily": {
+        "security": 1
+      },
+      "byRisk": {
+        "high": 1
+      },
+      "explicitAllowlistRequired": 1,
+      "installableWithoutAllowlist": 0,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 86,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:srpapi.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "srpapi.dll!SrpDisablePermissiveModeFileEncryption"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "srpapi.dll",
+      "targetModule": "srpapi.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0082",
+      "blockedApis": 0,
+      "byFamily": {
+        "security": 1
+      },
+      "byRisk": {
+        "high": 1
+      },
+      "explicitAllowlistRequired": 1,
+      "installableWithoutAllowlist": 0,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 86,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:sspicli.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "sspicli.dll!SecFreeCallContext"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "sspicli.dll",
+      "targetModule": "sspicli.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0084",
+      "blockedApis": 0,
+      "byFamily": {
+        "security": 1
+      },
+      "byRisk": {
+        "high": 1
+      },
+      "explicitAllowlistRequired": 1,
+      "installableWithoutAllowlist": 0,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 86,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:tokenbinding.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "tokenbinding.dll!TokenBindingDeleteAllBindings"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "tokenbinding.dll",
+      "targetModule": "tokenbinding.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0091",
+      "blockedApis": 0,
+      "byFamily": {
+        "security": 1
+      },
+      "byRisk": {
+        "high": 1
+      },
+      "explicitAllowlistRequired": 1,
+      "installableWithoutAllowlist": 0,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 86,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:webauthn.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "webauthn.dll!WebAuthNGetApiVersionNumber"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "webauthn.dll",
+      "targetModule": "webauthn.dll",
+      "totalApis": 1
+    },
+    {
+      "batchId": "tier2-batch-0017",
+      "blockedApis": 0,
+      "byFamily": {
+        "security": 1,
+        "system": 2
+      },
+      "byRisk": {
+        "high": 1,
+        "medium": 2
+      },
+      "explicitAllowlistRequired": 1,
+      "installableWithoutAllowlist": 2,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 88,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:advapi32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "advapi32.dll!RegDisablePredefinedCache",
+        "advapi32.dll!RegDisablePredefinedCacheEx",
+        "advapi32.dll!RevertToSelf"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "advapi32.dll",
+      "targetModule": "advapi32.dll",
+      "totalApis": 3
+    },
+    {
+      "batchId": "tier2-batch-0034",
+      "blockedApis": 0,
+      "byFamily": {
+        "storage": 4
+      },
+      "byRisk": {
+        "critical": 1,
+        "medium": 3
+      },
+      "explicitAllowlistRequired": 1,
+      "installableWithoutAllowlist": 3,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 89,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:esent.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "esent.dll!JetEndExternalBackup",
+        "esent.dll!JetStopBackup",
+        "esent.dll!JetStopService",
+        "esent.dll!JetTruncateLog"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "esent.dll",
+      "targetModule": "esent.dll",
+      "totalApis": 4
+    },
+    {
+      "batchId": "tier2-batch-0087",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 9,
+        "ui": 35
+      },
+      "byRisk": {
+        "medium": 44
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 44,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 89,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:user32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "user32.dll!AnyPopup",
+        "user32.dll!CancelShutdown",
+        "user32.dll!CloseClipboard",
+        "user32.dll!ConvertPrimaryPointerToMouseDrag",
+        "user32.dll!CountClipboardFormats"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "user32.dll",
+      "targetModule": "user32.dll",
+      "totalApis": 44
+    },
+    {
+      "batchId": "tier2-batch-0033",
+      "blockedApis": 0,
+      "byFamily": {
+        "security": 2
+      },
+      "byRisk": {
+        "high": 2
+      },
+      "explicitAllowlistRequired": 2,
+      "installableWithoutAllowlist": 0,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 97,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:eappprxy.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "eappprxy.dll!EapHostPeerInitialize",
+        "eappprxy.dll!EapHostPeerUninitialize"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "eappprxy.dll",
+      "targetModule": "eappprxy.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0075",
+      "blockedApis": 0,
+      "byFamily": {
+        "security": 2
+      },
+      "byRisk": {
+        "high": 2
+      },
+      "explicitAllowlistRequired": 2,
+      "installableWithoutAllowlist": 0,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 97,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:secur32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "secur32.dll!InitSecurityInterfaceA",
+        "secur32.dll!InitSecurityInterfaceW"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "secur32.dll",
+      "targetModule": "secur32.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0083",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 2
+      },
+      "byRisk": {
+        "critical": 2
+      },
+      "explicitAllowlistRequired": 2,
+      "installableWithoutAllowlist": 0,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 97,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:tbs.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "tbs.dll!Tbsi_Is_Tpm_Present",
+        "tbs.dll!Tbsi_Revoke_Attestation"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "tbs.dll",
+      "targetModule": "tbs.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0090",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 2
+      },
+      "byRisk": {
+        "critical": 2
+      },
+      "explicitAllowlistRequired": 2,
+      "installableWithoutAllowlist": 0,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 97,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:wdstptc.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "wdstptc.dll!WdsTransportClientInitialize",
+        "wdstptc.dll!WdsTransportClientShutdown"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "wdstptc.dll",
+      "targetModule": "wdstptc.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0097",
+      "blockedApis": 0,
+      "byFamily": {
+        "security": 2
+      },
+      "byRisk": {
+        "high": 2
+      },
+      "explicitAllowlistRequired": 2,
+      "installableWithoutAllowlist": 0,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 97,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:winscard.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "winscard.dll!SCardAccessStartedEvent",
+        "winscard.dll!SCardReleaseStartedEvent"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "winscard.dll",
+      "targetModule": "winscard.dll",
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0003",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 61
+      },
+      "byRisk": {
+        "medium": 61
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 61,
+      "kind": "api_set_resolved_host",
+      "priority": 101,
+      "profileSelectors": [
+        "api-set-safe",
+        "host:combase.dll",
+        "strategy:api_set_forwarder"
+      ],
+      "representativeApis": [
+        "api-ms-win-core-marshal-l1-1-0.dll!HRGN_UserFree64",
+        "api-ms-win-core-marshal-l1-1-0.dll!HRGN_UserMarshal64",
+        "api-ms-win-core-marshal-l1-1-0.dll!HRGN_UserSize64",
+        "api-ms-win-core-marshal-l1-1-0.dll!HRGN_UserUnmarshal64",
+        "api-ms-win-core-winrt-error-l1-1-0.dll!GetRestrictedErrorInfo"
+      ],
+      "requiredEvidence": [
+        "LoadLibraryW/GetProcAddress/GetModuleHandleExW(FROM_ADDRESS) host resolution",
+        "target import provider verification for the selected API-set DLL",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": "combase.dll",
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": "combase.dll",
+      "totalApis": 61
+    },
+    {
+      "batchId": "tier2-batch-0047",
+      "blockedApis": 0,
+      "byFamily": {
+        "foundation": 1,
+        "globalization": 10,
+        "storage": 7,
+        "system": 44
+      },
+      "byRisk": {
+        "medium": 62
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 62,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 107,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:kernel32.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "kernel32.dll!AllocConsole",
+        "kernel32.dll!AreFileApisANSI",
+        "kernel32.dll!CeipIsOptedIn",
+        "kernel32.dll!ConvertFiberToThread",
+        "kernel32.dll!CreateThreadpoolCleanupGroup"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "review_ready",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "kernel32.dll",
+      "targetModule": "kernel32.dll",
+      "totalApis": 62
+    },
+    {
+      "batchId": "tier2-batch-0012",
+      "blockedApis": 0,
+      "byFamily": {
+        "security": 2,
+        "system": 9,
+        "ui": 10
+      },
+      "byRisk": {
+        "high": 2,
+        "medium": 19
+      },
+      "explicitAllowlistRequired": 2,
+      "installableWithoutAllowlist": 19,
+      "kind": "api_set_resolved_host",
+      "priority": 111,
+      "profileSelectors": [
+        "api-set-safe",
+        "host:shcore.dll",
+        "strategy:api_set_forwarder"
+      ],
+      "representativeApis": [
+        "api-ms-win-core-featurestaging-l1-1-0.dll!GetFeatureEnabledState",
+        "api-ms-win-core-featurestaging-l1-1-0.dll!RecordFeatureError",
+        "api-ms-win-core-featurestaging-l1-1-0.dll!RecordFeatureUsage",
+        "api-ms-win-core-featurestaging-l1-1-0.dll!SubscribeFeatureStateChangeNotification",
+        "api-ms-win-core-featurestaging-l1-1-0.dll!UnsubscribeFeatureStateChangeNotification"
+      ],
+      "requiredEvidence": [
+        "LoadLibraryW/GetProcAddress/GetModuleHandleExW(FROM_ADDRESS) host resolution",
+        "target import provider verification for the selected API-set DLL",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": "shcore.dll",
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": "shcore.dll",
+      "totalApis": 21
+    },
+    {
+      "batchId": "tier2-batch-0011",
+      "blockedApis": 0,
+      "byFamily": {
+        "system": 4
+      },
+      "byRisk": {
+        "critical": 4
+      },
+      "explicitAllowlistRequired": 4,
+      "installableWithoutAllowlist": 0,
+      "kind": "api_set_resolved_host",
+      "priority": 114,
+      "profileSelectors": [
+        "api-set-safe",
+        "host:sechost.dll",
+        "strategy:api_set_forwarder"
+      ],
+      "representativeApis": [
+        "api-ms-win-service-core-l1-1-3.dll!GetServiceRegistryStateKey",
+        "api-ms-win-service-core-l1-1-4.dll!GetServiceDirectory",
+        "api-ms-win-service-core-l1-1-5.dll!GetSharedServiceDirectory",
+        "api-ms-win-service-core-l1-1-5.dll!GetSharedServiceRegistryStateKey"
+      ],
+      "requiredEvidence": [
+        "LoadLibraryW/GetProcAddress/GetModuleHandleExW(FROM_ADDRESS) host resolution",
+        "target import provider verification for the selected API-set DLL",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": "sechost.dll",
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": "sechost.dll",
+      "totalApis": 4
+    },
+    {
+      "batchId": "tier2-batch-0104",
+      "blockedApis": 2,
+      "byFamily": {
+        "system": 2
+      },
+      "byRisk": {
+        "medium": 2
+      },
+      "explicitAllowlistRequired": 0,
+      "installableWithoutAllowlist": 0,
+      "kind": "blocked_api_set_unresolved",
+      "priority": 147,
+      "profileSelectors": [],
+      "representativeApis": [
+        "api-ms-win-core-util-l1-1-1.dll!DecodeRemotePointer",
+        "api-ms-win-core-util-l1-1-1.dll!EncodeRemotePointer"
+      ],
+      "requiredEvidence": [
+        "manual ABI review before runtime hook installation",
+        "explicit allowlist and smoke evidence before promotion",
+        "payload absence and hook-overhead gates"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "blocked",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": null,
+      "totalApis": 2
+    },
+    {
+      "batchId": "tier2-batch-0009",
+      "blockedApis": 0,
+      "byFamily": {
+        "devices": 2,
+        "foundation": 1,
+        "gaming": 1,
+        "security": 1,
+        "storage": 23,
+        "system": 44,
+        "ui": 22
+      },
+      "byRisk": {
+        "critical": 1,
+        "high": 1,
+        "medium": 92
+      },
+      "explicitAllowlistRequired": 2,
+      "installableWithoutAllowlist": 92,
+      "kind": "api_set_resolved_host",
+      "priority": 184,
+      "profileSelectors": [
+        "api-set-safe",
+        "host:kernelbase.dll",
+        "strategy:api_set_forwarder"
+      ],
+      "representativeApis": [
+        "api-ms-win-core-apiquery-l2-1-0.dll!IsApiSetImplemented",
+        "api-ms-win-core-apiquery-l2-1-1.dll!GetApiSetModuleBaseName",
+        "api-ms-win-core-backgroundtask-l1-1-0.dll!RaiseCustomSystemEventTrigger",
+        "api-ms-win-core-comm-l1-1-1.dll!OpenCommPort",
+        "api-ms-win-core-comm-l1-1-2.dll!GetCommPorts"
+      ],
+      "requiredEvidence": [
+        "LoadLibraryW/GetProcAddress/GetModuleHandleExW(FROM_ADDRESS) host resolution",
+        "target import provider verification for the selected API-set DLL",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": "kernelbase.dll",
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": null,
+      "targetModule": "kernelbase.dll",
+      "totalApis": 94
+    }
+  ],
+  "policy": {
+    "broadSelectionRule": "Do not install raw all-Tier-2 selectors from this manifest.",
+    "initialCandidateMaxApisPerBatch": 2,
+    "initialCandidateRule": "No blocked APIs, no explicit allowlist requirements, and no more than two APIs in the resolved-host/source-DLL batch.",
+    "installMode": "review_manifest_only",
+    "profileExpansionRule": "Promote only one reviewed batch at a time with target import/provider evidence, x64 and x86 native smoke, zero healthy-path drops, and hook-overhead review.",
+    "runtimeHooksEnabledByDefault": false
+  },
+  "schemaVersion": "0.1.0",
+  "source": {
+    "tier2ProfileBatchPlan": "generated/tier2-profile-batch-plan.json",
+    "tier2ProfileBatchPlanSchemaVersion": "0.1.0"
+  },
+  "summary": {
+    "allowlistGatedBatchApis": 146,
+    "allowlistGatedBatches": 20,
+    "apisByReviewClass": {
+      "blocked": 2,
+      "explicit_allowlist_required": 146,
+      "initial_candidate": 55,
+      "review_ready": 452
+    },
+    "blockedApis": 2,
+    "blockedBatchApis": 2,
+    "blockedBatches": 1,
+    "byFamily": {
+      "data": 1,
+      "devices": 47,
+      "foundation": 2,
+      "gaming": 30,
+      "globalization": 29,
+      "graphics": 27,
+      "management": 2,
+      "media": 24,
+      "network-management": 28,
+      "networking": 14,
+      "security": 19,
+      "storage": 60,
+      "system": 269,
+      "ui": 97,
+      "web": 6
+    },
+    "byKind": {
+      "api_set_resolved_host": 16,
+      "blocked_api_set_unresolved": 1,
+      "missing_parameter_return_only_module": 87
+    },
+    "byReviewClass": {
+      "blocked": 1,
+      "explicit_allowlist_required": 20,
+      "initial_candidate": 42,
+      "review_ready": 41
+    },
+    "byRisk": {
+      "critical": 11,
+      "high": 19,
+      "medium": 625
+    },
+    "explicitAllowlistRequiredApis": 30,
+    "initialCandidateApis": 55,
+    "initialCandidateBatches": 42,
+    "manifestApis": 655,
+    "manifestBatches": 104,
+    "reviewReadyApis": 452,
+    "reviewReadyBatches": 41,
+    "runtimeHooksEnabledByDefault": 0,
+    "sourceApis": 655,
+    "sourceBatches": 104
+  }
+}
