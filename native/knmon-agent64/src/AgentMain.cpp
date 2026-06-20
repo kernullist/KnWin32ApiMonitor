@@ -201,6 +201,23 @@ using GetSymLoadErrorFn = DWORD(WINAPI*)();
 using ImagehlpApiVersionFn = PVOID(WINAPI*)();
 using RangeMapCreateFn = PVOID(WINAPI*)();
 using SymGetOptionsFn = DWORD(WINAPI*)();
+using GlEndFn = void(WINAPI*)();
+using GlEndListFn = void(WINAPI*)();
+using GlFinishFn = void(WINAPI*)();
+using GlFlushFn = void(WINAPI*)();
+using GlGetErrorFn = UINT(WINAPI*)();
+using GlInitNamesFn = void(WINAPI*)();
+using GlLoadIdentityFn = void(WINAPI*)();
+using GlPopAttribFn = void(WINAPI*)();
+using GlPopClientAttribFn = void(WINAPI*)();
+using GlPopMatrixFn = void(WINAPI*)();
+using GlPopNameFn = void(WINAPI*)();
+using GlPushMatrixFn = void(WINAPI*)();
+using WglGetCurrentContextFn = HGLRC(WINAPI*)();
+using WglGetCurrentDCFn = HDC(WINAPI*)();
+using GluNewNurbsRendererFn = PVOID(WINAPI*)();
+using GluNewQuadricFn = PVOID(WINAPI*)();
+using GluNewTessFn = PVOID(WINAPI*)();
 using GdipCreateHalftonePaletteFn = HPALETTE(WINAPI*)();
 using OaBuildVersionFn = ULONG(WINAPI*)();
 using OaEnablePerUserTLibRegistrationFn = void(WINAPI*)();
@@ -425,6 +442,23 @@ GetSymLoadErrorFn g_originalGetSymLoadError = nullptr;
 ImagehlpApiVersionFn g_originalImagehlpApiVersion = nullptr;
 RangeMapCreateFn g_originalRangeMapCreate = nullptr;
 SymGetOptionsFn g_originalSymGetOptions = nullptr;
+GlEndFn g_originalGlEnd = nullptr;
+GlEndListFn g_originalGlEndList = nullptr;
+GlFinishFn g_originalGlFinish = nullptr;
+GlFlushFn g_originalGlFlush = nullptr;
+GlGetErrorFn g_originalGlGetError = nullptr;
+GlInitNamesFn g_originalGlInitNames = nullptr;
+GlLoadIdentityFn g_originalGlLoadIdentity = nullptr;
+GlPopAttribFn g_originalGlPopAttrib = nullptr;
+GlPopClientAttribFn g_originalGlPopClientAttrib = nullptr;
+GlPopMatrixFn g_originalGlPopMatrix = nullptr;
+GlPopNameFn g_originalGlPopName = nullptr;
+GlPushMatrixFn g_originalGlPushMatrix = nullptr;
+WglGetCurrentContextFn g_originalWglGetCurrentContext = nullptr;
+WglGetCurrentDCFn g_originalWglGetCurrentDC = nullptr;
+GluNewNurbsRendererFn g_originalGluNewNurbsRenderer = nullptr;
+GluNewQuadricFn g_originalGluNewQuadric = nullptr;
+GluNewTessFn g_originalGluNewTess = nullptr;
 GdipCreateHalftonePaletteFn g_originalGdipCreateHalftonePalette = nullptr;
 OaBuildVersionFn g_originalOaBuildVersion = nullptr;
 OaEnablePerUserTLibRegistrationFn g_originalOaEnablePerUserTLibRegistration = nullptr;
@@ -664,7 +698,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 201;
+constexpr std::size_t HookDefinitionCount = 218;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -7197,6 +7231,23 @@ DWORD WINAPI HookedGetSymLoadError();
 PVOID WINAPI HookedImagehlpApiVersion();
 PVOID WINAPI HookedRangeMapCreate();
 DWORD WINAPI HookedSymGetOptions();
+void WINAPI HookedGlEnd();
+void WINAPI HookedGlEndList();
+void WINAPI HookedGlFinish();
+void WINAPI HookedGlFlush();
+UINT WINAPI HookedGlGetError();
+void WINAPI HookedGlInitNames();
+void WINAPI HookedGlLoadIdentity();
+void WINAPI HookedGlPopAttrib();
+void WINAPI HookedGlPopClientAttrib();
+void WINAPI HookedGlPopMatrix();
+void WINAPI HookedGlPopName();
+void WINAPI HookedGlPushMatrix();
+HGLRC WINAPI HookedWglGetCurrentContext();
+HDC WINAPI HookedWglGetCurrentDC();
+PVOID WINAPI HookedGluNewNurbsRenderer();
+PVOID WINAPI HookedGluNewQuadric();
+PVOID WINAPI HookedGluNewTess();
 HPALETTE WINAPI HookedGdipCreateHalftonePalette();
 ULONG WINAPI HookedOaBuildVersion();
 void WINAPI HookedOaEnablePerUserTLibRegistration();
@@ -7402,6 +7453,23 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "dbghelp.dll", "ImagehlpApiVersion", reinterpret_cast<void*>(HookedImagehlpApiVersion), reinterpret_cast<void**>(&g_originalImagehlpApiVersion), false, true, false, 1156, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "dbghelp.dll", "RangeMapCreate", reinterpret_cast<void*>(HookedRangeMapCreate), reinterpret_cast<void**>(&g_originalRangeMapCreate), false, true, false, 1162, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "dbghelp.dll", "SymGetOptions", reinterpret_cast<void*>(HookedSymGetOptions), reinterpret_cast<void**>(&g_originalSymGetOptions), false, true, false, 1257, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "opengl32.dll", "glEnd", reinterpret_cast<void*>(HookedGlEnd), reinterpret_cast<void**>(&g_originalGlEnd), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "opengl32.dll", "glEndList", reinterpret_cast<void*>(HookedGlEndList), reinterpret_cast<void**>(&g_originalGlEndList), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "opengl32.dll", "glFinish", reinterpret_cast<void*>(HookedGlFinish), reinterpret_cast<void**>(&g_originalGlFinish), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "opengl32.dll", "glFlush", reinterpret_cast<void*>(HookedGlFlush), reinterpret_cast<void**>(&g_originalGlFlush), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "opengl32.dll", "glGetError", reinterpret_cast<void*>(HookedGlGetError), reinterpret_cast<void**>(&g_originalGlGetError), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "opengl32.dll", "glInitNames", reinterpret_cast<void*>(HookedGlInitNames), reinterpret_cast<void**>(&g_originalGlInitNames), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "opengl32.dll", "glLoadIdentity", reinterpret_cast<void*>(HookedGlLoadIdentity), reinterpret_cast<void**>(&g_originalGlLoadIdentity), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "opengl32.dll", "glPopAttrib", reinterpret_cast<void*>(HookedGlPopAttrib), reinterpret_cast<void**>(&g_originalGlPopAttrib), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "opengl32.dll", "glPopClientAttrib", reinterpret_cast<void*>(HookedGlPopClientAttrib), reinterpret_cast<void**>(&g_originalGlPopClientAttrib), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "opengl32.dll", "glPopMatrix", reinterpret_cast<void*>(HookedGlPopMatrix), reinterpret_cast<void**>(&g_originalGlPopMatrix), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "opengl32.dll", "glPopName", reinterpret_cast<void*>(HookedGlPopName), reinterpret_cast<void**>(&g_originalGlPopName), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "opengl32.dll", "glPushMatrix", reinterpret_cast<void*>(HookedGlPushMatrix), reinterpret_cast<void**>(&g_originalGlPushMatrix), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "opengl32.dll", "wglGetCurrentContext", reinterpret_cast<void*>(HookedWglGetCurrentContext), reinterpret_cast<void**>(&g_originalWglGetCurrentContext), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "opengl32.dll", "wglGetCurrentDC", reinterpret_cast<void*>(HookedWglGetCurrentDC), reinterpret_cast<void**>(&g_originalWglGetCurrentDC), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "glu32.dll", "gluNewNurbsRenderer", reinterpret_cast<void*>(HookedGluNewNurbsRenderer), reinterpret_cast<void**>(&g_originalGluNewNurbsRenderer), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "glu32.dll", "gluNewQuadric", reinterpret_cast<void*>(HookedGluNewQuadric), reinterpret_cast<void**>(&g_originalGluNewQuadric), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "glu32.dll", "gluNewTess", reinterpret_cast<void*>(HookedGluNewTess), reinterpret_cast<void**>(&g_originalGluNewTess), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "gdiplus.dll", "GdipCreateHalftonePalette", reinterpret_cast<void*>(HookedGdipCreateHalftonePalette), reinterpret_cast<void**>(&g_originalGdipCreateHalftonePalette), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "oleaut32.dll", "OaBuildVersion", reinterpret_cast<void*>(HookedOaBuildVersion), reinterpret_cast<void**>(&g_originalOaBuildVersion), false, true, false, 170, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "oleaut32.dll", "OaEnablePerUserTLibRegistration", reinterpret_cast<void*>(HookedOaEnablePerUserTLibRegistration), reinterpret_cast<void**>(&g_originalOaEnablePerUserTLibRegistration), false, true, false, 444, 0, false, "", true, "tier2-initial-return-only" },
@@ -10109,6 +10177,261 @@ DWORD WINAPI HookedSymGetOptions()
     };
 
     return InvokeTier2ReturnOnlyHook(g_originalSymGetOptions, static_cast<DWORD>(0), Metadata);
+}
+
+void WINAPI HookedGlEnd()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "opengl32.dll",
+        "glEnd",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "opengl32.dll!glEnd",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalGlEnd, Metadata);
+}
+
+void WINAPI HookedGlEndList()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "opengl32.dll",
+        "glEndList",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "opengl32.dll!glEndList",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalGlEndList, Metadata);
+}
+
+void WINAPI HookedGlFinish()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "opengl32.dll",
+        "glFinish",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "opengl32.dll!glFinish",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalGlFinish, Metadata);
+}
+
+void WINAPI HookedGlFlush()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "opengl32.dll",
+        "glFlush",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "opengl32.dll!glFlush",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalGlFlush, Metadata);
+}
+
+UINT WINAPI HookedGlGetError()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "opengl32.dll",
+        "glGetError",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "opengl32.dll!glGetError",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGlGetError, static_cast<UINT>(0), Metadata);
+}
+
+void WINAPI HookedGlInitNames()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "opengl32.dll",
+        "glInitNames",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "opengl32.dll!glInitNames",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalGlInitNames, Metadata);
+}
+
+void WINAPI HookedGlLoadIdentity()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "opengl32.dll",
+        "glLoadIdentity",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "opengl32.dll!glLoadIdentity",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalGlLoadIdentity, Metadata);
+}
+
+void WINAPI HookedGlPopAttrib()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "opengl32.dll",
+        "glPopAttrib",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "opengl32.dll!glPopAttrib",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalGlPopAttrib, Metadata);
+}
+
+void WINAPI HookedGlPopClientAttrib()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "opengl32.dll",
+        "glPopClientAttrib",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "opengl32.dll!glPopClientAttrib",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalGlPopClientAttrib, Metadata);
+}
+
+void WINAPI HookedGlPopMatrix()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "opengl32.dll",
+        "glPopMatrix",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "opengl32.dll!glPopMatrix",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalGlPopMatrix, Metadata);
+}
+
+void WINAPI HookedGlPopName()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "opengl32.dll",
+        "glPopName",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "opengl32.dll!glPopName",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalGlPopName, Metadata);
+}
+
+void WINAPI HookedGlPushMatrix()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "opengl32.dll",
+        "glPushMatrix",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "opengl32.dll!glPushMatrix",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalGlPushMatrix, Metadata);
+}
+
+HGLRC WINAPI HookedWglGetCurrentContext()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "opengl32.dll",
+        "wglGetCurrentContext",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "opengl32.dll!wglGetCurrentContext",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalWglGetCurrentContext, static_cast<HGLRC>(nullptr), Metadata);
+}
+
+HDC WINAPI HookedWglGetCurrentDC()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "opengl32.dll",
+        "wglGetCurrentDC",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "opengl32.dll!wglGetCurrentDC",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalWglGetCurrentDC, static_cast<HDC>(nullptr), Metadata);
+}
+
+PVOID WINAPI HookedGluNewNurbsRenderer()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "glu32.dll",
+        "gluNewNurbsRenderer",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "glu32.dll!gluNewNurbsRenderer",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGluNewNurbsRenderer, static_cast<PVOID>(nullptr), Metadata);
+}
+
+PVOID WINAPI HookedGluNewQuadric()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "glu32.dll",
+        "gluNewQuadric",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "glu32.dll!gluNewQuadric",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGluNewQuadric, static_cast<PVOID>(nullptr), Metadata);
+}
+
+PVOID WINAPI HookedGluNewTess()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "glu32.dll",
+        "gluNewTess",
+        "graphics",
+        "graphics/open-gl",
+        "medium",
+        "glu32.dll!gluNewTess",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGluNewTess, static_cast<PVOID>(nullptr), Metadata);
 }
 
 HPALETTE WINAPI HookedGdipCreateHalftonePalette()

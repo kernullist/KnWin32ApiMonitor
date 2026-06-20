@@ -94,6 +94,24 @@ extern "C" __declspec(dllimport) void WINAPI InitCommonControls();
 extern "C" __declspec(dllimport) INT WINAPI D3DPERF_EndEvent();
 extern "C" __declspec(dllimport) DWORD WINAPI D3DPERF_GetStatus();
 extern "C" __declspec(dllimport) BOOL WINAPI D3DPERF_QueryRepeatFrame();
+extern "C" __declspec(dllimport) void WINAPI glEnd();
+extern "C" __declspec(dllimport) void WINAPI glEndList();
+extern "C" __declspec(dllimport) void WINAPI glFinish();
+extern "C" __declspec(dllimport) void WINAPI glFlush();
+extern "C" __declspec(dllimport) UINT WINAPI glGetError();
+extern "C" __declspec(dllimport) void WINAPI glInitNames();
+extern "C" __declspec(dllimport) void WINAPI glLoadIdentity();
+extern "C" __declspec(dllimport) void WINAPI glPopAttrib();
+extern "C" __declspec(dllimport) void WINAPI glPopClientAttrib();
+extern "C" __declspec(dllimport) void WINAPI glPopMatrix();
+extern "C" __declspec(dllimport) void WINAPI glPopName();
+extern "C" __declspec(dllimport) void WINAPI glPushMatrix();
+extern "C" __declspec(dllimport) PVOID WINAPI gluNewNurbsRenderer();
+extern "C" __declspec(dllimport) void WINAPI gluDeleteNurbsRenderer(PVOID nurbsRenderer);
+extern "C" __declspec(dllimport) PVOID WINAPI gluNewQuadric();
+extern "C" __declspec(dllimport) void WINAPI gluDeleteQuadric(PVOID quadric);
+extern "C" __declspec(dllimport) PVOID WINAPI gluNewTess();
+extern "C" __declspec(dllimport) void WINAPI gluDeleteTess(PVOID tess);
 extern "C" __declspec(dllimport) HPALETTE WINAPI GdipCreateHalftonePalette();
 extern "C" __declspec(dllimport) HRESULT WINAPI DXGIDeclareAdapterRemovalSupport();
 extern "C" __declspec(dllimport) HRESULT WINAPI DXGIDisableVBlankVirtualization();
@@ -3019,6 +3037,9 @@ bool RunTier2InitialReturnOnlyBatchProbe()
     bool success = false;
     HPALETTE palette = nullptr;
     PVOID rangeMap = nullptr;
+    PVOID gluNurbsRenderer = nullptr;
+    PVOID gluQuadric = nullptr;
+    PVOID gluTess = nullptr;
 
     do
     {
@@ -3047,6 +3068,23 @@ bool RunTier2InitialReturnOnlyBatchProbe()
         const INT d3dEndEvent = D3DPERF_EndEvent();
         const DWORD d3dStatus = D3DPERF_GetStatus();
         const BOOL d3dRepeatFrame = D3DPERF_QueryRepeatFrame();
+        glEnd();
+        glEndList();
+        glFinish();
+        glFlush();
+        const UINT glError = glGetError();
+        glInitNames();
+        glLoadIdentity();
+        glPopAttrib();
+        glPopClientAttrib();
+        glPopMatrix();
+        glPopName();
+        glPushMatrix();
+        const HGLRC currentGlContext = wglGetCurrentContext();
+        const HDC currentGlDc = wglGetCurrentDC();
+        gluNurbsRenderer = gluNewNurbsRenderer();
+        gluQuadric = gluNewQuadric();
+        gluTess = gluNewTess();
         const DWORD symLoadError = GetSymLoadError();
         const LPAPI_VERSION imagehlpVersion = ImagehlpApiVersion();
         rangeMap = RangeMapCreate();
@@ -3108,6 +3146,12 @@ bool RunTier2InitialReturnOnlyBatchProbe()
                   << " d3d_end_event=" << d3dEndEvent
                   << " d3d_status=" << d3dStatus
                   << " d3d_repeat=" << d3dRepeatFrame
+                  << " gl_error=" << glError
+                  << " gl_context=" << currentGlContext
+                  << " gl_dc=" << currentGlDc
+                  << " glu_nurbs=" << gluNurbsRenderer
+                  << " glu_quadric=" << gluQuadric
+                  << " glu_tess=" << gluTess
                   << " sym_load_error=" << symLoadError
                   << " imagehlp_version=" << reinterpret_cast<const void*>(imagehlpVersion)
                   << " range_map=" << rangeMap
@@ -3156,6 +3200,24 @@ bool RunTier2InitialReturnOnlyBatchProbe()
             rangeMap = nullptr;
         }
 
+        if (gluNurbsRenderer != nullptr)
+        {
+            gluDeleteNurbsRenderer(gluNurbsRenderer);
+            gluNurbsRenderer = nullptr;
+        }
+
+        if (gluQuadric != nullptr)
+        {
+            gluDeleteQuadric(gluQuadric);
+            gluQuadric = nullptr;
+        }
+
+        if (gluTess != nullptr)
+        {
+            gluDeleteTess(gluTess);
+            gluTess = nullptr;
+        }
+
         if (immContext != nullptr)
         {
             if (!ImmDestroyContext(immContext))
@@ -3191,6 +3253,24 @@ bool RunTier2InitialReturnOnlyBatchProbe()
     {
         RangeMapFree(rangeMap);
         rangeMap = nullptr;
+    }
+
+    if (gluNurbsRenderer != nullptr)
+    {
+        gluDeleteNurbsRenderer(gluNurbsRenderer);
+        gluNurbsRenderer = nullptr;
+    }
+
+    if (gluQuadric != nullptr)
+    {
+        gluDeleteQuadric(gluQuadric);
+        gluQuadric = nullptr;
+    }
+
+    if (gluTess != nullptr)
+    {
+        gluDeleteTess(gluTess);
+        gluTess = nullptr;
     }
 
     if (palette != nullptr)
