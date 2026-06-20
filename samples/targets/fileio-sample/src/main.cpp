@@ -3040,6 +3040,11 @@ bool RunTier2InitialReturnOnlyBatchProbe()
     PVOID gluNurbsRenderer = nullptr;
     PVOID gluQuadric = nullptr;
     PVOID gluTess = nullptr;
+    PTP_CLEANUP_GROUP cleanupGroup = nullptr;
+    HANDLE timerQueue = nullptr;
+    LPCH environmentStrings = nullptr;
+    LPWCH environmentStringsW = nullptr;
+    DWORD tlsIndex = TLS_OUT_OF_INDEXES;
 
     do
     {
@@ -3085,6 +3090,50 @@ bool RunTier2InitialReturnOnlyBatchProbe()
         gluNurbsRenderer = gluNewNurbsRenderer();
         gluQuadric = gluNewQuadric();
         gluTess = gluNewTess();
+        const BOOL fileApisAnsi = AreFileApisANSI();
+        cleanupGroup = CreateThreadpoolCleanupGroup();
+        timerQueue = CreateTimerQueue();
+        const UINT acp = GetACP();
+        const WORD activeProcessorGroups = GetActiveProcessorGroupCount();
+        const LPSTR commandLineA = GetCommandLineA();
+        const LPWSTR commandLineW = GetCommandLineW();
+        const DWORD consoleAliasExesA = GetConsoleAliasExesLengthA();
+        const DWORD consoleAliasExesW = GetConsoleAliasExesLengthW();
+        const UINT consoleCp = GetConsoleCP();
+        const UINT consoleOutputCp = GetConsoleOutputCP();
+        const HWND consoleWindow = GetConsoleWindow();
+        const DWORD currentProcessor = GetCurrentProcessorNumber();
+        const DWORD64 enabledXState = GetEnabledXStateFeatures();
+        environmentStrings = GetEnvironmentStrings();
+        environmentStringsW = GetEnvironmentStringsW();
+        const UINT errorMode = GetErrorMode();
+        const SIZE_T largePageMinimum = GetLargePageMinimum();
+        const DWORD logicalDrives = GetLogicalDrives();
+        const WORD maximumProcessorGroups = GetMaximumProcessorGroupCount();
+        const UINT oemCp = GetOEMCP();
+        const HANDLE processHeap = GetProcessHeap();
+        const LANGID systemLang = GetSystemDefaultLangID();
+        const LCID systemLcid = GetSystemDefaultLCID();
+        const LANGID systemUiLang = GetSystemDefaultUILanguage();
+        const DWORD depPolicy = static_cast<DWORD>(GetSystemDEPPolicy());
+        const DWORD64 threadXState = GetThreadEnabledXStateFeatures();
+        const DWORD threadErrorMode = GetThreadErrorMode();
+        const LCID threadLocale = GetThreadLocale();
+        const LANGID threadUiLanguage = GetThreadUILanguage();
+        const DWORD tickCount = GetTickCount();
+        const ULONGLONG tickCount64 = GetTickCount64();
+        const LANGID userLang = GetUserDefaultLangID();
+        const LCID userLcid = GetUserDefaultLCID();
+        const LANGID userUiLang = GetUserDefaultUILanguage();
+        const DWORD version = GetVersion();
+        const BOOL debuggerPresent = IsDebuggerPresent();
+        const BOOL resumeAutomatic = IsSystemResumeAutomatic();
+        const BOOL threadIsFiber = IsThreadAFiber();
+        const BOOL switchedThread = SwitchToThread();
+        tlsIndex = TlsAlloc();
+        const HRESULT recoveryUnregister = UnregisterApplicationRecoveryCallback();
+        const HRESULT restartUnregister = UnregisterApplicationRestart();
+        const DWORD activeConsoleSession = WTSGetActiveConsoleSessionId();
         const DWORD symLoadError = GetSymLoadError();
         const LPAPI_VERSION imagehlpVersion = ImagehlpApiVersion();
         rangeMap = RangeMapCreate();
@@ -3152,6 +3201,50 @@ bool RunTier2InitialReturnOnlyBatchProbe()
                   << " glu_nurbs=" << gluNurbsRenderer
                   << " glu_quadric=" << gluQuadric
                   << " glu_tess=" << gluTess
+                  << " file_apis_ansi=" << fileApisAnsi
+                  << " cleanup_group=" << cleanupGroup
+                  << " timer_queue=" << timerQueue
+                  << " acp=" << acp
+                  << " active_processor_groups=" << activeProcessorGroups
+                  << " cmd_a=" << reinterpret_cast<const void*>(commandLineA)
+                  << " cmd_w=" << reinterpret_cast<const void*>(commandLineW)
+                  << " console_alias_a=" << consoleAliasExesA
+                  << " console_alias_w=" << consoleAliasExesW
+                  << " console_cp=" << consoleCp
+                  << " console_output_cp=" << consoleOutputCp
+                  << " console_window=" << consoleWindow
+                  << " current_processor=" << currentProcessor
+                  << " xstate=0x" << std::hex << static_cast<unsigned long long>(enabledXState) << std::dec
+                  << " env_a=" << reinterpret_cast<const void*>(environmentStrings)
+                  << " env_w=" << reinterpret_cast<const void*>(environmentStringsW)
+                  << " error_mode=" << errorMode
+                  << " large_page_min=" << static_cast<unsigned long long>(largePageMinimum)
+                  << " logical_drives=0x" << std::hex << logicalDrives << std::dec
+                  << " max_processor_groups=" << maximumProcessorGroups
+                  << " oem_cp=" << oemCp
+                  << " process_heap=" << processHeap
+                  << " system_lang=" << systemLang
+                  << " system_lcid=" << systemLcid
+                  << " system_ui_lang=" << systemUiLang
+                  << " dep_policy=" << depPolicy
+                  << " thread_xstate=0x" << std::hex << static_cast<unsigned long long>(threadXState) << std::dec
+                  << " thread_error_mode=" << threadErrorMode
+                  << " thread_locale=" << threadLocale
+                  << " thread_ui_lang=" << threadUiLanguage
+                  << " tick=" << tickCount
+                  << " tick64=" << static_cast<unsigned long long>(tickCount64)
+                  << " user_lang=" << userLang
+                  << " user_lcid=" << userLcid
+                  << " user_ui_lang=" << userUiLang
+                  << " version=0x" << std::hex << version << std::dec
+                  << " debugger=" << debuggerPresent
+                  << " resume_auto=" << resumeAutomatic
+                  << " thread_fiber=" << threadIsFiber
+                  << " switched=" << switchedThread
+                  << " tls_index=" << tlsIndex
+                  << " recovery_unregister=" << HexHResult(recoveryUnregister)
+                  << " restart_unregister=" << HexHResult(restartUnregister)
+                  << " active_console_session=" << activeConsoleSession
                   << " sym_load_error=" << symLoadError
                   << " imagehlp_version=" << reinterpret_cast<const void*>(imagehlpVersion)
                   << " range_map=" << rangeMap
@@ -3218,6 +3311,36 @@ bool RunTier2InitialReturnOnlyBatchProbe()
             gluTess = nullptr;
         }
 
+        if (environmentStrings != nullptr)
+        {
+            FreeEnvironmentStringsA(environmentStrings);
+            environmentStrings = nullptr;
+        }
+
+        if (environmentStringsW != nullptr)
+        {
+            FreeEnvironmentStringsW(environmentStringsW);
+            environmentStringsW = nullptr;
+        }
+
+        if (tlsIndex != TLS_OUT_OF_INDEXES)
+        {
+            TlsFree(tlsIndex);
+            tlsIndex = TLS_OUT_OF_INDEXES;
+        }
+
+        if (timerQueue != nullptr)
+        {
+            DeleteTimerQueueEx(timerQueue, INVALID_HANDLE_VALUE);
+            timerQueue = nullptr;
+        }
+
+        if (cleanupGroup != nullptr)
+        {
+            CloseThreadpoolCleanupGroup(cleanupGroup);
+            cleanupGroup = nullptr;
+        }
+
         if (immContext != nullptr)
         {
             if (!ImmDestroyContext(immContext))
@@ -3271,6 +3394,36 @@ bool RunTier2InitialReturnOnlyBatchProbe()
     {
         gluDeleteTess(gluTess);
         gluTess = nullptr;
+    }
+
+    if (environmentStrings != nullptr)
+    {
+        FreeEnvironmentStringsA(environmentStrings);
+        environmentStrings = nullptr;
+    }
+
+    if (environmentStringsW != nullptr)
+    {
+        FreeEnvironmentStringsW(environmentStringsW);
+        environmentStringsW = nullptr;
+    }
+
+    if (tlsIndex != TLS_OUT_OF_INDEXES)
+    {
+        TlsFree(tlsIndex);
+        tlsIndex = TLS_OUT_OF_INDEXES;
+    }
+
+    if (timerQueue != nullptr)
+    {
+        DeleteTimerQueueEx(timerQueue, INVALID_HANDLE_VALUE);
+        timerQueue = nullptr;
+    }
+
+    if (cleanupGroup != nullptr)
+    {
+        CloseThreadpoolCleanupGroup(cleanupGroup);
+        cleanupGroup = nullptr;
     }
 
     if (palette != nullptr)

@@ -218,6 +218,50 @@ using WglGetCurrentDCFn = HDC(WINAPI*)();
 using GluNewNurbsRendererFn = PVOID(WINAPI*)();
 using GluNewQuadricFn = PVOID(WINAPI*)();
 using GluNewTessFn = PVOID(WINAPI*)();
+using AreFileApisANSIFn = BOOL(WINAPI*)();
+using CreateThreadpoolCleanupGroupFn = PTP_CLEANUP_GROUP(WINAPI*)();
+using CreateTimerQueueFn = HANDLE(WINAPI*)();
+using GetACPFn = UINT(WINAPI*)();
+using GetActiveProcessorGroupCountFn = WORD(WINAPI*)();
+using GetCommandLineAFn = LPSTR(WINAPI*)();
+using GetCommandLineWFn = LPWSTR(WINAPI*)();
+using GetConsoleAliasExesLengthAFn = DWORD(WINAPI*)();
+using GetConsoleAliasExesLengthWFn = DWORD(WINAPI*)();
+using GetConsoleCPFn = UINT(WINAPI*)();
+using GetConsoleOutputCPFn = UINT(WINAPI*)();
+using GetConsoleWindowFn = HWND(WINAPI*)();
+using GetCurrentProcessorNumberFn = DWORD(WINAPI*)();
+using GetEnabledXStateFeaturesFn = DWORD64(WINAPI*)();
+using GetEnvironmentStringsFn = LPCH(WINAPI*)();
+using GetEnvironmentStringsWFn = LPWCH(WINAPI*)();
+using GetErrorModeFn = UINT(WINAPI*)();
+using GetLargePageMinimumFn = SIZE_T(WINAPI*)();
+using GetLogicalDrivesFn = DWORD(WINAPI*)();
+using GetMaximumProcessorGroupCountFn = WORD(WINAPI*)();
+using GetOEMCPFn = UINT(WINAPI*)();
+using GetProcessHeapFn = HANDLE(WINAPI*)();
+using GetSystemDefaultLangIDFn = LANGID(WINAPI*)();
+using GetSystemDefaultLCIDFn = LCID(WINAPI*)();
+using GetSystemDefaultUILanguageFn = LANGID(WINAPI*)();
+using GetSystemDEPPolicyFn = DWORD(WINAPI*)();
+using GetThreadEnabledXStateFeaturesFn = DWORD64(WINAPI*)();
+using GetThreadErrorModeFn = DWORD(WINAPI*)();
+using GetThreadLocaleFn = LCID(WINAPI*)();
+using GetThreadUILanguageFn = LANGID(WINAPI*)();
+using GetTickCountFn = DWORD(WINAPI*)();
+using GetTickCount64Fn = ULONGLONG(WINAPI*)();
+using GetUserDefaultLangIDFn = LANGID(WINAPI*)();
+using GetUserDefaultLCIDFn = LCID(WINAPI*)();
+using GetUserDefaultUILanguageFn = LANGID(WINAPI*)();
+using GetVersionFn = DWORD(WINAPI*)();
+using IsDebuggerPresentFn = BOOL(WINAPI*)();
+using IsSystemResumeAutomaticFn = BOOL(WINAPI*)();
+using IsThreadAFiberFn = BOOL(WINAPI*)();
+using SwitchToThreadFn = BOOL(WINAPI*)();
+using TlsAllocFn = DWORD(WINAPI*)();
+using UnregisterApplicationRecoveryCallbackFn = HRESULT(WINAPI*)();
+using UnregisterApplicationRestartFn = HRESULT(WINAPI*)();
+using WTSGetActiveConsoleSessionIdFn = DWORD(WINAPI*)();
 using GdipCreateHalftonePaletteFn = HPALETTE(WINAPI*)();
 using OaBuildVersionFn = ULONG(WINAPI*)();
 using OaEnablePerUserTLibRegistrationFn = void(WINAPI*)();
@@ -459,6 +503,50 @@ WglGetCurrentDCFn g_originalWglGetCurrentDC = nullptr;
 GluNewNurbsRendererFn g_originalGluNewNurbsRenderer = nullptr;
 GluNewQuadricFn g_originalGluNewQuadric = nullptr;
 GluNewTessFn g_originalGluNewTess = nullptr;
+AreFileApisANSIFn g_originalAreFileApisANSI = nullptr;
+CreateThreadpoolCleanupGroupFn g_originalCreateThreadpoolCleanupGroup = nullptr;
+CreateTimerQueueFn g_originalCreateTimerQueue = nullptr;
+GetACPFn g_originalGetACP = nullptr;
+GetActiveProcessorGroupCountFn g_originalGetActiveProcessorGroupCount = nullptr;
+GetCommandLineAFn g_originalGetCommandLineA = nullptr;
+GetCommandLineWFn g_originalGetCommandLineW = nullptr;
+GetConsoleAliasExesLengthAFn g_originalGetConsoleAliasExesLengthA = nullptr;
+GetConsoleAliasExesLengthWFn g_originalGetConsoleAliasExesLengthW = nullptr;
+GetConsoleCPFn g_originalGetConsoleCP = nullptr;
+GetConsoleOutputCPFn g_originalGetConsoleOutputCP = nullptr;
+GetConsoleWindowFn g_originalGetConsoleWindow = nullptr;
+GetCurrentProcessorNumberFn g_originalGetCurrentProcessorNumber = nullptr;
+GetEnabledXStateFeaturesFn g_originalGetEnabledXStateFeatures = nullptr;
+GetEnvironmentStringsFn g_originalGetEnvironmentStrings = nullptr;
+GetEnvironmentStringsWFn g_originalGetEnvironmentStringsW = nullptr;
+GetErrorModeFn g_originalGetErrorMode = nullptr;
+GetLargePageMinimumFn g_originalGetLargePageMinimum = nullptr;
+GetLogicalDrivesFn g_originalGetLogicalDrives = nullptr;
+GetMaximumProcessorGroupCountFn g_originalGetMaximumProcessorGroupCount = nullptr;
+GetOEMCPFn g_originalGetOEMCP = nullptr;
+GetProcessHeapFn g_originalGetProcessHeap = nullptr;
+GetSystemDefaultLangIDFn g_originalGetSystemDefaultLangID = nullptr;
+GetSystemDefaultLCIDFn g_originalGetSystemDefaultLCID = nullptr;
+GetSystemDefaultUILanguageFn g_originalGetSystemDefaultUILanguage = nullptr;
+GetSystemDEPPolicyFn g_originalGetSystemDEPPolicy = nullptr;
+GetThreadEnabledXStateFeaturesFn g_originalGetThreadEnabledXStateFeatures = nullptr;
+GetThreadErrorModeFn g_originalGetThreadErrorMode = nullptr;
+GetThreadLocaleFn g_originalGetThreadLocale = nullptr;
+GetThreadUILanguageFn g_originalGetThreadUILanguage = nullptr;
+GetTickCountFn g_originalGetTickCount = nullptr;
+GetTickCount64Fn g_originalGetTickCount64 = nullptr;
+GetUserDefaultLangIDFn g_originalGetUserDefaultLangID = nullptr;
+GetUserDefaultLCIDFn g_originalGetUserDefaultLCID = nullptr;
+GetUserDefaultUILanguageFn g_originalGetUserDefaultUILanguage = nullptr;
+GetVersionFn g_originalGetVersion = nullptr;
+IsDebuggerPresentFn g_originalIsDebuggerPresent = nullptr;
+IsSystemResumeAutomaticFn g_originalIsSystemResumeAutomatic = nullptr;
+IsThreadAFiberFn g_originalIsThreadAFiber = nullptr;
+SwitchToThreadFn g_originalSwitchToThread = nullptr;
+TlsAllocFn g_originalTlsAlloc = nullptr;
+UnregisterApplicationRecoveryCallbackFn g_originalUnregisterApplicationRecoveryCallback = nullptr;
+UnregisterApplicationRestartFn g_originalUnregisterApplicationRestart = nullptr;
+WTSGetActiveConsoleSessionIdFn g_originalWTSGetActiveConsoleSessionId = nullptr;
 GdipCreateHalftonePaletteFn g_originalGdipCreateHalftonePalette = nullptr;
 OaBuildVersionFn g_originalOaBuildVersion = nullptr;
 OaEnablePerUserTLibRegistrationFn g_originalOaEnablePerUserTLibRegistration = nullptr;
@@ -698,7 +786,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 218;
+constexpr std::size_t HookDefinitionCount = 262;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -7248,6 +7336,50 @@ HDC WINAPI HookedWglGetCurrentDC();
 PVOID WINAPI HookedGluNewNurbsRenderer();
 PVOID WINAPI HookedGluNewQuadric();
 PVOID WINAPI HookedGluNewTess();
+BOOL WINAPI HookedAreFileApisANSI();
+PTP_CLEANUP_GROUP WINAPI HookedCreateThreadpoolCleanupGroup();
+HANDLE WINAPI HookedCreateTimerQueue();
+UINT WINAPI HookedGetACP();
+WORD WINAPI HookedGetActiveProcessorGroupCount();
+LPSTR WINAPI HookedGetCommandLineA();
+LPWSTR WINAPI HookedGetCommandLineW();
+DWORD WINAPI HookedGetConsoleAliasExesLengthA();
+DWORD WINAPI HookedGetConsoleAliasExesLengthW();
+UINT WINAPI HookedGetConsoleCP();
+UINT WINAPI HookedGetConsoleOutputCP();
+HWND WINAPI HookedGetConsoleWindow();
+DWORD WINAPI HookedGetCurrentProcessorNumber();
+DWORD64 WINAPI HookedGetEnabledXStateFeatures();
+LPCH WINAPI HookedGetEnvironmentStrings();
+LPWCH WINAPI HookedGetEnvironmentStringsW();
+UINT WINAPI HookedGetErrorMode();
+SIZE_T WINAPI HookedGetLargePageMinimum();
+DWORD WINAPI HookedGetLogicalDrives();
+WORD WINAPI HookedGetMaximumProcessorGroupCount();
+UINT WINAPI HookedGetOEMCP();
+HANDLE WINAPI HookedGetProcessHeap();
+LANGID WINAPI HookedGetSystemDefaultLangID();
+LCID WINAPI HookedGetSystemDefaultLCID();
+LANGID WINAPI HookedGetSystemDefaultUILanguage();
+DWORD WINAPI HookedGetSystemDEPPolicy();
+DWORD64 WINAPI HookedGetThreadEnabledXStateFeatures();
+DWORD WINAPI HookedGetThreadErrorMode();
+LCID WINAPI HookedGetThreadLocale();
+LANGID WINAPI HookedGetThreadUILanguage();
+DWORD WINAPI HookedGetTickCount();
+ULONGLONG WINAPI HookedGetTickCount64();
+LANGID WINAPI HookedGetUserDefaultLangID();
+LCID WINAPI HookedGetUserDefaultLCID();
+LANGID WINAPI HookedGetUserDefaultUILanguage();
+DWORD WINAPI HookedGetVersion();
+BOOL WINAPI HookedIsDebuggerPresent();
+BOOL WINAPI HookedIsSystemResumeAutomatic();
+BOOL WINAPI HookedIsThreadAFiber();
+BOOL WINAPI HookedSwitchToThread();
+DWORD WINAPI HookedTlsAlloc();
+HRESULT WINAPI HookedUnregisterApplicationRecoveryCallback();
+HRESULT WINAPI HookedUnregisterApplicationRestart();
+DWORD WINAPI HookedWTSGetActiveConsoleSessionId();
 HPALETTE WINAPI HookedGdipCreateHalftonePalette();
 ULONG WINAPI HookedOaBuildVersion();
 void WINAPI HookedOaEnablePerUserTLibRegistration();
@@ -7470,6 +7602,50 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "glu32.dll", "gluNewNurbsRenderer", reinterpret_cast<void*>(HookedGluNewNurbsRenderer), reinterpret_cast<void**>(&g_originalGluNewNurbsRenderer), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "glu32.dll", "gluNewQuadric", reinterpret_cast<void*>(HookedGluNewQuadric), reinterpret_cast<void**>(&g_originalGluNewQuadric), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "glu32.dll", "gluNewTess", reinterpret_cast<void*>(HookedGluNewTess), reinterpret_cast<void**>(&g_originalGluNewTess), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "AreFileApisANSI", reinterpret_cast<void*>(HookedAreFileApisANSI), reinterpret_cast<void**>(&g_originalAreFileApisANSI), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "CreateThreadpoolCleanupGroup", reinterpret_cast<void*>(HookedCreateThreadpoolCleanupGroup), reinterpret_cast<void**>(&g_originalCreateThreadpoolCleanupGroup), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "CreateTimerQueue", reinterpret_cast<void*>(HookedCreateTimerQueue), reinterpret_cast<void**>(&g_originalCreateTimerQueue), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetACP", reinterpret_cast<void*>(HookedGetACP), reinterpret_cast<void**>(&g_originalGetACP), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetActiveProcessorGroupCount", reinterpret_cast<void*>(HookedGetActiveProcessorGroupCount), reinterpret_cast<void**>(&g_originalGetActiveProcessorGroupCount), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetCommandLineA", reinterpret_cast<void*>(HookedGetCommandLineA), reinterpret_cast<void**>(&g_originalGetCommandLineA), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetCommandLineW", reinterpret_cast<void*>(HookedGetCommandLineW), reinterpret_cast<void**>(&g_originalGetCommandLineW), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetConsoleAliasExesLengthA", reinterpret_cast<void*>(HookedGetConsoleAliasExesLengthA), reinterpret_cast<void**>(&g_originalGetConsoleAliasExesLengthA), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetConsoleAliasExesLengthW", reinterpret_cast<void*>(HookedGetConsoleAliasExesLengthW), reinterpret_cast<void**>(&g_originalGetConsoleAliasExesLengthW), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetConsoleCP", reinterpret_cast<void*>(HookedGetConsoleCP), reinterpret_cast<void**>(&g_originalGetConsoleCP), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetConsoleOutputCP", reinterpret_cast<void*>(HookedGetConsoleOutputCP), reinterpret_cast<void**>(&g_originalGetConsoleOutputCP), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetConsoleWindow", reinterpret_cast<void*>(HookedGetConsoleWindow), reinterpret_cast<void**>(&g_originalGetConsoleWindow), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetCurrentProcessorNumber", reinterpret_cast<void*>(HookedGetCurrentProcessorNumber), reinterpret_cast<void**>(&g_originalGetCurrentProcessorNumber), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetEnabledXStateFeatures", reinterpret_cast<void*>(HookedGetEnabledXStateFeatures), reinterpret_cast<void**>(&g_originalGetEnabledXStateFeatures), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetEnvironmentStrings", reinterpret_cast<void*>(HookedGetEnvironmentStrings), reinterpret_cast<void**>(&g_originalGetEnvironmentStrings), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetEnvironmentStringsW", reinterpret_cast<void*>(HookedGetEnvironmentStringsW), reinterpret_cast<void**>(&g_originalGetEnvironmentStringsW), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetErrorMode", reinterpret_cast<void*>(HookedGetErrorMode), reinterpret_cast<void**>(&g_originalGetErrorMode), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetLargePageMinimum", reinterpret_cast<void*>(HookedGetLargePageMinimum), reinterpret_cast<void**>(&g_originalGetLargePageMinimum), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetLogicalDrives", reinterpret_cast<void*>(HookedGetLogicalDrives), reinterpret_cast<void**>(&g_originalGetLogicalDrives), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetMaximumProcessorGroupCount", reinterpret_cast<void*>(HookedGetMaximumProcessorGroupCount), reinterpret_cast<void**>(&g_originalGetMaximumProcessorGroupCount), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetOEMCP", reinterpret_cast<void*>(HookedGetOEMCP), reinterpret_cast<void**>(&g_originalGetOEMCP), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetProcessHeap", reinterpret_cast<void*>(HookedGetProcessHeap), reinterpret_cast<void**>(&g_originalGetProcessHeap), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetSystemDefaultLangID", reinterpret_cast<void*>(HookedGetSystemDefaultLangID), reinterpret_cast<void**>(&g_originalGetSystemDefaultLangID), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetSystemDefaultLCID", reinterpret_cast<void*>(HookedGetSystemDefaultLCID), reinterpret_cast<void**>(&g_originalGetSystemDefaultLCID), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetSystemDefaultUILanguage", reinterpret_cast<void*>(HookedGetSystemDefaultUILanguage), reinterpret_cast<void**>(&g_originalGetSystemDefaultUILanguage), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetSystemDEPPolicy", reinterpret_cast<void*>(HookedGetSystemDEPPolicy), reinterpret_cast<void**>(&g_originalGetSystemDEPPolicy), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetThreadEnabledXStateFeatures", reinterpret_cast<void*>(HookedGetThreadEnabledXStateFeatures), reinterpret_cast<void**>(&g_originalGetThreadEnabledXStateFeatures), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetThreadErrorMode", reinterpret_cast<void*>(HookedGetThreadErrorMode), reinterpret_cast<void**>(&g_originalGetThreadErrorMode), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetThreadLocale", reinterpret_cast<void*>(HookedGetThreadLocale), reinterpret_cast<void**>(&g_originalGetThreadLocale), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetThreadUILanguage", reinterpret_cast<void*>(HookedGetThreadUILanguage), reinterpret_cast<void**>(&g_originalGetThreadUILanguage), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetTickCount", reinterpret_cast<void*>(HookedGetTickCount), reinterpret_cast<void**>(&g_originalGetTickCount), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetTickCount64", reinterpret_cast<void*>(HookedGetTickCount64), reinterpret_cast<void**>(&g_originalGetTickCount64), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetUserDefaultLangID", reinterpret_cast<void*>(HookedGetUserDefaultLangID), reinterpret_cast<void**>(&g_originalGetUserDefaultLangID), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetUserDefaultLCID", reinterpret_cast<void*>(HookedGetUserDefaultLCID), reinterpret_cast<void**>(&g_originalGetUserDefaultLCID), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetUserDefaultUILanguage", reinterpret_cast<void*>(HookedGetUserDefaultUILanguage), reinterpret_cast<void**>(&g_originalGetUserDefaultUILanguage), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "GetVersion", reinterpret_cast<void*>(HookedGetVersion), reinterpret_cast<void**>(&g_originalGetVersion), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "IsDebuggerPresent", reinterpret_cast<void*>(HookedIsDebuggerPresent), reinterpret_cast<void**>(&g_originalIsDebuggerPresent), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "IsSystemResumeAutomatic", reinterpret_cast<void*>(HookedIsSystemResumeAutomatic), reinterpret_cast<void**>(&g_originalIsSystemResumeAutomatic), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "IsThreadAFiber", reinterpret_cast<void*>(HookedIsThreadAFiber), reinterpret_cast<void**>(&g_originalIsThreadAFiber), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "SwitchToThread", reinterpret_cast<void*>(HookedSwitchToThread), reinterpret_cast<void**>(&g_originalSwitchToThread), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "TlsAlloc", reinterpret_cast<void*>(HookedTlsAlloc), reinterpret_cast<void**>(&g_originalTlsAlloc), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "UnregisterApplicationRecoveryCallback", reinterpret_cast<void*>(HookedUnregisterApplicationRecoveryCallback), reinterpret_cast<void**>(&g_originalUnregisterApplicationRecoveryCallback), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "UnregisterApplicationRestart", reinterpret_cast<void*>(HookedUnregisterApplicationRestart), reinterpret_cast<void**>(&g_originalUnregisterApplicationRestart), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "kernel32.dll", "WTSGetActiveConsoleSessionId", reinterpret_cast<void*>(HookedWTSGetActiveConsoleSessionId), reinterpret_cast<void**>(&g_originalWTSGetActiveConsoleSessionId), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "gdiplus.dll", "GdipCreateHalftonePalette", reinterpret_cast<void*>(HookedGdipCreateHalftonePalette), reinterpret_cast<void**>(&g_originalGdipCreateHalftonePalette), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "oleaut32.dll", "OaBuildVersion", reinterpret_cast<void*>(HookedOaBuildVersion), reinterpret_cast<void**>(&g_originalOaBuildVersion), false, true, false, 170, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "oleaut32.dll", "OaEnablePerUserTLibRegistration", reinterpret_cast<void*>(HookedOaEnablePerUserTLibRegistration), reinterpret_cast<void**>(&g_originalOaEnablePerUserTLibRegistration), false, true, false, 444, 0, false, "", true, "tier2-initial-return-only" },
@@ -10432,6 +10608,666 @@ PVOID WINAPI HookedGluNewTess()
     };
 
     return InvokeTier2ReturnOnlyHook(g_originalGluNewTess, static_cast<PVOID>(nullptr), Metadata);
+}
+
+BOOL WINAPI HookedAreFileApisANSI()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "AreFileApisANSI",
+        "storage",
+        "storage/file-system",
+        "medium",
+        "kernel32.dll!AreFileApisANSI",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalAreFileApisANSI, FALSE, Metadata);
+}
+
+PTP_CLEANUP_GROUP WINAPI HookedCreateThreadpoolCleanupGroup()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "CreateThreadpoolCleanupGroup",
+        "system",
+        "system/threading",
+        "medium",
+        "kernel32.dll!CreateThreadpoolCleanupGroup",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalCreateThreadpoolCleanupGroup, static_cast<PTP_CLEANUP_GROUP>(nullptr), Metadata);
+}
+
+HANDLE WINAPI HookedCreateTimerQueue()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "CreateTimerQueue",
+        "system",
+        "system/threading",
+        "medium",
+        "kernel32.dll!CreateTimerQueue",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalCreateTimerQueue, static_cast<HANDLE>(nullptr), Metadata);
+}
+
+UINT WINAPI HookedGetACP()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetACP",
+        "globalization",
+        "globalization",
+        "medium",
+        "kernel32.dll!GetACP",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetACP, static_cast<UINT>(0), Metadata);
+}
+
+WORD WINAPI HookedGetActiveProcessorGroupCount()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetActiveProcessorGroupCount",
+        "system",
+        "system/threading",
+        "medium",
+        "kernel32.dll!GetActiveProcessorGroupCount",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetActiveProcessorGroupCount, static_cast<WORD>(0), Metadata);
+}
+
+LPSTR WINAPI HookedGetCommandLineA()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetCommandLineA",
+        "system",
+        "system/environment",
+        "medium",
+        "kernel32.dll!GetCommandLineA",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetCommandLineA, static_cast<LPSTR>(nullptr), Metadata);
+}
+
+LPWSTR WINAPI HookedGetCommandLineW()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetCommandLineW",
+        "system",
+        "system/environment",
+        "medium",
+        "kernel32.dll!GetCommandLineW",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetCommandLineW, static_cast<LPWSTR>(nullptr), Metadata);
+}
+
+DWORD WINAPI HookedGetConsoleAliasExesLengthA()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetConsoleAliasExesLengthA",
+        "system",
+        "system/console",
+        "medium",
+        "kernel32.dll!GetConsoleAliasExesLengthA",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetConsoleAliasExesLengthA, static_cast<DWORD>(0), Metadata);
+}
+
+DWORD WINAPI HookedGetConsoleAliasExesLengthW()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetConsoleAliasExesLengthW",
+        "system",
+        "system/console",
+        "medium",
+        "kernel32.dll!GetConsoleAliasExesLengthW",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetConsoleAliasExesLengthW, static_cast<DWORD>(0), Metadata);
+}
+
+UINT WINAPI HookedGetConsoleCP()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetConsoleCP",
+        "system",
+        "system/console",
+        "medium",
+        "kernel32.dll!GetConsoleCP",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetConsoleCP, static_cast<UINT>(0), Metadata);
+}
+
+UINT WINAPI HookedGetConsoleOutputCP()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetConsoleOutputCP",
+        "system",
+        "system/console",
+        "medium",
+        "kernel32.dll!GetConsoleOutputCP",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetConsoleOutputCP, static_cast<UINT>(0), Metadata);
+}
+
+HWND WINAPI HookedGetConsoleWindow()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetConsoleWindow",
+        "system",
+        "system/console",
+        "medium",
+        "kernel32.dll!GetConsoleWindow",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetConsoleWindow, static_cast<HWND>(nullptr), Metadata);
+}
+
+DWORD WINAPI HookedGetCurrentProcessorNumber()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetCurrentProcessorNumber",
+        "system",
+        "system/threading",
+        "medium",
+        "kernel32.dll!GetCurrentProcessorNumber",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetCurrentProcessorNumber, static_cast<DWORD>(0), Metadata);
+}
+
+DWORD64 WINAPI HookedGetEnabledXStateFeatures()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetEnabledXStateFeatures",
+        "system",
+        "system/diagnostics/debug",
+        "medium",
+        "kernel32.dll!GetEnabledXStateFeatures",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetEnabledXStateFeatures, static_cast<DWORD64>(0), Metadata);
+}
+
+LPCH WINAPI HookedGetEnvironmentStrings()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetEnvironmentStrings",
+        "system",
+        "system/environment",
+        "medium",
+        "kernel32.dll!GetEnvironmentStrings",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetEnvironmentStrings, static_cast<LPCH>(nullptr), Metadata);
+}
+
+LPWCH WINAPI HookedGetEnvironmentStringsW()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetEnvironmentStringsW",
+        "system",
+        "system/environment",
+        "medium",
+        "kernel32.dll!GetEnvironmentStringsW",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetEnvironmentStringsW, static_cast<LPWCH>(nullptr), Metadata);
+}
+
+UINT WINAPI HookedGetErrorMode()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetErrorMode",
+        "system",
+        "system/diagnostics/debug",
+        "medium",
+        "kernel32.dll!GetErrorMode",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetErrorMode, static_cast<UINT>(0), Metadata);
+}
+
+SIZE_T WINAPI HookedGetLargePageMinimum()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetLargePageMinimum",
+        "system",
+        "system/memory",
+        "medium",
+        "kernel32.dll!GetLargePageMinimum",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetLargePageMinimum, static_cast<SIZE_T>(0), Metadata);
+}
+
+DWORD WINAPI HookedGetLogicalDrives()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetLogicalDrives",
+        "storage",
+        "storage/file-system",
+        "medium",
+        "kernel32.dll!GetLogicalDrives",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetLogicalDrives, static_cast<DWORD>(0), Metadata);
+}
+
+WORD WINAPI HookedGetMaximumProcessorGroupCount()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetMaximumProcessorGroupCount",
+        "system",
+        "system/threading",
+        "medium",
+        "kernel32.dll!GetMaximumProcessorGroupCount",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetMaximumProcessorGroupCount, static_cast<WORD>(0), Metadata);
+}
+
+UINT WINAPI HookedGetOEMCP()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetOEMCP",
+        "globalization",
+        "globalization",
+        "medium",
+        "kernel32.dll!GetOEMCP",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetOEMCP, static_cast<UINT>(0), Metadata);
+}
+
+HANDLE WINAPI HookedGetProcessHeap()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetProcessHeap",
+        "system",
+        "system/memory",
+        "medium",
+        "kernel32.dll!GetProcessHeap",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetProcessHeap, static_cast<HANDLE>(nullptr), Metadata);
+}
+
+LANGID WINAPI HookedGetSystemDefaultLangID()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetSystemDefaultLangID",
+        "globalization",
+        "globalization",
+        "medium",
+        "kernel32.dll!GetSystemDefaultLangID",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetSystemDefaultLangID, static_cast<LANGID>(0), Metadata);
+}
+
+LCID WINAPI HookedGetSystemDefaultLCID()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetSystemDefaultLCID",
+        "globalization",
+        "globalization",
+        "medium",
+        "kernel32.dll!GetSystemDefaultLCID",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetSystemDefaultLCID, static_cast<LCID>(0), Metadata);
+}
+
+LANGID WINAPI HookedGetSystemDefaultUILanguage()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetSystemDefaultUILanguage",
+        "globalization",
+        "globalization",
+        "medium",
+        "kernel32.dll!GetSystemDefaultUILanguage",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetSystemDefaultUILanguage, static_cast<LANGID>(0), Metadata);
+}
+
+DWORD WINAPI HookedGetSystemDEPPolicy()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetSystemDEPPolicy",
+        "system",
+        "system/system-information",
+        "medium",
+        "kernel32.dll!GetSystemDEPPolicy",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetSystemDEPPolicy, static_cast<DWORD>(0), Metadata);
+}
+
+DWORD64 WINAPI HookedGetThreadEnabledXStateFeatures()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetThreadEnabledXStateFeatures",
+        "system",
+        "system/windows-programming",
+        "medium",
+        "kernel32.dll!GetThreadEnabledXStateFeatures",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetThreadEnabledXStateFeatures, static_cast<DWORD64>(0), Metadata);
+}
+
+DWORD WINAPI HookedGetThreadErrorMode()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetThreadErrorMode",
+        "system",
+        "system/diagnostics/debug",
+        "medium",
+        "kernel32.dll!GetThreadErrorMode",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetThreadErrorMode, static_cast<DWORD>(0), Metadata);
+}
+
+LCID WINAPI HookedGetThreadLocale()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetThreadLocale",
+        "globalization",
+        "globalization",
+        "medium",
+        "kernel32.dll!GetThreadLocale",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetThreadLocale, static_cast<LCID>(0), Metadata);
+}
+
+LANGID WINAPI HookedGetThreadUILanguage()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetThreadUILanguage",
+        "globalization",
+        "globalization",
+        "medium",
+        "kernel32.dll!GetThreadUILanguage",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetThreadUILanguage, static_cast<LANGID>(0), Metadata);
+}
+
+DWORD WINAPI HookedGetTickCount()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetTickCount",
+        "system",
+        "system/system-information",
+        "medium",
+        "kernel32.dll!GetTickCount",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetTickCount, static_cast<DWORD>(0), Metadata);
+}
+
+ULONGLONG WINAPI HookedGetTickCount64()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetTickCount64",
+        "system",
+        "system/system-information",
+        "medium",
+        "kernel32.dll!GetTickCount64",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetTickCount64, static_cast<ULONGLONG>(0), Metadata);
+}
+
+LANGID WINAPI HookedGetUserDefaultLangID()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetUserDefaultLangID",
+        "globalization",
+        "globalization",
+        "medium",
+        "kernel32.dll!GetUserDefaultLangID",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetUserDefaultLangID, static_cast<LANGID>(0), Metadata);
+}
+
+LCID WINAPI HookedGetUserDefaultLCID()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetUserDefaultLCID",
+        "globalization",
+        "globalization",
+        "medium",
+        "kernel32.dll!GetUserDefaultLCID",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetUserDefaultLCID, static_cast<LCID>(0), Metadata);
+}
+
+LANGID WINAPI HookedGetUserDefaultUILanguage()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetUserDefaultUILanguage",
+        "globalization",
+        "globalization",
+        "medium",
+        "kernel32.dll!GetUserDefaultUILanguage",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetUserDefaultUILanguage, static_cast<LANGID>(0), Metadata);
+}
+
+DWORD WINAPI HookedGetVersion()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "GetVersion",
+        "system",
+        "system/system-information",
+        "medium",
+        "kernel32.dll!GetVersion",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetVersion, static_cast<DWORD>(0), Metadata);
+}
+
+BOOL WINAPI HookedIsDebuggerPresent()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "IsDebuggerPresent",
+        "system",
+        "system/diagnostics/debug",
+        "medium",
+        "kernel32.dll!IsDebuggerPresent",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalIsDebuggerPresent, FALSE, Metadata);
+}
+
+BOOL WINAPI HookedIsSystemResumeAutomatic()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "IsSystemResumeAutomatic",
+        "system",
+        "system/power",
+        "medium",
+        "kernel32.dll!IsSystemResumeAutomatic",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalIsSystemResumeAutomatic, FALSE, Metadata);
+}
+
+BOOL WINAPI HookedIsThreadAFiber()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "IsThreadAFiber",
+        "system",
+        "system/threading",
+        "medium",
+        "kernel32.dll!IsThreadAFiber",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalIsThreadAFiber, FALSE, Metadata);
+}
+
+BOOL WINAPI HookedSwitchToThread()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "SwitchToThread",
+        "system",
+        "system/threading",
+        "medium",
+        "kernel32.dll!SwitchToThread",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalSwitchToThread, FALSE, Metadata);
+}
+
+DWORD WINAPI HookedTlsAlloc()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "TlsAlloc",
+        "system",
+        "system/threading",
+        "medium",
+        "kernel32.dll!TlsAlloc",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalTlsAlloc, static_cast<DWORD>(TLS_OUT_OF_INDEXES), Metadata);
+}
+
+HRESULT WINAPI HookedUnregisterApplicationRecoveryCallback()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "UnregisterApplicationRecoveryCallback",
+        "system",
+        "system/recovery",
+        "medium",
+        "kernel32.dll!UnregisterApplicationRecoveryCallback",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHResultHook(g_originalUnregisterApplicationRecoveryCallback, Metadata);
+}
+
+HRESULT WINAPI HookedUnregisterApplicationRestart()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "UnregisterApplicationRestart",
+        "system",
+        "system/recovery",
+        "medium",
+        "kernel32.dll!UnregisterApplicationRestart",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHResultHook(g_originalUnregisterApplicationRestart, Metadata);
+}
+
+DWORD WINAPI HookedWTSGetActiveConsoleSessionId()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "kernel32.dll",
+        "WTSGetActiveConsoleSessionId",
+        "system",
+        "system/remote-desktop",
+        "medium",
+        "kernel32.dll!WTSGetActiveConsoleSessionId",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalWTSGetActiveConsoleSessionId, static_cast<DWORD>(0xFFFFFFFF), Metadata);
 }
 
 HPALETTE WINAPI HookedGdipCreateHalftonePalette()
