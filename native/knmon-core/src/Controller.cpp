@@ -1259,6 +1259,7 @@ std::vector<DWORD> CollectProcessTreeIds(DWORD rootProcessId)
 struct ProcessWindowRevealResult
 {
     std::uint32_t CandidateWindows = 0;
+    std::uint32_t SkippedWindows = 0;
     std::uint32_t VisibleWindows = 0;
     std::uint32_t RestoredWindows = 0;
 };
@@ -1269,6 +1270,87 @@ struct ProcessWindowRevealContext
     ProcessWindowRevealResult Result;
     bool ForegroundSet = false;
 };
+
+std::wstring GetWindowTextSnapshot(HWND window)
+{
+    std::wstring text;
+
+    do
+    {
+        const int length = GetWindowTextLengthW(window);
+        if (length <= 0)
+        {
+            break;
+        }
+
+        std::vector<wchar_t> buffer(static_cast<std::size_t>(length) + 1);
+        const int copied = GetWindowTextW(window, buffer.data(), static_cast<int>(buffer.size()));
+        if (copied <= 0)
+        {
+            break;
+        }
+
+        text.assign(buffer.data(), static_cast<std::size_t>(copied));
+    }
+    while (false);
+
+    return text;
+}
+
+std::wstring GetWindowClassSnapshot(HWND window)
+{
+    std::wstring className;
+    std::array<wchar_t, 256> buffer = {};
+
+    const int copied = GetClassNameW(window, buffer.data(), static_cast<int>(buffer.size()));
+    if (copied > 0)
+    {
+        className.assign(buffer.data(), static_cast<std::size_t>(copied));
+    }
+
+    return className;
+}
+
+bool IsInternalLaunchWindow(HWND window, const std::wstring& title, const std::wstring& className, LONG_PTR style, LONG_PTR exStyle)
+{
+    bool internal = false;
+
+    do
+    {
+        if ((style & WS_CHILD) != 0 || (exStyle & WS_EX_TOOLWINDOW) != 0)
+        {
+            internal = true;
+            break;
+        }
+
+        if (GetWindow(window, GW_OWNER) != nullptr)
+        {
+            internal = true;
+            break;
+        }
+
+        if (title == L"PyInstaller Onefile Hidden Window")
+        {
+            internal = true;
+            break;
+        }
+
+        if (title.find(L"PyInstaller") != std::wstring::npos && title.find(L"Hidden Window") != std::wstring::npos)
+        {
+            internal = true;
+            break;
+        }
+
+        if (className == L"IME" || className == L"MSCTFIME UI")
+        {
+            internal = true;
+            break;
+        }
+    }
+    while (false);
+
+    return internal;
+}
 
 BOOL CALLBACK RevealProcessWindowProc(HWND window, LPARAM parameter)
 {
@@ -1299,6 +1381,16 @@ BOOL CALLBACK RevealProcessWindowProc(HWND window, LPARAM parameter)
     }
 
     ++context->Result.CandidateWindows;
+    const std::wstring title = GetWindowTextSnapshot(window);
+    const std::wstring className = GetWindowClassSnapshot(window);
+    const LONG_PTR style = GetWindowLongPtrW(window, GWL_STYLE);
+    const LONG_PTR exStyle = GetWindowLongPtrW(window, GWL_EXSTYLE);
+    if (IsInternalLaunchWindow(window, title, className, style, exStyle))
+    {
+        ++context->Result.SkippedWindows;
+        return TRUE;
+    }
+
     if (IsWindowVisible(window))
     {
         ++context->Result.VisibleWindows;
@@ -5983,6 +6075,8 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
                 std::ostringstream revealMessage;
                 revealMessage << "Launch target window reveal checked; candidates="
                               << reveal.CandidateWindows
+                              << "; skipped="
+                              << reveal.SkippedWindows
                               << "; visible="
                               << reveal.VisibleWindows
                               << "; restored="
