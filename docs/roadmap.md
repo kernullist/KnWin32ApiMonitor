@@ -570,7 +570,7 @@ Next implementation focus:
 
 1. Keep the selected Winsock bootstrap/address-resolution/connect metadata, registry, advapi32 token query/privilege lookup, RPCRT4 binding/option/UUID helper, bcrypt CNG provider/RNG/key-destroy, crypt32 certificate-store/message-handle, WinHTTP session/scalar-option, WinINet session-handle, User32/GDI32 metadata, PSAPI module-query, Version resource metadata, Shell known-folder metadata, OLE32 COM lifecycle/GUID helper, COMBASE-backed WinRT lifecycle, KERNEL32 memory protection, KERNEL32 thread lifecycle, KERNEL32 event synchronization, KERNEL32 mutex/semaphore synchronization, KERNEL32 file-mapping, KERNEL32 process/thread identity, KERNEL32 handle metadata, KERNEL32 module lifecycle, KERNEL32 file metadata, OLEAUT32 lifecycle, SECUR32 credential/context cleanup, USERENV environment-block destroy, DNSAPI record-list free, IPHLPAPI adapter/interface metadata, SETUPAPI device-info close, DbgHelp symbol-session, and Tier 2 generic representative hooks under shared-memory backpressure and hook-overhead gates.
 2. Design payload-heavy network hooks (`send`, `recv`, `sendto`, `recvfrom`), WinHTTP connection/request/transfer/header/body/cookie/credential capture, WinHTTP non-scalar option buffers, and WinINet connection/request/transfer/option/header/cookie/credential/body capture separately before enabling buffer capture at scale.
-3. Stage broader Tier 2 coverage only through `generated/tier2-profile-batch-plan.json` resolved-host/source-DLL review batches, explicit profiles, resolved host DLL selection, module/family/risk/allowlist gates, and representative native smoke evidence; do not enable broad API-set or missing-parameter hooks by default.
+3. Stage broader Tier 2 coverage only through `generated/tier2-profile-batch-plan.json` resolved-host/source-DLL review batches and `defs:tier2-profile-batch-plan:select` previews by explicit profile, resolved host DLL, source module, family, risk, or allowlist gate; do not enable broad API-set or missing-parameter hooks by default.
 4. Stage Tier 3 work only as reviewed design slices first; do not enable callback, COM/interface/vtable, WinRT/HSTRING, window-message/hook-procedure, buffer-heavy, remote-process-sensitive, security-sensitive, or manual-strategy APIs as runtime hooks from the generated plan alone.
 5. Keep returned-pointer instrumentation as a separate reviewed design item.
 
@@ -1154,7 +1154,7 @@ Safe implementation queue:
    - API-set forwarders require resolved host evidence and target import/provider verification.
    - Missing-parameter APIs remain return-only unless a reviewed manual definition adds safe argument metadata.
    - High-risk Tier 2 rows require explicit allowlist or risk override before installation.
-   - Broader Tier 2 work must start from `generated/tier2-profile-batch-plan.json` batches, not raw all-Tier-2 selectors.
+   - Broader Tier 2 work must start from `generated/tier2-profile-batch-plan.json` batches previewed by `defs:tier2-profile-batch-plan:select`, not raw all-Tier-2 selectors.
    - Representative native smokes must prove at least one API-set generic event, one return-only event, and preserved resolver visibility before adding broader profiles.
 6. Use the DLL batch promotion plan as the default promotion queue:
    - Auto-promotable APIs must be implemented by DLL batch, not as isolated unrelated one-offs.

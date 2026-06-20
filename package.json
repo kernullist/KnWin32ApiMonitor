@@ -44,6 +44,7 @@
     "defs:tier2-profile-batch-plan:generate": "node tools/def-validator/generate-tier2-profile-batch-plan.mjs --write",
     "defs:tier2-profile-batch-plan:check": "node tools/def-validator/generate-tier2-profile-batch-plan.mjs --check",
     "defs:tier2-profile-batch-plan": "node tools/def-validator/validate-tier2-profile-batch-plan.mjs",
+    "defs:tier2-profile-batch-plan:select": "node tools/def-validator/plan-tier2-profile-batches.mjs",
     "defs:tier3-plan:generate": "node tools/def-validator/generate-tier3-hook-plan.mjs --write",
     "defs:tier3-plan:check": "node tools/def-validator/generate-tier3-hook-plan.mjs --check",
     "defs:tier3-plan": "node tools/def-validator/validate-tier3-hook-plan.mjs",

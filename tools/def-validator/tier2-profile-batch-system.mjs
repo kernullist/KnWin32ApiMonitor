@@ -224,6 +224,110 @@ export function validateTier2ProfileBatchPlan(plan = loadTier2ProfileBatchPlan()
   return errors;
 }
 
+export function selectTier2ProfileBatches(plan, options = {})
+{
+  const includeAll = options.includeAll === true;
+  const batchIds = new Set(options.batchIds ?? []);
+  const kinds = new Set(options.kinds ?? []);
+  const profiles = new Set(options.profiles ?? []);
+  const resolvedHosts = new Set((options.resolvedHosts ?? []).map(normalizeModuleName));
+  const modules = new Set((options.modules ?? []).map(normalizeModuleName));
+  const families = new Set(options.families ?? []);
+  const risks = new Set(options.risks ?? []);
+  const includeBlocked = options.includeBlocked === true;
+  const limit = options.limit ?? 0;
+  const selectedBatches = [];
+
+  for (const batch of plan.batches ?? [])
+  {
+    let selected = includeAll;
+
+    if (!selected && batchIds.has(batch.batchId))
+    {
+      selected = true;
+    }
+
+    if (!selected && kinds.has(batch.kind))
+    {
+      selected = true;
+    }
+
+    if (!selected && arraysIntersect(batch.profileSelectors ?? [], profiles))
+    {
+      selected = true;
+    }
+
+    if (!selected && resolvedHosts.has(normalizeModuleName(batch.resolvedHostModule)))
+    {
+      selected = true;
+    }
+
+    if (!selected && (modules.has(normalizeModuleName(batch.sourceModule)) || arraysIntersect(batch.sourceModules ?? [], modules, normalizeModuleName)))
+    {
+      selected = true;
+    }
+
+    if (!selected && arraysIntersect(Object.keys(batch.byFamily ?? {}), families))
+    {
+      selected = true;
+    }
+
+    if (!selected && arraysIntersect(Object.keys(batch.byRisk ?? {}), risks))
+    {
+      selected = true;
+    }
+
+    if (!selected)
+    {
+      continue;
+    }
+
+    if (!includeBlocked && batch.kind.startsWith("blocked_"))
+    {
+      continue;
+    }
+
+    selectedBatches.push(batch);
+
+    if (limit > 0 && selectedBatches.length >= limit)
+    {
+      break;
+    }
+  }
+
+  const selectedApis = selectedBatches.flatMap((batch) => batch.apis ?? []);
+
+  return {
+    schemaVersion: "0.1.0",
+    selection: {
+      includeAll,
+      batchIds: Array.from(batchIds).sort(),
+      kinds: Array.from(kinds).sort(),
+      profiles: Array.from(profiles).sort(),
+      resolvedHosts: Array.from(resolvedHosts).sort(),
+      modules: Array.from(modules).sort(),
+      families: Array.from(families).sort(),
+      risks: Array.from(risks).sort(),
+      includeBlocked,
+      limit
+    },
+    summary: {
+      selectedBatches: selectedBatches.length,
+      selectedApis: selectedApis.length,
+      installableWithoutAllowlistApis: selectedApis.filter((api) => api.installableWithoutAllowlist).length,
+      explicitAllowlistRequiredApis: selectedApis.filter((api) => api.explicitAllowlistRequired).length,
+      blockedApis: selectedApis.filter((api) => api.blockedReason !== null).length,
+      runtimeHooksEnabledByDefault: 0,
+      byBatchKind: countBy(selectedBatches, (batch) => batch.kind),
+      byRisk: countBy(selectedApis, (api) => api.risk),
+      byFamily: countBy(selectedApis, (api) => api.family),
+      byResolvedHostModule: countBy(selectedApis.filter((api) => api.resolvedHostModule), (api) => api.resolvedHostModule),
+      bySourceModule: countBy(selectedApis, (api) => api.module)
+    },
+    batches: selectedBatches
+  };
+}
+
 function buildApiSetHostBatches(apis)
 {
   const grouped = groupBy(
@@ -512,4 +616,22 @@ function countBy(entries, selector)
   }
 
   return Object.fromEntries(Object.entries(counts).sort(([left], [right]) => left.localeCompare(right)));
+}
+
+function arraysIntersect(values, filters, normalizer = (value) => value)
+{
+  if (filters.size === 0)
+  {
+    return false;
+  }
+
+  for (const value of values)
+  {
+    if (filters.has(normalizer(value)))
+    {
+      return true;
+    }
+  }
+
+  return false;
 }
