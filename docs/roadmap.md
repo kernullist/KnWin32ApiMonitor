@@ -1153,8 +1153,10 @@ Remaining definition-only expansion queue:
 Design-only high-risk queue:
 
 1. Resolver-returned pointer instrumentation:
-   - Design required for IAT-visible resolver calls versus actual function-pointer call coverage.
-   - Inline/EAT patching, arbitrary returned-pointer wrapping, and broad detours remain out of implementation scope.
+   - Reviewed design input is documented in `docs/resolver-returned-pointer-instrumentation-design.md`.
+   - Current runtime can claim resolver visibility and IAT-covered calls, but not calls through resolver-returned function pointers.
+   - The next approved implementation slice is candidate-ledger classification only: map resolver return pointers to module/export/API identity where safe, emit candidate or unsupported reason evidence, and do not mutate target code.
+   - Inline/EAT patching, arbitrary returned-pointer wrapping, breakpoint mutation, skip-call, forced-return behavior, stealth behavior, and broad detours remain out of implementation scope.
 2. Token mutation and service-control APIs:
    - `AdjustTokenPrivileges`, service creation/start/control/delete, and privilege mutation need no-op observability, least-payload ABI, and smoke isolation before any hook work.
 3. Crypto and certificate secret-bearing APIs:
