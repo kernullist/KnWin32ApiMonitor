@@ -42,6 +42,7 @@
 #include <new>
 #include <sstream>
 #include <string>
+#include <type_traits>
 
 #ifdef GetAddrInfo
 #undef GetAddrInfo
@@ -171,6 +172,10 @@ using GetIpStatisticsFn = ULONG(WINAPI*)(PMIB_IPSTATS);
 using GetStockObjectFn = HGDIOBJ(WINAPI*)(int);
 using WindowsGetStringLenFn = UINT32(WINAPI*)(HSTRING);
 using RevertToSelfFn = BOOL(WINAPI*)();
+using CommDlgExtendedErrorFn = DWORD(WINAPI*)();
+using DwmFlushFn = HRESULT(WINAPI*)();
+using AcmGetVersionFn = UINT(WINAPI*)();
+using GdipCreateHalftonePaletteFn = HPALETTE(WINAPI*)();
 using GetModuleHandleWFn = HMODULE(WINAPI*)(LPCWSTR);
 using GetModuleHandleExWFn = BOOL(WINAPI*)(DWORD, LPCWSTR, HMODULE*);
 using GetModuleFileNameWFn = DWORD(WINAPI*)(HMODULE, LPWSTR, DWORD);
@@ -332,6 +337,10 @@ GetIpStatisticsFn g_originalGetIpStatistics = nullptr;
 GetStockObjectFn g_originalGetStockObject = nullptr;
 WindowsGetStringLenFn g_originalWindowsGetStringLen = nullptr;
 RevertToSelfFn g_originalRevertToSelf = nullptr;
+CommDlgExtendedErrorFn g_originalCommDlgExtendedError = nullptr;
+DwmFlushFn g_originalDwmFlush = nullptr;
+AcmGetVersionFn g_originalAcmGetVersion = nullptr;
+GdipCreateHalftonePaletteFn g_originalGdipCreateHalftonePalette = nullptr;
 GetModuleHandleWFn g_originalGetModuleHandleW = nullptr;
 GetModuleHandleExWFn g_originalGetModuleHandleExW = nullptr;
 GetModuleFileNameWFn g_originalGetModuleFileNameW = nullptr;
@@ -537,7 +546,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 138;
+constexpr std::size_t HookDefinitionCount = 142;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -7041,6 +7050,10 @@ ULONG WINAPI HookedGetIpStatistics(PMIB_IPSTATS statistics);
 HGDIOBJ WINAPI HookedGetStockObject(int object);
 UINT32 WINAPI HookedWindowsGetStringLen(HSTRING string);
 BOOL WINAPI HookedRevertToSelf();
+DWORD WINAPI HookedCommDlgExtendedError();
+HRESULT WINAPI HookedDwmFlush();
+UINT WINAPI HookedAcmGetVersion();
+HPALETTE WINAPI HookedGdipCreateHalftonePalette();
 HANDLE WINAPI HookedCreateThread(LPSECURITY_ATTRIBUTES threadAttributes, SIZE_T stackSize, LPTHREAD_START_ROUTINE startAddress, LPVOID parameter, DWORD creationFlags, LPDWORD threadId);
 HANDLE WINAPI HookedOpenThread(DWORD desiredAccess, BOOL inheritHandle, DWORD threadId);
 DWORD WINAPI HookedWaitForSingleObject(HANDLE handle, DWORD milliseconds);
@@ -7183,6 +7196,10 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "api-ms-win-core-winrt-string-l1-1-0.dll", "WindowsGetStringLen", reinterpret_cast<void*>(HookedWindowsGetStringLen), reinterpret_cast<void**>(&g_originalWindowsGetStringLen), false, true, false, 0, 0, false, "", true, "api-set-safe" },
         HookDefinition { "combase.dll", "WindowsGetStringLen", reinterpret_cast<void*>(HookedWindowsGetStringLen), reinterpret_cast<void**>(&g_originalWindowsGetStringLen), false, true, false, 0, 0, false, "", true, "api-set-safe" },
         HookDefinition { "advapi32.dll", "RevertToSelf", reinterpret_cast<void*>(HookedRevertToSelf), reinterpret_cast<void**>(&g_originalRevertToSelf), false, true, false, 0, 0, false, "", true, "missing-metadata-safe" },
+        HookDefinition { "comdlg32.dll", "CommDlgExtendedError", reinterpret_cast<void*>(HookedCommDlgExtendedError), reinterpret_cast<void**>(&g_originalCommDlgExtendedError), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "dwmapi.dll", "DwmFlush", reinterpret_cast<void*>(HookedDwmFlush), reinterpret_cast<void**>(&g_originalDwmFlush), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "msacm32.dll", "acmGetVersion", reinterpret_cast<void*>(HookedAcmGetVersion), reinterpret_cast<void**>(&g_originalAcmGetVersion), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "gdiplus.dll", "GdipCreateHalftonePalette", reinterpret_cast<void*>(HookedGdipCreateHalftonePalette), reinterpret_cast<void**>(&g_originalGdipCreateHalftonePalette), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "kernel32.dll", "GetModuleHandleW", reinterpret_cast<void*>(HookedGetModuleHandleW), reinterpret_cast<void**>(&g_originalGetModuleHandleW), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleHandleExW", reinterpret_cast<void*>(HookedGetModuleHandleExW), reinterpret_cast<void**>(&g_originalGetModuleHandleExW), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleFileNameW", reinterpret_cast<void*>(HookedGetModuleFileNameW), reinterpret_cast<void**>(&g_originalGetModuleFileNameW), false, true, false, 0, 0 },
@@ -9146,6 +9163,202 @@ BOOL WINAPI HookedRevertToSelf()
 
     SetLastError(lastError);
     return result;
+}
+
+struct Tier2ReturnOnlyMetadata
+{
+    const char* ModuleName = "";
+    const char* ApiName = "";
+    const char* Family = "";
+    const char* Category = "";
+    const char* Risk = "medium";
+    const char* InventoryKey = "";
+    GenericReturnFormat ReturnFormat = GenericReturnFormat::UInt32;
+};
+
+template <typename ReturnT>
+std::uint64_t Tier2ReturnOnlyValue(ReturnT value)
+{
+    if constexpr (std::is_pointer_v<ReturnT>)
+    {
+        return static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(value));
+    }
+    else
+    {
+        using UnsignedReturnT = std::make_unsigned_t<ReturnT>;
+        return static_cast<std::uint64_t>(static_cast<UnsignedReturnT>(value));
+    }
+}
+
+DWORD Tier2ReturnOnlyErrorCode(const Tier2ReturnOnlyMetadata& metadata, std::uint64_t returnValue, DWORD lastError)
+{
+    DWORD errorCode = 0;
+
+    if (metadata.ReturnFormat == GenericReturnFormat::Pointer && returnValue == 0)
+    {
+        errorCode = lastError;
+    }
+
+    return errorCode;
+}
+
+DWORD Tier2ReturnOnlyHResultErrorCode(HRESULT result)
+{
+    DWORD errorCode = 0;
+
+    if (FAILED(result))
+    {
+        errorCode = static_cast<DWORD>(result);
+    }
+
+    return errorCode;
+}
+
+template <typename ReturnT>
+ReturnT InvokeTier2ReturnOnlyHook(ReturnT(WINAPI* original)(), ReturnT missingValue, const Tier2ReturnOnlyMetadata& metadata)
+{
+    if (g_inHook || !HooksEnabled() || original == nullptr)
+    {
+        if (original == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return missingValue;
+        }
+
+        return original();
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const ReturnT result = original();
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const std::uint64_t returnValue = Tier2ReturnOnlyValue(result);
+    const DWORD eventError = Tier2ReturnOnlyErrorCode(metadata, returnValue, lastError);
+    if (HooksEnabled())
+    {
+        EmitGenericReturnOnlyEvent(
+            metadata.ModuleName,
+            metadata.ApiName,
+            "tier2",
+            "tier2-initial-return-only",
+            metadata.Family,
+            metadata.Category,
+            metadata.Risk,
+            "generic_return_only",
+            "",
+            metadata.InventoryKey,
+            returnValue,
+            metadata.ReturnFormat,
+            eventError,
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+DWORD WINAPI HookedCommDlgExtendedError()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "comdlg32.dll",
+        "CommDlgExtendedError",
+        "ui",
+        "ui/controls/dialogs",
+        "medium",
+        "comdlg32.dll!CommDlgExtendedError",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalCommDlgExtendedError, static_cast<DWORD>(0), Metadata);
+}
+
+HRESULT WINAPI HookedDwmFlush()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "dwmapi.dll",
+        "DwmFlush",
+        "graphics",
+        "graphics/dwm",
+        "medium",
+        "dwmapi.dll!DwmFlush",
+        GenericReturnFormat::UInt32
+    };
+
+    if (g_inHook || !HooksEnabled() || g_originalDwmFlush == nullptr)
+    {
+        if (g_originalDwmFlush == nullptr)
+        {
+            return HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND);
+        }
+
+        return g_originalDwmFlush();
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const HRESULT result = g_originalDwmFlush();
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitGenericReturnOnlyEvent(
+            Metadata.ModuleName,
+            Metadata.ApiName,
+            "tier2",
+            "tier2-initial-return-only",
+            Metadata.Family,
+            Metadata.Category,
+            Metadata.Risk,
+            "generic_return_only",
+            "",
+            Metadata.InventoryKey,
+            static_cast<std::uint64_t>(static_cast<std::uint32_t>(result)),
+            Metadata.ReturnFormat,
+            Tier2ReturnOnlyHResultErrorCode(result),
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+UINT WINAPI HookedAcmGetVersion()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "msacm32.dll",
+        "acmGetVersion",
+        "media",
+        "media/audio",
+        "medium",
+        "msacm32.dll!acmGetVersion",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalAcmGetVersion, static_cast<UINT>(0), Metadata);
+}
+
+HPALETTE WINAPI HookedGdipCreateHalftonePalette()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "gdiplus.dll",
+        "GdipCreateHalftonePalette",
+        "graphics",
+        "graphics/gdi-plus",
+        "medium",
+        "gdiplus.dll!GdipCreateHalftonePalette",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGdipCreateHalftonePalette, static_cast<HPALETTE>(nullptr), Metadata);
 }
 
 HMODULE WINAPI HookedGetModuleHandleW(LPCWSTR moduleName)

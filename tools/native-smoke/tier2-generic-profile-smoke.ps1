@@ -19,11 +19,32 @@ function Assert-True
 
 Assert-True (Test-Path -LiteralPath $HelperPath) "Helper not found: $HelperPath"
 
+function Assert-ReturnOnlyEvent
+{
+    param(
+        [object[]]$Events,
+        [string]$Api,
+        [string]$Module,
+        [string]$InventoryKey,
+        [string]$Family
+    )
+
+    $event = @($Events | Where-Object { $_.api -eq $Api -and $_.module -eq $Module } | Select-Object -First 1)
+    Assert-True ($event.Count -eq 1) "Tier 2 initial return-only batch did not capture $Module!$Api."
+    Assert-True ($event[0].monitorTier -eq "tier2") "$Api tier mismatch: $($event[0].monitorTier)"
+    Assert-True ($event[0].tier2Profile -eq "tier2-initial-return-only") "$Api profile mismatch: $($event[0].tier2Profile)"
+    Assert-True ($event[0].hookPolicy -eq "tier2_return_only_iat") "$Api hook policy mismatch: $($event[0].hookPolicy)"
+    Assert-True ($event[0].coverageStatus -eq "generic_return_only") "$Api coverage mismatch: $($event[0].coverageStatus)"
+    Assert-True ($event[0].inventoryKey -eq $InventoryKey) "$Api inventory key mismatch: $($event[0].inventoryKey)"
+    Assert-True ($event[0].apiFamily -eq $Family) "$Api family mismatch: $($event[0].apiFamily)"
+    Assert-True ($event[0].arguments.Count -eq 0) "$Api return-only event must not carry arguments."
+}
+
 $previousProfile = $env:KNMON_TIER2_PROFILE
 
 try
 {
-    $env:KNMON_TIER2_PROFILE = "api-set-safe missing-metadata-safe"
+    $env:KNMON_TIER2_PROFILE = "api-set-safe missing-metadata-safe tier2-initial-return-only"
     $result = & $HelperPath capture-sample | ConvertFrom-Json
 
     Assert-True $result.success "Tier 2 generic capture failed: $($result.operation): $($result.message)"
@@ -53,6 +74,11 @@ try
     Assert-True ($returnOnlyEvent[0].coverageStatus -eq "generic_return_only") "RevertToSelf coverage mismatch: $($returnOnlyEvent[0].coverageStatus)"
     Assert-True ($returnOnlyEvent[0].arguments.Count -eq 0) "RevertToSelf return-only event must not carry arguments."
     Assert-True ($returnOnlyEvent[0].returnValue -eq "TRUE") "RevertToSelf return value mismatch: $($returnOnlyEvent[0].returnValue)"
+
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "CommDlgExtendedError" -Module "comdlg32.dll" -InventoryKey "comdlg32.dll!CommDlgExtendedError" -Family "ui"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "DwmFlush" -Module "dwmapi.dll" -InventoryKey "dwmapi.dll!DwmFlush" -Family "graphics"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "acmGetVersion" -Module "msacm32.dll" -InventoryKey "msacm32.dll!acmGetVersion" -Family "media"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "GdipCreateHalftonePalette" -Module "gdiplus.dll" -InventoryKey "gdiplus.dll!GdipCreateHalftonePalette" -Family "graphics"
 
     $getProcEvent = @($result.capturedEvents | Where-Object { $_.api -eq "GetProcAddress" } | Select-Object -First 1)
     $ldrProcEvent = @($result.capturedEvents | Where-Object { $_.api -eq "LdrGetProcedureAddress" } | Select-Object -First 1)

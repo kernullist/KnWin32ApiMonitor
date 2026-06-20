@@ -83,13 +83,13 @@ enum class KnMonTransportEventKind : std::uint16_t
 };
 
 inline constexpr std::uint32_t KnMonTransportMagic = 0x4d54534b;
-inline constexpr std::uint16_t KnMonTransportAbiVersion = 1;
+inline constexpr std::uint16_t KnMonTransportAbiVersion = 2;
 inline constexpr std::uint32_t KnMonTransportDefaultCapacity = 1024;
 inline constexpr std::uint32_t KnMonTransportMinCapacity = 2;
 inline constexpr std::uint32_t KnMonTransportMaxCapacity = 65536;
 inline constexpr std::uint32_t KnMonTransportOperationIdChars = 64;
 inline constexpr std::uint32_t KnMonTransportText0Bytes = 512;
-inline constexpr std::uint32_t KnMonTransportText1Bytes = 160;
+inline constexpr std::uint32_t KnMonTransportText1Bytes = 512;
 inline constexpr std::uint32_t KnMonTransportText2Bytes = 80;
 inline constexpr std::uint32_t KnMonTransportSlotCount64 = 8;
 inline constexpr std::uint32_t KnMonTransportSlotCount32 = 8;

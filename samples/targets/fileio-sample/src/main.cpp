@@ -68,6 +68,11 @@ extern "C" NTSYSAPI NTSTATUS NTAPI LdrGetProcedureAddress(
     ULONG Ordinal,
     PVOID* FunctionAddress);
 
+extern "C" __declspec(dllimport) DWORD WINAPI CommDlgExtendedError();
+extern "C" __declspec(dllimport) HRESULT WINAPI DwmFlush();
+extern "C" __declspec(dllimport) UINT WINAPI acmGetVersion();
+extern "C" __declspec(dllimport) HPALETTE WINAPI GdipCreateHalftonePalette();
+
 namespace
 {
 constexpr GUID SampleFolderIdWindows = { 0xf38bf404, 0x1d43, 0x42f2, { 0x93, 0x05, 0x67, 0xde, 0x0b, 0x28, 0xfc, 0x23 } };
@@ -2959,6 +2964,49 @@ bool RunTier2MissingMetadataProbe()
     return result != FALSE;
 }
 
+bool RunTier2InitialReturnOnlyBatchProbe()
+{
+    bool success = false;
+    HPALETTE palette = nullptr;
+
+    do
+    {
+        const DWORD dialogError = CommDlgExtendedError();
+        const HRESULT dwmResult = DwmFlush();
+        const UINT acmVersion = acmGetVersion();
+        palette = GdipCreateHalftonePalette();
+
+        std::cout << "tier2 initial return-only batch dialog_error=" << dialogError
+                  << " dwm=" << HexHResult(dwmResult)
+                  << " acm_version=" << acmVersion
+                  << " palette=" << palette << "\n";
+
+        if (acmVersion == 0)
+        {
+            break;
+        }
+
+        if (palette == nullptr)
+        {
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    if (palette != nullptr)
+    {
+        if (!DeleteObject(palette))
+        {
+            LogLastError("DeleteObject(GdipCreateHalftonePalette)");
+            success = false;
+        }
+    }
+
+    return success;
+}
+
 int RunFileIo(bool slow)
 {
     int exitCode = 1;
@@ -3007,6 +3055,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunTier2MissingMetadataProbe())
+        {
+            break;
+        }
+
+        if (!RunTier2InitialReturnOnlyBatchProbe())
         {
             break;
         }
