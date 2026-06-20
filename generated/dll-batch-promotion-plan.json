@@ -1,0 +1,5087 @@
+{
+  "dlls": [
+    {
+      "alreadyLive": 8,
+      "apis": [
+        {
+          "apiName": "RegOpenKeyExW",
+          "callingConvention": "stdcall",
+          "category": "registry_key_open",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "registry",
+          "hookPolicy": "iat",
+          "id": 14,
+          "key": "advapi32.dll!RegOpenKeyExW",
+          "module": "advapi32.dll",
+          "parameterCount": 5,
+          "payloadSensitiveParameters": [
+            "lpSubKey"
+          ],
+          "pointerOnlyParameters": [
+            "phkResult"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "LSTATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/advapi32.json"
+        },
+        {
+          "apiName": "RegCreateKeyExW",
+          "callingConvention": "stdcall",
+          "category": "registry_key_create",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "registry",
+          "hookPolicy": "iat",
+          "id": 15,
+          "key": "advapi32.dll!RegCreateKeyExW",
+          "module": "advapi32.dll",
+          "parameterCount": 9,
+          "payloadSensitiveParameters": [
+            "lpSubKey",
+            "lpClass",
+            "lpSecurityAttributes"
+          ],
+          "pointerOnlyParameters": [
+            "phkResult",
+            "lpdwDisposition"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "LSTATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/advapi32.json"
+        },
+        {
+          "apiName": "RegQueryValueExW",
+          "callingConvention": "stdcall",
+          "category": "registry_value_query",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "registry",
+          "hookPolicy": "iat",
+          "id": 16,
+          "key": "advapi32.dll!RegQueryValueExW",
+          "module": "advapi32.dll",
+          "parameterCount": 6,
+          "payloadSensitiveParameters": [
+            "lpValueName",
+            "lpData"
+          ],
+          "pointerOnlyParameters": [
+            "lpReserved",
+            "lpType",
+            "lpcbData"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "LSTATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/advapi32.json"
+        },
+        {
+          "apiName": "RegSetValueExW",
+          "callingConvention": "stdcall",
+          "category": "registry_value_set",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "registry",
+          "hookPolicy": "iat",
+          "id": 17,
+          "key": "advapi32.dll!RegSetValueExW",
+          "module": "advapi32.dll",
+          "parameterCount": 6,
+          "payloadSensitiveParameters": [
+            "lpValueName",
+            "lpData"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "LSTATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/advapi32.json"
+        },
+        {
+          "apiName": "RegDeleteValueW",
+          "callingConvention": "stdcall",
+          "category": "registry_value_delete",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "registry",
+          "hookPolicy": "iat",
+          "id": 18,
+          "key": "advapi32.dll!RegDeleteValueW",
+          "module": "advapi32.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [
+            "lpValueName"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "LSTATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/advapi32.json"
+        },
+        {
+          "apiName": "RegCloseKey",
+          "callingConvention": "stdcall",
+          "category": "registry_key_close",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "registry",
+          "hookPolicy": "iat",
+          "id": 19,
+          "key": "advapi32.dll!RegCloseKey",
+          "module": "advapi32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "LSTATUS",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/advapi32.json"
+        },
+        {
+          "apiName": "OpenProcessToken",
+          "callingConvention": "stdcall",
+          "category": "token_open",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "security",
+          "hookPolicy": "iat",
+          "id": 20,
+          "key": "advapi32.dll!OpenProcessToken",
+          "module": "advapi32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "TokenHandle"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/advapi32.json"
+        },
+        {
+          "apiName": "AdjustTokenPrivileges",
+          "callingConvention": "stdcall",
+          "category": "token_privilege_adjust",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "security",
+          "hookPolicy": "definition_only",
+          "id": 21,
+          "key": "advapi32.dll!AdjustTokenPrivileges",
+          "module": "advapi32.dll",
+          "parameterCount": 6,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "ReturnLength"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_name_or_type"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "critical",
+          "sourceFile": "definitions/win32/advapi32.json"
+        },
+        {
+          "apiName": "LookupPrivilegeValueW",
+          "callingConvention": "stdcall",
+          "category": "privilege_lookup",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "security",
+          "hookPolicy": "iat",
+          "id": 22,
+          "key": "advapi32.dll!LookupPrivilegeValueW",
+          "module": "advapi32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [
+            "lpSystemName",
+            "lpName",
+            "lpLuid"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/advapi32.json"
+        },
+        {
+          "apiName": "OpenSCManagerW",
+          "callingConvention": "stdcall",
+          "category": "service_manager_open",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "service-control",
+          "hookPolicy": "definition_only",
+          "id": 23,
+          "key": "advapi32.dll!OpenSCManagerW",
+          "module": "advapi32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [
+            "lpMachineName",
+            "lpDatabaseName"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "SC_HANDLE",
+          "risk": "high",
+          "sourceFile": "definitions/win32/advapi32.json"
+        },
+        {
+          "apiName": "OpenServiceW",
+          "callingConvention": "stdcall",
+          "category": "service_open",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "service-control",
+          "hookPolicy": "definition_only",
+          "id": 24,
+          "key": "advapi32.dll!OpenServiceW",
+          "module": "advapi32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [
+            "lpServiceName"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "SC_HANDLE",
+          "risk": "high",
+          "sourceFile": "definitions/win32/advapi32.json"
+        },
+        {
+          "apiName": "CreateServiceW",
+          "callingConvention": "stdcall",
+          "category": "service_create",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "service-control",
+          "hookPolicy": "definition_only",
+          "id": 25,
+          "key": "advapi32.dll!CreateServiceW",
+          "module": "advapi32.dll",
+          "parameterCount": 13,
+          "payloadSensitiveParameters": [
+            "lpServiceName",
+            "lpDisplayName",
+            "lpBinaryPathName",
+            "lpLoadOrderGroup",
+            "lpDependencies",
+            "lpServiceStartName",
+            "lpPassword"
+          ],
+          "pointerOnlyParameters": [
+            "lpdwTagId"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_name_or_type",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "SC_HANDLE",
+          "risk": "critical",
+          "sourceFile": "definitions/win32/advapi32.json"
+        },
+        {
+          "apiName": "StartServiceW",
+          "callingConvention": "stdcall",
+          "category": "service_start",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "service-control",
+          "hookPolicy": "definition_only",
+          "id": 26,
+          "key": "advapi32.dll!StartServiceW",
+          "module": "advapi32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpServiceArgVectors"
+          ],
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "critical",
+          "sourceFile": "definitions/win32/advapi32.json"
+        },
+        {
+          "apiName": "ControlService",
+          "callingConvention": "stdcall",
+          "category": "service_control",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "service-control",
+          "hookPolicy": "definition_only",
+          "id": 27,
+          "key": "advapi32.dll!ControlService",
+          "module": "advapi32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/advapi32.json"
+        },
+        {
+          "apiName": "DeleteService",
+          "callingConvention": "stdcall",
+          "category": "service_delete",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "service-control",
+          "hookPolicy": "definition_only",
+          "id": 28,
+          "key": "advapi32.dll!DeleteService",
+          "module": "advapi32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "critical",
+          "sourceFile": "definitions/win32/advapi32.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 7,
+      "manualDecoderRequired": 0,
+      "module": "advapi32.dll",
+      "recommendation": "document_payload_boundary_only",
+      "sourceFiles": [
+        "definitions/win32/advapi32.json"
+      ],
+      "totalApis": 15,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 3,
+      "apis": [
+        {
+          "apiName": "RoInitialize",
+          "callingConvention": "stdcall",
+          "category": "winrt_apartment_init",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "HRESULT",
+          "family": "com",
+          "hookPolicy": "iat",
+          "id": 113,
+          "key": "api-ms-win-core-winrt-l1-1-0.dll!RoInitialize",
+          "module": "api-ms-win-core-winrt-l1-1-0.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HRESULT",
+          "risk": "low",
+          "sourceFile": "definitions/win32/api-ms-win-core-winrt-l1-1-0.json"
+        },
+        {
+          "apiName": "RoUninitialize",
+          "callingConvention": "stdcall",
+          "category": "winrt_apartment_uninit",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "com",
+          "hookPolicy": "iat",
+          "id": 114,
+          "key": "api-ms-win-core-winrt-l1-1-0.dll!RoUninitialize",
+          "module": "api-ms-win-core-winrt-l1-1-0.dll",
+          "parameterCount": 0,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "void",
+          "risk": "low",
+          "sourceFile": "definitions/win32/api-ms-win-core-winrt-l1-1-0.json"
+        },
+        {
+          "apiName": "RoGetApartmentIdentifier",
+          "callingConvention": "stdcall",
+          "category": "winrt_apartment_identifier",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "HRESULT",
+          "family": "com",
+          "hookPolicy": "iat",
+          "id": 115,
+          "key": "api-ms-win-core-winrt-l1-1-0.dll!RoGetApartmentIdentifier",
+          "module": "api-ms-win-core-winrt-l1-1-0.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "apartmentIdentifier"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HRESULT",
+          "risk": "low",
+          "sourceFile": "definitions/win32/api-ms-win-core-winrt-l1-1-0.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 0,
+      "manualDecoderRequired": 0,
+      "module": "api-ms-win-core-winrt-l1-1-0.dll",
+      "recommendation": "fully_triaged",
+      "sourceFiles": [
+        "definitions/win32/api-ms-win-core-winrt-l1-1-0.json"
+      ],
+      "totalApis": 3,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 4,
+      "apis": [
+        {
+          "apiName": "BCryptOpenAlgorithmProvider",
+          "callingConvention": "stdcall",
+          "category": "cng_algorithm_open",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "return_ntstatus",
+          "family": "crypto",
+          "hookPolicy": "iat",
+          "id": 29,
+          "key": "bcrypt.dll!BCryptOpenAlgorithmProvider",
+          "module": "bcrypt.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "pszAlgId",
+            "pszImplementation"
+          ],
+          "pointerOnlyParameters": [
+            "phAlgorithm"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "NTSTATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/bcrypt.json"
+        },
+        {
+          "apiName": "BCryptCloseAlgorithmProvider",
+          "callingConvention": "stdcall",
+          "category": "cng_algorithm_close",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "return_ntstatus",
+          "family": "crypto",
+          "hookPolicy": "iat",
+          "id": 30,
+          "key": "bcrypt.dll!BCryptCloseAlgorithmProvider",
+          "module": "bcrypt.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "NTSTATUS",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/bcrypt.json"
+        },
+        {
+          "apiName": "BCryptGetProperty",
+          "callingConvention": "stdcall",
+          "category": "cng_property_get",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "return_ntstatus",
+          "family": "crypto",
+          "hookPolicy": "iat",
+          "id": 31,
+          "key": "bcrypt.dll!BCryptGetProperty",
+          "module": "bcrypt.dll",
+          "parameterCount": 6,
+          "payloadSensitiveParameters": [
+            "pszProperty",
+            "pbOutput"
+          ],
+          "pointerOnlyParameters": [
+            "pcbResult"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "NTSTATUS",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/bcrypt.json"
+        },
+        {
+          "apiName": "BCryptSetProperty",
+          "callingConvention": "stdcall",
+          "category": "cng_property_set",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "return_ntstatus",
+          "family": "crypto",
+          "hookPolicy": "definition_only",
+          "id": 32,
+          "key": "bcrypt.dll!BCryptSetProperty",
+          "module": "bcrypt.dll",
+          "parameterCount": 5,
+          "payloadSensitiveParameters": [
+            "pszProperty",
+            "pbInput"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "NTSTATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/bcrypt.json"
+        },
+        {
+          "apiName": "BCryptGenerateSymmetricKey",
+          "callingConvention": "stdcall",
+          "category": "cng_symmetric_key_create",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "return_ntstatus",
+          "family": "crypto",
+          "hookPolicy": "definition_only",
+          "id": 33,
+          "key": "bcrypt.dll!BCryptGenerateSymmetricKey",
+          "module": "bcrypt.dll",
+          "parameterCount": 7,
+          "payloadSensitiveParameters": [
+            "pbKeyObject",
+            "pbSecret",
+            "cbSecret"
+          ],
+          "pointerOnlyParameters": [
+            "phKey"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_name_or_type",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "NTSTATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/bcrypt.json"
+        },
+        {
+          "apiName": "BCryptDestroyKey",
+          "callingConvention": "stdcall",
+          "category": "cng_key_destroy",
+          "classification": "auto_promotable",
+          "coverageStatus": "definition_only",
+          "errorSource": "return_ntstatus",
+          "family": "crypto",
+          "hookPolicy": "definition_only",
+          "id": 34,
+          "key": "bcrypt.dll!BCryptDestroyKey",
+          "module": "bcrypt.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "pointer_scalar_or_pointer_only_parameters"
+          ],
+          "recommendation": "promote_with_same_dll_pointer_scalar_batch",
+          "returnType": "NTSTATUS",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/bcrypt.json"
+        },
+        {
+          "apiName": "BCryptEncrypt",
+          "callingConvention": "stdcall",
+          "category": "cng_encrypt",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "return_ntstatus",
+          "family": "crypto",
+          "hookPolicy": "definition_only",
+          "id": 35,
+          "key": "bcrypt.dll!BCryptEncrypt",
+          "module": "bcrypt.dll",
+          "parameterCount": 10,
+          "payloadSensitiveParameters": [
+            "pbInput",
+            "pbIV",
+            "pbOutput"
+          ],
+          "pointerOnlyParameters": [
+            "pPaddingInfo",
+            "pcbResult"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "NTSTATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/bcrypt.json"
+        },
+        {
+          "apiName": "BCryptDecrypt",
+          "callingConvention": "stdcall",
+          "category": "cng_decrypt",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "return_ntstatus",
+          "family": "crypto",
+          "hookPolicy": "definition_only",
+          "id": 36,
+          "key": "bcrypt.dll!BCryptDecrypt",
+          "module": "bcrypt.dll",
+          "parameterCount": 10,
+          "payloadSensitiveParameters": [
+            "pbInput",
+            "pbIV",
+            "pbOutput"
+          ],
+          "pointerOnlyParameters": [
+            "pPaddingInfo",
+            "pcbResult"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "NTSTATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/bcrypt.json"
+        },
+        {
+          "apiName": "BCryptGenRandom",
+          "callingConvention": "stdcall",
+          "category": "cng_random",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "return_ntstatus",
+          "family": "crypto",
+          "hookPolicy": "iat",
+          "id": 37,
+          "key": "bcrypt.dll!BCryptGenRandom",
+          "module": "bcrypt.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "pbBuffer"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "NTSTATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/bcrypt.json"
+        },
+        {
+          "apiName": "BCryptHashData",
+          "callingConvention": "stdcall",
+          "category": "cng_hash_update",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "return_ntstatus",
+          "family": "crypto",
+          "hookPolicy": "definition_only",
+          "id": 38,
+          "key": "bcrypt.dll!BCryptHashData",
+          "module": "bcrypt.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "pbInput"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "NTSTATUS",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/bcrypt.json"
+        }
+      ],
+      "autoPromotable": 1,
+      "blockedByPayloadPolicy": 5,
+      "manualDecoderRequired": 0,
+      "module": "bcrypt.dll",
+      "recommendation": "promote_auto_batch_before_single_api_work",
+      "sourceFiles": [
+        "definitions/win32/bcrypt.json"
+      ],
+      "totalApis": 10,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 4,
+      "apis": [
+        {
+          "apiName": "CertOpenStore",
+          "callingConvention": "stdcall",
+          "category": "certificate_store_open",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "certificate",
+          "hookPolicy": "iat",
+          "id": 39,
+          "key": "crypt32.dll!CertOpenStore",
+          "module": "crypt32.dll",
+          "parameterCount": 5,
+          "payloadSensitiveParameters": [
+            "lpszStoreProvider"
+          ],
+          "pointerOnlyParameters": [
+            "pvPara"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HCERTSTORE",
+          "risk": "high",
+          "sourceFile": "definitions/win32/crypt32.json"
+        },
+        {
+          "apiName": "CertCloseStore",
+          "callingConvention": "stdcall",
+          "category": "certificate_store_close",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "certificate",
+          "hookPolicy": "iat",
+          "id": 40,
+          "key": "crypt32.dll!CertCloseStore",
+          "module": "crypt32.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/crypt32.json"
+        },
+        {
+          "apiName": "CertFindCertificateInStore",
+          "callingConvention": "stdcall",
+          "category": "certificate_find",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "certificate",
+          "hookPolicy": "definition_only",
+          "id": 41,
+          "key": "crypt32.dll!CertFindCertificateInStore",
+          "module": "crypt32.dll",
+          "parameterCount": 6,
+          "payloadSensitiveParameters": [
+            "pPrevCertContext"
+          ],
+          "pointerOnlyParameters": [
+            "pvFindPara"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_name_or_type",
+            "payload_sensitive_parameter"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "PCCERT_CONTEXT",
+          "risk": "high",
+          "sourceFile": "definitions/win32/crypt32.json"
+        },
+        {
+          "apiName": "CertFreeCertificateContext",
+          "callingConvention": "stdcall",
+          "category": "certificate_context_free",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "certificate",
+          "hookPolicy": "definition_only",
+          "id": 42,
+          "key": "crypt32.dll!CertFreeCertificateContext",
+          "module": "crypt32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [
+            "pCertContext"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_sensitive_name_or_type",
+            "payload_sensitive_parameter"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/crypt32.json"
+        },
+        {
+          "apiName": "CertGetCertificateChain",
+          "callingConvention": "stdcall",
+          "category": "certificate_chain_build",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "certificate",
+          "hookPolicy": "definition_only",
+          "id": 43,
+          "key": "crypt32.dll!CertGetCertificateChain",
+          "module": "crypt32.dll",
+          "parameterCount": 8,
+          "payloadSensitiveParameters": [
+            "pCertContext",
+            "pChainPara"
+          ],
+          "pointerOnlyParameters": [
+            "pTime",
+            "pvReserved",
+            "ppChainContext"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_name_or_type",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/crypt32.json"
+        },
+        {
+          "apiName": "CertVerifyCertificateChainPolicy",
+          "callingConvention": "stdcall",
+          "category": "certificate_chain_policy_verify",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "certificate",
+          "hookPolicy": "definition_only",
+          "id": 44,
+          "key": "crypt32.dll!CertVerifyCertificateChainPolicy",
+          "module": "crypt32.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "pszPolicyOID",
+            "pPolicyPara",
+            "pPolicyStatus"
+          ],
+          "pointerOnlyParameters": [
+            "pChainContext"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/crypt32.json"
+        },
+        {
+          "apiName": "CryptQueryObject",
+          "callingConvention": "stdcall",
+          "category": "crypt_query_object",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "crypto-message",
+          "hookPolicy": "definition_only",
+          "id": 45,
+          "key": "crypt32.dll!CryptQueryObject",
+          "module": "crypt32.dll",
+          "parameterCount": 11,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "pvObject",
+            "pdwMsgAndCertEncodingType",
+            "pdwContentType",
+            "pdwFormatType",
+            "phCertStore",
+            "phMsg",
+            "ppvContext"
+          ],
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/crypt32.json"
+        },
+        {
+          "apiName": "CryptMsgOpenToDecode",
+          "callingConvention": "stdcall",
+          "category": "crypt_message_open_decode",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "crypto-message",
+          "hookPolicy": "iat",
+          "id": 46,
+          "key": "crypt32.dll!CryptMsgOpenToDecode",
+          "module": "crypt32.dll",
+          "parameterCount": 6,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "pRecipientInfo",
+            "pStreamInfo"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HCRYPTMSG",
+          "risk": "high",
+          "sourceFile": "definitions/win32/crypt32.json"
+        },
+        {
+          "apiName": "CryptMsgUpdate",
+          "callingConvention": "stdcall",
+          "category": "crypt_message_update",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "crypto-message",
+          "hookPolicy": "definition_only",
+          "id": 47,
+          "key": "crypt32.dll!CryptMsgUpdate",
+          "module": "crypt32.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "pbData"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/crypt32.json"
+        },
+        {
+          "apiName": "CryptMsgClose",
+          "callingConvention": "stdcall",
+          "category": "crypt_message_close",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "crypto-message",
+          "hookPolicy": "iat",
+          "id": 48,
+          "key": "crypt32.dll!CryptMsgClose",
+          "module": "crypt32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/crypt32.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 6,
+      "manualDecoderRequired": 0,
+      "module": "crypt32.dll",
+      "recommendation": "document_payload_boundary_only",
+      "sourceFiles": [
+        "definitions/win32/crypt32.json"
+      ],
+      "totalApis": 10,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 2,
+      "apis": [
+        {
+          "apiName": "SymInitializeW",
+          "callingConvention": "stdcall",
+          "category": "symbol_session_initialize",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "symbols",
+          "hookPolicy": "iat",
+          "id": 178,
+          "key": "dbghelp.dll!SymInitializeW",
+          "module": "dbghelp.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [
+            "UserSearchPath"
+          ],
+          "pointerOnlyParameters": [
+            "UserSearchPath"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/dbghelp.json"
+        },
+        {
+          "apiName": "SymCleanup",
+          "callingConvention": "stdcall",
+          "category": "symbol_session_cleanup",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "symbols",
+          "hookPolicy": "iat",
+          "id": 179,
+          "key": "dbghelp.dll!SymCleanup",
+          "module": "dbghelp.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/dbghelp.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 0,
+      "manualDecoderRequired": 0,
+      "module": "dbghelp.dll",
+      "recommendation": "fully_triaged",
+      "sourceFiles": [
+        "definitions/win32/dbghelp.json"
+      ],
+      "totalApis": 2,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 1,
+      "apis": [
+        {
+          "apiName": "DnsQuery_W",
+          "callingConvention": "stdcall",
+          "category": "dns_query",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "dns",
+          "hookPolicy": "definition_only",
+          "id": 168,
+          "key": "dnsapi.dll!DnsQuery_W",
+          "module": "dnsapi.dll",
+          "parameterCount": 6,
+          "payloadSensitiveParameters": [
+            "pszName"
+          ],
+          "pointerOnlyParameters": [
+            "pExtra",
+            "ppQueryResults",
+            "pReserved"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "DNS_STATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/dnsapi.json"
+        },
+        {
+          "apiName": "DnsRecordListFree",
+          "callingConvention": "stdcall",
+          "category": "dns_record_list_free",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "dns",
+          "hookPolicy": "iat",
+          "id": 169,
+          "key": "dnsapi.dll!DnsRecordListFree",
+          "module": "dnsapi.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "pRecordList"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "VOID",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/dnsapi.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 1,
+      "manualDecoderRequired": 0,
+      "module": "dnsapi.dll",
+      "recommendation": "document_payload_boundary_only",
+      "sourceFiles": [
+        "definitions/win32/dnsapi.json"
+      ],
+      "totalApis": 2,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 3,
+      "apis": [
+        {
+          "apiName": "CreateCompatibleDC",
+          "callingConvention": "stdcall",
+          "category": "gdi_dc_create",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "gdi",
+          "hookPolicy": "iat",
+          "id": 95,
+          "key": "gdi32.dll!CreateCompatibleDC",
+          "module": "gdi32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HDC",
+          "risk": "low",
+          "sourceFile": "definitions/win32/gdi32.json"
+        },
+        {
+          "apiName": "GetDeviceCaps",
+          "callingConvention": "stdcall",
+          "category": "gdi_device_cap_query",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "gdi",
+          "hookPolicy": "iat",
+          "id": 96,
+          "key": "gdi32.dll!GetDeviceCaps",
+          "module": "gdi32.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "int",
+          "risk": "low",
+          "sourceFile": "definitions/win32/gdi32.json"
+        },
+        {
+          "apiName": "DeleteDC",
+          "callingConvention": "stdcall",
+          "category": "gdi_dc_delete",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "gdi",
+          "hookPolicy": "iat",
+          "id": 97,
+          "key": "gdi32.dll!DeleteDC",
+          "module": "gdi32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/gdi32.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 0,
+      "manualDecoderRequired": 0,
+      "module": "gdi32.dll",
+      "recommendation": "fully_triaged",
+      "sourceFiles": [
+        "definitions/win32/gdi32.json"
+      ],
+      "totalApis": 3,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 1,
+      "apis": [
+        {
+          "apiName": "GetAdaptersAddresses",
+          "callingConvention": "stdcall",
+          "category": "adapter_addresses_query",
+          "classification": "manual_decoder_required",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "network-metadata",
+          "hookPolicy": "definition_only",
+          "id": 170,
+          "key": "iphlpapi.dll!GetAdaptersAddresses",
+          "module": "iphlpapi.dll",
+          "parameterCount": 5,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "Reserved",
+            "AdapterAddresses",
+            "SizePointer"
+          ],
+          "reasons": [
+            "manual_family_boundary_review",
+            "manual_output_pointer_memory_boundary"
+          ],
+          "recommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "returnType": "ULONG",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/iphlpapi.json"
+        },
+        {
+          "apiName": "GetIfEntry2",
+          "callingConvention": "stdcall",
+          "category": "interface_entry_query",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "network-metadata",
+          "hookPolicy": "iat",
+          "id": 171,
+          "key": "iphlpapi.dll!GetIfEntry2",
+          "module": "iphlpapi.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "Row"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "NETIO_STATUS",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/iphlpapi.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 0,
+      "manualDecoderRequired": 1,
+      "module": "iphlpapi.dll",
+      "recommendation": "design_manual_decoder_batch",
+      "sourceFiles": [
+        "definitions/win32/iphlpapi.json"
+      ],
+      "totalApis": 2,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 51,
+      "apis": [
+        {
+          "apiName": "CreateFileW",
+          "callingConvention": "stdcall",
+          "category": "file_open",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "file-io",
+          "hookPolicy": "iat",
+          "id": 1,
+          "key": "kernel32.dll!CreateFileW",
+          "module": "kernel32.dll",
+          "parameterCount": 7,
+          "payloadSensitiveParameters": [
+            "lpFileName",
+            "lpSecurityAttributes"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HANDLE",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/file-io.json"
+        },
+        {
+          "apiName": "CreateFileA",
+          "callingConvention": "stdcall",
+          "category": "file_open",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "file-io",
+          "hookPolicy": "iat",
+          "id": 2,
+          "key": "kernel32.dll!CreateFileA",
+          "module": "kernel32.dll",
+          "parameterCount": 7,
+          "payloadSensitiveParameters": [
+            "lpFileName",
+            "lpSecurityAttributes"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HANDLE",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/file-io.json"
+        },
+        {
+          "apiName": "ReadFile",
+          "callingConvention": "stdcall",
+          "category": "file_read",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "file-io",
+          "hookPolicy": "iat",
+          "id": 4,
+          "key": "kernel32.dll!ReadFile",
+          "module": "kernel32.dll",
+          "parameterCount": 5,
+          "payloadSensitiveParameters": [
+            "lpBuffer"
+          ],
+          "pointerOnlyParameters": [
+            "lpNumberOfBytesRead"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/file-io.json"
+        },
+        {
+          "apiName": "WriteFile",
+          "callingConvention": "stdcall",
+          "category": "file_write",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "file-io",
+          "hookPolicy": "iat",
+          "id": 5,
+          "key": "kernel32.dll!WriteFile",
+          "module": "kernel32.dll",
+          "parameterCount": 5,
+          "payloadSensitiveParameters": [
+            "lpBuffer"
+          ],
+          "pointerOnlyParameters": [
+            "lpNumberOfBytesWritten"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/file-io.json"
+        },
+        {
+          "apiName": "CloseHandle",
+          "callingConvention": "stdcall",
+          "category": "handle_close",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "file-io",
+          "hookPolicy": "iat",
+          "id": 6,
+          "key": "kernel32.dll!CloseHandle",
+          "module": "kernel32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/file-io.json"
+        },
+        {
+          "apiName": "LoadLibraryW",
+          "callingConvention": "stdcall",
+          "category": "module_load",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "loader",
+          "hookPolicy": "iat",
+          "id": 7,
+          "key": "kernel32.dll!LoadLibraryW",
+          "module": "kernel32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [
+            "lpLibFileName"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HMODULE",
+          "risk": "high",
+          "sourceFile": "definitions/win32/loader.json"
+        },
+        {
+          "apiName": "LoadLibraryA",
+          "callingConvention": "stdcall",
+          "category": "module_load",
+          "classification": "already_live",
+          "coverageStatus": "hooked",
+          "errorSource": "GetLastError",
+          "family": "loader",
+          "hookPolicy": "iat",
+          "id": 8,
+          "key": "kernel32.dll!LoadLibraryA",
+          "module": "kernel32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [
+            "lpLibFileName"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HMODULE",
+          "risk": "high",
+          "sourceFile": "definitions/win32/loader.json"
+        },
+        {
+          "apiName": "LoadLibraryExW",
+          "callingConvention": "stdcall",
+          "category": "module_load",
+          "classification": "already_live",
+          "coverageStatus": "hooked",
+          "errorSource": "GetLastError",
+          "family": "loader",
+          "hookPolicy": "iat",
+          "id": 9,
+          "key": "kernel32.dll!LoadLibraryExW",
+          "module": "kernel32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [
+            "lpLibFileName"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HMODULE",
+          "risk": "high",
+          "sourceFile": "definitions/win32/loader.json"
+        },
+        {
+          "apiName": "LoadLibraryExA",
+          "callingConvention": "stdcall",
+          "category": "module_load",
+          "classification": "already_live",
+          "coverageStatus": "hooked",
+          "errorSource": "GetLastError",
+          "family": "loader",
+          "hookPolicy": "iat",
+          "id": 10,
+          "key": "kernel32.dll!LoadLibraryExA",
+          "module": "kernel32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [
+            "lpLibFileName"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HMODULE",
+          "risk": "high",
+          "sourceFile": "definitions/win32/loader.json"
+        },
+        {
+          "apiName": "GetProcAddress",
+          "callingConvention": "stdcall",
+          "category": "dynamic_symbol_lookup",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "resolver",
+          "hookPolicy": "iat",
+          "id": 12,
+          "key": "kernel32.dll!GetProcAddress",
+          "module": "kernel32.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "FARPROC",
+          "risk": "high",
+          "sourceFile": "definitions/win32/resolver.json"
+        },
+        {
+          "apiName": "VirtualAlloc",
+          "callingConvention": "stdcall",
+          "category": "memory_allocate",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "memory",
+          "hookPolicy": "iat",
+          "id": 116,
+          "key": "kernel32.dll!VirtualAlloc",
+          "module": "kernel32.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpAddress"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "LPVOID",
+          "risk": "high",
+          "sourceFile": "definitions/win32/memory.json"
+        },
+        {
+          "apiName": "VirtualFree",
+          "callingConvention": "stdcall",
+          "category": "memory_free",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "memory",
+          "hookPolicy": "iat",
+          "id": 117,
+          "key": "kernel32.dll!VirtualFree",
+          "module": "kernel32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpAddress"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/memory.json"
+        },
+        {
+          "apiName": "VirtualProtect",
+          "callingConvention": "stdcall",
+          "category": "memory_protect",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "memory",
+          "hookPolicy": "iat",
+          "id": 118,
+          "key": "kernel32.dll!VirtualProtect",
+          "module": "kernel32.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpAddress",
+            "lpflOldProtect"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/memory.json"
+        },
+        {
+          "apiName": "VirtualQuery",
+          "callingConvention": "stdcall",
+          "category": "memory_query",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "memory",
+          "hookPolicy": "iat",
+          "id": 119,
+          "key": "kernel32.dll!VirtualQuery",
+          "module": "kernel32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpAddress"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "SIZE_T",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/memory.json"
+        },
+        {
+          "apiName": "CreateThread",
+          "callingConvention": "stdcall",
+          "category": "thread_create",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "thread",
+          "hookPolicy": "iat",
+          "id": 120,
+          "key": "kernel32.dll!CreateThread",
+          "module": "kernel32.dll",
+          "parameterCount": 6,
+          "payloadSensitiveParameters": [
+            "lpThreadAttributes"
+          ],
+          "pointerOnlyParameters": [
+            "lpStartAddress",
+            "lpParameter",
+            "lpThreadId"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HANDLE",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/threading.json"
+        },
+        {
+          "apiName": "OpenThread",
+          "callingConvention": "stdcall",
+          "category": "thread_open",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "thread",
+          "hookPolicy": "iat",
+          "id": 121,
+          "key": "kernel32.dll!OpenThread",
+          "module": "kernel32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HANDLE",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/threading.json"
+        },
+        {
+          "apiName": "WaitForSingleObject",
+          "callingConvention": "stdcall",
+          "category": "thread_wait",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "thread",
+          "hookPolicy": "iat",
+          "id": 122,
+          "key": "kernel32.dll!WaitForSingleObject",
+          "module": "kernel32.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "DWORD",
+          "risk": "low",
+          "sourceFile": "definitions/win32/threading.json"
+        },
+        {
+          "apiName": "GetExitCodeThread",
+          "callingConvention": "stdcall",
+          "category": "thread_exit_code",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "thread",
+          "hookPolicy": "iat",
+          "id": 123,
+          "key": "kernel32.dll!GetExitCodeThread",
+          "module": "kernel32.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpExitCode"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/threading.json"
+        },
+        {
+          "apiName": "CreateEventW",
+          "callingConvention": "stdcall",
+          "category": "event_create",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "synchronization",
+          "hookPolicy": "iat",
+          "id": 124,
+          "key": "kernel32.dll!CreateEventW",
+          "module": "kernel32.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "lpEventAttributes"
+          ],
+          "pointerOnlyParameters": [
+            "lpEventAttributes",
+            "lpName"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HANDLE",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/synchronization.json"
+        },
+        {
+          "apiName": "OpenEventW",
+          "callingConvention": "stdcall",
+          "category": "event_open",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "synchronization",
+          "hookPolicy": "iat",
+          "id": 125,
+          "key": "kernel32.dll!OpenEventW",
+          "module": "kernel32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpName"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HANDLE",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/synchronization.json"
+        },
+        {
+          "apiName": "SetEvent",
+          "callingConvention": "stdcall",
+          "category": "event_set",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "synchronization",
+          "hookPolicy": "iat",
+          "id": 126,
+          "key": "kernel32.dll!SetEvent",
+          "module": "kernel32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/synchronization.json"
+        },
+        {
+          "apiName": "ResetEvent",
+          "callingConvention": "stdcall",
+          "category": "event_reset",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "synchronization",
+          "hookPolicy": "iat",
+          "id": 127,
+          "key": "kernel32.dll!ResetEvent",
+          "module": "kernel32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/synchronization.json"
+        },
+        {
+          "apiName": "WaitForSingleObjectEx",
+          "callingConvention": "stdcall",
+          "category": "event_wait",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "synchronization",
+          "hookPolicy": "iat",
+          "id": 128,
+          "key": "kernel32.dll!WaitForSingleObjectEx",
+          "module": "kernel32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "DWORD",
+          "risk": "low",
+          "sourceFile": "definitions/win32/synchronization.json"
+        },
+        {
+          "apiName": "CreateMutexW",
+          "callingConvention": "stdcall",
+          "category": "mutex_create",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "synchronization",
+          "hookPolicy": "iat",
+          "id": 129,
+          "key": "kernel32.dll!CreateMutexW",
+          "module": "kernel32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [
+            "lpMutexAttributes"
+          ],
+          "pointerOnlyParameters": [
+            "lpMutexAttributes",
+            "lpName"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HANDLE",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/synchronization.json"
+        },
+        {
+          "apiName": "OpenMutexW",
+          "callingConvention": "stdcall",
+          "category": "mutex_open",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "synchronization",
+          "hookPolicy": "iat",
+          "id": 130,
+          "key": "kernel32.dll!OpenMutexW",
+          "module": "kernel32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpName"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HANDLE",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/synchronization.json"
+        },
+        {
+          "apiName": "ReleaseMutex",
+          "callingConvention": "stdcall",
+          "category": "mutex_release",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "synchronization",
+          "hookPolicy": "iat",
+          "id": 131,
+          "key": "kernel32.dll!ReleaseMutex",
+          "module": "kernel32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/synchronization.json"
+        },
+        {
+          "apiName": "CreateSemaphoreW",
+          "callingConvention": "stdcall",
+          "category": "semaphore_create",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "synchronization",
+          "hookPolicy": "iat",
+          "id": 132,
+          "key": "kernel32.dll!CreateSemaphoreW",
+          "module": "kernel32.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "lpSemaphoreAttributes"
+          ],
+          "pointerOnlyParameters": [
+            "lpSemaphoreAttributes",
+            "lpName"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HANDLE",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/synchronization.json"
+        },
+        {
+          "apiName": "OpenSemaphoreW",
+          "callingConvention": "stdcall",
+          "category": "semaphore_open",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "synchronization",
+          "hookPolicy": "iat",
+          "id": 133,
+          "key": "kernel32.dll!OpenSemaphoreW",
+          "module": "kernel32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpName"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HANDLE",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/synchronization.json"
+        },
+        {
+          "apiName": "ReleaseSemaphore",
+          "callingConvention": "stdcall",
+          "category": "semaphore_release",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "synchronization",
+          "hookPolicy": "iat",
+          "id": 134,
+          "key": "kernel32.dll!ReleaseSemaphore",
+          "module": "kernel32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpPreviousCount"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/synchronization.json"
+        },
+        {
+          "apiName": "WaitForMultipleObjectsEx",
+          "callingConvention": "stdcall",
+          "category": "multi_wait",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "synchronization",
+          "hookPolicy": "iat",
+          "id": 135,
+          "key": "kernel32.dll!WaitForMultipleObjectsEx",
+          "module": "kernel32.dll",
+          "parameterCount": 5,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpHandles"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "DWORD",
+          "risk": "low",
+          "sourceFile": "definitions/win32/synchronization.json"
+        },
+        {
+          "apiName": "CreateFileMappingW",
+          "callingConvention": "stdcall",
+          "category": "file_mapping_create",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "memory",
+          "hookPolicy": "iat",
+          "id": 136,
+          "key": "kernel32.dll!CreateFileMappingW",
+          "module": "kernel32.dll",
+          "parameterCount": 6,
+          "payloadSensitiveParameters": [
+            "lpFileMappingAttributes"
+          ],
+          "pointerOnlyParameters": [
+            "lpFileMappingAttributes",
+            "lpName"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HANDLE",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/memory.json"
+        },
+        {
+          "apiName": "OpenFileMappingW",
+          "callingConvention": "stdcall",
+          "category": "file_mapping_open",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "memory",
+          "hookPolicy": "iat",
+          "id": 137,
+          "key": "kernel32.dll!OpenFileMappingW",
+          "module": "kernel32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpName"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HANDLE",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/memory.json"
+        },
+        {
+          "apiName": "MapViewOfFile",
+          "callingConvention": "stdcall",
+          "category": "file_mapping_map_view",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "memory",
+          "hookPolicy": "iat",
+          "id": 138,
+          "key": "kernel32.dll!MapViewOfFile",
+          "module": "kernel32.dll",
+          "parameterCount": 5,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "LPVOID",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/memory.json"
+        },
+        {
+          "apiName": "UnmapViewOfFile",
+          "callingConvention": "stdcall",
+          "category": "file_mapping_unmap_view",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "memory",
+          "hookPolicy": "iat",
+          "id": 139,
+          "key": "kernel32.dll!UnmapViewOfFile",
+          "module": "kernel32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpBaseAddress"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/memory.json"
+        },
+        {
+          "apiName": "GetCurrentProcess",
+          "callingConvention": "stdcall",
+          "category": "process_identity",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "process",
+          "hookPolicy": "iat",
+          "id": 140,
+          "key": "kernel32.dll!GetCurrentProcess",
+          "module": "kernel32.dll",
+          "parameterCount": 0,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HANDLE",
+          "risk": "low",
+          "sourceFile": "definitions/win32/process.json"
+        },
+        {
+          "apiName": "GetCurrentProcessId",
+          "callingConvention": "stdcall",
+          "category": "process_identity",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "process",
+          "hookPolicy": "iat",
+          "id": 141,
+          "key": "kernel32.dll!GetCurrentProcessId",
+          "module": "kernel32.dll",
+          "parameterCount": 0,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "DWORD",
+          "risk": "low",
+          "sourceFile": "definitions/win32/process.json"
+        },
+        {
+          "apiName": "GetCurrentThread",
+          "callingConvention": "stdcall",
+          "category": "thread_identity",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "process",
+          "hookPolicy": "iat",
+          "id": 142,
+          "key": "kernel32.dll!GetCurrentThread",
+          "module": "kernel32.dll",
+          "parameterCount": 0,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HANDLE",
+          "risk": "low",
+          "sourceFile": "definitions/win32/process.json"
+        },
+        {
+          "apiName": "GetCurrentThreadId",
+          "callingConvention": "stdcall",
+          "category": "thread_identity",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "process",
+          "hookPolicy": "iat",
+          "id": 143,
+          "key": "kernel32.dll!GetCurrentThreadId",
+          "module": "kernel32.dll",
+          "parameterCount": 0,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "DWORD",
+          "risk": "low",
+          "sourceFile": "definitions/win32/process.json"
+        },
+        {
+          "apiName": "GetProcessId",
+          "callingConvention": "stdcall",
+          "category": "process_identity",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "process",
+          "hookPolicy": "iat",
+          "id": 144,
+          "key": "kernel32.dll!GetProcessId",
+          "module": "kernel32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "DWORD",
+          "risk": "low",
+          "sourceFile": "definitions/win32/process.json"
+        },
+        {
+          "apiName": "GetThreadId",
+          "callingConvention": "stdcall",
+          "category": "thread_identity",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "process",
+          "hookPolicy": "iat",
+          "id": 145,
+          "key": "kernel32.dll!GetThreadId",
+          "module": "kernel32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "DWORD",
+          "risk": "low",
+          "sourceFile": "definitions/win32/process.json"
+        },
+        {
+          "apiName": "GetStdHandle",
+          "callingConvention": "stdcall",
+          "category": "standard_handle",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "handle",
+          "hookPolicy": "iat",
+          "id": 146,
+          "key": "kernel32.dll!GetStdHandle",
+          "module": "kernel32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HANDLE",
+          "risk": "low",
+          "sourceFile": "definitions/win32/handle.json"
+        },
+        {
+          "apiName": "GetFileType",
+          "callingConvention": "stdcall",
+          "category": "handle_metadata",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "handle",
+          "hookPolicy": "iat",
+          "id": 147,
+          "key": "kernel32.dll!GetFileType",
+          "module": "kernel32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "DWORD",
+          "risk": "low",
+          "sourceFile": "definitions/win32/handle.json"
+        },
+        {
+          "apiName": "GetHandleInformation",
+          "callingConvention": "stdcall",
+          "category": "handle_metadata",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "handle",
+          "hookPolicy": "iat",
+          "id": 148,
+          "key": "kernel32.dll!GetHandleInformation",
+          "module": "kernel32.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpdwFlags"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/handle.json"
+        },
+        {
+          "apiName": "SetHandleInformation",
+          "callingConvention": "stdcall",
+          "category": "handle_metadata",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "handle",
+          "hookPolicy": "iat",
+          "id": 149,
+          "key": "kernel32.dll!SetHandleInformation",
+          "module": "kernel32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/handle.json"
+        },
+        {
+          "apiName": "GetModuleHandleW",
+          "callingConvention": "stdcall",
+          "category": "module_lookup",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "module",
+          "hookPolicy": "iat",
+          "id": 150,
+          "key": "kernel32.dll!GetModuleHandleW",
+          "module": "kernel32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [
+            "lpModuleName"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HMODULE",
+          "risk": "low",
+          "sourceFile": "definitions/win32/module.json"
+        },
+        {
+          "apiName": "GetModuleHandleExW",
+          "callingConvention": "stdcall",
+          "category": "module_lookup",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "module",
+          "hookPolicy": "iat",
+          "id": 151,
+          "key": "kernel32.dll!GetModuleHandleExW",
+          "module": "kernel32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [
+            "lpModuleName"
+          ],
+          "pointerOnlyParameters": [
+            "phModule"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/module.json"
+        },
+        {
+          "apiName": "GetModuleFileNameW",
+          "callingConvention": "stdcall",
+          "category": "module_path",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "module",
+          "hookPolicy": "iat",
+          "id": 152,
+          "key": "kernel32.dll!GetModuleFileNameW",
+          "module": "kernel32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [
+            "lpFilename"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "DWORD",
+          "risk": "low",
+          "sourceFile": "definitions/win32/module.json"
+        },
+        {
+          "apiName": "FreeLibrary",
+          "callingConvention": "stdcall",
+          "category": "module_lifecycle",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "module",
+          "hookPolicy": "iat",
+          "id": 153,
+          "key": "kernel32.dll!FreeLibrary",
+          "module": "kernel32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/module.json"
+        },
+        {
+          "apiName": "GetFileSizeEx",
+          "callingConvention": "stdcall",
+          "category": "file_size_query",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "file",
+          "hookPolicy": "iat",
+          "id": 154,
+          "key": "kernel32.dll!GetFileSizeEx",
+          "module": "kernel32.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/file-metadata.json"
+        },
+        {
+          "apiName": "GetFileTime",
+          "callingConvention": "stdcall",
+          "category": "file_time_query",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "file",
+          "hookPolicy": "iat",
+          "id": 155,
+          "key": "kernel32.dll!GetFileTime",
+          "module": "kernel32.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/file-metadata.json"
+        },
+        {
+          "apiName": "GetFileInformationByHandle",
+          "callingConvention": "stdcall",
+          "category": "file_information_query",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "file",
+          "hookPolicy": "iat",
+          "id": 156,
+          "key": "kernel32.dll!GetFileInformationByHandle",
+          "module": "kernel32.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/file-metadata.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 0,
+      "manualDecoderRequired": 0,
+      "module": "kernel32.dll",
+      "recommendation": "fully_triaged",
+      "sourceFiles": [
+        "definitions/win32/file-io.json",
+        "definitions/win32/file-metadata.json",
+        "definitions/win32/handle.json",
+        "definitions/win32/loader.json",
+        "definitions/win32/memory.json",
+        "definitions/win32/module.json",
+        "definitions/win32/process.json",
+        "definitions/win32/resolver.json",
+        "definitions/win32/synchronization.json",
+        "definitions/win32/threading.json"
+      ],
+      "totalApis": 51,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 3,
+      "apis": [
+        {
+          "apiName": "NtCreateFile",
+          "callingConvention": "ntapi",
+          "category": "file_open_nt",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "return_ntstatus",
+          "family": "file-io",
+          "hookPolicy": "iat",
+          "id": 3,
+          "key": "ntdll.dll!NtCreateFile",
+          "module": "ntdll.dll",
+          "parameterCount": 11,
+          "payloadSensitiveParameters": [
+            "EaBuffer"
+          ],
+          "pointerOnlyParameters": [
+            "FileHandle"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "NTSTATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/file-io.json"
+        },
+        {
+          "apiName": "LdrLoadDll",
+          "callingConvention": "ntapi",
+          "category": "module_load_nt",
+          "classification": "already_live",
+          "coverageStatus": "hooked",
+          "errorSource": "return_ntstatus",
+          "family": "loader",
+          "hookPolicy": "iat",
+          "id": 11,
+          "key": "ntdll.dll!LdrLoadDll",
+          "module": "ntdll.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "PathToFile",
+            "ModuleFileName"
+          ],
+          "pointerOnlyParameters": [
+            "ModuleHandle"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "NTSTATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/loader.json"
+        },
+        {
+          "apiName": "LdrGetProcedureAddress",
+          "callingConvention": "ntapi",
+          "category": "dynamic_symbol_lookup_nt",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "return_ntstatus",
+          "family": "resolver",
+          "hookPolicy": "iat",
+          "id": 13,
+          "key": "ntdll.dll!LdrGetProcedureAddress",
+          "module": "ntdll.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "FunctionName"
+          ],
+          "pointerOnlyParameters": [
+            "FunctionAddress"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "NTSTATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/resolver.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 0,
+      "manualDecoderRequired": 0,
+      "module": "ntdll.dll",
+      "recommendation": "fully_triaged",
+      "sourceFiles": [
+        "definitions/win32/file-io.json",
+        "definitions/win32/loader.json",
+        "definitions/win32/resolver.json"
+      ],
+      "totalApis": 3,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 4,
+      "apis": [
+        {
+          "apiName": "CoInitializeEx",
+          "callingConvention": "stdcall",
+          "category": "com_apartment_init",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "HRESULT",
+          "family": "com",
+          "hookPolicy": "iat",
+          "id": 107,
+          "key": "ole32.dll!CoInitializeEx",
+          "module": "ole32.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "pvReserved"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HRESULT",
+          "risk": "low",
+          "sourceFile": "definitions/win32/ole32.json"
+        },
+        {
+          "apiName": "CoUninitialize",
+          "callingConvention": "stdcall",
+          "category": "com_apartment_uninit",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "com",
+          "hookPolicy": "iat",
+          "id": 108,
+          "key": "ole32.dll!CoUninitialize",
+          "module": "ole32.dll",
+          "parameterCount": 0,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "void",
+          "risk": "low",
+          "sourceFile": "definitions/win32/ole32.json"
+        },
+        {
+          "apiName": "CoCreateGuid",
+          "callingConvention": "stdcall",
+          "category": "com_guid_create",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "HRESULT",
+          "family": "com",
+          "hookPolicy": "iat",
+          "id": 109,
+          "key": "ole32.dll!CoCreateGuid",
+          "module": "ole32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HRESULT",
+          "risk": "low",
+          "sourceFile": "definitions/win32/ole32.json"
+        },
+        {
+          "apiName": "StringFromGUID2",
+          "callingConvention": "stdcall",
+          "category": "com_guid_string",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "com",
+          "hookPolicy": "iat",
+          "id": 110,
+          "key": "ole32.dll!StringFromGUID2",
+          "module": "ole32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [
+            "lpsz"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "int",
+          "risk": "low",
+          "sourceFile": "definitions/win32/ole32.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 0,
+      "manualDecoderRequired": 0,
+      "module": "ole32.dll",
+      "recommendation": "fully_triaged",
+      "sourceFiles": [
+        "definitions/win32/ole32.json"
+      ],
+      "totalApis": 4,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 3,
+      "apis": [
+        {
+          "apiName": "SysAllocString",
+          "callingConvention": "stdcall",
+          "category": "bstr_allocate",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "ole-automation",
+          "hookPolicy": "definition_only",
+          "id": 157,
+          "key": "oleaut32.dll!SysAllocString",
+          "module": "oleaut32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [
+            "psz"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BSTR",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/oleaut32.json"
+        },
+        {
+          "apiName": "SysFreeString",
+          "callingConvention": "stdcall",
+          "category": "bstr_free",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "ole-automation",
+          "hookPolicy": "iat",
+          "id": 158,
+          "key": "oleaut32.dll!SysFreeString",
+          "module": "oleaut32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [
+            "bstrString"
+          ],
+          "pointerOnlyParameters": [
+            "bstrString"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "VOID",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/oleaut32.json"
+        },
+        {
+          "apiName": "VariantClear",
+          "callingConvention": "stdcall",
+          "category": "variant_clear",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "HRESULT",
+          "family": "ole-automation",
+          "hookPolicy": "iat",
+          "id": 159,
+          "key": "oleaut32.dll!VariantClear",
+          "module": "oleaut32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "pvarg"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HRESULT",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/oleaut32.json"
+        },
+        {
+          "apiName": "SafeArrayDestroy",
+          "callingConvention": "stdcall",
+          "category": "safe_array_destroy",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "HRESULT",
+          "family": "ole-automation",
+          "hookPolicy": "iat",
+          "id": 160,
+          "key": "oleaut32.dll!SafeArrayDestroy",
+          "module": "oleaut32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "psa"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HRESULT",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/oleaut32.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 1,
+      "manualDecoderRequired": 0,
+      "module": "oleaut32.dll",
+      "recommendation": "document_payload_boundary_only",
+      "sourceFiles": [
+        "definitions/win32/oleaut32.json"
+      ],
+      "totalApis": 4,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 4,
+      "apis": [
+        {
+          "apiName": "EnumProcessModules",
+          "callingConvention": "stdcall",
+          "category": "process_module_enumeration",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "module",
+          "hookPolicy": "iat",
+          "id": 98,
+          "key": "psapi.dll!EnumProcessModules",
+          "module": "psapi.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lphModule",
+            "lpcbNeeded"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/psapi.json"
+        },
+        {
+          "apiName": "GetModuleInformation",
+          "callingConvention": "stdcall",
+          "category": "process_module_information",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "module",
+          "hookPolicy": "iat",
+          "id": 99,
+          "key": "psapi.dll!GetModuleInformation",
+          "module": "psapi.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/psapi.json"
+        },
+        {
+          "apiName": "GetModuleBaseNameW",
+          "callingConvention": "stdcall",
+          "category": "process_module_base_name",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "module",
+          "hookPolicy": "iat",
+          "id": 100,
+          "key": "psapi.dll!GetModuleBaseNameW",
+          "module": "psapi.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "lpBaseName"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "DWORD",
+          "risk": "low",
+          "sourceFile": "definitions/win32/psapi.json"
+        },
+        {
+          "apiName": "GetModuleFileNameExW",
+          "callingConvention": "stdcall",
+          "category": "process_module_file_name",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "module",
+          "hookPolicy": "iat",
+          "id": 101,
+          "key": "psapi.dll!GetModuleFileNameExW",
+          "module": "psapi.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "lpFilename"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "DWORD",
+          "risk": "low",
+          "sourceFile": "definitions/win32/psapi.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 0,
+      "manualDecoderRequired": 0,
+      "module": "psapi.dll",
+      "recommendation": "fully_triaged",
+      "sourceFiles": [
+        "definitions/win32/psapi.json"
+      ],
+      "totalApis": 4,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 8,
+      "apis": [
+        {
+          "apiName": "RpcStringBindingComposeW",
+          "callingConvention": "stdcall",
+          "category": "rpc_string_binding_compose",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "rpc",
+          "hookPolicy": "iat",
+          "id": 49,
+          "key": "rpcrt4.dll!RpcStringBindingComposeW",
+          "module": "rpcrt4.dll",
+          "parameterCount": 6,
+          "payloadSensitiveParameters": [
+            "ObjUuid",
+            "ProtSeq",
+            "NetworkAddr",
+            "Endpoint",
+            "Options",
+            "StringBinding"
+          ],
+          "pointerOnlyParameters": [
+            "StringBinding"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "RPC_STATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/rpcrt4.json"
+        },
+        {
+          "apiName": "RpcBindingFromStringBindingW",
+          "callingConvention": "stdcall",
+          "category": "rpc_binding_from_string",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "rpc",
+          "hookPolicy": "iat",
+          "id": 50,
+          "key": "rpcrt4.dll!RpcBindingFromStringBindingW",
+          "module": "rpcrt4.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [
+            "StringBinding"
+          ],
+          "pointerOnlyParameters": [
+            "Binding"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "RPC_STATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/rpcrt4.json"
+        },
+        {
+          "apiName": "RpcStringFreeW",
+          "callingConvention": "stdcall",
+          "category": "rpc_string_free",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "rpc",
+          "hookPolicy": "iat",
+          "id": 51,
+          "key": "rpcrt4.dll!RpcStringFreeW",
+          "module": "rpcrt4.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [
+            "String"
+          ],
+          "pointerOnlyParameters": [
+            "String"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "RPC_STATUS",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/rpcrt4.json"
+        },
+        {
+          "apiName": "RpcBindingFree",
+          "callingConvention": "stdcall",
+          "category": "rpc_binding_free",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "rpc",
+          "hookPolicy": "iat",
+          "id": 52,
+          "key": "rpcrt4.dll!RpcBindingFree",
+          "module": "rpcrt4.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "Binding"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "RPC_STATUS",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/rpcrt4.json"
+        },
+        {
+          "apiName": "RpcBindingSetAuthInfoW",
+          "callingConvention": "stdcall",
+          "category": "rpc_binding_auth_set",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "rpc",
+          "hookPolicy": "definition_only",
+          "id": 53,
+          "key": "rpcrt4.dll!RpcBindingSetAuthInfoW",
+          "module": "rpcrt4.dll",
+          "parameterCount": 6,
+          "payloadSensitiveParameters": [
+            "ServerPrincName"
+          ],
+          "pointerOnlyParameters": [
+            "AuthIdentity"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "RPC_STATUS",
+          "risk": "critical",
+          "sourceFile": "definitions/win32/rpcrt4.json"
+        },
+        {
+          "apiName": "RpcBindingSetOption",
+          "callingConvention": "stdcall",
+          "category": "rpc_binding_option_set",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "rpc",
+          "hookPolicy": "iat",
+          "id": 54,
+          "key": "rpcrt4.dll!RpcBindingSetOption",
+          "module": "rpcrt4.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "RPC_STATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/rpcrt4.json"
+        },
+        {
+          "apiName": "RpcMgmtEpEltInqBegin",
+          "callingConvention": "stdcall",
+          "category": "rpc_endpoint_inquiry_begin",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "rpc",
+          "hookPolicy": "definition_only",
+          "id": 55,
+          "key": "rpcrt4.dll!RpcMgmtEpEltInqBegin",
+          "module": "rpcrt4.dll",
+          "parameterCount": 6,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "IfId",
+            "ObjectUuid",
+            "InquiryContext"
+          ],
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "RPC_STATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/rpcrt4.json"
+        },
+        {
+          "apiName": "RpcMgmtEpEltInqNextW",
+          "callingConvention": "stdcall",
+          "category": "rpc_endpoint_inquiry_next",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "rpc",
+          "hookPolicy": "definition_only",
+          "id": 56,
+          "key": "rpcrt4.dll!RpcMgmtEpEltInqNextW",
+          "module": "rpcrt4.dll",
+          "parameterCount": 5,
+          "payloadSensitiveParameters": [
+            "Annotation"
+          ],
+          "pointerOnlyParameters": [
+            "InquiryContext",
+            "IfId",
+            "Binding",
+            "ObjectUuid",
+            "Annotation"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "RPC_STATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/rpcrt4.json"
+        },
+        {
+          "apiName": "RpcMgmtEpEltInqDone",
+          "callingConvention": "stdcall",
+          "category": "rpc_endpoint_inquiry_done",
+          "classification": "manual_decoder_required",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "rpc",
+          "hookPolicy": "definition_only",
+          "id": 57,
+          "key": "rpcrt4.dll!RpcMgmtEpEltInqDone",
+          "module": "rpcrt4.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "InquiryContext"
+          ],
+          "reasons": [
+            "manual_output_boundary_review",
+            "manual_output_pointer_memory_boundary"
+          ],
+          "recommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "returnType": "RPC_STATUS",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/rpcrt4.json"
+        },
+        {
+          "apiName": "UuidCreate",
+          "callingConvention": "stdcall",
+          "category": "uuid_create",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "rpc",
+          "hookPolicy": "iat",
+          "id": 58,
+          "key": "rpcrt4.dll!UuidCreate",
+          "module": "rpcrt4.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "RPC_STATUS",
+          "risk": "low",
+          "sourceFile": "definitions/win32/rpcrt4.json"
+        },
+        {
+          "apiName": "UuidToStringW",
+          "callingConvention": "stdcall",
+          "category": "uuid_to_string",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "rpc",
+          "hookPolicy": "iat",
+          "id": 111,
+          "key": "rpcrt4.dll!UuidToStringW",
+          "module": "rpcrt4.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [
+            "StringUuid"
+          ],
+          "pointerOnlyParameters": [
+            "StringUuid"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "RPC_STATUS",
+          "risk": "low",
+          "sourceFile": "definitions/win32/rpcrt4.json"
+        },
+        {
+          "apiName": "UuidFromStringW",
+          "callingConvention": "stdcall",
+          "category": "uuid_from_string",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "rpc",
+          "hookPolicy": "iat",
+          "id": 112,
+          "key": "rpcrt4.dll!UuidFromStringW",
+          "module": "rpcrt4.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [
+            "StringUuid"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "RPC_STATUS",
+          "risk": "low",
+          "sourceFile": "definitions/win32/rpcrt4.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 3,
+      "manualDecoderRequired": 1,
+      "module": "rpcrt4.dll",
+      "recommendation": "design_manual_decoder_batch",
+      "sourceFiles": [
+        "definitions/win32/rpcrt4.json"
+      ],
+      "totalApis": 12,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 1,
+      "apis": [
+        {
+          "apiName": "AcquireCredentialsHandleW",
+          "callingConvention": "stdcall",
+          "category": "credential_acquire",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "sspi",
+          "hookPolicy": "definition_only",
+          "id": 161,
+          "key": "secur32.dll!AcquireCredentialsHandleW",
+          "module": "secur32.dll",
+          "parameterCount": 9,
+          "payloadSensitiveParameters": [
+            "pszPrincipal",
+            "pszPackage",
+            "pAuthData"
+          ],
+          "pointerOnlyParameters": [
+            "pvLogonId",
+            "pAuthData",
+            "pGetKeyFn",
+            "pvGetKeyArgument",
+            "phCredential",
+            "ptsExpiry"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_name_or_type",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "SECURITY_STATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/secur32.json"
+        },
+        {
+          "apiName": "FreeCredentialsHandle",
+          "callingConvention": "stdcall",
+          "category": "credential_free",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "sspi",
+          "hookPolicy": "iat",
+          "id": 162,
+          "key": "secur32.dll!FreeCredentialsHandle",
+          "module": "secur32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "phCredential"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "SECURITY_STATUS",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/secur32.json"
+        },
+        {
+          "apiName": "InitializeSecurityContextW",
+          "callingConvention": "stdcall",
+          "category": "security_context_initialize",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "sspi",
+          "hookPolicy": "definition_only",
+          "id": 163,
+          "key": "secur32.dll!InitializeSecurityContextW",
+          "module": "secur32.dll",
+          "parameterCount": 12,
+          "payloadSensitiveParameters": [
+            "pszTargetName",
+            "pInput",
+            "pOutput"
+          ],
+          "pointerOnlyParameters": [
+            "phCredential",
+            "phContext",
+            "pInput",
+            "phNewContext",
+            "pOutput",
+            "pfContextAttr",
+            "ptsExpiry"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_name_or_type",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "SECURITY_STATUS",
+          "risk": "high",
+          "sourceFile": "definitions/win32/secur32.json"
+        },
+        {
+          "apiName": "DeleteSecurityContext",
+          "callingConvention": "stdcall",
+          "category": "security_context_delete",
+          "classification": "auto_promotable",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "sspi",
+          "hookPolicy": "definition_only",
+          "id": 164,
+          "key": "secur32.dll!DeleteSecurityContext",
+          "module": "secur32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "phContext"
+          ],
+          "reasons": [
+            "pointer_scalar_or_pointer_only_parameters"
+          ],
+          "recommendation": "promote_with_same_dll_pointer_scalar_batch",
+          "returnType": "SECURITY_STATUS",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/secur32.json"
+        }
+      ],
+      "autoPromotable": 1,
+      "blockedByPayloadPolicy": 2,
+      "manualDecoderRequired": 0,
+      "module": "secur32.dll",
+      "recommendation": "promote_auto_batch_before_single_api_work",
+      "sourceFiles": [
+        "definitions/win32/secur32.json"
+      ],
+      "totalApis": 4,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 1,
+      "apis": [
+        {
+          "apiName": "SetupDiGetClassDevsW",
+          "callingConvention": "stdcall",
+          "category": "device_info_set_open",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "device-setup",
+          "hookPolicy": "definition_only",
+          "id": 172,
+          "key": "setupapi.dll!SetupDiGetClassDevsW",
+          "module": "setupapi.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "Enumerator"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "HDEVINFO",
+          "risk": "high",
+          "sourceFile": "definitions/win32/setupapi.json"
+        },
+        {
+          "apiName": "SetupDiDestroyDeviceInfoList",
+          "callingConvention": "stdcall",
+          "category": "device_info_set_close",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "device-setup",
+          "hookPolicy": "iat",
+          "id": 173,
+          "key": "setupapi.dll!SetupDiDestroyDeviceInfoList",
+          "module": "setupapi.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/setupapi.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 1,
+      "manualDecoderRequired": 0,
+      "module": "setupapi.dll",
+      "recommendation": "document_payload_boundary_only",
+      "sourceFiles": [
+        "definitions/win32/setupapi.json"
+      ],
+      "totalApis": 2,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 2,
+      "apis": [
+        {
+          "apiName": "SHGetKnownFolderPath",
+          "callingConvention": "stdcall",
+          "category": "known_folder_path_query",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "HRESULT",
+          "family": "shell",
+          "hookPolicy": "iat",
+          "id": 105,
+          "key": "shell32.dll!SHGetKnownFolderPath",
+          "module": "shell32.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "rfid",
+            "ppszPath"
+          ],
+          "pointerOnlyParameters": [
+            "ppszPath"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HRESULT",
+          "risk": "low",
+          "sourceFile": "definitions/win32/shell32.json"
+        },
+        {
+          "apiName": "SHGetSpecialFolderPathW",
+          "callingConvention": "stdcall",
+          "category": "special_folder_path_query",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "shell",
+          "hookPolicy": "iat",
+          "id": 106,
+          "key": "shell32.dll!SHGetSpecialFolderPathW",
+          "module": "shell32.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "pszPath"
+          ],
+          "pointerOnlyParameters": [
+            "pszPath"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/shell32.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 0,
+      "manualDecoderRequired": 0,
+      "module": "shell32.dll",
+      "recommendation": "fully_triaged",
+      "sourceFiles": [
+        "definitions/win32/shell32.json"
+      ],
+      "totalApis": 2,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 1,
+      "apis": [
+        {
+          "apiName": "PathFileExistsW",
+          "callingConvention": "stdcall",
+          "category": "path_exists_query",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "shell-path",
+          "hookPolicy": "iat",
+          "id": 174,
+          "key": "shlwapi.dll!PathFileExistsW",
+          "module": "shlwapi.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [
+            "pszPath"
+          ],
+          "pointerOnlyParameters": [
+            "pszPath"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/shlwapi.json"
+        },
+        {
+          "apiName": "PathCombineW",
+          "callingConvention": "stdcall",
+          "category": "path_combine",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "shell-path",
+          "hookPolicy": "definition_only",
+          "id": 175,
+          "key": "shlwapi.dll!PathCombineW",
+          "module": "shlwapi.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [
+            "pszDest",
+            "pszDir",
+            "pszFile"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "LPWSTR",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/shlwapi.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 1,
+      "manualDecoderRequired": 0,
+      "module": "shlwapi.dll",
+      "recommendation": "document_payload_boundary_only",
+      "sourceFiles": [
+        "definitions/win32/shlwapi.json"
+      ],
+      "totalApis": 2,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 4,
+      "apis": [
+        {
+          "apiName": "GetSystemMetrics",
+          "callingConvention": "stdcall",
+          "category": "user_system_metric",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "ui",
+          "hookPolicy": "iat",
+          "id": 91,
+          "key": "user32.dll!GetSystemMetrics",
+          "module": "user32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "int",
+          "risk": "low",
+          "sourceFile": "definitions/win32/user32.json"
+        },
+        {
+          "apiName": "GetDesktopWindow",
+          "callingConvention": "stdcall",
+          "category": "window_handle_query",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "ui",
+          "hookPolicy": "iat",
+          "id": 92,
+          "key": "user32.dll!GetDesktopWindow",
+          "module": "user32.dll",
+          "parameterCount": 0,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HWND",
+          "risk": "low",
+          "sourceFile": "definitions/win32/user32.json"
+        },
+        {
+          "apiName": "GetForegroundWindow",
+          "callingConvention": "stdcall",
+          "category": "window_handle_query",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "ui",
+          "hookPolicy": "iat",
+          "id": 93,
+          "key": "user32.dll!GetForegroundWindow",
+          "module": "user32.dll",
+          "parameterCount": 0,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HWND",
+          "risk": "low",
+          "sourceFile": "definitions/win32/user32.json"
+        },
+        {
+          "apiName": "GetWindowThreadProcessId",
+          "callingConvention": "stdcall",
+          "category": "window_thread_process_query",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "ui",
+          "hookPolicy": "iat",
+          "id": 94,
+          "key": "user32.dll!GetWindowThreadProcessId",
+          "module": "user32.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpdwProcessId"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "DWORD",
+          "risk": "low",
+          "sourceFile": "definitions/win32/user32.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 0,
+      "manualDecoderRequired": 0,
+      "module": "user32.dll",
+      "recommendation": "fully_triaged",
+      "sourceFiles": [
+        "definitions/win32/user32.json"
+      ],
+      "totalApis": 4,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 1,
+      "apis": [
+        {
+          "apiName": "GetUserProfileDirectoryW",
+          "callingConvention": "stdcall",
+          "category": "profile_directory_query",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "profile",
+          "hookPolicy": "definition_only",
+          "id": 165,
+          "key": "userenv.dll!GetUserProfileDirectoryW",
+          "module": "userenv.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [
+            "lpProfileDir"
+          ],
+          "pointerOnlyParameters": [
+            "lpcchSize"
+          ],
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/userenv.json"
+        },
+        {
+          "apiName": "CreateEnvironmentBlock",
+          "callingConvention": "stdcall",
+          "category": "environment_block_create",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "profile",
+          "hookPolicy": "definition_only",
+          "id": 166,
+          "key": "userenv.dll!CreateEnvironmentBlock",
+          "module": "userenv.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [
+            "lpEnvironment"
+          ],
+          "pointerOnlyParameters": [
+            "lpEnvironment"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/userenv.json"
+        },
+        {
+          "apiName": "DestroyEnvironmentBlock",
+          "callingConvention": "stdcall",
+          "category": "environment_block_destroy",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "profile",
+          "hookPolicy": "iat",
+          "id": 167,
+          "key": "userenv.dll!DestroyEnvironmentBlock",
+          "module": "userenv.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [
+            "lpEnvironment"
+          ],
+          "pointerOnlyParameters": [
+            "lpEnvironment"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/userenv.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 2,
+      "manualDecoderRequired": 0,
+      "module": "userenv.dll",
+      "recommendation": "document_payload_boundary_only",
+      "sourceFiles": [
+        "definitions/win32/userenv.json"
+      ],
+      "totalApis": 3,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 3,
+      "apis": [
+        {
+          "apiName": "GetFileVersionInfoSizeW",
+          "callingConvention": "stdcall",
+          "category": "version_info_size_query",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "resource",
+          "hookPolicy": "iat",
+          "id": 102,
+          "key": "version.dll!GetFileVersionInfoSizeW",
+          "module": "version.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [
+            "lptstrFilename"
+          ],
+          "pointerOnlyParameters": [
+            "lpdwHandle"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "DWORD",
+          "risk": "low",
+          "sourceFile": "definitions/win32/version.json"
+        },
+        {
+          "apiName": "GetFileVersionInfoW",
+          "callingConvention": "stdcall",
+          "category": "version_info_load",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "resource",
+          "hookPolicy": "iat",
+          "id": 103,
+          "key": "version.dll!GetFileVersionInfoW",
+          "module": "version.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "lptstrFilename"
+          ],
+          "pointerOnlyParameters": [
+            "lpData"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/version.json"
+        },
+        {
+          "apiName": "VerQueryValueW",
+          "callingConvention": "stdcall",
+          "category": "version_value_query",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "resource",
+          "hookPolicy": "iat",
+          "id": 104,
+          "key": "version.dll!VerQueryValueW",
+          "module": "version.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "lpSubBlock"
+          ],
+          "pointerOnlyParameters": [
+            "pBlock",
+            "lplpBuffer",
+            "puLen"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "low",
+          "sourceFile": "definitions/win32/version.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 0,
+      "manualDecoderRequired": 0,
+      "module": "version.dll",
+      "recommendation": "fully_triaged",
+      "sourceFiles": [
+        "definitions/win32/version.json"
+      ],
+      "totalApis": 3,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 3,
+      "apis": [
+        {
+          "apiName": "WinHttpOpen",
+          "callingConvention": "stdcall",
+          "category": "winhttp_session_open",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "http",
+          "hookPolicy": "iat",
+          "id": 81,
+          "key": "winhttp.dll!WinHttpOpen",
+          "module": "winhttp.dll",
+          "parameterCount": 5,
+          "payloadSensitiveParameters": [
+            "pszAgentW",
+            "pszProxyW",
+            "pszProxyBypassW"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HINTERNET",
+          "risk": "high",
+          "sourceFile": "definitions/win32/winhttp.json"
+        },
+        {
+          "apiName": "WinHttpCloseHandle",
+          "callingConvention": "stdcall",
+          "category": "winhttp_handle_close",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "http",
+          "hookPolicy": "iat",
+          "id": 82,
+          "key": "winhttp.dll!WinHttpCloseHandle",
+          "module": "winhttp.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/winhttp.json"
+        },
+        {
+          "apiName": "WinHttpConnect",
+          "callingConvention": "stdcall",
+          "category": "winhttp_connect",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "http",
+          "hookPolicy": "definition_only",
+          "id": 83,
+          "key": "winhttp.dll!WinHttpConnect",
+          "module": "winhttp.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "pswzServerName"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "HINTERNET",
+          "risk": "high",
+          "sourceFile": "definitions/win32/winhttp.json"
+        },
+        {
+          "apiName": "WinHttpOpenRequest",
+          "callingConvention": "stdcall",
+          "category": "winhttp_request_open",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "http",
+          "hookPolicy": "definition_only",
+          "id": 84,
+          "key": "winhttp.dll!WinHttpOpenRequest",
+          "module": "winhttp.dll",
+          "parameterCount": 7,
+          "payloadSensitiveParameters": [
+            "pwszVerb",
+            "pwszObjectName",
+            "pwszVersion",
+            "pwszReferrer"
+          ],
+          "pointerOnlyParameters": [
+            "ppwszAcceptTypes"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "HINTERNET",
+          "risk": "high",
+          "sourceFile": "definitions/win32/winhttp.json"
+        },
+        {
+          "apiName": "WinHttpSendRequest",
+          "callingConvention": "stdcall",
+          "category": "winhttp_request_send",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "http",
+          "hookPolicy": "definition_only",
+          "id": 85,
+          "key": "winhttp.dll!WinHttpSendRequest",
+          "module": "winhttp.dll",
+          "parameterCount": 7,
+          "payloadSensitiveParameters": [
+            "lpszHeaders",
+            "dwHeadersLength",
+            "lpOptional"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_name_or_type",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/winhttp.json"
+        },
+        {
+          "apiName": "WinHttpReceiveResponse",
+          "callingConvention": "stdcall",
+          "category": "winhttp_response_receive",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "http",
+          "hookPolicy": "definition_only",
+          "id": 86,
+          "key": "winhttp.dll!WinHttpReceiveResponse",
+          "module": "winhttp.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpReserved"
+          ],
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/winhttp.json"
+        },
+        {
+          "apiName": "WinHttpReadData",
+          "callingConvention": "stdcall",
+          "category": "winhttp_read",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "http",
+          "hookPolicy": "definition_only",
+          "id": 87,
+          "key": "winhttp.dll!WinHttpReadData",
+          "module": "winhttp.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "lpBuffer"
+          ],
+          "pointerOnlyParameters": [
+            "lpdwNumberOfBytesRead"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/winhttp.json"
+        },
+        {
+          "apiName": "WinHttpWriteData",
+          "callingConvention": "stdcall",
+          "category": "winhttp_write",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "http",
+          "hookPolicy": "definition_only",
+          "id": 88,
+          "key": "winhttp.dll!WinHttpWriteData",
+          "module": "winhttp.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "lpBuffer"
+          ],
+          "pointerOnlyParameters": [
+            "lpdwNumberOfBytesWritten"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/winhttp.json"
+        },
+        {
+          "apiName": "WinHttpSetOption",
+          "callingConvention": "stdcall",
+          "category": "winhttp_option_set",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "http",
+          "hookPolicy": "iat",
+          "id": 89,
+          "key": "winhttp.dll!WinHttpSetOption",
+          "module": "winhttp.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "lpBuffer"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/winhttp.json"
+        },
+        {
+          "apiName": "WinHttpQueryHeaders",
+          "callingConvention": "stdcall",
+          "category": "winhttp_header_query",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "http",
+          "hookPolicy": "definition_only",
+          "id": 90,
+          "key": "winhttp.dll!WinHttpQueryHeaders",
+          "module": "winhttp.dll",
+          "parameterCount": 6,
+          "payloadSensitiveParameters": [
+            "pwszName",
+            "lpBuffer"
+          ],
+          "pointerOnlyParameters": [
+            "lpdwBufferLength",
+            "lpdwIndex"
+          ],
+          "reasons": [
+            "payload_sensitive_name_or_type",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/winhttp.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 7,
+      "manualDecoderRequired": 0,
+      "module": "winhttp.dll",
+      "recommendation": "document_payload_boundary_only",
+      "sourceFiles": [
+        "definitions/win32/winhttp.json"
+      ],
+      "totalApis": 10,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 2,
+      "apis": [
+        {
+          "apiName": "InternetOpenW",
+          "callingConvention": "stdcall",
+          "category": "wininet_session_open",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "internet",
+          "hookPolicy": "iat",
+          "id": 71,
+          "key": "wininet.dll!InternetOpenW",
+          "module": "wininet.dll",
+          "parameterCount": 5,
+          "payloadSensitiveParameters": [
+            "lpszAgent",
+            "lpszProxy",
+            "lpszProxyBypass"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "HINTERNET",
+          "risk": "high",
+          "sourceFile": "definitions/win32/wininet.json"
+        },
+        {
+          "apiName": "InternetCloseHandle",
+          "callingConvention": "stdcall",
+          "category": "wininet_handle_close",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "GetLastError",
+          "family": "internet",
+          "hookPolicy": "iat",
+          "id": 72,
+          "key": "wininet.dll!InternetCloseHandle",
+          "module": "wininet.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/wininet.json"
+        },
+        {
+          "apiName": "InternetConnectW",
+          "callingConvention": "stdcall",
+          "category": "wininet_connect",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "internet",
+          "hookPolicy": "definition_only",
+          "id": 73,
+          "key": "wininet.dll!InternetConnectW",
+          "module": "wininet.dll",
+          "parameterCount": 8,
+          "payloadSensitiveParameters": [
+            "lpszServerName",
+            "lpszUserName",
+            "lpszPassword"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_name_or_type",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "HINTERNET",
+          "risk": "high",
+          "sourceFile": "definitions/win32/wininet.json"
+        },
+        {
+          "apiName": "InternetOpenUrlW",
+          "callingConvention": "stdcall",
+          "category": "wininet_url_open",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "internet",
+          "hookPolicy": "definition_only",
+          "id": 74,
+          "key": "wininet.dll!InternetOpenUrlW",
+          "module": "wininet.dll",
+          "parameterCount": 6,
+          "payloadSensitiveParameters": [
+            "lpszUrl",
+            "lpszHeaders",
+            "dwHeadersLength"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_name_or_type",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "HINTERNET",
+          "risk": "high",
+          "sourceFile": "definitions/win32/wininet.json"
+        },
+        {
+          "apiName": "HttpOpenRequestW",
+          "callingConvention": "stdcall",
+          "category": "wininet_http_request_open",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "internet",
+          "hookPolicy": "definition_only",
+          "id": 75,
+          "key": "wininet.dll!HttpOpenRequestW",
+          "module": "wininet.dll",
+          "parameterCount": 8,
+          "payloadSensitiveParameters": [
+            "lpszVerb",
+            "lpszObjectName",
+            "lpszVersion",
+            "lpszReferrer"
+          ],
+          "pointerOnlyParameters": [
+            "lplpszAcceptTypes"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "HINTERNET",
+          "risk": "high",
+          "sourceFile": "definitions/win32/wininet.json"
+        },
+        {
+          "apiName": "HttpSendRequestW",
+          "callingConvention": "stdcall",
+          "category": "wininet_http_request_send",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "internet",
+          "hookPolicy": "definition_only",
+          "id": 76,
+          "key": "wininet.dll!HttpSendRequestW",
+          "module": "wininet.dll",
+          "parameterCount": 5,
+          "payloadSensitiveParameters": [
+            "lpszHeaders",
+            "dwHeadersLength",
+            "lpOptional"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_name_or_type",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/wininet.json"
+        },
+        {
+          "apiName": "InternetReadFile",
+          "callingConvention": "stdcall",
+          "category": "wininet_read",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "internet",
+          "hookPolicy": "definition_only",
+          "id": 77,
+          "key": "wininet.dll!InternetReadFile",
+          "module": "wininet.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "lpBuffer"
+          ],
+          "pointerOnlyParameters": [
+            "lpdwNumberOfBytesRead"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/wininet.json"
+        },
+        {
+          "apiName": "InternetWriteFile",
+          "callingConvention": "stdcall",
+          "category": "wininet_write",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "internet",
+          "hookPolicy": "definition_only",
+          "id": 78,
+          "key": "wininet.dll!InternetWriteFile",
+          "module": "wininet.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "lpBuffer"
+          ],
+          "pointerOnlyParameters": [
+            "lpdwNumberOfBytesWritten"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/wininet.json"
+        },
+        {
+          "apiName": "InternetSetOptionW",
+          "callingConvention": "stdcall",
+          "category": "wininet_option_set",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "internet",
+          "hookPolicy": "definition_only",
+          "id": 79,
+          "key": "wininet.dll!InternetSetOptionW",
+          "module": "wininet.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "lpBuffer"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "high",
+          "sourceFile": "definitions/win32/wininet.json"
+        },
+        {
+          "apiName": "InternetQueryOptionW",
+          "callingConvention": "stdcall",
+          "category": "wininet_option_query",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "GetLastError",
+          "family": "internet",
+          "hookPolicy": "definition_only",
+          "id": 80,
+          "key": "wininet.dll!InternetQueryOptionW",
+          "module": "wininet.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "lpBuffer"
+          ],
+          "pointerOnlyParameters": [
+            "lpdwBufferLength"
+          ],
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "BOOL",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/wininet.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 8,
+      "manualDecoderRequired": 0,
+      "module": "wininet.dll",
+      "recommendation": "document_payload_boundary_only",
+      "sourceFiles": [
+        "definitions/win32/wininet.json"
+      ],
+      "totalApis": 10,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 0,
+      "apis": [
+        {
+          "apiName": "WinVerifyTrust",
+          "callingConvention": "stdcall",
+          "category": "trust_verify",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "trust",
+          "hookPolicy": "definition_only",
+          "id": 176,
+          "key": "wintrust.dll!WinVerifyTrust",
+          "module": "wintrust.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "pWVTData"
+          ],
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "LONG",
+          "risk": "high",
+          "sourceFile": "definitions/win32/wintrust.json"
+        },
+        {
+          "apiName": "WTHelperProvDataFromStateData",
+          "callingConvention": "stdcall",
+          "category": "trust_state_query",
+          "classification": "manual_decoder_required",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "trust",
+          "hookPolicy": "definition_only",
+          "id": 177,
+          "key": "wintrust.dll!WTHelperProvDataFromStateData",
+          "module": "wintrust.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "manual_family_boundary_review"
+          ],
+          "recommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "returnType": "CRYPT_PROVIDER_DATA*",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/wintrust.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 1,
+      "manualDecoderRequired": 1,
+      "module": "wintrust.dll",
+      "recommendation": "design_manual_decoder_batch",
+      "sourceFiles": [
+        "definitions/win32/wintrust.json"
+      ],
+      "totalApis": 2,
+      "unsupported": 0
+    },
+    {
+      "alreadyLive": 8,
+      "apis": [
+        {
+          "apiName": "WSAStartup",
+          "callingConvention": "stdcall",
+          "category": "winsock_startup",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "network",
+          "hookPolicy": "iat",
+          "id": 59,
+          "key": "ws2_32.dll!WSAStartup",
+          "module": "ws2_32.dll",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [
+            "lpWSAData"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "int",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/ws2_32.json"
+        },
+        {
+          "apiName": "WSACleanup",
+          "callingConvention": "stdcall",
+          "category": "winsock_cleanup",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "network",
+          "hookPolicy": "iat",
+          "id": 60,
+          "key": "ws2_32.dll!WSACleanup",
+          "module": "ws2_32.dll",
+          "parameterCount": 0,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "int",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/ws2_32.json"
+        },
+        {
+          "apiName": "socket",
+          "callingConvention": "stdcall",
+          "category": "socket_create",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "network",
+          "hookPolicy": "iat",
+          "id": 61,
+          "key": "ws2_32.dll!socket",
+          "module": "ws2_32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "SOCKET",
+          "risk": "high",
+          "sourceFile": "definitions/win32/ws2_32.json"
+        },
+        {
+          "apiName": "closesocket",
+          "callingConvention": "stdcall",
+          "category": "socket_close",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "network",
+          "hookPolicy": "iat",
+          "id": 62,
+          "key": "ws2_32.dll!closesocket",
+          "module": "ws2_32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "int",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/ws2_32.json"
+        },
+        {
+          "apiName": "connect",
+          "callingConvention": "stdcall",
+          "category": "socket_connect",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "network",
+          "hookPolicy": "iat",
+          "id": 63,
+          "key": "ws2_32.dll!connect",
+          "module": "ws2_32.dll",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "int",
+          "risk": "high",
+          "sourceFile": "definitions/win32/ws2_32.json"
+        },
+        {
+          "apiName": "send",
+          "callingConvention": "stdcall",
+          "category": "socket_send",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "network",
+          "hookPolicy": "definition_only",
+          "id": 64,
+          "key": "ws2_32.dll!send",
+          "module": "ws2_32.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "buf"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "int",
+          "risk": "high",
+          "sourceFile": "definitions/win32/ws2_32.json"
+        },
+        {
+          "apiName": "recv",
+          "callingConvention": "stdcall",
+          "category": "socket_recv",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "network",
+          "hookPolicy": "definition_only",
+          "id": 65,
+          "key": "ws2_32.dll!recv",
+          "module": "ws2_32.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "buf"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "int",
+          "risk": "high",
+          "sourceFile": "definitions/win32/ws2_32.json"
+        },
+        {
+          "apiName": "sendto",
+          "callingConvention": "stdcall",
+          "category": "socket_sendto",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "network",
+          "hookPolicy": "definition_only",
+          "id": 66,
+          "key": "ws2_32.dll!sendto",
+          "module": "ws2_32.dll",
+          "parameterCount": 6,
+          "payloadSensitiveParameters": [
+            "buf"
+          ],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "int",
+          "risk": "high",
+          "sourceFile": "definitions/win32/ws2_32.json"
+        },
+        {
+          "apiName": "recvfrom",
+          "callingConvention": "stdcall",
+          "category": "socket_recvfrom",
+          "classification": "blocked_by_payload_policy",
+          "coverageStatus": "definition_only",
+          "errorSource": "none",
+          "family": "network",
+          "hookPolicy": "definition_only",
+          "id": 67,
+          "key": "ws2_32.dll!recvfrom",
+          "module": "ws2_32.dll",
+          "parameterCount": 6,
+          "payloadSensitiveParameters": [
+            "buf"
+          ],
+          "pointerOnlyParameters": [
+            "fromlen"
+          ],
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "recommendation": "keep_definition_only_until_payload_policy_review",
+          "returnType": "int",
+          "risk": "high",
+          "sourceFile": "definitions/win32/ws2_32.json"
+        },
+        {
+          "apiName": "getaddrinfo",
+          "callingConvention": "stdcall",
+          "category": "socket_address_resolve",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "network",
+          "hookPolicy": "iat",
+          "id": 68,
+          "key": "ws2_32.dll!getaddrinfo",
+          "module": "ws2_32.dll",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [
+            "pNodeName",
+            "pServiceName"
+          ],
+          "pointerOnlyParameters": [
+            "ppResult"
+          ],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "int",
+          "risk": "high",
+          "sourceFile": "definitions/win32/ws2_32.json"
+        },
+        {
+          "apiName": "freeaddrinfo",
+          "callingConvention": "stdcall",
+          "category": "socket_address_free",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "network",
+          "hookPolicy": "iat",
+          "id": 69,
+          "key": "ws2_32.dll!freeaddrinfo",
+          "module": "ws2_32.dll",
+          "parameterCount": 1,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "void",
+          "risk": "medium",
+          "sourceFile": "definitions/win32/ws2_32.json"
+        },
+        {
+          "apiName": "WSAGetLastError",
+          "callingConvention": "stdcall",
+          "category": "winsock_error_query",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
+          "errorSource": "none",
+          "family": "network",
+          "hookPolicy": "iat",
+          "id": 70,
+          "key": "ws2_32.dll!WSAGetLastError",
+          "module": "ws2_32.dll",
+          "parameterCount": 0,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [],
+          "reasons": [
+            "already_live_iat_coverage"
+          ],
+          "recommendation": "keep_in_dll_batch_smoke",
+          "returnType": "int",
+          "risk": "low",
+          "sourceFile": "definitions/win32/ws2_32.json"
+        }
+      ],
+      "autoPromotable": 0,
+      "blockedByPayloadPolicy": 4,
+      "manualDecoderRequired": 0,
+      "module": "ws2_32.dll",
+      "recommendation": "document_payload_boundary_only",
+      "sourceFiles": [
+        "definitions/win32/ws2_32.json"
+      ],
+      "totalApis": 12,
+      "unsupported": 0
+    }
+  ],
+  "policy": {
+    "autoPromotionBoundary": "pointer_scalar_or_existing_pointer_only_metadata",
+    "batchRule": "Promote all auto-promotable APIs in the same DLL together, document manual decoders, and block sensitive payload APIs explicitly.",
+    "generatedRuntimeHooksEnabledByDefault": false,
+    "installMode": "dll_batch_review",
+    "payloadCaptureDefault": "disabled",
+    "x86Requirement": "Every auto-promotable API still needs ABI-class compatible wrappers before runtime promotion."
+  },
+  "schemaVersion": "0.1.0",
+  "source": {
+    "definitions": "definitions/win32",
+    "generatedFrom": [
+      "definitions/**/*.json",
+      "definitions/metadata/**/*.json"
+    ],
+    "metadata": "definitions/metadata"
+  },
+  "summary": {
+    "alreadyLive": 125,
+    "autoPromotable": 2,
+    "blockedByPayloadPolicy": 49,
+    "dllsFullyTriaged": 20,
+    "dllsWithAutoPromotableApis": 2,
+    "manualDecoderRequired": 3,
+    "totalApis": 179,
+    "totalDlls": 25,
+    "unsupported": 0
+  }
+}

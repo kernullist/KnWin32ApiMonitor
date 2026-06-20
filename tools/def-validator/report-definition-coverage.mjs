@@ -18,6 +18,11 @@ import {
   validateTier3HookPlan
 } from "./tier3-hook-plan-system.mjs";
 import {
+  dllBatchPromotionPlanToMarkdown,
+  loadDllBatchPromotionPlan,
+  validateDllBatchPromotionPlan
+} from "./dll-batch-promotion-system.mjs";
+import {
   buildCoverageReport,
   coverageReportToMarkdown,
   stableStringify,
@@ -40,6 +45,7 @@ const inventory = loadApiInventory();
 const tier1HookPlan = loadTier1HookPlan();
 const tier2HookPlan = loadTier2HookPlan();
 const tier3HookPlan = loadTier3HookPlan();
+const dllBatchPromotionPlan = loadDllBatchPromotionPlan();
 
 if (args.has("--check")) {
   const requiredStatuses = ["definition_only", "hooked", "smoke_verified"];
@@ -104,6 +110,15 @@ if (args.has("--check")) {
     process.exit(1);
   }
 
+  const dllBatchPlanErrors = validateDllBatchPromotionPlan(dllBatchPromotionPlan, result.apiDocuments, result.metadataIndex);
+  if (dllBatchPlanErrors.length > 0) {
+    console.error("DLL batch promotion plan report check failed:");
+    for (const error of dllBatchPlanErrors) {
+      console.error(`- ${error}`);
+    }
+    process.exit(1);
+  }
+
   console.log("Definition coverage report check passed.");
 } else if (args.has("--json")) {
   process.stdout.write(stableStringify({
@@ -111,7 +126,8 @@ if (args.has("--check")) {
     microsoftSourceInventory: inventory,
     tier1HookPlan,
     tier2HookPlan,
-    tier3HookPlan
+    tier3HookPlan,
+    dllBatchPromotionPlan
   }));
 } else {
   process.stdout.write(coverageReportToMarkdown(report));
@@ -123,4 +139,5 @@ if (args.has("--check")) {
   process.stdout.write(`\n${tier1HookPlanToMarkdown(tier1HookPlan)}`);
   process.stdout.write(`\n${tier2HookPlanToMarkdown(tier2HookPlan)}`);
   process.stdout.write(`\n${tier3HookPlanToMarkdown(tier3HookPlan)}`);
+  process.stdout.write(`\n${dllBatchPromotionPlanToMarkdown(dllBatchPromotionPlan)}`);
 }
