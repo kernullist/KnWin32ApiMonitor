@@ -14,6 +14,72 @@ pub const PROTOCOL_MINOR: u16 = 1;
 pub const PROTOCOL_PATCH: u16 = 0;
 const STREAM_BATCH_QUEUE_LIMIT: usize = 64;
 
+#[cfg(windows)]
+mod process_liveness
+{
+    use std::ffi::c_void;
+    use std::ptr::null_mut;
+
+    const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
+    const STILL_ACTIVE: u32 = 259;
+
+    #[link(name = "kernel32")]
+    extern "system"
+    {
+        fn OpenProcess(dwDesiredAccess: u32, bInheritHandle: i32, dwProcessId: u32) -> *mut c_void;
+        fn GetExitCodeProcess(hProcess: *mut c_void, lpExitCode: *mut u32) -> i32;
+        fn CloseHandle(hObject: *mut c_void) -> i32;
+    }
+
+    pub fn is_process_alive(process_id: u32) -> bool
+    {
+        let mut alive = false;
+        let mut process_handle = null_mut();
+
+        unsafe
+        {
+            loop
+            {
+                if process_id == 0
+                {
+                    break;
+                }
+
+                process_handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, process_id);
+                if process_handle.is_null()
+                {
+                    break;
+                }
+
+                let mut exit_code = 0;
+                if GetExitCodeProcess(process_handle, &mut exit_code) == 0
+                {
+                    break;
+                }
+
+                alive = exit_code == STILL_ACTIVE;
+                break;
+            }
+
+            if !process_handle.is_null()
+            {
+                CloseHandle(process_handle);
+            }
+        }
+
+        alive
+    }
+}
+
+#[cfg(not(windows))]
+mod process_liveness
+{
+    pub fn is_process_alive(_process_id: u32) -> bool
+    {
+        false
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TargetProcess
@@ -91,6 +157,8 @@ pub struct NativeSession
     pub session_process_alive: bool,
     #[serde(default)]
     pub target_alive: bool,
+    #[serde(default)]
+    pub target_exit_observed: bool,
     #[serde(default)]
     pub knapm_exists: bool,
     #[serde(default)]
@@ -395,6 +463,8 @@ struct NativeOperationRecord
     host_dropped_batches: u64,
     last_batch_sequence: u64,
     trace_batches: VecDeque<NativeTraceBatch>,
+    target_alive_observed: bool,
+    target_exit_observed: bool,
     stale_reason: String,
     recovery_action: String,
     shutdown_evidence: String,
@@ -923,6 +993,9 @@ fn session_view(record: &NativeOperationRecord) -> NativeSession
 {
     let now_ms = now_epoch_ms();
     let elapsed_ms = record.started_at.elapsed().as_millis() as u64;
+    let helper_alive = process_liveness::is_process_alive(record.helper_process_id);
+    let target_alive = process_liveness::is_process_alive(record.target_process_id);
+    let target_exit_observed = record.target_exit_observed || (record.target_alive_observed && !target_alive);
     let stopped_utc = if record.finished_at_ms == 0
     {
         String::new()
@@ -966,8 +1039,9 @@ fn session_view(record: &NativeOperationRecord) -> NativeSession
         daemon_control_endpoint: String::new(),
         knapm_path: String::new(),
         daemon_alive: false,
-        session_process_alive: false,
-        target_alive: false,
+        session_process_alive: helper_alive,
+        target_alive,
+        target_exit_observed,
         knapm_exists: false,
         knapm_valid: false,
         recovery_state: String::new(),
@@ -1000,6 +1074,8 @@ fn register_native_operation(operation_id: &str, operation_kind: &str, target_pr
             host_dropped_batches: 0,
             last_batch_sequence: 0,
             trace_batches: VecDeque::new(),
+            target_alive_observed: false,
+            target_exit_observed: false,
             stale_reason: String::new(),
             recovery_action: String::new(),
             shutdown_evidence: String::new(),
@@ -1078,6 +1154,17 @@ fn update_native_record_from_session(record: &mut NativeOperationRecord, session
     record.records_streamed = session.records_streamed;
     record.transport_dropped_events = session.transport_dropped_events;
     record.host_dropped_batches = session.host_dropped_batches.max(record.host_dropped_batches);
+    if session.target_process_id != 0
+    {
+        if session.target_alive
+        {
+            record.target_alive_observed = true;
+        }
+        else if record.target_alive_observed || session.target_exit_observed
+        {
+            record.target_exit_observed = true;
+        }
+    }
     record.stale_reason = session.stale_reason.clone();
     record.recovery_action = session.recovery_action.clone();
     record.shutdown_evidence = session.shutdown_evidence.clone();

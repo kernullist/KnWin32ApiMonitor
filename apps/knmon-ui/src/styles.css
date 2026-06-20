@@ -1984,9 +1984,73 @@ input[type="checkbox"] {
   box-shadow: 0 0 0 3px rgba(91, 216, 160, 0.16);
 }
 
+.pulse.stopped {
+  background: var(--danger);
+  box-shadow: 0 0 0 3px rgba(255, 104, 119, 0.16);
+}
+
 .workspace {
   grid-template-columns: minmax(350px, 380px) minmax(0, 1fr);
   background: var(--bg);
+}
+
+.workspace.has-process-exit {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.workspace.has-process-exit .left-rail,
+.workspace.has-process-exit .main-panel {
+  grid-row: 2;
+}
+
+.process-exit-banner {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 12px;
+  color: #ffd7bf;
+  background:
+    linear-gradient(180deg, rgba(255, 175, 90, 0.08) 0, rgba(255, 104, 119, 0.06) 100%),
+    #17100e;
+  border-bottom: 1px solid #6f3c2f;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+.process-exit-banner svg {
+  color: var(--warning);
+}
+
+.process-exit-banner strong {
+  color: #fff1e5;
+  white-space: nowrap;
+}
+
+.process-exit-banner span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.process-exit-banner small {
+  color: #d4a286;
+  white-space: nowrap;
+}
+
+.process-exit-banner .tool-button {
+  height: 28px;
+  color: #ffd7bf;
+  background: #241612;
+  border-color: #71402f;
+}
+
+.process-exit-banner .tool-button:hover:not(:disabled) {
+  color: #fff3ea;
+  background: #321a15;
+  border-color: #92503a;
 }
 
 .left-rail {
@@ -2259,6 +2323,20 @@ input[type="checkbox"] {
 
 .session-strip {
   background: #191611;
+}
+
+.alive-pill {
+  color: #9ee6bf;
+  background: #10261c;
+  border: 1px solid #255b40;
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+
+.alive-pill.exited {
+  color: #ffb5a7;
+  background: #2a1512;
+  border-color: #70362e;
 }
 
 .session-strip .tool-button {
@@ -2803,6 +2881,24 @@ code {
 
   .workspace {
     grid-template-columns: 1fr;
+  }
+
+  .workspace.has-process-exit {
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .workspace.has-process-exit .left-rail,
+  .workspace.has-process-exit .main-panel {
+    grid-row: auto;
+  }
+
+  .process-exit-banner {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .process-exit-banner strong,
+  .process-exit-banner small {
+    display: none;
   }
 
   .left-rail {

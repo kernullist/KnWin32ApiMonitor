@@ -1560,6 +1560,7 @@ struct NativeSessionInfo
     bool DaemonAlive = false;
     bool SessionProcessAlive = false;
     bool TargetAlive = false;
+    bool TargetExitObserved = false;
     bool KnapmExists = false;
     bool KnapmValid = false;
     std::string RecoveryState;
@@ -1655,6 +1656,7 @@ std::string ToJson(const NativeSessionInfo& session)
     stream << "\"daemonAlive\":" << (session.DaemonAlive ? "true" : "false") << ",";
     stream << "\"sessionProcessAlive\":" << (session.SessionProcessAlive ? "true" : "false") << ",";
     stream << "\"targetAlive\":" << (session.TargetAlive ? "true" : "false") << ",";
+    stream << "\"targetExitObserved\":" << (session.TargetExitObserved ? "true" : "false") << ",";
     stream << "\"knapmExists\":" << (session.KnapmExists ? "true" : "false") << ",";
     stream << "\"knapmValid\":" << (session.KnapmValid ? "true" : "false") << ",";
     stream << "\"recoveryState\":" << Q(session.RecoveryState) << ",";
@@ -7082,6 +7084,8 @@ NativeSessionInfo BuildAttachSessionInfo(
     session.StartedUtc = startedUtc;
     session.UpdatedUtc = NowUtc();
     session.CancellationEventName = cancellationEventName;
+    session.SessionProcessAlive = IsProcessAlive(session.HelperProcessId);
+    session.TargetAlive = IsProcessAlive(session.TargetProcessId);
     return session;
 }
 
@@ -7121,6 +7125,10 @@ NativeSessionInfo BuildSessionInfoFromCapture(const knmon::KnMonCaptureResult& r
     {
         session.SessionState = "stopped";
     }
+
+    session.SessionProcessAlive = IsProcessAlive(session.HelperProcessId);
+    session.TargetAlive = IsProcessAlive(session.TargetProcessId);
+    session.TargetExitObserved = previous.TargetExitObserved || (session.TargetProcessId != 0 && previous.TargetAlive && !session.TargetAlive);
 
     return session;
 }

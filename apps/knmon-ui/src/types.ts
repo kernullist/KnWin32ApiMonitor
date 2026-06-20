@@ -61,6 +61,7 @@ export interface NativeSession {
   daemonAlive: boolean;
   sessionProcessAlive: boolean;
   targetAlive: boolean;
+  targetExitObserved: boolean;
   knapmExists: boolean;
   knapmValid: boolean;
   recoveryState: string;

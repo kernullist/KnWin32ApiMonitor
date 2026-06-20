@@ -1,5 +1,6 @@
 import {
   Activity,
+  AlertTriangle,
   Braces,
   ChevronRight,
   CircleDot,
@@ -84,6 +85,15 @@ const traceOverscanRows = 6;
 
 type ReplaySource =
   | { kind: "catalog"; label: string; path: string; validationStatus: string };
+
+type ProcessExitNotice = {
+  sessionId: string;
+  sessionKind: string;
+  targetProcessId: number;
+  sessionState: string;
+  observedUtc: string;
+  message: string;
+};
 
 function formatBytes(value: number): string {
   if (value < 1024) {
@@ -272,6 +282,10 @@ function isDaemonSession(session: NativeSession): boolean {
   return session.sessionKind.startsWith("daemon_") || session.daemonProcessId > 0;
 }
 
+function targetExitNoticeMessage(session: NativeSession): string {
+  return `Target process ${session.targetProcessId} exited while ${session.sessionKind} was being monitored.`;
+}
+
 function formatElapsedMs(value: number): string {
   return `${(value / 1000).toFixed(1)}s`;
 }
@@ -335,6 +349,7 @@ function App() {
   const [lastSession, setLastSession] = useState<SessionInfo | null>(null);
   const [nativeOperations, setNativeOperations] = useState<NativeOperation[]>([]);
   const [nativeSessions, setNativeSessions] = useState<NativeSession[]>([]);
+  const [processExitNotice, setProcessExitNotice] = useState<ProcessExitNotice | null>(null);
   const [sessionCatalog, setSessionCatalog] = useState<NativeSessionCatalog | null>(null);
   const [catalogStateFilter, setCatalogStateFilter] = useState("all");
   const [catalogTargetFilter, setCatalogTargetFilter] = useState("");
@@ -355,6 +370,8 @@ function App() {
   const nextEventId = useRef(1);
   const nextQueryClauseId = useRef(1);
   const streamBatchCursors = useRef<Record<string, number>>({});
+  const lastSessionTargetAlive = useRef<Record<string, boolean>>({});
+  const notifiedExitedSessions = useRef<Set<string>>(new Set());
   const traceScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -416,6 +433,88 @@ function App() {
 
   function appendOutput(eventsToAppend: AuditEvent[]) {
     setOutputEvents((current) => [...eventsToAppend, ...current].slice(0, 80));
+  }
+
+  function observeTargetExitTransitions(sessions: NativeSession[]) {
+    const exitEvents: AuditEvent[] = [];
+
+    sessions.forEach((session) => {
+      if (session.targetProcessId === 0) {
+        return;
+      }
+
+      const previousAlive = lastSessionTargetAlive.current[session.sessionId];
+      const exitReason = [session.staleReason, session.recoveryReason, session.lastError]
+        .some((value) => value.toLowerCase().includes("target_exited"));
+      const observedExit = session.targetExitObserved || exitReason;
+      const firstTerminalExit = previousAlive === undefined && !session.targetAlive && observedExit;
+      const transitionedToExited = previousAlive === true && !session.targetAlive;
+      const rememberedExit = session.targetExitObserved && !session.targetAlive;
+
+      lastSessionTargetAlive.current[session.sessionId] = session.targetAlive;
+
+      if (!transitionedToExited && !firstTerminalExit && !rememberedExit) {
+        return;
+      }
+
+      if (notifiedExitedSessions.current.has(session.sessionId)) {
+        return;
+      }
+
+      notifiedExitedSessions.current.add(session.sessionId);
+
+      const observedUtc = new Date().toISOString();
+      const message = targetExitNoticeMessage(session);
+      setProcessExitNotice({
+        sessionId: session.sessionId,
+        sessionKind: session.sessionKind,
+        targetProcessId: session.targetProcessId,
+        sessionState: session.sessionState,
+        observedUtc,
+        message
+      });
+      exitEvents.push(makeAuditEvent("target_process_exited", "list_native_sessions", message));
+    });
+
+    if (exitEvents.length > 0) {
+      appendOutput(exitEvents);
+      setInspectorTab("output");
+    }
+  }
+
+  function observeTargetExitFromCaptureResult(result: CaptureResult) {
+    if (result.targetProcessId === 0) {
+      return;
+    }
+
+    const exited = result.auditEvents.some((event) => {
+      const eventType = event.eventType.toLowerCase();
+      const message = event.message.toLowerCase();
+      return eventType.includes("target_exited") || message.includes("target exited");
+    });
+
+    if (!exited) {
+      return;
+    }
+
+    const sessionId = result.sessionId || result.operationId;
+    if (notifiedExitedSessions.current.has(sessionId)) {
+      return;
+    }
+
+    notifiedExitedSessions.current.add(sessionId);
+    const sessionKind = result.sessionKind || result.captureMode;
+    const message = `Target process ${result.targetProcessId} exited while ${sessionKind} was being monitored.`;
+    setProcessExitNotice({
+      sessionId,
+      sessionKind,
+      targetProcessId: result.targetProcessId,
+      sessionState: result.sessionState || result.operationState || "stopped",
+      observedUtc: new Date().toISOString(),
+      message
+    });
+    appendOutput([makeAuditEvent("target_process_exited", result.operation, message, result.win32ErrorCode)]);
+    setInspectorTab("output");
   }
 
   function createTraceQueryClause(template?: Partial<Omit<TraceQueryClause, "id">>): TraceQueryClause {
@@ -609,7 +708,9 @@ function App() {
         if (active) {
           setNativeOperations(operations);
           const daemonIds = new Set(daemonSessions.map((session) => session.sessionId));
-          setNativeSessions([...daemonSessions, ...sessions.filter((session) => !daemonIds.has(session.sessionId))]);
+          const nextSessions = [...daemonSessions, ...sessions.filter((session) => !daemonIds.has(session.sessionId))];
+          observeTargetExitTransitions(nextSessions);
+          setNativeSessions(nextSessions);
         }
       } catch (error) {
         if (active) {
@@ -690,6 +791,8 @@ function App() {
   const targetBlockReason = targetEligibilityReason(selectedTarget);
   const activeNativeOperation = nativeOperations.find(isNativeOperationActive) ?? null;
   const activeNativeSession = nativeSessions.find(isNativeSessionActive) ?? null;
+  const topbarPulseClass = processExitNotice ? "pulse stopped" : activeNativeSession || nativeBusy ? "pulse running" : "pulse";
+  const topbarStatusLabel = processExitNotice ? "target exited" : activeNativeSession ? activeNativeSession.sessionState : nativeBusy ? "working" : "idle";
   const currentLaunchSession = launchSession
     ? nativeSessions.find((session) => session.sessionId === launchSession.sessionId) ?? launchSession
     : null;
@@ -783,12 +886,14 @@ function App() {
     setEvents([]);
     setSelectedEventId(0);
     setReplaySource(null);
+    setProcessExitNotice(null);
     nextEventId.current = 1;
   }
 
   async function startLaunchMonitorForTarget(targetPath: string, workingDirectory: string) {
     setNativeBusy(true);
     setLaunchSession(null);
+    setProcessExitNotice(null);
 
     try {
       appendOutput([makeAuditEvent("launch_requested", "start_launch_monitor_session", `Early-bird launch monitor requested for ${targetPath}.`)]);
@@ -1181,6 +1286,7 @@ function App() {
 
     setNativeBusy(true);
     setAttachResult(null);
+    setProcessExitNotice(null);
 
     try {
       appendOutput([makeAuditEvent("attach_requested", "attach_target_process_capture", `Bounded attach requested for PID ${selectedTarget.pid}.`)]);
@@ -1191,6 +1297,7 @@ function App() {
       setDroppedCount(result.droppedEvents);
       appendOutput(result.auditEvents.length > 0 ? result.auditEvents : [makeAuditEvent("attach_result", result.operation, result.message, result.win32ErrorCode)]);
       appendCapturedEvents(result.capturedEvents, ["ui-attach", `target:${result.targetProcessId}`]);
+      observeTargetExitFromCaptureResult(result);
       setInspectorTab("output");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -1209,6 +1316,7 @@ function App() {
     }
 
     setNativeBusy(true);
+    setProcessExitNotice(null);
 
     try {
       appendOutput([makeAuditEvent("stream_attach_requested", "start_streaming_attach_session", `Streaming attach requested for PID ${selectedTarget.pid}.`)]);
@@ -1236,6 +1344,7 @@ function App() {
     }
 
     setNativeBusy(true);
+    setProcessExitNotice(null);
 
     try {
       appendOutput([makeAuditEvent("daemon_session_requested", "start_daemon_supervised_session", `Daemon-supervised attach requested for PID ${selectedTarget.pid}.`)]);
@@ -1263,6 +1372,7 @@ function App() {
 
     setNativeBusy(true);
     setProcessTreeResult(null);
+    setProcessExitNotice(null);
 
     try {
       appendOutput([makeAuditEvent("process_tree_requested", "supervise_process_tree", `Supervision requested for PID ${selectedTarget.pid}; policy=${childPolicy}.`)]);
@@ -1281,6 +1391,7 @@ function App() {
 
       result.childAttachResults.forEach((capture) => {
         appendCapturedEvents(capture.capturedEvents, ["process-tree", `child:${capture.targetProcessId}`]);
+        observeTargetExitFromCaptureResult(capture);
       });
 
       setInspectorTab("output");
@@ -1389,12 +1500,23 @@ function App() {
           </button>
         </div>
         <div className="topbar-status">
-          <span className={activeNativeSession || nativeBusy ? "pulse running" : "pulse"} />
-          <span>{activeNativeSession ? activeNativeSession.sessionState : nativeBusy ? "working" : "idle"}</span>
+          <span className={topbarPulseClass} />
+          <span>{topbarStatusLabel}</span>
         </div>
       </header>
 
-      <main className="workspace">
+      <main className={processExitNotice ? "workspace has-process-exit" : "workspace"}>
+        {processExitNotice ? (
+          <div className="process-exit-banner" role="status" aria-live="polite">
+            <AlertTriangle size={17} />
+            <strong>Target exited</strong>
+            <span>{processExitNotice.message}</span>
+            <small>{processExitNotice.sessionState} / {processExitNotice.observedUtc}</small>
+            <button type="button" className="tool-button" onClick={() => setProcessExitNotice(null)}>
+              <span>Dismiss</span>
+            </button>
+          </div>
+        ) : null}
         <aside className="left-rail">
           <div className="segmented">
             <button type="button" className={leftTab === "targets" ? "active" : ""} onClick={() => setLeftTab("targets")}>Targets</button>
@@ -1486,6 +1608,11 @@ function App() {
                     <span>{activeNativeSession.recordsStreamed} rec</span>
                     <span>{activeNativeSession.transportDroppedEvents} drop</span>
                     <span>{activeNativeSession.hostDroppedBatches} ui-drop</span>
+                    {activeNativeSession.targetProcessId ? (
+                      <small className={activeNativeSession.targetAlive ? "alive-pill" : "alive-pill exited"}>
+                        target {activeNativeSession.targetProcessId} {activeNativeSession.targetAlive ? "alive" : "exited"}
+                      </small>
+                    ) : null}
                     <button
                       type="button"
                       className="tool-button"
@@ -1500,7 +1627,7 @@ function App() {
                     {activeNativeSession.daemonProcessId ? <small>daemon {activeNativeSession.daemonProcessId}</small> : null}
                     {activeNativeSession.recoveryState ? <small>{activeNativeSession.recoveryState}/{activeNativeSession.recoveryReason || "n/a"}</small> : null}
                     {activeNativeSession.pruneEligible ? <small>prune {activeNativeSession.pruneReason || "eligible"}</small> : null}
-                    {activeNativeSession.daemonProcessId ? <small>alive d={activeNativeSession.daemonAlive ? "yes" : "no"} w={activeNativeSession.sessionProcessAlive ? "yes" : "no"} t={activeNativeSession.targetAlive ? "yes" : "no"}</small> : null}
+                    {activeNativeSession.daemonProcessId ? <small>alive d={activeNativeSession.daemonAlive ? "yes" : "no"} w={activeNativeSession.sessionProcessAlive ? "yes" : "no"}</small> : null}
                     {activeNativeSession.knapmPath ? <small title={activeNativeSession.knapmPath}>{activeNativeSession.knapmPath}</small> : null}
                     {activeNativeSession.staleReason ? <small>{activeNativeSession.staleReason}</small> : null}
                     {activeNativeSession.lastError ? <small>{activeNativeSession.lastError}</small> : null}
@@ -2416,6 +2543,7 @@ function App() {
 
       <footer className="statusbar">
         <span>State: {activeNativeSession ? activeNativeSession.sessionState : "idle"}</span>
+        {processExitNotice ? <span>Target exited: {processExitNotice.targetProcessId}</span> : null}
         <span>Events: {events.length}</span>
         <span>Dropped: {droppedCount}</span>
         <span>Session: {formatBytes(sessionBytes)}</span>
