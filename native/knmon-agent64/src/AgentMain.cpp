@@ -1,4 +1,5 @@
 #include <knmon/common/AttachConfig.h>
+#include <knmon/common/GeneratedApiMetadata.h>
 #include <knmon/common/Protocol.h>
 
 #include <WinSock2.h>
@@ -465,6 +466,24 @@ struct ModuleInfo
     bool IsSystem = false;
     bool HasImports = false;
     bool Eligible = false;
+};
+
+struct ResolverPointerClassification
+{
+    bool Candidate = false;
+    bool HasRequestedModule = false;
+    bool HasTargetModule = false;
+    bool TargetExecutable = false;
+    std::uint32_t TargetRva = 0;
+    std::uint32_t Ordinal = 0;
+    std::string Reason;
+    std::string RequestedName;
+    std::string RequestedModuleName;
+    std::string TargetModuleName;
+    std::string TargetModulePath;
+    ModuleInfo RequestedModule = {};
+    ModuleInfo TargetModule = {};
+    const knmon::KnMonGeneratedApiMetadata* Metadata = nullptr;
 };
 
 struct SweepStats
@@ -6638,7 +6657,10 @@ bool ModuleHasImports(HMODULE module, std::uint32_t size)
     return ReadImageImportDirectory(module, size, &imports);
 }
 
-std::size_t CaptureModuleSnapshot(std::array<ModuleInfo, MaxModuleRecords>& modules, SweepStats* stats)
+std::size_t CaptureModuleSnapshot(
+    std::array<ModuleInfo, MaxModuleRecords>& modules,
+    SweepStats* stats,
+    bool evaluateEligibility = true)
 {
     std::size_t count = 0;
 
@@ -6676,9 +6698,12 @@ std::size_t CaptureModuleSnapshot(std::array<ModuleInfo, MaxModuleRecords>& modu
             LowerAsciiInPlace(module.Name);
             LowerAsciiInPlace(module.FullPath);
             module.IsAgent = module.Base == g_agentModule || std::strcmp(module.Name, KNMON_AGENT_DLL_NAME) == 0;
-            module.IsSystem = IsWindowsSystemModule(module);
-            module.HasImports = ModuleHasImports(module.Base, module.SizeOfImage);
-            module.Eligible = !module.IsAgent && !module.IsSystem && module.HasImports;
+            if (evaluateEligibility)
+            {
+                module.IsSystem = IsWindowsSystemModule(module);
+                module.HasImports = ModuleHasImports(module.Base, module.SizeOfImage);
+                module.Eligible = !module.IsAgent && !module.IsSystem && module.HasImports;
+            }
 
             if (stats != nullptr)
             {
@@ -7227,6 +7252,412 @@ bool AddressBelongsToLoadedModule(const void* address)
     }
 
     return loaded;
+}
+
+std::string PointerText(const void* value)
+{
+    char buffer[32] = {};
+    CopyHexPointerText(buffer, nullptr, sizeof(buffer), value);
+    return std::string(buffer);
+}
+
+std::string RvaText(std::uint32_t rva)
+{
+    char buffer[16] = {};
+    std::snprintf(buffer, sizeof(buffer), "0x%08lx", static_cast<unsigned long>(rva));
+    return std::string(buffer);
+}
+
+bool StringViewEqualsAsciiNoCase(std::string_view left, const char* right)
+{
+    bool equal = false;
+
+    do
+    {
+        if (right == nullptr)
+        {
+            break;
+        }
+
+        std::size_t index = 0;
+        for (; index < left.size() && right[index] != '\0'; ++index)
+        {
+            char a = static_cast<char>(left[index]);
+            char b = right[index];
+            if (a >= 'A' && a <= 'Z')
+            {
+                a = static_cast<char>(a - 'A' + 'a');
+            }
+
+            if (b >= 'A' && b <= 'Z')
+            {
+                b = static_cast<char>(b - 'A' + 'a');
+            }
+
+            if (a != b)
+            {
+                break;
+            }
+        }
+
+        equal = index == left.size() && right[index] == '\0';
+    }
+    while (false);
+
+    return equal;
+}
+
+const knmon::KnMonGeneratedApiMetadata* FindResolverDefinition(const char* moduleName, const char* apiName)
+{
+    const knmon::KnMonGeneratedApiMetadata* metadata = nullptr;
+
+    do
+    {
+        if (moduleName == nullptr || moduleName[0] == '\0' || apiName == nullptr || apiName[0] == '\0')
+        {
+            break;
+        }
+
+        for (const knmon::KnMonGeneratedApiMetadata& entry : knmon::KnMonGeneratedApis)
+        {
+            if (
+                StringViewEqualsAsciiNoCase(entry.ModuleName, moduleName) &&
+                StringViewEqualsAsciiNoCase(entry.Name, apiName))
+            {
+                metadata = &entry;
+                break;
+            }
+        }
+    }
+    while (false);
+
+    return metadata;
+}
+
+bool FindModuleByBase(
+    const std::array<ModuleInfo, MaxModuleRecords>& modules,
+    std::size_t moduleCount,
+    HMODULE base,
+    ModuleInfo* output)
+{
+    bool found = false;
+
+    do
+    {
+        if (base == nullptr || output == nullptr)
+        {
+            break;
+        }
+
+        for (std::size_t index = 0; index < moduleCount; ++index)
+        {
+            if (modules[index].Base == base)
+            {
+                *output = modules[index];
+                found = true;
+                break;
+            }
+        }
+    }
+    while (false);
+
+    return found;
+}
+
+bool FindModuleByAddress(
+    const std::array<ModuleInfo, MaxModuleRecords>& modules,
+    std::size_t moduleCount,
+    const void* address,
+    ModuleInfo* output)
+{
+    bool found = false;
+
+    do
+    {
+        if (address == nullptr || output == nullptr)
+        {
+            break;
+        }
+
+        for (std::size_t index = 0; index < moduleCount; ++index)
+        {
+            const ModuleInfo& module = modules[index];
+            if (ImageRangeContains(reinterpret_cast<const std::uint8_t*>(module.Base), module.SizeOfImage, address, 1))
+            {
+                *output = module;
+                found = true;
+                break;
+            }
+        }
+    }
+    while (false);
+
+    return found;
+}
+
+bool AddressInExecutableImageSection(const ModuleInfo& module, const void* address, std::uint32_t* rva)
+{
+    bool executable = false;
+
+    do
+    {
+        if (module.Base == nullptr || module.SizeOfImage == 0 || address == nullptr)
+        {
+            break;
+        }
+
+        auto* base = reinterpret_cast<std::uint8_t*>(module.Base);
+        auto* current = static_cast<const std::uint8_t*>(address);
+        if (!ImageRangeContains(base, module.SizeOfImage, current, 1))
+        {
+            break;
+        }
+
+        const std::uintptr_t offset = static_cast<std::uintptr_t>(current - base);
+        if (offset > 0xffffffffu)
+        {
+            break;
+        }
+
+        if (rva != nullptr)
+        {
+            *rva = static_cast<std::uint32_t>(offset);
+        }
+
+        auto* dosHeader = reinterpret_cast<IMAGE_DOS_HEADER*>(base);
+        if (!ImageRangeContains(base, module.SizeOfImage, dosHeader, sizeof(*dosHeader)) || dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+        {
+            break;
+        }
+
+        if (dosHeader->e_lfanew <= 0 || static_cast<std::uint32_t>(dosHeader->e_lfanew) >= module.SizeOfImage)
+        {
+            break;
+        }
+
+        auto* ntHeaders = reinterpret_cast<IMAGE_NT_HEADERS*>(base + dosHeader->e_lfanew);
+        if (!ImageRangeContains(base, module.SizeOfImage, ntHeaders, sizeof(*ntHeaders)) || ntHeaders->Signature != IMAGE_NT_SIGNATURE)
+        {
+            break;
+        }
+
+        IMAGE_SECTION_HEADER* section = IMAGE_FIRST_SECTION(ntHeaders);
+        const std::uint32_t sectionCount = ntHeaders->FileHeader.NumberOfSections;
+        const std::size_t sectionBytes = static_cast<std::size_t>(sectionCount) * sizeof(IMAGE_SECTION_HEADER);
+        if (!ImageRangeContains(base, module.SizeOfImage, section, sectionBytes))
+        {
+            break;
+        }
+
+        for (std::uint32_t index = 0; index < sectionCount; ++index)
+        {
+            const IMAGE_SECTION_HEADER& currentSection = section[index];
+            if ((currentSection.Characteristics & IMAGE_SCN_MEM_EXECUTE) == 0)
+            {
+                continue;
+            }
+
+            const std::uint32_t sectionStart = currentSection.VirtualAddress;
+            std::uint32_t sectionSpan = std::max(currentSection.Misc.VirtualSize, currentSection.SizeOfRawData);
+            if (sectionSpan == 0 || sectionStart >= module.SizeOfImage)
+            {
+                continue;
+            }
+
+            if (sectionSpan > module.SizeOfImage - sectionStart)
+            {
+                sectionSpan = module.SizeOfImage - sectionStart;
+            }
+
+            if (offset >= sectionStart && offset < static_cast<std::uintptr_t>(sectionStart) + sectionSpan)
+            {
+                executable = true;
+                break;
+            }
+        }
+    }
+    while (false);
+
+    return executable;
+}
+
+std::string CaptureResolverProcName(LPCSTR procName, bool ordinal)
+{
+    std::string result;
+
+    do
+    {
+        if (procName == nullptr || ordinal)
+        {
+            break;
+        }
+
+        char buffer[MaxResolverNameBytes + 1] = {};
+        std::uint32_t length = 0;
+        const std::uint32_t status = CopyAnsiPointerText(buffer, &length, sizeof(buffer), procName);
+        if (
+            status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded) ||
+            status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial) ||
+            status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated))
+        {
+            result.assign(buffer, length);
+        }
+    }
+    while (false);
+
+    return result;
+}
+
+std::string CaptureResolverAnsiStringName(PANSI_STRING functionName)
+{
+    std::string result;
+
+    do
+    {
+        if (functionName == nullptr)
+        {
+            break;
+        }
+
+        char buffer[MaxResolverNameBytes + 1] = {};
+        std::uint32_t length = 0;
+        const std::uint32_t status = CopyAnsiStringText(buffer, &length, sizeof(buffer), functionName);
+        if (
+            status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded) ||
+            status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial) ||
+            status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated))
+        {
+            result.assign(buffer, length);
+        }
+    }
+    while (false);
+
+    return result;
+}
+
+ResolverPointerClassification ClassifyResolverPointer(
+    HMODULE requestedModule,
+    const std::string& requestedName,
+    bool lookupByOrdinal,
+    std::uint32_t ordinal,
+    const void* returnedPointer)
+{
+    ResolverPointerClassification classification;
+    classification.RequestedName = requestedName;
+    classification.Ordinal = ordinal;
+    classification.Reason = "unsupported_unknown";
+
+    do
+    {
+        if (returnedPointer == nullptr)
+        {
+            classification.Reason = "unsupported_null_result";
+            break;
+        }
+
+        std::array<ModuleInfo, MaxModuleRecords> modules = {};
+        const std::size_t moduleCount = CaptureModuleSnapshot(modules, nullptr, false);
+        classification.HasRequestedModule = FindModuleByBase(modules, moduleCount, requestedModule, &classification.RequestedModule);
+        if (classification.HasRequestedModule)
+        {
+            classification.RequestedModuleName = classification.RequestedModule.Name;
+        }
+        else
+        {
+            classification.Reason = "unsupported_requested_module_unknown";
+            break;
+        }
+
+        classification.HasTargetModule = FindModuleByAddress(modules, moduleCount, returnedPointer, &classification.TargetModule);
+        if (!classification.HasTargetModule)
+        {
+            classification.Reason = "unsupported_pointer_module_unknown";
+            break;
+        }
+
+        classification.TargetModuleName = classification.TargetModule.Name;
+        classification.TargetModulePath = classification.TargetModule.FullPath;
+        classification.TargetExecutable = AddressInExecutableImageSection(
+            classification.TargetModule,
+            returnedPointer,
+            &classification.TargetRva);
+        if (!classification.TargetExecutable)
+        {
+            classification.Reason = "unsupported_non_executable_range";
+            break;
+        }
+
+        if (lookupByOrdinal)
+        {
+            classification.Reason = "unsupported_ordinal_metadata_missing";
+            break;
+        }
+
+        if (classification.RequestedName.empty())
+        {
+            classification.Reason = "unsupported_name_missing";
+            break;
+        }
+
+        classification.Metadata = FindResolverDefinition(
+            classification.RequestedModuleName.c_str(),
+            classification.RequestedName.c_str());
+        if (classification.Metadata == nullptr)
+        {
+            classification.Reason = "unsupported_definition_missing";
+            break;
+        }
+
+        classification.Candidate = true;
+        classification.Reason = "candidate_definition_match";
+    }
+    while (false);
+
+    return classification;
+}
+
+void SendResolverPointerClassification(
+    const char* resolverApi,
+    HMODULE requestedModule,
+    const std::string& requestedName,
+    bool lookupByOrdinal,
+    std::uint32_t ordinal,
+    const void* returnedPointer)
+{
+    const ResolverPointerClassification classification = ClassifyResolverPointer(
+        requestedModule,
+        requestedName,
+        lookupByOrdinal,
+        ordinal,
+        returnedPointer);
+
+    const LONG64 sequence = NextSequence();
+    std::ostringstream stream;
+    stream << MessagePrefix(classification.Candidate ? "resolver_pointer_candidate" : "resolver_pointer_unsupported", sequence) << ",";
+    stream << "\"resolverApi\":" << Q(resolverApi == nullptr ? "unknown" : resolverApi) << ",";
+    stream << "\"classification\":" << Q(classification.Candidate ? "candidate" : "unsupported") << ",";
+    stream << "\"reason\":" << Q(classification.Reason) << ",";
+    stream << "\"lookupKind\":" << Q(lookupByOrdinal ? "ordinal" : "name") << ",";
+    stream << "\"requestedName\":" << Q(lookupByOrdinal ? "" : classification.RequestedName) << ",";
+    stream << "\"requestedOrdinal\":" << (lookupByOrdinal ? ordinal : 0) << ",";
+    stream << "\"requestedModule\":" << Q(classification.RequestedModuleName) << ",";
+    stream << "\"requestedModuleBase\":" << Q(PointerText(requestedModule)) << ",";
+    stream << "\"returnedPointer\":" << Q(PointerText(returnedPointer)) << ",";
+    stream << "\"targetModule\":" << Q(classification.TargetModuleName) << ",";
+    stream << "\"targetModulePath\":" << Q(classification.TargetModulePath) << ",";
+    stream << "\"targetModuleBase\":" << Q(PointerText(classification.TargetModule.Base)) << ",";
+    stream << "\"targetRva\":" << classification.TargetRva << ",";
+    stream << "\"targetRvaHex\":" << Q(RvaText(classification.TargetRva)) << ",";
+    stream << "\"targetExecutable\":" << (classification.TargetExecutable ? "true" : "false") << ",";
+    stream << "\"definitionApiId\":" << (classification.Metadata == nullptr ? 0 : classification.Metadata->Id) << ",";
+    stream << "\"definitionModule\":" << Q(classification.Metadata == nullptr ? "" : std::string(classification.Metadata->ModuleName)) << ",";
+    stream << "\"definitionName\":" << Q(classification.Metadata == nullptr ? "" : std::string(classification.Metadata->Name)) << ",";
+    stream << "\"hookPolicy\":" << Q(classification.Metadata == nullptr ? "" : std::string(classification.Metadata->HookPolicy)) << ",";
+    stream << "\"coverageStatus\":" << Q(classification.Metadata == nullptr ? "" : std::string(classification.Metadata->CoverageStatus)) << ",";
+    stream << "\"instrumented\":false,";
+    stream << "\"message\":\"Resolver returned pointer classified without code mutation.\"";
+    stream << "}";
+    SendJson(stream.str());
 }
 
 bool SweepLoadedModules(const char* reason, bool reportHookStatus, SweepStats* outStats)
@@ -9280,6 +9711,20 @@ FARPROC WINAPI HookedGetProcAddress(HMODULE module, LPCSTR procName)
     if (HooksEnabled())
     {
         EmitGetProcAddressEvent(result, eventError, start, end, module, procName);
+        if (result != nullptr)
+        {
+            const bool lookupByOrdinal = IsOrdinalProcName(procName);
+            const std::uint32_t ordinal = lookupByOrdinal ?
+                static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(procName) & 0xffffu) :
+                0;
+            SendResolverPointerClassification(
+                "GetProcAddress",
+                module,
+                CaptureResolverProcName(procName, lookupByOrdinal),
+                lookupByOrdinal,
+                ordinal,
+                reinterpret_cast<const void*>(result));
+        }
     }
 
     SetLastError(lastError);
@@ -9417,6 +9862,19 @@ NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functio
     if (HooksEnabled())
     {
         EmitLdrGetProcedureAddressEvent(status, eventError, start, end, module, functionName, ordinal, functionAddress);
+        PVOID resolvedAddress = nullptr;
+        if (NT_SUCCESS(status) && ReadCurrentProcessValue(functionAddress, &resolvedAddress) && resolvedAddress != nullptr)
+        {
+            const std::string requestedName = CaptureResolverAnsiStringName(functionName);
+            const bool lookupByOrdinal = requestedName.empty() && ordinal != 0;
+            SendResolverPointerClassification(
+                "LdrGetProcedureAddress",
+                module,
+                requestedName,
+                lookupByOrdinal,
+                lookupByOrdinal ? ordinal : 0,
+                resolvedAddress);
+        }
     }
 
     return status;

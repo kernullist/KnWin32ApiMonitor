@@ -267,6 +267,43 @@ bool RunDynamicLoadProbe()
             break;
         }
 
+        HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
+        if (kernel32 == nullptr)
+        {
+            LogLastError("GetModuleHandleW(kernel32.dll)");
+            break;
+        }
+
+        using ProcessIdFn = DWORD(WINAPI*)();
+        auto resolvedGetCurrentProcessId = reinterpret_cast<ProcessIdFn>(GetProcAddress(kernel32, "GetCurrentProcessId"));
+        if (resolvedGetCurrentProcessId == nullptr)
+        {
+            LogLastError("GetProcAddress(GetCurrentProcessId)");
+            break;
+        }
+
+        const char ldrProcessIdName[] = "GetCurrentProcessId";
+        ANSI_STRING ldrProcessId = {};
+        ldrProcessId.Buffer = const_cast<PSTR>(ldrProcessIdName);
+        ldrProcessId.Length = static_cast<USHORT>(std::strlen(ldrProcessIdName));
+        ldrProcessId.MaximumLength = static_cast<USHORT>(ldrProcessId.Length + 1);
+        PVOID ldrProcessIdAddress = nullptr;
+        const NTSTATUS ldrProcessIdStatus = LdrGetProcedureAddress(kernel32, &ldrProcessId, 0, &ldrProcessIdAddress);
+        std::cout << "ldrgetprocedureaddress GetCurrentProcessId status=" << HexNtStatus(ldrProcessIdStatus) << "\n";
+        if (!NT_SUCCESS(ldrProcessIdStatus) || ldrProcessIdAddress == nullptr)
+        {
+            break;
+        }
+
+        auto ldrGetCurrentProcessId = reinterpret_cast<ProcessIdFn>(ldrProcessIdAddress);
+        const DWORD importedPid = GetCurrentProcessId();
+        const DWORD resolvedPid = resolvedGetCurrentProcessId();
+        const DWORD ldrResolvedPid = ldrGetCurrentProcessId();
+        if (resolvedPid != importedPid || ldrResolvedPid != importedPid)
+        {
+            break;
+        }
+
         const DWORD probeResult = probe();
         std::cout << "dynamic probe result=" << probeResult << "\n";
         if (probeResult != 0)

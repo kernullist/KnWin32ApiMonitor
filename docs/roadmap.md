@@ -404,8 +404,12 @@ Current verified behavior:
 8. Post-load File I/O from `knmon-dynamic-probe.dll` is captured after the re-sweep.
 9. `GetProcAddress` and `LdrGetProcedureAddress` resolver calls for `KnMonDynamicProbe` are captured as resolver-tagged shared-memory `api_call` events.
 10. Resolver records include bounded function-name evidence and return/status values without claiming returned-pointer instrumentation.
-11. Unloaded owner-module restoration races are handled without stale writes and healthy shutdown reports `restoredHooks=installedHooks`.
-12. The first Wave 2 live slice captures selected `ws2_32.dll` Winsock bootstrap, connect metadata, and address-resolution APIs through the same shared-memory transport:
+11. Resolver-returned pointers are classified through low-volume candidate-ledger agent messages without code mutation:
+   - known generated APIs such as `kernel32.dll!GetCurrentProcessId` are reported as `resolver_pointer_candidate` with module/RVA/definition evidence and `instrumented=false`
+   - repository-only exports such as `KnMonDynamicProbe` are reported as `resolver_pointer_unsupported` with `unsupported_definition_missing`
+   - no `resolver_pointer_call` event is emitted by the candidate-ledger slice
+12. Unloaded owner-module restoration races are handled without stale writes and healthy shutdown reports `restoredHooks=installedHooks`.
+13. The first Wave 2 live slice captures selected `ws2_32.dll` Winsock bootstrap, connect metadata, and address-resolution APIs through the same shared-memory transport:
    - `WSAStartup`
    - `WSACleanup`
    - `socket`
@@ -1154,8 +1158,8 @@ Design-only high-risk queue:
 
 1. Resolver-returned pointer instrumentation:
    - Reviewed design input is documented in `docs/resolver-returned-pointer-instrumentation-design.md`.
-   - Current runtime can claim resolver visibility and IAT-covered calls, but not calls through resolver-returned function pointers.
-   - The next approved implementation slice is candidate-ledger classification only: map resolver return pointers to module/export/API identity where safe, emit candidate or unsupported reason evidence, and do not mutate target code.
+   - Current runtime can claim resolver visibility, IAT-covered calls, and resolver-pointer candidate or unsupported classification, but not calls through resolver-returned function pointers.
+   - Candidate-ledger classification is implemented: resolver return pointers are mapped to module/RVA/API identity where safe, candidate or unsupported reason evidence is emitted, and target code is not mutated.
    - Inline/EAT patching, arbitrary returned-pointer wrapping, breakpoint mutation, skip-call, forced-return behavior, stealth behavior, and broad detours remain out of implementation scope.
 2. Token mutation and service-control APIs:
    - `AdjustTokenPrivileges`, service creation/start/control/delete, and privilege mutation need no-op observability, least-payload ABI, and smoke isolation before any hook work.

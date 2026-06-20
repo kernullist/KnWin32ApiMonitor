@@ -1,6 +1,6 @@
 # Resolver-Returned Pointer Instrumentation Design
 
-Status: reviewed design input, no runtime hook behavior changes.
+Status: reviewed design with candidate-ledger implementation, no pointer-call instrumentation.
 
 Updated: 2026-06-20
 
@@ -25,11 +25,15 @@ Current loader-aware coverage provides these paths:
 4. Resolver call monitoring for `GetProcAddress` and
    `LdrGetProcedureAddress`.
 5. Bounded shared-memory `api_call` records for the selected imported APIs.
+6. Candidate-ledger lifecycle messages for resolver-returned pointers:
+   - `resolver_pointer_candidate`
+   - `resolver_pointer_unsupported`
 
 This captures APIs reached through import slots in eligible modules. It also
 captures resolver calls with bounded function-name evidence and return/status
-values. It does not automatically capture a later call through a raw function
-pointer returned by the resolver.
+values. The candidate ledger classifies returned pointers, but it does not
+automatically capture a later call through a raw function pointer returned by
+the resolver.
 
 ## Coverage Model
 
@@ -129,9 +133,9 @@ must not claim pointer-call coverage for that resolver result.
 
 ## Recommended Implementation Path
 
-The first implementation slice should be a candidate ledger only. It should not
-patch code, patch export tables, rewrite caller variables, wrap arbitrary
-function pointers, or install broad detours.
+The first implementation slice is a candidate ledger only. It does not patch
+code, patch export tables, rewrite caller variables, wrap arbitrary function
+pointers, or install broad detours.
 
 Candidate ledger responsibilities:
 

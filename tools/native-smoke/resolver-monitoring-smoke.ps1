@@ -99,6 +99,59 @@ if ($ldrArgs -notmatch "0x[0-9a-fA-F]+")
     throw "LdrGetProcedureAddress arguments did not include pointer evidence: $ldrArgs"
 }
 
+$resolverPointerCalls = @($result.agentMessages | Where-Object { $_.messageType -eq "resolver_pointer_call" })
+if ($resolverPointerCalls.Count -ne 0)
+{
+    throw "Resolver candidate ledger smoke must not emit resolver_pointer_call events."
+}
+
+$ledgerMessages = @($result.agentMessages | Where-Object {
+    $_.messageType -eq "resolver_pointer_candidate" -or
+    $_.messageType -eq "resolver_pointer_unsupported"
+})
+
+if ($ledgerMessages.Count -lt 2)
+{
+    throw "Resolver pointer ledger evidence missing."
+}
+
+$candidate = @($ledgerMessages | Where-Object {
+    $_.messageType -eq "resolver_pointer_candidate" -and
+    $_.definitionName -eq "GetCurrentProcessId" -and
+    $_.definitionApiId -eq 141
+} | Select-Object -First 1)
+
+if ($candidate.Count -ne 1)
+{
+    throw "Resolver pointer candidate evidence for GetCurrentProcessId missing."
+}
+
+if ($candidate[0].instrumented -ne $false)
+{
+    throw "Resolver pointer candidate must be explicitly uninstrumented."
+}
+
+if ($candidate[0].targetExecutable -ne $true -or [uint64]$candidate[0].targetRva -eq 0)
+{
+    throw "Resolver pointer candidate did not include executable target RVA evidence."
+}
+
+if ($candidate[0].hookPolicy -ne "iat")
+{
+    throw "Resolver pointer candidate did not map to generated hook policy: $($candidate[0].hookPolicy)"
+}
+
+$unsupported = @($ledgerMessages | Where-Object {
+    $_.messageType -eq "resolver_pointer_unsupported" -and
+    $_.requestedName -eq "KnMonDynamicProbe" -and
+    $_.reason -eq "unsupported_definition_missing"
+} | Select-Object -First 1)
+
+if ($unsupported.Count -ne 1)
+{
+    throw "Resolver pointer unsupported evidence for KnMonDynamicProbe missing."
+}
+
 $resolverHooks = @($result.agentMessages | Where-Object {
     $_.messageType -eq "hook_installed" -and
     $_.api -in $resolverApis
@@ -124,4 +177,4 @@ if ($shutdown[0].restoredHooks -ne $shutdown[0].installedHooks -or $shutdown[0].
     throw "Unexpected resolver hook lifecycle counts: installed=$($shutdown[0].installedHooks) restored=$($shutdown[0].restoredHooks) failed=$($shutdown[0].failedHooks)"
 }
 
-Write-Host "Resolver monitoring smoke passed: apis=$($resolverApis -join ',') hooks=$($shutdown[0].installedHooks) events=$($result.capturedEvents.Count)"
+Write-Host "Resolver monitoring smoke passed: apis=$($resolverApis -join ',') hooks=$($shutdown[0].installedHooks) events=$($result.capturedEvents.Count) ledger=$($ledgerMessages.Count)"

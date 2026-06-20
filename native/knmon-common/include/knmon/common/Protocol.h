@@ -72,6 +72,8 @@ enum class KnMonAgentMessageType : std::uint32_t
     ApiCall = 4,
     DroppedEvents = 5,
     AgentShutdown = 6,
+    ResolverPointerCandidate = 7,
+    ResolverPointerUnsupported = 8,
 };
 
 enum class KnMonTransportEventKind : std::uint16_t
