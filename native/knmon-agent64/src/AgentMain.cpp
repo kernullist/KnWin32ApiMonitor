@@ -175,6 +175,16 @@ using RevertToSelfFn = BOOL(WINAPI*)();
 using CommDlgExtendedErrorFn = DWORD(WINAPI*)();
 using DwmFlushFn = HRESULT(WINAPI*)();
 using AcmGetVersionFn = UINT(WINAPI*)();
+using AuxGetNumDevsFn = UINT(WINAPI*)();
+using JoyGetNumDevsFn = UINT(WINAPI*)();
+using MidiInGetNumDevsFn = UINT(WINAPI*)();
+using MidiOutGetNumDevsFn = UINT(WINAPI*)();
+using MixerGetNumDevsFn = UINT(WINAPI*)();
+using MmGetCurrentTaskFn = DWORD(WINAPI*)();
+using MmTaskYieldFn = void(WINAPI*)();
+using TimeGetTimeFn = DWORD(WINAPI*)();
+using WaveInGetNumDevsFn = UINT(WINAPI*)();
+using WaveOutGetNumDevsFn = UINT(WINAPI*)();
 using GdipCreateHalftonePaletteFn = HPALETTE(WINAPI*)();
 using OaBuildVersionFn = ULONG(WINAPI*)();
 using OaEnablePerUserTLibRegistrationFn = void(WINAPI*)();
@@ -373,6 +383,16 @@ RevertToSelfFn g_originalRevertToSelf = nullptr;
 CommDlgExtendedErrorFn g_originalCommDlgExtendedError = nullptr;
 DwmFlushFn g_originalDwmFlush = nullptr;
 AcmGetVersionFn g_originalAcmGetVersion = nullptr;
+AuxGetNumDevsFn g_originalAuxGetNumDevs = nullptr;
+JoyGetNumDevsFn g_originalJoyGetNumDevs = nullptr;
+MidiInGetNumDevsFn g_originalMidiInGetNumDevs = nullptr;
+MidiOutGetNumDevsFn g_originalMidiOutGetNumDevs = nullptr;
+MixerGetNumDevsFn g_originalMixerGetNumDevs = nullptr;
+MmGetCurrentTaskFn g_originalMmGetCurrentTask = nullptr;
+MmTaskYieldFn g_originalMmTaskYield = nullptr;
+TimeGetTimeFn g_originalTimeGetTime = nullptr;
+WaveInGetNumDevsFn g_originalWaveInGetNumDevs = nullptr;
+WaveOutGetNumDevsFn g_originalWaveOutGetNumDevs = nullptr;
 GdipCreateHalftonePaletteFn g_originalGdipCreateHalftonePalette = nullptr;
 OaBuildVersionFn g_originalOaBuildVersion = nullptr;
 OaEnablePerUserTLibRegistrationFn g_originalOaEnablePerUserTLibRegistration = nullptr;
@@ -612,7 +632,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 175;
+constexpr std::size_t HookDefinitionCount = 185;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -7119,6 +7139,16 @@ BOOL WINAPI HookedRevertToSelf();
 DWORD WINAPI HookedCommDlgExtendedError();
 HRESULT WINAPI HookedDwmFlush();
 UINT WINAPI HookedAcmGetVersion();
+UINT WINAPI HookedAuxGetNumDevs();
+UINT WINAPI HookedJoyGetNumDevs();
+UINT WINAPI HookedMidiInGetNumDevs();
+UINT WINAPI HookedMidiOutGetNumDevs();
+UINT WINAPI HookedMixerGetNumDevs();
+DWORD WINAPI HookedMmGetCurrentTask();
+void WINAPI HookedMmTaskYield();
+DWORD WINAPI HookedTimeGetTime();
+UINT WINAPI HookedWaveInGetNumDevs();
+UINT WINAPI HookedWaveOutGetNumDevs();
 HPALETTE WINAPI HookedGdipCreateHalftonePalette();
 ULONG WINAPI HookedOaBuildVersion();
 void WINAPI HookedOaEnablePerUserTLibRegistration();
@@ -7298,6 +7328,16 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "comdlg32.dll", "CommDlgExtendedError", reinterpret_cast<void*>(HookedCommDlgExtendedError), reinterpret_cast<void**>(&g_originalCommDlgExtendedError), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "dwmapi.dll", "DwmFlush", reinterpret_cast<void*>(HookedDwmFlush), reinterpret_cast<void**>(&g_originalDwmFlush), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "msacm32.dll", "acmGetVersion", reinterpret_cast<void*>(HookedAcmGetVersion), reinterpret_cast<void**>(&g_originalAcmGetVersion), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "winmm.dll", "auxGetNumDevs", reinterpret_cast<void*>(HookedAuxGetNumDevs), reinterpret_cast<void**>(&g_originalAuxGetNumDevs), false, true, false, 17, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "winmm.dll", "joyGetNumDevs", reinterpret_cast<void*>(HookedJoyGetNumDevs), reinterpret_cast<void**>(&g_originalJoyGetNumDevs), false, true, false, 24, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "winmm.dll", "midiInGetNumDevs", reinterpret_cast<void*>(HookedMidiInGetNumDevs), reinterpret_cast<void**>(&g_originalMidiInGetNumDevs), false, true, false, 59, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "winmm.dll", "midiOutGetNumDevs", reinterpret_cast<void*>(HookedMidiOutGetNumDevs), reinterpret_cast<void**>(&g_originalMidiOutGetNumDevs), false, true, false, 75, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "winmm.dll", "mixerGetNumDevs", reinterpret_cast<void*>(HookedMixerGetNumDevs), reinterpret_cast<void**>(&g_originalMixerGetNumDevs), false, true, false, 103, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "winmm.dll", "mmGetCurrentTask", reinterpret_cast<void*>(HookedMmGetCurrentTask), reinterpret_cast<void**>(&g_originalMmGetCurrentTask), false, true, false, 108, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "winmm.dll", "mmTaskYield", reinterpret_cast<void*>(HookedMmTaskYield), reinterpret_cast<void**>(&g_originalMmTaskYield), false, true, false, 112, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "winmm.dll", "timeGetTime", reinterpret_cast<void*>(HookedTimeGetTime), reinterpret_cast<void**>(&g_originalTimeGetTime), false, true, false, 141, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "winmm.dll", "waveInGetNumDevs", reinterpret_cast<void*>(HookedWaveInGetNumDevs), reinterpret_cast<void**>(&g_originalWaveInGetNumDevs), false, true, false, 151, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "winmm.dll", "waveOutGetNumDevs", reinterpret_cast<void*>(HookedWaveOutGetNumDevs), reinterpret_cast<void**>(&g_originalWaveOutGetNumDevs), false, true, false, 167, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "gdiplus.dll", "GdipCreateHalftonePalette", reinterpret_cast<void*>(HookedGdipCreateHalftonePalette), reinterpret_cast<void**>(&g_originalGdipCreateHalftonePalette), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "oleaut32.dll", "OaBuildVersion", reinterpret_cast<void*>(HookedOaBuildVersion), reinterpret_cast<void**>(&g_originalOaBuildVersion), false, true, false, 170, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "oleaut32.dll", "OaEnablePerUserTLibRegistration", reinterpret_cast<void*>(HookedOaEnablePerUserTLibRegistration), reinterpret_cast<void**>(&g_originalOaEnablePerUserTLibRegistration), false, true, false, 444, 0, false, "", true, "tier2-initial-return-only" },
@@ -9615,6 +9655,156 @@ UINT WINAPI HookedAcmGetVersion()
     };
 
     return InvokeTier2ReturnOnlyHook(g_originalAcmGetVersion, static_cast<UINT>(0), Metadata);
+}
+
+UINT WINAPI HookedAuxGetNumDevs()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "winmm.dll",
+        "auxGetNumDevs",
+        "media",
+        "media/audio",
+        "medium",
+        "winmm.dll!auxGetNumDevs",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalAuxGetNumDevs, static_cast<UINT>(0), Metadata);
+}
+
+UINT WINAPI HookedJoyGetNumDevs()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "winmm.dll",
+        "joyGetNumDevs",
+        "media",
+        "media/multimedia",
+        "medium",
+        "winmm.dll!joyGetNumDevs",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalJoyGetNumDevs, static_cast<UINT>(0), Metadata);
+}
+
+UINT WINAPI HookedMidiInGetNumDevs()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "winmm.dll",
+        "midiInGetNumDevs",
+        "media",
+        "media/audio",
+        "medium",
+        "winmm.dll!midiInGetNumDevs",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalMidiInGetNumDevs, static_cast<UINT>(0), Metadata);
+}
+
+UINT WINAPI HookedMidiOutGetNumDevs()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "winmm.dll",
+        "midiOutGetNumDevs",
+        "media",
+        "media/audio",
+        "medium",
+        "winmm.dll!midiOutGetNumDevs",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalMidiOutGetNumDevs, static_cast<UINT>(0), Metadata);
+}
+
+UINT WINAPI HookedMixerGetNumDevs()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "winmm.dll",
+        "mixerGetNumDevs",
+        "media",
+        "media/audio",
+        "medium",
+        "winmm.dll!mixerGetNumDevs",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalMixerGetNumDevs, static_cast<UINT>(0), Metadata);
+}
+
+DWORD WINAPI HookedMmGetCurrentTask()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "winmm.dll",
+        "mmGetCurrentTask",
+        "media",
+        "media/multimedia",
+        "medium",
+        "winmm.dll!mmGetCurrentTask",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalMmGetCurrentTask, static_cast<DWORD>(0), Metadata);
+}
+
+void WINAPI HookedMmTaskYield()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "winmm.dll",
+        "mmTaskYield",
+        "media",
+        "media/multimedia",
+        "medium",
+        "winmm.dll!mmTaskYield",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalMmTaskYield, Metadata);
+}
+
+DWORD WINAPI HookedTimeGetTime()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "winmm.dll",
+        "timeGetTime",
+        "media",
+        "media",
+        "medium",
+        "winmm.dll!timeGetTime",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalTimeGetTime, static_cast<DWORD>(0), Metadata);
+}
+
+UINT WINAPI HookedWaveInGetNumDevs()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "winmm.dll",
+        "waveInGetNumDevs",
+        "media",
+        "media/audio",
+        "medium",
+        "winmm.dll!waveInGetNumDevs",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalWaveInGetNumDevs, static_cast<UINT>(0), Metadata);
+}
+
+UINT WINAPI HookedWaveOutGetNumDevs()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "winmm.dll",
+        "waveOutGetNumDevs",
+        "media",
+        "media/audio",
+        "medium",
+        "winmm.dll!waveOutGetNumDevs",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalWaveOutGetNumDevs, static_cast<UINT>(0), Metadata);
 }
 
 HPALETTE WINAPI HookedGdipCreateHalftonePalette()

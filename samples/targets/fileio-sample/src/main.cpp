@@ -73,6 +73,16 @@ extern "C" NTSYSAPI ULONG_PTR NTAPI RtlGetReturnAddressHijackTarget();
 extern "C" __declspec(dllimport) DWORD WINAPI CommDlgExtendedError();
 extern "C" __declspec(dllimport) HRESULT WINAPI DwmFlush();
 extern "C" __declspec(dllimport) UINT WINAPI acmGetVersion();
+extern "C" __declspec(dllimport) UINT WINAPI auxGetNumDevs();
+extern "C" __declspec(dllimport) UINT WINAPI joyGetNumDevs();
+extern "C" __declspec(dllimport) UINT WINAPI midiInGetNumDevs();
+extern "C" __declspec(dllimport) UINT WINAPI midiOutGetNumDevs();
+extern "C" __declspec(dllimport) UINT WINAPI mixerGetNumDevs();
+extern "C" __declspec(dllimport) DWORD WINAPI mmGetCurrentTask();
+extern "C" __declspec(dllimport) void WINAPI mmTaskYield();
+extern "C" __declspec(dllimport) DWORD WINAPI timeGetTime();
+extern "C" __declspec(dllimport) UINT WINAPI waveInGetNumDevs();
+extern "C" __declspec(dllimport) UINT WINAPI waveOutGetNumDevs();
 extern "C" __declspec(dllimport) HPALETTE WINAPI GdipCreateHalftonePalette();
 extern "C" __declspec(dllimport) HRESULT WINAPI DXGIDeclareAdapterRemovalSupport();
 extern "C" __declspec(dllimport) HRESULT WINAPI DXGIDisableVBlankVirtualization();
@@ -3003,6 +3013,16 @@ bool RunTier2InitialReturnOnlyBatchProbe()
         const DWORD dialogError = CommDlgExtendedError();
         const HRESULT dwmResult = DwmFlush();
         const UINT acmVersion = acmGetVersion();
+        const UINT auxDevices = auxGetNumDevs();
+        const UINT joystickDevices = joyGetNumDevs();
+        const UINT midiInDevices = midiInGetNumDevs();
+        const UINT midiOutDevices = midiOutGetNumDevs();
+        const UINT mixerDevices = mixerGetNumDevs();
+        const DWORD currentTask = mmGetCurrentTask();
+        mmTaskYield();
+        const DWORD multimediaTime = timeGetTime();
+        const UINT waveInDevices = waveInGetNumDevs();
+        const UINT waveOutDevices = waveOutGetNumDevs();
         const ULONG oleAutomationBuild = OaBuildVersion();
         const HRESULT dxgiAdapterRemoval = DXGIDeclareAdapterRemovalSupport();
         const HRESULT dxgiVBlank = DXGIDisableVBlankVirtualization();
@@ -3041,6 +3061,15 @@ bool RunTier2InitialReturnOnlyBatchProbe()
         std::cout << "tier2 initial return-only batch dialog_error=" << dialogError
                   << " dwm=" << HexHResult(dwmResult)
                   << " acm_version=" << acmVersion
+                  << " aux_devs=" << auxDevices
+                  << " joy_devs=" << joystickDevices
+                  << " midi_in_devs=" << midiInDevices
+                  << " midi_out_devs=" << midiOutDevices
+                  << " mixer_devs=" << mixerDevices
+                  << " mm_task=" << currentTask
+                  << " time_ms=" << multimediaTime
+                  << " wave_in_devs=" << waveInDevices
+                  << " wave_out_devs=" << waveOutDevices
                   << " oleaut32_build=" << oleAutomationBuild
                   << " dxgi_adapter=" << HexHResult(dxgiAdapterRemoval)
                   << " dxgi_vblank=" << HexHResult(dxgiVBlank)
