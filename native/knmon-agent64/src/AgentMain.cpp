@@ -200,6 +200,15 @@ using ImmCreateContextFn = HIMC(WINAPI*)();
 using UiaClientsAreListeningFn = BOOL(WINAPI*)();
 using WscQueryAntiMalwareUriFn = HRESULT(WINAPI*)();
 using RatingEnabledQueryFn = HRESULT(WINAPI*)();
+using CanSendToFaxRecipientFn = BOOL(WINAPI*)();
+using DhcpDsCleanupFn = void(__cdecl*)();
+using DhcpDsInitFn = DWORD(__cdecl*)();
+using ImmDisableLegacyIMEFn = BOOL(WINAPI*)();
+using RatingInitFn = HRESULT(WINAPI*)();
+using UiaDisconnectAllProvidersFn = HRESULT(WINAPI*)();
+using WscRegisterForUserNotificationsFn = HRESULT(WINAPI*)();
+using SnmpCleanupFn = INT(WINAPI*)();
+using SnmpCleanupExFn = INT(WINAPI*)();
 using GetModuleHandleWFn = HMODULE(WINAPI*)(LPCWSTR);
 using GetModuleHandleExWFn = BOOL(WINAPI*)(DWORD, LPCWSTR, HMODULE*);
 using GetModuleFileNameWFn = DWORD(WINAPI*)(HMODULE, LPWSTR, DWORD);
@@ -389,6 +398,15 @@ ImmCreateContextFn g_originalImmCreateContext = nullptr;
 UiaClientsAreListeningFn g_originalUiaClientsAreListening = nullptr;
 WscQueryAntiMalwareUriFn g_originalWscQueryAntiMalwareUri = nullptr;
 RatingEnabledQueryFn g_originalRatingEnabledQuery = nullptr;
+CanSendToFaxRecipientFn g_originalCanSendToFaxRecipient = nullptr;
+DhcpDsCleanupFn g_originalDhcpDsCleanup = nullptr;
+DhcpDsInitFn g_originalDhcpDsInit = nullptr;
+ImmDisableLegacyIMEFn g_originalImmDisableLegacyIME = nullptr;
+RatingInitFn g_originalRatingInit = nullptr;
+UiaDisconnectAllProvidersFn g_originalUiaDisconnectAllProviders = nullptr;
+WscRegisterForUserNotificationsFn g_originalWscRegisterForUserNotifications = nullptr;
+SnmpCleanupFn g_originalSnmpCleanup = nullptr;
+SnmpCleanupExFn g_originalSnmpCleanupEx = nullptr;
 GetModuleHandleWFn g_originalGetModuleHandleW = nullptr;
 GetModuleHandleExWFn g_originalGetModuleHandleExW = nullptr;
 GetModuleFileNameWFn g_originalGetModuleFileNameW = nullptr;
@@ -594,7 +612,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 166;
+constexpr std::size_t HookDefinitionCount = 175;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -7126,6 +7144,15 @@ HIMC WINAPI HookedImmCreateContext();
 BOOL WINAPI HookedUiaClientsAreListening();
 HRESULT WINAPI HookedWscQueryAntiMalwareUri();
 HRESULT WINAPI HookedRatingEnabledQuery();
+BOOL WINAPI HookedCanSendToFaxRecipient();
+void __cdecl HookedDhcpDsCleanup();
+DWORD __cdecl HookedDhcpDsInit();
+BOOL WINAPI HookedImmDisableLegacyIME();
+HRESULT WINAPI HookedRatingInit();
+HRESULT WINAPI HookedUiaDisconnectAllProviders();
+HRESULT WINAPI HookedWscRegisterForUserNotifications();
+INT WINAPI HookedSnmpCleanup();
+INT WINAPI HookedSnmpCleanupEx();
 HANDLE WINAPI HookedCreateThread(LPSECURITY_ATTRIBUTES threadAttributes, SIZE_T stackSize, LPTHREAD_START_ROUTINE startAddress, LPVOID parameter, DWORD creationFlags, LPDWORD threadId);
 HANDLE WINAPI HookedOpenThread(DWORD desiredAccess, BOOL inheritHandle, DWORD threadId);
 DWORD WINAPI HookedWaitForSingleObject(HANDLE handle, DWORD milliseconds);
@@ -7296,6 +7323,15 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "uiautomationcore.dll", "UiaClientsAreListening", reinterpret_cast<void*>(HookedUiaClientsAreListening), reinterpret_cast<void**>(&g_originalUiaClientsAreListening), false, true, false, 62, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "wscapi.dll", "WscQueryAntiMalwareUri", reinterpret_cast<void*>(HookedWscQueryAntiMalwareUri), reinterpret_cast<void**>(&g_originalWscQueryAntiMalwareUri), false, true, false, 13, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "msrating.dll", "RatingEnabledQuery", reinterpret_cast<void*>(HookedRatingEnabledQuery), reinterpret_cast<void**>(&g_originalRatingEnabledQuery), false, true, false, 24, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "fxsutility.dll", "CanSendToFaxRecipient", reinterpret_cast<void*>(HookedCanSendToFaxRecipient), reinterpret_cast<void**>(&g_originalCanSendToFaxRecipient), false, true, false, 1, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "dhcpsapi.dll", "DhcpDsCleanup", reinterpret_cast<void*>(HookedDhcpDsCleanup), reinterpret_cast<void**>(&g_originalDhcpDsCleanup), false, true, false, 33, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "dhcpsapi.dll", "DhcpDsInit", reinterpret_cast<void*>(HookedDhcpDsInit), reinterpret_cast<void**>(&g_originalDhcpDsInit), false, true, false, 35, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "imm32.dll", "ImmDisableLegacyIME", reinterpret_cast<void*>(HookedImmDisableLegacyIME), reinterpret_cast<void**>(&g_originalImmDisableLegacyIME), false, true, false, 55, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "msrating.dll", "RatingInit", reinterpret_cast<void*>(HookedRatingInit), reinterpret_cast<void**>(&g_originalRatingInit), false, true, false, 26, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "uiautomationcore.dll", "UiaDisconnectAllProviders", reinterpret_cast<void*>(HookedUiaDisconnectAllProviders), reinterpret_cast<void**>(&g_originalUiaDisconnectAllProviders), false, true, false, 63, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "wscapi.dll", "WscRegisterForUserNotifications", reinterpret_cast<void*>(HookedWscRegisterForUserNotifications), reinterpret_cast<void**>(&g_originalWscRegisterForUserNotifications), false, true, false, 15, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "wsnmp32.dll", "SnmpCleanup", reinterpret_cast<void*>(HookedSnmpCleanup), reinterpret_cast<void**>(&g_originalSnmpCleanup), false, true, false, 201, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "wsnmp32.dll", "SnmpCleanupEx", reinterpret_cast<void*>(HookedSnmpCleanupEx), reinterpret_cast<void**>(&g_originalSnmpCleanupEx), false, true, false, 292, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "kernel32.dll", "GetModuleHandleW", reinterpret_cast<void*>(HookedGetModuleHandleW), reinterpret_cast<void**>(&g_originalGetModuleHandleW), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleHandleExW", reinterpret_cast<void*>(HookedGetModuleHandleExW), reinterpret_cast<void**>(&g_originalGetModuleHandleExW), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleFileNameW", reinterpret_cast<void*>(HookedGetModuleFileNameW), reinterpret_cast<void**>(&g_originalGetModuleFileNameW), false, true, false, 0, 0 },
@@ -9445,6 +9481,49 @@ void InvokeTier2ReturnOnlyVoidHook(void(WINAPI* original)(), const Tier2ReturnOn
     SetLastError(lastError);
 }
 
+void InvokeTier2ReturnOnlyCdeclVoidHook(void(__cdecl* original)(), const Tier2ReturnOnlyMetadata& metadata)
+{
+    if (g_inHook || !HooksEnabled() || original == nullptr)
+    {
+        if (original != nullptr)
+        {
+            original();
+        }
+
+        return;
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    original();
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitGenericReturnOnlyEvent(
+            metadata.ModuleName,
+            metadata.ApiName,
+            "tier2",
+            "tier2-initial-return-only",
+            metadata.Family,
+            metadata.Category,
+            metadata.Risk,
+            "generic_return_only",
+            "",
+            metadata.InventoryKey,
+            0,
+            GenericReturnFormat::Void,
+            0,
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
+}
+
 template <typename ReturnT>
 ReturnT InvokeTier2ReturnOnlyCdeclHook(ReturnT(__cdecl* original)(), ReturnT missingValue, const Tier2ReturnOnlyMetadata& metadata)
 {
@@ -9911,6 +9990,141 @@ HRESULT WINAPI HookedRatingEnabledQuery()
     };
 
     return InvokeTier2ReturnOnlyHResultHook(g_originalRatingEnabledQuery, Metadata);
+}
+
+BOOL WINAPI HookedCanSendToFaxRecipient()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "fxsutility.dll",
+        "CanSendToFaxRecipient",
+        "devices",
+        "devices/fax",
+        "medium",
+        "fxsutility.dll!CanSendToFaxRecipient",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalCanSendToFaxRecipient, FALSE, Metadata);
+}
+
+void __cdecl HookedDhcpDsCleanup()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "dhcpsapi.dll",
+        "DhcpDsCleanup",
+        "network-management",
+        "network-management/dhcp",
+        "medium",
+        "dhcpsapi.dll!DhcpDsCleanup",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyCdeclVoidHook(g_originalDhcpDsCleanup, Metadata);
+}
+
+DWORD __cdecl HookedDhcpDsInit()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "dhcpsapi.dll",
+        "DhcpDsInit",
+        "network-management",
+        "network-management/dhcp",
+        "medium",
+        "dhcpsapi.dll!DhcpDsInit",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyCdeclHook(g_originalDhcpDsInit, static_cast<DWORD>(ERROR_PROC_NOT_FOUND), Metadata);
+}
+
+BOOL WINAPI HookedImmDisableLegacyIME()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "imm32.dll",
+        "ImmDisableLegacyIME",
+        "ui",
+        "ui/input/ime",
+        "medium",
+        "imm32.dll!ImmDisableLegacyIME",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalImmDisableLegacyIME, FALSE, Metadata);
+}
+
+HRESULT WINAPI HookedRatingInit()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "msrating.dll",
+        "RatingInit",
+        "web",
+        "web/internet-explorer",
+        "medium",
+        "msrating.dll!RatingInit",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHResultHook(g_originalRatingInit, Metadata);
+}
+
+HRESULT WINAPI HookedUiaDisconnectAllProviders()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "uiautomationcore.dll",
+        "UiaDisconnectAllProviders",
+        "ui",
+        "ui/accessibility",
+        "medium",
+        "uiautomationcore.dll!UiaDisconnectAllProviders",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHResultHook(g_originalUiaDisconnectAllProviders, Metadata);
+}
+
+HRESULT WINAPI HookedWscRegisterForUserNotifications()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "wscapi.dll",
+        "WscRegisterForUserNotifications",
+        "system",
+        "system/security-center",
+        "medium",
+        "wscapi.dll!WscRegisterForUserNotifications",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHResultHook(g_originalWscRegisterForUserNotifications, Metadata);
+}
+
+INT WINAPI HookedSnmpCleanup()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "wsnmp32.dll",
+        "SnmpCleanup",
+        "network-management",
+        "network-management/snmp",
+        "medium",
+        "wsnmp32.dll!SnmpCleanup",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalSnmpCleanup, static_cast<INT>(0), Metadata);
+}
+
+INT WINAPI HookedSnmpCleanupEx()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "wsnmp32.dll",
+        "SnmpCleanupEx",
+        "network-management",
+        "network-management/snmp",
+        "medium",
+        "wsnmp32.dll!SnmpCleanupEx",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalSnmpCleanupEx, static_cast<INT>(0), Metadata);
 }
 
 HMODULE WINAPI HookedGetModuleHandleW(LPCWSTR moduleName)

@@ -103,6 +103,15 @@ try
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "UiaClientsAreListening" -Module "uiautomationcore.dll" -InventoryKey "uiautomationcore.dll!UiaClientsAreListening" -Family "ui"
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "WscQueryAntiMalwareUri" -Module "wscapi.dll" -InventoryKey "wscapi.dll!WscQueryAntiMalwareUri" -Family "system"
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "RatingEnabledQuery" -Module "msrating.dll" -InventoryKey "msrating.dll!RatingEnabledQuery" -Family "web"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "CanSendToFaxRecipient" -Module "fxsutility.dll" -InventoryKey "fxsutility.dll!CanSendToFaxRecipient" -Family "devices"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "DhcpDsCleanup" -Module "dhcpsapi.dll" -InventoryKey "dhcpsapi.dll!DhcpDsCleanup" -Family "network-management"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "DhcpDsInit" -Module "dhcpsapi.dll" -InventoryKey "dhcpsapi.dll!DhcpDsInit" -Family "network-management"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "ImmDisableLegacyIME" -Module "imm32.dll" -InventoryKey "imm32.dll!ImmDisableLegacyIME" -Family "ui"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "RatingInit" -Module "msrating.dll" -InventoryKey "msrating.dll!RatingInit" -Family "web"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "UiaDisconnectAllProviders" -Module "uiautomationcore.dll" -InventoryKey "uiautomationcore.dll!UiaDisconnectAllProviders" -Family "ui"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "WscRegisterForUserNotifications" -Module "wscapi.dll" -InventoryKey "wscapi.dll!WscRegisterForUserNotifications" -Family "system"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "SnmpCleanup" -Module "wsnmp32.dll" -InventoryKey "wsnmp32.dll!SnmpCleanup" -Family "network-management"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "SnmpCleanupEx" -Module "wsnmp32.dll" -InventoryKey "wsnmp32.dll!SnmpCleanupEx" -Family "network-management"
 
     $getProcEvent = @($result.capturedEvents | Where-Object { $_.api -eq "GetProcAddress" } | Select-Object -First 1)
     $ldrProcEvent = @($result.capturedEvents | Where-Object { $_.api -eq "LdrGetProcedureAddress" } | Select-Object -First 1)

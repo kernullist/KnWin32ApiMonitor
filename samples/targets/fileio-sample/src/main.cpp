@@ -93,6 +93,14 @@ extern "C" __declspec(dllimport) WORD WINAPI CM_Get_Version();
 extern "C" __declspec(dllimport) BOOL WINAPI UiaClientsAreListening();
 extern "C" __declspec(dllimport) HRESULT WINAPI WscQueryAntiMalwareUri();
 extern "C" __declspec(dllimport) HRESULT WINAPI RatingEnabledQuery();
+extern "C" __declspec(dllimport) BOOL WINAPI CanSendToFaxRecipient();
+extern "C" __declspec(dllimport) DWORD DhcpDsInit();
+extern "C" __declspec(dllimport) void DhcpDsCleanup();
+extern "C" __declspec(dllimport) HRESULT WINAPI RatingInit();
+extern "C" __declspec(dllimport) HRESULT WINAPI UiaDisconnectAllProviders();
+extern "C" __declspec(dllimport) HRESULT WINAPI WscRegisterForUserNotifications();
+extern "C" __declspec(dllimport) INT WINAPI SnmpCleanup();
+extern "C" __declspec(dllimport) INT WINAPI SnmpCleanupEx();
 
 namespace
 {
@@ -3018,6 +3026,15 @@ bool RunTier2InitialReturnOnlyBatchProbe()
         const BOOL uiaListening = UiaClientsAreListening();
         const HRESULT antiMalwareUri = WscQueryAntiMalwareUri();
         const HRESULT ratingEnabled = RatingEnabledQuery();
+        const BOOL faxRecipient = CanSendToFaxRecipient();
+        const DWORD dhcpDsInit = DhcpDsInit();
+        DhcpDsCleanup();
+        const BOOL legacyImeDisabled = ImmDisableLegacyIME();
+        const HRESULT ratingInit = RatingInit();
+        const HRESULT uiaDisconnect = UiaDisconnectAllProviders();
+        const HRESULT wscNotifications = WscRegisterForUserNotifications();
+        const INT snmpCleanup = SnmpCleanup();
+        const INT snmpCleanupEx = SnmpCleanupEx();
         OaEnablePerUserTLibRegistration();
         palette = GdipCreateHalftonePalette();
 
@@ -3046,6 +3063,14 @@ bool RunTier2InitialReturnOnlyBatchProbe()
                   << " uia_listening=" << uiaListening
                   << " wsc_uri=" << HexHResult(antiMalwareUri)
                   << " rating=" << HexHResult(ratingEnabled)
+                  << " fax_recipient=" << faxRecipient
+                  << " dhcp_ds_init=" << dhcpDsInit
+                  << " legacy_ime_disabled=" << legacyImeDisabled
+                  << " rating_init=" << HexHResult(ratingInit)
+                  << " uia_disconnect=" << HexHResult(uiaDisconnect)
+                  << " wsc_notifications=" << HexHResult(wscNotifications)
+                  << " wsnmp_cleanup=" << snmpCleanup
+                  << " wsnmp_cleanup_ex=" << snmpCleanupEx
                   << " palette=" << palette << "\n";
 
         if (dciProvider != nullptr)
