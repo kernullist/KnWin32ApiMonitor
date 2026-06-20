@@ -409,6 +409,8 @@ export interface CaptureResult {
   agentControlStatus?: number;
   agentAbiVersion?: number;
   droppedEvents: number;
+  resolverPointerCandidates?: number;
+  resolverPointerUnsupported?: number;
   transportMode: string;
   transportCapacity: number;
   transportRecordsProduced: number;
@@ -501,6 +503,8 @@ export interface SessionInfo {
   traceEventCount: number;
   agentEventCount: number;
   auditEventCount: number;
+  resolverPointerCandidates?: number;
+  resolverPointerUnsupported?: number;
   droppedEvents: number;
   transportDroppedEvents: number;
   hostDroppedBatches: number;

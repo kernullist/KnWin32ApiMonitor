@@ -1329,6 +1329,8 @@ std::string ToJson(const knmon::KnMonCaptureResult& result)
     stream << "\"staleAgentOperationId\":" << Q(result.StaleAgentOperationId) << ",";
     stream << "\"staleAgentState\":" << Q(result.StaleAgentState) << ",";
     stream << "\"droppedEvents\":" << result.DroppedEvents << ",";
+    stream << "\"resolverPointerCandidates\":" << result.ResolverPointerCandidates << ",";
+    stream << "\"resolverPointerUnsupported\":" << result.ResolverPointerUnsupported << ",";
     stream << "\"transportMode\":" << Q(result.TransportMode) << ",";
     stream << "\"transportCapacity\":" << result.TransportCapacity << ",";
     stream << "\"transportRecordsProduced\":" << result.TransportRecordsProduced << ",";
@@ -1500,6 +1502,8 @@ struct SessionInfo
     std::uint64_t TraceEventCount = 0;
     std::uint64_t AgentEventCount = 0;
     std::uint64_t AuditEventCount = 0;
+    std::uint64_t ResolverPointerCandidates = 0;
+    std::uint64_t ResolverPointerUnsupported = 0;
     std::uint64_t DroppedEvents = 0;
     std::uint64_t TransportDroppedEvents = 0;
     std::uint64_t HostDroppedBatches = 0;
@@ -1583,6 +1587,8 @@ std::string ToJson(const SessionInfo& session)
     stream << "\"traceEventCount\":" << session.TraceEventCount << ",";
     stream << "\"agentEventCount\":" << session.AgentEventCount << ",";
     stream << "\"auditEventCount\":" << session.AuditEventCount << ",";
+    stream << "\"resolverPointerCandidates\":" << session.ResolverPointerCandidates << ",";
+    stream << "\"resolverPointerUnsupported\":" << session.ResolverPointerUnsupported << ",";
     stream << "\"droppedEvents\":" << session.DroppedEvents << ",";
     stream << "\"transportDroppedEvents\":" << session.TransportDroppedEvents << ",";
     stream << "\"hostDroppedBatches\":" << session.HostDroppedBatches << ",";
@@ -1759,7 +1765,9 @@ std::string BuildManifestJson(
     stream << "\"audit\":" << session.AuditEventCount << ",";
     stream << "\"agentEvents\":" << session.AgentEventCount << ",";
     stream << "\"traceEvents\":" << session.TraceEventCount << ",";
-    stream << "\"capturedEvents\":" << result.CapturedEvents.size();
+    stream << "\"capturedEvents\":" << result.CapturedEvents.size() << ",";
+    stream << "\"resolverPointerCandidates\":" << result.ResolverPointerCandidates << ",";
+    stream << "\"resolverPointerUnsupported\":" << result.ResolverPointerUnsupported;
     stream << "},";
     stream << "\"droppedEvents\":" << result.DroppedEvents << ",";
     stream << "\"files\":{";
@@ -1817,6 +1825,8 @@ SessionInfo WriteSession(const knmon::KnMonCaptureResult& result, const std::fil
         session.AuditEventCount = auditLines.size();
         session.AgentEventCount = agentLines.size();
         session.TraceEventCount = traceLines.size();
+        session.ResolverPointerCandidates = result.ResolverPointerCandidates;
+        session.ResolverPointerUnsupported = result.ResolverPointerUnsupported;
 
         const std::string manifest = BuildManifestJson(result, session, auditFile, agentEventsFile, traceEventsFile);
         std::string writeError;
@@ -2362,6 +2372,8 @@ struct KnapmSessionWriter
     std::uint64_t AgentEventCount = 0;
     std::uint64_t AuditEventCount = 0;
     std::uint64_t CapturedEventCount = 0;
+    std::uint64_t ResolverPointerCandidates = 0;
+    std::uint64_t ResolverPointerUnsupported = 0;
     std::uint64_t LastBatchSequence = 0;
     std::uint64_t LastRecordSequence = 0;
     std::uint64_t NextEventId = 1;
@@ -2646,6 +2658,8 @@ struct KnapmSessionWriter
         DroppedEvents = result.DroppedEvents;
         TransportDroppedEvents = result.TransportDroppedEvents;
         HostDroppedBatches = session.HostDroppedBatches;
+        ResolverPointerCandidates = result.ResolverPointerCandidates;
+        ResolverPointerUnsupported = result.ResolverPointerUnsupported;
         if (Chunks.empty())
         {
             LastRecordSequence = result.LastTransportSequence;
@@ -2776,7 +2790,9 @@ struct KnapmSessionWriter
         stream << "\"audit\":" << AuditEventCount << ",";
         stream << "\"agentEvents\":" << AgentEventCount << ",";
         stream << "\"traceEvents\":" << TraceEventCount << ",";
-        stream << "\"capturedEvents\":" << CapturedEventCount;
+        stream << "\"capturedEvents\":" << CapturedEventCount << ",";
+        stream << "\"resolverPointerCandidates\":" << ResolverPointerCandidates << ",";
+        stream << "\"resolverPointerUnsupported\":" << ResolverPointerUnsupported;
         stream << "},";
         stream << "\"droppedEvents\":" << DroppedEvents << ",";
         stream << "\"transportDroppedEvents\":" << TransportDroppedEvents << ",";
@@ -3305,6 +3321,8 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
         session.AuditEventCount = ExtractJsonUInt64(eventCounts, "audit");
         session.AgentEventCount = ExtractJsonUInt64(eventCounts, "agentEvents");
         session.TraceEventCount = ExtractJsonUInt64(eventCounts, "traceEvents");
+        session.ResolverPointerCandidates = ExtractJsonUInt64(eventCounts, "resolverPointerCandidates");
+        session.ResolverPointerUnsupported = ExtractJsonUInt64(eventCounts, "resolverPointerUnsupported");
         const std::uint64_t capturedEventCount = ExtractJsonUInt64(eventCounts, "capturedEvents");
         const std::uint64_t sessionRecordsStreamed = ExtractJsonUInt64(sessionObject, "recordsStreamed");
         const std::uint64_t sessionLastTransport = ExtractJsonUInt64(sessionObject, "lastTransportSequence");
@@ -3329,9 +3347,47 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
         else
         {
             const auto agentLines = SplitJsonl(agentText);
+            std::uint64_t resolverPointerCandidates = 0;
+            std::uint64_t resolverPointerUnsupported = 0;
             if (agentLines.size() != session.AgentEventCount)
             {
                 session.ValidationErrors.push_back("agent-events.jsonl count does not match manifest eventCounts.agentEvents.");
+            }
+
+            for (const auto& line : agentLines)
+            {
+                if (PayloadContains(line, "\"messageType\":\"resolver_pointer_candidate\""))
+                {
+                    ++resolverPointerCandidates;
+                }
+                else if (PayloadContains(line, "\"messageType\":\"resolver_pointer_unsupported\""))
+                {
+                    ++resolverPointerUnsupported;
+                }
+            }
+
+            if (PayloadContains(eventCounts, "\"resolverPointerCandidates\""))
+            {
+                if (session.ResolverPointerCandidates != resolverPointerCandidates)
+                {
+                    session.ValidationErrors.push_back("agent-events.jsonl resolver_pointer_candidate count does not match manifest eventCounts.resolverPointerCandidates.");
+                }
+            }
+            else
+            {
+                session.ResolverPointerCandidates = resolverPointerCandidates;
+            }
+
+            if (PayloadContains(eventCounts, "\"resolverPointerUnsupported\""))
+            {
+                if (session.ResolverPointerUnsupported != resolverPointerUnsupported)
+                {
+                    session.ValidationErrors.push_back("agent-events.jsonl resolver_pointer_unsupported count does not match manifest eventCounts.resolverPointerUnsupported.");
+                }
+            }
+            else
+            {
+                session.ResolverPointerUnsupported = resolverPointerUnsupported;
             }
 
             if (session.Finalized)
@@ -3713,9 +3769,12 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
         const std::string manifestOperationId = ExtractJsonString(manifest, "operationId");
         const std::string targetManifest = ExtractJsonObject(manifest, "target");
         const std::string agentManifest = ExtractJsonObject(manifest, "agent");
+        const std::string eventCounts = ExtractJsonObject(manifest, "eventCounts");
         const std::string manifestTargetArchitecture = ExtractJsonString(targetManifest, "architecture");
         const std::string manifestAgentArchitecture = ExtractJsonString(agentManifest, "architecture");
         const std::string manifestAgentVersion = ExtractJsonString(agentManifest, "version");
+        session.ResolverPointerCandidates = ExtractJsonUInt64(eventCounts, "resolverPointerCandidates");
+        session.ResolverPointerUnsupported = ExtractJsonUInt64(eventCounts, "resolverPointerUnsupported");
 
         if (!PayloadContains(manifest, "\"schemaVersion\":\"0.1.0\""))
         {
@@ -3775,6 +3834,8 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
             const auto lines = SplitJsonl(agentText);
             session.AgentEventCount = lines.size();
             std::uint64_t helloCount = 0;
+            std::uint64_t resolverPointerCandidates = 0;
+            std::uint64_t resolverPointerUnsupported = 0;
             bool hasDropped = false;
             bool hasShutdown = false;
             for (const auto& line : lines)
@@ -3819,6 +3880,15 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
                 }
 
                 hasDropped = hasDropped || PayloadContains(line, "\"messageType\":\"dropped_events\"");
+                if (PayloadContains(line, "\"messageType\":\"resolver_pointer_candidate\""))
+                {
+                    ++resolverPointerCandidates;
+                }
+                else if (PayloadContains(line, "\"messageType\":\"resolver_pointer_unsupported\""))
+                {
+                    ++resolverPointerUnsupported;
+                }
+
                 if (PayloadContains(line, "\"messageType\":\"agent_shutdown\""))
                 {
                     hasShutdown = true;
@@ -3860,6 +3930,30 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
             if (!hasShutdown)
             {
                 session.ValidationErrors.push_back("agent-events.jsonl does not contain agent_shutdown.");
+            }
+
+            if (PayloadContains(eventCounts, "\"resolverPointerCandidates\""))
+            {
+                if (session.ResolverPointerCandidates != resolverPointerCandidates)
+                {
+                    session.ValidationErrors.push_back("agent-events.jsonl resolver_pointer_candidate count does not match manifest eventCounts.resolverPointerCandidates.");
+                }
+            }
+            else
+            {
+                session.ResolverPointerCandidates = resolverPointerCandidates;
+            }
+
+            if (PayloadContains(eventCounts, "\"resolverPointerUnsupported\""))
+            {
+                if (session.ResolverPointerUnsupported != resolverPointerUnsupported)
+                {
+                    session.ValidationErrors.push_back("agent-events.jsonl resolver_pointer_unsupported count does not match manifest eventCounts.resolverPointerUnsupported.");
+                }
+            }
+            else
+            {
+                session.ResolverPointerUnsupported = resolverPointerUnsupported;
             }
         }
 

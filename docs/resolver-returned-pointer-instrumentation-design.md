@@ -353,7 +353,9 @@ Done means:
    trampoline installation is added.
 5. `knmon-dynamic-probe.dll` smoke proves resolver visibility plus candidate
    ledger evidence.
-6. Existing `npm run defs:validate`, native smoke, and `npm run verify` gates
+6. Capture results and session manifests expose candidate/unsupported ledger
+   counters without making them pointer-call coverage.
+7. Existing `npm run defs:validate`, native smoke, and `npm run verify` gates
    remain green.
-7. README and roadmap continue to state that resolver observation is not
+8. README and roadmap continue to state that resolver observation is not
    pointer-call instrumentation.

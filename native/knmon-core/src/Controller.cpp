@@ -5508,6 +5508,15 @@ std::string ResolverPointerAuditMessage(const KnMonAgentMessage& message)
 
 void AddResolverPointerAudit(KnMonCaptureResult& result, const KnMonAgentMessage& message)
 {
+    if (message.MessageType == "resolver_pointer_candidate")
+    {
+        ++result.ResolverPointerCandidates;
+    }
+    else if (message.MessageType == "resolver_pointer_unsupported")
+    {
+        ++result.ResolverPointerUnsupported;
+    }
+
     AddAudit(
         result,
         message.MessageType,

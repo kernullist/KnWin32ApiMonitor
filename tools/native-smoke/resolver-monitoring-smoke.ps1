@@ -115,6 +115,24 @@ if ($ledgerMessages.Count -lt 2)
     throw "Resolver pointer ledger evidence missing."
 }
 
+$candidateLedgerCount = @($ledgerMessages | Where-Object { $_.messageType -eq "resolver_pointer_candidate" }).Count
+$unsupportedLedgerCount = @($ledgerMessages | Where-Object { $_.messageType -eq "resolver_pointer_unsupported" }).Count
+
+if ([uint64]$result.resolverPointerCandidates -ne [uint64]$candidateLedgerCount)
+{
+    throw "Resolver pointer candidate counter mismatch: result=$($result.resolverPointerCandidates) ledger=$candidateLedgerCount"
+}
+
+if ([uint64]$result.resolverPointerUnsupported -ne [uint64]$unsupportedLedgerCount)
+{
+    throw "Resolver pointer unsupported counter mismatch: result=$($result.resolverPointerUnsupported) ledger=$unsupportedLedgerCount"
+}
+
+if ($candidateLedgerCount -lt 1 -or $unsupportedLedgerCount -lt 1)
+{
+    throw "Resolver pointer counters did not include both candidate and unsupported evidence: candidates=$candidateLedgerCount unsupported=$unsupportedLedgerCount"
+}
+
 $candidate = @($ledgerMessages | Where-Object {
     $_.messageType -eq "resolver_pointer_candidate" -and
     $_.definitionName -eq "GetCurrentProcessId" -and
@@ -201,4 +219,4 @@ if ($shutdown[0].restoredHooks -ne $shutdown[0].installedHooks -or $shutdown[0].
     throw "Unexpected resolver hook lifecycle counts: installed=$($shutdown[0].installedHooks) restored=$($shutdown[0].restoredHooks) failed=$($shutdown[0].failedHooks)"
 }
 
-Write-Host "Resolver monitoring smoke passed: apis=$($resolverApis -join ',') hooks=$($shutdown[0].installedHooks) events=$($result.capturedEvents.Count) ledger=$($ledgerMessages.Count)"
+Write-Host "Resolver monitoring smoke passed: apis=$($resolverApis -join ',') hooks=$($shutdown[0].installedHooks) events=$($result.capturedEvents.Count) resolver=$candidateLedgerCount/$unsupportedLedgerCount ledger=$($ledgerMessages.Count)"

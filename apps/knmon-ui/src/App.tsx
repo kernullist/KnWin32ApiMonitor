@@ -281,6 +281,14 @@ function hookRestoreSummary(result: CaptureResult | null): string {
   return `agent_shutdown reason=${reason}; restored=${restoredHooks}/${installedHooks}; failed=${failedHooks}`;
 }
 
+function resolverPointerCountSummary(result: CaptureResult | null): string {
+  if (!result) {
+    return "resolver=0/0";
+  }
+
+  return `resolver=${result.resolverPointerCandidates ?? 0}/${result.resolverPointerUnsupported ?? 0}`;
+}
+
 function targetEligibilityReason(target: TargetProcess | null): string | null {
   if (!target) {
     return "Select a target row.";
@@ -1721,7 +1729,7 @@ function App() {
                       <div>{attachResult.captureMode}; {attachResult.injectionMethod}; {attachResult.detachPolicy || "self-disable-no-unload"}</div>
                       <div>state={attachResult.attachState || "not_loaded"}; strategy={attachResult.attachStrategy || "load_library_initialize"}; loaded={attachResult.loadedAgentDetected ? "yes" : "no"}</div>
                       <div>op={attachResult.operationState || (attachResult.success ? "completed" : "failed")}; cancel={attachResult.cancelObserved ? attachResult.cancelStage || "observed" : "no"}; cleanup={attachResult.agentCleanupAttempted ? (attachResult.agentCleanupSucceeded ? "ok" : "failed") : "n/a"}</div>
-                      <div>events={attachResult.capturedEvents.length}; dropped={attachResult.droppedEvents}; transport={attachResult.transportRecordsConsumed}/{attachResult.transportRecordsProduced}</div>
+                      <div>events={attachResult.capturedEvents.length}; {resolverPointerCountSummary(attachResult)}; dropped={attachResult.droppedEvents}; transport={attachResult.transportRecordsConsumed}/{attachResult.transportRecordsProduced}</div>
                       <div>{hookRestoreSummary(attachResult)}</div>
                       <div>{attachResult.operation}; subsystem={attachResult.subsystem}; win32={attachResult.win32ErrorCode}; {attachResult.message}</div>
                     </div>
@@ -1871,7 +1879,7 @@ function App() {
                 ) : null}
                 {captureResult ? (
                   <div className={captureResult.success ? "launch-result success" : "launch-result failure"}>
-                    PID {captureResult.targetProcessId} / {captureResult.captureMode} / events={captureResult.capturedEvents.length} / {captureResult.message}
+                    PID {captureResult.targetProcessId} / {captureResult.captureMode} / events={captureResult.capturedEvents.length} / {resolverPointerCountSummary(captureResult)} / {captureResult.message}
                   </div>
                 ) : null}
                 {lastSession ? (

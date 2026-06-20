@@ -391,6 +391,8 @@ struct KnMonCaptureResult
     std::string StaleAgentOperationId;
     std::string StaleAgentState;
     std::uint64_t DroppedEvents = 0;
+    std::uint64_t ResolverPointerCandidates = 0;
+    std::uint64_t ResolverPointerUnsupported = 0;
     std::string TransportMode = "named-pipe-json";
     std::uint64_t TransportCapacity = 0;
     std::uint64_t TransportRecordsProduced = 0;

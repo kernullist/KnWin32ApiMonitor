@@ -1,7 +1,7 @@
 # Roadmap
 
 작성일: 2026-06-08
-갱신일: 2026-06-19
+갱신일: 2026-06-20
 
 ## Product-Critical Priorities
 
@@ -408,6 +408,7 @@ Current verified behavior:
    - known generated APIs such as `kernel32.dll!GetCurrentProcessId` are reported as `resolver_pointer_candidate` with module/RVA/definition evidence and `instrumented=false`
    - repository-only exports such as `KnMonDynamicProbe` are reported as `resolver_pointer_unsupported` with `unsupported_definition_missing`
    - controller audit events and UI output summaries surface the candidate or unsupported reason before high-volume hook status noise
+   - capture results plus legacy and `.knapm` session manifests expose `resolverPointerCandidates` and `resolverPointerUnsupported` counters
    - no `resolver_pointer_call` event is emitted by the candidate-ledger slice
 12. Unloaded owner-module restoration races are handled without stale writes and healthy shutdown reports `restoredHooks=installedHooks`.
 13. The first Wave 2 live slice captures selected `ws2_32.dll` Winsock bootstrap, connect metadata, and address-resolution APIs through the same shared-memory transport:
