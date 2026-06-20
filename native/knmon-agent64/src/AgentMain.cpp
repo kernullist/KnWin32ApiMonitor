@@ -242,6 +242,7 @@ using DnsFreeFn = void(WINAPI*)(PVOID, DNS_FREE_TYPE);
 using SetupDiDestroyDeviceInfoListFn = BOOL(WINAPI*)(HDEVINFO);
 using DestroyEnvironmentBlockFn = BOOL(WINAPI*)(LPVOID);
 using GetIfEntry2Fn = NETIO_STATUS(WINAPI*)(PMIB_IF_ROW2);
+using PathFileExistsWFn = BOOL(WINAPI*)(LPCWSTR);
 using SymInitializeWFn = BOOL(WINAPI*)(HANDLE, PCWSTR, BOOL);
 using SymCleanupFn = BOOL(WINAPI*)(HANDLE);
 using RpcStringBindingComposeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR, RPC_WSTR*);
@@ -396,6 +397,7 @@ DnsFreeFn g_originalDnsFree = nullptr;
 SetupDiDestroyDeviceInfoListFn g_originalSetupDiDestroyDeviceInfoList = nullptr;
 DestroyEnvironmentBlockFn g_originalDestroyEnvironmentBlock = nullptr;
 GetIfEntry2Fn g_originalGetIfEntry2 = nullptr;
+PathFileExistsWFn g_originalPathFileExistsW = nullptr;
 SymInitializeWFn g_originalSymInitializeW = nullptr;
 SymCleanupFn g_originalSymCleanup = nullptr;
 RpcStringBindingComposeWFn g_originalRpcStringBindingComposeW = nullptr;
@@ -518,7 +520,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 131;
+constexpr std::size_t HookDefinitionCount = 132;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1939,6 +1941,10 @@ std::uint16_t ModuleId(const char* moduleName)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Oleaut32);
     }
+    else if (_stricmp(moduleName, "secur32.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Secur32);
+    }
     else if (_stricmp(moduleName, "userenv.dll") == 0)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Userenv);
@@ -1954,6 +1960,14 @@ std::uint16_t ModuleId(const char* moduleName)
     else if (_stricmp(moduleName, "setupapi.dll") == 0)
     {
         result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Setupapi);
+    }
+    else if (_stricmp(moduleName, "shlwapi.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Shlwapi);
+    }
+    else if (_stricmp(moduleName, "wintrust.dll") == 0)
+    {
+        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Wintrust);
     }
     else if (_stricmp(moduleName, "dbghelp.dll") == 0)
     {
@@ -5902,6 +5916,25 @@ void EmitGetIfEntry2Event(
     }
 }
 
+void EmitPathFileExistsWEvent(
+    BOOL result,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    LPCWSTR path)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::PathFileExistsW, "shlwapi.dll", start, end, errorCode);
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(path));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void EmitSymInitializeWEvent(
     BOOL result,
     DWORD errorCode,
@@ -6923,6 +6956,7 @@ void WINAPI HookedDnsFree(PVOID data, DNS_FREE_TYPE freeType);
 BOOL WINAPI HookedSetupDiDestroyDeviceInfoList(HDEVINFO deviceInfoSet);
 BOOL WINAPI HookedDestroyEnvironmentBlock(LPVOID environment);
 NETIO_STATUS WINAPI HookedGetIfEntry2(PMIB_IF_ROW2 row);
+BOOL WINAPI HookedPathFileExistsW(LPCWSTR path);
 BOOL WINAPI HookedSymInitializeW(HANDLE process, PCWSTR userSearchPath, BOOL invadeProcess);
 BOOL WINAPI HookedSymCleanup(HANDLE process);
 RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR protSeq, RPC_WSTR networkAddr, RPC_WSTR endpoint, RPC_WSTR options, RPC_WSTR* stringBinding);
@@ -7061,6 +7095,7 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "setupapi.dll", "SetupDiDestroyDeviceInfoList", reinterpret_cast<void*>(HookedSetupDiDestroyDeviceInfoList), reinterpret_cast<void**>(&g_originalSetupDiDestroyDeviceInfoList), false, true, false, 0, 0 },
         HookDefinition { "userenv.dll", "DestroyEnvironmentBlock", reinterpret_cast<void*>(HookedDestroyEnvironmentBlock), reinterpret_cast<void**>(&g_originalDestroyEnvironmentBlock), false, true, false, 0, 0 },
         HookDefinition { "iphlpapi.dll", "GetIfEntry2", reinterpret_cast<void*>(HookedGetIfEntry2), reinterpret_cast<void**>(&g_originalGetIfEntry2), false, true, false, 0, 0 },
+        HookDefinition { "shlwapi.dll", "PathFileExistsW", reinterpret_cast<void*>(HookedPathFileExistsW), reinterpret_cast<void**>(&g_originalPathFileExistsW), false, true, false, 0, 0 },
         HookDefinition { "dbghelp.dll", "SymInitializeW", reinterpret_cast<void*>(HookedSymInitializeW), reinterpret_cast<void**>(&g_originalSymInitializeW), false, true, false, 0, 0 },
         HookDefinition { "dbghelp.dll", "SymCleanup", reinterpret_cast<void*>(HookedSymCleanup), reinterpret_cast<void**>(&g_originalSymCleanup), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcStringBindingComposeW", reinterpret_cast<void*>(HookedRpcStringBindingComposeW), reinterpret_cast<void**>(&g_originalRpcStringBindingComposeW), false, true, false, 0, 0 },
@@ -11433,6 +11468,37 @@ NETIO_STATUS WINAPI HookedGetIfEntry2(PMIB_IF_ROW2 row)
     }
 
     return status;
+}
+
+BOOL WINAPI HookedPathFileExistsW(LPCWSTR path)
+{
+    if (g_inHook || !HooksEnabled() || g_originalPathFileExistsW == nullptr)
+    {
+        if (g_originalPathFileExistsW == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalPathFileExistsW(path);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = g_originalPathFileExistsW(path);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == FALSE ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitPathFileExistsWEvent(result, eventError, start, end, path);
+    }
+
+    SetLastError(lastError);
+    return result;
 }
 
 BOOL WINAPI HookedSymInitializeW(HANDLE process, PCWSTR userSearchPath, BOOL invadeProcess)

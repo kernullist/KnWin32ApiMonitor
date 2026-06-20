@@ -106,6 +106,7 @@ $requiredApis = @(
     "SetupDiDestroyDeviceInfoList",
     "DestroyEnvironmentBlock",
     "GetIfEntry2",
+    "PathFileExistsW",
     "SymInitializeW",
     "SymCleanup",
     "RpcStringBindingComposeW",
@@ -424,6 +425,37 @@ $iphlpapiPayload = $iphlpapiEntry[0] | ConvertTo-Json -Depth 12
 if ($iphlpapiPayload -cmatch "GetAdaptersAddresses|GetIfTable2|FriendlyName|Description|PhysicalAddress|PermanentPhysicalAddress|Unicast|Anycast|Multicast|DnsSuffix|Gateway|TransmitLinkSpeed|ReceiveLinkSpeed|InOctets|OutOctets|NetworkGuid|AdapterName|InterfaceAlias|IfDescr|MAC|([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 GetIfEntry2 event appears to expose adapter inventory, interface payload, stack, injection, credential, or byte-preview evidence: $iphlpapiPayload"
+}
+
+$shlwapiPathExists = @($result.capturedEvents | Where-Object { $_.module -eq "shlwapi.dll" -and $_.api -eq "PathFileExistsW" } | Select-Object -First 1)
+if ($shlwapiPathExists.Count -ne 1 -or
+    $shlwapiPathExists[0].apiFamily -ne "shell-path" -or
+    $shlwapiPathExists[0].apiCategory -ne "path_exists_query" -or
+    $shlwapiPathExists[0].hookPolicy -ne "iat" -or
+    $shlwapiPathExists[0].coverageStatus -ne "smoke_verified" -or
+    $shlwapiPathExists[0].returnValue -ne "TRUE")
+{
+    throw "x86 PathFileExistsW metadata or return evidence mismatch: $($shlwapiPathExists | ConvertTo-Json -Depth 8)"
+}
+
+if (-not [string]::IsNullOrEmpty($shlwapiPathExists[0].bufferPreview))
+{
+    throw "x86 PathFileExistsW exposed bufferPreview: $($shlwapiPathExists[0] | ConvertTo-Json -Depth 8)"
+}
+
+$pathPointer = @($shlwapiPathExists[0].arguments | Where-Object { $_.name -eq "pszPath" } | Select-Object -First 1)
+if ($pathPointer.Count -ne 1 -or
+    $pathPointer[0].decodeAlias -ne "pointer" -or
+    $pathPointer[0].captureTiming -ne "pre")
+{
+    throw "x86 PathFileExistsW pszPath evidence mismatch: $($pathPointer | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $pathPointer[0].decodedValue -Name "x86 PathFileExistsW pszPath"
+
+$shlwapiPayload = $shlwapiPathExists[0] | ConvertTo-Json -Depth 12
+if ($shlwapiPayload -cmatch "C:\\Windows|Windows|System32|Users|AppData|ProgramData|Desktop|Documents|Downloads|PathCombine|PathCanonicalize|ShellExecute|PIDL|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 PathFileExistsW event appears to expose path text, shell payload, stack, injection, credential, or byte-preview evidence: $shlwapiPayload"
 }
 
 $dbghelpEvents = @($result.capturedEvents | Where-Object { $_.module -eq "dbghelp.dll" -and $_.api -in @("SymInitializeW", "SymCleanup") })

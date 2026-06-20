@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "module": "shlwapi",
-  "description": "Wave 4 definition-only metadata for shell lightweight path helper APIs.",
+  "description": "Wave 4 shell lightweight path helper metadata, with selected low-payload pointer-only path query hooks.",
   "apis": [
     {
       "module": "SHLWAPI.dll",
@@ -9,8 +9,8 @@
       "family": "shell-path",
       "category": "path_exists_query",
       "risk": "medium",
-      "hookPolicy": "definition_only",
-      "coverageStatus": "definition_only",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
       "architectures": ["x86", "x64"],
       "callingConvention": "stdcall",
       "returnType": "BOOL",
@@ -18,7 +18,7 @@
       "success": { "returnNotEqual": "FALSE" },
       "failure": { "returnEqual": "FALSE" },
       "parameters": [
-        { "name": "pszPath", "type": "LPCWSTR", "direction": "in", "decode": "utf16_string", "maxBytes": 1024 }
+        { "name": "pszPath", "type": "LPCWSTR", "direction": "in", "decode": "pointer", "nullable": true }
       ]
     },
     {

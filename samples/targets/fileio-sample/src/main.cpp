@@ -26,6 +26,7 @@
 #include <winternl.h>
 #include <winuser.h>
 #include <wingdi.h>
+#include <shlwapi.h>
 
 #include <array>
 #include <cstring>
@@ -1897,6 +1898,18 @@ bool RunFileMetadataProbe()
     return success;
 }
 
+bool RunShlwapiPathExistsProbe()
+{
+    if (!PathFileExistsW(L"C:\\Windows"))
+    {
+        LogLastError("PathFileExistsW");
+        return false;
+    }
+
+    std::cout << "shlwapi path exists query completed\n";
+    return true;
+}
+
 bool RunDbgHelpSymbolSessionProbe()
 {
     bool success = false;
@@ -2950,6 +2963,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunIphlpapiInterfaceEntryQueryProbe())
+        {
+            break;
+        }
+
+        if (!RunShlwapiPathExistsProbe())
         {
             break;
         }

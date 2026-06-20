@@ -4137,14 +4137,14 @@
     {
       "callingConvention": "stdcall",
       "category": "path_exists_query",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnEqual": "FALSE"
       },
       "family": "shell-path",
       "firstParameterIndex": 588,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 174,
       "module": "shlwapi.dll",
       "moduleId": 24,
@@ -15458,7 +15458,7 @@
       "absoluteIndex": 588,
       "apiId": 174,
       "captureTiming": "pre",
-      "decode": "utf16_string",
+      "decode": "pointer",
       "direction": "in",
       "enum": "",
       "flags": "",
@@ -15466,9 +15466,9 @@
       "lengthExpression": "",
       "lengthFrom": "",
       "lengthFromIndex": -1,
-      "maxBytes": 1024,
+      "maxBytes": 0,
       "name": "pszPath",
-      "nullable": false,
+      "nullable": true,
       "type": "LPCWSTR"
     },
     {
