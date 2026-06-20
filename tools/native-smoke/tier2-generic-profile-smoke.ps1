@@ -91,6 +91,18 @@ try
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "SnmpSvcGetUptime" -Module "snmpapi.dll" -InventoryKey "snmpapi.dll!SnmpSvcGetUptime" -Family "network-management"
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "WinHttpCheckPlatform" -Module "winhttp.dll" -InventoryKey "winhttp.dll!WinHttpCheckPlatform" -Family "networking"
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "LdapGetLastError" -Module "wldap32.dll" -InventoryKey "wldap32.dll!LdapGetLastError" -Family "networking"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "NeedRebootInit" -Module "advpack.dll" -InventoryKey "advpack.dll!NeedRebootInit" -Family "system"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "DCIOpenProvider" -Module "dciman32.dll" -InventoryKey "dciman32.dll!DCIOpenProvider" -Family "system"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "Dhcpv6CApiCleanup" -Module "dhcpcsvc6.dll" -InventoryKey "dhcpcsvc6.dll!Dhcpv6CApiCleanup" -Family "network-management"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "WSARevertImpersonation" -Module "fwpuclnt.dll" -InventoryKey "fwpuclnt.dll!WSARevertImpersonation" -Family "networking"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "RtlGetReturnAddressHijackTarget" -Module "ntdll.dll" -InventoryKey "ntdll.dll!RtlGetReturnAddressHijackTarget" -Family "system"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "PSRefreshPropertySchema" -Module "propsys.dll" -InventoryKey "propsys.dll!PSRefreshPropertySchema" -Family "ui"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "IEGetUserPrivateNamespaceName" -Module "urlmon.dll" -InventoryKey "urlmon.dll!IEGetUserPrivateNamespaceName" -Family "system"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "CM_Get_Version" -Module "cfgmgr32.dll" -InventoryKey "cfgmgr32.dll!CM_Get_Version" -Family "devices"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "ImmCreateContext" -Module "imm32.dll" -InventoryKey "imm32.dll!ImmCreateContext" -Family "ui"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "UiaClientsAreListening" -Module "uiautomationcore.dll" -InventoryKey "uiautomationcore.dll!UiaClientsAreListening" -Family "ui"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "WscQueryAntiMalwareUri" -Module "wscapi.dll" -InventoryKey "wscapi.dll!WscQueryAntiMalwareUri" -Family "system"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "RatingEnabledQuery" -Module "msrating.dll" -InventoryKey "msrating.dll!RatingEnabledQuery" -Family "web"
 
     $getProcEvent = @($result.capturedEvents | Where-Object { $_.api -eq "GetProcAddress" } | Select-Object -First 1)
     $ldrProcEvent = @($result.capturedEvents | Where-Object { $_.api -eq "LdrGetProcedureAddress" } | Select-Object -First 1)

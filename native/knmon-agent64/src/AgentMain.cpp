@@ -188,6 +188,18 @@ using ODBCGetTryWaitValueFn = DWORD(WINAPI*)();
 using SnmpSvcGetUptimeFn = DWORD(WINAPI*)();
 using WinHttpCheckPlatformFn = BOOL(WINAPI*)();
 using LdapGetLastErrorFn = ULONG(__cdecl*)();
+using NeedRebootInitFn = DWORD(WINAPI*)();
+using DCIOpenProviderFn = HDC(WINAPI*)();
+using Dhcpv6CApiCleanupFn = void(WINAPI*)();
+using WSARevertImpersonationFn = INT(WINAPI*)();
+using RtlGetReturnAddressHijackTargetFn = ULONG_PTR(NTAPI*)();
+using PSRefreshPropertySchemaFn = HRESULT(WINAPI*)();
+using IEGetUserPrivateNamespaceNameFn = PWSTR(WINAPI*)();
+using CMGetVersionFn = WORD(WINAPI*)();
+using ImmCreateContextFn = HIMC(WINAPI*)();
+using UiaClientsAreListeningFn = BOOL(WINAPI*)();
+using WscQueryAntiMalwareUriFn = HRESULT(WINAPI*)();
+using RatingEnabledQueryFn = HRESULT(WINAPI*)();
 using GetModuleHandleWFn = HMODULE(WINAPI*)(LPCWSTR);
 using GetModuleHandleExWFn = BOOL(WINAPI*)(DWORD, LPCWSTR, HMODULE*);
 using GetModuleFileNameWFn = DWORD(WINAPI*)(HMODULE, LPWSTR, DWORD);
@@ -365,6 +377,18 @@ ODBCGetTryWaitValueFn g_originalODBCGetTryWaitValue = nullptr;
 SnmpSvcGetUptimeFn g_originalSnmpSvcGetUptime = nullptr;
 WinHttpCheckPlatformFn g_originalWinHttpCheckPlatform = nullptr;
 LdapGetLastErrorFn g_originalLdapGetLastError = nullptr;
+NeedRebootInitFn g_originalNeedRebootInit = nullptr;
+DCIOpenProviderFn g_originalDCIOpenProvider = nullptr;
+Dhcpv6CApiCleanupFn g_originalDhcpv6CApiCleanup = nullptr;
+WSARevertImpersonationFn g_originalWSARevertImpersonation = nullptr;
+RtlGetReturnAddressHijackTargetFn g_originalRtlGetReturnAddressHijackTarget = nullptr;
+PSRefreshPropertySchemaFn g_originalPSRefreshPropertySchema = nullptr;
+IEGetUserPrivateNamespaceNameFn g_originalIEGetUserPrivateNamespaceName = nullptr;
+CMGetVersionFn g_originalCMGetVersion = nullptr;
+ImmCreateContextFn g_originalImmCreateContext = nullptr;
+UiaClientsAreListeningFn g_originalUiaClientsAreListening = nullptr;
+WscQueryAntiMalwareUriFn g_originalWscQueryAntiMalwareUri = nullptr;
+RatingEnabledQueryFn g_originalRatingEnabledQuery = nullptr;
 GetModuleHandleWFn g_originalGetModuleHandleW = nullptr;
 GetModuleHandleExWFn g_originalGetModuleHandleExW = nullptr;
 GetModuleFileNameWFn g_originalGetModuleFileNameW = nullptr;
@@ -570,7 +594,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 154;
+constexpr std::size_t HookDefinitionCount = 166;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -7090,6 +7114,18 @@ DWORD WINAPI HookedODBCGetTryWaitValue();
 DWORD WINAPI HookedSnmpSvcGetUptime();
 BOOL WINAPI HookedWinHttpCheckPlatform();
 ULONG __cdecl HookedLdapGetLastError();
+DWORD WINAPI HookedNeedRebootInit();
+HDC WINAPI HookedDCIOpenProvider();
+void WINAPI HookedDhcpv6CApiCleanup();
+INT WINAPI HookedWSARevertImpersonation();
+ULONG_PTR NTAPI HookedRtlGetReturnAddressHijackTarget();
+HRESULT WINAPI HookedPSRefreshPropertySchema();
+PWSTR WINAPI HookedIEGetUserPrivateNamespaceName();
+WORD WINAPI HookedCMGetVersion();
+HIMC WINAPI HookedImmCreateContext();
+BOOL WINAPI HookedUiaClientsAreListening();
+HRESULT WINAPI HookedWscQueryAntiMalwareUri();
+HRESULT WINAPI HookedRatingEnabledQuery();
 HANDLE WINAPI HookedCreateThread(LPSECURITY_ATTRIBUTES threadAttributes, SIZE_T stackSize, LPTHREAD_START_ROUTINE startAddress, LPVOID parameter, DWORD creationFlags, LPDWORD threadId);
 HANDLE WINAPI HookedOpenThread(DWORD desiredAccess, BOOL inheritHandle, DWORD threadId);
 DWORD WINAPI HookedWaitForSingleObject(HANDLE handle, DWORD milliseconds);
@@ -7248,6 +7284,18 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "snmpapi.dll", "SnmpSvcGetUptime", reinterpret_cast<void*>(HookedSnmpSvcGetUptime), reinterpret_cast<void**>(&g_originalSnmpSvcGetUptime), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "winhttp.dll", "WinHttpCheckPlatform", reinterpret_cast<void*>(HookedWinHttpCheckPlatform), reinterpret_cast<void**>(&g_originalWinHttpCheckPlatform), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "wldap32.dll", "LdapGetLastError", reinterpret_cast<void*>(HookedLdapGetLastError), reinterpret_cast<void**>(&g_originalLdapGetLastError), false, true, false, 16, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "advpack.dll", "NeedRebootInit", reinterpret_cast<void*>(HookedNeedRebootInit), reinterpret_cast<void**>(&g_originalNeedRebootInit), false, true, false, 48, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "dciman32.dll", "DCIOpenProvider", reinterpret_cast<void*>(HookedDCIOpenProvider), reinterpret_cast<void**>(&g_originalDCIOpenProvider), false, true, false, 10, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "dhcpcsvc6.dll", "Dhcpv6CApiCleanup", reinterpret_cast<void*>(HookedDhcpv6CApiCleanup), reinterpret_cast<void**>(&g_originalDhcpv6CApiCleanup), false, true, false, 2, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "fwpuclnt.dll", "WSARevertImpersonation", reinterpret_cast<void*>(HookedWSARevertImpersonation), reinterpret_cast<void**>(&g_originalWSARevertImpersonation), false, true, false, 263, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "ntdll.dll", "RtlGetReturnAddressHijackTarget", reinterpret_cast<void*>(HookedRtlGetReturnAddressHijackTarget), reinterpret_cast<void**>(&g_originalRtlGetReturnAddressHijackTarget), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "propsys.dll", "PSRefreshPropertySchema", reinterpret_cast<void*>(HookedPSRefreshPropertySchema), reinterpret_cast<void**>(&g_originalPSRefreshPropertySchema), false, true, false, 106, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "urlmon.dll", "IEGetUserPrivateNamespaceName", reinterpret_cast<void*>(HookedIEGetUserPrivateNamespaceName), reinterpret_cast<void**>(&g_originalIEGetUserPrivateNamespaceName), false, true, false, 198, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "cfgmgr32.dll", "CM_Get_Version", reinterpret_cast<void*>(HookedCMGetVersion), reinterpret_cast<void**>(&g_originalCMGetVersion), false, true, false, 159, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "imm32.dll", "ImmCreateContext", reinterpret_cast<void*>(HookedImmCreateContext), reinterpret_cast<void**>(&g_originalImmCreateContext), false, true, false, 47, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "uiautomationcore.dll", "UiaClientsAreListening", reinterpret_cast<void*>(HookedUiaClientsAreListening), reinterpret_cast<void**>(&g_originalUiaClientsAreListening), false, true, false, 62, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "wscapi.dll", "WscQueryAntiMalwareUri", reinterpret_cast<void*>(HookedWscQueryAntiMalwareUri), reinterpret_cast<void**>(&g_originalWscQueryAntiMalwareUri), false, true, false, 13, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "msrating.dll", "RatingEnabledQuery", reinterpret_cast<void*>(HookedRatingEnabledQuery), reinterpret_cast<void**>(&g_originalRatingEnabledQuery), false, true, false, 24, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "kernel32.dll", "GetModuleHandleW", reinterpret_cast<void*>(HookedGetModuleHandleW), reinterpret_cast<void**>(&g_originalGetModuleHandleW), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleHandleExW", reinterpret_cast<void*>(HookedGetModuleHandleExW), reinterpret_cast<void**>(&g_originalGetModuleHandleExW), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleFileNameW", reinterpret_cast<void*>(HookedGetModuleFileNameW), reinterpret_cast<void**>(&g_originalGetModuleFileNameW), false, true, false, 0, 0 },
@@ -9247,11 +9295,6 @@ DWORD Tier2ReturnOnlyErrorCode(const Tier2ReturnOnlyMetadata& metadata, std::uin
         errorCode = lastError;
     }
 
-    if (metadata.ReturnFormat == GenericReturnFormat::Bool && returnValue == 0)
-    {
-        errorCode = lastError;
-    }
-
     return errorCode;
 }
 
@@ -9688,6 +9731,186 @@ ULONG __cdecl HookedLdapGetLastError()
     };
 
     return InvokeTier2ReturnOnlyCdeclHook(g_originalLdapGetLastError, static_cast<ULONG>(0), Metadata);
+}
+
+DWORD WINAPI HookedNeedRebootInit()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "advpack.dll",
+        "NeedRebootInit",
+        "system",
+        "system/windows-programming",
+        "medium",
+        "advpack.dll!NeedRebootInit",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalNeedRebootInit, static_cast<DWORD>(0), Metadata);
+}
+
+HDC WINAPI HookedDCIOpenProvider()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "dciman32.dll",
+        "DCIOpenProvider",
+        "system",
+        "system/windows-programming",
+        "medium",
+        "dciman32.dll!DCIOpenProvider",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalDCIOpenProvider, static_cast<HDC>(nullptr), Metadata);
+}
+
+void WINAPI HookedDhcpv6CApiCleanup()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "dhcpcsvc6.dll",
+        "Dhcpv6CApiCleanup",
+        "network-management",
+        "network-management/dhcp",
+        "medium",
+        "dhcpcsvc6.dll!Dhcpv6CApiCleanup",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalDhcpv6CApiCleanup, Metadata);
+}
+
+INT WINAPI HookedWSARevertImpersonation()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "fwpuclnt.dll",
+        "WSARevertImpersonation",
+        "networking",
+        "networking/win-sock",
+        "medium",
+        "fwpuclnt.dll!WSARevertImpersonation",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalWSARevertImpersonation, static_cast<INT>(SOCKET_ERROR), Metadata);
+}
+
+ULONG_PTR NTAPI HookedRtlGetReturnAddressHijackTarget()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "ntdll.dll",
+        "RtlGetReturnAddressHijackTarget",
+        "system",
+        "system/windows-programming",
+        "medium",
+        "ntdll.dll!RtlGetReturnAddressHijackTarget",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalRtlGetReturnAddressHijackTarget, static_cast<ULONG_PTR>(0), Metadata);
+}
+
+HRESULT WINAPI HookedPSRefreshPropertySchema()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "propsys.dll",
+        "PSRefreshPropertySchema",
+        "ui",
+        "ui/shell/properties-system",
+        "medium",
+        "propsys.dll!PSRefreshPropertySchema",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHResultHook(g_originalPSRefreshPropertySchema, Metadata);
+}
+
+PWSTR WINAPI HookedIEGetUserPrivateNamespaceName()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "urlmon.dll",
+        "IEGetUserPrivateNamespaceName",
+        "system",
+        "system/com/urlmon",
+        "medium",
+        "urlmon.dll!IEGetUserPrivateNamespaceName",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalIEGetUserPrivateNamespaceName, static_cast<PWSTR>(nullptr), Metadata);
+}
+
+WORD WINAPI HookedCMGetVersion()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "cfgmgr32.dll",
+        "CM_Get_Version",
+        "devices",
+        "devices/device-and-driver-installation",
+        "medium",
+        "cfgmgr32.dll!CM_Get_Version",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalCMGetVersion, static_cast<WORD>(0), Metadata);
+}
+
+HIMC WINAPI HookedImmCreateContext()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "imm32.dll",
+        "ImmCreateContext",
+        "ui",
+        "ui/input/ime",
+        "medium",
+        "imm32.dll!ImmCreateContext",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalImmCreateContext, static_cast<HIMC>(nullptr), Metadata);
+}
+
+BOOL WINAPI HookedUiaClientsAreListening()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "uiautomationcore.dll",
+        "UiaClientsAreListening",
+        "ui",
+        "ui/accessibility",
+        "medium",
+        "uiautomationcore.dll!UiaClientsAreListening",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalUiaClientsAreListening, FALSE, Metadata);
+}
+
+HRESULT WINAPI HookedWscQueryAntiMalwareUri()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "wscapi.dll",
+        "WscQueryAntiMalwareUri",
+        "system",
+        "system/security-center",
+        "medium",
+        "wscapi.dll!WscQueryAntiMalwareUri",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHResultHook(g_originalWscQueryAntiMalwareUri, Metadata);
+}
+
+HRESULT WINAPI HookedRatingEnabledQuery()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "msrating.dll",
+        "RatingEnabledQuery",
+        "web",
+        "web/internet-explorer",
+        "medium",
+        "msrating.dll!RatingEnabledQuery",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHResultHook(g_originalRatingEnabledQuery, Metadata);
 }
 
 HMODULE WINAPI HookedGetModuleHandleW(LPCWSTR moduleName)

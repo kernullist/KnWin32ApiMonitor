@@ -68,6 +68,8 @@ extern "C" NTSYSAPI NTSTATUS NTAPI LdrGetProcedureAddress(
     ULONG Ordinal,
     PVOID* FunctionAddress);
 
+extern "C" NTSYSAPI ULONG_PTR NTAPI RtlGetReturnAddressHijackTarget();
+
 extern "C" __declspec(dllimport) DWORD WINAPI CommDlgExtendedError();
 extern "C" __declspec(dllimport) HRESULT WINAPI DwmFlush();
 extern "C" __declspec(dllimport) UINT WINAPI acmGetVersion();
@@ -81,6 +83,16 @@ extern "C" __declspec(dllimport) UINT WINAPI MsiGetLastErrorRecord();
 extern "C" __declspec(dllimport) DWORD WINAPI ODBCGetTryWaitValue();
 extern "C" __declspec(dllimport) DWORD WINAPI SnmpSvcGetUptime();
 extern "C" __declspec(dllimport) ULONG __cdecl LdapGetLastError();
+extern "C" __declspec(dllimport) DWORD WINAPI NeedRebootInit();
+extern "C" __declspec(dllimport) HDC WINAPI DCIOpenProvider();
+extern "C" __declspec(dllimport) void WINAPI DCICloseProvider(HDC provider);
+extern "C" __declspec(dllimport) void WINAPI Dhcpv6CApiCleanup();
+extern "C" __declspec(dllimport) INT WINAPI WSARevertImpersonation();
+extern "C" __declspec(dllimport) HRESULT WINAPI PSRefreshPropertySchema();
+extern "C" __declspec(dllimport) WORD WINAPI CM_Get_Version();
+extern "C" __declspec(dllimport) BOOL WINAPI UiaClientsAreListening();
+extern "C" __declspec(dllimport) HRESULT WINAPI WscQueryAntiMalwareUri();
+extern "C" __declspec(dllimport) HRESULT WINAPI RatingEnabledQuery();
 
 namespace
 {
@@ -2994,6 +3006,18 @@ bool RunTier2InitialReturnOnlyBatchProbe()
         const DWORD snmpUptime = SnmpSvcGetUptime();
         const BOOL winHttpPlatform = WinHttpCheckPlatform();
         const ULONG ldapLastError = LdapGetLastError();
+        const DWORD rebootState = NeedRebootInit();
+        HDC dciProvider = DCIOpenProvider();
+        Dhcpv6CApiCleanup();
+        const INT wsaRevert = WSARevertImpersonation();
+        const ULONG_PTR hijackTarget = RtlGetReturnAddressHijackTarget();
+        const HRESULT propertySchema = PSRefreshPropertySchema();
+        const PWSTR privateNamespace = IEGetUserPrivateNamespaceName();
+        const WORD configManagerVersion = CM_Get_Version();
+        HIMC immContext = ImmCreateContext();
+        const BOOL uiaListening = UiaClientsAreListening();
+        const HRESULT antiMalwareUri = WscQueryAntiMalwareUri();
+        const HRESULT ratingEnabled = RatingEnabledQuery();
         OaEnablePerUserTLibRegistration();
         palette = GdipCreateHalftonePalette();
 
@@ -3011,7 +3035,36 @@ bool RunTier2InitialReturnOnlyBatchProbe()
                   << " snmp_uptime=" << snmpUptime
                   << " winhttp_platform=" << winHttpPlatform
                   << " ldap_error=" << ldapLastError
+                  << " reboot_state=" << rebootState
+                  << " dci_provider=" << dciProvider
+                  << " wsa_revert=" << wsaRevert
+                  << " hijack_target=0x" << std::hex << static_cast<unsigned long long>(hijackTarget) << std::dec
+                  << " propsys=" << HexHResult(propertySchema)
+                  << " private_namespace=" << reinterpret_cast<const void*>(privateNamespace)
+                  << " cfgmgr_version=" << configManagerVersion
+                  << " imm_context=" << immContext
+                  << " uia_listening=" << uiaListening
+                  << " wsc_uri=" << HexHResult(antiMalwareUri)
+                  << " rating=" << HexHResult(ratingEnabled)
                   << " palette=" << palette << "\n";
+
+        if (dciProvider != nullptr)
+        {
+            DCICloseProvider(dciProvider);
+            dciProvider = nullptr;
+        }
+
+        if (immContext != nullptr)
+        {
+            if (!ImmDestroyContext(immContext))
+            {
+                LogLastError("ImmDestroyContext");
+                success = false;
+                break;
+            }
+
+            immContext = nullptr;
+        }
 
         if (acmVersion == 0)
         {
