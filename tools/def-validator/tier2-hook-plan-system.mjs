@@ -509,7 +509,8 @@ function resolveApiSetForwarders(entries, options = {})
     module: normalizeModuleName(entry.module),
     apiName: entry.name
   }));
-  const inputPath = path.join(os.tmpdir(), `knmon-tier2-api-set-${process.pid}-${Date.now()}.json`);
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "knmon-tier2-api-set-"));
+  const inputPath = path.join(tempRoot, "input.json");
 
   try
   {
@@ -520,6 +521,11 @@ function resolveApiSetForwarders(entries, options = {})
       {
         cwd: repoRoot,
         encoding: "utf8",
+        env: {
+          ...process.env,
+          TMP: tempRoot,
+          TEMP: tempRoot
+        },
         maxBuffer: 32 * 1024 * 1024
       });
 
@@ -546,7 +552,7 @@ function resolveApiSetForwarders(entries, options = {})
   }
   finally
   {
-    fs.rmSync(inputPath, { force: true });
+    fs.rmSync(tempRoot, { force: true, recursive: true });
   }
 
   return results;
