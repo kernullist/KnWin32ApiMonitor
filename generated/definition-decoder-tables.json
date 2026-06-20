@@ -3753,14 +3753,14 @@
     {
       "callingConvention": "stdcall",
       "category": "bstr_free",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnEqual": "void"
       },
       "family": "ole-automation",
       "firstParameterIndex": 536,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 158,
       "module": "oleaut32.dll",
       "moduleId": 18,
@@ -14574,7 +14574,7 @@
       "absoluteIndex": 536,
       "apiId": 158,
       "captureTiming": "pre",
-      "decode": "utf16_string_optional",
+      "decode": "pointer",
       "direction": "in",
       "enum": "",
       "flags": "",
@@ -14582,7 +14582,7 @@
       "lengthExpression": "",
       "lengthFrom": "",
       "lengthFromIndex": -1,
-      "maxBytes": 512,
+      "maxBytes": 0,
       "name": "bstrString",
       "nullable": true,
       "type": "BSTR"

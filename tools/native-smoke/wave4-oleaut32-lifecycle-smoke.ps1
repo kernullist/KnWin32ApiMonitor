@@ -6,6 +6,7 @@ $ErrorActionPreference = "Stop"
 
 $ProviderModule = "oleaut32.dll"
 $SelectedApis = @(
+    "SysFreeString",
     "VariantClear",
     "SafeArrayDestroy"
 )
@@ -80,6 +81,7 @@ if ($provider.Count -ne 1 -or $provider[0].id -ne 18)
 }
 
 $expectedIds = @(
+    @{ Api = "SysFreeString"; Id = 158 },
     @{ Api = "VariantClear"; Id = 159 },
     @{ Api = "SafeArrayDestroy"; Id = 160 }
 )
@@ -118,10 +120,13 @@ if ($oleautEvents.Count -lt $SelectedApis.Count)
 }
 
 $expected = @(
-    @{ Api = "VariantClear"; Family = "ole-automation"; Category = "variant_clear"; Args = @(
+    @{ Api = "SysFreeString"; Family = "ole-automation"; Category = "bstr_free"; ReturnValue = "void"; Args = @(
+        @{ Name = "bstrString"; Alias = "pointer"; Timing = "pre" }
+    ) },
+    @{ Api = "VariantClear"; Family = "ole-automation"; Category = "variant_clear"; ReturnValue = "0x00000000"; Args = @(
         @{ Name = "pvarg"; Alias = "pointer"; Timing = "pre" }
     ) },
-    @{ Api = "SafeArrayDestroy"; Family = "ole-automation"; Category = "safe_array_destroy"; Args = @(
+    @{ Api = "SafeArrayDestroy"; Family = "ole-automation"; Category = "safe_array_destroy"; ReturnValue = "0x00000000"; Args = @(
         @{ Name = "psa"; Alias = "pointer"; Timing = "pre" }
     ) }
 )
@@ -139,9 +144,9 @@ foreach ($item in $expected)
         throw "$($item.Api) hook metadata mismatch: hook=$($event.hookPolicy) coverage=$($event.coverageStatus)"
     }
 
-    if ($event.returnValue -ne "0x00000000")
+    if ($event.returnValue -ne $item.ReturnValue)
     {
-        throw "$($item.Api) did not return S_OK: $($event | ConvertTo-Json -Depth 8)"
+        throw "$($item.Api) return evidence mismatch: $($event | ConvertTo-Json -Depth 8)"
     }
 
     if ($null -eq $event.durationUs -or $event.durationUs -lt 0)
@@ -168,7 +173,7 @@ foreach ($item in $expected)
 }
 
 $eventData = $oleautEvents | ConvertTo-Json -Depth 12
-if ($eventData -cmatch "SysAllocString|SysFreeString|VT_BSTR|BSTR|bstrString|SafeArrayAccessData|SafeArrayGetElement|SafeArrayPtrOfIndex|VariantChangeType|C:\\Users|AppData|ProgramData|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+if ($eventData -cmatch "SysAllocString|KNMonBstrProbe|VT_BSTR|SafeArrayAccessData|SafeArrayGetElement|SafeArrayPtrOfIndex|VariantChangeType|C:\\Users|AppData|ProgramData|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "Wave 4 OLEAUT32 events appear to expose BSTR, SAFEARRAY content, payload, stack, injection, credential, or byte-preview evidence: $eventData"
 }

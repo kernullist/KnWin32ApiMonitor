@@ -235,6 +235,7 @@ using StringFromGUID2Fn = int(WINAPI*)(REFGUID, LPOLESTR, int);
 using RoInitializeFn = HRESULT(WINAPI*)(RO_INIT_TYPE);
 using RoUninitializeFn = void(WINAPI*)();
 using RoGetApartmentIdentifierFn = HRESULT(WINAPI*)(UINT64*);
+using SysFreeStringFn = void(WINAPI*)(BSTR);
 using VariantClearFn = HRESULT(WINAPI*)(VARIANTARG*);
 using SafeArrayDestroyFn = HRESULT(WINAPI*)(SAFEARRAY*);
 using DnsFreeFn = void(WINAPI*)(PVOID, DNS_FREE_TYPE);
@@ -388,6 +389,7 @@ StringFromGUID2Fn g_originalStringFromGUID2 = nullptr;
 RoInitializeFn g_originalRoInitialize = nullptr;
 RoUninitializeFn g_originalRoUninitialize = nullptr;
 RoGetApartmentIdentifierFn g_originalRoGetApartmentIdentifier = nullptr;
+SysFreeStringFn g_originalSysFreeString = nullptr;
 VariantClearFn g_originalVariantClear = nullptr;
 SafeArrayDestroyFn g_originalSafeArrayDestroy = nullptr;
 DnsFreeFn g_originalDnsFree = nullptr;
@@ -516,7 +518,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 130;
+constexpr std::size_t HookDefinitionCount = 131;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -5810,6 +5812,22 @@ void EmitSafeArrayDestroyEvent(
     }
 }
 
+void EmitSysFreeStringEvent(
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    BSTR value)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::SysFreeString, "oleaut32.dll", start, end, 0);
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(value));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void EmitDnsRecordListFreeEvent(
     const LARGE_INTEGER& start,
     const LARGE_INTEGER& end,
@@ -6898,6 +6916,7 @@ int WINAPI HookedStringFromGUID2(REFGUID guid, LPOLESTR string, int cchMax);
 HRESULT WINAPI HookedRoInitialize(RO_INIT_TYPE initType);
 void WINAPI HookedRoUninitialize();
 HRESULT WINAPI HookedRoGetApartmentIdentifier(UINT64* apartmentIdentifier);
+void WINAPI HookedSysFreeString(BSTR value);
 HRESULT WINAPI HookedVariantClear(VARIANTARG* variant);
 HRESULT WINAPI HookedSafeArrayDestroy(SAFEARRAY* safeArray);
 void WINAPI HookedDnsFree(PVOID data, DNS_FREE_TYPE freeType);
@@ -7035,6 +7054,7 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "api-ms-win-core-winrt-l1-1-0.dll", "RoInitialize", reinterpret_cast<void*>(HookedRoInitialize), reinterpret_cast<void**>(&g_originalRoInitialize), false, true, false, 0, 0 },
         HookDefinition { "api-ms-win-core-winrt-l1-1-0.dll", "RoUninitialize", reinterpret_cast<void*>(HookedRoUninitialize), reinterpret_cast<void**>(&g_originalRoUninitialize), false, true, false, 0, 0 },
         HookDefinition { "api-ms-win-core-winrt-l1-1-0.dll", "RoGetApartmentIdentifier", reinterpret_cast<void*>(HookedRoGetApartmentIdentifier), reinterpret_cast<void**>(&g_originalRoGetApartmentIdentifier), false, true, false, 0, 0 },
+        HookDefinition { "oleaut32.dll", "SysFreeString", reinterpret_cast<void*>(HookedSysFreeString), reinterpret_cast<void**>(&g_originalSysFreeString), false, true, false, 6, 0 },
         HookDefinition { "oleaut32.dll", "VariantClear", reinterpret_cast<void*>(HookedVariantClear), reinterpret_cast<void**>(&g_originalVariantClear), false, true, false, 9, 0 },
         HookDefinition { "oleaut32.dll", "SafeArrayDestroy", reinterpret_cast<void*>(HookedSafeArrayDestroy), reinterpret_cast<void**>(&g_originalSafeArrayDestroy), false, true, false, 16, 0 },
         HookDefinition { "dnsapi.dll", "DnsFree", reinterpret_cast<void*>(HookedDnsFree), reinterpret_cast<void**>(&g_originalDnsFree), false, true, false, 0, 0 },
@@ -11208,6 +11228,34 @@ HRESULT WINAPI HookedRoGetApartmentIdentifier(UINT64* apartmentIdentifier)
 
     SetLastError(lastError);
     return result;
+}
+
+void WINAPI HookedSysFreeString(BSTR value)
+{
+    if (g_inHook || !HooksEnabled() || g_originalSysFreeString == nullptr)
+    {
+        if (g_originalSysFreeString != nullptr)
+        {
+            g_originalSysFreeString(value);
+        }
+
+        return;
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    g_originalSysFreeString(value);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitSysFreeStringEvent(start, end, value);
+    }
+
+    SetLastError(lastError);
 }
 
 HRESULT WINAPI HookedVariantClear(VARIANTARG* variant)

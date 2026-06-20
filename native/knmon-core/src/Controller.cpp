@@ -4509,6 +4509,13 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         payload = ApiCallPayload(result, record, HexHResultValue(record.ReturnCode), args.str(), "");
         break;
     }
+    case KnMonTransportApiId::SysFreeString:
+    {
+        const std::string valuePointer = HexPointerValue(record.Values64[0], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "BSTR", "bstrString", "in", valuePointer, valuePointer, valuePointer);
+        payload = ApiCallPayload(result, record, "void", args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::VariantClear:
     {
         const std::string variantPointer = HexPointerValue(record.Values64[0], result.Architecture);

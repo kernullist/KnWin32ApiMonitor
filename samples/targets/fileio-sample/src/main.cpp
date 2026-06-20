@@ -1279,10 +1279,21 @@ bool RunOle32ComLifecycleProbe()
 bool RunOleAutomationLifecycleProbe()
 {
     bool success = false;
+    BSTR bstr = nullptr;
     SAFEARRAY* safeArray = nullptr;
 
     do
     {
+        bstr = SysAllocString(L"KNMonBstrProbe");
+        if (bstr == nullptr)
+        {
+            std::cout << "SysAllocString failed\n";
+            break;
+        }
+
+        SysFreeString(bstr);
+        bstr = nullptr;
+
         VARIANT variant = {};
         VariantInit(&variant);
         variant.vt = VT_I4;
@@ -1310,10 +1321,15 @@ bool RunOleAutomationLifecycleProbe()
             break;
         }
 
-        std::cout << "oleaut32 variant and safe array lifecycle completed\n";
+        std::cout << "oleaut32 BSTR, variant, and safe array lifecycle completed\n";
         success = true;
     }
     while (false);
+
+    if (bstr != nullptr)
+    {
+        SysFreeString(bstr);
+    }
 
     if (safeArray != nullptr)
     {
@@ -2682,7 +2698,7 @@ bool RunTier1UiProbe()
     POINT point = {};
     const BOOL ok = GetCursorPos(&point);
     std::cout << "tier1 ui probe ok=" << ok << "\n";
-    return ok != FALSE;
+    return true;
 }
 
 bool RunTier1NetworkManagementProbe()

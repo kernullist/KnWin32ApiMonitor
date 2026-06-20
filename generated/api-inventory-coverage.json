@@ -1,5 +1,5 @@
 {
-  "blockedByMissingDecoderOrHookStrategy": 17964,
+  "blockedByMissingDecoderOrHookStrategy": 17963,
   "nextFamilies": [
     {
       "examples": [
@@ -353,13 +353,13 @@
   ],
   "schemaVersion": "0.1.0",
   "summary": {
-    "blockedByMissingDecoder": 15939,
+    "blockedByMissingDecoder": 15938,
     "blockedByMissingHookStrategy": 2025,
     "byCoverageStatus": {
-      "definition_only": 57,
+      "definition_only": 56,
       "hooked": 4,
       "not_defined": 17907,
-      "smoke_verified": 118
+      "smoke_verified": 119
     },
     "byFamily": {
       "ai": 4,
@@ -412,8 +412,8 @@
       "web": 58
     },
     "byHookTier": {
-      "0": 122,
-      "1": 15939,
+      "0": 123,
+      "1": 15938,
       "2": 655,
       "3": 1370
     },
@@ -792,7 +792,7 @@
       "existingDefinitionOnly": 4,
       "win32Metadata": 18082
     },
-    "currentlyEmittedByAgentHooks": 122,
+    "currentlyEmittedByAgentHooks": 123,
     "totalApis": 18086,
     "withMicrosoftLearnDocs": 13819,
     "withModuleMapping": 18086,

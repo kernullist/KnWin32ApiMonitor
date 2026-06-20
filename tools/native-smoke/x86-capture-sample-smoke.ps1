@@ -99,6 +99,7 @@ $requiredApis = @(
     "RoInitialize",
     "RoUninitialize",
     "RoGetApartmentIdentifier",
+    "SysFreeString",
     "VariantClear",
     "SafeArrayDestroy",
     "DnsRecordListFree",
@@ -227,11 +228,29 @@ foreach ($api in $requiredApis)
     }
 }
 
-$oleautEvents = @($result.capturedEvents | Where-Object { $_.module -eq "oleaut32.dll" -and $_.api -in @("VariantClear", "SafeArrayDestroy") })
-if ($oleautEvents.Count -lt 2)
+$oleautEvents = @($result.capturedEvents | Where-Object { $_.module -eq "oleaut32.dll" -and $_.api -in @("SysFreeString", "VariantClear", "SafeArrayDestroy") })
+if ($oleautEvents.Count -lt 3)
 {
     throw "x86 capture did not include the selected OLEAUT32 lifecycle API slice."
 }
+
+$sysFreeString = @($oleautEvents | Where-Object { $_.api -eq "SysFreeString" } | Select-Object -First 1)
+if ($sysFreeString.Count -ne 1 -or
+    $sysFreeString[0].apiFamily -ne "ole-automation" -or
+    $sysFreeString[0].apiCategory -ne "bstr_free" -or
+    $sysFreeString[0].hookPolicy -ne "iat" -or
+    $sysFreeString[0].coverageStatus -ne "smoke_verified" -or
+    $sysFreeString[0].returnValue -ne "void")
+{
+    throw "x86 SysFreeString metadata or return evidence mismatch: $($sysFreeString | ConvertTo-Json -Depth 8)"
+}
+
+$bstrPointer = @($sysFreeString[0].arguments | Where-Object { $_.name -eq "bstrString" } | Select-Object -First 1)
+if ($bstrPointer.Count -ne 1 -or $bstrPointer[0].decodeAlias -ne "pointer")
+{
+    throw "x86 SysFreeString pointer metadata mismatch: $($bstrPointer | ConvertTo-Json -Depth 8)"
+}
+Assert-PointerValue -Value $bstrPointer[0].decodedValue -Name "x86 SysFreeString bstrString"
 
 $variantClear = @($oleautEvents | Where-Object { $_.api -eq "VariantClear" } | Select-Object -First 1)
 if ($variantClear.Count -ne 1 -or
@@ -270,7 +289,7 @@ if ($safeArrayPointer.Count -ne 1 -or $safeArrayPointer[0].decodeAlias -ne "poin
 Assert-PointerValue -Value $safeArrayPointer[0].decodedValue -Name "x86 SafeArrayDestroy psa"
 
 $oleautPayload = $oleautEvents | ConvertTo-Json -Depth 12
-if ($oleautPayload -cmatch "SysAllocString|SysFreeString|VT_BSTR|BSTR|bstrString|SafeArrayAccessData|SafeArrayGetElement|SafeArrayPtrOfIndex|VariantChangeType|C:\\Users|AppData|ProgramData|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+if ($oleautPayload -cmatch "SysAllocString|KNMonBstrProbe|VT_BSTR|SafeArrayAccessData|SafeArrayGetElement|SafeArrayPtrOfIndex|VariantChangeType|C:\\Users|AppData|ProgramData|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|StackWalk|Disassembly|Injection|Shellcode|BEGIN CERTIFICATE|PRIVATE KEY|Password|Credential|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 OLEAUT32 events appear to expose BSTR, SAFEARRAY content, payload, stack, injection, credential, or byte-preview evidence: $oleautPayload"
 }
