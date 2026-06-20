@@ -79,6 +79,8 @@ try
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "DwmFlush" -Module "dwmapi.dll" -InventoryKey "dwmapi.dll!DwmFlush" -Family "graphics"
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "acmGetVersion" -Module "msacm32.dll" -InventoryKey "msacm32.dll!acmGetVersion" -Family "media"
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "GdipCreateHalftonePalette" -Module "gdiplus.dll" -InventoryKey "gdiplus.dll!GdipCreateHalftonePalette" -Family "graphics"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "OaBuildVersion" -Module "oleaut32.dll" -InventoryKey "oleaut32.dll!OaBuildVersion" -Family "com"
+    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "OaEnablePerUserTLibRegistration" -Module "oleaut32.dll" -InventoryKey "oleaut32.dll!OaEnablePerUserTLibRegistration" -Family "com"
 
     $getProcEvent = @($result.capturedEvents | Where-Object { $_.api -eq "GetProcAddress" } | Select-Object -First 1)
     $ldrProcEvent = @($result.capturedEvents | Where-Object { $_.api -eq "LdrGetProcedureAddress" } | Select-Object -First 1)

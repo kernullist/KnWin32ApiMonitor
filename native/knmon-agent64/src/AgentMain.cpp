@@ -176,6 +176,8 @@ using CommDlgExtendedErrorFn = DWORD(WINAPI*)();
 using DwmFlushFn = HRESULT(WINAPI*)();
 using AcmGetVersionFn = UINT(WINAPI*)();
 using GdipCreateHalftonePaletteFn = HPALETTE(WINAPI*)();
+using OaBuildVersionFn = ULONG(WINAPI*)();
+using OaEnablePerUserTLibRegistrationFn = void(WINAPI*)();
 using GetModuleHandleWFn = HMODULE(WINAPI*)(LPCWSTR);
 using GetModuleHandleExWFn = BOOL(WINAPI*)(DWORD, LPCWSTR, HMODULE*);
 using GetModuleFileNameWFn = DWORD(WINAPI*)(HMODULE, LPWSTR, DWORD);
@@ -341,6 +343,8 @@ CommDlgExtendedErrorFn g_originalCommDlgExtendedError = nullptr;
 DwmFlushFn g_originalDwmFlush = nullptr;
 AcmGetVersionFn g_originalAcmGetVersion = nullptr;
 GdipCreateHalftonePaletteFn g_originalGdipCreateHalftonePalette = nullptr;
+OaBuildVersionFn g_originalOaBuildVersion = nullptr;
+OaEnablePerUserTLibRegistrationFn g_originalOaEnablePerUserTLibRegistration = nullptr;
 GetModuleHandleWFn g_originalGetModuleHandleW = nullptr;
 GetModuleHandleExWFn g_originalGetModuleHandleExW = nullptr;
 GetModuleFileNameWFn g_originalGetModuleFileNameW = nullptr;
@@ -546,7 +550,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 142;
+constexpr std::size_t HookDefinitionCount = 144;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -7054,6 +7058,8 @@ DWORD WINAPI HookedCommDlgExtendedError();
 HRESULT WINAPI HookedDwmFlush();
 UINT WINAPI HookedAcmGetVersion();
 HPALETTE WINAPI HookedGdipCreateHalftonePalette();
+ULONG WINAPI HookedOaBuildVersion();
+void WINAPI HookedOaEnablePerUserTLibRegistration();
 HANDLE WINAPI HookedCreateThread(LPSECURITY_ATTRIBUTES threadAttributes, SIZE_T stackSize, LPTHREAD_START_ROUTINE startAddress, LPVOID parameter, DWORD creationFlags, LPDWORD threadId);
 HANDLE WINAPI HookedOpenThread(DWORD desiredAccess, BOOL inheritHandle, DWORD threadId);
 DWORD WINAPI HookedWaitForSingleObject(HANDLE handle, DWORD milliseconds);
@@ -7200,6 +7206,8 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "dwmapi.dll", "DwmFlush", reinterpret_cast<void*>(HookedDwmFlush), reinterpret_cast<void**>(&g_originalDwmFlush), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "msacm32.dll", "acmGetVersion", reinterpret_cast<void*>(HookedAcmGetVersion), reinterpret_cast<void**>(&g_originalAcmGetVersion), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "gdiplus.dll", "GdipCreateHalftonePalette", reinterpret_cast<void*>(HookedGdipCreateHalftonePalette), reinterpret_cast<void**>(&g_originalGdipCreateHalftonePalette), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "oleaut32.dll", "OaBuildVersion", reinterpret_cast<void*>(HookedOaBuildVersion), reinterpret_cast<void**>(&g_originalOaBuildVersion), false, true, false, 170, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "oleaut32.dll", "OaEnablePerUserTLibRegistration", reinterpret_cast<void*>(HookedOaEnablePerUserTLibRegistration), reinterpret_cast<void**>(&g_originalOaEnablePerUserTLibRegistration), false, true, false, 444, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "kernel32.dll", "GetModuleHandleW", reinterpret_cast<void*>(HookedGetModuleHandleW), reinterpret_cast<void**>(&g_originalGetModuleHandleW), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleHandleExW", reinterpret_cast<void*>(HookedGetModuleHandleExW), reinterpret_cast<void**>(&g_originalGetModuleHandleExW), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleFileNameW", reinterpret_cast<void*>(HookedGetModuleFileNameW), reinterpret_cast<void**>(&g_originalGetModuleFileNameW), false, true, false, 0, 0 },
@@ -9262,6 +9270,49 @@ ReturnT InvokeTier2ReturnOnlyHook(ReturnT(WINAPI* original)(), ReturnT missingVa
     return result;
 }
 
+void InvokeTier2ReturnOnlyVoidHook(void(WINAPI* original)(), const Tier2ReturnOnlyMetadata& metadata)
+{
+    if (g_inHook || !HooksEnabled() || original == nullptr)
+    {
+        if (original != nullptr)
+        {
+            original();
+        }
+
+        return;
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    original();
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitGenericReturnOnlyEvent(
+            metadata.ModuleName,
+            metadata.ApiName,
+            "tier2",
+            "tier2-initial-return-only",
+            metadata.Family,
+            metadata.Category,
+            metadata.Risk,
+            "generic_return_only",
+            "",
+            metadata.InventoryKey,
+            0,
+            GenericReturnFormat::Void,
+            0,
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
+}
+
 DWORD WINAPI HookedCommDlgExtendedError()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
@@ -9359,6 +9410,36 @@ HPALETTE WINAPI HookedGdipCreateHalftonePalette()
     };
 
     return InvokeTier2ReturnOnlyHook(g_originalGdipCreateHalftonePalette, static_cast<HPALETTE>(nullptr), Metadata);
+}
+
+ULONG WINAPI HookedOaBuildVersion()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "oleaut32.dll",
+        "OaBuildVersion",
+        "com",
+        "com/ole-automation",
+        "medium",
+        "oleaut32.dll!OaBuildVersion",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalOaBuildVersion, static_cast<ULONG>(0), Metadata);
+}
+
+void WINAPI HookedOaEnablePerUserTLibRegistration()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "oleaut32.dll",
+        "OaEnablePerUserTLibRegistration",
+        "com",
+        "com/ole-automation",
+        "medium",
+        "oleaut32.dll!OaEnablePerUserTLibRegistration",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalOaEnablePerUserTLibRegistration, Metadata);
 }
 
 HMODULE WINAPI HookedGetModuleHandleW(LPCWSTR moduleName)

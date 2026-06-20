@@ -2974,14 +2974,22 @@ bool RunTier2InitialReturnOnlyBatchProbe()
         const DWORD dialogError = CommDlgExtendedError();
         const HRESULT dwmResult = DwmFlush();
         const UINT acmVersion = acmGetVersion();
+        const ULONG oleAutomationBuild = OaBuildVersion();
+        OaEnablePerUserTLibRegistration();
         palette = GdipCreateHalftonePalette();
 
         std::cout << "tier2 initial return-only batch dialog_error=" << dialogError
                   << " dwm=" << HexHResult(dwmResult)
                   << " acm_version=" << acmVersion
+                  << " oleaut32_build=" << oleAutomationBuild
                   << " palette=" << palette << "\n";
 
         if (acmVersion == 0)
+        {
+            break;
+        }
+
+        if (oleAutomationBuild == 0)
         {
             break;
         }
