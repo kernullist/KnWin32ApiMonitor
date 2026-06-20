@@ -119,6 +119,7 @@ $requiredApis = @(
     "RpcStringFreeW",
     "RpcBindingFree",
     "RpcBindingSetOption",
+    "RpcMgmtEpEltInqDone",
     "UuidCreate",
     "UuidToStringW",
     "UuidFromStringW",
@@ -750,6 +751,41 @@ $bindingSetOptionPayload = $bindingSetOptionEvent[0] | ConvertTo-Json -Depth 12
 if ($bindingSetOptionPayload -cmatch "RpcBindingSetAuthInfo|RpcMgmtEp|EndpointMapper|Annotation|ServerPrinc|AuthIdentity|Authn|Authz|Credential|Password|Token|SID|ACL|SecurityDescriptor|send|recv|WinHttp|InternetOpenUrl|HttpSend|Cookie|Authorization|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|Injection|BEGIN CERTIFICATE|PRIVATE KEY|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
 {
     throw "x86 RpcBindingSetOption event appears to expose forbidden auth, endpoint, credential, payload, remote-memory, stack, injection, or byte-preview evidence: $bindingSetOptionPayload"
+}
+
+$endpointInquiryDone = @($result.capturedEvents | Where-Object { $_.api -eq "RpcMgmtEpEltInqDone" } | Select-Object -First 1)
+if ($endpointInquiryDone.Count -ne 1 -or
+    $endpointInquiryDone[0].module -ne "rpcrt4.dll" -or
+    $endpointInquiryDone[0].apiFamily -ne "rpc" -or
+    $endpointInquiryDone[0].apiCategory -ne "rpc_endpoint_inquiry_done" -or
+    $endpointInquiryDone[0].hookPolicy -ne "iat" -or
+    $endpointInquiryDone[0].coverageStatus -ne "smoke_verified" -or
+    $endpointInquiryDone[0].returnValue -notmatch "^0 \(0x00000000\)$")
+{
+    throw "x86 RpcMgmtEpEltInqDone metadata or return evidence mismatch: $($endpointInquiryDone | ConvertTo-Json -Depth 8)"
+}
+
+if (-not [string]::IsNullOrEmpty($endpointInquiryDone[0].bufferPreview))
+{
+    throw "x86 RpcMgmtEpEltInqDone exposed bufferPreview: $($endpointInquiryDone[0] | ConvertTo-Json -Depth 8)"
+}
+
+$inquiryContext = @($endpointInquiryDone[0].arguments | Where-Object { $_.name -eq "InquiryContext" } | Select-Object -First 1)
+if ($inquiryContext.Count -ne 1 -or
+    $inquiryContext[0].decodeAlias -ne "pointer_pointer" -or
+    $inquiryContext[0].captureTiming -ne "pre_post" -or
+    $inquiryContext[0].rawValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $inquiryContext[0].preCallValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $inquiryContext[0].decodedValue -notmatch "^0x[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*$" -or
+    $inquiryContext[0].postCallValue -notmatch "^0x[0-9a-fA-F]+$")
+{
+    throw "x86 RpcMgmtEpEltInqDone InquiryContext evidence mismatch: $($inquiryContext | ConvertTo-Json -Depth 8)"
+}
+
+$endpointInquiryPayload = $endpointInquiryDone[0] | ConvertTo-Json -Depth 12
+if ($endpointInquiryPayload -cmatch "RpcMgmtEpEltInqBegin|RpcMgmtEpEltInqNext|Annotation|RPC_IF_ID|ObjectUuid|EndpointMapper|endpoint mapper|StringBinding|RpcBindingSetAuthInfo|ServerPrinc|AuthIdentity|Authn|Authz|Credential|Password|Token|SID|ACL|SecurityDescriptor|send|recv|WinHttp|InternetOpenUrl|HttpSend|Cookie|Authorization|CommandLine|Environment|ReadProcessMemory|WriteProcessMemory|VirtualAllocEx|CreateRemoteThread|QueueUserAPC|GetThreadContext|SetThreadContext|CallStack|StackTrace|Injection|BEGIN CERTIFICATE|PRIVATE KEY|\b[0-9a-fA-F]{2}( [0-9a-fA-F]{2}){7,}\b")
+{
+    throw "x86 RpcMgmtEpEltInqDone event appears to expose forbidden endpoint, auth, credential, network, payload, remote-memory, stack, injection, or byte-preview evidence: $endpointInquiryPayload"
 }
 
 $connectEvent = @($result.capturedEvents | Where-Object { $_.api -eq "connect" } | Select-Object -First 1)
@@ -3010,9 +3046,9 @@ if ($mutexSemaphorePayload -cmatch "KnMonMutexProbe|KnMonSemaphoreProbe|Global\\
 }
 
 $rpcEvents = @($result.capturedEvents | Where-Object { $_.apiFamily -eq "rpc" })
-if ($rpcEvents.Count -lt 7)
+if ($rpcEvents.Count -lt 9)
 {
-    throw "x86 capture did not include the selected RPCRT4 binding and UUID API family slices."
+    throw "x86 capture did not include the selected RPCRT4 binding, endpoint cleanup, and UUID API family slices."
 }
 
 $rpcCompose = @($rpcEvents | Where-Object { $_.api -eq "RpcStringBindingComposeW" } | Select-Object -First 1)

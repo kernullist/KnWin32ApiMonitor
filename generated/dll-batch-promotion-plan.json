@@ -3095,7 +3095,7 @@
       "unsupported": 0
     },
     {
-      "alreadyLive": 8,
+      "alreadyLive": 9,
       "apis": [
         {
           "apiName": "RpcStringBindingComposeW",
@@ -3323,11 +3323,11 @@
           "apiName": "RpcMgmtEpEltInqDone",
           "callingConvention": "stdcall",
           "category": "rpc_endpoint_inquiry_done",
-          "classification": "manual_decoder_required",
-          "coverageStatus": "definition_only",
+          "classification": "already_live",
+          "coverageStatus": "smoke_verified",
           "errorSource": "none",
           "family": "rpc",
-          "hookPolicy": "definition_only",
+          "hookPolicy": "iat",
           "id": 57,
           "key": "rpcrt4.dll!RpcMgmtEpEltInqDone",
           "module": "rpcrt4.dll",
@@ -3337,10 +3337,9 @@
             "InquiryContext"
           ],
           "reasons": [
-            "manual_output_boundary_review",
-            "manual_output_pointer_memory_boundary"
+            "already_live_iat_coverage"
           ],
-          "recommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "recommendation": "keep_in_dll_batch_smoke",
           "returnType": "RPC_STATUS",
           "risk": "medium",
           "sourceFile": "definitions/win32/rpcrt4.json"
@@ -3423,9 +3422,9 @@
       ],
       "autoPromotable": 0,
       "blockedByPayloadPolicy": 3,
-      "manualDecoderRequired": 1,
+      "manualDecoderRequired": 0,
       "module": "rpcrt4.dll",
-      "recommendation": "design_manual_decoder_batch",
+      "recommendation": "document_payload_boundary_only",
       "sourceFiles": [
         "definitions/win32/rpcrt4.json"
       ],
@@ -5073,12 +5072,12 @@
     "metadata": "definitions/metadata"
   },
   "summary": {
-    "alreadyLive": 129,
+    "alreadyLive": 130,
     "autoPromotable": 0,
     "blockedByPayloadPolicy": 49,
-    "dllsFullyTriaged": 24,
+    "dllsFullyTriaged": 25,
     "dllsWithAutoPromotableApis": 0,
-    "manualDecoderRequired": 1,
+    "manualDecoderRequired": 0,
     "totalApis": 179,
     "totalDlls": 25,
     "unsupported": 0

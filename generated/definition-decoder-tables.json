@@ -1347,14 +1347,14 @@
     {
       "callingConvention": "stdcall",
       "category": "rpc_endpoint_inquiry_done",
-      "coverageStatus": "definition_only",
+      "coverageStatus": "smoke_verified",
       "errorSource": "none",
       "failure": {
         "returnNotEqual": "RPC_S_OK"
       },
       "family": "rpc",
       "firstParameterIndex": 252,
-      "hookPolicy": "definition_only",
+      "hookPolicy": "iat",
       "id": 57,
       "module": "rpcrt4.dll",
       "moduleId": 7,

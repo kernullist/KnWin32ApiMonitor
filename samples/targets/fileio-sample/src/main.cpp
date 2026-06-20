@@ -590,6 +590,52 @@ bool RunRpcBindingProbe()
     return success;
 }
 
+bool RunRpcEndpointInquiryCleanupProbe()
+{
+    bool success = false;
+    RPC_EP_INQ_HANDLE inquiryContext = nullptr;
+
+    do
+    {
+        RPC_STATUS status = RpcMgmtEpEltInqBegin(
+            nullptr,
+            RPC_C_EP_ALL_ELTS,
+            nullptr,
+            RPC_C_VERS_ALL,
+            nullptr,
+            &inquiryContext);
+        if (status != RPC_S_OK)
+        {
+            std::cout << "RpcMgmtEpEltInqBegin failed with " << status << "\n";
+            break;
+        }
+
+        status = RpcMgmtEpEltInqDone(&inquiryContext);
+        if (status != RPC_S_OK)
+        {
+            std::cout << "RpcMgmtEpEltInqDone failed with " << status << "\n";
+            break;
+        }
+
+        inquiryContext = nullptr;
+        std::cout << "rpc endpoint inquiry cleanup completed\n";
+        success = true;
+    }
+    while (false);
+
+    if (inquiryContext != nullptr)
+    {
+        const RPC_STATUS cleanupStatus = RpcMgmtEpEltInqDone(&inquiryContext);
+        if (cleanupStatus != RPC_S_OK)
+        {
+            std::cout << "RpcMgmtEpEltInqDone(cleanup) failed with " << cleanupStatus << "\n";
+            success = false;
+        }
+    }
+
+    return success;
+}
+
 bool RpcStatusProducedUuid(RPC_STATUS status)
 {
     return status == RPC_S_OK || status == RPC_S_UUID_LOCAL_ONLY;
@@ -3026,6 +3072,11 @@ int RunFileIo(bool slow)
         }
 
         if (!RunRpcBindingProbe())
+        {
+            break;
+        }
+
+        if (!RunRpcEndpointInquiryCleanupProbe())
         {
             break;
         }

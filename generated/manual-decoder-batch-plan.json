@@ -1,106 +1,5 @@
 {
-  "dlls": [
-    {
-      "apis": [
-        {
-          "allowedEvidence": [
-            "RPC_EP_INQ_HANDLE pointer address",
-            "pre/post RPC_EP_INQ_HANDLE value only",
-            "RPC_STATUS return value",
-            "duration and hook lifecycle metadata"
-          ],
-          "apiName": "RpcMgmtEpEltInqDone",
-          "callingConvention": "stdcall",
-          "category": "rpc_endpoint_inquiry_done",
-          "classification": "manual_decoder_required",
-          "designStatus": "review_required",
-          "family": "rpc",
-          "forbiddenEvidence": [
-            "endpoint annotation strings",
-            "RPC binding vectors or string bindings",
-            "object UUID payload expansion",
-            "endpoint mapper inventory",
-            "RPC auth data or network payloads"
-          ],
-          "id": 57,
-          "key": "rpcrt4.dll!RpcMgmtEpEltInqDone",
-          "module": "rpcrt4.dll",
-          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
-          "parameterCount": 1,
-          "payloadSensitiveParameters": [],
-          "pointerOnlyParameters": [
-            "InquiryContext"
-          ],
-          "reasons": [
-            "manual_output_boundary_review",
-            "manual_output_pointer_memory_boundary"
-          ],
-          "requiredEvidence": [
-            "x64_native_smoke",
-            "x86_native_smoke",
-            "zero_healthy_path_drops",
-            "payload_absence_assertions",
-            "hook_overhead_gate",
-            "same_dll_batch_review"
-          ],
-          "returnType": "RPC_STATUS",
-          "reviewNotes": [
-            "Only the cleanup call is a possible low-payload candidate; begin/next remain payload-policy blocked.",
-            "A runtime hook must not infer endpoint inventory from the inquiry handle."
-          ],
-          "risk": "medium",
-          "runtimeHookPolicy": "blocked_by_default"
-        }
-      ],
-      "manualDecoderRequired": 1,
-      "module": "rpcrt4.dll",
-      "payloadBlockedApis": [
-        {
-          "apiName": "RpcBindingSetAuthInfoW",
-          "category": "rpc_binding_auth_set",
-          "family": "rpc",
-          "id": 53,
-          "key": "rpcrt4.dll!RpcBindingSetAuthInfoW",
-          "reasons": [
-            "payload_risk_policy",
-            "payload_sensitive_parameter",
-            "payload_string_or_buffer_decoder"
-          ],
-          "risk": "critical"
-        },
-        {
-          "apiName": "RpcMgmtEpEltInqBegin",
-          "category": "rpc_endpoint_inquiry_begin",
-          "family": "rpc",
-          "id": 55,
-          "key": "rpcrt4.dll!RpcMgmtEpEltInqBegin",
-          "reasons": [
-            "payload_risk_policy"
-          ],
-          "risk": "high"
-        },
-        {
-          "apiName": "RpcMgmtEpEltInqNextW",
-          "category": "rpc_endpoint_inquiry_next",
-          "family": "rpc",
-          "id": 56,
-          "key": "rpcrt4.dll!RpcMgmtEpEltInqNextW",
-          "reasons": [
-            "payload_risk_policy",
-            "payload_sensitive_parameter"
-          ],
-          "risk": "high"
-        }
-      ],
-      "payloadBlockedInSameDll": 3,
-      "recommendation": "design_manual_decoder_batch_before_runtime_promotion",
-      "runtimeHooksEnabledByDefault": false,
-      "sourceFiles": [
-        "definitions/win32/rpcrt4.json"
-      ],
-      "totalApis": 1
-    }
-  ],
+  "dlls": [],
   "policy": {
     "installMode": "blocked_by_default",
     "payloadCaptureDefault": "disabled",
@@ -113,10 +12,10 @@
     "policyInput": "classification == manual_decoder_required"
   },
   "summary": {
-    "manualDecoderRequired": 1,
-    "payloadBlockedInManualDlls": 3,
+    "manualDecoderRequired": 0,
+    "payloadBlockedInManualDlls": 0,
     "runtimeHooksEnabledByDefault": 0,
-    "totalApis": 1,
-    "totalDlls": 1
+    "totalApis": 0,
+    "totalDlls": 0
   }
 }

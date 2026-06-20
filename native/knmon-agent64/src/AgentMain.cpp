@@ -260,6 +260,7 @@ using RpcBindingFromStringBindingWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, RPC_BIND
 using RpcStringFreeWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR*);
 using RpcBindingFreeFn = RPC_STATUS(RPC_ENTRY*)(RPC_BINDING_HANDLE*);
 using RpcBindingSetOptionFn = RPC_STATUS(RPC_ENTRY*)(RPC_BINDING_HANDLE, unsigned long, ULONG_PTR);
+using RpcMgmtEpEltInqDoneFn = RPC_STATUS(RPC_ENTRY*)(RPC_EP_INQ_HANDLE*);
 using UuidCreateFn = RPC_STATUS(RPC_ENTRY*)(UUID*);
 using UuidToStringWFn = RPC_STATUS(RPC_ENTRY*)(UUID*, RPC_WSTR*);
 using UuidFromStringWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, UUID*);
@@ -420,6 +421,7 @@ RpcBindingFromStringBindingWFn g_originalRpcBindingFromStringBindingW = nullptr;
 RpcStringFreeWFn g_originalRpcStringFreeW = nullptr;
 RpcBindingFreeFn g_originalRpcBindingFree = nullptr;
 RpcBindingSetOptionFn g_originalRpcBindingSetOption = nullptr;
+RpcMgmtEpEltInqDoneFn g_originalRpcMgmtEpEltInqDone = nullptr;
 UuidCreateFn g_originalUuidCreate = nullptr;
 UuidToStringWFn g_originalUuidToStringW = nullptr;
 UuidFromStringWFn g_originalUuidFromStringW = nullptr;
@@ -535,7 +537,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 137;
+constexpr std::size_t HookDefinitionCount = 138;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -6260,6 +6262,28 @@ void EmitRpcBindingSetOptionEvent(
     }
 }
 
+void EmitRpcMgmtEpEltInqDoneEvent(
+    RPC_STATUS result,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end,
+    RPC_EP_INQ_HANDLE* inquiryContext,
+    RPC_EP_INQ_HANDLE preInquiryContext,
+    RPC_EP_INQ_HANDLE postInquiryContext)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, knmon::KnMonTransportApiId::RpcMgmtEpEltInqDone, "rpcrt4.dll", start, end, result == RPC_S_OK ? 0 : static_cast<DWORD>(result));
+        record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(inquiryContext));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(preInquiryContext));
+        record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(postInquiryContext));
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
 void EmitUuidCreateEvent(
     RPC_STATUS result,
     const LARGE_INTEGER& start,
@@ -7106,6 +7130,7 @@ RPC_STATUS RPC_ENTRY HookedRpcBindingFromStringBindingW(RPC_WSTR stringBinding, 
 RPC_STATUS RPC_ENTRY HookedRpcStringFreeW(RPC_WSTR* string);
 RPC_STATUS RPC_ENTRY HookedRpcBindingFree(RPC_BINDING_HANDLE* binding);
 RPC_STATUS RPC_ENTRY HookedRpcBindingSetOption(RPC_BINDING_HANDLE binding, unsigned long option, ULONG_PTR optionValue);
+RPC_STATUS RPC_ENTRY HookedRpcMgmtEpEltInqDone(RPC_EP_INQ_HANDLE* inquiryContext);
 RPC_STATUS RPC_ENTRY HookedUuidCreate(UUID* uuid);
 RPC_STATUS RPC_ENTRY HookedUuidToStringW(UUID* uuid, RPC_WSTR* stringUuid);
 RPC_STATUS RPC_ENTRY HookedUuidFromStringW(RPC_WSTR stringUuid, UUID* uuid);
@@ -7250,6 +7275,7 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "rpcrt4.dll", "RpcStringFreeW", reinterpret_cast<void*>(HookedRpcStringFreeW), reinterpret_cast<void**>(&g_originalRpcStringFreeW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcBindingFree", reinterpret_cast<void*>(HookedRpcBindingFree), reinterpret_cast<void**>(&g_originalRpcBindingFree), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "RpcBindingSetOption", reinterpret_cast<void*>(HookedRpcBindingSetOption), reinterpret_cast<void**>(&g_originalRpcBindingSetOption), false, true, false, 0, 0 },
+        HookDefinition { "rpcrt4.dll", "RpcMgmtEpEltInqDone", reinterpret_cast<void*>(HookedRpcMgmtEpEltInqDone), reinterpret_cast<void**>(&g_originalRpcMgmtEpEltInqDone), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "UuidCreate", reinterpret_cast<void*>(HookedUuidCreate), reinterpret_cast<void**>(&g_originalUuidCreate), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "UuidToStringW", reinterpret_cast<void*>(HookedUuidToStringW), reinterpret_cast<void**>(&g_originalUuidToStringW), false, true, false, 0, 0 },
         HookDefinition { "rpcrt4.dll", "UuidFromStringW", reinterpret_cast<void*>(HookedUuidFromStringW), reinterpret_cast<void**>(&g_originalUuidFromStringW), false, true, false, 0, 0 },
@@ -12015,6 +12041,45 @@ RPC_STATUS RPC_ENTRY HookedRpcBindingSetOption(RPC_BINDING_HANDLE binding, unsig
     if (HooksEnabled())
     {
         EmitRpcBindingSetOptionEvent(result, start, end, binding, option, optionValue);
+    }
+
+    return result;
+}
+
+RPC_STATUS RPC_ENTRY HookedRpcMgmtEpEltInqDone(RPC_EP_INQ_HANDLE* inquiryContext)
+{
+    if (g_inHook || !HooksEnabled() || g_originalRpcMgmtEpEltInqDone == nullptr)
+    {
+        if (g_originalRpcMgmtEpEltInqDone == nullptr)
+        {
+            return RPC_S_CALL_FAILED;
+        }
+
+        return g_originalRpcMgmtEpEltInqDone(inquiryContext);
+    }
+
+    HookReentryGuard guard;
+    RPC_EP_INQ_HANDLE preInquiryContext = nullptr;
+    if (inquiryContext != nullptr)
+    {
+        ReadCurrentProcessValue(inquiryContext, &preInquiryContext);
+    }
+
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const RPC_STATUS result = g_originalRpcMgmtEpEltInqDone(inquiryContext);
+    QueryPerformanceCounter(&end);
+
+    RPC_EP_INQ_HANDLE postInquiryContext = nullptr;
+    if (inquiryContext != nullptr)
+    {
+        ReadCurrentProcessValue(inquiryContext, &postInquiryContext);
+    }
+
+    if (HooksEnabled())
+    {
+        EmitRpcMgmtEpEltInqDoneEvent(result, start, end, inquiryContext, preInquiryContext, postInquiryContext);
     }
 
     return result;

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "module": "rpcrt4",
-  "description": "Wave 2 RPC metadata with smoke-verified local binding lifecycle coverage plus a low-payload Wave 3 UUID helper slice.",
+  "description": "Wave 2 RPC metadata with smoke-verified local binding lifecycle, endpoint inquiry cleanup, and low-payload Wave 3 UUID helper coverage.",
   "apis": [
     {
       "module": "RPCRT4.dll",
@@ -175,8 +175,8 @@
       "family": "rpc",
       "category": "rpc_endpoint_inquiry_done",
       "risk": "medium",
-      "hookPolicy": "definition_only",
-      "coverageStatus": "definition_only",
+      "hookPolicy": "iat",
+      "coverageStatus": "smoke_verified",
       "architectures": ["x86", "x64"],
       "callingConvention": "stdcall",
       "returnType": "RPC_STATUS",

@@ -4737,6 +4737,15 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         payload = ApiCallPayload(result, record, RpcStatusValue(record.ReturnValue), args.str(), "");
         break;
     }
+    case KnMonTransportApiId::RpcMgmtEpEltInqDone:
+    {
+        const std::string inquiryContextPointer = HexPointerValue(record.Values64[0], result.Architecture);
+        const std::string preInquiryContext = HexPointerValue(record.Values64[1], result.Architecture);
+        const std::string postInquiryContext = HexPointerValue(record.Values64[2], result.Architecture);
+        args << ArgumentJsonFromMetadata(record.ApiId, 0, "RPC_EP_INQ_HANDLE*", "InquiryContext", "inout", inquiryContextPointer, postInquiryContext, preInquiryContext);
+        payload = ApiCallPayload(result, record, RpcStatusValue(record.ReturnValue), args.str(), "");
+        break;
+    }
     case KnMonTransportApiId::UuidCreate:
     {
         const std::string uuidPointer = HexPointerValue(record.Values64[0], result.Architecture);
