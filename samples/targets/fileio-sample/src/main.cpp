@@ -83,6 +83,17 @@ extern "C" __declspec(dllimport) void WINAPI mmTaskYield();
 extern "C" __declspec(dllimport) DWORD WINAPI timeGetTime();
 extern "C" __declspec(dllimport) UINT WINAPI waveInGetNumDevs();
 extern "C" __declspec(dllimport) UINT WINAPI waveOutGetNumDevs();
+extern "C" __declspec(dllimport) HRESULT WINAPI BufferedPaintInit();
+extern "C" __declspec(dllimport) HRESULT WINAPI BufferedPaintUnInit();
+extern "C" __declspec(dllimport) DWORD WINAPI GetThemeAppProperties();
+extern "C" __declspec(dllimport) BOOL WINAPI IsAppThemed();
+extern "C" __declspec(dllimport) BOOL WINAPI IsCompositionActive();
+extern "C" __declspec(dllimport) BOOL WINAPI IsThemeActive();
+extern "C" __declspec(dllimport) void WINAPI ImageList_EndDrag();
+extern "C" __declspec(dllimport) void WINAPI InitCommonControls();
+extern "C" __declspec(dllimport) INT WINAPI D3DPERF_EndEvent();
+extern "C" __declspec(dllimport) DWORD WINAPI D3DPERF_GetStatus();
+extern "C" __declspec(dllimport) BOOL WINAPI D3DPERF_QueryRepeatFrame();
 extern "C" __declspec(dllimport) HPALETTE WINAPI GdipCreateHalftonePalette();
 extern "C" __declspec(dllimport) HRESULT WINAPI DXGIDeclareAdapterRemovalSupport();
 extern "C" __declspec(dllimport) HRESULT WINAPI DXGIDisableVBlankVirtualization();
@@ -3007,6 +3018,7 @@ bool RunTier2InitialReturnOnlyBatchProbe()
 {
     bool success = false;
     HPALETTE palette = nullptr;
+    PVOID rangeMap = nullptr;
 
     do
     {
@@ -3023,6 +3035,22 @@ bool RunTier2InitialReturnOnlyBatchProbe()
         const DWORD multimediaTime = timeGetTime();
         const UINT waveInDevices = waveInGetNumDevs();
         const UINT waveOutDevices = waveOutGetNumDevs();
+        const HRESULT bufferedPaintInit = BufferedPaintInit();
+        const DWORD themeProperties = GetThemeAppProperties();
+        const BOOL appThemed = IsAppThemed();
+        const BOOL compositionActive = IsCompositionActive();
+        const BOOL themeActive = IsThemeActive();
+        const HRESULT bufferedPaintUnInit = BufferedPaintUnInit();
+        InitCommonControls();
+        ImageList_EndDrag();
+        const LANGID muiLanguage = GetMUILanguage();
+        const INT d3dEndEvent = D3DPERF_EndEvent();
+        const DWORD d3dStatus = D3DPERF_GetStatus();
+        const BOOL d3dRepeatFrame = D3DPERF_QueryRepeatFrame();
+        const DWORD symLoadError = GetSymLoadError();
+        const LPAPI_VERSION imagehlpVersion = ImagehlpApiVersion();
+        rangeMap = RangeMapCreate();
+        const DWORD symOptions = SymGetOptions();
         const ULONG oleAutomationBuild = OaBuildVersion();
         const HRESULT dxgiAdapterRemoval = DXGIDeclareAdapterRemovalSupport();
         const HRESULT dxgiVBlank = DXGIDisableVBlankVirtualization();
@@ -3070,6 +3098,20 @@ bool RunTier2InitialReturnOnlyBatchProbe()
                   << " time_ms=" << multimediaTime
                   << " wave_in_devs=" << waveInDevices
                   << " wave_out_devs=" << waveOutDevices
+                  << " buffered_paint_init=" << HexHResult(bufferedPaintInit)
+                  << " theme_props=" << themeProperties
+                  << " app_themed=" << appThemed
+                  << " composition_active=" << compositionActive
+                  << " theme_active=" << themeActive
+                  << " buffered_paint_uninit=" << HexHResult(bufferedPaintUnInit)
+                  << " mui_language=" << muiLanguage
+                  << " d3d_end_event=" << d3dEndEvent
+                  << " d3d_status=" << d3dStatus
+                  << " d3d_repeat=" << d3dRepeatFrame
+                  << " sym_load_error=" << symLoadError
+                  << " imagehlp_version=" << reinterpret_cast<const void*>(imagehlpVersion)
+                  << " range_map=" << rangeMap
+                  << " sym_options=" << symOptions
                   << " oleaut32_build=" << oleAutomationBuild
                   << " dxgi_adapter=" << HexHResult(dxgiAdapterRemoval)
                   << " dxgi_vblank=" << HexHResult(dxgiVBlank)
@@ -3108,6 +3150,12 @@ bool RunTier2InitialReturnOnlyBatchProbe()
             dciProvider = nullptr;
         }
 
+        if (rangeMap != nullptr)
+        {
+            RangeMapFree(rangeMap);
+            rangeMap = nullptr;
+        }
+
         if (immContext != nullptr)
         {
             if (!ImmDestroyContext(immContext))
@@ -3138,6 +3186,12 @@ bool RunTier2InitialReturnOnlyBatchProbe()
         success = true;
     }
     while (false);
+
+    if (rangeMap != nullptr)
+    {
+        RangeMapFree(rangeMap);
+        rangeMap = nullptr;
+    }
 
     if (palette != nullptr)
     {

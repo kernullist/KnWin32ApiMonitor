@@ -185,6 +185,22 @@ using MmTaskYieldFn = void(WINAPI*)();
 using TimeGetTimeFn = DWORD(WINAPI*)();
 using WaveInGetNumDevsFn = UINT(WINAPI*)();
 using WaveOutGetNumDevsFn = UINT(WINAPI*)();
+using BufferedPaintInitFn = HRESULT(WINAPI*)();
+using BufferedPaintUnInitFn = HRESULT(WINAPI*)();
+using GetThemeAppPropertiesFn = DWORD(WINAPI*)();
+using IsAppThemedFn = BOOL(WINAPI*)();
+using IsCompositionActiveFn = BOOL(WINAPI*)();
+using IsThemeActiveFn = BOOL(WINAPI*)();
+using GetMUILanguageFn = LANGID(WINAPI*)();
+using ImageListEndDragFn = void(WINAPI*)();
+using InitCommonControlsFn = void(WINAPI*)();
+using D3DPerfEndEventFn = INT(WINAPI*)();
+using D3DPerfGetStatusFn = DWORD(WINAPI*)();
+using D3DPerfQueryRepeatFrameFn = BOOL(WINAPI*)();
+using GetSymLoadErrorFn = DWORD(WINAPI*)();
+using ImagehlpApiVersionFn = PVOID(WINAPI*)();
+using RangeMapCreateFn = PVOID(WINAPI*)();
+using SymGetOptionsFn = DWORD(WINAPI*)();
 using GdipCreateHalftonePaletteFn = HPALETTE(WINAPI*)();
 using OaBuildVersionFn = ULONG(WINAPI*)();
 using OaEnablePerUserTLibRegistrationFn = void(WINAPI*)();
@@ -393,6 +409,22 @@ MmTaskYieldFn g_originalMmTaskYield = nullptr;
 TimeGetTimeFn g_originalTimeGetTime = nullptr;
 WaveInGetNumDevsFn g_originalWaveInGetNumDevs = nullptr;
 WaveOutGetNumDevsFn g_originalWaveOutGetNumDevs = nullptr;
+BufferedPaintInitFn g_originalBufferedPaintInit = nullptr;
+BufferedPaintUnInitFn g_originalBufferedPaintUnInit = nullptr;
+GetThemeAppPropertiesFn g_originalGetThemeAppProperties = nullptr;
+IsAppThemedFn g_originalIsAppThemed = nullptr;
+IsCompositionActiveFn g_originalIsCompositionActive = nullptr;
+IsThemeActiveFn g_originalIsThemeActive = nullptr;
+GetMUILanguageFn g_originalGetMUILanguage = nullptr;
+ImageListEndDragFn g_originalImageListEndDrag = nullptr;
+InitCommonControlsFn g_originalInitCommonControls = nullptr;
+D3DPerfEndEventFn g_originalD3DPerfEndEvent = nullptr;
+D3DPerfGetStatusFn g_originalD3DPerfGetStatus = nullptr;
+D3DPerfQueryRepeatFrameFn g_originalD3DPerfQueryRepeatFrame = nullptr;
+GetSymLoadErrorFn g_originalGetSymLoadError = nullptr;
+ImagehlpApiVersionFn g_originalImagehlpApiVersion = nullptr;
+RangeMapCreateFn g_originalRangeMapCreate = nullptr;
+SymGetOptionsFn g_originalSymGetOptions = nullptr;
 GdipCreateHalftonePaletteFn g_originalGdipCreateHalftonePalette = nullptr;
 OaBuildVersionFn g_originalOaBuildVersion = nullptr;
 OaEnablePerUserTLibRegistrationFn g_originalOaEnablePerUserTLibRegistration = nullptr;
@@ -632,7 +664,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 185;
+constexpr std::size_t HookDefinitionCount = 201;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -7149,6 +7181,22 @@ void WINAPI HookedMmTaskYield();
 DWORD WINAPI HookedTimeGetTime();
 UINT WINAPI HookedWaveInGetNumDevs();
 UINT WINAPI HookedWaveOutGetNumDevs();
+HRESULT WINAPI HookedBufferedPaintInit();
+HRESULT WINAPI HookedBufferedPaintUnInit();
+DWORD WINAPI HookedGetThemeAppProperties();
+BOOL WINAPI HookedIsAppThemed();
+BOOL WINAPI HookedIsCompositionActive();
+BOOL WINAPI HookedIsThemeActive();
+LANGID WINAPI HookedGetMUILanguage();
+void WINAPI HookedImageListEndDrag();
+void WINAPI HookedInitCommonControls();
+INT WINAPI HookedD3DPerfEndEvent();
+DWORD WINAPI HookedD3DPerfGetStatus();
+BOOL WINAPI HookedD3DPerfQueryRepeatFrame();
+DWORD WINAPI HookedGetSymLoadError();
+PVOID WINAPI HookedImagehlpApiVersion();
+PVOID WINAPI HookedRangeMapCreate();
+DWORD WINAPI HookedSymGetOptions();
 HPALETTE WINAPI HookedGdipCreateHalftonePalette();
 ULONG WINAPI HookedOaBuildVersion();
 void WINAPI HookedOaEnablePerUserTLibRegistration();
@@ -7338,6 +7386,22 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "winmm.dll", "timeGetTime", reinterpret_cast<void*>(HookedTimeGetTime), reinterpret_cast<void**>(&g_originalTimeGetTime), false, true, false, 141, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "winmm.dll", "waveInGetNumDevs", reinterpret_cast<void*>(HookedWaveInGetNumDevs), reinterpret_cast<void**>(&g_originalWaveInGetNumDevs), false, true, false, 151, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "winmm.dll", "waveOutGetNumDevs", reinterpret_cast<void*>(HookedWaveOutGetNumDevs), reinterpret_cast<void**>(&g_originalWaveOutGetNumDevs), false, true, false, 167, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "uxtheme.dll", "BufferedPaintInit", reinterpret_cast<void*>(HookedBufferedPaintInit), reinterpret_cast<void**>(&g_originalBufferedPaintInit), false, true, false, 38, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "uxtheme.dll", "BufferedPaintUnInit", reinterpret_cast<void*>(HookedBufferedPaintUnInit), reinterpret_cast<void**>(&g_originalBufferedPaintUnInit), false, true, false, 42, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "uxtheme.dll", "GetThemeAppProperties", reinterpret_cast<void*>(HookedGetThemeAppProperties), reinterpret_cast<void**>(&g_originalGetThemeAppProperties), false, true, false, 153, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "uxtheme.dll", "IsAppThemed", reinterpret_cast<void*>(HookedIsAppThemed), reinterpret_cast<void**>(&g_originalIsAppThemed), false, true, false, 187, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "uxtheme.dll", "IsCompositionActive", reinterpret_cast<void*>(HookedIsCompositionActive), reinterpret_cast<void**>(&g_originalIsCompositionActive), false, true, false, 188, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "uxtheme.dll", "IsThemeActive", reinterpret_cast<void*>(HookedIsThemeActive), reinterpret_cast<void**>(&g_originalIsThemeActive), false, true, false, 189, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "comctl32.dll", "GetMUILanguage", reinterpret_cast<void*>(HookedGetMUILanguage), reinterpret_cast<void**>(&g_originalGetMUILanguage), false, true, false, 38, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "comctl32.dll", "ImageList_EndDrag", reinterpret_cast<void*>(HookedImageListEndDrag), reinterpret_cast<void**>(&g_originalImageListEndDrag), false, true, false, 54, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "comctl32.dll", "InitCommonControls", reinterpret_cast<void*>(HookedInitCommonControls), reinterpret_cast<void**>(&g_originalInitCommonControls), false, true, false, 17, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "d3d9.dll", "D3DPERF_EndEvent", reinterpret_cast<void*>(HookedD3DPerfEndEvent), reinterpret_cast<void**>(&g_originalD3DPerfEndEvent), false, true, false, 28, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "d3d9.dll", "D3DPERF_GetStatus", reinterpret_cast<void*>(HookedD3DPerfGetStatus), reinterpret_cast<void**>(&g_originalD3DPerfGetStatus), false, true, false, 29, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "d3d9.dll", "D3DPERF_QueryRepeatFrame", reinterpret_cast<void*>(HookedD3DPerfQueryRepeatFrame), reinterpret_cast<void**>(&g_originalD3DPerfQueryRepeatFrame), false, true, false, 30, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "dbghelp.dll", "GetSymLoadError", reinterpret_cast<void*>(HookedGetSymLoadError), reinterpret_cast<void**>(&g_originalGetSymLoadError), false, true, false, 1149, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "dbghelp.dll", "ImagehlpApiVersion", reinterpret_cast<void*>(HookedImagehlpApiVersion), reinterpret_cast<void**>(&g_originalImagehlpApiVersion), false, true, false, 1156, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "dbghelp.dll", "RangeMapCreate", reinterpret_cast<void*>(HookedRangeMapCreate), reinterpret_cast<void**>(&g_originalRangeMapCreate), false, true, false, 1162, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "dbghelp.dll", "SymGetOptions", reinterpret_cast<void*>(HookedSymGetOptions), reinterpret_cast<void**>(&g_originalSymGetOptions), false, true, false, 1257, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "gdiplus.dll", "GdipCreateHalftonePalette", reinterpret_cast<void*>(HookedGdipCreateHalftonePalette), reinterpret_cast<void**>(&g_originalGdipCreateHalftonePalette), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "oleaut32.dll", "OaBuildVersion", reinterpret_cast<void*>(HookedOaBuildVersion), reinterpret_cast<void**>(&g_originalOaBuildVersion), false, true, false, 170, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "oleaut32.dll", "OaEnablePerUserTLibRegistration", reinterpret_cast<void*>(HookedOaEnablePerUserTLibRegistration), reinterpret_cast<void**>(&g_originalOaEnablePerUserTLibRegistration), false, true, false, 444, 0, false, "", true, "tier2-initial-return-only" },
@@ -9805,6 +9869,246 @@ UINT WINAPI HookedWaveOutGetNumDevs()
     };
 
     return InvokeTier2ReturnOnlyHook(g_originalWaveOutGetNumDevs, static_cast<UINT>(0), Metadata);
+}
+
+HRESULT WINAPI HookedBufferedPaintInit()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "uxtheme.dll",
+        "BufferedPaintInit",
+        "ui",
+        "ui/controls",
+        "medium",
+        "uxtheme.dll!BufferedPaintInit",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHResultHook(g_originalBufferedPaintInit, Metadata);
+}
+
+HRESULT WINAPI HookedBufferedPaintUnInit()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "uxtheme.dll",
+        "BufferedPaintUnInit",
+        "ui",
+        "ui/controls",
+        "medium",
+        "uxtheme.dll!BufferedPaintUnInit",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHResultHook(g_originalBufferedPaintUnInit, Metadata);
+}
+
+DWORD WINAPI HookedGetThemeAppProperties()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "uxtheme.dll",
+        "GetThemeAppProperties",
+        "ui",
+        "ui/controls",
+        "medium",
+        "uxtheme.dll!GetThemeAppProperties",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetThemeAppProperties, static_cast<DWORD>(0), Metadata);
+}
+
+BOOL WINAPI HookedIsAppThemed()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "uxtheme.dll",
+        "IsAppThemed",
+        "ui",
+        "ui/controls",
+        "medium",
+        "uxtheme.dll!IsAppThemed",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalIsAppThemed, FALSE, Metadata);
+}
+
+BOOL WINAPI HookedIsCompositionActive()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "uxtheme.dll",
+        "IsCompositionActive",
+        "ui",
+        "ui/controls",
+        "medium",
+        "uxtheme.dll!IsCompositionActive",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalIsCompositionActive, FALSE, Metadata);
+}
+
+BOOL WINAPI HookedIsThemeActive()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "uxtheme.dll",
+        "IsThemeActive",
+        "ui",
+        "ui/controls",
+        "medium",
+        "uxtheme.dll!IsThemeActive",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalIsThemeActive, FALSE, Metadata);
+}
+
+LANGID WINAPI HookedGetMUILanguage()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "comctl32.dll",
+        "GetMUILanguage",
+        "ui",
+        "ui/controls",
+        "medium",
+        "comctl32.dll!GetMUILanguage",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetMUILanguage, static_cast<LANGID>(0), Metadata);
+}
+
+void WINAPI HookedImageListEndDrag()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "comctl32.dll",
+        "ImageList_EndDrag",
+        "ui",
+        "ui/controls",
+        "medium",
+        "comctl32.dll!ImageList_EndDrag",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalImageListEndDrag, Metadata);
+}
+
+void WINAPI HookedInitCommonControls()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "comctl32.dll",
+        "InitCommonControls",
+        "ui",
+        "ui/controls",
+        "medium",
+        "comctl32.dll!InitCommonControls",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalInitCommonControls, Metadata);
+}
+
+INT WINAPI HookedD3DPerfEndEvent()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "d3d9.dll",
+        "D3DPERF_EndEvent",
+        "graphics",
+        "graphics/direct3-d9",
+        "medium",
+        "d3d9.dll!D3DPERF_EndEvent",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalD3DPerfEndEvent, static_cast<INT>(0), Metadata);
+}
+
+DWORD WINAPI HookedD3DPerfGetStatus()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "d3d9.dll",
+        "D3DPERF_GetStatus",
+        "graphics",
+        "graphics/direct3-d9",
+        "medium",
+        "d3d9.dll!D3DPERF_GetStatus",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalD3DPerfGetStatus, static_cast<DWORD>(0), Metadata);
+}
+
+BOOL WINAPI HookedD3DPerfQueryRepeatFrame()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "d3d9.dll",
+        "D3DPERF_QueryRepeatFrame",
+        "graphics",
+        "graphics/direct3-d9",
+        "medium",
+        "d3d9.dll!D3DPERF_QueryRepeatFrame",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalD3DPerfQueryRepeatFrame, FALSE, Metadata);
+}
+
+DWORD WINAPI HookedGetSymLoadError()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "dbghelp.dll",
+        "GetSymLoadError",
+        "system",
+        "system/diagnostics/debug",
+        "medium",
+        "dbghelp.dll!GetSymLoadError",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetSymLoadError, static_cast<DWORD>(0), Metadata);
+}
+
+PVOID WINAPI HookedImagehlpApiVersion()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "dbghelp.dll",
+        "ImagehlpApiVersion",
+        "system",
+        "system/diagnostics/debug",
+        "medium",
+        "dbghelp.dll!ImagehlpApiVersion",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalImagehlpApiVersion, static_cast<PVOID>(nullptr), Metadata);
+}
+
+PVOID WINAPI HookedRangeMapCreate()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "dbghelp.dll",
+        "RangeMapCreate",
+        "system",
+        "system/diagnostics/debug",
+        "medium",
+        "dbghelp.dll!RangeMapCreate",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalRangeMapCreate, static_cast<PVOID>(nullptr), Metadata);
+}
+
+DWORD WINAPI HookedSymGetOptions()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "dbghelp.dll",
+        "SymGetOptions",
+        "system",
+        "system/diagnostics/debug",
+        "medium",
+        "dbghelp.dll!SymGetOptions",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalSymGetOptions, static_cast<DWORD>(0), Metadata);
 }
 
 HPALETTE WINAPI HookedGdipCreateHalftonePalette()
