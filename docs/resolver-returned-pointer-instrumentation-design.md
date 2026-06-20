@@ -28,6 +28,7 @@ Current loader-aware coverage provides these paths:
 6. Candidate-ledger lifecycle messages for resolver-returned pointers:
    - `resolver_pointer_candidate`
    - `resolver_pointer_unsupported`
+7. Controller audit/output summaries for candidate-ledger messages.
 
 This captures APIs reached through import slots in eligible modules. It also
 captures resolver calls with bounded function-name evidence and return/status

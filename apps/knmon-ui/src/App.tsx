@@ -205,6 +205,57 @@ function readNumberField(record: Record<string, unknown>, name: string): number 
   return null;
 }
 
+function readStringField(record: Record<string, unknown>, name: string): string {
+  const value = record[name];
+  return typeof value === "string" ? value : "";
+}
+
+function readBooleanField(record: Record<string, unknown>, name: string): boolean {
+  return record[name] === true;
+}
+
+function resolverPointerOutputEvents(result: CaptureResult): AuditEvent[] {
+  return result.agentMessages
+    .map((message) => getRecord(message))
+    .filter((message): message is Record<string, unknown> =>
+      message?.messageType === "resolver_pointer_candidate" ||
+      message?.messageType === "resolver_pointer_unsupported"
+    )
+    .map((message) => {
+      const messageType = readStringField(message, "messageType");
+      const classification = readStringField(message, "classification") || (messageType === "resolver_pointer_candidate" ? "candidate" : "unsupported");
+      const resolverApi = readStringField(message, "resolverApi") || "resolver";
+      const requestedModule = readStringField(message, "requestedModule");
+      const requestedName = readStringField(message, "requestedName");
+      const lookupKind = readStringField(message, "lookupKind");
+      const requestedOrdinal = readNumberField(message, "requestedOrdinal");
+      const requestedSymbol = lookupKind === "ordinal"
+        ? `ordinal:${requestedOrdinal ?? 0}`
+        : (requestedName || "<unnamed>");
+      const targetModule = readStringField(message, "targetModule");
+      const targetRvaHex = readStringField(message, "targetRvaHex");
+      const definitionName = readStringField(message, "definitionName");
+      const definitionApiId = readNumberField(message, "definitionApiId");
+      const reason = readStringField(message, "reason");
+      const instrumented = readBooleanField(message, "instrumented");
+      const mapped = definitionName ? `; apiId=${definitionApiId ?? 0} ${definitionName}` : "";
+      const target = targetModule ? ` -> ${targetModule}${targetRvaHex ? `+${targetRvaHex}` : ""}` : "";
+      const source = `${requestedModule ? `${requestedModule}!` : ""}${requestedSymbol}`;
+      const messageText = `${classification} via ${resolverApi}: ${source}${target}${mapped}; reason=${reason || "none"}; instrumented=${instrumented ? "true" : "false"}`;
+
+      return makeAuditEvent(messageType, "resolver_pointer_classification", messageText);
+    });
+}
+
+function captureResultOutputEvents(result: CaptureResult, fallbackType: string): AuditEvent[] {
+  const resolverEvents = resolverPointerOutputEvents(result);
+  if (result.auditEvents.length > 0 || resolverEvents.length > 0) {
+    return [...resolverEvents, ...result.auditEvents];
+  }
+
+  return [makeAuditEvent(fallbackType, result.operation, result.message, result.win32ErrorCode)];
+}
+
 function hookRestoreSummary(result: CaptureResult | null): string {
   if (!result) {
     return "not available";
@@ -1295,7 +1346,7 @@ function App() {
       setCaptureResult(result);
       setBackendMode(result.backendMode);
       setDroppedCount(result.droppedEvents);
-      appendOutput(result.auditEvents.length > 0 ? result.auditEvents : [makeAuditEvent("attach_result", result.operation, result.message, result.win32ErrorCode)]);
+      appendOutput(captureResultOutputEvents(result, "attach_result"));
       appendCapturedEvents(result.capturedEvents, ["ui-attach", `target:${result.targetProcessId}`]);
       observeTargetExitFromCaptureResult(result);
       setInspectorTab("output");
@@ -1378,14 +1429,15 @@ function App() {
       appendOutput([makeAuditEvent("process_tree_requested", "supervise_process_tree", `Supervision requested for PID ${selectedTarget.pid}; policy=${childPolicy}.`)]);
       const result = await superviseProcessTree(selectedTarget.pid, treeDurationMs, childPolicy);
       const childAuditEvents = result.childAttachResults.flatMap((capture) => capture.auditEvents);
+      const childResolverEvents = result.childAttachResults.flatMap((capture) => resolverPointerOutputEvents(capture));
       const childDroppedEvents = result.childAttachResults.reduce((total, capture) => total + capture.droppedEvents, 0);
 
       setProcessTreeResult(result);
       setBackendMode(result.backendMode);
       setDroppedCount(childDroppedEvents);
       appendOutput(
-        result.auditEvents.length + childAuditEvents.length > 0
-          ? [...result.auditEvents, ...childAuditEvents]
+        result.auditEvents.length + childAuditEvents.length + childResolverEvents.length > 0
+          ? [...childResolverEvents, ...result.auditEvents, ...childAuditEvents]
           : [makeAuditEvent("process_tree_result", result.operation, result.message, result.win32ErrorCode)]
       );
 

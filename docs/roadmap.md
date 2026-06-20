@@ -407,6 +407,7 @@ Current verified behavior:
 11. Resolver-returned pointers are classified through low-volume candidate-ledger agent messages without code mutation:
    - known generated APIs such as `kernel32.dll!GetCurrentProcessId` are reported as `resolver_pointer_candidate` with module/RVA/definition evidence and `instrumented=false`
    - repository-only exports such as `KnMonDynamicProbe` are reported as `resolver_pointer_unsupported` with `unsupported_definition_missing`
+   - controller audit events and UI output summaries surface the candidate or unsupported reason before high-volume hook status noise
    - no `resolver_pointer_call` event is emitted by the candidate-ledger slice
 12. Unloaded owner-module restoration races are handled without stale writes and healthy shutdown reports `restoredHooks=installedHooks`.
 13. The first Wave 2 live slice captures selected `ws2_32.dll` Winsock bootstrap, connect metadata, and address-resolution APIs through the same shared-memory transport:

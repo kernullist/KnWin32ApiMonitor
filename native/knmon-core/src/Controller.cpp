@@ -5441,6 +5441,80 @@ KnMonAgentMessage BuildAgentMessage(const KnMonCaptureResult& result, const std:
     return message;
 }
 
+bool IsResolverPointerMessageType(const std::string& messageType)
+{
+    return messageType == "resolver_pointer_candidate" || messageType == "resolver_pointer_unsupported";
+}
+
+std::string ResolverPointerAuditMessage(const KnMonAgentMessage& message)
+{
+    const std::string& payload = message.RawPayload;
+    const std::string resolverApi = ExtractJsonString(payload, "resolverApi");
+    const std::string classification = ExtractJsonString(payload, "classification");
+    const std::string reason = ExtractJsonString(payload, "reason");
+    const std::string requestedModule = ExtractJsonString(payload, "requestedModule");
+    const std::string requestedName = ExtractJsonString(payload, "requestedName");
+    const std::string lookupKind = ExtractJsonString(payload, "lookupKind");
+    const std::string targetModule = ExtractJsonString(payload, "targetModule");
+    const std::string targetRvaHex = ExtractJsonString(payload, "targetRvaHex");
+    const std::string definitionName = ExtractJsonString(payload, "definitionName");
+    const std::uint64_t definitionApiId = ExtractJsonUInt64(payload, "definitionApiId");
+    const std::uint64_t requestedOrdinal = ExtractJsonUInt64(payload, "requestedOrdinal");
+    std::ostringstream stream;
+
+    stream << "Resolver pointer " << (classification.empty() ? "classified" : classification);
+    if (!resolverApi.empty())
+    {
+        stream << " via " << resolverApi;
+    }
+
+    stream << ": ";
+    if (!requestedModule.empty())
+    {
+        stream << requestedModule << "!";
+    }
+
+    if (lookupKind == "ordinal")
+    {
+        stream << "ordinal:" << requestedOrdinal;
+    }
+    else
+    {
+        stream << (requestedName.empty() ? "<unnamed>" : requestedName);
+    }
+
+    if (!targetModule.empty())
+    {
+        stream << " -> " << targetModule;
+        if (!targetRvaHex.empty())
+        {
+            stream << "+" << targetRvaHex;
+        }
+    }
+
+    if (!definitionName.empty())
+    {
+        stream << "; apiId=" << definitionApiId << " " << definitionName;
+    }
+
+    if (!reason.empty())
+    {
+        stream << "; reason=" << reason;
+    }
+
+    stream << "; instrumented=false";
+    return stream.str();
+}
+
+void AddResolverPointerAudit(KnMonCaptureResult& result, const KnMonAgentMessage& message)
+{
+    AddAudit(
+        result,
+        message.MessageType,
+        "resolver_pointer_classification",
+        ResolverPointerAuditMessage(message));
+}
+
 KnMonError NotImplementedError(const std::string& operation)
 {
     KnMonError error;
@@ -5817,6 +5891,10 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         {
             result.CapturedEvents.push_back(message);
             AddAudit(result, "api_call_received", "agent_event_read", message.RawPayload);
+        }
+        else if (IsResolverPointerMessageType(message.MessageType))
+        {
+            AddResolverPointerAudit(result, message);
         }
         else if (message.MessageType == "dropped_events")
         {
@@ -6671,6 +6749,10 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                     result.CapturedEvents.push_back(message);
                     AddAudit(result, "api_call_received", "agent_event_read", message.RawPayload);
                 }
+                else if (IsResolverPointerMessageType(message.MessageType))
+                {
+                    AddResolverPointerAudit(result, message);
+                }
                 else if (message.MessageType == "dropped_events")
                 {
                     result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
@@ -6941,6 +7023,10 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         {
             result.CapturedEvents.push_back(message);
             AddAudit(result, "api_call_received", "agent_event_read", message.RawPayload);
+        }
+        else if (IsResolverPointerMessageType(message.MessageType))
+        {
+            AddResolverPointerAudit(result, message);
         }
         else if (message.MessageType == "dropped_events")
         {

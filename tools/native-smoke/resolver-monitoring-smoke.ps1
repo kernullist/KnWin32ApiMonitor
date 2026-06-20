@@ -152,6 +152,30 @@ if ($unsupported.Count -ne 1)
     throw "Resolver pointer unsupported evidence for KnMonDynamicProbe missing."
 }
 
+$candidateAudit = @($result.auditEvents | Where-Object {
+    $_.eventType -eq "resolver_pointer_candidate" -and
+    $_.operation -eq "resolver_pointer_classification" -and
+    $_.message -match "GetCurrentProcessId" -and
+    $_.message -match "instrumented=false"
+} | Select-Object -First 1)
+
+if ($candidateAudit.Count -ne 1)
+{
+    throw "Resolver pointer candidate audit output missing."
+}
+
+$unsupportedAudit = @($result.auditEvents | Where-Object {
+    $_.eventType -eq "resolver_pointer_unsupported" -and
+    $_.operation -eq "resolver_pointer_classification" -and
+    $_.message -match "KnMonDynamicProbe" -and
+    $_.message -match "unsupported_definition_missing"
+} | Select-Object -First 1)
+
+if ($unsupportedAudit.Count -ne 1)
+{
+    throw "Resolver pointer unsupported audit output missing."
+}
+
 $resolverHooks = @($result.agentMessages | Where-Object {
     $_.messageType -eq "hook_installed" -and
     $_.api -in $resolverApis
