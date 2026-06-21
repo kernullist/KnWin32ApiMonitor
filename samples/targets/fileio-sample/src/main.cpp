@@ -3045,6 +3045,8 @@ bool RunTier2InitialReturnOnlyBatchProbe()
     LPCH environmentStrings = nullptr;
     LPWCH environmentStringsW = nullptr;
     DWORD tlsIndex = TLS_OUT_OF_INDEXES;
+    HMENU menu = nullptr;
+    HMENU popupMenu = nullptr;
 
     do
     {
@@ -3070,6 +3072,38 @@ bool RunTier2InitialReturnOnlyBatchProbe()
         InitCommonControls();
         ImageList_EndDrag();
         const LANGID muiLanguage = GetMUILanguage();
+        const BOOL anyPopup = AnyPopup();
+        const BOOL closeClipboard = CloseClipboard();
+        const INT clipboardFormats = CountClipboardFormats();
+        menu = CreateMenu();
+        popupMenu = CreatePopupMenu();
+        const HWND activeWindow = GetActiveWindow();
+        const HWND capturedWindow = GetCapture();
+        const UINT caretBlinkTime = GetCaretBlinkTime();
+        const HWND clipboardOwner = GetClipboardOwner();
+        const UINT clipboardSequence = GetClipboardSequenceNumber();
+        const HWND clipboardViewer = GetClipboardViewer();
+        const HCURSOR cursor = GetCursor();
+        const INT dialogBaseUnits = GetDialogBaseUnits();
+        const UINT doubleClickTime = GetDoubleClickTime();
+        const UINT systemDpi = GetDpiForSystem();
+        const HWND focusWindow = GetFocus();
+        const BOOL inputState = GetInputState();
+        const UINT keyboardCodePage = GetKBCodePage();
+        const INT menuCheckMark = GetMenuCheckMarkDimensions();
+        const LPARAM messageExtraInfo = GetMessageExtraInfo();
+        const UINT messagePos = GetMessagePos();
+        const INT messageTime = GetMessageTime();
+        const HWND openClipboardWindow = GetOpenClipboardWindow();
+        const HWINSTA windowStation = GetProcessWindowStation();
+        const HWND shellWindow = GetShellWindow();
+        const DPI_AWARENESS_CONTEXT dpiAwareness = GetThreadDpiAwarenessContext();
+        const DPI_HOSTING_BEHAVIOR dpiHosting = GetThreadDpiHostingBehavior();
+        const UINT unpredictedMessagePos = GetUnpredictedMessagePos();
+        const BOOL inSendMessage = InSendMessage();
+        const BOOL mouseInPointer = IsMouseInPointerEnabled();
+        const BOOL processDpiAware = IsProcessDPIAware();
+        const BOOL wow64Message = IsWow64Message();
         const INT d3dEndEvent = D3DPERF_EndEvent();
         const DWORD d3dStatus = D3DPERF_GetStatus();
         const BOOL d3dRepeatFrame = D3DPERF_QueryRepeatFrame();
@@ -3192,6 +3226,38 @@ bool RunTier2InitialReturnOnlyBatchProbe()
                   << " theme_active=" << themeActive
                   << " buffered_paint_uninit=" << HexHResult(bufferedPaintUnInit)
                   << " mui_language=" << muiLanguage
+                  << " any_popup=" << anyPopup
+                  << " close_clipboard=" << closeClipboard
+                  << " clipboard_formats=" << clipboardFormats
+                  << " menu=" << menu
+                  << " popup_menu=" << popupMenu
+                  << " active_window=" << activeWindow
+                  << " captured_window=" << capturedWindow
+                  << " caret_blink_ms=" << caretBlinkTime
+                  << " clipboard_owner=" << clipboardOwner
+                  << " clipboard_sequence=" << clipboardSequence
+                  << " clipboard_viewer=" << clipboardViewer
+                  << " cursor=" << cursor
+                  << " dialog_base_units=" << dialogBaseUnits
+                  << " double_click_ms=" << doubleClickTime
+                  << " system_dpi=" << systemDpi
+                  << " focus_window=" << focusWindow
+                  << " input_state=" << inputState
+                  << " kb_code_page=" << keyboardCodePage
+                  << " menu_check=" << menuCheckMark
+                  << " message_extra=0x" << std::hex << static_cast<unsigned long long>(messageExtraInfo) << std::dec
+                  << " message_pos=0x" << std::hex << messagePos << std::dec
+                  << " message_time=" << messageTime
+                  << " open_clipboard_window=" << openClipboardWindow
+                  << " window_station=" << windowStation
+                  << " shell_window=" << shellWindow
+                  << " dpi_awareness=" << reinterpret_cast<const void*>(dpiAwareness)
+                  << " dpi_hosting=" << static_cast<int>(dpiHosting)
+                  << " unpredicted_message_pos=0x" << std::hex << unpredictedMessagePos << std::dec
+                  << " in_send_message=" << inSendMessage
+                  << " mouse_in_pointer=" << mouseInPointer
+                  << " process_dpi_aware=" << processDpiAware
+                  << " wow64_message=" << wow64Message
                   << " d3d_end_event=" << d3dEndEvent
                   << " d3d_status=" << d3dStatus
                   << " d3d_repeat=" << d3dRepeatFrame
@@ -3341,6 +3407,30 @@ bool RunTier2InitialReturnOnlyBatchProbe()
             cleanupGroup = nullptr;
         }
 
+        if (popupMenu != nullptr)
+        {
+            if (!DestroyMenu(popupMenu))
+            {
+                LogLastError("DestroyMenu(CreatePopupMenu)");
+                success = false;
+                break;
+            }
+
+            popupMenu = nullptr;
+        }
+
+        if (menu != nullptr)
+        {
+            if (!DestroyMenu(menu))
+            {
+                LogLastError("DestroyMenu(CreateMenu)");
+                success = false;
+                break;
+            }
+
+            menu = nullptr;
+        }
+
         if (immContext != nullptr)
         {
             if (!ImmDestroyContext(immContext))
@@ -3424,6 +3514,28 @@ bool RunTier2InitialReturnOnlyBatchProbe()
     {
         CloseThreadpoolCleanupGroup(cleanupGroup);
         cleanupGroup = nullptr;
+    }
+
+    if (popupMenu != nullptr)
+    {
+        if (!DestroyMenu(popupMenu))
+        {
+            LogLastError("DestroyMenu(CreatePopupMenu)");
+            success = false;
+        }
+
+        popupMenu = nullptr;
+    }
+
+    if (menu != nullptr)
+    {
+        if (!DestroyMenu(menu))
+        {
+            LogLastError("DestroyMenu(CreateMenu)");
+            success = false;
+        }
+
+        menu = nullptr;
     }
 
     if (palette != nullptr)

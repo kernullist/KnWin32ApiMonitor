@@ -346,6 +346,38 @@ using WinHttpSetOptionFn = BOOL(WINAPI*)(HINTERNET, DWORD, LPVOID, DWORD);
 using GetSystemMetricsFn = int(WINAPI*)(int);
 using GetDesktopWindowFn = HWND(WINAPI*)();
 using GetForegroundWindowFn = HWND(WINAPI*)();
+using AnyPopupFn = BOOL(WINAPI*)();
+using CloseClipboardFn = BOOL(WINAPI*)();
+using CountClipboardFormatsFn = INT(WINAPI*)();
+using CreateMenuFn = HMENU(WINAPI*)();
+using CreatePopupMenuFn = HMENU(WINAPI*)();
+using GetActiveWindowFn = HWND(WINAPI*)();
+using GetCaptureFn = HWND(WINAPI*)();
+using GetCaretBlinkTimeFn = UINT(WINAPI*)();
+using GetClipboardOwnerFn = HWND(WINAPI*)();
+using GetClipboardSequenceNumberFn = UINT(WINAPI*)();
+using GetClipboardViewerFn = HWND(WINAPI*)();
+using GetCursorFn = HCURSOR(WINAPI*)();
+using GetDialogBaseUnitsFn = INT(WINAPI*)();
+using GetDoubleClickTimeFn = UINT(WINAPI*)();
+using GetDpiForSystemFn = UINT(WINAPI*)();
+using GetFocusFn = HWND(WINAPI*)();
+using GetInputStateFn = BOOL(WINAPI*)();
+using GetKBCodePageFn = UINT(WINAPI*)();
+using GetMenuCheckMarkDimensionsFn = INT(WINAPI*)();
+using GetMessageExtraInfoFn = LPARAM(WINAPI*)();
+using GetMessagePosFn = UINT(WINAPI*)();
+using GetMessageTimeFn = INT(WINAPI*)();
+using GetOpenClipboardWindowFn = HWND(WINAPI*)();
+using GetProcessWindowStationFn = HWINSTA(WINAPI*)();
+using GetShellWindowFn = HWND(WINAPI*)();
+using GetThreadDpiAwarenessContextFn = DPI_AWARENESS_CONTEXT(WINAPI*)();
+using GetThreadDpiHostingBehaviorFn = DPI_HOSTING_BEHAVIOR(WINAPI*)();
+using GetUnpredictedMessagePosFn = UINT(WINAPI*)();
+using InSendMessageFn = BOOL(WINAPI*)();
+using IsMouseInPointerEnabledFn = BOOL(WINAPI*)();
+using IsProcessDPIAwareFn = BOOL(WINAPI*)();
+using IsWow64MessageFn = BOOL(WINAPI*)();
 using GetWindowThreadProcessIdFn = DWORD(WINAPI*)(HWND, LPDWORD);
 using CreateCompatibleDCFn = HDC(WINAPI*)(HDC);
 using GetDeviceCapsFn = int(WINAPI*)(HDC, int);
@@ -631,6 +663,38 @@ WinHttpSetOptionFn g_originalWinHttpSetOption = nullptr;
 GetSystemMetricsFn g_originalGetSystemMetrics = nullptr;
 GetDesktopWindowFn g_originalGetDesktopWindow = nullptr;
 GetForegroundWindowFn g_originalGetForegroundWindow = nullptr;
+AnyPopupFn g_originalAnyPopup = nullptr;
+CloseClipboardFn g_originalCloseClipboard = nullptr;
+CountClipboardFormatsFn g_originalCountClipboardFormats = nullptr;
+CreateMenuFn g_originalCreateMenu = nullptr;
+CreatePopupMenuFn g_originalCreatePopupMenu = nullptr;
+GetActiveWindowFn g_originalGetActiveWindow = nullptr;
+GetCaptureFn g_originalGetCapture = nullptr;
+GetCaretBlinkTimeFn g_originalGetCaretBlinkTime = nullptr;
+GetClipboardOwnerFn g_originalGetClipboardOwner = nullptr;
+GetClipboardSequenceNumberFn g_originalGetClipboardSequenceNumber = nullptr;
+GetClipboardViewerFn g_originalGetClipboardViewer = nullptr;
+GetCursorFn g_originalGetCursor = nullptr;
+GetDialogBaseUnitsFn g_originalGetDialogBaseUnits = nullptr;
+GetDoubleClickTimeFn g_originalGetDoubleClickTime = nullptr;
+GetDpiForSystemFn g_originalGetDpiForSystem = nullptr;
+GetFocusFn g_originalGetFocus = nullptr;
+GetInputStateFn g_originalGetInputState = nullptr;
+GetKBCodePageFn g_originalGetKBCodePage = nullptr;
+GetMenuCheckMarkDimensionsFn g_originalGetMenuCheckMarkDimensions = nullptr;
+GetMessageExtraInfoFn g_originalGetMessageExtraInfo = nullptr;
+GetMessagePosFn g_originalGetMessagePos = nullptr;
+GetMessageTimeFn g_originalGetMessageTime = nullptr;
+GetOpenClipboardWindowFn g_originalGetOpenClipboardWindow = nullptr;
+GetProcessWindowStationFn g_originalGetProcessWindowStation = nullptr;
+GetShellWindowFn g_originalGetShellWindow = nullptr;
+GetThreadDpiAwarenessContextFn g_originalGetThreadDpiAwarenessContext = nullptr;
+GetThreadDpiHostingBehaviorFn g_originalGetThreadDpiHostingBehavior = nullptr;
+GetUnpredictedMessagePosFn g_originalGetUnpredictedMessagePos = nullptr;
+InSendMessageFn g_originalInSendMessage = nullptr;
+IsMouseInPointerEnabledFn g_originalIsMouseInPointerEnabled = nullptr;
+IsProcessDPIAwareFn g_originalIsProcessDPIAware = nullptr;
+IsWow64MessageFn g_originalIsWow64Message = nullptr;
 GetWindowThreadProcessIdFn g_originalGetWindowThreadProcessId = nullptr;
 CreateCompatibleDCFn g_originalCreateCompatibleDC = nullptr;
 GetDeviceCapsFn g_originalGetDeviceCaps = nullptr;
@@ -786,7 +850,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 262;
+constexpr std::size_t HookDefinitionCount = 294;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -7464,6 +7528,38 @@ BOOL WINAPI HookedWinHttpSetOption(HINTERNET internet, DWORD option, LPVOID buff
 int WINAPI HookedGetSystemMetrics(int index);
 HWND WINAPI HookedGetDesktopWindow();
 HWND WINAPI HookedGetForegroundWindow();
+BOOL WINAPI HookedAnyPopup();
+BOOL WINAPI HookedCloseClipboard();
+INT WINAPI HookedCountClipboardFormats();
+HMENU WINAPI HookedCreateMenu();
+HMENU WINAPI HookedCreatePopupMenu();
+HWND WINAPI HookedGetActiveWindow();
+HWND WINAPI HookedGetCapture();
+UINT WINAPI HookedGetCaretBlinkTime();
+HWND WINAPI HookedGetClipboardOwner();
+UINT WINAPI HookedGetClipboardSequenceNumber();
+HWND WINAPI HookedGetClipboardViewer();
+HCURSOR WINAPI HookedGetCursor();
+INT WINAPI HookedGetDialogBaseUnits();
+UINT WINAPI HookedGetDoubleClickTime();
+UINT WINAPI HookedGetDpiForSystem();
+HWND WINAPI HookedGetFocus();
+BOOL WINAPI HookedGetInputState();
+UINT WINAPI HookedGetKBCodePage();
+INT WINAPI HookedGetMenuCheckMarkDimensions();
+LPARAM WINAPI HookedGetMessageExtraInfo();
+UINT WINAPI HookedGetMessagePos();
+INT WINAPI HookedGetMessageTime();
+HWND WINAPI HookedGetOpenClipboardWindow();
+HWINSTA WINAPI HookedGetProcessWindowStation();
+HWND WINAPI HookedGetShellWindow();
+DPI_AWARENESS_CONTEXT WINAPI HookedGetThreadDpiAwarenessContext();
+DPI_HOSTING_BEHAVIOR WINAPI HookedGetThreadDpiHostingBehavior();
+UINT WINAPI HookedGetUnpredictedMessagePos();
+BOOL WINAPI HookedInSendMessage();
+BOOL WINAPI HookedIsMouseInPointerEnabled();
+BOOL WINAPI HookedIsProcessDPIAware();
+BOOL WINAPI HookedIsWow64Message();
 DWORD WINAPI HookedGetWindowThreadProcessId(HWND window, LPDWORD processId);
 HDC WINAPI HookedCreateCompatibleDC(HDC dc);
 int WINAPI HookedGetDeviceCaps(HDC dc, int index);
@@ -7578,6 +7674,38 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "comctl32.dll", "GetMUILanguage", reinterpret_cast<void*>(HookedGetMUILanguage), reinterpret_cast<void**>(&g_originalGetMUILanguage), false, true, false, 38, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "comctl32.dll", "ImageList_EndDrag", reinterpret_cast<void*>(HookedImageListEndDrag), reinterpret_cast<void**>(&g_originalImageListEndDrag), false, true, false, 54, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "comctl32.dll", "InitCommonControls", reinterpret_cast<void*>(HookedInitCommonControls), reinterpret_cast<void**>(&g_originalInitCommonControls), false, true, false, 17, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "AnyPopup", reinterpret_cast<void*>(HookedAnyPopup), reinterpret_cast<void**>(&g_originalAnyPopup), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "CloseClipboard", reinterpret_cast<void*>(HookedCloseClipboard), reinterpret_cast<void**>(&g_originalCloseClipboard), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "CountClipboardFormats", reinterpret_cast<void*>(HookedCountClipboardFormats), reinterpret_cast<void**>(&g_originalCountClipboardFormats), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "CreateMenu", reinterpret_cast<void*>(HookedCreateMenu), reinterpret_cast<void**>(&g_originalCreateMenu), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "CreatePopupMenu", reinterpret_cast<void*>(HookedCreatePopupMenu), reinterpret_cast<void**>(&g_originalCreatePopupMenu), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetActiveWindow", reinterpret_cast<void*>(HookedGetActiveWindow), reinterpret_cast<void**>(&g_originalGetActiveWindow), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetCapture", reinterpret_cast<void*>(HookedGetCapture), reinterpret_cast<void**>(&g_originalGetCapture), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetCaretBlinkTime", reinterpret_cast<void*>(HookedGetCaretBlinkTime), reinterpret_cast<void**>(&g_originalGetCaretBlinkTime), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetClipboardOwner", reinterpret_cast<void*>(HookedGetClipboardOwner), reinterpret_cast<void**>(&g_originalGetClipboardOwner), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetClipboardSequenceNumber", reinterpret_cast<void*>(HookedGetClipboardSequenceNumber), reinterpret_cast<void**>(&g_originalGetClipboardSequenceNumber), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetClipboardViewer", reinterpret_cast<void*>(HookedGetClipboardViewer), reinterpret_cast<void**>(&g_originalGetClipboardViewer), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetCursor", reinterpret_cast<void*>(HookedGetCursor), reinterpret_cast<void**>(&g_originalGetCursor), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetDialogBaseUnits", reinterpret_cast<void*>(HookedGetDialogBaseUnits), reinterpret_cast<void**>(&g_originalGetDialogBaseUnits), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetDoubleClickTime", reinterpret_cast<void*>(HookedGetDoubleClickTime), reinterpret_cast<void**>(&g_originalGetDoubleClickTime), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetDpiForSystem", reinterpret_cast<void*>(HookedGetDpiForSystem), reinterpret_cast<void**>(&g_originalGetDpiForSystem), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetFocus", reinterpret_cast<void*>(HookedGetFocus), reinterpret_cast<void**>(&g_originalGetFocus), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetInputState", reinterpret_cast<void*>(HookedGetInputState), reinterpret_cast<void**>(&g_originalGetInputState), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetKBCodePage", reinterpret_cast<void*>(HookedGetKBCodePage), reinterpret_cast<void**>(&g_originalGetKBCodePage), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetMenuCheckMarkDimensions", reinterpret_cast<void*>(HookedGetMenuCheckMarkDimensions), reinterpret_cast<void**>(&g_originalGetMenuCheckMarkDimensions), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetMessageExtraInfo", reinterpret_cast<void*>(HookedGetMessageExtraInfo), reinterpret_cast<void**>(&g_originalGetMessageExtraInfo), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetMessagePos", reinterpret_cast<void*>(HookedGetMessagePos), reinterpret_cast<void**>(&g_originalGetMessagePos), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetMessageTime", reinterpret_cast<void*>(HookedGetMessageTime), reinterpret_cast<void**>(&g_originalGetMessageTime), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetOpenClipboardWindow", reinterpret_cast<void*>(HookedGetOpenClipboardWindow), reinterpret_cast<void**>(&g_originalGetOpenClipboardWindow), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetProcessWindowStation", reinterpret_cast<void*>(HookedGetProcessWindowStation), reinterpret_cast<void**>(&g_originalGetProcessWindowStation), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetShellWindow", reinterpret_cast<void*>(HookedGetShellWindow), reinterpret_cast<void**>(&g_originalGetShellWindow), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetThreadDpiAwarenessContext", reinterpret_cast<void*>(HookedGetThreadDpiAwarenessContext), reinterpret_cast<void**>(&g_originalGetThreadDpiAwarenessContext), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetThreadDpiHostingBehavior", reinterpret_cast<void*>(HookedGetThreadDpiHostingBehavior), reinterpret_cast<void**>(&g_originalGetThreadDpiHostingBehavior), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetUnpredictedMessagePos", reinterpret_cast<void*>(HookedGetUnpredictedMessagePos), reinterpret_cast<void**>(&g_originalGetUnpredictedMessagePos), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "InSendMessage", reinterpret_cast<void*>(HookedInSendMessage), reinterpret_cast<void**>(&g_originalInSendMessage), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "IsMouseInPointerEnabled", reinterpret_cast<void*>(HookedIsMouseInPointerEnabled), reinterpret_cast<void**>(&g_originalIsMouseInPointerEnabled), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "IsProcessDPIAware", reinterpret_cast<void*>(HookedIsProcessDPIAware), reinterpret_cast<void**>(&g_originalIsProcessDPIAware), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "IsWow64Message", reinterpret_cast<void*>(HookedIsWow64Message), reinterpret_cast<void**>(&g_originalIsWow64Message), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "d3d9.dll", "D3DPERF_EndEvent", reinterpret_cast<void*>(HookedD3DPerfEndEvent), reinterpret_cast<void**>(&g_originalD3DPerfEndEvent), false, true, false, 28, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "d3d9.dll", "D3DPERF_GetStatus", reinterpret_cast<void*>(HookedD3DPerfGetStatus), reinterpret_cast<void**>(&g_originalD3DPerfGetStatus), false, true, false, 29, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "d3d9.dll", "D3DPERF_QueryRepeatFrame", reinterpret_cast<void*>(HookedD3DPerfQueryRepeatFrame), reinterpret_cast<void**>(&g_originalD3DPerfQueryRepeatFrame), false, true, false, 30, 0, false, "", true, "tier2-initial-return-only" },
@@ -10248,6 +10376,486 @@ void WINAPI HookedInitCommonControls()
     };
 
     InvokeTier2ReturnOnlyVoidHook(g_originalInitCommonControls, Metadata);
+}
+
+BOOL WINAPI HookedAnyPopup()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "AnyPopup",
+        "ui",
+        "ui/windows-and-messaging",
+        "medium",
+        "user32.dll!AnyPopup",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalAnyPopup, FALSE, Metadata);
+}
+
+BOOL WINAPI HookedCloseClipboard()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "CloseClipboard",
+        "system",
+        "system/data-exchange",
+        "medium",
+        "user32.dll!CloseClipboard",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalCloseClipboard, FALSE, Metadata);
+}
+
+INT WINAPI HookedCountClipboardFormats()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "CountClipboardFormats",
+        "system",
+        "system/data-exchange",
+        "medium",
+        "user32.dll!CountClipboardFormats",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalCountClipboardFormats, static_cast<INT>(0), Metadata);
+}
+
+HMENU WINAPI HookedCreateMenu()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "CreateMenu",
+        "ui",
+        "ui/windows-and-messaging",
+        "medium",
+        "user32.dll!CreateMenu",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalCreateMenu, static_cast<HMENU>(nullptr), Metadata);
+}
+
+HMENU WINAPI HookedCreatePopupMenu()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "CreatePopupMenu",
+        "ui",
+        "ui/windows-and-messaging",
+        "medium",
+        "user32.dll!CreatePopupMenu",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalCreatePopupMenu, static_cast<HMENU>(nullptr), Metadata);
+}
+
+HWND WINAPI HookedGetActiveWindow()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetActiveWindow",
+        "ui",
+        "ui/input/keyboard-and-mouse",
+        "medium",
+        "user32.dll!GetActiveWindow",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetActiveWindow, static_cast<HWND>(nullptr), Metadata);
+}
+
+HWND WINAPI HookedGetCapture()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetCapture",
+        "ui",
+        "ui/input/keyboard-and-mouse",
+        "medium",
+        "user32.dll!GetCapture",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetCapture, static_cast<HWND>(nullptr), Metadata);
+}
+
+UINT WINAPI HookedGetCaretBlinkTime()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetCaretBlinkTime",
+        "ui",
+        "ui/windows-and-messaging",
+        "medium",
+        "user32.dll!GetCaretBlinkTime",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetCaretBlinkTime, static_cast<UINT>(0), Metadata);
+}
+
+HWND WINAPI HookedGetClipboardOwner()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetClipboardOwner",
+        "system",
+        "system/data-exchange",
+        "medium",
+        "user32.dll!GetClipboardOwner",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetClipboardOwner, static_cast<HWND>(nullptr), Metadata);
+}
+
+UINT WINAPI HookedGetClipboardSequenceNumber()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetClipboardSequenceNumber",
+        "system",
+        "system/data-exchange",
+        "medium",
+        "user32.dll!GetClipboardSequenceNumber",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetClipboardSequenceNumber, static_cast<UINT>(0), Metadata);
+}
+
+HWND WINAPI HookedGetClipboardViewer()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetClipboardViewer",
+        "system",
+        "system/data-exchange",
+        "medium",
+        "user32.dll!GetClipboardViewer",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetClipboardViewer, static_cast<HWND>(nullptr), Metadata);
+}
+
+HCURSOR WINAPI HookedGetCursor()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetCursor",
+        "ui",
+        "ui/windows-and-messaging",
+        "medium",
+        "user32.dll!GetCursor",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetCursor, static_cast<HCURSOR>(nullptr), Metadata);
+}
+
+INT WINAPI HookedGetDialogBaseUnits()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetDialogBaseUnits",
+        "ui",
+        "ui/windows-and-messaging",
+        "medium",
+        "user32.dll!GetDialogBaseUnits",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetDialogBaseUnits, static_cast<INT>(0), Metadata);
+}
+
+UINT WINAPI HookedGetDoubleClickTime()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetDoubleClickTime",
+        "ui",
+        "ui/input/keyboard-and-mouse",
+        "medium",
+        "user32.dll!GetDoubleClickTime",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetDoubleClickTime, static_cast<UINT>(0), Metadata);
+}
+
+UINT WINAPI HookedGetDpiForSystem()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetDpiForSystem",
+        "ui",
+        "ui/hi-dpi",
+        "medium",
+        "user32.dll!GetDpiForSystem",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetDpiForSystem, static_cast<UINT>(0), Metadata);
+}
+
+HWND WINAPI HookedGetFocus()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetFocus",
+        "ui",
+        "ui/input/keyboard-and-mouse",
+        "medium",
+        "user32.dll!GetFocus",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetFocus, static_cast<HWND>(nullptr), Metadata);
+}
+
+BOOL WINAPI HookedGetInputState()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetInputState",
+        "ui",
+        "ui/windows-and-messaging",
+        "medium",
+        "user32.dll!GetInputState",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetInputState, FALSE, Metadata);
+}
+
+UINT WINAPI HookedGetKBCodePage()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetKBCodePage",
+        "ui",
+        "ui/input/keyboard-and-mouse",
+        "medium",
+        "user32.dll!GetKBCodePage",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetKBCodePage, static_cast<UINT>(0), Metadata);
+}
+
+INT WINAPI HookedGetMenuCheckMarkDimensions()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetMenuCheckMarkDimensions",
+        "ui",
+        "ui/windows-and-messaging",
+        "medium",
+        "user32.dll!GetMenuCheckMarkDimensions",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetMenuCheckMarkDimensions, static_cast<INT>(0), Metadata);
+}
+
+LPARAM WINAPI HookedGetMessageExtraInfo()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetMessageExtraInfo",
+        "ui",
+        "ui/windows-and-messaging",
+        "medium",
+        "user32.dll!GetMessageExtraInfo",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetMessageExtraInfo, static_cast<LPARAM>(0), Metadata);
+}
+
+UINT WINAPI HookedGetMessagePos()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetMessagePos",
+        "ui",
+        "ui/windows-and-messaging",
+        "medium",
+        "user32.dll!GetMessagePos",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetMessagePos, static_cast<UINT>(0), Metadata);
+}
+
+INT WINAPI HookedGetMessageTime()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetMessageTime",
+        "ui",
+        "ui/windows-and-messaging",
+        "medium",
+        "user32.dll!GetMessageTime",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetMessageTime, static_cast<INT>(0), Metadata);
+}
+
+HWND WINAPI HookedGetOpenClipboardWindow()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetOpenClipboardWindow",
+        "system",
+        "system/data-exchange",
+        "medium",
+        "user32.dll!GetOpenClipboardWindow",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetOpenClipboardWindow, static_cast<HWND>(nullptr), Metadata);
+}
+
+HWINSTA WINAPI HookedGetProcessWindowStation()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetProcessWindowStation",
+        "system",
+        "system/stations-and-desktops",
+        "medium",
+        "user32.dll!GetProcessWindowStation",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetProcessWindowStation, static_cast<HWINSTA>(nullptr), Metadata);
+}
+
+HWND WINAPI HookedGetShellWindow()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetShellWindow",
+        "ui",
+        "ui/windows-and-messaging",
+        "medium",
+        "user32.dll!GetShellWindow",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetShellWindow, static_cast<HWND>(nullptr), Metadata);
+}
+
+DPI_AWARENESS_CONTEXT WINAPI HookedGetThreadDpiAwarenessContext()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetThreadDpiAwarenessContext",
+        "ui",
+        "ui/hi-dpi",
+        "medium",
+        "user32.dll!GetThreadDpiAwarenessContext",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetThreadDpiAwarenessContext, static_cast<DPI_AWARENESS_CONTEXT>(nullptr), Metadata);
+}
+
+DPI_HOSTING_BEHAVIOR WINAPI HookedGetThreadDpiHostingBehavior()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetThreadDpiHostingBehavior",
+        "ui",
+        "ui/hi-dpi",
+        "medium",
+        "user32.dll!GetThreadDpiHostingBehavior",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetThreadDpiHostingBehavior, static_cast<DPI_HOSTING_BEHAVIOR>(0), Metadata);
+}
+
+UINT WINAPI HookedGetUnpredictedMessagePos()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetUnpredictedMessagePos",
+        "ui",
+        "ui/input/pointer",
+        "medium",
+        "user32.dll!GetUnpredictedMessagePos",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetUnpredictedMessagePos, static_cast<UINT>(0), Metadata);
+}
+
+BOOL WINAPI HookedInSendMessage()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "InSendMessage",
+        "ui",
+        "ui/windows-and-messaging",
+        "medium",
+        "user32.dll!InSendMessage",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalInSendMessage, FALSE, Metadata);
+}
+
+BOOL WINAPI HookedIsMouseInPointerEnabled()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "IsMouseInPointerEnabled",
+        "ui",
+        "ui/input/pointer",
+        "medium",
+        "user32.dll!IsMouseInPointerEnabled",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalIsMouseInPointerEnabled, FALSE, Metadata);
+}
+
+BOOL WINAPI HookedIsProcessDPIAware()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "IsProcessDPIAware",
+        "ui",
+        "ui/windows-and-messaging",
+        "medium",
+        "user32.dll!IsProcessDPIAware",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalIsProcessDPIAware, FALSE, Metadata);
+}
+
+BOOL WINAPI HookedIsWow64Message()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "IsWow64Message",
+        "ui",
+        "ui/windows-and-messaging",
+        "medium",
+        "user32.dll!IsWow64Message",
+        GenericReturnFormat::Bool
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalIsWow64Message, FALSE, Metadata);
 }
 
 INT WINAPI HookedD3DPerfEndEvent()
