@@ -7949,7 +7949,7 @@ NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functio
 
 constexpr std::size_t HookDefinitionCount = ManualHookDefinitionCount + GeneratedAgentHookDefinitionCount;
 #if defined(_WIN64)
-static_assert(GeneratedAgentHookRequiredApiCount >= 700, "generated hook target must satisfy the 700 API coverage goal");
+static_assert(GeneratedAgentHookRequiredApiCount >= 10000, "generated hook target must satisfy the 10000 API coverage goal");
 static_assert(GeneratedAgentHookCoveredApiCount >= GeneratedAgentHookRequiredApiCount, "generated hooks must cover every hookable API definition");
 #endif
 
@@ -8273,13 +8273,29 @@ std::array<HookDefinition, ManualHookDefinitionCount> BuildManualHookDefinitions
     };
 }
 
-std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
+void BuildHookDefinitions(HookDefinition* definitions, std::size_t definitionCount)
 {
-    std::array<HookDefinition, HookDefinitionCount> definitions = {};
+    if (definitions == nullptr || definitionCount < HookDefinitionCount)
+    {
+        return;
+    }
+
     const std::array<HookDefinition, ManualHookDefinitionCount> manualDefinitions = BuildManualHookDefinitions();
-    std::copy(manualDefinitions.begin(), manualDefinitions.end(), definitions.begin());
-    AppendGeneratedHookDefinitions(definitions.data() + manualDefinitions.size(), GeneratedAgentHookDefinitionCount);
-    return definitions;
+    std::fill(definitions, definitions + definitionCount, HookDefinition {});
+    std::copy(manualDefinitions.begin(), manualDefinitions.end(), definitions);
+    AppendGeneratedHookDefinitions(definitions + manualDefinitions.size(), GeneratedAgentHookDefinitionCount);
+}
+
+const std::array<HookDefinition, HookDefinitionCount>& ResolverHookDefinitions()
+{
+    static const auto definitions = []()
+    {
+        auto cachedDefinitions = std::make_unique<std::array<HookDefinition, HookDefinitionCount>>();
+        BuildHookDefinitions(cachedDefinitions->data(), cachedDefinitions->size());
+        return cachedDefinitions;
+    }();
+
+    return *definitions;
 }
 
 bool ImportMatchesDefinition(std::uint8_t* base, std::uint32_t size, IMAGE_THUNK_DATA* originalThunk, const HookDefinition& definition)
@@ -8881,8 +8897,8 @@ void* SelectResolverPointerReplacement(ResolverPointerClassification& classifica
             break;
         }
 
-        std::array<HookDefinition, HookDefinitionCount> definitions = BuildHookDefinitions();
-        for (HookDefinition& definition : definitions)
+        const std::array<HookDefinition, HookDefinitionCount>& definitions = ResolverHookDefinitions();
+        for (const HookDefinition& definition : definitions)
         {
             if (!ResolverHookDefinitionMatches(classification, definition))
             {
@@ -9044,7 +9060,8 @@ bool SweepLoadedModules(const char* reason, bool reportHookStatus, SweepStats* o
     bool installedCoverage = false;
     SweepStats stats = {};
     auto modules = std::make_unique<std::array<ModuleInfo, MaxModuleRecords>>();
-    auto definitions = std::make_unique<std::array<HookDefinition, HookDefinitionCount>>(BuildHookDefinitions());
+    auto definitions = std::make_unique<std::array<HookDefinition, HookDefinitionCount>>();
+    BuildHookDefinitions(definitions->data(), definitions->size());
     ResolveHookDefinitions(*definitions);
     const std::size_t moduleCount = CaptureModuleSnapshot(*modules, &stats);
 

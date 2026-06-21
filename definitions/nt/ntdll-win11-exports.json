@@ -235,24 +235,6 @@
       "coverageStatus": "defined",
       "errorSource": "none",
       "family": "ntdll",
-      "hookPolicy": "definition_only",
-      "minWindowsVersion": "Windows 11 24H2 export baseline 10.0.26100; prototype source supplemental Wine dlls/ntdll/ntdll.spec:1578",
-      "module": "ntdll.dll",
-      "name": "_fltused",
-      "ordinal": 2349,
-      "parameters": [],
-      "returnType": "ULONG_PTR",
-      "risk": "medium"
-    },
-    {
-      "architectures": [
-        "x64"
-      ],
-      "callingConvention": "cdecl",
-      "category": "ntdll/ntdll",
-      "coverageStatus": "defined",
-      "errorSource": "none",
-      "family": "ntdll",
       "hookPolicy": "iat",
       "minWindowsVersion": "Windows 11 24H2 export baseline 10.0.26100; prototype source supplemental Wine dlls/ntdll/ntdll.spec:1582",
       "module": "ntdll.dll",
@@ -7498,24 +7480,6 @@
         "x64"
       ],
       "callingConvention": "cdecl",
-      "category": "ntdll/data-export",
-      "coverageStatus": "defined",
-      "errorSource": "none",
-      "family": "data-export",
-      "hookPolicy": "definition_only",
-      "minWindowsVersion": "Windows 11 24H2 export baseline 10.0.26100; PE export section .mrdata is not executable",
-      "module": "ntdll.dll",
-      "name": "KiUserInvertedFunctionTable",
-      "ordinal": 110,
-      "parameters": [],
-      "returnType": "PVOID",
-      "risk": "low"
-    },
-    {
-      "architectures": [
-        "x64"
-      ],
-      "callingConvention": "cdecl",
       "category": "ntdll/crt",
       "coverageStatus": "defined",
       "errorSource": "none",
@@ -10573,24 +10537,6 @@
       "coverageStatus": "defined",
       "errorSource": "none",
       "family": "loader",
-      "hookPolicy": "definition_only",
-      "minWindowsVersion": "Windows 11 24H2 export baseline 10.0.26100; prototype source supplemental Wine dlls/ntdll/ntdll.spec:121",
-      "module": "ntdll.dll",
-      "name": "LdrSystemDllInitBlock",
-      "ordinal": 182,
-      "parameters": [],
-      "returnType": "PVOID",
-      "risk": "high"
-    },
-    {
-      "architectures": [
-        "x64"
-      ],
-      "callingConvention": "ntapi",
-      "category": "ntdll/loader",
-      "coverageStatus": "defined",
-      "errorSource": "none",
-      "family": "loader",
       "hookPolicy": "iat",
       "minWindowsVersion": "Windows 11 24H2 export baseline 10.0.26100; prototype source PHNT ntldr.h",
       "module": "ntdll.dll",
@@ -11518,60 +11464,6 @@
         }
       ],
       "returnType": "ULONG_PTR",
-      "risk": "medium"
-    },
-    {
-      "architectures": [
-        "x64"
-      ],
-      "callingConvention": "cdecl",
-      "category": "ntdll/ntdll",
-      "coverageStatus": "defined",
-      "errorSource": "none",
-      "family": "ntdll",
-      "hookPolicy": "definition_only",
-      "minWindowsVersion": "Windows 11 24H2 export baseline 10.0.26100; prototype source supplemental Wine dlls/ntdll/ntdll.spec:133",
-      "module": "ntdll.dll",
-      "name": "NlsAnsiCodePage",
-      "ordinal": 200,
-      "parameters": [],
-      "returnType": "PVOID",
-      "risk": "medium"
-    },
-    {
-      "architectures": [
-        "x64"
-      ],
-      "callingConvention": "cdecl",
-      "category": "ntdll/ntdll",
-      "coverageStatus": "defined",
-      "errorSource": "none",
-      "family": "ntdll",
-      "hookPolicy": "definition_only",
-      "minWindowsVersion": "Windows 11 24H2 export baseline 10.0.26100; prototype source supplemental Wine dlls/ntdll/ntdll.spec:134",
-      "module": "ntdll.dll",
-      "name": "NlsMbCodePageTag",
-      "ordinal": 201,
-      "parameters": [],
-      "returnType": "PVOID",
-      "risk": "medium"
-    },
-    {
-      "architectures": [
-        "x64"
-      ],
-      "callingConvention": "cdecl",
-      "category": "ntdll/ntdll",
-      "coverageStatus": "defined",
-      "errorSource": "none",
-      "family": "ntdll",
-      "hookPolicy": "definition_only",
-      "minWindowsVersion": "Windows 11 24H2 export baseline 10.0.26100; prototype source supplemental Wine dlls/ntdll/ntdll.spec:135",
-      "module": "ntdll.dll",
-      "name": "NlsMbOemCodePageTag",
-      "ordinal": 202,
-      "parameters": [],
-      "returnType": "PVOID",
       "risk": "medium"
     },
     {
@@ -63308,24 +63200,6 @@
       "callingConvention": "ntapi",
       "category": "ntdll/rtl",
       "coverageStatus": "defined",
-      "errorSource": "none",
-      "family": "rtl",
-      "hookPolicy": "definition_only",
-      "minWindowsVersion": "Windows 11 24H2 export baseline 10.0.26100; prototype source supplemental ReactOS dll/ntdll/def/ntdll.spec:1056",
-      "module": "ntdll.dll",
-      "name": "RtlNtdllName",
-      "ordinal": 1335,
-      "parameters": [],
-      "returnType": "ULONG_PTR",
-      "risk": "medium"
-    },
-    {
-      "architectures": [
-        "x64"
-      ],
-      "callingConvention": "ntapi",
-      "category": "ntdll/rtl",
-      "coverageStatus": "defined",
       "errorSource": "return_ntstatus",
       "family": "rtl",
       "hookPolicy": "iat",
@@ -64814,24 +64688,6 @@
       "architectures": [
         "x64"
       ],
-      "callingConvention": "cdecl",
-      "category": "ntdll/data-export",
-      "coverageStatus": "defined",
-      "errorSource": "none",
-      "family": "data-export",
-      "hookPolicy": "definition_only",
-      "minWindowsVersion": "Windows 11 24H2 export baseline 10.0.26100; PE export section .data is not executable",
-      "module": "ntdll.dll",
-      "name": "RtlpFreezeTimeBias",
-      "ordinal": 1705,
-      "parameters": [],
-      "returnType": "PVOID",
-      "risk": "low"
-    },
-    {
-      "architectures": [
-        "x64"
-      ],
       "callingConvention": "ntapi",
       "category": "ntdll/rtl",
       "coverageStatus": "defined",
@@ -66214,24 +66070,6 @@
       ],
       "returnType": "void",
       "risk": "medium"
-    },
-    {
-      "architectures": [
-        "x64"
-      ],
-      "callingConvention": "cdecl",
-      "category": "ntdll/data-export",
-      "coverageStatus": "defined",
-      "errorSource": "none",
-      "family": "data-export",
-      "hookPolicy": "definition_only",
-      "minWindowsVersion": "Windows 11 24H2 export baseline 10.0.26100; PE export section .rdata is not executable",
-      "module": "ntdll.dll",
-      "name": "RtlpScpCfgNtdllExports",
-      "ordinal": 1731,
-      "parameters": [],
-      "returnType": "PVOID",
-      "risk": "low"
     },
     {
       "architectures": [
@@ -115791,7 +115629,7 @@
       "risk": "medium"
     }
   ],
-  "description": "Windows 11 ntdll.dll export coverage. Known Win32 metadata rows carry field decoders; prototype-unknown exports are intentionally unsupported until ABI validation.",
+  "description": "Windows 11 ntdll.dll executable export coverage. Data exports are excluded because they are not callable APIs.",
   "module": "ntdll",
   "schemaVersion": "0.1.0"
 }

@@ -81,7 +81,7 @@ const generatedDocuments = [
     document: {
       schemaVersion: "0.1.0",
       module: "ntdll",
-      description: "Windows 11 ntdll.dll export coverage. Known Win32 metadata rows carry field decoders; prototype-unknown exports are intentionally unsupported until ABI validation.",
+      description: "Windows 11 ntdll.dll executable export coverage. Data exports are excluded because they are not callable APIs.",
       apis: ntdllApis
     }
   }
@@ -89,7 +89,7 @@ const generatedDocuments = [
 
 const metadataDocuments = loadMetadataDocuments().documents;
 const idAssignments = metadataDocuments.find((item) => item.document.metadataType === "id_assignments")?.document ?? readJson(idAssignmentsPath);
-const updatedAssignments = updateIdAssignments(idAssignments, generatedDocuments);
+const updatedAssignments = updateIdAssignments(idAssignments, generatedDocuments, apiDocuments);
 const evidence = buildNtdllEvidence(ntdllExports, ntdllApis, inventoryByKey);
 
 if (write)
@@ -182,7 +182,7 @@ function buildBulkDefinitions(rows, existing, ntdllKeys, needed)
   const candidates = rows
     .filter((entry) => entry.hookability?.tier === 1)
     .filter((entry) => (entry.parameters ?? []).length > 0)
-    .filter((entry) => (entry.parameters ?? []).length <= 8)
+    .filter(inventoryEntryIsRuntimeSafe)
     .filter((entry) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(entry.name))
     .filter((entry) => !existing.has(apiKey(entry.module, entry.name)))
     .filter((entry) => !ntdllKeys.has(apiKey(entry.module, entry.name)))
@@ -210,6 +210,11 @@ function buildNtdllDefinitions(exports, inventoryMap, existing, phntMap, sdkMap,
 
   for (const exported of exports.namedExports)
   {
+    if (!exported.executable)
+    {
+      continue;
+    }
+
     const key = apiKey("ntdll.dll", exported.name);
     if (existing.has(key))
     {
@@ -403,7 +408,17 @@ function inventoryEntryIsRuntimeSafe(entry)
 function unsafeGenericAbiType(type)
 {
   const text = String(type ?? "").toLowerCase();
-  return text.includes("float") || text.includes("double") || (text.startsWith("struct ") && !text.includes("*"));
+  if (pointerLikeType(text))
+  {
+    return false;
+  }
+
+  return /\b(float|double|single)\b/.test(text) || (text.startsWith("struct ") && !text.includes("*"));
+}
+
+function pointerLikeType(text)
+{
+  return text.includes("*") || text.includes("&") || /\b(lp|p)[a-z0-9_]+/.test(text);
 }
 
 function parameterFromPrototype(parameter, index)
@@ -474,26 +489,6 @@ function definitionFromExport(exported)
 {
   const family = familyFromApiName(exported.name);
   const exportSource = exportSourceText(exported);
-  if (!exported.executable)
-  {
-    return {
-      module: "ntdll.dll",
-      name: exported.name,
-      ordinal: exported.ordinal,
-      family: "data-export",
-      category: "ntdll/data-export",
-      risk: "low",
-      hookPolicy: "definition_only",
-      coverageStatus: "defined",
-      minWindowsVersion: `${exportSource}; PE export section ${exported.sectionName ?? "unknown"} is not executable`,
-      architectures: ["x64"],
-      callingConvention: "cdecl",
-      returnType: "PVOID",
-      errorSource: "none",
-      parameters: []
-    };
-  }
-
   return {
     module: "ntdll.dll",
     name: exported.name,
@@ -876,18 +871,41 @@ function inventoryPriority(entry)
   return moduleScore * 100 + familyScore + riskScore;
 }
 
-function updateIdAssignments(current, generated)
+function updateIdAssignments(current, generated, sourceDocuments)
 {
+  const targetApiKeys = new Set();
+  for (const item of sourceDocuments)
+  {
+    const itemPath = relative(item.filePath);
+    if (itemPath === "definitions/win32/generated-win32metadata-bulk.json" || itemPath === "definitions/nt/ntdll-win11-exports.json")
+    {
+      continue;
+    }
+
+    for (const api of item.document.apis ?? [])
+    {
+      targetApiKeys.add(apiKey(api.module, api.name));
+    }
+  }
+
+  for (const item of generated)
+  {
+    for (const api of item.document.apis ?? [])
+    {
+      targetApiKeys.add(apiKey(api.module, api.name));
+    }
+  }
+
   const modules = [...(current.modules ?? [])];
-  const apis = [...(current.apis ?? [])];
+  const apis = [...(current.apis ?? [])].filter((entry) => targetApiKeys.has(apiKey(entry.module, entry.name)));
   const moduleNames = new Set(modules.map((entry) => entry.name));
   const apiKeys = new Set(apis.map((entry) => apiKey(entry.module, entry.name)));
   const usedSymbols = new Set([
     ...modules.map((entry) => entry.symbol),
-    ...apis.map((entry) => entry.symbol)
+    ...(current.apis ?? []).map((entry) => entry.symbol)
   ]);
   let nextModuleId = modules.reduce((max, entry) => Math.max(max, entry.id), 0) + 1;
-  let nextApiId = apis.reduce((max, entry) => Math.max(max, entry.id), 0) + 1;
+  let nextApiId = (current.apis ?? []).reduce((max, entry) => Math.max(max, entry.id), 0) + 1;
 
   for (const item of generated)
   {
@@ -1000,7 +1018,7 @@ function buildNtdllEvidence(exports, ntdllApis, inventoryMap)
       withSdkPrototype: ntdllApis.filter((api) => String(api.minWindowsVersion ?? "").includes("prototype source Windows SDK")).length,
       withSupplementalSpecPrototype: ntdllApis.filter((api) => String(api.minWindowsVersion ?? "").includes("prototype source supplemental")).length,
       withOpaqueAbiFallback: ntdllApis.filter((api) => String(api.minWindowsVersion ?? "").includes("opaque 16-slot x64 ABI fallback")).length,
-      dataExports: ntdllApis.filter((api) => api.category === "ntdll/data-export").length,
+      dataExportsSkipped: exports.namedExports.filter((api) => !api.executable).length,
       unsupportedPrototypeUnknown: ntdllApis.filter((api) => api.coverageStatus === "unsupported").length
     },
     exports: exports.namedExports

@@ -988,7 +988,7 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
     ""
   ];
 
-  lines.push(`inline constexpr std::array<KnMonGeneratedModuleMetadata, ${decoderTables.modules.length}> KnMonGeneratedModules =`);
+  lines.push(`inline const std::array<KnMonGeneratedModuleMetadata, ${decoderTables.modules.length}> KnMonGeneratedModules =`);
   lines.push("{{");
   for (const module of decoderTables.modules) {
     lines.push("    {");
@@ -1000,7 +1000,7 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
   lines.push("}};");
   lines.push("");
 
-  lines.push(`inline constexpr std::array<KnMonGeneratedApiMetadata, ${decoderTables.apis.length}> KnMonGeneratedApis =`);
+  lines.push(`inline const std::array<KnMonGeneratedApiMetadata, ${decoderTables.apis.length}> KnMonGeneratedApis =`);
   lines.push("{{");
   for (const api of decoderTables.apis) {
     lines.push("    {");
@@ -1026,7 +1026,7 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
   lines.push("}};");
   lines.push("");
 
-  lines.push(`inline constexpr std::array<KnMonGeneratedParameterMetadata, ${decoderTables.parameters.length}> KnMonGeneratedParameters =`);
+  lines.push(`inline const std::array<KnMonGeneratedParameterMetadata, ${decoderTables.parameters.length}> KnMonGeneratedParameters =`);
   lines.push("{{");
   for (const parameter of decoderTables.parameters) {
     lines.push("    {");
@@ -1050,7 +1050,7 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
   lines.push("}};");
   lines.push("");
 
-  lines.push(`inline constexpr std::array<KnMonGeneratedConstantMetadata, ${decoderTables.valueSets.length}> KnMonGeneratedConstants =`);
+  lines.push(`inline const std::array<KnMonGeneratedConstantMetadata, ${decoderTables.valueSets.length}> KnMonGeneratedConstants =`);
   lines.push("{{");
   for (const value of decoderTables.valueSets) {
     lines.push("    {");
@@ -1064,7 +1064,7 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
   lines.push("");
 
   lines.push(
-    "inline constexpr const KnMonGeneratedModuleMetadata* FindGeneratedModuleMetadata(std::uint16_t id)",
+    "inline const KnMonGeneratedModuleMetadata* FindGeneratedModuleMetadata(std::uint16_t id)",
     "{",
     "    for (const auto& entry : KnMonGeneratedModules)",
     "    {",
@@ -1077,7 +1077,7 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
     "    return nullptr;",
     "}",
     "",
-    "inline constexpr const KnMonGeneratedApiMetadata* FindGeneratedApiMetadata(std::uint16_t id)",
+    "inline const KnMonGeneratedApiMetadata* FindGeneratedApiMetadata(std::uint16_t id)",
     "{",
     "    for (const auto& entry : KnMonGeneratedApis)",
     "    {",
@@ -1090,7 +1090,7 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
     "    return nullptr;",
     "}",
     "",
-    "inline constexpr const KnMonGeneratedConstantMetadata* FindGeneratedConstantMetadata(std::string_view setName, std::string_view kind, std::uint64_t value)",
+    "inline const KnMonGeneratedConstantMetadata* FindGeneratedConstantMetadata(std::string_view setName, std::string_view kind, std::uint64_t value)",
     "{",
     "    for (const auto& entry : KnMonGeneratedConstants)",
     "    {",
@@ -1103,7 +1103,7 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
     "    return nullptr;",
     "}",
     "",
-    "inline constexpr const KnMonGeneratedParameterMetadata* FindGeneratedParameterMetadata(std::uint16_t apiId, std::uint16_t index)",
+    "inline const KnMonGeneratedParameterMetadata* FindGeneratedParameterMetadata(std::uint16_t apiId, std::uint16_t index)",
     "{",
     "    const KnMonGeneratedApiMetadata* api = FindGeneratedApiMetadata(apiId);",
     "    if (api == nullptr)",
@@ -1243,6 +1243,7 @@ export function buildCoverageReport(documents, metadataIndex) {
   const byModule = {};
   const byFamily = {};
   const byRisk = {};
+  const byHookPolicy = {};
   const byDecodeQuality = {
     raw: 0,
     string: 0,
@@ -1260,6 +1261,7 @@ export function buildCoverageReport(documents, metadataIndex) {
     const moduleName = normalizeModuleName(api.module);
     const family = api.family ?? "uncategorized";
     const risk = api.risk ?? "medium";
+    const hookPolicy = api.hookPolicy ?? "definition_only";
     const coverageStatus = api.coverageStatus ?? "defined";
     const decodeQualities = Array.from(new Set((api.parameters ?? []).map((parameter) => decodeQualityForParameter(parameter, metadataIndex)))).sort();
 
@@ -1267,6 +1269,7 @@ export function buildCoverageReport(documents, metadataIndex) {
     incrementCounter(byModule, moduleName);
     incrementCounter(byFamily, family);
     incrementCounter(byRisk, risk);
+    incrementCounter(byHookPolicy, hookPolicy);
     for (const quality of decodeQualities) {
       incrementCounter(byDecodeQuality, quality);
     }
@@ -1278,7 +1281,7 @@ export function buildCoverageReport(documents, metadataIndex) {
       family,
       category: api.category ?? "uncategorized",
       risk,
-      hookPolicy: api.hookPolicy ?? "definition_only",
+      hookPolicy,
       coverageStatus,
       decodeQualities
     };
@@ -1291,6 +1294,8 @@ export function buildCoverageReport(documents, metadataIndex) {
       byModule,
       byFamily,
       byRisk,
+      byHookPolicy,
+      runtimeHookableApis: apis.filter((api) => api.hookPolicy !== "definition_only" && api.hookPolicy !== "unsupported" && api.coverageStatus !== "unsupported").length,
       byCoverageStatus: statusCounts,
       byDecodeQuality
     },
@@ -1303,10 +1308,21 @@ export function coverageReportToMarkdown(report) {
     "# Definition Coverage Report",
     "",
     `Total APIs: ${report.summary.totalApis}`,
+    `Runtime hookable APIs: ${report.summary.runtimeHookableApis}`,
+    "",
+    "## Hook Policy",
+    ""
+  ];
+
+  for (const policy of Object.keys(report.summary.byHookPolicy).sort()) {
+    lines.push(`- ${policy}: ${report.summary.byHookPolicy[policy] ?? 0}`);
+  }
+
+  lines.push(
     "",
     "## Coverage Status",
     ""
-  ];
+  );
 
   for (const status of validCoverageStatuses) {
     lines.push(`- ${status}: ${report.summary.byCoverageStatus[status] ?? 0}`);

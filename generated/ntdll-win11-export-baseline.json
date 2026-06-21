@@ -20800,8 +20800,8 @@
     "size": 2517968
   },
   "summary": {
-    "dataExports": 3,
-    "generatedDefinitions": 2542,
+    "dataExportsSkipped": 9,
+    "generatedDefinitions": 2533,
     "latestOverlayAddedExports": 29,
     "numberOfFunctions": 2546,
     "numberOfNames": 2545,
@@ -20810,7 +20810,7 @@
     "withOpaqueAbiFallback": 157,
     "withPhntPrototype": 1979,
     "withSdkPrototype": 117,
-    "withSupplementalSpecPrototype": 286,
+    "withSupplementalSpecPrototype": 280,
     "withWin32Metadata": 0
   }
 }

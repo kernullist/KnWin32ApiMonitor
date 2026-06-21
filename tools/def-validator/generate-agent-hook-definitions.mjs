@@ -49,7 +49,12 @@ function manualHookKeys()
 function unsafeScalarType(type)
 {
   const text = String(type ?? "").toLowerCase();
-  if (text.includes("float") || text.includes("double"))
+  if (pointerLikeType(text))
+  {
+    return false;
+  }
+
+  if (/\b(float|double|single)\b/.test(text))
   {
     return true;
   }
@@ -60,6 +65,11 @@ function unsafeScalarType(type)
   }
 
   return false;
+}
+
+function pointerLikeType(text)
+{
+  return text.includes("*") || text.includes("&") || /\b(lp|p)[a-z0-9_]+/.test(text);
 }
 
 function returnFormat(returnType)
@@ -246,7 +256,7 @@ function buildHookFile(hooks, coverage)
   }
 
   lines.push("");
-  lines.push(`inline constexpr std::array<GeneratedGenericHookMetadata, ${hooks.length}> GeneratedAgentHookMetadata =`);
+  lines.push(`inline const std::array<GeneratedGenericHookMetadata, ${hooks.length}> GeneratedAgentHookMetadata =`);
   lines.push("{{");
   for (const hook of hooks)
   {

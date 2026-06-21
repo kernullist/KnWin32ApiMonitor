@@ -3603,7 +3603,7 @@ int RunFileIo(bool slow)
 
         if (slow)
         {
-            Sleep(500);
+            Sleep(2500);
         }
 
         if (!RunTier1SystemProbe())

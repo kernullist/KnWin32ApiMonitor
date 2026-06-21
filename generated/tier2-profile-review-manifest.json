@@ -3793,26 +3793,24 @@
       "batchId": "tier2-batch-0062",
       "blockedApis": 0,
       "byFamily": {
-        "data-export": 3,
         "diagnostics": 4,
         "ipc": 1,
-        "loader": 10,
+        "loader": 9,
         "nt-native": 29,
-        "ntdll": 12,
-        "rtl": 69,
+        "ntdll": 8,
+        "rtl": 68,
         "subsystem": 11,
         "threadpool": 1,
         "tracing": 1
       },
       "byRisk": {
-        "high": 12,
-        "low": 3,
-        "medium": 126
+        "high": 11,
+        "medium": 121
       },
-      "explicitAllowlistRequired": 12,
-      "installableWithoutAllowlist": 129,
+      "explicitAllowlistRequired": 11,
+      "installableWithoutAllowlist": 121,
       "kind": "missing_parameter_return_only_module",
-      "priority": 294,
+      "priority": 284,
       "profileSelectors": [
         "missing-metadata-safe",
         "module:ntdll.dll",
@@ -3822,8 +3820,8 @@
         "ntdll.dll!__chkstk",
         "ntdll.dll!__misaligned_access",
         "ntdll.dll!_errno",
-        "ntdll.dll!_fltused",
-        "ntdll.dll!AlpcMaxAllowedMessageLength"
+        "ntdll.dll!AlpcMaxAllowedMessageLength",
+        "ntdll.dll!CsrAllocateCaptureBuffer"
       ],
       "requiredEvidence": [
         "zero-argument metadata evidence from Microsoft inventory",
@@ -3837,7 +3835,7 @@
       "runtimeHooksEnabledByDefault": false,
       "sourceModule": "ntdll.dll",
       "targetModule": "ntdll.dll",
-      "totalApis": 141
+      "totalApis": 132
     }
   ],
   "policy": {
@@ -3854,11 +3852,11 @@
     "tier2ProfileBatchPlanSchemaVersion": "0.1.0"
   },
   "summary": {
-    "allowlistGatedBatchApis": 287,
+    "allowlistGatedBatchApis": 278,
     "allowlistGatedBatches": 21,
     "apisByReviewClass": {
       "blocked": 2,
-      "explicit_allowlist_required": 287,
+      "explicit_allowlist_required": 278,
       "initial_candidate": 54,
       "review_ready": 452
     },
@@ -3867,7 +3865,6 @@
     "blockedBatches": 1,
     "byFamily": {
       "data": 1,
-      "data-export": 3,
       "devices": 47,
       "diagnostics": 4,
       "foundation": 2,
@@ -3875,14 +3872,14 @@
       "globalization": 29,
       "graphics": 27,
       "ipc": 1,
-      "loader": 10,
+      "loader": 9,
       "management": 2,
       "media": 24,
       "network-management": 28,
       "networking": 14,
       "nt-native": 29,
-      "ntdll": 12,
-      "rtl": 69,
+      "ntdll": 8,
+      "rtl": 68,
       "security": 19,
       "storage": 60,
       "subsystem": 11,
@@ -3905,19 +3902,18 @@
     },
     "byRisk": {
       "critical": 11,
-      "high": 31,
-      "low": 3,
-      "medium": 750
+      "high": 30,
+      "medium": 745
     },
-    "explicitAllowlistRequiredApis": 42,
+    "explicitAllowlistRequiredApis": 41,
     "initialCandidateApis": 54,
     "initialCandidateBatches": 41,
-    "manifestApis": 795,
+    "manifestApis": 786,
     "manifestBatches": 104,
     "reviewReadyApis": 452,
     "reviewReadyBatches": 41,
     "runtimeHooksEnabledByDefault": 0,
-    "sourceApis": 795,
+    "sourceApis": 786,
     "sourceBatches": 104
   }
 }

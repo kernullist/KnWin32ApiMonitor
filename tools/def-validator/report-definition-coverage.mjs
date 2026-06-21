@@ -54,6 +54,12 @@ const dllBatchPromotionPlan = loadDllBatchPromotionPlan();
 const manualDecoderBatchPlan = loadManualDecoderBatchPlan();
 
 if (args.has("--check")) {
+  const requiredRuntimeHookableApis = 10000;
+  if ((report.summary.runtimeHookableApis ?? 0) < requiredRuntimeHookableApis) {
+    console.error(`Definition coverage report has only ${report.summary.runtimeHookableApis ?? 0} runtime-hookable APIs; expected at least ${requiredRuntimeHookableApis}.`);
+    process.exit(1);
+  }
+
   const requiredStatuses = ["definition_only", "hooked", "smoke_verified"];
   for (const status of requiredStatuses) {
     if (!Object.prototype.hasOwnProperty.call(report.summary.byCoverageStatus, status)) {
