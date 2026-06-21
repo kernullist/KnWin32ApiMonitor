@@ -16,6 +16,11 @@ export const generatedIdJsonPath = path.join(repoRoot, "generated", "definition-
 export const generatedDecoderJsonPath = path.join(repoRoot, "generated", "definition-decoder-tables.json");
 export const generatedApiHeaderPath = path.join(repoRoot, "native", "knmon-common", "include", "knmon", "common", "GeneratedApiIds.h");
 export const generatedApiMetadataHeaderPath = path.join(repoRoot, "native", "knmon-common", "include", "knmon", "common", "GeneratedApiMetadata.h");
+export const generatedApiMetadataSourceDirectory = path.join(repoRoot, "native", "knmon-common", "src");
+export const generatedApiMetadataSourcePath = path.join(generatedApiMetadataSourceDirectory, "GeneratedApiMetadata.cpp");
+
+const generatedApiMetadataParameterChunkPrefix = "GeneratedApiMetadataParametersChunk";
+const generatedApiMetadataParameterChunkSize = 4096;
 
 const stableApiIds = new Map([
   ["kernel32.dll!CreateFileW", 1],
@@ -955,7 +960,7 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
     "    std::string_view ErrorSource;",
     "    std::string_view SuccessJson;",
     "    std::string_view FailureJson;",
-    "    std::uint16_t FirstParameterIndex;",
+    "    std::uint32_t FirstParameterIndex;",
     "    std::uint16_t ParameterCount;",
     "};",
     "",
@@ -963,7 +968,7 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
     "{",
     "    std::uint16_t ApiId;",
     "    std::uint16_t Index;",
-    "    std::uint16_t AbsoluteIndex;",
+    "    std::uint32_t AbsoluteIndex;",
     "    std::string_view Name;",
     "    std::string_view Type;",
     "    std::string_view Direction;",
@@ -985,86 +990,98 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
     "    std::string_view Name;",
     "    std::uint64_t Value;",
     "};",
+    "",
+    `extern const std::array<KnMonGeneratedModuleMetadata, ${decoderTables.modules.length}> KnMonGeneratedModules;`,
+    `extern const std::array<KnMonGeneratedApiMetadata, ${decoderTables.apis.length}> KnMonGeneratedApis;`,
+    `extern const std::array<KnMonGeneratedConstantMetadata, ${decoderTables.valueSets.length}> KnMonGeneratedConstants;`,
+    "",
+    "const KnMonGeneratedModuleMetadata* FindGeneratedModuleMetadata(std::uint16_t id);",
+    "const KnMonGeneratedApiMetadata* FindGeneratedApiMetadata(std::uint16_t id);",
+    "const KnMonGeneratedConstantMetadata* FindGeneratedConstantMetadata(std::string_view setName, std::string_view kind, std::uint64_t value);",
+    "const KnMonGeneratedParameterMetadata* FindGeneratedParameterMetadata(std::uint16_t apiId, std::uint16_t index);",
+    "}",
     ""
   ];
 
-  lines.push(`inline const std::array<KnMonGeneratedModuleMetadata, ${decoderTables.modules.length}> KnMonGeneratedModules =`);
-  lines.push("{{");
+  return lines.join("\n");
+}
+
+function generatedApiMetadataParameterChunkInfos(decoderTables) {
+  const chunks = [];
+  for (let start = 0; start < decoderTables.parameters.length; start += generatedApiMetadataParameterChunkSize) {
+    const end = Math.min(start + generatedApiMetadataParameterChunkSize, decoderTables.parameters.length);
+    chunks.push({
+      index: chunks.length,
+      start,
+      end,
+      parameters: decoderTables.parameters.slice(start, end)
+    });
+  }
+
+  return chunks;
+}
+
+function generatedApiMetadataParameterChunkPath(chunkIndex) {
+  return path.join(generatedApiMetadataSourceDirectory, `${generatedApiMetadataParameterChunkPrefix}${chunkIndex}.cpp`);
+}
+
+function listGeneratedApiMetadataParameterChunkFiles() {
+  if (!fs.existsSync(generatedApiMetadataSourceDirectory)) {
+    return [];
+  }
+
+  const pattern = new RegExp(`^${generatedApiMetadataParameterChunkPrefix}\\d+\\.cpp$`);
+  return fs.readdirSync(generatedApiMetadataSourceDirectory)
+    .filter((entry) => pattern.test(entry))
+    .map((entry) => path.join(generatedApiMetadataSourceDirectory, entry));
+}
+
+export function buildGeneratedApiMetadataSource(decoderTables) {
+  const parameterChunks = generatedApiMetadataParameterChunkInfos(decoderTables);
+  const lines = [
+    "#include <knmon/common/GeneratedApiMetadata.h>",
+    "",
+    "namespace knmon",
+    "{",
+  ];
+
+  for (const chunk of parameterChunks) {
+    lines.push(`const KnMonGeneratedParameterMetadata* FindGeneratedParameterMetadataChunk${chunk.index}(std::uint32_t absoluteIndex, std::uint16_t apiId, std::uint16_t index);`);
+  }
+
+  if (parameterChunks.length > 0) {
+    lines.push("");
+  }
+
+  lines.push(
+    `const std::array<KnMonGeneratedModuleMetadata, ${decoderTables.modules.length}> KnMonGeneratedModules =`,
+    "{{"
+  );
+
   for (const module of decoderTables.modules) {
-    lines.push("    {");
-    lines.push(`        ${module.id},`);
-    lines.push(`        ${cppString(module.name)},`);
-    lines.push(`        ${cppString(module.symbol)}`);
-    lines.push("    },");
+    lines.push(`    { ${module.id}, ${cppString(module.name)}, ${cppString(module.symbol)} },`);
   }
   lines.push("}};");
   lines.push("");
 
-  lines.push(`inline const std::array<KnMonGeneratedApiMetadata, ${decoderTables.apis.length}> KnMonGeneratedApis =`);
+  lines.push(`const std::array<KnMonGeneratedApiMetadata, ${decoderTables.apis.length}> KnMonGeneratedApis =`);
   lines.push("{{");
   for (const api of decoderTables.apis) {
-    lines.push("    {");
-    lines.push(`        ${api.id},`);
-    lines.push(`        ${api.moduleId},`);
-    lines.push(`        ${cppString(api.module)},`);
-    lines.push(`        ${cppString(api.name)},`);
-    lines.push(`        ${cppString(api.symbol)},`);
-    lines.push(`        ${cppString(api.family)},`);
-    lines.push(`        ${cppString(api.category)},`);
-    lines.push(`        ${cppString(api.risk)},`);
-    lines.push(`        ${cppString(api.hookPolicy)},`);
-    lines.push(`        ${cppString(api.coverageStatus)},`);
-    lines.push(`        ${cppString(api.callingConvention)},`);
-    lines.push(`        ${cppString(api.returnType)},`);
-    lines.push(`        ${cppString(api.errorSource)},`);
-    lines.push(`        ${cppString(stableJsonText(api.success))},`);
-    lines.push(`        ${cppString(stableJsonText(api.failure))},`);
-    lines.push(`        ${api.firstParameterIndex},`);
-    lines.push(`        ${api.parameterCount}`);
-    lines.push("    },");
+    lines.push(`    { ${api.id}, ${api.moduleId}, ${cppString(api.module)}, ${cppString(api.name)}, ${cppString(api.symbol)}, ${cppString(api.family)}, ${cppString(api.category)}, ${cppString(api.risk)}, ${cppString(api.hookPolicy)}, ${cppString(api.coverageStatus)}, ${cppString(api.callingConvention)}, ${cppString(api.returnType)}, ${cppString(api.errorSource)}, ${cppString(stableJsonText(api.success))}, ${cppString(stableJsonText(api.failure))}, ${api.firstParameterIndex}, ${api.parameterCount} },`);
   }
   lines.push("}};");
   lines.push("");
 
-  lines.push(`inline const std::array<KnMonGeneratedParameterMetadata, ${decoderTables.parameters.length}> KnMonGeneratedParameters =`);
-  lines.push("{{");
-  for (const parameter of decoderTables.parameters) {
-    lines.push("    {");
-    lines.push(`        ${parameter.apiId},`);
-    lines.push(`        ${parameter.index},`);
-    lines.push(`        ${parameter.absoluteIndex},`);
-    lines.push(`        ${cppString(parameter.name)},`);
-    lines.push(`        ${cppString(parameter.type)},`);
-    lines.push(`        ${cppString(parameter.direction)},`);
-    lines.push(`        ${cppString(parameter.decode)},`);
-    lines.push(`        ${cppString(parameter.captureTiming)},`);
-    lines.push(`        ${cppBool(parameter.nullable)},`);
-    lines.push(`        ${parameter.maxBytes},`);
-    lines.push(`        ${cppString(parameter.enum)},`);
-    lines.push(`        ${cppString(parameter.flags)},`);
-    lines.push(`        ${cppString(parameter.lengthFrom)},`);
-    lines.push(`        ${parameter.lengthFromIndex},`);
-    lines.push(`        ${cppString(parameter.lengthExpression)}`);
-    lines.push("    },");
-  }
-  lines.push("}};");
-  lines.push("");
-
-  lines.push(`inline const std::array<KnMonGeneratedConstantMetadata, ${decoderTables.valueSets.length}> KnMonGeneratedConstants =`);
+  lines.push(`const std::array<KnMonGeneratedConstantMetadata, ${decoderTables.valueSets.length}> KnMonGeneratedConstants =`);
   lines.push("{{");
   for (const value of decoderTables.valueSets) {
-    lines.push("    {");
-    lines.push(`        ${cppString(value.set)},`);
-    lines.push(`        ${cppString(value.kind)},`);
-    lines.push(`        ${cppString(value.name)},`);
-    lines.push(`        ${cppUInt64(value.value)}`);
-    lines.push("    },");
+    lines.push(`    { ${cppString(value.set)}, ${cppString(value.kind)}, ${cppString(value.name)}, ${cppUInt64(value.value)} },`);
   }
   lines.push("}};");
   lines.push("");
 
   lines.push(
-    "inline const KnMonGeneratedModuleMetadata* FindGeneratedModuleMetadata(std::uint16_t id)",
+    "const KnMonGeneratedModuleMetadata* FindGeneratedModuleMetadata(std::uint16_t id)",
     "{",
     "    for (const auto& entry : KnMonGeneratedModules)",
     "    {",
@@ -1077,7 +1094,7 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
     "    return nullptr;",
     "}",
     "",
-    "inline const KnMonGeneratedApiMetadata* FindGeneratedApiMetadata(std::uint16_t id)",
+    "const KnMonGeneratedApiMetadata* FindGeneratedApiMetadata(std::uint16_t id)",
     "{",
     "    for (const auto& entry : KnMonGeneratedApis)",
     "    {",
@@ -1090,7 +1107,7 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
     "    return nullptr;",
     "}",
     "",
-    "inline const KnMonGeneratedConstantMetadata* FindGeneratedConstantMetadata(std::string_view setName, std::string_view kind, std::uint64_t value)",
+    "const KnMonGeneratedConstantMetadata* FindGeneratedConstantMetadata(std::string_view setName, std::string_view kind, std::uint64_t value)",
     "{",
     "    for (const auto& entry : KnMonGeneratedConstants)",
     "    {",
@@ -1103,7 +1120,7 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
     "    return nullptr;",
     "}",
     "",
-    "inline const KnMonGeneratedParameterMetadata* FindGeneratedParameterMetadata(std::uint16_t apiId, std::uint16_t index)",
+    "const KnMonGeneratedParameterMetadata* FindGeneratedParameterMetadata(std::uint16_t apiId, std::uint16_t index)",
     "{",
     "    const KnMonGeneratedApiMetadata* api = FindGeneratedApiMetadata(apiId);",
     "    if (api == nullptr)",
@@ -1116,13 +1133,64 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
     "        return nullptr;",
     "    }",
     "",
-    "    const std::uint16_t absoluteIndex = static_cast<std::uint16_t>(api->FirstParameterIndex + index);",
-    "    if (absoluteIndex >= KnMonGeneratedParameters.size())",
+    "    const std::uint32_t absoluteIndex = api->FirstParameterIndex + index;",
+    `    if (absoluteIndex >= ${decoderTables.parameters.length}U)`,
     "    {",
     "        return nullptr;",
     "    }",
     "",
-    "    const KnMonGeneratedParameterMetadata& parameter = KnMonGeneratedParameters[absoluteIndex];",
+    `    switch (absoluteIndex / ${generatedApiMetadataParameterChunkSize}U)`,
+    "    {"
+  );
+
+  for (const chunk of parameterChunks) {
+    lines.push(
+      `    case ${chunk.index}U:`,
+      `        return FindGeneratedParameterMetadataChunk${chunk.index}(absoluteIndex, apiId, index);`
+    );
+  }
+
+  lines.push(
+    "    default:",
+    "        break;",
+    "    }",
+    "",
+    "    return nullptr;",
+    "}",
+    "}",
+    ""
+  );
+
+  return lines.join("\n");
+}
+
+function buildGeneratedApiMetadataParameterSource(chunk) {
+  const lines = [
+    "#include <array>",
+    "",
+    "#include <knmon/common/GeneratedApiMetadata.h>",
+    "",
+    "namespace knmon",
+    "{",
+    `const std::array<KnMonGeneratedParameterMetadata, ${chunk.parameters.length}> KnMonGeneratedParametersChunk${chunk.index} =`,
+    "{{"
+  ];
+
+  for (const parameter of chunk.parameters) {
+    lines.push(`    { ${parameter.apiId}, ${parameter.index}, ${parameter.absoluteIndex}, ${cppString(parameter.name)}, ${cppString(parameter.type)}, ${cppString(parameter.direction)}, ${cppString(parameter.decode)}, ${cppString(parameter.captureTiming)}, ${cppBool(parameter.nullable)}, ${parameter.maxBytes}, ${cppString(parameter.enum)}, ${cppString(parameter.flags)}, ${cppString(parameter.lengthFrom)}, ${parameter.lengthFromIndex}, ${cppString(parameter.lengthExpression)} },`);
+  }
+
+  lines.push(
+    "}};",
+    "",
+    `const KnMonGeneratedParameterMetadata* FindGeneratedParameterMetadataChunk${chunk.index}(std::uint32_t absoluteIndex, std::uint16_t apiId, std::uint16_t index)`,
+    "{",
+    `    if (absoluteIndex < ${chunk.start}U || absoluteIndex >= ${chunk.end}U)`,
+    "    {",
+    "        return nullptr;",
+    "    }",
+    "",
+    `    const KnMonGeneratedParameterMetadata& parameter = KnMonGeneratedParametersChunk${chunk.index}[absoluteIndex - ${chunk.start}U];`,
     "    if (parameter.ApiId != apiId || parameter.Index != index)",
     "    {",
     "        return nullptr;",
@@ -1137,6 +1205,15 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
   return lines.join("\n");
 }
 
+function buildGeneratedApiMetadataParameterSources(decoderTables) {
+  const sources = new Map();
+  for (const chunk of generatedApiMetadataParameterChunkInfos(decoderTables)) {
+    sources.set(generatedApiMetadataParameterChunkPath(chunk.index), buildGeneratedApiMetadataParameterSource(chunk));
+  }
+
+  return sources;
+}
+
 export function expectedGeneratedArtifacts(apiDocuments, metadataIndex) {
   const generatedIds = buildGeneratedIds(metadataIndex);
   const decoderTables = buildGeneratedDecoderTables(apiDocuments, metadataIndex);
@@ -1144,7 +1221,9 @@ export function expectedGeneratedArtifacts(apiDocuments, metadataIndex) {
     json: stableStringify(generatedIds),
     header: buildGeneratedApiHeader(generatedIds),
     decoderJson: stableStringify(decoderTables),
-    metadataHeader: buildGeneratedApiMetadataHeader(decoderTables)
+    metadataHeader: buildGeneratedApiMetadataHeader(decoderTables),
+    metadataSource: buildGeneratedApiMetadataSource(decoderTables),
+    metadataParameterSources: buildGeneratedApiMetadataParameterSources(decoderTables)
   };
 }
 
@@ -1168,6 +1247,17 @@ export function checkGeneratedArtifacts(apiDocuments, metadataIndex) {
   checkGeneratedArtifact(errors, generatedApiHeaderPath, expected.header);
   checkGeneratedArtifact(errors, generatedDecoderJsonPath, expected.decoderJson);
   checkGeneratedArtifact(errors, generatedApiMetadataHeaderPath, expected.metadataHeader);
+  checkGeneratedArtifact(errors, generatedApiMetadataSourcePath, expected.metadataSource);
+  for (const [filePath, expectedText] of expected.metadataParameterSources) {
+    checkGeneratedArtifact(errors, filePath, expectedText);
+  }
+
+  const expectedParameterSourcePaths = new Set(expected.metadataParameterSources.keys());
+  for (const filePath of listGeneratedApiMetadataParameterChunkFiles()) {
+    if (!expectedParameterSourcePaths.has(filePath)) {
+      errors.push(`${relativePath(filePath)} is stale; run npm run defs:generate`);
+    }
+  }
 
   return errors;
 }
@@ -1182,6 +1272,19 @@ export function writeGeneratedArtifacts(apiDocuments, metadataIndex) {
   fs.writeFileSync(generatedDecoderJsonPath, expected.decoderJson, "utf8");
   ensureDirectoryForFile(generatedApiMetadataHeaderPath);
   fs.writeFileSync(generatedApiMetadataHeaderPath, expected.metadataHeader, "utf8");
+  ensureDirectoryForFile(generatedApiMetadataSourcePath);
+  fs.writeFileSync(generatedApiMetadataSourcePath, expected.metadataSource, "utf8");
+  const expectedParameterSourcePaths = new Set(expected.metadataParameterSources.keys());
+  for (const filePath of listGeneratedApiMetadataParameterChunkFiles()) {
+    if (!expectedParameterSourcePaths.has(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  }
+
+  for (const [filePath, expectedText] of expected.metadataParameterSources) {
+    ensureDirectoryForFile(filePath);
+    fs.writeFileSync(filePath, expectedText, "utf8");
+  }
 }
 
 export function decodeQualityForParameter(parameter, metadataIndex) {

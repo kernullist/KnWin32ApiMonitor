@@ -2,9 +2,50 @@ cmake_minimum_required(VERSION 3.24)
 
 project(knmon_native LANGUAGES CXX)
 
+if(WIN32)
+    enable_language(RC)
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(KNMON_VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../VERSION")
+if(EXISTS "${KNMON_VERSION_FILE}")
+    file(READ "${KNMON_VERSION_FILE}" KNMON_VERSION_STRING)
+    string(STRIP "${KNMON_VERSION_STRING}" KNMON_VERSION_STRING)
+else()
+    set(KNMON_VERSION_STRING "0.1.0.0")
+endif()
+
+if(NOT KNMON_VERSION_STRING MATCHES "^([0-9]+)\\.([0-9]+)\\.([0-9]+)\\.([0-9]+)$")
+    message(FATAL_ERROR "VERSION must use MAJOR.MINOR.PATCH.BUILD numeric format.")
+endif()
+
+set(KNMON_VERSION_MAJOR "${CMAKE_MATCH_1}")
+set(KNMON_VERSION_MINOR "${CMAKE_MATCH_2}")
+set(KNMON_VERSION_PATCH "${CMAKE_MATCH_3}")
+set(KNMON_VERSION_BUILD "${CMAKE_MATCH_4}")
+set(KNMON_VERSION_COMMA "${KNMON_VERSION_MAJOR},${KNMON_VERSION_MINOR},${KNMON_VERSION_PATCH},${KNMON_VERSION_BUILD}")
+set(KNMON_COMPANY_NAME "kernullist")
+set(KNMON_PRODUCT_NAME "KN Win32 API Monitor")
+set(KNMON_COPYRIGHT "Copyright (C) 2026 kernullist")
+
+function(knmon_add_version_resource target file_description original_filename file_type)
+    if(WIN32)
+        set(KNMON_RESOURCE_FILE_DESCRIPTION "${file_description}")
+        set(KNMON_RESOURCE_INTERNAL_NAME "${target}")
+        set(KNMON_RESOURCE_ORIGINAL_FILENAME "${original_filename}")
+        set(KNMON_RESOURCE_FILE_TYPE "${file_type}")
+        set(resource_path "${CMAKE_CURRENT_BINARY_DIR}/version/${target}.rc")
+        configure_file(
+            "${CMAKE_CURRENT_SOURCE_DIR}/version.rc.in"
+            "${resource_path}"
+            @ONLY
+        )
+        target_sources(${target} PRIVATE "${resource_path}")
+    endif()
+endfunction()
 
 add_library(knmon-common INTERFACE)
 target_include_directories(knmon-common INTERFACE
@@ -25,8 +66,14 @@ target_compile_definitions(knmon-collector-core PRIVATE
     NOMINMAX
 )
 
+file(GLOB KNMON_COMMON_GENERATED_METADATA_PARAMETER_SOURCES CONFIGURE_DEPENDS
+    knmon-common/src/GeneratedApiMetadataParametersChunk*.cpp
+)
+
 add_library(knmon-core STATIC
     knmon-core/src/Controller.cpp
+    knmon-common/src/GeneratedApiMetadata.cpp
+    ${KNMON_COMMON_GENERATED_METADATA_PARAMETER_SOURCES}
 )
 target_include_directories(knmon-core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/knmon-core/include
@@ -48,6 +95,7 @@ target_compile_definitions(knmon-collector PRIVATE
     WIN32_LEAN_AND_MEAN
     NOMINMAX
 )
+knmon_add_version_resource(knmon-collector "KN Win32 API Monitor Collector" "knmon-collector.exe" "0x1L")
 
 add_executable(knmon-native-helper
     knmon-native-helper/src/main.cpp
@@ -57,14 +105,19 @@ target_compile_definitions(knmon-native-helper PRIVATE
     WIN32_LEAN_AND_MEAN
     NOMINMAX
 )
+knmon_add_version_resource(knmon-native-helper "KN Win32 API Monitor Native Helper" "knmon-native-helper.exe" "0x1L")
 
 set(KNMON_AGENT_SOURCE
     knmon-agent64/src/AgentMain.cpp
 )
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    file(GLOB KNMON_AGENT_GENERATED_HOOK_SOURCES CONFIGURE_DEPENDS
+        knmon-agent64/src/GeneratedAgentHooksChunk*.cpp
+    )
     add_library(knmon-agent64 SHARED
         ${KNMON_AGENT_SOURCE}
+        ${KNMON_AGENT_GENERATED_HOOK_SOURCES}
     )
     target_compile_definitions(knmon-agent64 PRIVATE
         WIN32_LEAN_AND_MEAN
@@ -74,6 +127,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         KNMON_AGENT_HELLO_MESSAGE="KNMon x64 agent loaded by controlled early-bird APC"
     )
     target_link_libraries(knmon-agent64 PRIVATE knmon-common)
+    knmon_add_version_resource(knmon-agent64 "KN Win32 API Monitor x64 Agent" "knmon-agent64.dll" "0x2L")
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
     add_library(knmon-agent32 SHARED
         ${KNMON_AGENT_SOURCE}
@@ -86,6 +140,7 @@ elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
         KNMON_AGENT_HELLO_MESSAGE="KNMon x86 agent loaded by controlled early-bird APC"
     )
     target_link_libraries(knmon-agent32 PRIVATE knmon-common)
+    knmon_add_version_resource(knmon-agent32 "KN Win32 API Monitor x86 Agent" "knmon-agent32.dll" "0x2L")
 else()
     message(FATAL_ERROR "Unsupported pointer size for KNMon agent build.")
 endif()
@@ -150,6 +205,7 @@ target_compile_definitions(knmon-sample-fileio PRIVATE
     WIN32_LEAN_AND_MEAN
     NOMINMAX
 )
+knmon_add_version_resource(knmon-sample-fileio "KN Win32 API Monitor Sample File I/O Target" "knmon-sample-fileio.exe" "0x1L")
 
 add_library(knmon-dynamic-probe SHARED
     ../samples/targets/dynamic-probe/src/main.cpp
@@ -158,3 +214,4 @@ target_compile_definitions(knmon-dynamic-probe PRIVATE
     WIN32_LEAN_AND_MEAN
     NOMINMAX
 )
+knmon_add_version_resource(knmon-dynamic-probe "KN Win32 API Monitor Dynamic Probe" "knmon-dynamic-probe.dll" "0x2L")

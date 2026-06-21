@@ -19,6 +19,7 @@ const targetDefinedApis = Number.parseInt(argumentValue("--target-defined", "700
 const inventoryPath = path.join(repoRoot, "generated", "api-inventory.json");
 const idAssignmentsPath = path.join(repoRoot, "definitions", "metadata", "id-assignments.json");
 const bulkDefinitionPath = path.join(repoRoot, "definitions", "win32", "generated-win32metadata-bulk.json");
+const systemExportDefinitionPath = path.join(repoRoot, "definitions", "win32", "generated-system32-exports-bulk.json");
 const ntdllDefinitionPath = path.join(repoRoot, "definitions", "nt", "ntdll-win11-exports.json");
 const ntdllEvidencePath = path.join(repoRoot, "generated", "ntdll-win11-export-baseline.json");
 const ntdllLatestOverlayPath = path.join(repoRoot, "generated", "ntdll-win11-latest-export-overlay.json");
@@ -37,7 +38,10 @@ const existingKeys = new Set();
 for (const item of apiDocuments)
 {
   const relativePath = path.relative(repoRoot, item.filePath).replaceAll("\\", "/");
-  if (relativePath === "definitions/win32/generated-win32metadata-bulk.json" || relativePath === "definitions/nt/ntdll-win11-exports.json")
+  if (
+    relativePath === "definitions/win32/generated-win32metadata-bulk.json" ||
+    relativePath === "definitions/win32/generated-system32-exports-bulk.json" ||
+    relativePath === "definitions/nt/ntdll-win11-exports.json")
   {
     continue;
   }
@@ -62,9 +66,14 @@ const ntdllExports = mergeLatestOverlayExports(readPeExports(ntdllPath), ntdllLa
 const ntdllApis = buildNtdllDefinitions(ntdllExports, inventoryByKey, existingKeys, phntPrototypesByName, sdkPrototypesByName, supplementalSpecPrototypesByName);
 const newNtdllKeys = new Set(ntdllApis.map((api) => apiKey(api.module, api.name)));
 const previousBulkCount = fs.existsSync(bulkDefinitionPath) ? ((readJson(bulkDefinitionPath).apis ?? []).length) : 0;
+const previousSystemExportCount = fs.existsSync(systemExportDefinitionPath) ? ((readJson(systemExportDefinitionPath).apis ?? []).length) : 0;
 const definedCountBeforeBulk = existingRuntimeHookableCount(apiDocuments) + ntdllApis.filter(isRuntimeHookableDefinition).length;
 const bulkTarget = Math.max(previousBulkCount, targetDefinedApis - definedCountBeforeBulk);
 const bulkApis = buildBulkDefinitions(inventoryRows, existingKeys, newNtdllKeys, bulkTarget);
+const newBulkKeys = new Set(bulkApis.map((api) => apiKey(api.module, api.name)));
+const remainingAfterMetadata = targetDefinedApis - definedCountBeforeBulk - bulkApis.filter(isRuntimeHookableDefinition).length;
+const systemExportTarget = Math.max(previousSystemExportCount, remainingAfterMetadata);
+const systemExportApis = buildSystemExportDefinitions(systemExportTarget, existingKeys, newNtdllKeys, newBulkKeys);
 
 const generatedDocuments = [
   {
@@ -74,6 +83,15 @@ const generatedDocuments = [
       module: "win32metadata-bulk",
       description: "Generated Win32 metadata API expansion with generic field decoding hints.",
       apis: bulkApis
+    }
+  },
+  {
+    filePath: systemExportDefinitionPath,
+    document: {
+      schemaVersion: "0.1.0",
+      module: "system32-export-bulk",
+      description: "Generated Microsoft System32 executable export coverage with opaque x64 ABI decoding. Data exports and forwarders are excluded.",
+      apis: systemExportApis
     }
   },
   {
@@ -95,10 +113,11 @@ const evidence = buildNtdllEvidence(ntdllExports, ntdllApis, inventoryByKey);
 if (write)
 {
   writeStableJson(bulkDefinitionPath, generatedDocuments[0].document);
-  writeStableJson(ntdllDefinitionPath, generatedDocuments[1].document);
+  writeStableJson(systemExportDefinitionPath, generatedDocuments[1].document);
+  writeStableJson(ntdllDefinitionPath, generatedDocuments[2].document);
   writeStableJson(ntdllEvidencePath, evidence);
   writeStableJson(idAssignmentsPath, updatedAssignments);
-  console.log(`Generated bulk definitions: win32metadata=${bulkApis.length} ntdll=${ntdllApis.length}`);
+  console.log(`Generated bulk definitions: win32metadata=${bulkApis.length} system32exports=${systemExportApis.length} ntdll=${ntdllApis.length}`);
   console.log(`Updated ID assignments: modules=${updatedAssignments.modules.length} apis=${updatedAssignments.apis.length}`);
 }
 else
@@ -109,6 +128,7 @@ else
     definedCountBeforeBulk,
     generated: {
       win32metadataBulk: bulkApis.length,
+      system32Exports: systemExportApis.length,
       ntdllExports: ntdllApis.length,
       ntdllKnownMetadata: ntdllApis.filter((api) => api.coverageStatus !== "unsupported").length,
       ntdllUnsupported: ntdllApis.filter((api) => api.coverageStatus === "unsupported").length,
@@ -118,6 +138,7 @@ else
     },
     output: {
       bulkDefinitionPath: relative(bulkDefinitionPath),
+      systemExportDefinitionPath: relative(systemExportDefinitionPath),
       ntdllDefinitionPath: relative(ntdllDefinitionPath),
       ntdllEvidencePath: relative(ntdllEvidencePath)
     }
@@ -149,7 +170,10 @@ function existingRuntimeHookableCount(documents)
   for (const item of documents)
   {
     const relativePath = relative(item.filePath);
-    if (relativePath === "definitions/win32/generated-win32metadata-bulk.json" || relativePath === "definitions/nt/ntdll-win11-exports.json")
+    if (
+      relativePath === "definitions/win32/generated-win32metadata-bulk.json" ||
+      relativePath === "definitions/win32/generated-system32-exports-bulk.json" ||
+      relativePath === "definitions/nt/ntdll-win11-exports.json")
     {
       continue;
     }
@@ -180,8 +204,7 @@ function buildBulkDefinitions(rows, existing, ntdllKeys, needed)
   }
 
   const candidates = rows
-    .filter((entry) => entry.hookability?.tier === 1)
-    .filter((entry) => (entry.parameters ?? []).length > 0)
+    .filter((entry) => inventoryEntryIsRuntimeCandidate(entry))
     .filter(inventoryEntryIsRuntimeSafe)
     .filter((entry) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(entry.name))
     .filter((entry) => !existing.has(apiKey(entry.module, entry.name)))
@@ -202,6 +225,347 @@ function buildBulkDefinitions(rows, existing, ntdllKeys, needed)
   }
 
   return output;
+}
+
+function inventoryEntryIsRuntimeCandidate(entry)
+{
+  const tier = Number(entry.hookability?.tier ?? 99);
+  return tier >= 1 && tier <= 3;
+}
+
+function buildSystemExportDefinitions(needed, existing, ntdllKeys, bulkKeys)
+{
+  if (needed <= 0)
+  {
+    return [];
+  }
+
+  const candidates = [];
+  for (const dll of microsoftSystemDlls())
+  {
+    let exports = null;
+    try
+    {
+      exports = readPeExports(dll.path, {
+        fileVersion: dll.fileVersion ?? null,
+        productVersion: dll.productVersion ?? null
+      });
+    }
+    catch (error)
+    {
+      continue;
+    }
+
+    for (const exported of exports.namedExports)
+    {
+      if (!systemExportIsRuntimeCandidate(exported))
+      {
+        continue;
+      }
+
+      const moduleName = normalizeModuleName(dll.name);
+      const key = apiKey(moduleName, exported.name);
+      if (existing.has(key) || ntdllKeys.has(key) || bulkKeys.has(key))
+      {
+        continue;
+      }
+
+      candidates.push({
+        dll,
+        exported,
+        moduleName,
+        key
+      });
+    }
+  }
+
+  candidates.sort(compareSystemExportPriority);
+
+  const output = [];
+  const emitted = new Set();
+  for (const candidate of candidates)
+  {
+    if (emitted.has(candidate.key))
+    {
+      continue;
+    }
+
+    output.push(definitionFromSystemExport(candidate.dll, candidate.exported));
+    emitted.add(candidate.key);
+
+    if (output.length >= needed)
+    {
+      break;
+    }
+  }
+
+  if (output.length < needed)
+  {
+    throw new Error(`Only ${output.length} Microsoft System32 executable export APIs were available; ${needed} were required.`);
+  }
+
+  return output;
+}
+
+function microsoftSystemDlls()
+{
+  if (process.platform !== "win32")
+  {
+    return [];
+  }
+
+  const command = [
+    "$items = @(Get-ChildItem -Path $env:SystemRoot\\System32 -Filter *.dll -File | ForEach-Object {",
+    "$vi = $_.VersionInfo;",
+    "if (($vi.CompanyName -like '*Microsoft*') -or ($vi.FileDescription -like '*Microsoft*')) {",
+    "[pscustomobject]@{ name = $_.Name; path = $_.FullName; fileVersion = $vi.FileVersion; productVersion = $vi.ProductVersion; companyName = $vi.CompanyName; fileDescription = $vi.FileDescription }",
+    "}",
+    "});",
+    "$items | ConvertTo-Json -Compress"
+  ].join(" ");
+  const output = childProcess.execFileSync(
+    "powershell",
+    ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
+    {
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024
+    });
+  const parsed = JSON.parse(output || "[]");
+  return (Array.isArray(parsed) ? parsed : [parsed])
+    .filter((entry) => entry && /^[A-Za-z0-9_.-]+\.dll$/i.test(entry.name))
+    .sort((left, right) => normalizeModuleName(left.name).localeCompare(normalizeModuleName(right.name)));
+}
+
+function systemExportIsRuntimeCandidate(exported)
+{
+  return exported.executable === true &&
+    exported.forwarder === null &&
+    /^[A-Za-z_][A-Za-z0-9_]*$/.test(exported.name);
+}
+
+function definitionFromSystemExport(dll, exported)
+{
+  const moduleName = normalizeModuleName(dll.name);
+  const family = familyFromSystemExport(moduleName, exported.name);
+  return {
+    module: moduleName,
+    name: exported.name,
+    ordinal: exported.ordinal,
+    family,
+    category: categoryFromSystemExport(moduleName, family),
+    risk: riskFromSystemExport(moduleName, exported.name, family),
+    hookPolicy: "iat",
+    coverageStatus: "defined",
+    minWindowsVersion: systemExportSourceText(dll, exported),
+    architectures: ["x64"],
+    callingConvention: callingConventionFromSystemExport(exported.name),
+    returnType: returnTypeFromSystemExport(exported.name),
+    errorSource: errorSourceFromSystemExport(exported.name),
+    parameters: opaqueParameters(exported.name)
+  };
+}
+
+function systemExportSourceText(dll, exported)
+{
+  const version = dll.fileVersion ? ` version ${dll.fileVersion}` : "";
+  return `Microsoft System32 executable export${version}; ordinal ${exported.ordinal}; opaque 16-slot x64 ABI fallback; data exports and forwarders excluded`;
+}
+
+function familyFromSystemExport(moduleName, apiName)
+{
+  const stem = moduleName.replace(/\.dll$/i, "");
+  if (/^(ntdll|kernel32|kernelbase|win32u|api-ms-win-core|ext-ms-win-core)/i.test(stem))
+  {
+    return "system";
+  }
+
+  if (/^(advapi32|authz|credssp|crypt32|bcrypt|ncrypt|secur32|security|wintrust|cryptnet|cryptui|samcli|netapi32|ntdsapi)/i.test(stem))
+  {
+    return "security";
+  }
+
+  if (/^(ws2_32|mswsock|winhttp|wininet|dnsapi|iphlpapi|netiohlp|rasapi32|rtutils|websocket|httpapi)/i.test(stem))
+  {
+    return "network";
+  }
+
+  if (/^(user32|comctl32|uxtheme|dwmapi|windows\.ui|twinapi|input|imm32)/i.test(stem))
+  {
+    return "ui";
+  }
+
+  if (/^(gdi32|gdi32full|gdiplus|dwrite|d2d1|d3d|dxgi|opengl32|glu32|windowscodecs)/i.test(stem))
+  {
+    return "graphics";
+  }
+
+  if (/^(ole32|oleaut32|combase|rpcrt4|actxprxy)/i.test(stem))
+  {
+    return "com-rpc";
+  }
+
+  if (/^(shell32|shlwapi|windows\.storage|propsys|thumbcache|apphelp)/i.test(stem))
+  {
+    return "shell-storage";
+  }
+
+  if (/^(setupapi|cfgmgr32|devobj|newdev|wlanapi|bluetoothapis|hid|winusb)/i.test(stem))
+  {
+    return "device";
+  }
+
+  if (/^(dbghelp|dbgcore|wer|faultrep|tdh|evntrace|wevtapi|pdh)/i.test(stem))
+  {
+    return "diagnostics";
+  }
+
+  if (/^(msvcrt|ucrt|vcruntime|msvcp|concrt)/i.test(stem) || /^[A-Za-z_]?_?str|^mem|^wcs|^qsort|^bsearch|^abs$|^labs$/i.test(apiName))
+  {
+    return "crt";
+  }
+
+  if (/^(clfsw32|esent|vssapi|virtdisk|cabinet|archive)/i.test(stem))
+  {
+    return "storage";
+  }
+
+  return "system-export";
+}
+
+function categoryFromSystemExport(moduleName, family)
+{
+  return `system32-exports/${family}/${moduleName.replace(/\.dll$/i, "")}`;
+}
+
+function riskFromSystemExport(moduleName, apiName, family)
+{
+  const text = `${moduleName}!${apiName}`;
+  if (/(Token|Privilege|Credential|Password|Secret|PrivateKey|Cert|Crypt|Protect|Security|Acl|Sid|Logon|Impersonat|Remote|Inject|Debug|WriteProcess|VirtualAlloc|VirtualProtect|MapView|Service|SCManager|Firewall)/i.test(text))
+  {
+    return "high";
+  }
+
+  if (family === "security" || family === "network" || family === "com-rpc")
+  {
+    return "high";
+  }
+
+  if (family === "crt")
+  {
+    return "low";
+  }
+
+  return "medium";
+}
+
+function callingConventionFromSystemExport(apiName)
+{
+  if (/^(Nt|Zw|Rtl|Ldr|Alpc|Etw|Tp|Csr|Dbg)/.test(apiName))
+  {
+    return "ntapi";
+  }
+
+  if (/^[A-Za-z_]?_/.test(apiName) || /^(mem|str|wcs|qsort|bsearch|abs|labs)/i.test(apiName))
+  {
+    return "cdecl";
+  }
+
+  return "winapi";
+}
+
+function returnTypeFromSystemExport(apiName)
+{
+  if (/^(Nt|Zw|Etw|Alpc|Csr)/.test(apiName))
+  {
+    return "NTSTATUS";
+  }
+
+  if (/^(DllRegisterServer|DllUnregisterServer|DllGetClassObject|DllCanUnloadNow|Ro[A-Z])/.test(apiName))
+  {
+    return "HRESULT";
+  }
+
+  return "ULONG_PTR";
+}
+
+function errorSourceFromSystemExport(apiName)
+{
+  const returnType = returnTypeFromSystemExport(apiName);
+  if (returnType === "NTSTATUS")
+  {
+    return "return_ntstatus";
+  }
+
+  if (returnType === "HRESULT")
+  {
+    return "HRESULT";
+  }
+
+  return "none";
+}
+
+function compareSystemExportPriority(left, right)
+{
+  const leftScore = systemExportPriority(left);
+  const rightScore = systemExportPriority(right);
+  if (leftScore !== rightScore)
+  {
+    return leftScore - rightScore;
+  }
+
+  const moduleCompare = left.moduleName.localeCompare(right.moduleName);
+  if (moduleCompare !== 0)
+  {
+    return moduleCompare;
+  }
+
+  return left.exported.name.localeCompare(right.exported.name);
+}
+
+function systemExportPriority(candidate)
+{
+  const moduleName = candidate.moduleName;
+  const family = familyFromSystemExport(moduleName, candidate.exported.name);
+  const modulePriority = [
+    "kernel32.dll",
+    "kernelbase.dll",
+    "ntdll.dll",
+    "win32u.dll",
+    "advapi32.dll",
+    "user32.dll",
+    "gdi32.dll",
+    "gdi32full.dll",
+    "rpcrt4.dll",
+    "combase.dll",
+    "ole32.dll",
+    "oleaut32.dll",
+    "shell32.dll",
+    "shlwapi.dll",
+    "setupapi.dll",
+    "cfgmgr32.dll",
+    "ws2_32.dll",
+    "winhttp.dll",
+    "wininet.dll",
+    "dnsapi.dll",
+    "iphlpapi.dll",
+    "crypt32.dll",
+    "bcrypt.dll",
+    "ncrypt.dll",
+    "wintrust.dll",
+    "secur32.dll",
+    "dbghelp.dll",
+    "dbgcore.dll",
+    "esent.dll",
+    "windows.storage.dll",
+    "gdiplus.dll",
+    "dwrite.dll",
+    "opengl32.dll"
+  ];
+  const moduleIndex = modulePriority.indexOf(moduleName);
+  const moduleScore = moduleIndex >= 0 ? moduleIndex : 1000;
+  const familyScore = family === "crt" ? 200 : family === "system-export" ? 100 : 0;
+  const debugScore = /d\.dll$|debug|checked/i.test(moduleName) ? 500 : 0;
+  return moduleScore * 1000 + familyScore + debugScore;
 }
 
 function buildNtdllDefinitions(exports, inventoryMap, existing, phntMap, sdkMap, supplementalSpecMap)
@@ -866,9 +1230,11 @@ function inventoryPriority(entry)
 
   const moduleIndex = modulePriority.indexOf(moduleName);
   const moduleScore = moduleIndex >= 0 ? moduleIndex : 100;
+  const tierScore = Number(entry.hookability?.tier ?? 9) * 10000;
   const riskScore = entry.risk === "critical" ? 0 : entry.risk === "high" ? 1 : 2;
   const familyScore = /system|security|network|crypto|storage|ui|graphics/.test(family) ? 0 : 10;
-  return moduleScore * 100 + familyScore + riskScore;
+  const parameterScore = (entry.parameters ?? []).length === 0 ? 5 : 0;
+  return tierScore + moduleScore * 100 + familyScore + riskScore + parameterScore;
 }
 
 function updateIdAssignments(current, generated, sourceDocuments)
@@ -877,7 +1243,10 @@ function updateIdAssignments(current, generated, sourceDocuments)
   for (const item of sourceDocuments)
   {
     const itemPath = relative(item.filePath);
-    if (itemPath === "definitions/win32/generated-win32metadata-bulk.json" || itemPath === "definitions/nt/ntdll-win11-exports.json")
+    if (
+      itemPath === "definitions/win32/generated-win32metadata-bulk.json" ||
+      itemPath === "definitions/win32/generated-system32-exports-bulk.json" ||
+      itemPath === "definitions/nt/ntdll-win11-exports.json")
     {
       continue;
     }
@@ -1018,18 +1387,18 @@ function buildNtdllEvidence(exports, ntdllApis, inventoryMap)
       withSdkPrototype: ntdllApis.filter((api) => String(api.minWindowsVersion ?? "").includes("prototype source Windows SDK")).length,
       withSupplementalSpecPrototype: ntdllApis.filter((api) => String(api.minWindowsVersion ?? "").includes("prototype source supplemental")).length,
       withOpaqueAbiFallback: ntdllApis.filter((api) => String(api.minWindowsVersion ?? "").includes("opaque 16-slot x64 ABI fallback")).length,
-      dataExportsSkipped: exports.namedExports.filter((api) => !api.executable).length,
+      dataExportsSkipped: exports.namedExports.filter((api) => api.dataExport === true).length,
       unsupportedPrototypeUnknown: ntdllApis.filter((api) => api.coverageStatus === "unsupported").length
     },
     exports: exports.namedExports
   };
 }
 
-function readPeExports(filePath)
+function readPeExports(filePath, versionOverride = null)
 {
   const buffer = fs.readFileSync(filePath);
   const stat = fs.statSync(filePath);
-  const version = fileVersion(filePath);
+  const version = versionOverride ?? fileVersion(filePath);
   const u16 = (offset) => buffer.readUInt16LE(offset);
   const u32 = (offset) => buffer.readUInt32LE(offset);
   const peOffset = u32(0x3c);
@@ -1105,13 +1474,16 @@ function readPeExports(filePath)
     const ordinalIndex = u16(rvaToOffset(ordinalsRva) + index * 2);
     const functionRva = u32(rvaToOffset(functionsRva) + ordinalIndex * 4);
     const section = rvaToSection(functionRva);
+    const forwarder = functionRva >= exportRva && functionRva < exportRva + exportSize ? readString(functionRva) : null;
+    const executable = Boolean((section?.characteristics ?? 0) & 0x20000000);
     namedExports.push({
       name: readString(nameRva),
       ordinal: ordinalBase + ordinalIndex,
       rva: `0x${functionRva.toString(16).padStart(8, "0")}`,
       sectionName: section?.name ?? null,
-      executable: Boolean((section?.characteristics ?? 0) & 0x20000000),
-      forwarder: functionRva >= exportRva && functionRva < exportRva + exportSize ? readString(functionRva) : null
+      executable,
+      forwarder,
+      dataExport: !executable && forwarder === null
     });
   }
 

@@ -1,2 +1,5 @@
 # Keep hashed JSONL fixture chunks stable across Windows checkouts.
 tests/fixtures/session/**/*.jsonl text eol=lf
+generated/tier1-hook-plan.json filter=lfs diff=lfs merge=lfs -text
+generated/definition-decoder-tables.json filter=lfs diff=lfs merge=lfs -text
+generated/api-inventory.json filter=lfs diff=lfs merge=lfs -text

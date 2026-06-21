@@ -34,7 +34,7 @@
     "defs:ntdll-sdk-prototypes": "node tools/def-validator/generate-ntdll-sdk-prototype-index.mjs --write",
     "defs:ntdll-supplemental-spec": "node tools/def-validator/generate-ntdll-supplemental-spec-index.mjs --write",
     "defs:ntdll-latest-overlay": "node tools/def-validator/generate-ntdll-latest-export-overlay.mjs --write",
-    "defs:bulk-expansion": "node tools/def-validator/generate-bulk-monitoring-definitions.mjs --write --target-defined=10000",
+    "defs:bulk-expansion": "node tools/def-validator/generate-bulk-monitoring-definitions.mjs --write --target-defined=30000",
     "defs:inventory": "node tools/def-validator/generate-api-inventory.mjs --write",
     "defs:inventory:check": "node tools/def-validator/generate-api-inventory.mjs --check",
     "defs:inventory:validate": "node tools/def-validator/validate-api-inventory.mjs",

@@ -32,6 +32,18 @@ bool HasApiSelection(const std::string& value)
     return !value.empty();
 }
 
+bool HasEnvironmentValue(const wchar_t* name)
+{
+    wchar_t buffer[2] = {};
+    const DWORD length = GetEnvironmentVariableW(name, buffer, static_cast<DWORD>(std::size(buffer)));
+    return length > 0;
+}
+
+bool HasGenericProfileSelection()
+{
+    return HasEnvironmentValue(L"KNMON_TIER1_PROFILE") || HasEnvironmentValue(L"KNMON_TIER2_PROFILE");
+}
+
 std::string LowerAscii(std::string value)
 {
     for (char& ch : value)
@@ -7381,6 +7393,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         std::uint64_t shutdownRestoredHooks = 0;
         std::uint64_t shutdownFailedHooks = 0;
         std::string shutdownReason;
+        const bool hasGenericProfileSelection = HasGenericProfileSelection();
 
         while (!captureEnded)
         {
@@ -7499,9 +7512,13 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         DrainSharedTransport(result, transport);
         UpdateTransportMetrics(result, transport);
 
-        if (hookInstalledCount >= ExpectedFileIoHookCount)
+        if (!hasGenericProfileSelection && hookInstalledCount >= ExpectedFileIoHookCount)
         {
             AddAudit(result, "hook_install_complete", "agent_event_read", "All selected File I/O hooks reported installed.");
+        }
+        else if (hasGenericProfileSelection)
+        {
+            AddAudit(result, "api_profile_filter_applied", "hook_install_count", "API profile selection is active; fixed File I/O hook-count gate was skipped.");
         }
 
         if (agentShutdownReceived)
@@ -7529,7 +7546,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
             break;
         }
 
-        if (hookInstalledCount < ExpectedFileIoHookCount)
+        if (!hasGenericProfileSelection && hookInstalledCount < ExpectedFileIoHookCount)
         {
             SetResultError(result, ERROR_HOOK_NOT_INSTALLED, "knmon-core", "hook_install_count_required", "Not all selected File I/O hooks reported installed.");
             fatalError = true;

@@ -1,5 +1,4 @@
 #include <knmon/common/AttachConfig.h>
-#include <knmon/common/GeneratedApiMetadata.h>
 #include <knmon/common/Protocol.h>
 
 #include <WinSock2.h>
@@ -845,6 +844,8 @@ struct ModuleInfo
     bool Eligible = false;
 };
 
+struct GeneratedAgentResolverMetadata;
+
 struct ResolverPointerClassification
 {
     bool Candidate = false;
@@ -864,7 +865,7 @@ struct ResolverPointerClassification
     void* ReplacementFunction = nullptr;
     ModuleInfo RequestedModule = {};
     ModuleInfo TargetModule = {};
-    const knmon::KnMonGeneratedApiMetadata* Metadata = nullptr;
+    const GeneratedAgentResolverMetadata* Metadata = nullptr;
 };
 
 struct SweepStats
@@ -2339,26 +2340,7 @@ bool GeneratedModuleNameEquals(std::string_view left, const char* right)
     return equal;
 }
 
-std::uint16_t ModuleId(const char* moduleName)
-{
-    std::uint16_t result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Unknown);
-
-    if (moduleName == nullptr)
-    {
-        return result;
-    }
-
-    for (const knmon::KnMonGeneratedModuleMetadata& module : knmon::KnMonGeneratedModules)
-    {
-        if (GeneratedModuleNameEquals(module.Name, moduleName))
-        {
-            result = module.Id;
-            break;
-        }
-    }
-
-    return result;
-}
+std::uint16_t ModuleId(const char* moduleName);
 
 bool OpenTransport(const std::wstring& mappingName)
 {
@@ -7947,9 +7929,128 @@ NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functio
 
 #include "GeneratedAgentHooks.inc"
 
+std::uint16_t ModuleId(const char* moduleName)
+{
+    std::uint16_t result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Unknown);
+
+    do
+    {
+        if (moduleName == nullptr)
+        {
+            break;
+        }
+
+        for (const GeneratedAgentModuleMetadata& module : GeneratedAgentModules)
+        {
+            if (GeneratedModuleNameEquals(module.Name, moduleName))
+            {
+                result = module.Id;
+                break;
+            }
+        }
+    }
+    while (false);
+
+    return result;
+}
+
+#if defined(_WIN64)
+extern "C" __declspec(dllexport) std::uintptr_t KnMonInvokeGeneratedValueHookByIndex(
+    std::size_t index,
+    std::uintptr_t arg0,
+    std::uintptr_t arg1,
+    std::uintptr_t arg2,
+    std::uintptr_t arg3,
+    std::uintptr_t arg4,
+    std::uintptr_t arg5,
+    std::uintptr_t arg6,
+    std::uintptr_t arg7,
+    std::uintptr_t arg8,
+    std::uintptr_t arg9,
+    std::uintptr_t arg10,
+    std::uintptr_t arg11,
+    std::uintptr_t arg12,
+    std::uintptr_t arg13,
+    std::uintptr_t arg14,
+    std::uintptr_t arg15)
+{
+    if (index >= GeneratedAgentHookMetadata.size())
+    {
+        SetLastError(ERROR_PROC_NOT_FOUND);
+        return 0;
+    }
+
+    return InvokeGeneratedValueHook<GeneratedAgentValueFunction_16>(
+        &g_generatedAgentOriginalFunctions[index],
+        GeneratedAgentHookMetadata[index],
+        arg0,
+        arg1,
+        arg2,
+        arg3,
+        arg4,
+        arg5,
+        arg6,
+        arg7,
+        arg8,
+        arg9,
+        arg10,
+        arg11,
+        arg12,
+        arg13,
+        arg14,
+        arg15);
+}
+
+extern "C" __declspec(dllexport) void KnMonInvokeGeneratedVoidHookByIndex(
+    std::size_t index,
+    std::uintptr_t arg0,
+    std::uintptr_t arg1,
+    std::uintptr_t arg2,
+    std::uintptr_t arg3,
+    std::uintptr_t arg4,
+    std::uintptr_t arg5,
+    std::uintptr_t arg6,
+    std::uintptr_t arg7,
+    std::uintptr_t arg8,
+    std::uintptr_t arg9,
+    std::uintptr_t arg10,
+    std::uintptr_t arg11,
+    std::uintptr_t arg12,
+    std::uintptr_t arg13,
+    std::uintptr_t arg14,
+    std::uintptr_t arg15)
+{
+    if (index >= GeneratedAgentHookMetadata.size())
+    {
+        SetLastError(ERROR_PROC_NOT_FOUND);
+        return;
+    }
+
+    InvokeGeneratedVoidHook<GeneratedAgentVoidFunction_16>(
+        &g_generatedAgentOriginalFunctions[index],
+        GeneratedAgentHookMetadata[index],
+        arg0,
+        arg1,
+        arg2,
+        arg3,
+        arg4,
+        arg5,
+        arg6,
+        arg7,
+        arg8,
+        arg9,
+        arg10,
+        arg11,
+        arg12,
+        arg13,
+        arg14,
+        arg15);
+}
+#endif
+
 constexpr std::size_t HookDefinitionCount = ManualHookDefinitionCount + GeneratedAgentHookDefinitionCount;
 #if defined(_WIN64)
-static_assert(GeneratedAgentHookRequiredApiCount >= 10000, "generated hook target must satisfy the 10000 API coverage goal");
+static_assert(GeneratedAgentHookRequiredApiCount >= 30000, "generated hook target must satisfy the 30000 API coverage goal");
 static_assert(GeneratedAgentHookCoveredApiCount >= GeneratedAgentHookRequiredApiCount, "generated hooks must cover every hookable API definition");
 #endif
 
@@ -8543,9 +8644,9 @@ bool StringViewEqualsAsciiNoCase(std::string_view left, const char* right)
     return equal;
 }
 
-const knmon::KnMonGeneratedApiMetadata* FindResolverDefinition(const char* moduleName, const char* apiName)
+const GeneratedAgentResolverMetadata* FindResolverDefinition(const char* moduleName, const char* apiName)
 {
-    const knmon::KnMonGeneratedApiMetadata* metadata = nullptr;
+    const GeneratedAgentResolverMetadata* metadata = nullptr;
 
     do
     {
@@ -8554,7 +8655,7 @@ const knmon::KnMonGeneratedApiMetadata* FindResolverDefinition(const char* modul
             break;
         }
 
-        for (const knmon::KnMonGeneratedApiMetadata& entry : knmon::KnMonGeneratedApis)
+        for (const GeneratedAgentResolverMetadata& entry : GeneratedAgentResolverMetadataTable)
         {
             if (
                 StringViewEqualsAsciiNoCase(entry.ModuleName, moduleName) &&

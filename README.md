@@ -28,17 +28,17 @@ capture artifacts, and generated API definition metadata.
 
 The current definition and hook pipeline reports:
 
-- Microsoft-source inventory candidates: `20,548`
-- Defined APIs: `10,112`
-- Runtime-monitorable APIs: `10,000`
+- Microsoft-source inventory candidates: `30,182`
+- Defined APIs: `30,112`
+- Runtime-monitorable APIs: `30,000`
 - Definition-only APIs awaiting payload/ABI review: `112`
 - Data exports included as monitor targets: `0`
-- Parameter metadata rows: `35,386`
+- Parameter metadata rows: `226,754`
 - Parameters missing decode metadata: `0`
-- API families: `52`
-- API categories/groups: `292`
-- Generated hook coverage: `required=10000`, `manual=135`,
-  `generated=9865`, `covered=10000`
+- API families: `61`
+- API categories/groups: `475`
+- Generated hook coverage: `required=30000`, `manual=314`,
+  `generated=29686`, `covered=30000`
 
 Runtime-monitorable means the API has a generated or manual hook definition
 that can be selected by API filter or enabled through the relevant runtime
@@ -124,6 +124,19 @@ Build the desktop UI:
 npm run build
 ```
 
+Or use the repository build script:
+
+```powershell
+.\Build.ps1
+```
+
+For release builds, the script increments the fourth PE resource version
+component in `VERSION` before configuring and building native Release outputs:
+
+```powershell
+.\Build.ps1 -Release
+```
+
 Optional Win32/x86 native build:
 
 ```powershell
@@ -192,7 +205,7 @@ build\native\Debug\knmon-native-helper.exe replay-session --session captures\lat
 ## Validation
 
 Validate API definitions, generated decoder tables, inventory, plans, importer
-fixtures, and the 10,000 runtime-hookable API gate:
+fixtures, and the 30,000 runtime-hookable API gate:
 
 ```powershell
 npm run defs:validate
@@ -246,8 +259,26 @@ npm run agent-hooks:check
 Expected current hook check:
 
 ```text
-Generated agent hook definitions. required=10000 manual=135 generated=9865 covered=10000
+Generated agent hook definitions. required=30000 manual=314 generated=29686 covered=30000 chunks=58
 ```
+
+## Release Package
+
+Create a ZIP package from existing Release build outputs:
+
+```powershell
+.\Release.ps1
+```
+
+Include an already-built Win32/x86 native tree:
+
+```powershell
+.\Release.ps1 -IncludeWin32
+```
+
+The ZIP is written under `dist\release\` and includes native PE outputs,
+`README.md`, `VERSION`, `BUILD-INFO.json`, the UI `dist` folder when present,
+and Tauri `target\release`/`bundle` outputs when they have been built.
 
 ## Design Docs
 
