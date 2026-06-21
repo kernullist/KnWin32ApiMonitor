@@ -421,6 +421,26 @@ using RpcMgmtEpEltInqDoneFn = RPC_STATUS(RPC_ENTRY*)(RPC_EP_INQ_HANDLE*);
 using UuidCreateFn = RPC_STATUS(RPC_ENTRY*)(UUID*);
 using UuidToStringWFn = RPC_STATUS(RPC_ENTRY*)(UUID*, RPC_WSTR*);
 using UuidFromStringWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, UUID*);
+using IRpcGetCurrentCallHandleFn = PVOID(RPC_ENTRY*)();
+using IRpcGetExtendedErrorFn = RPC_STATUS(RPC_ENTRY*)();
+using IRpcMgmtEnableDedicatedThreadPoolFn = RPC_STATUS(RPC_ENTRY*)();
+using IRpcServerDisableExceptionFilterFn = LONG(RPC_ENTRY*)();
+using IRpcServerInqAddressChangeFnFn = RPC_ADDRESS_CHANGE_FN*(RPC_ENTRY*)();
+using IRpcSessionStrictContextHandleFn = void(RPC_ENTRY*)();
+using IRpcSsDontSerializeContextFn = void(RPC_ENTRY*)();
+using IRpcTurnOnEEInfoPropagationFn = RPC_STATUS(RPC_ENTRY*)();
+using RpcErrorClearInformationFn = void(RPC_ENTRY*)();
+using RpcMgmtEnableIdleCleanupFn = RPC_STATUS(RPC_ENTRY*)();
+using RpcRevertContainerImpersonationFn = RPC_STATUS(RPC_ENTRY*)();
+using RpcRevertToSelfFn = RPC_STATUS(RPC_ENTRY*)();
+using RpcServerYieldFn = void(RPC_ENTRY*)();
+using RpcSmDisableAllocateFn = RPC_STATUS(RPC_ENTRY*)();
+using RpcSmEnableAllocateFn = RPC_STATUS(RPC_ENTRY*)();
+using RpcSsDisableAllocateFn = void(RPC_ENTRY*)();
+using RpcSsDontSerializeContextFn = void(RPC_ENTRY*)();
+using RpcSsEnableAllocateFn = void(RPC_ENTRY*)();
+using RpcSsGetThreadHandleFn = PVOID(RPC_ENTRY*)();
+using RpcTestCancelFn = RPC_STATUS(RPC_ENTRY*)();
 using WSAStartupFn = int(WINAPI*)(WORD, LPWSADATA);
 using WSACleanupFn = int(WINAPI*)();
 using SocketFn = SOCKET(WINAPI*)(int, int, int);
@@ -738,6 +758,26 @@ RpcMgmtEpEltInqDoneFn g_originalRpcMgmtEpEltInqDone = nullptr;
 UuidCreateFn g_originalUuidCreate = nullptr;
 UuidToStringWFn g_originalUuidToStringW = nullptr;
 UuidFromStringWFn g_originalUuidFromStringW = nullptr;
+IRpcGetCurrentCallHandleFn g_originalIRpcGetCurrentCallHandle = nullptr;
+IRpcGetExtendedErrorFn g_originalIRpcGetExtendedError = nullptr;
+IRpcMgmtEnableDedicatedThreadPoolFn g_originalIRpcMgmtEnableDedicatedThreadPool = nullptr;
+IRpcServerDisableExceptionFilterFn g_originalIRpcServerDisableExceptionFilter = nullptr;
+IRpcServerInqAddressChangeFnFn g_originalIRpcServerInqAddressChangeFn = nullptr;
+IRpcSessionStrictContextHandleFn g_originalIRpcSessionStrictContextHandle = nullptr;
+IRpcSsDontSerializeContextFn g_originalIRpcSsDontSerializeContext = nullptr;
+IRpcTurnOnEEInfoPropagationFn g_originalIRpcTurnOnEEInfoPropagation = nullptr;
+RpcErrorClearInformationFn g_originalRpcErrorClearInformation = nullptr;
+RpcMgmtEnableIdleCleanupFn g_originalRpcMgmtEnableIdleCleanup = nullptr;
+RpcRevertContainerImpersonationFn g_originalRpcRevertContainerImpersonation = nullptr;
+RpcRevertToSelfFn g_originalRpcRevertToSelf = nullptr;
+RpcServerYieldFn g_originalRpcServerYield = nullptr;
+RpcSmDisableAllocateFn g_originalRpcSmDisableAllocate = nullptr;
+RpcSmEnableAllocateFn g_originalRpcSmEnableAllocate = nullptr;
+RpcSsDisableAllocateFn g_originalRpcSsDisableAllocate = nullptr;
+RpcSsDontSerializeContextFn g_originalRpcSsDontSerializeContext = nullptr;
+RpcSsEnableAllocateFn g_originalRpcSsEnableAllocate = nullptr;
+RpcSsGetThreadHandleFn g_originalRpcSsGetThreadHandle = nullptr;
+RpcTestCancelFn g_originalRpcTestCancel = nullptr;
 WSAStartupFn g_originalWSAStartup = nullptr;
 WSACleanupFn g_originalWSACleanup = nullptr;
 SocketFn g_originalSocket = nullptr;
@@ -850,7 +890,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 1024;
 constexpr std::size_t MaxModuleRecords = 256;
-constexpr std::size_t HookDefinitionCount = 294;
+constexpr std::size_t HookDefinitionCount = 314;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -7603,6 +7643,26 @@ RPC_STATUS RPC_ENTRY HookedRpcMgmtEpEltInqDone(RPC_EP_INQ_HANDLE* inquiryContext
 RPC_STATUS RPC_ENTRY HookedUuidCreate(UUID* uuid);
 RPC_STATUS RPC_ENTRY HookedUuidToStringW(UUID* uuid, RPC_WSTR* stringUuid);
 RPC_STATUS RPC_ENTRY HookedUuidFromStringW(RPC_WSTR stringUuid, UUID* uuid);
+PVOID RPC_ENTRY HookedIRpcGetCurrentCallHandle();
+RPC_STATUS RPC_ENTRY HookedIRpcGetExtendedError();
+RPC_STATUS RPC_ENTRY HookedIRpcMgmtEnableDedicatedThreadPool();
+LONG RPC_ENTRY HookedIRpcServerDisableExceptionFilter();
+RPC_ADDRESS_CHANGE_FN* RPC_ENTRY HookedIRpcServerInqAddressChangeFn();
+void RPC_ENTRY HookedIRpcSessionStrictContextHandle();
+void RPC_ENTRY HookedIRpcSsDontSerializeContext();
+RPC_STATUS RPC_ENTRY HookedIRpcTurnOnEEInfoPropagation();
+void RPC_ENTRY HookedRpcErrorClearInformation();
+RPC_STATUS RPC_ENTRY HookedRpcMgmtEnableIdleCleanup();
+RPC_STATUS RPC_ENTRY HookedRpcRevertContainerImpersonation();
+RPC_STATUS RPC_ENTRY HookedRpcRevertToSelf();
+void RPC_ENTRY HookedRpcServerYield();
+RPC_STATUS RPC_ENTRY HookedRpcSmDisableAllocate();
+RPC_STATUS RPC_ENTRY HookedRpcSmEnableAllocate();
+void RPC_ENTRY HookedRpcSsDisableAllocate();
+void RPC_ENTRY HookedRpcSsDontSerializeContext();
+void RPC_ENTRY HookedRpcSsEnableAllocate();
+PVOID RPC_ENTRY HookedRpcSsGetThreadHandle();
+RPC_STATUS RPC_ENTRY HookedRpcTestCancel();
 int WINAPI HookedWSAStartup(WORD versionRequested, LPWSADATA data);
 int WINAPI HookedWSACleanup();
 SOCKET WINAPI HookedSocket(int af, int type, int protocol);
@@ -7808,6 +7868,26 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "wscapi.dll", "WscRegisterForUserNotifications", reinterpret_cast<void*>(HookedWscRegisterForUserNotifications), reinterpret_cast<void**>(&g_originalWscRegisterForUserNotifications), false, true, false, 15, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "wsnmp32.dll", "SnmpCleanup", reinterpret_cast<void*>(HookedSnmpCleanup), reinterpret_cast<void**>(&g_originalSnmpCleanup), false, true, false, 201, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "wsnmp32.dll", "SnmpCleanupEx", reinterpret_cast<void*>(HookedSnmpCleanupEx), reinterpret_cast<void**>(&g_originalSnmpCleanupEx), false, true, false, 292, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "I_RpcGetCurrentCallHandle", reinterpret_cast<void*>(HookedIRpcGetCurrentCallHandle), reinterpret_cast<void**>(&g_originalIRpcGetCurrentCallHandle), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "I_RpcGetExtendedError", reinterpret_cast<void*>(HookedIRpcGetExtendedError), reinterpret_cast<void**>(&g_originalIRpcGetExtendedError), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "I_RpcMgmtEnableDedicatedThreadPool", reinterpret_cast<void*>(HookedIRpcMgmtEnableDedicatedThreadPool), reinterpret_cast<void**>(&g_originalIRpcMgmtEnableDedicatedThreadPool), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "I_RpcServerDisableExceptionFilter", reinterpret_cast<void*>(HookedIRpcServerDisableExceptionFilter), reinterpret_cast<void**>(&g_originalIRpcServerDisableExceptionFilter), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "I_RpcServerInqAddressChangeFn", reinterpret_cast<void*>(HookedIRpcServerInqAddressChangeFn), reinterpret_cast<void**>(&g_originalIRpcServerInqAddressChangeFn), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "I_RpcSessionStrictContextHandle", reinterpret_cast<void*>(HookedIRpcSessionStrictContextHandle), reinterpret_cast<void**>(&g_originalIRpcSessionStrictContextHandle), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "I_RpcSsDontSerializeContext", reinterpret_cast<void*>(HookedIRpcSsDontSerializeContext), reinterpret_cast<void**>(&g_originalIRpcSsDontSerializeContext), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "I_RpcTurnOnEEInfoPropagation", reinterpret_cast<void*>(HookedIRpcTurnOnEEInfoPropagation), reinterpret_cast<void**>(&g_originalIRpcTurnOnEEInfoPropagation), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "RpcErrorClearInformation", reinterpret_cast<void*>(HookedRpcErrorClearInformation), reinterpret_cast<void**>(&g_originalRpcErrorClearInformation), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "RpcMgmtEnableIdleCleanup", reinterpret_cast<void*>(HookedRpcMgmtEnableIdleCleanup), reinterpret_cast<void**>(&g_originalRpcMgmtEnableIdleCleanup), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "RpcRevertContainerImpersonation", reinterpret_cast<void*>(HookedRpcRevertContainerImpersonation), reinterpret_cast<void**>(&g_originalRpcRevertContainerImpersonation), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "RpcRevertToSelf", reinterpret_cast<void*>(HookedRpcRevertToSelf), reinterpret_cast<void**>(&g_originalRpcRevertToSelf), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "RpcServerYield", reinterpret_cast<void*>(HookedRpcServerYield), reinterpret_cast<void**>(&g_originalRpcServerYield), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "RpcSmDisableAllocate", reinterpret_cast<void*>(HookedRpcSmDisableAllocate), reinterpret_cast<void**>(&g_originalRpcSmDisableAllocate), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "RpcSmEnableAllocate", reinterpret_cast<void*>(HookedRpcSmEnableAllocate), reinterpret_cast<void**>(&g_originalRpcSmEnableAllocate), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "RpcSsDisableAllocate", reinterpret_cast<void*>(HookedRpcSsDisableAllocate), reinterpret_cast<void**>(&g_originalRpcSsDisableAllocate), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "RpcSsDontSerializeContext", reinterpret_cast<void*>(HookedRpcSsDontSerializeContext), reinterpret_cast<void**>(&g_originalRpcSsDontSerializeContext), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "RpcSsEnableAllocate", reinterpret_cast<void*>(HookedRpcSsEnableAllocate), reinterpret_cast<void**>(&g_originalRpcSsEnableAllocate), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "RpcSsGetThreadHandle", reinterpret_cast<void*>(HookedRpcSsGetThreadHandle), reinterpret_cast<void**>(&g_originalRpcSsGetThreadHandle), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "rpcrt4.dll", "RpcTestCancel", reinterpret_cast<void*>(HookedRpcTestCancel), reinterpret_cast<void**>(&g_originalRpcTestCancel), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "kernel32.dll", "GetModuleHandleW", reinterpret_cast<void*>(HookedGetModuleHandleW), reinterpret_cast<void**>(&g_originalGetModuleHandleW), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleHandleExW", reinterpret_cast<void*>(HookedGetModuleHandleExW), reinterpret_cast<void**>(&g_originalGetModuleHandleExW), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetModuleFileNameW", reinterpret_cast<void*>(HookedGetModuleFileNameW), reinterpret_cast<void**>(&g_originalGetModuleFileNameW), false, true, false, 0, 0 },
@@ -12386,6 +12466,306 @@ INT WINAPI HookedSnmpCleanupEx()
     };
 
     return InvokeTier2ReturnOnlyHook(g_originalSnmpCleanupEx, static_cast<INT>(0), Metadata);
+}
+
+PVOID RPC_ENTRY HookedIRpcGetCurrentCallHandle()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "I_RpcGetCurrentCallHandle",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!I_RpcGetCurrentCallHandle",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalIRpcGetCurrentCallHandle, static_cast<PVOID>(nullptr), Metadata);
+}
+
+RPC_STATUS RPC_ENTRY HookedIRpcGetExtendedError()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "I_RpcGetExtendedError",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!I_RpcGetExtendedError",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalIRpcGetExtendedError, static_cast<RPC_STATUS>(0), Metadata);
+}
+
+RPC_STATUS RPC_ENTRY HookedIRpcMgmtEnableDedicatedThreadPool()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "I_RpcMgmtEnableDedicatedThreadPool",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!I_RpcMgmtEnableDedicatedThreadPool",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalIRpcMgmtEnableDedicatedThreadPool, static_cast<RPC_STATUS>(0), Metadata);
+}
+
+LONG RPC_ENTRY HookedIRpcServerDisableExceptionFilter()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "I_RpcServerDisableExceptionFilter",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!I_RpcServerDisableExceptionFilter",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalIRpcServerDisableExceptionFilter, static_cast<LONG>(0), Metadata);
+}
+
+RPC_ADDRESS_CHANGE_FN* RPC_ENTRY HookedIRpcServerInqAddressChangeFn()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "I_RpcServerInqAddressChangeFn",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!I_RpcServerInqAddressChangeFn",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalIRpcServerInqAddressChangeFn, static_cast<RPC_ADDRESS_CHANGE_FN*>(nullptr), Metadata);
+}
+
+void RPC_ENTRY HookedIRpcSessionStrictContextHandle()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "I_RpcSessionStrictContextHandle",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!I_RpcSessionStrictContextHandle",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalIRpcSessionStrictContextHandle, Metadata);
+}
+
+void RPC_ENTRY HookedIRpcSsDontSerializeContext()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "I_RpcSsDontSerializeContext",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!I_RpcSsDontSerializeContext",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalIRpcSsDontSerializeContext, Metadata);
+}
+
+RPC_STATUS RPC_ENTRY HookedIRpcTurnOnEEInfoPropagation()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "I_RpcTurnOnEEInfoPropagation",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!I_RpcTurnOnEEInfoPropagation",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalIRpcTurnOnEEInfoPropagation, static_cast<RPC_STATUS>(0), Metadata);
+}
+
+void RPC_ENTRY HookedRpcErrorClearInformation()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "RpcErrorClearInformation",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!RpcErrorClearInformation",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalRpcErrorClearInformation, Metadata);
+}
+
+RPC_STATUS RPC_ENTRY HookedRpcMgmtEnableIdleCleanup()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "RpcMgmtEnableIdleCleanup",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!RpcMgmtEnableIdleCleanup",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalRpcMgmtEnableIdleCleanup, static_cast<RPC_STATUS>(0), Metadata);
+}
+
+RPC_STATUS RPC_ENTRY HookedRpcRevertContainerImpersonation()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "RpcRevertContainerImpersonation",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!RpcRevertContainerImpersonation",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalRpcRevertContainerImpersonation, static_cast<RPC_STATUS>(0), Metadata);
+}
+
+RPC_STATUS RPC_ENTRY HookedRpcRevertToSelf()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "RpcRevertToSelf",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!RpcRevertToSelf",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalRpcRevertToSelf, static_cast<RPC_STATUS>(0), Metadata);
+}
+
+void RPC_ENTRY HookedRpcServerYield()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "RpcServerYield",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!RpcServerYield",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalRpcServerYield, Metadata);
+}
+
+RPC_STATUS RPC_ENTRY HookedRpcSmDisableAllocate()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "RpcSmDisableAllocate",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!RpcSmDisableAllocate",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalRpcSmDisableAllocate, static_cast<RPC_STATUS>(0), Metadata);
+}
+
+RPC_STATUS RPC_ENTRY HookedRpcSmEnableAllocate()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "RpcSmEnableAllocate",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!RpcSmEnableAllocate",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalRpcSmEnableAllocate, static_cast<RPC_STATUS>(0), Metadata);
+}
+
+void RPC_ENTRY HookedRpcSsDisableAllocate()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "RpcSsDisableAllocate",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!RpcSsDisableAllocate",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalRpcSsDisableAllocate, Metadata);
+}
+
+void RPC_ENTRY HookedRpcSsDontSerializeContext()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "RpcSsDontSerializeContext",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!RpcSsDontSerializeContext",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalRpcSsDontSerializeContext, Metadata);
+}
+
+void RPC_ENTRY HookedRpcSsEnableAllocate()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "RpcSsEnableAllocate",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!RpcSsEnableAllocate",
+        GenericReturnFormat::Void
+    };
+
+    InvokeTier2ReturnOnlyVoidHook(g_originalRpcSsEnableAllocate, Metadata);
+}
+
+PVOID RPC_ENTRY HookedRpcSsGetThreadHandle()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "RpcSsGetThreadHandle",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!RpcSsGetThreadHandle",
+        GenericReturnFormat::Pointer
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalRpcSsGetThreadHandle, static_cast<PVOID>(nullptr), Metadata);
+}
+
+RPC_STATUS RPC_ENTRY HookedRpcTestCancel()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "rpcrt4.dll",
+        "RpcTestCancel",
+        "system",
+        "system/rpc",
+        "medium",
+        "rpcrt4.dll!RpcTestCancel",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalRpcTestCancel, static_cast<RPC_STATUS>(0), Metadata);
 }
 
 HMODULE WINAPI HookedGetModuleHandleW(LPCWSTR moduleName)

@@ -140,6 +140,12 @@ extern "C" __declspec(dllimport) HRESULT WINAPI UiaDisconnectAllProviders();
 extern "C" __declspec(dllimport) HRESULT WINAPI WscRegisterForUserNotifications();
 extern "C" __declspec(dllimport) INT WINAPI SnmpCleanup();
 extern "C" __declspec(dllimport) INT WINAPI SnmpCleanupEx();
+extern "C" __declspec(dllimport) PVOID RPC_ENTRY I_RpcGetCurrentCallHandle();
+extern "C" __declspec(dllimport) RPC_STATUS RPC_ENTRY I_RpcGetExtendedError();
+extern "C" __declspec(dllimport) RPC_STATUS RPC_ENTRY I_RpcMgmtEnableDedicatedThreadPool();
+extern "C" __declspec(dllimport) void RPC_ENTRY I_RpcSessionStrictContextHandle();
+extern "C" __declspec(dllimport) void RPC_ENTRY I_RpcSsDontSerializeContext();
+extern "C" __declspec(dllimport) RPC_STATUS RPC_ENTRY I_RpcTurnOnEEInfoPropagation();
 
 namespace
 {
@@ -3204,6 +3210,26 @@ bool RunTier2InitialReturnOnlyBatchProbe()
         const HRESULT wscNotifications = WscRegisterForUserNotifications();
         const INT snmpCleanup = SnmpCleanup();
         const INT snmpCleanupEx = SnmpCleanupEx();
+        const PVOID rpcCurrentCall = I_RpcGetCurrentCallHandle();
+        const RPC_STATUS rpcExtendedError = I_RpcGetExtendedError();
+        const RPC_STATUS rpcDedicatedThreadPool = I_RpcMgmtEnableDedicatedThreadPool();
+        const LONG rpcDisableExceptionFilter = I_RpcServerDisableExceptionFilter();
+        RPC_ADDRESS_CHANGE_FN* rpcAddressChange = I_RpcServerInqAddressChangeFn();
+        I_RpcSessionStrictContextHandle();
+        I_RpcSsDontSerializeContext();
+        const RPC_STATUS rpcEePropagation = I_RpcTurnOnEEInfoPropagation();
+        RpcErrorClearInformation();
+        const RPC_STATUS rpcIdleCleanup = RpcMgmtEnableIdleCleanup();
+        const RPC_STATUS rpcContainerRevert = RpcRevertContainerImpersonation();
+        const RPC_STATUS rpcRevert = RpcRevertToSelf();
+        RpcServerYield();
+        const RPC_STATUS rpcSmDisable = RpcSmDisableAllocate();
+        const RPC_STATUS rpcSmEnable = RpcSmEnableAllocate();
+        RpcSsDisableAllocate();
+        RpcSsEnableAllocate();
+        RpcSsDontSerializeContext();
+        const PVOID rpcThreadHandle = RpcSsGetThreadHandle();
+        const RPC_STATUS rpcCancel = RpcTestCancel();
         OaEnablePerUserTLibRegistration();
         palette = GdipCreateHalftonePalette();
 
@@ -3345,6 +3371,19 @@ bool RunTier2InitialReturnOnlyBatchProbe()
                   << " wsc_notifications=" << HexHResult(wscNotifications)
                   << " wsnmp_cleanup=" << snmpCleanup
                   << " wsnmp_cleanup_ex=" << snmpCleanupEx
+                  << " rpc_current_call=" << rpcCurrentCall
+                  << " rpc_extended_error=" << rpcExtendedError
+                  << " rpc_dedicated_pool=" << rpcDedicatedThreadPool
+                  << " rpc_disable_exception_filter=" << rpcDisableExceptionFilter
+                  << " rpc_address_change=" << reinterpret_cast<const void*>(rpcAddressChange)
+                  << " rpc_ee_propagation=" << rpcEePropagation
+                  << " rpc_idle_cleanup=" << rpcIdleCleanup
+                  << " rpc_container_revert=" << rpcContainerRevert
+                  << " rpc_revert=" << rpcRevert
+                  << " rpc_sm_disable=" << rpcSmDisable
+                  << " rpc_sm_enable=" << rpcSmEnable
+                  << " rpc_thread_handle=" << rpcThreadHandle
+                  << " rpc_cancel=" << rpcCancel
                   << " palette=" << palette << "\n";
 
         if (dciProvider != nullptr)
