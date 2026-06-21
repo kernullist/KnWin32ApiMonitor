@@ -18857,6 +18857,180 @@
       "module": "ntdll.dll",
       "name": "ZwYieldExecution",
       "symbol": "Api_Ntdll_ZwYieldExecution"
+    },
+    {
+      "id": 3144,
+      "module": "ntdll.dll",
+      "name": "NtManageWobTicket",
+      "symbol": "Api_Ntdll_NtManageWobTicket"
+    },
+    {
+      "id": 3145,
+      "module": "ntdll.dll",
+      "name": "RtlAddGroupAffinityEx",
+      "symbol": "Api_Ntdll_RtlAddGroupAffinityEx"
+    },
+    {
+      "id": 3146,
+      "module": "ntdll.dll",
+      "name": "RtlAndAffinityEx",
+      "symbol": "Api_Ntdll_RtlAndAffinityEx"
+    },
+    {
+      "id": 3147,
+      "module": "ntdll.dll",
+      "name": "RtlComplementAffinityEx",
+      "symbol": "Api_Ntdll_RtlComplementAffinityEx"
+    },
+    {
+      "id": 3148,
+      "module": "ntdll.dll",
+      "name": "RtlCopyAffinityEx",
+      "symbol": "Api_Ntdll_RtlCopyAffinityEx"
+    },
+    {
+      "id": 3149,
+      "module": "ntdll.dll",
+      "name": "RtlCountSetBitsAffinityEx",
+      "symbol": "Api_Ntdll_RtlCountSetBitsAffinityEx"
+    },
+    {
+      "id": 3150,
+      "module": "ntdll.dll",
+      "name": "RtlFirstGroupAffinityEx",
+      "symbol": "Api_Ntdll_RtlFirstGroupAffinityEx"
+    },
+    {
+      "id": 3151,
+      "module": "ntdll.dll",
+      "name": "RtlInitializeAffinityEx",
+      "symbol": "Api_Ntdll_RtlInitializeAffinityEx"
+    },
+    {
+      "id": 3152,
+      "module": "ntdll.dll",
+      "name": "RtlIsEmptyAffinityEx",
+      "symbol": "Api_Ntdll_RtlIsEmptyAffinityEx"
+    },
+    {
+      "id": 3153,
+      "module": "ntdll.dll",
+      "name": "RtlIsEqualAffinityEx",
+      "symbol": "Api_Ntdll_RtlIsEqualAffinityEx"
+    },
+    {
+      "id": 3154,
+      "module": "ntdll.dll",
+      "name": "RtlIsMultipleProcessorAffinityEx",
+      "symbol": "Api_Ntdll_RtlIsMultipleProcessorAffinityEx"
+    },
+    {
+      "id": 3155,
+      "module": "ntdll.dll",
+      "name": "RtlIsSingleGroupAffinityEx",
+      "symbol": "Api_Ntdll_RtlIsSingleGroupAffinityEx"
+    },
+    {
+      "id": 3156,
+      "module": "ntdll.dll",
+      "name": "RtlIsSubsetAffinityEx",
+      "symbol": "Api_Ntdll_RtlIsSubsetAffinityEx"
+    },
+    {
+      "id": 3157,
+      "module": "ntdll.dll",
+      "name": "RtlOrAffinityEx",
+      "symbol": "Api_Ntdll_RtlOrAffinityEx"
+    },
+    {
+      "id": 3158,
+      "module": "ntdll.dll",
+      "name": "RtlQueryFeatureConfigurationBuffer",
+      "symbol": "Api_Ntdll_RtlQueryFeatureConfigurationBuffer"
+    },
+    {
+      "id": 3159,
+      "module": "ntdll.dll",
+      "name": "RtlQueryGroupAffinityEx",
+      "symbol": "Api_Ntdll_RtlQueryGroupAffinityEx"
+    },
+    {
+      "id": 3160,
+      "module": "ntdll.dll",
+      "name": "RtlQueryPriorityForWobTicket",
+      "symbol": "Api_Ntdll_RtlQueryPriorityForWobTicket"
+    },
+    {
+      "id": 3161,
+      "module": "ntdll.dll",
+      "name": "RtlQueryProcessAvailableCpus",
+      "symbol": "Api_Ntdll_RtlQueryProcessAvailableCpus"
+    },
+    {
+      "id": 3162,
+      "module": "ntdll.dll",
+      "name": "RtlQueryProcessAvailableCpusCount",
+      "symbol": "Api_Ntdll_RtlQueryProcessAvailableCpusCount"
+    },
+    {
+      "id": 3163,
+      "module": "ntdll.dll",
+      "name": "RtlQueryQosForWobTicket",
+      "symbol": "Api_Ntdll_RtlQueryQosForWobTicket"
+    },
+    {
+      "id": 3164,
+      "module": "ntdll.dll",
+      "name": "RtlQueryUnbiasedInterruptTimePrecise",
+      "symbol": "Api_Ntdll_RtlQueryUnbiasedInterruptTimePrecise"
+    },
+    {
+      "id": 3165,
+      "module": "ntdll.dll",
+      "name": "RtlRegisterAvailableCpusChangeNotification",
+      "symbol": "Api_Ntdll_RtlRegisterAvailableCpusChangeNotification"
+    },
+    {
+      "id": 3166,
+      "module": "ntdll.dll",
+      "name": "RtlRemoveGroupAffinityEx",
+      "symbol": "Api_Ntdll_RtlRemoveGroupAffinityEx"
+    },
+    {
+      "id": 3167,
+      "module": "ntdll.dll",
+      "name": "RtlSizeOfAffinityEx",
+      "symbol": "Api_Ntdll_RtlSizeOfAffinityEx"
+    },
+    {
+      "id": 3168,
+      "module": "ntdll.dll",
+      "name": "RtlSubtractAffinityEx",
+      "symbol": "Api_Ntdll_RtlSubtractAffinityEx"
+    },
+    {
+      "id": 3169,
+      "module": "ntdll.dll",
+      "name": "RtlUnregisterAvailableCpusChangeNotification",
+      "symbol": "Api_Ntdll_RtlUnregisterAvailableCpusChangeNotification"
+    },
+    {
+      "id": 3170,
+      "module": "ntdll.dll",
+      "name": "RtlUpdateGroupAffinityEx",
+      "symbol": "Api_Ntdll_RtlUpdateGroupAffinityEx"
+    },
+    {
+      "id": 3171,
+      "module": "ntdll.dll",
+      "name": "RtlXorAffinityEx",
+      "symbol": "Api_Ntdll_RtlXorAffinityEx"
+    },
+    {
+      "id": 3172,
+      "module": "ntdll.dll",
+      "name": "ZwManageWobTicket",
+      "symbol": "Api_Ntdll_ZwManageWobTicket"
     }
   ],
   "metadataType": "id_assignments",

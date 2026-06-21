@@ -21,7 +21,10 @@ const idAssignmentsPath = path.join(repoRoot, "definitions", "metadata", "id-ass
 const bulkDefinitionPath = path.join(repoRoot, "definitions", "win32", "generated-win32metadata-bulk.json");
 const ntdllDefinitionPath = path.join(repoRoot, "definitions", "nt", "ntdll-win11-exports.json");
 const ntdllEvidencePath = path.join(repoRoot, "generated", "ntdll-win11-export-baseline.json");
+const ntdllLatestOverlayPath = path.join(repoRoot, "generated", "ntdll-win11-latest-export-overlay.json");
 const phntPrototypeIndexPath = path.join(repoRoot, "generated", "phnt-ntdll-prototype-index.json");
+const sdkPrototypeIndexPath = path.join(repoRoot, "generated", "ntdll-sdk-prototype-index.json");
+const supplementalSpecIndexPath = path.join(repoRoot, "generated", "ntdll-supplemental-spec-index.json");
 const ntdllPath = "C:/Windows/System32/ntdll.dll";
 
 if (!Number.isInteger(targetDefinedApis) || targetDefinedApis < 1)
@@ -50,8 +53,13 @@ const inventoryRows = inventory.apis ?? [];
 const inventoryByKey = new Map(inventoryRows.map((entry) => [apiKey(entry.module, entry.name), entry]));
 const phntPrototypeIndex = fs.existsSync(phntPrototypeIndexPath) ? readJson(phntPrototypeIndexPath) : null;
 const phntPrototypesByName = new Map((phntPrototypeIndex?.prototypes ?? []).map((prototype) => [prototype.name, prototype]));
-const ntdllExports = readPeExports(ntdllPath);
-const ntdllApis = buildNtdllDefinitions(ntdllExports, inventoryByKey, existingKeys, phntPrototypesByName);
+const sdkPrototypeIndex = fs.existsSync(sdkPrototypeIndexPath) ? readJson(sdkPrototypeIndexPath) : null;
+const sdkPrototypesByName = new Map((sdkPrototypeIndex?.prototypes ?? []).map((prototype) => [prototype.name, prototype]));
+const supplementalSpecIndex = fs.existsSync(supplementalSpecIndexPath) ? readJson(supplementalSpecIndexPath) : null;
+const supplementalSpecPrototypesByName = new Map((supplementalSpecIndex?.prototypes ?? []).map((prototype) => [prototype.name, prototype]));
+const ntdllLatestOverlay = fs.existsSync(ntdllLatestOverlayPath) ? readJson(ntdllLatestOverlayPath) : null;
+const ntdllExports = mergeLatestOverlayExports(readPeExports(ntdllPath), ntdllLatestOverlay);
+const ntdllApis = buildNtdllDefinitions(ntdllExports, inventoryByKey, existingKeys, phntPrototypesByName, sdkPrototypesByName, supplementalSpecPrototypesByName);
 const newNtdllKeys = new Set(ntdllApis.map((api) => apiKey(api.module, api.name)));
 const previousBulkCount = fs.existsSync(bulkDefinitionPath) ? ((readJson(bulkDefinitionPath).apis ?? []).length) : 0;
 const definedCountBeforeBulk = existingRuntimeHookableCount(apiDocuments) + ntdllApis.filter(isRuntimeHookableDefinition).length;
@@ -104,7 +112,9 @@ else
       ntdllExports: ntdllApis.length,
       ntdllKnownMetadata: ntdllApis.filter((api) => api.coverageStatus !== "unsupported").length,
       ntdllUnsupported: ntdllApis.filter((api) => api.coverageStatus === "unsupported").length,
-      phntPrototypeMatches: ntdllApis.filter((api) => String(api.minWindowsVersion ?? "").includes("prototype source PHNT")).length
+      phntPrototypeMatches: ntdllApis.filter((api) => String(api.minWindowsVersion ?? "").includes("prototype source PHNT")).length,
+      sdkPrototypeMatches: ntdllApis.filter((api) => String(api.minWindowsVersion ?? "").includes("prototype source Windows SDK")).length,
+      supplementalSpecMatches: ntdllApis.filter((api) => String(api.minWindowsVersion ?? "").includes("prototype source supplemental")).length
     },
     output: {
       bulkDefinitionPath: relative(bulkDefinitionPath),
@@ -194,7 +204,7 @@ function buildBulkDefinitions(rows, existing, ntdllKeys, needed)
   return output;
 }
 
-function buildNtdllDefinitions(exports, inventoryMap, existing, phntMap)
+function buildNtdllDefinitions(exports, inventoryMap, existing, phntMap, sdkMap, supplementalSpecMap)
 {
   const apis = [];
 
@@ -207,13 +217,14 @@ function buildNtdllDefinitions(exports, inventoryMap, existing, phntMap)
     }
 
     const inventoryEntry = inventoryMap.get(key);
-    if (inventoryEntry && (inventoryEntry.parameters ?? []).length > 0)
+    if (inventoryEntryIsExternalNtdllMetadata(inventoryEntry))
     {
+      const runtimeSafe = inventoryEntryIsRuntimeSafe(inventoryEntry);
       apis.push(definitionFromInventory(inventoryEntry, {
         ordinal: exported.ordinal,
-        hookPolicy: "iat",
+        hookPolicy: runtimeSafe ? "iat" : "definition_only",
         coverageStatus: "defined",
-        minWindowsVersion: "Windows 11 24H2 export baseline 10.0.26100"
+        minWindowsVersion: exportSourceText(exported)
       }));
       continue;
     }
@@ -225,16 +236,106 @@ function buildNtdllDefinitions(exports, inventoryMap, existing, phntMap)
       continue;
     }
 
+    const sdkPrototype = sdkMap.get(exported.name);
+    if (sdkPrototype)
+    {
+      apis.push(definitionFromSdkPrototype(exported, sdkPrototype));
+      continue;
+    }
+
+    const supplementalSpecPrototype = supplementalSpecMap.get(exported.name);
+    if (supplementalSpecPrototype)
+    {
+      apis.push(definitionFromSupplementalSpecPrototype(exported, supplementalSpecPrototype));
+      continue;
+    }
+
     apis.push(definitionFromExport(exported));
   }
 
   return apis.sort((left, right) => left.name.localeCompare(right.name));
 }
 
+function mergeLatestOverlayExports(localExports, overlay)
+{
+  if (!overlay || (overlay.addedExports ?? []).length === 0)
+  {
+    return localExports;
+  }
+
+  const byName = new Map(localExports.namedExports.map((entry) => [entry.name, entry]));
+  for (const exported of overlay.addedExports ?? [])
+  {
+    if (!byName.has(exported.name))
+    {
+      byName.set(exported.name, {
+        ...exported,
+        latestOverlay: true,
+        latestOverlaySource: overlay.source ?? null
+      });
+    }
+  }
+
+  return {
+    ...localExports,
+    latestOverlay: {
+      source: overlay.source ?? null,
+      latest: overlay.latest ?? null,
+      addedExports: overlay.addedExports?.length ?? 0
+    },
+    namedExports: [...byName.values()].sort((left, right) => left.name.localeCompare(right.name)),
+    numberOfNames: Math.max(localExports.numberOfNames, overlay.latest?.numberOfNames ?? localExports.numberOfNames),
+    numberOfFunctions: Math.max(localExports.numberOfFunctions, overlay.latest?.numberOfFunctions ?? localExports.numberOfFunctions),
+    ordinalOnlyCount: Math.max(localExports.ordinalOnlyCount, overlay.latest?.ordinalOnlyCount ?? localExports.ordinalOnlyCount)
+  };
+}
+
+function inventoryEntryIsExternalNtdllMetadata(entry)
+{
+  if (!entry || (entry.parameters ?? []).length === 0)
+  {
+    return false;
+  }
+
+  if (entry.definition?.source === "definitions/nt/ntdll-win11-exports.json")
+  {
+    return false;
+  }
+
+  return entry.sourceKind === "win32metadata";
+}
+
 function definitionFromPhntPrototype(exported, prototype)
 {
+  return definitionFromPrototype(exported, prototype, {
+    label: "PHNT",
+    detail: prototype.source?.file ?? "",
+    forceDefinitionOnly: false
+  });
+}
+
+function definitionFromSupplementalSpecPrototype(exported, prototype)
+{
+  return definitionFromPrototype(exported, prototype, {
+    label: `supplemental ${prototype.source?.name ?? prototype.source?.id ?? "spec"}`,
+    detail: `${prototype.source?.file ?? ""}:${prototype.source?.line ?? ""}`,
+    forceDefinitionOnly: Boolean(prototype.stub || prototype.dataExport)
+  });
+}
+
+function definitionFromSdkPrototype(exported, prototype)
+{
+  return definitionFromPrototype(exported, prototype, {
+    label: "Windows SDK",
+    detail: prototype.source?.file ?? "",
+    forceDefinitionOnly: false
+  });
+}
+
+function definitionFromPrototype(exported, prototype, source)
+{
   const family = familyFromApiName(exported.name);
-  const runtimeSafe = phntPrototypeIsRuntimeSafe(prototype);
+  const runtimeSafe = !source.forceDefinitionOnly && prototypeIsRuntimeSafe(prototype);
   return {
     module: "ntdll.dll",
     name: exported.name,
@@ -244,7 +345,7 @@ function definitionFromPhntPrototype(exported, prototype)
     risk: riskFromExportName(exported.name, family),
     hookPolicy: runtimeSafe ? "iat" : "definition_only",
     coverageStatus: "defined",
-    minWindowsVersion: `Windows 11 24H2 export baseline 10.0.26100; prototype source PHNT ${prototype.source?.file ?? ""}`,
+    minWindowsVersion: `${exportSourceText(exported)}; prototype source ${source.label} ${source.detail}`,
     architectures: ["x64"],
     callingConvention: normalizeCallingConvention(prototype.callingConvention),
     returnType: normalizePrototypeType(prototype.returnType),
@@ -253,7 +354,7 @@ function definitionFromPhntPrototype(exported, prototype)
   };
 }
 
-function phntPrototypeIsRuntimeSafe(prototype)
+function prototypeIsRuntimeSafe(prototype)
 {
   if ((prototype.parameters ?? []).length > 16)
   {
@@ -268,6 +369,29 @@ function phntPrototypeIsRuntimeSafe(prototype)
   for (const parameter of prototype.parameters ?? [])
   {
     if (parameter.variadic || unsafeGenericAbiType(parameter.type))
+    {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function inventoryEntryIsRuntimeSafe(entry)
+{
+  if ((entry.parameters ?? []).length > 16)
+  {
+    return false;
+  }
+
+  if (unsafeGenericAbiType(entry.returnType))
+  {
+    return false;
+  }
+
+  for (const parameter of entry.parameters ?? [])
+  {
+    if (unsafeGenericAbiType(parameter.type))
     {
       return false;
     }
@@ -349,6 +473,27 @@ function definitionFromInventory(entry, overrides = {})
 function definitionFromExport(exported)
 {
   const family = familyFromApiName(exported.name);
+  const exportSource = exportSourceText(exported);
+  if (!exported.executable)
+  {
+    return {
+      module: "ntdll.dll",
+      name: exported.name,
+      ordinal: exported.ordinal,
+      family: "data-export",
+      category: "ntdll/data-export",
+      risk: "low",
+      hookPolicy: "definition_only",
+      coverageStatus: "defined",
+      minWindowsVersion: `${exportSource}; PE export section ${exported.sectionName ?? "unknown"} is not executable`,
+      architectures: ["x64"],
+      callingConvention: "cdecl",
+      returnType: "PVOID",
+      errorSource: "none",
+      parameters: []
+    };
+  }
+
   return {
     module: "ntdll.dll",
     name: exported.name,
@@ -356,14 +501,47 @@ function definitionFromExport(exported)
     family,
     category: categoryFromApiName(exported.name),
     risk: riskFromExportName(exported.name, family),
-    hookPolicy: "unsupported",
-    coverageStatus: "unsupported",
+    hookPolicy: "iat",
+    coverageStatus: "defined",
+    minWindowsVersion: `${exportSource}; opaque 16-slot x64 ABI fallback; prototype source unresolved`,
     architectures: ["x64"],
     callingConvention: callingConventionFromExportName(exported.name),
     returnType: returnTypeFromExportName(exported.name),
     errorSource: errorSourceFromExportName(exported.name),
-    parameters: []
+    parameters: opaqueParameters(exported.name)
   };
+}
+
+function exportSourceText(exported)
+{
+  const source = exported.latestOverlaySource;
+  if (source)
+  {
+    return `Windows 11 latest overlay ${source.update ?? source.version ?? ""}`.trim();
+  }
+
+  return "Windows 11 24H2 export baseline 10.0.26100";
+}
+
+function opaqueParameters(name)
+{
+  return Array.from({ length: 16 }, (_, index) => ({
+    name: `arg${index}`,
+    type: "ULONG_PTR",
+    direction: "in",
+    decode: opaqueDecodeForArgument(name, index),
+    nullable: true
+  }));
+}
+
+function opaqueDecodeForArgument(name, index)
+{
+  if (/String|Path|Name|Dll|File|Wnf|Feature|Sqm|Event|Message|Notification|Resource|Thread|Process|Pool|Callback/i.test(name) && index < 4)
+  {
+    return "pointer";
+  }
+
+  return "dword_value";
 }
 
 function parameterFromInventory(parameter, index)
@@ -808,14 +986,21 @@ function buildNtdllEvidence(exports, ntdllApis, inventoryMap)
       machine: exports.machine,
       exportRva: exports.exportRva,
       exportSize: exports.exportSize,
+      latestOverlay: exports.latestOverlay ?? null,
       note: "Local Windows 11 24H2 export baseline; Microsoft release health on 2026-06-09 lists 26100.8655 as the latest 24H2 GA build."
     },
     summary: {
       numberOfFunctions: exports.numberOfFunctions,
       numberOfNames: exports.numberOfNames,
       ordinalOnlyCount: exports.ordinalOnlyCount,
+      latestOverlayAddedExports: exports.latestOverlay?.addedExports ?? 0,
       generatedDefinitions: ntdllApis.length,
-      withWin32Metadata: ntdllApis.filter((api) => inventoryMap.has(apiKey(api.module, api.name))).length,
+      withWin32Metadata: ntdllApis.filter((api) => inventoryEntryIsExternalNtdllMetadata(inventoryMap.get(apiKey(api.module, api.name)))).length,
+      withPhntPrototype: ntdllApis.filter((api) => String(api.minWindowsVersion ?? "").includes("prototype source PHNT")).length,
+      withSdkPrototype: ntdllApis.filter((api) => String(api.minWindowsVersion ?? "").includes("prototype source Windows SDK")).length,
+      withSupplementalSpecPrototype: ntdllApis.filter((api) => String(api.minWindowsVersion ?? "").includes("prototype source supplemental")).length,
+      withOpaqueAbiFallback: ntdllApis.filter((api) => String(api.minWindowsVersion ?? "").includes("opaque 16-slot x64 ABI fallback")).length,
+      dataExports: ntdllApis.filter((api) => api.category === "ntdll/data-export").length,
       unsupportedPrototypeUnknown: ntdllApis.filter((api) => api.coverageStatus === "unsupported").length
     },
     exports: exports.namedExports
@@ -849,18 +1034,29 @@ function readPeExports(filePath)
       virtualSize: u32(offset + 8),
       virtualAddress: u32(offset + 12),
       rawSize: u32(offset + 16),
-      rawAddress: u32(offset + 20)
+      rawAddress: u32(offset + 20),
+      characteristics: u32(offset + 36)
     });
   }
 
-  const rvaToOffset = (rva) => {
+  const rvaToSection = (rva) => {
     for (const section of sections)
     {
       const size = Math.max(section.virtualSize, section.rawSize);
       if (rva >= section.virtualAddress && rva < section.virtualAddress + size)
       {
-        return section.rawAddress + (rva - section.virtualAddress);
+        return section;
       }
+    }
+
+    return null;
+  };
+
+  const rvaToOffset = (rva) => {
+    const section = rvaToSection(rva);
+    if (section)
+    {
+      return section.rawAddress + (rva - section.virtualAddress);
     }
 
     throw new Error(`unmapped PE RVA 0x${rva.toString(16)}`);
@@ -890,10 +1086,13 @@ function readPeExports(filePath)
     const nameRva = u32(rvaToOffset(namesRva) + index * 4);
     const ordinalIndex = u16(rvaToOffset(ordinalsRva) + index * 2);
     const functionRva = u32(rvaToOffset(functionsRva) + ordinalIndex * 4);
+    const section = rvaToSection(functionRva);
     namedExports.push({
       name: readString(nameRva),
       ordinal: ordinalBase + ordinalIndex,
       rva: `0x${functionRva.toString(16).padStart(8, "0")}`,
+      sectionName: section?.name ?? null,
+      executable: Boolean((section?.characteristics ?? 0) & 0x20000000),
       forwarder: functionRva >= exportRva && functionRva < exportRva + exportSize ? readString(functionRva) : null
     });
   }

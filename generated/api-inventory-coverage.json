@@ -1,5 +1,5 @@
 {
-  "blockedByMissingDecoderOrHookStrategy": 20398,
+  "blockedByMissingDecoderOrHookStrategy": 20427,
   "nextFamilies": [
     {
       "examples": [
@@ -13,11 +13,11 @@
         "advapi32.dll!ChangeServiceConfigW"
       ],
       "family": "system",
-      "impact": 8728,
-      "tier1": 4230,
+      "impact": 8636,
+      "tier1": 4184,
       "tier2": 268,
-      "withParameters": 4364,
-      "withSdkHeader": 3208
+      "withParameters": 4318,
+      "withSdkHeader": 3185
     },
     {
       "examples": [
@@ -103,11 +103,11 @@
         "activeds.dll!ADsOpenObject"
       ],
       "family": "networking",
-      "impact": 3010,
-      "tier1": 1498,
+      "impact": 3002,
+      "tier1": 1494,
       "tier2": 14,
-      "withParameters": 1498,
-      "withSdkHeader": 1280
+      "withParameters": 1494,
+      "withSdkHeader": 1276
     },
     {
       "examples": [
@@ -139,11 +139,29 @@
         "advapi32.dll!AccessCheckByTypeResultListAndAuditAlarmA"
       ],
       "family": "security",
-      "impact": 2369,
-      "tier1": 1175,
+      "impact": 2365,
+      "tier1": 1173,
       "tier2": 19,
-      "withParameters": 1179,
-      "withSdkHeader": 1068
+      "withParameters": 1177,
+      "withSdkHeader": 1067
+    },
+    {
+      "examples": [
+        "ntdll.dll!RtlAbortRXact",
+        "ntdll.dll!RtlAbsoluteToSelfRelativeSD",
+        "ntdll.dll!RtlAcquirePebLock",
+        "ntdll.dll!RtlAcquirePrivilege",
+        "ntdll.dll!RtlAcquireReleaseSRWLockExclusive",
+        "ntdll.dll!RtlAcquireResourceExclusive",
+        "ntdll.dll!RtlAcquireResourceShared",
+        "ntdll.dll!RtlAcquireSRWLockExclusive"
+      ],
+      "family": "rtl",
+      "impact": 2053,
+      "tier1": 992,
+      "tier2": 69,
+      "withParameters": 992,
+      "withSdkHeader": 46
     },
     {
       "examples": [
@@ -157,10 +175,10 @@
         "ntdll.dll!NtAccessCheckByTypeResultListAndAuditAlarmByHandle"
       ],
       "family": "nt-native",
-      "impact": 1918,
-      "tier1": 945,
-      "tier2": 28,
-      "withParameters": 945,
+      "impact": 1931,
+      "tier1": 951,
+      "tier2": 29,
+      "withParameters": 951,
       "withSdkHeader": 0
     },
     {
@@ -183,24 +201,6 @@
     },
     {
       "examples": [
-        "ntdll.dll!RtlAbsoluteToSelfRelativeSD",
-        "ntdll.dll!RtlAcquirePebLock",
-        "ntdll.dll!RtlAcquirePrivilege",
-        "ntdll.dll!RtlAcquireReleaseSRWLockExclusive",
-        "ntdll.dll!RtlAcquireResourceExclusive",
-        "ntdll.dll!RtlAcquireResourceShared",
-        "ntdll.dll!RtlAcquireSRWLockExclusive",
-        "ntdll.dll!RtlAcquireSRWLockShared"
-      ],
-      "family": "rtl",
-      "impact": 1470,
-      "tier1": 712,
-      "tier2": 46,
-      "withParameters": 712,
-      "withSdkHeader": 0
-    },
-    {
-      "examples": [
         "api-ms-win-mm-misc-l1-1-1.dll!sndOpenSound",
         "avicap32.dll!capCreateCaptureWindowA",
         "avicap32.dll!capCreateCaptureWindowW",
@@ -216,6 +216,24 @@
       "tier2": 24,
       "withParameters": 330,
       "withSdkHeader": 302
+    },
+    {
+      "examples": [
+        "ntdll.dll!__C_specific_handler",
+        "ntdll.dll!__chkstk",
+        "ntdll.dll!__isascii",
+        "ntdll.dll!__iscsym",
+        "ntdll.dll!__iscsymf",
+        "ntdll.dll!__misaligned_access",
+        "ntdll.dll!__toascii",
+        "ntdll.dll!_atoi64"
+      ],
+      "family": "ntdll",
+      "impact": 374,
+      "tier1": 181,
+      "tier2": 12,
+      "withParameters": 181,
+      "withSdkHeader": 0
     },
     {
       "examples": [
@@ -247,10 +265,46 @@
         "ntdll.dll!LdrCreateEnclave"
       ],
       "family": "loader",
-      "impact": 141,
-      "tier1": 67,
-      "tier2": 7,
-      "withParameters": 67,
+      "impact": 150,
+      "tier1": 70,
+      "tier2": 10,
+      "withParameters": 70,
+      "withSdkHeader": 0
+    },
+    {
+      "examples": [
+        "ntdll.dll!_strcmpi",
+        "ntdll.dll!_stricmp",
+        "ntdll.dll!_strlwr",
+        "ntdll.dll!_strlwr_s",
+        "ntdll.dll!_strnicmp",
+        "ntdll.dll!_strnset_s",
+        "ntdll.dll!_strset_s",
+        "ntdll.dll!_strupr"
+      ],
+      "family": "crt",
+      "impact": 130,
+      "tier1": 65,
+      "tier2": 0,
+      "withParameters": 65,
+      "withSdkHeader": 0
+    },
+    {
+      "examples": [
+        "ntdll.dll!TpAllocAlpcCompletion",
+        "ntdll.dll!TpAllocAlpcCompletionEx",
+        "ntdll.dll!TpAllocCleanupGroup",
+        "ntdll.dll!TpAllocIoCompletion",
+        "ntdll.dll!TpAllocJobNotification",
+        "ntdll.dll!TpAllocPool",
+        "ntdll.dll!TpAllocTimer",
+        "ntdll.dll!TpAllocWait"
+      ],
+      "family": "threadpool",
+      "impact": 129,
+      "tier1": 64,
+      "tier2": 1,
+      "withParameters": 64,
       "withSdkHeader": 0
     },
     {
@@ -273,38 +327,20 @@
     },
     {
       "examples": [
-        "ntdll.dll!TpAllocAlpcCompletion",
-        "ntdll.dll!TpAllocAlpcCompletionEx",
-        "ntdll.dll!TpAllocCleanupGroup",
-        "ntdll.dll!TpAllocIoCompletion",
-        "ntdll.dll!TpAllocPool",
-        "ntdll.dll!TpAllocTimer",
-        "ntdll.dll!TpAllocWait",
-        "ntdll.dll!TpAllocWork"
-      ],
-      "family": "threadpool",
-      "impact": 92,
-      "tier1": 46,
-      "tier2": 0,
-      "withParameters": 46,
-      "withSdkHeader": 0
-    },
-    {
-      "examples": [
         "ntdll.dll!EtwCheckCoverage",
+        "ntdll.dll!EtwCreateTraceInstanceId",
+        "ntdll.dll!EtwDeliverDataBlock",
         "ntdll.dll!EtwEnumerateProcessRegGuids",
         "ntdll.dll!EtwEventActivityIdControl",
         "ntdll.dll!EtwEventEnabled",
         "ntdll.dll!EtwEventProviderEnabled",
-        "ntdll.dll!EtwEventRegister",
-        "ntdll.dll!EtwEventSetInformation",
-        "ntdll.dll!EtwEventUnregister"
+        "ntdll.dll!EtwEventRegister"
       ],
       "family": "tracing",
-      "impact": 45,
-      "tier1": 22,
+      "impact": 75,
+      "tier1": 37,
       "tier2": 1,
-      "withParameters": 22,
+      "withParameters": 37,
       "withSdkHeader": 0
     },
     {
@@ -324,55 +360,18 @@
       "tier2": 4,
       "withParameters": 15,
       "withSdkHeader": 0
-    },
-    {
-      "examples": [
-        "mdmlocalmanagement.dll!ApplyLocalManagementSyncML",
-        "mdmlocalmanagement.dll!RegisterDeviceWithLocalManagement",
-        "mdmlocalmanagement.dll!UnregisterDeviceWithLocalManagement",
-        "mdmregistration.dll!DiscoverManagementService",
-        "mdmregistration.dll!DiscoverManagementServiceEx",
-        "mdmregistration.dll!GetDeviceManagementConfigInfo",
-        "mdmregistration.dll!GetDeviceRegistrationInfo",
-        "mdmregistration.dll!GetManagementAppHyperlink"
-      ],
-      "family": "management",
-      "impact": 34,
-      "tier1": 16,
-      "tier2": 2,
-      "withParameters": 16,
-      "withSdkHeader": 13
-    },
-    {
-      "examples": [
-        "api-ms-win-core-handle-l1-1-0.dll!CompareObjectHandles",
-        "kernel32.dll!DuplicateHandle",
-        "kernel32.dll!GetLastError",
-        "kernel32.dll!GlobalFree",
-        "kernel32.dll!LocalFree",
-        "kernel32.dll!SetLastError",
-        "ntdll.dll!RtlNtStatusToDosError",
-        "oleaut32.dll!SysAddRefString"
-      ],
-      "family": "foundation",
-      "impact": 30,
-      "tier1": 14,
-      "tier2": 2,
-      "withParameters": 15,
-      "withSdkHeader": 16
     }
   ],
   "schemaVersion": "0.1.0",
   "summary": {
-    "blockedByMissingDecoder": 17768,
-    "blockedByMissingHookStrategy": 2630,
+    "blockedByMissingDecoder": 18273,
+    "blockedByMissingHookStrategy": 2154,
     "byCoverageStatus": {
-      "defined": 2451,
+      "defined": 2993,
       "definition_only": 49,
       "hooked": 4,
       "not_defined": 17385,
-      "smoke_verified": 126,
-      "unsupported": 513
+      "smoke_verified": 126
     },
     "byFamily": {
       "ai": 4,
@@ -383,13 +382,14 @@
       "crypto": 10,
       "crypto-message": 4,
       "data": 90,
+      "data-export": 3,
       "device-setup": 2,
       "devices": 1861,
       "diagnostics": 19,
       "dns": 2,
       "file": 3,
       "file-io": 6,
-      "foundation": 16,
+      "foundation": 15,
       "gaming": 30,
       "gdi": 3,
       "globalization": 1248,
@@ -406,9 +406,9 @@
       "network": 12,
       "network-management": 1629,
       "network-metadata": 2,
-      "networking": 1583,
-      "nt-native": 982,
-      "ntdll": 194,
+      "networking": 1563,
+      "nt-native": 984,
+      "ntdll": 193,
       "ole-automation": 4,
       "process": 6,
       "profile": 3,
@@ -416,8 +416,8 @@
       "resolver": 2,
       "resource": 3,
       "rpc": 12,
-      "rtl": 968,
-      "security": 1243,
+      "rtl": 1063,
+      "security": 1241,
       "service-control": 6,
       "shell": 2,
       "shell-path": 2,
@@ -426,7 +426,7 @@
       "subsystem": 13,
       "symbols": 2,
       "synchronization": 12,
-      "system": 4884,
+      "system": 4837,
       "thread": 4,
       "threadpool": 65,
       "tracing": 38,
@@ -436,9 +436,9 @@
     },
     "byHookTier": {
       "0": 130,
-      "1": 17768,
-      "2": 741,
-      "3": 1889
+      "1": 18273,
+      "2": 795,
+      "3": 1359
     },
     "byModule": {
       "aclui.dll": 3,
@@ -677,7 +677,7 @@
       "newdev.dll": 11,
       "ninput.dll": 30,
       "normaliz.dll": 2,
-      "ntdll.dll": 2516,
+      "ntdll.dll": 2545,
       "ntdllk.dll": 1,
       "ntdsapi.dll": 81,
       "ntlanman.dll": 10,
@@ -807,19 +807,19 @@
     },
     "byRisk": {
       "critical": 708,
-      "high": 1766,
-      "low": 52,
-      "medium": 18002
+      "high": 1764,
+      "low": 55,
+      "medium": 18030
     },
     "bySource": {
-      "existingDefinitionOnly": 2446,
+      "existingDefinitionOnly": 2475,
       "win32Metadata": 18082
     },
     "currentlyEmittedByAgentHooks": 130,
-    "totalApis": 20528,
+    "totalApis": 20557,
     "withMicrosoftLearnDocs": 13819,
-    "withModuleMapping": 20528,
-    "withParameterMetadata": 19536,
+    "withModuleMapping": 20557,
+    "withParameterMetadata": 20024,
     "withSdkHeaderValidation": 12605
   }
 }

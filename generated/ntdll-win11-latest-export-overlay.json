@@ -1,0 +1,259 @@
+{
+  "addedExports": [
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "NtManageWobTicket",
+      "ordinal": 422,
+      "rva": "0x00161460",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlAddGroupAffinityEx",
+      "ordinal": 738,
+      "rva": "0x0013f860",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlAndAffinityEx",
+      "ordinal": 760,
+      "rva": "0x0013f890",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlComplementAffinityEx",
+      "ordinal": 826,
+      "rva": "0x0013f960",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlCopyAffinityEx",
+      "ordinal": 845,
+      "rva": "0x0013f9e0",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlCountSetBitsAffinityEx",
+      "ordinal": 861,
+      "rva": "0x0013fa40",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlFirstGroupAffinityEx",
+      "ordinal": 1043,
+      "rva": "0x0013fa70",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlInitializeAffinityEx",
+      "ordinal": 1191,
+      "rva": "0x0013fab0",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlIsEmptyAffinityEx",
+      "ordinal": 1260,
+      "rva": "0x0013fad0",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlIsEqualAffinityEx",
+      "ordinal": 1262,
+      "rva": "0x0013fb00",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlIsMultipleProcessorAffinityEx",
+      "ordinal": 1268,
+      "rva": "0x0013fb80",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlIsSingleGroupAffinityEx",
+      "ordinal": 1280,
+      "rva": "0x0013fba0",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlIsSubsetAffinityEx",
+      "ordinal": 1282,
+      "rva": "0x0013fc00",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlOrAffinityEx",
+      "ordinal": 1363,
+      "rva": "0x0013fca0",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlQueryFeatureConfigurationBuffer",
+      "ordinal": 1389,
+      "rva": "0x00148eb0",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlQueryGroupAffinityEx",
+      "ordinal": 1392,
+      "rva": "0x0013fd40",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlQueryPriorityForWobTicket",
+      "ordinal": 1407,
+      "rva": "0x001440b0",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlQueryProcessAvailableCpus",
+      "ordinal": 1408,
+      "rva": "0x00149200",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlQueryProcessAvailableCpusCount",
+      "ordinal": 1409,
+      "rva": "0x00149290",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlQueryQosForWobTicket",
+      "ordinal": 1417,
+      "rva": "0x00144120",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlQueryUnbiasedInterruptTimePrecise",
+      "ordinal": 1430,
+      "rva": "0x000c13f0",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlRegisterAvailableCpusChangeNotification",
+      "ordinal": 1457,
+      "rva": "0x00149310",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlRemoveGroupAffinityEx",
+      "ordinal": 1474,
+      "rva": "0x0013fd60",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlSizeOfAffinityEx",
+      "ordinal": 1572,
+      "rva": "0x0013fd80",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlSubtractAffinityEx",
+      "ordinal": 1585,
+      "rva": "0x0013fd90",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlUnregisterAvailableCpusChangeNotification",
+      "ordinal": 1641,
+      "rva": "0x00149470",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlUpdateGroupAffinityEx",
+      "ordinal": 1659,
+      "rva": "0x0013fe20",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "RtlXorAffinityEx",
+      "ordinal": 1720,
+      "rva": "0x0013fe50",
+      "sectionName": ".text"
+    },
+    {
+      "executable": true,
+      "forwarder": null,
+      "name": "ZwManageWobTicket",
+      "ordinal": 2097,
+      "rva": "0x00161460",
+      "sectionName": ".text"
+    }
+  ],
+  "baseline": {
+    "file": "generated/ntdll-win11-export-baseline.json",
+    "numberOfNames": 2516
+  },
+  "latest": {
+    "numberOfFunctions": 2546,
+    "numberOfNames": 2545,
+    "ordinalOnlyCount": 1
+  },
+  "schemaVersion": "0.1.0",
+  "source": {
+    "fileVersion": "10.0.28000.2179 (WinBuild.160101.0800)",
+    "machine": "0x8664",
+    "name": "Windows 11 26H1 ntdll.dll from Microsoft symbol server",
+    "note": "Overlay exports absent from the local 24H2 baseline but present in a newer Windows 11 ntdll binary.",
+    "path": "C:\\Users\\KERNUL~1\\AppData\\Local\\Temp\\ntdll-26h1-28000.2179-amd64.dll",
+    "productVersion": "10.0.28000.2179",
+    "sha256": "14e9ceec51c7df513dab8aa25efd18507eee57eab39143502dcf2c25075f8ec7",
+    "size": 2497360,
+    "update": "KB5095051 OS Build 28000.2269",
+    "url": "https://msdl.microsoft.com/download/symbols/ntdll.dll/7A0E62FC261000/ntdll.dll",
+    "version": "10.0.28000.2179"
+  }
+}

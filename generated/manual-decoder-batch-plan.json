@@ -6236,6 +6236,338 @@
       "apis": [
         {
           "allowedEvidence": [
+            "_memccpy scalar arguments",
+            "_memccpy pointer or handle values",
+            "_memccpy return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "_memccpy",
+          "callingConvention": "cdecl",
+          "category": "ntdll/ntdll",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "ntdll",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 656,
+          "key": "ntdll.dll!_memccpy",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_Dst",
+            "_Src"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "void *",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "_snprintf_s scalar arguments",
+            "_snprintf_s pointer or handle values",
+            "_snprintf_s return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "_snprintf_s",
+          "callingConvention": "cdecl",
+          "category": "ntdll/ntdll",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "ntdll",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 661,
+          "key": "ntdll.dll!_snprintf_s",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 5,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_DstBuf",
+            "_Format"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "int",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "_strlwr_s scalar arguments",
+            "_strlwr_s pointer or handle values",
+            "_strlwr_s return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "_strlwr_s",
+          "callingConvention": "cdecl",
+          "category": "ntdll/crt",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "crt",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 671,
+          "key": "ntdll.dll!_strlwr_s",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_Str"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(errno_t, strerror_s, char, _Buffer, int, _ErrorMessage) errno_t",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "_strnset_s scalar arguments",
+            "_strnset_s pointer or handle values",
+            "_strnset_s return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "_strnset_s",
+          "callingConvention": "cdecl",
+          "category": "ntdll/crt",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "crt",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 673,
+          "key": "ntdll.dll!_strnset_s",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_Str"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_2(errno_t, strncpy_s, char, _Dest, const char *, _Source, size_t, _Count) __DEFINE_CPP_OVERLOAD_STANDARD_NFUNC_0_2_EX(char *, __RETURN_POLICY_DST, _CRTIMP_NOIA64, strncpy, strncpy_s, char, , char, _Dest, const char *, _Source, size_t, _Count) errno_t",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "_strset_s scalar arguments",
+            "_strset_s pointer or handle values",
+            "_strset_s return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "_strset_s",
+          "callingConvention": "cdecl",
+          "category": "ntdll/crt",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "crt",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 674,
+          "key": "ntdll.dll!_strset_s",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_Dst"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "errno_t",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "_strupr_s scalar arguments",
+            "_strupr_s pointer or handle values",
+            "_strupr_s return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "_strupr_s",
+          "callingConvention": "cdecl",
+          "category": "ntdll/crt",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "crt",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 676,
+          "key": "ntdll.dll!_strupr_s",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 2,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_Str"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "errno_t",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "_vsnprintf_s scalar arguments",
+            "_vsnprintf_s pointer or handle values",
+            "_vsnprintf_s return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "_vsnprintf_s",
+          "callingConvention": "cdecl",
+          "category": "ntdll/ntdll",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "ntdll",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 689,
+          "key": "ntdll.dll!_vsnprintf_s",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 5,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_DstBuf",
+            "_Format"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "int",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
             "DbgPrompt scalar arguments",
             "DbgPrompt pointer or handle values",
             "DbgPrompt return value",
@@ -6418,6 +6750,245 @@
             "same_dll_batch_review"
           ],
           "returnType": "NTSTATUS",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "memcpy scalar arguments",
+            "memcpy pointer or handle values",
+            "memcpy return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "memcpy",
+          "callingConvention": "cdecl",
+          "category": "ntdll/crt",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "crt",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 934,
+          "key": "ntdll.dll!memcpy",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_Dst",
+            "_Src"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "_CRT_INSECURE_DEPRECATE_MEMORY(memcpy_s) ((unsigned char*)_Dst, , _MaxCount, (((unsigned char*)_Dst)[ ] == ((unsigned char*)_Src)[ ])) void *",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "memcpy_s scalar arguments",
+            "memcpy_s pointer or handle values",
+            "memcpy_s return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "memcpy_s",
+          "callingConvention": "cdecl",
+          "category": "ntdll/crt",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "crt",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 935,
+          "key": "ntdll.dll!memcpy_s",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_Dst",
+            "_Src"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "errno_t",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "memmove scalar arguments",
+            "memmove pointer or handle values",
+            "memmove return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "memmove",
+          "callingConvention": "cdecl",
+          "category": "ntdll/crt",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "crt",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 936,
+          "key": "ntdll.dll!memmove",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_Dst",
+            "_Src"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "_CRT_INSECURE_DEPRECATE_MEMORY(memmove_s) void *",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "memmove_s scalar arguments",
+            "memmove_s pointer or handle values",
+            "memmove_s return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "memmove_s",
+          "callingConvention": "cdecl",
+          "category": "ntdll/crt",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "crt",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 937,
+          "key": "ntdll.dll!memmove_s",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_Dst",
+            "_Src"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "errno_t",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "memset scalar arguments",
+            "memset pointer or handle values",
+            "memset return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "memset",
+          "callingConvention": "cdecl",
+          "category": "ntdll/crt",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "crt",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 938,
+          "key": "ntdll.dll!memset",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_Dst"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "((unsigned char*)_Dst, , _Size, (((unsigned char*)_Dst)[ ] == _Val)) void *",
           "reviewNotes": [
             "A concrete family-specific boundary must be added before runtime promotion."
           ],
@@ -13971,11 +14542,11 @@
             "duration and hook lifecycle metadata"
           ],
           "apiName": "RtlAddGrowableFunctionTable",
-          "callingConvention": "winapi",
-          "category": "system/diagnostics/debug",
+          "callingConvention": "ntapi",
+          "category": "ntdll/rtl",
           "classification": "manual_decoder_required",
           "designStatus": "review_required",
-          "family": "system",
+          "family": "rtl",
           "forbiddenEvidence": [
             "target_memory_bulk_copy",
             "strings_or_buffer_payloads",
@@ -14005,7 +14576,7 @@
             "hook_overhead_gate",
             "same_dll_batch_review"
           ],
-          "returnType": "UINT",
+          "returnType": "ULONG",
           "reviewNotes": [
             "A concrete family-specific boundary must be added before runtime promotion."
           ],
@@ -15784,100 +16355,6 @@
         },
         {
           "allowedEvidence": [
-            "RtlCrc32 scalar arguments",
-            "RtlCrc32 pointer or handle values",
-            "RtlCrc32 return value",
-            "duration and hook lifecycle metadata"
-          ],
-          "apiName": "RtlCrc32",
-          "callingConvention": "winapi",
-          "category": "system/memory",
-          "classification": "manual_decoder_required",
-          "designStatus": "review_required",
-          "family": "system",
-          "forbiddenEvidence": [
-            "target_memory_bulk_copy",
-            "strings_or_buffer_payloads",
-            "credentials_or_secret_material",
-            "byte_previews",
-            "stack_or_injection_payloads"
-          ],
-          "id": 1598,
-          "key": "ntdll.dll!RtlCrc32",
-          "module": "ntdll.dll",
-          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
-          "parameterCount": 3,
-          "payloadSensitiveParameters": [],
-          "pointerOnlyParameters": [
-            "Buffer"
-          ],
-          "reasons": [
-            "manual_output_boundary_review"
-          ],
-          "requiredEvidence": [
-            "x64_native_smoke",
-            "x86_native_smoke",
-            "zero_healthy_path_drops",
-            "payload_absence_assertions",
-            "hook_overhead_gate",
-            "same_dll_batch_review"
-          ],
-          "returnType": "UINT",
-          "reviewNotes": [
-            "A concrete family-specific boundary must be added before runtime promotion."
-          ],
-          "risk": "medium",
-          "runtimeHookPolicy": "blocked_by_default"
-        },
-        {
-          "allowedEvidence": [
-            "RtlCrc64 scalar arguments",
-            "RtlCrc64 pointer or handle values",
-            "RtlCrc64 return value",
-            "duration and hook lifecycle metadata"
-          ],
-          "apiName": "RtlCrc64",
-          "callingConvention": "winapi",
-          "category": "system/memory",
-          "classification": "manual_decoder_required",
-          "designStatus": "review_required",
-          "family": "system",
-          "forbiddenEvidence": [
-            "target_memory_bulk_copy",
-            "strings_or_buffer_payloads",
-            "credentials_or_secret_material",
-            "byte_previews",
-            "stack_or_injection_payloads"
-          ],
-          "id": 1599,
-          "key": "ntdll.dll!RtlCrc64",
-          "module": "ntdll.dll",
-          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
-          "parameterCount": 3,
-          "payloadSensitiveParameters": [],
-          "pointerOnlyParameters": [
-            "Buffer"
-          ],
-          "reasons": [
-            "manual_output_boundary_review"
-          ],
-          "requiredEvidence": [
-            "x64_native_smoke",
-            "x86_native_smoke",
-            "zero_healthy_path_drops",
-            "payload_absence_assertions",
-            "hook_overhead_gate",
-            "same_dll_batch_review"
-          ],
-          "returnType": "UINT64",
-          "reviewNotes": [
-            "A concrete family-specific boundary must be added before runtime promotion."
-          ],
-          "risk": "medium",
-          "runtimeHookPolicy": "blocked_by_default"
-        },
-        {
-          "allowedEvidence": [
             "RtlCreateAcl scalar arguments",
             "RtlCreateAcl pointer or handle values",
             "RtlCreateAcl return value",
@@ -16835,53 +17312,6 @@
         },
         {
           "allowedEvidence": [
-            "RtlDeleteGrowableFunctionTable scalar arguments",
-            "RtlDeleteGrowableFunctionTable pointer or handle values",
-            "RtlDeleteGrowableFunctionTable return value",
-            "duration and hook lifecycle metadata"
-          ],
-          "apiName": "RtlDeleteGrowableFunctionTable",
-          "callingConvention": "winapi",
-          "category": "system/diagnostics/debug",
-          "classification": "manual_decoder_required",
-          "designStatus": "review_required",
-          "family": "system",
-          "forbiddenEvidence": [
-            "target_memory_bulk_copy",
-            "strings_or_buffer_payloads",
-            "credentials_or_secret_material",
-            "byte_previews",
-            "stack_or_injection_payloads"
-          ],
-          "id": 1661,
-          "key": "ntdll.dll!RtlDeleteGrowableFunctionTable",
-          "module": "ntdll.dll",
-          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
-          "parameterCount": 1,
-          "payloadSensitiveParameters": [],
-          "pointerOnlyParameters": [
-            "DynamicTable"
-          ],
-          "reasons": [
-            "manual_output_boundary_review"
-          ],
-          "requiredEvidence": [
-            "x64_native_smoke",
-            "x86_native_smoke",
-            "zero_healthy_path_drops",
-            "payload_absence_assertions",
-            "hook_overhead_gate",
-            "same_dll_batch_review"
-          ],
-          "returnType": "void",
-          "reviewNotes": [
-            "A concrete family-specific boundary must be added before runtime promotion."
-          ],
-          "risk": "medium",
-          "runtimeHookPolicy": "blocked_by_default"
-        },
-        {
-          "allowedEvidence": [
             "RtlDeleteNoSplay scalar arguments",
             "RtlDeleteNoSplay pointer or handle values",
             "RtlDeleteNoSplay return value",
@@ -17063,53 +17493,6 @@
             "same_dll_batch_review"
           ],
           "returnType": "NTSTATUS",
-          "reviewNotes": [
-            "A concrete family-specific boundary must be added before runtime promotion."
-          ],
-          "risk": "medium",
-          "runtimeHookPolicy": "blocked_by_default"
-        },
-        {
-          "allowedEvidence": [
-            "RtlDrainNonVolatileFlush scalar arguments",
-            "RtlDrainNonVolatileFlush pointer or handle values",
-            "RtlDrainNonVolatileFlush return value",
-            "duration and hook lifecycle metadata"
-          ],
-          "apiName": "RtlDrainNonVolatileFlush",
-          "callingConvention": "winapi",
-          "category": "system/memory/non-volatile",
-          "classification": "manual_decoder_required",
-          "designStatus": "review_required",
-          "family": "system",
-          "forbiddenEvidence": [
-            "target_memory_bulk_copy",
-            "strings_or_buffer_payloads",
-            "credentials_or_secret_material",
-            "byte_previews",
-            "stack_or_injection_payloads"
-          ],
-          "id": 1705,
-          "key": "ntdll.dll!RtlDrainNonVolatileFlush",
-          "module": "ntdll.dll",
-          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
-          "parameterCount": 1,
-          "payloadSensitiveParameters": [],
-          "pointerOnlyParameters": [
-            "NvToken"
-          ],
-          "reasons": [
-            "manual_output_boundary_review"
-          ],
-          "requiredEvidence": [
-            "x64_native_smoke",
-            "x86_native_smoke",
-            "zero_healthy_path_drops",
-            "payload_absence_assertions",
-            "hook_overhead_gate",
-            "same_dll_batch_review"
-          ],
-          "returnType": "UINT",
           "reviewNotes": [
             "A concrete family-specific boundary must be added before runtime promotion."
           ],
@@ -17653,11 +18036,11 @@
             "duration and hook lifecycle metadata"
           ],
           "apiName": "RtlExtendCorrelationVector",
-          "callingConvention": "winapi",
-          "category": "system/correlation-vector",
+          "callingConvention": "ntapi",
+          "category": "ntdll/rtl",
           "classification": "manual_decoder_required",
           "designStatus": "review_required",
-          "family": "system",
+          "family": "rtl",
           "forbiddenEvidence": [
             "target_memory_bulk_copy",
             "strings_or_buffer_payloads",
@@ -17685,7 +18068,7 @@
             "hook_overhead_gate",
             "same_dll_batch_review"
           ],
-          "returnType": "UINT",
+          "returnType": "DWORD",
           "reviewNotes": [
             "A concrete family-specific boundary must be added before runtime promotion."
           ],
@@ -17747,11 +18130,11 @@
             "duration and hook lifecycle metadata"
           ],
           "apiName": "RtlFillNonVolatileMemory",
-          "callingConvention": "winapi",
-          "category": "system/memory/non-volatile",
+          "callingConvention": "ntapi",
+          "category": "ntdll/rtl",
           "classification": "manual_decoder_required",
           "designStatus": "review_required",
-          "family": "system",
+          "family": "rtl",
           "forbiddenEvidence": [
             "target_memory_bulk_copy",
             "strings_or_buffer_payloads",
@@ -17780,7 +18163,7 @@
             "hook_overhead_gate",
             "same_dll_batch_review"
           ],
-          "returnType": "UINT",
+          "returnType": "DWORD",
           "reviewNotes": [
             "A concrete family-specific boundary must be added before runtime promotion."
           ],
@@ -18174,149 +18557,6 @@
         },
         {
           "allowedEvidence": [
-            "RtlFlushNonVolatileMemory scalar arguments",
-            "RtlFlushNonVolatileMemory pointer or handle values",
-            "RtlFlushNonVolatileMemory return value",
-            "duration and hook lifecycle metadata"
-          ],
-          "apiName": "RtlFlushNonVolatileMemory",
-          "callingConvention": "winapi",
-          "category": "system/memory/non-volatile",
-          "classification": "manual_decoder_required",
-          "designStatus": "review_required",
-          "family": "system",
-          "forbiddenEvidence": [
-            "target_memory_bulk_copy",
-            "strings_or_buffer_payloads",
-            "credentials_or_secret_material",
-            "byte_previews",
-            "stack_or_injection_payloads"
-          ],
-          "id": 1786,
-          "key": "ntdll.dll!RtlFlushNonVolatileMemory",
-          "module": "ntdll.dll",
-          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
-          "parameterCount": 4,
-          "payloadSensitiveParameters": [],
-          "pointerOnlyParameters": [
-            "NvToken",
-            "NvBuffer"
-          ],
-          "reasons": [
-            "manual_output_boundary_review"
-          ],
-          "requiredEvidence": [
-            "x64_native_smoke",
-            "x86_native_smoke",
-            "zero_healthy_path_drops",
-            "payload_absence_assertions",
-            "hook_overhead_gate",
-            "same_dll_batch_review"
-          ],
-          "returnType": "UINT",
-          "reviewNotes": [
-            "A concrete family-specific boundary must be added before runtime promotion."
-          ],
-          "risk": "medium",
-          "runtimeHookPolicy": "blocked_by_default"
-        },
-        {
-          "allowedEvidence": [
-            "RtlFlushNonVolatileMemoryRanges scalar arguments",
-            "RtlFlushNonVolatileMemoryRanges pointer or handle values",
-            "RtlFlushNonVolatileMemoryRanges return value",
-            "duration and hook lifecycle metadata"
-          ],
-          "apiName": "RtlFlushNonVolatileMemoryRanges",
-          "callingConvention": "winapi",
-          "category": "system/memory/non-volatile",
-          "classification": "manual_decoder_required",
-          "designStatus": "review_required",
-          "family": "system",
-          "forbiddenEvidence": [
-            "target_memory_bulk_copy",
-            "strings_or_buffer_payloads",
-            "credentials_or_secret_material",
-            "byte_previews",
-            "stack_or_injection_payloads"
-          ],
-          "id": 1787,
-          "key": "ntdll.dll!RtlFlushNonVolatileMemoryRanges",
-          "module": "ntdll.dll",
-          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
-          "parameterCount": 4,
-          "payloadSensitiveParameters": [],
-          "pointerOnlyParameters": [
-            "NvToken",
-            "NvRanges"
-          ],
-          "reasons": [
-            "manual_output_boundary_review"
-          ],
-          "requiredEvidence": [
-            "x64_native_smoke",
-            "x86_native_smoke",
-            "zero_healthy_path_drops",
-            "payload_absence_assertions",
-            "hook_overhead_gate",
-            "same_dll_batch_review"
-          ],
-          "returnType": "UINT",
-          "reviewNotes": [
-            "A concrete family-specific boundary must be added before runtime promotion."
-          ],
-          "risk": "medium",
-          "runtimeHookPolicy": "blocked_by_default"
-        },
-        {
-          "allowedEvidence": [
-            "RtlFreeNonVolatileToken scalar arguments",
-            "RtlFreeNonVolatileToken pointer or handle values",
-            "RtlFreeNonVolatileToken return value",
-            "duration and hook lifecycle metadata"
-          ],
-          "apiName": "RtlFreeNonVolatileToken",
-          "callingConvention": "winapi",
-          "category": "system/memory/non-volatile",
-          "classification": "manual_decoder_required",
-          "designStatus": "review_required",
-          "family": "system",
-          "forbiddenEvidence": [
-            "target_memory_bulk_copy",
-            "strings_or_buffer_payloads",
-            "credentials_or_secret_material",
-            "byte_previews",
-            "stack_or_injection_payloads"
-          ],
-          "id": 1797,
-          "key": "ntdll.dll!RtlFreeNonVolatileToken",
-          "module": "ntdll.dll",
-          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
-          "parameterCount": 1,
-          "payloadSensitiveParameters": [],
-          "pointerOnlyParameters": [
-            "NvToken"
-          ],
-          "reasons": [
-            "manual_output_boundary_review"
-          ],
-          "requiredEvidence": [
-            "x64_native_smoke",
-            "x86_native_smoke",
-            "zero_healthy_path_drops",
-            "payload_absence_assertions",
-            "hook_overhead_gate",
-            "same_dll_batch_review"
-          ],
-          "returnType": "UINT",
-          "reviewNotes": [
-            "A concrete family-specific boundary must be added before runtime promotion."
-          ],
-          "risk": "medium",
-          "runtimeHookPolicy": "blocked_by_default"
-        },
-        {
-          "allowedEvidence": [
             "RtlGetAcesBufferSize scalar arguments",
             "RtlGetAcesBufferSize pointer or handle values",
             "RtlGetAcesBufferSize return value",
@@ -18651,55 +18891,6 @@
         },
         {
           "allowedEvidence": [
-            "RtlGetDeviceFamilyInfoEnum scalar arguments",
-            "RtlGetDeviceFamilyInfoEnum pointer or handle values",
-            "RtlGetDeviceFamilyInfoEnum return value",
-            "duration and hook lifecycle metadata"
-          ],
-          "apiName": "RtlGetDeviceFamilyInfoEnum",
-          "callingConvention": "winapi",
-          "category": "system/system-information",
-          "classification": "manual_decoder_required",
-          "designStatus": "review_required",
-          "family": "system",
-          "forbiddenEvidence": [
-            "target_memory_bulk_copy",
-            "strings_or_buffer_payloads",
-            "credentials_or_secret_material",
-            "byte_previews",
-            "stack_or_injection_payloads"
-          ],
-          "id": 1827,
-          "key": "ntdll.dll!RtlGetDeviceFamilyInfoEnum",
-          "module": "ntdll.dll",
-          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
-          "parameterCount": 3,
-          "payloadSensitiveParameters": [],
-          "pointerOnlyParameters": [
-            "pullUAPInfo",
-            "pulDeviceFamily",
-            "pulDeviceForm"
-          ],
-          "reasons": [
-            "manual_output_boundary_review"
-          ],
-          "requiredEvidence": [
-            "x64_native_smoke",
-            "x86_native_smoke",
-            "zero_healthy_path_drops",
-            "payload_absence_assertions",
-            "hook_overhead_gate",
-            "same_dll_batch_review"
-          ],
-          "returnType": "void",
-          "reviewNotes": [
-            "A concrete family-specific boundary must be added before runtime promotion."
-          ],
-          "risk": "medium",
-          "runtimeHookPolicy": "blocked_by_default"
-        },
-        {
-          "allowedEvidence": [
             "RtlGetExtendedContextLength scalar arguments",
             "RtlGetExtendedContextLength pointer or handle values",
             "RtlGetExtendedContextLength return value",
@@ -18939,55 +19130,6 @@
         },
         {
           "allowedEvidence": [
-            "RtlGetNonVolatileToken scalar arguments",
-            "RtlGetNonVolatileToken pointer or handle values",
-            "RtlGetNonVolatileToken return value",
-            "duration and hook lifecycle metadata"
-          ],
-          "apiName": "RtlGetNonVolatileToken",
-          "callingConvention": "winapi",
-          "category": "system/memory/non-volatile",
-          "classification": "manual_decoder_required",
-          "designStatus": "review_required",
-          "family": "system",
-          "forbiddenEvidence": [
-            "target_memory_bulk_copy",
-            "strings_or_buffer_payloads",
-            "credentials_or_secret_material",
-            "byte_previews",
-            "stack_or_injection_payloads"
-          ],
-          "id": 1857,
-          "key": "ntdll.dll!RtlGetNonVolatileToken",
-          "module": "ntdll.dll",
-          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
-          "parameterCount": 3,
-          "payloadSensitiveParameters": [],
-          "pointerOnlyParameters": [
-            "NvBuffer",
-            "NvToken"
-          ],
-          "reasons": [
-            "manual_output_boundary_review",
-            "manual_output_pointer_memory_boundary"
-          ],
-          "requiredEvidence": [
-            "x64_native_smoke",
-            "x86_native_smoke",
-            "zero_healthy_path_drops",
-            "payload_absence_assertions",
-            "hook_overhead_gate",
-            "same_dll_batch_review"
-          ],
-          "returnType": "UINT",
-          "reviewNotes": [
-            "A concrete family-specific boundary must be added before runtime promotion."
-          ],
-          "risk": "medium",
-          "runtimeHookPolicy": "blocked_by_default"
-        },
-        {
-          "allowedEvidence": [
             "RtlGetNtProductType scalar arguments",
             "RtlGetNtProductType pointer or handle values",
             "RtlGetNtProductType return value",
@@ -19137,11 +19279,11 @@
             "duration and hook lifecycle metadata"
           ],
           "apiName": "RtlGetProductInfo",
-          "callingConvention": "winapi",
-          "category": "system/system-information",
+          "callingConvention": "ntapi",
+          "category": "ntdll/rtl",
           "classification": "manual_decoder_required",
           "designStatus": "review_required",
-          "family": "system",
+          "family": "rtl",
           "forbiddenEvidence": [
             "target_memory_bulk_copy",
             "strings_or_buffer_payloads",
@@ -19566,11 +19708,11 @@
             "duration and hook lifecycle metadata"
           ],
           "apiName": "RtlGrowFunctionTable",
-          "callingConvention": "winapi",
-          "category": "system/diagnostics/debug",
+          "callingConvention": "ntapi",
+          "category": "ntdll/rtl",
           "classification": "manual_decoder_required",
           "designStatus": "review_required",
-          "family": "system",
+          "family": "rtl",
           "forbiddenEvidence": [
             "target_memory_bulk_copy",
             "strings_or_buffer_payloads",
@@ -19709,11 +19851,11 @@
             "duration and hook lifecycle metadata"
           ],
           "apiName": "RtlIncrementCorrelationVector",
-          "callingConvention": "winapi",
-          "category": "system/correlation-vector",
+          "callingConvention": "ntapi",
+          "category": "ntdll/rtl",
           "classification": "manual_decoder_required",
           "designStatus": "review_required",
-          "family": "system",
+          "family": "rtl",
           "forbiddenEvidence": [
             "target_memory_bulk_copy",
             "strings_or_buffer_payloads",
@@ -19741,7 +19883,7 @@
             "hook_overhead_gate",
             "same_dll_batch_review"
           ],
-          "returnType": "UINT",
+          "returnType": "DWORD",
           "reviewNotes": [
             "A concrete family-specific boundary must be added before runtime promotion."
           ],
@@ -19996,11 +20138,11 @@
             "duration and hook lifecycle metadata"
           ],
           "apiName": "RtlInitializeCorrelationVector",
-          "callingConvention": "winapi",
-          "category": "system/correlation-vector",
+          "callingConvention": "ntapi",
+          "category": "ntdll/rtl",
           "classification": "manual_decoder_required",
           "designStatus": "review_required",
-          "family": "system",
+          "family": "rtl",
           "forbiddenEvidence": [
             "target_memory_bulk_copy",
             "strings_or_buffer_payloads",
@@ -20020,7 +20162,6 @@
           "reasons": [
             "manual_object_or_unknown_decoder",
             "manual_output_boundary_review",
-            "manual_output_pointer_memory_boundary",
             "manual_unsupported_parameter_shape"
           ],
           "requiredEvidence": [
@@ -20031,7 +20172,7 @@
             "hook_overhead_gate",
             "same_dll_batch_review"
           ],
-          "returnType": "UINT",
+          "returnType": "DWORD",
           "reviewNotes": [
             "A concrete family-specific boundary must be added before runtime promotion."
           ],
@@ -21200,53 +21341,6 @@
         },
         {
           "allowedEvidence": [
-            "RtlIsZeroMemory scalar arguments",
-            "RtlIsZeroMemory pointer or handle values",
-            "RtlIsZeroMemory return value",
-            "duration and hook lifecycle metadata"
-          ],
-          "apiName": "RtlIsZeroMemory",
-          "callingConvention": "winapi",
-          "category": "system/memory",
-          "classification": "manual_decoder_required",
-          "designStatus": "review_required",
-          "family": "system",
-          "forbiddenEvidence": [
-            "target_memory_bulk_copy",
-            "strings_or_buffer_payloads",
-            "credentials_or_secret_material",
-            "byte_previews",
-            "stack_or_injection_payloads"
-          ],
-          "id": 2019,
-          "key": "ntdll.dll!RtlIsZeroMemory",
-          "module": "ntdll.dll",
-          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
-          "parameterCount": 2,
-          "payloadSensitiveParameters": [],
-          "pointerOnlyParameters": [
-            "Buffer"
-          ],
-          "reasons": [
-            "manual_output_boundary_review"
-          ],
-          "requiredEvidence": [
-            "x64_native_smoke",
-            "x86_native_smoke",
-            "zero_healthy_path_drops",
-            "payload_absence_assertions",
-            "hook_overhead_gate",
-            "same_dll_batch_review"
-          ],
-          "returnType": "BOOLEAN",
-          "reviewNotes": [
-            "A concrete family-specific boundary must be added before runtime promotion."
-          ],
-          "risk": "medium",
-          "runtimeHookPolicy": "blocked_by_default"
-        },
-        {
-          "allowedEvidence": [
             "RtlLeaveCriticalSection scalar arguments",
             "RtlLeaveCriticalSection pointer or handle values",
             "RtlLeaveCriticalSection return value",
@@ -21300,11 +21394,11 @@
             "duration and hook lifecycle metadata"
           ],
           "apiName": "RtlLocalTimeToSystemTime",
-          "callingConvention": "winapi",
-          "category": "system/windows-programming",
+          "callingConvention": "ntapi",
+          "category": "ntdll/rtl",
           "classification": "manual_decoder_required",
           "designStatus": "review_required",
-          "family": "system",
+          "family": "rtl",
           "forbiddenEvidence": [
             "target_memory_bulk_copy",
             "strings_or_buffer_payloads",
@@ -21722,6 +21816,54 @@
             "same_dll_batch_review"
           ],
           "returnType": "PVOID",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "RtlLookupFunctionEntry scalar arguments",
+            "RtlLookupFunctionEntry pointer or handle values",
+            "RtlLookupFunctionEntry return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "RtlLookupFunctionEntry",
+          "callingConvention": "ntapi",
+          "category": "ntdll/rtl",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "rtl",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 2053,
+          "key": "ntdll.dll!RtlLookupFunctionEntry",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "ImageBase",
+            "HistoryTable"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "PRUNTIME_FUNCTION",
           "reviewNotes": [
             "A concrete family-specific boundary must be added before runtime promotion."
           ],
@@ -23061,53 +23203,6 @@
             "same_dll_batch_review"
           ],
           "returnType": "NTSTATUS",
-          "reviewNotes": [
-            "A concrete family-specific boundary must be added before runtime promotion."
-          ],
-          "risk": "medium",
-          "runtimeHookPolicy": "blocked_by_default"
-        },
-        {
-          "allowedEvidence": [
-            "RtlRaiseCustomSystemEventTrigger scalar arguments",
-            "RtlRaiseCustomSystemEventTrigger pointer or handle values",
-            "RtlRaiseCustomSystemEventTrigger return value",
-            "duration and hook lifecycle metadata"
-          ],
-          "apiName": "RtlRaiseCustomSystemEventTrigger",
-          "callingConvention": "winapi",
-          "category": "system/windows-programming",
-          "classification": "manual_decoder_required",
-          "designStatus": "review_required",
-          "family": "system",
-          "forbiddenEvidence": [
-            "target_memory_bulk_copy",
-            "strings_or_buffer_payloads",
-            "credentials_or_secret_material",
-            "byte_previews",
-            "stack_or_injection_payloads"
-          ],
-          "id": 2205,
-          "key": "ntdll.dll!RtlRaiseCustomSystemEventTrigger",
-          "module": "ntdll.dll",
-          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
-          "parameterCount": 1,
-          "payloadSensitiveParameters": [],
-          "pointerOnlyParameters": [
-            "TriggerConfig"
-          ],
-          "reasons": [
-            "manual_output_boundary_review"
-          ],
-          "requiredEvidence": [
-            "x64_native_smoke",
-            "x86_native_smoke",
-            "zero_healthy_path_drops",
-            "payload_absence_assertions",
-            "hook_overhead_gate",
-            "same_dll_batch_review"
-          ],
-          "returnType": "UINT",
           "reviewNotes": [
             "A concrete family-specific boundary must be added before runtime promotion."
           ],
@@ -24984,53 +25079,6 @@
         },
         {
           "allowedEvidence": [
-            "RtlSwitchedVVI scalar arguments",
-            "RtlSwitchedVVI pointer or handle values",
-            "RtlSwitchedVVI return value",
-            "duration and hook lifecycle metadata"
-          ],
-          "apiName": "RtlSwitchedVVI",
-          "callingConvention": "winapi",
-          "category": "system/system-information",
-          "classification": "manual_decoder_required",
-          "designStatus": "review_required",
-          "family": "system",
-          "forbiddenEvidence": [
-            "target_memory_bulk_copy",
-            "strings_or_buffer_payloads",
-            "credentials_or_secret_material",
-            "byte_previews",
-            "stack_or_injection_payloads"
-          ],
-          "id": 2352,
-          "key": "ntdll.dll!RtlSwitchedVVI",
-          "module": "ntdll.dll",
-          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
-          "parameterCount": 3,
-          "payloadSensitiveParameters": [],
-          "pointerOnlyParameters": [
-            "VersionInfo"
-          ],
-          "reasons": [
-            "manual_output_boundary_review"
-          ],
-          "requiredEvidence": [
-            "x64_native_smoke",
-            "x86_native_smoke",
-            "zero_healthy_path_drops",
-            "payload_absence_assertions",
-            "hook_overhead_gate",
-            "same_dll_batch_review"
-          ],
-          "returnType": "UINT",
-          "reviewNotes": [
-            "A concrete family-specific boundary must be added before runtime promotion."
-          ],
-          "risk": "medium",
-          "runtimeHookPolicy": "blocked_by_default"
-        },
-        {
-          "allowedEvidence": [
             "RtlSystemTimeToLocalTime scalar arguments",
             "RtlSystemTimeToLocalTime pointer or handle values",
             "RtlSystemTimeToLocalTime return value",
@@ -25181,11 +25229,11 @@
             "duration and hook lifecycle metadata"
           ],
           "apiName": "RtlTimeToSecondsSince1970",
-          "callingConvention": "winapi",
-          "category": "system/windows-programming",
+          "callingConvention": "ntapi",
+          "category": "ntdll/rtl",
           "classification": "manual_decoder_required",
           "designStatus": "review_required",
-          "family": "system",
+          "family": "rtl",
           "forbiddenEvidence": [
             "target_memory_bulk_copy",
             "strings_or_buffer_payloads",
@@ -25513,11 +25561,11 @@
             "duration and hook lifecycle metadata"
           ],
           "apiName": "RtlUniform",
-          "callingConvention": "winapi",
-          "category": "system/windows-programming",
+          "callingConvention": "ntapi",
+          "category": "ntdll/rtl",
           "classification": "manual_decoder_required",
           "designStatus": "review_required",
-          "family": "system",
+          "family": "rtl",
           "forbiddenEvidence": [
             "target_memory_bulk_copy",
             "strings_or_buffer_payloads",
@@ -25545,7 +25593,7 @@
             "hook_overhead_gate",
             "same_dll_batch_review"
           ],
-          "returnType": "UINT",
+          "returnType": "ULONG",
           "reviewNotes": [
             "A concrete family-specific boundary must be added before runtime promotion."
           ],
@@ -25648,53 +25696,6 @@
         },
         {
           "allowedEvidence": [
-            "RtlValidateCorrelationVector scalar arguments",
-            "RtlValidateCorrelationVector pointer or handle values",
-            "RtlValidateCorrelationVector return value",
-            "duration and hook lifecycle metadata"
-          ],
-          "apiName": "RtlValidateCorrelationVector",
-          "callingConvention": "winapi",
-          "category": "system/correlation-vector",
-          "classification": "manual_decoder_required",
-          "designStatus": "review_required",
-          "family": "system",
-          "forbiddenEvidence": [
-            "target_memory_bulk_copy",
-            "strings_or_buffer_payloads",
-            "credentials_or_secret_material",
-            "byte_previews",
-            "stack_or_injection_payloads"
-          ],
-          "id": 2428,
-          "key": "ntdll.dll!RtlValidateCorrelationVector",
-          "module": "ntdll.dll",
-          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
-          "parameterCount": 1,
-          "payloadSensitiveParameters": [],
-          "pointerOnlyParameters": [
-            "Vector"
-          ],
-          "reasons": [
-            "manual_output_boundary_review"
-          ],
-          "requiredEvidence": [
-            "x64_native_smoke",
-            "x86_native_smoke",
-            "zero_healthy_path_drops",
-            "payload_absence_assertions",
-            "hook_overhead_gate",
-            "same_dll_batch_review"
-          ],
-          "returnType": "UINT",
-          "reviewNotes": [
-            "A concrete family-specific boundary must be added before runtime promotion."
-          ],
-          "risk": "medium",
-          "runtimeHookPolicy": "blocked_by_default"
-        },
-        {
-          "allowedEvidence": [
             "RtlValidateUserCallTarget scalar arguments",
             "RtlValidateUserCallTarget pointer or handle values",
             "RtlValidateUserCallTarget return value",
@@ -25735,6 +25736,58 @@
             "same_dll_batch_review"
           ],
           "returnType": "void",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "RtlVirtualUnwind scalar arguments",
+            "RtlVirtualUnwind pointer or handle values",
+            "RtlVirtualUnwind return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "RtlVirtualUnwind",
+          "callingConvention": "ntapi",
+          "category": "ntdll/rtl",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "rtl",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 2438,
+          "key": "ntdll.dll!RtlVirtualUnwind",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 8,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "FunctionEntry",
+            "ContextRecord",
+            "HandlerData",
+            "EstablisherFrame",
+            "ContextPointers"
+          ],
+          "reasons": [
+            "manual_output_boundary_review",
+            "manual_output_pointer_memory_boundary"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "PEXCEPTION_ROUTINE",
           "reviewNotes": [
             "A concrete family-specific boundary must be added before runtime promotion."
           ],
@@ -26222,11 +26275,11 @@
             "duration and hook lifecycle metadata"
           ],
           "apiName": "RtlWriteNonVolatileMemory",
-          "callingConvention": "winapi",
-          "category": "system/memory/non-volatile",
+          "callingConvention": "ntapi",
+          "category": "ntdll/rtl",
           "classification": "manual_decoder_required",
           "designStatus": "review_required",
-          "family": "system",
+          "family": "rtl",
           "forbiddenEvidence": [
             "target_memory_bulk_copy",
             "strings_or_buffer_payloads",
@@ -26256,7 +26309,297 @@
             "hook_overhead_gate",
             "same_dll_batch_review"
           ],
-          "returnType": "UINT",
+          "returnType": "DWORD",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "sprintf_s scalar arguments",
+            "sprintf_s pointer or handle values",
+            "sprintf_s return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "sprintf_s",
+          "callingConvention": "cdecl",
+          "category": "ntdll/ntdll",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "ntdll",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 2497,
+          "key": "ntdll.dll!sprintf_s",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_DstBuf",
+            "_Format"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_2_ARGLIST(int, _snprintf_s, _vsnprintf_s, char, _Dest, size_t, _MaxCount, const char *,_Format) int",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "strcat_s scalar arguments",
+            "strcat_s pointer or handle values",
+            "strcat_s return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "strcat_s",
+          "callingConvention": "cdecl",
+          "category": "ntdll/crt",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "crt",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 2502,
+          "key": "ntdll.dll!strcat_s",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_Dst",
+            "_Src"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(errno_t, strcpy_s, char, _Dest, const char *, _Source) __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1(char *, __RETURN_POLICY_DST, __EMPTY_DECLSPEC, strcpy, ( + 1), char, _Dest, const char *, _Source) errno_t",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "strcpy_s scalar arguments",
+            "strcpy_s pointer or handle values",
+            "strcpy_s return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "strcpy_s",
+          "callingConvention": "cdecl",
+          "category": "ntdll/crt",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "crt",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 2506,
+          "key": "ntdll.dll!strcpy_s",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_Dst",
+            "_Src"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(errno_t, _strset_s, char, _Dest, int, _Value) __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1(char *, __RETURN_POLICY_DST, __EMPTY_DECLSPEC, _strset, , char, _Dest, int, _Value) errno_t",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "strncat_s scalar arguments",
+            "strncat_s pointer or handle values",
+            "strncat_s return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "strncat_s",
+          "callingConvention": "cdecl",
+          "category": "ntdll/crt",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "crt",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 2510,
+          "key": "ntdll.dll!strncat_s",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_Dst",
+            "_Src"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(errno_t, _strlwr_s_l, char, _String, _locale_t, _Locale) __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX(char *, __RETURN_POLICY_DST, , _strlwr_l, _strlwr_s_l, char, , char, _String, _locale_t, _Locale) errno_t",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "strncpy_s scalar arguments",
+            "strncpy_s pointer or handle values",
+            "strncpy_s return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "strncpy_s",
+          "callingConvention": "cdecl",
+          "category": "ntdll/crt",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "crt",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 2513,
+          "key": "ntdll.dll!strncpy_s",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_Dst",
+            "_Src"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "errno_t",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "strtok_s scalar arguments",
+            "strtok_s pointer or handle values",
+            "strtok_s return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "strtok_s",
+          "callingConvention": "cdecl",
+          "category": "ntdll/crt",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "crt",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 2519,
+          "key": "ntdll.dll!strtok_s",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 3,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_Str",
+            "_Delim",
+            "_Context"
+          ],
+          "reasons": [
+            "manual_output_boundary_review",
+            "manual_output_pointer_memory_boundary"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "char *",
           "reviewNotes": [
             "A concrete family-specific boundary must be added before runtime promotion."
           ],
@@ -28309,6 +28652,54 @@
             "same_dll_batch_review"
           ],
           "returnType": "void",
+          "reviewNotes": [
+            "A concrete family-specific boundary must be added before runtime promotion."
+          ],
+          "risk": "medium",
+          "runtimeHookPolicy": "blocked_by_default"
+        },
+        {
+          "allowedEvidence": [
+            "vsprintf_s scalar arguments",
+            "vsprintf_s pointer or handle values",
+            "vsprintf_s return value",
+            "duration and hook lifecycle metadata"
+          ],
+          "apiName": "vsprintf_s",
+          "callingConvention": "cdecl",
+          "category": "ntdll/ntdll",
+          "classification": "manual_decoder_required",
+          "designStatus": "review_required",
+          "family": "ntdll",
+          "forbiddenEvidence": [
+            "target_memory_bulk_copy",
+            "strings_or_buffer_payloads",
+            "credentials_or_secret_material",
+            "byte_previews",
+            "stack_or_injection_payloads"
+          ],
+          "id": 2599,
+          "key": "ntdll.dll!vsprintf_s",
+          "module": "ntdll.dll",
+          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
+          "parameterCount": 4,
+          "payloadSensitiveParameters": [],
+          "pointerOnlyParameters": [
+            "_DstBuf",
+            "_Format"
+          ],
+          "reasons": [
+            "manual_output_boundary_review"
+          ],
+          "requiredEvidence": [
+            "x64_native_smoke",
+            "x86_native_smoke",
+            "zero_healthy_path_drops",
+            "payload_absence_assertions",
+            "hook_overhead_gate",
+            "same_dll_batch_review"
+          ],
+          "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_3(int, _vsnprintf_s, char, _Dest, size_t, _MaxCount, const char *, _Format, va_list, _Args) __DEFINE_CPP_OVERLOAD_STANDARD_NFUNC_0_2_ARGLIST_EX(int, __RETURN_POLICY_SAME, , _snprintf, _vsnprintf, char, , char, _Dest, size_t, _Count, const char *, _Format) int",
           "reviewNotes": [
             "A concrete family-specific boundary must be added before runtime promotion."
           ],
@@ -34701,9 +35092,465 @@
           "runtimeHookPolicy": "blocked_by_default"
         }
       ],
-      "manualDecoderRequired": 592,
+      "manualDecoderRequired": 600,
       "module": "ntdll.dll",
       "payloadBlockedApis": [
+        {
+          "apiName": "_atoi64",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 638,
+          "key": "ntdll.dll!_atoi64",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_i64tow",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 643,
+          "key": "ntdll.dll!_i64tow",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_i64tow_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 644,
+          "key": "ntdll.dll!_i64tow_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_itow_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 648,
+          "key": "ntdll.dll!_itow_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_ltow_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 654,
+          "key": "ntdll.dll!_ltow_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_makepath_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 655,
+          "key": "ntdll.dll!_makepath_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_snprintf",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 660,
+          "key": "ntdll.dll!_snprintf",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_snwprintf",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 663,
+          "key": "ntdll.dll!_snwprintf",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_snwprintf_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 664,
+          "key": "ntdll.dll!_snwprintf_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_snwscanf_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 665,
+          "key": "ntdll.dll!_snwscanf_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_splitpath",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 666,
+          "key": "ntdll.dll!_splitpath",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_splitpath_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 667,
+          "key": "ntdll.dll!_splitpath_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_strlwr",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 670,
+          "key": "ntdll.dll!_strlwr",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_strupr",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 675,
+          "key": "ntdll.dll!_strupr",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_swprintf",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 677,
+          "key": "ntdll.dll!_swprintf",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_ui64tow",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 680,
+          "key": "ntdll.dll!_ui64tow",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_ui64tow_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 681,
+          "key": "ntdll.dll!_ui64tow_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_ultow_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 685,
+          "key": "ntdll.dll!_ultow_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_vscwprintf",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 687,
+          "key": "ntdll.dll!_vscwprintf",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_vsnprintf",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 688,
+          "key": "ntdll.dll!_vsnprintf",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_vsnwprintf",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 690,
+          "key": "ntdll.dll!_vsnwprintf",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_vsnwprintf_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 691,
+          "key": "ntdll.dll!_vsnwprintf_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_vswprintf",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 692,
+          "key": "ntdll.dll!_vswprintf",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_wcsicmp",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 693,
+          "key": "ntdll.dll!_wcsicmp",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_wcslwr",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 694,
+          "key": "ntdll.dll!_wcslwr",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_wcslwr_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 695,
+          "key": "ntdll.dll!_wcslwr_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_wcsnicmp",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 696,
+          "key": "ntdll.dll!_wcsnicmp",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_wcsnset_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 697,
+          "key": "ntdll.dll!_wcsnset_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_wcsset_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 698,
+          "key": "ntdll.dll!_wcsset_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_wcstoi64",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 699,
+          "key": "ntdll.dll!_wcstoi64",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_wcstoui64",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 700,
+          "key": "ntdll.dll!_wcstoui64",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_wcsupr",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 701,
+          "key": "ntdll.dll!_wcsupr",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_wcsupr_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 702,
+          "key": "ntdll.dll!_wcsupr_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_wmakepath_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 703,
+          "key": "ntdll.dll!_wmakepath_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_wsplitpath_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 704,
+          "key": "ntdll.dll!_wsplitpath_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_wtoi",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 705,
+          "key": "ntdll.dll!_wtoi",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_wtoi64",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 706,
+          "key": "ntdll.dll!_wtoi64",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "_wtol",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 707,
+          "key": "ntdll.dll!_wtol",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
         {
           "apiName": "AlpcAdjustCompletionListConcurrencyCount",
           "category": "ntdll/ipc",
@@ -34895,11 +35742,57 @@
           "risk": "medium"
         },
         {
+          "apiName": "atoi",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 733,
+          "key": "ntdll.dll!atoi",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "atol",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 734,
+          "key": "ntdll.dll!atol",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
           "apiName": "EtwCheckCoverage",
           "category": "ntdll/tracing",
           "family": "tracing",
           "id": 771,
           "key": "ntdll.dll!EtwCheckCoverage",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
+          "apiName": "EtwCreateTraceInstanceId",
+          "category": "ntdll/tracing",
+          "family": "tracing",
+          "id": 772,
+          "key": "ntdll.dll!EtwCreateTraceInstanceId",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
+          "apiName": "EtwDeliverDataBlock",
+          "category": "ntdll/tracing",
+          "family": "tracing",
+          "id": 773,
+          "key": "ntdll.dll!EtwDeliverDataBlock",
           "reasons": [
             "payload_risk_policy"
           ],
@@ -35073,6 +35966,50 @@
           "risk": "high"
         },
         {
+          "apiName": "EtwGetTraceEnableFlags",
+          "category": "ntdll/tracing",
+          "family": "tracing",
+          "id": 789,
+          "key": "ntdll.dll!EtwGetTraceEnableFlags",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
+          "apiName": "EtwGetTraceEnableLevel",
+          "category": "ntdll/tracing",
+          "family": "tracing",
+          "id": 790,
+          "key": "ntdll.dll!EtwGetTraceEnableLevel",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
+          "apiName": "EtwGetTraceLoggerHandle",
+          "category": "ntdll/tracing",
+          "family": "tracing",
+          "id": 791,
+          "key": "ntdll.dll!EtwGetTraceLoggerHandle",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
+          "apiName": "EtwLogTraceEvent",
+          "category": "ntdll/tracing",
+          "family": "tracing",
+          "id": 792,
+          "key": "ntdll.dll!EtwLogTraceEvent",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
           "apiName": "EtwNotificationRegister",
           "category": "ntdll/tracing",
           "family": "tracing",
@@ -35095,6 +36032,39 @@
           "risk": "high"
         },
         {
+          "apiName": "EtwpCreateEtwThread",
+          "category": "ntdll/tracing",
+          "family": "tracing",
+          "id": 795,
+          "key": "ntdll.dll!EtwpCreateEtwThread",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
+          "apiName": "EtwpGetCpuSpeed",
+          "category": "ntdll/tracing",
+          "family": "tracing",
+          "id": 796,
+          "key": "ntdll.dll!EtwpGetCpuSpeed",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
+          "apiName": "EtwProcessPrivateLoggerRequest",
+          "category": "ntdll/tracing",
+          "family": "tracing",
+          "id": 797,
+          "key": "ntdll.dll!EtwProcessPrivateLoggerRequest",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
           "apiName": "EtwRegisterSecurityProvider",
           "category": "ntdll/tracing",
           "family": "tracing",
@@ -35102,6 +36072,32 @@
           "key": "ntdll.dll!EtwRegisterSecurityProvider",
           "reasons": [
             "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
+          "apiName": "EtwRegisterTraceGuidsA",
+          "category": "ntdll/tracing",
+          "family": "tracing",
+          "id": 799,
+          "key": "ntdll.dll!EtwRegisterTraceGuidsA",
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "high"
+        },
+        {
+          "apiName": "EtwRegisterTraceGuidsW",
+          "category": "ntdll/tracing",
+          "family": "tracing",
+          "id": 800,
+          "key": "ntdll.dll!EtwRegisterTraceGuidsW",
+          "reasons": [
+            "payload_risk_policy",
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
           ],
           "risk": "high"
         },
@@ -35137,6 +36133,50 @@
           "family": "tracing",
           "id": 803,
           "key": "ntdll.dll!EtwSetMark",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
+          "apiName": "EtwTraceEventInstance",
+          "category": "ntdll/tracing",
+          "family": "tracing",
+          "id": 804,
+          "key": "ntdll.dll!EtwTraceEventInstance",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
+          "apiName": "EtwTraceMessage",
+          "category": "ntdll/tracing",
+          "family": "tracing",
+          "id": 805,
+          "key": "ntdll.dll!EtwTraceMessage",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
+          "apiName": "EtwTraceMessageVa",
+          "category": "ntdll/tracing",
+          "family": "tracing",
+          "id": 806,
+          "key": "ntdll.dll!EtwTraceMessageVa",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
+          "apiName": "EtwUnregisterTraceGuids",
+          "category": "ntdll/tracing",
+          "family": "tracing",
+          "id": 807,
+          "key": "ntdll.dll!EtwUnregisterTraceGuids",
           "reasons": [
             "payload_risk_policy"
           ],
@@ -35506,6 +36546,17 @@
           "risk": "high"
         },
         {
+          "apiName": "LdrHotPatchNotify",
+          "category": "ntdll/loader",
+          "family": "loader",
+          "id": 873,
+          "key": "ntdll.dll!LdrHotPatchNotify",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
           "apiName": "LdrInitializeEnclave",
           "category": "ntdll/loader",
           "family": "loader",
@@ -35522,6 +36573,17 @@
           "family": "loader",
           "id": 875,
           "key": "ntdll.dll!LdrInitializeThunk",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
+          "apiName": "LdrInitShimEngineDynamic",
+          "category": "ntdll/loader",
+          "family": "loader",
+          "id": 876,
+          "key": "ntdll.dll!LdrInitShimEngineDynamic",
           "reasons": [
             "payload_risk_policy"
           ],
@@ -35854,6 +36916,28 @@
           "risk": "high"
         },
         {
+          "apiName": "LdrRscIsTypeExist",
+          "category": "ntdll/loader",
+          "family": "loader",
+          "id": 904,
+          "key": "ntdll.dll!LdrRscIsTypeExist",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
+          "apiName": "LdrSetAppCompatDllRedirectionCallback",
+          "category": "ntdll/loader",
+          "family": "loader",
+          "id": 905,
+          "key": "ntdll.dll!LdrSetAppCompatDllRedirectionCallback",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
           "apiName": "LdrSetDefaultDllDirectories",
           "category": "ntdll/loader",
           "family": "loader",
@@ -35900,6 +36984,17 @@
           "risk": "high"
         },
         {
+          "apiName": "LdrSetMUICacheType",
+          "category": "ntdll/loader",
+          "family": "loader",
+          "id": 910,
+          "key": "ntdll.dll!LdrSetMUICacheType",
+          "reasons": [
+            "payload_risk_policy"
+          ],
+          "risk": "high"
+        },
+        {
           "apiName": "LdrShutdownProcess",
           "category": "ntdll/loader",
           "family": "loader",
@@ -35930,6 +37025,17 @@
           "reasons": [
             "payload_risk_policy",
             "payload_sensitive_parameter"
+          ],
+          "risk": "high"
+        },
+        {
+          "apiName": "LdrSystemDllInitBlock",
+          "category": "ntdll/loader",
+          "family": "loader",
+          "id": 914,
+          "key": "ntdll.dll!LdrSystemDllInitBlock",
+          "reasons": [
+            "payload_risk_policy"
           ],
           "risk": "high"
         },
@@ -36026,6 +37132,18 @@
             "payload_risk_policy"
           ],
           "risk": "high"
+        },
+        {
+          "apiName": "mbstowcs",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 925,
+          "key": "ntdll.dll!mbstowcs",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
         },
         {
           "apiName": "NtAccessCheck",
@@ -38759,8 +39877,8 @@
         },
         {
           "apiName": "RtlAnsiStringToUnicodeString",
-          "category": "system/windows-programming",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1502,
           "key": "ntdll.dll!RtlAnsiStringToUnicodeString",
           "reasons": [
@@ -38826,6 +39944,18 @@
           "risk": "medium"
         },
         {
+          "apiName": "RtlApplicationVerifierStop",
+          "category": "ntdll/rtl",
+          "family": "rtl",
+          "id": 1508,
+          "key": "ntdll.dll!RtlApplicationVerifierStop",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
           "apiName": "RtlAreBitsClear",
           "category": "ntdll/rtl",
           "family": "rtl",
@@ -38874,12 +40004,13 @@
         },
         {
           "apiName": "RtlCharToInteger",
-          "category": "system/windows-programming",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1532,
           "key": "ntdll.dll!RtlCharToInteger",
           "reasons": [
-            "payload_sensitive_parameter"
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
           ],
           "risk": "medium"
         },
@@ -39044,18 +40175,6 @@
           "risk": "medium"
         },
         {
-          "apiName": "RtlConvertDeviceFamilyInfoToString",
-          "category": "system/system-information",
-          "family": "system",
-          "id": 1575,
-          "key": "ntdll.dll!RtlConvertDeviceFamilyInfoToString",
-          "reasons": [
-            "payload_sensitive_parameter",
-            "payload_string_or_buffer_decoder"
-          ],
-          "risk": "medium"
-        },
-        {
           "apiName": "RtlConvertLCIDToString",
           "category": "ntdll/rtl",
           "family": "rtl",
@@ -39069,15 +40188,14 @@
         },
         {
           "apiName": "RtlConvertSidToUnicodeString",
-          "category": "security",
-          "family": "security",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1580,
           "key": "ntdll.dll!RtlConvertSidToUnicodeString",
           "reasons": [
-            "payload_risk_policy",
             "payload_sensitive_parameter"
           ],
-          "risk": "high"
+          "risk": "medium"
         },
         {
           "apiName": "RtlConvertToAutoInheritSecurityObject",
@@ -39647,8 +40765,8 @@
         },
         {
           "apiName": "RtlEthernetAddressToStringA",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1737,
           "key": "ntdll.dll!RtlEthernetAddressToStringA",
           "reasons": [
@@ -39659,8 +40777,8 @@
         },
         {
           "apiName": "RtlEthernetAddressToStringW",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1738,
           "key": "ntdll.dll!RtlEthernetAddressToStringW",
           "reasons": [
@@ -39671,8 +40789,8 @@
         },
         {
           "apiName": "RtlEthernetStringToAddressA",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1739,
           "key": "ntdll.dll!RtlEthernetStringToAddressA",
           "reasons": [
@@ -39683,8 +40801,8 @@
         },
         {
           "apiName": "RtlEthernetStringToAddressW",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1740,
           "key": "ntdll.dll!RtlEthernetStringToAddressW",
           "reasons": [
@@ -39883,8 +41001,8 @@
         },
         {
           "apiName": "RtlFirstEntrySList",
-          "category": "system/kernel",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1777,
           "key": "ntdll.dll!RtlFirstEntrySList",
           "reasons": [
@@ -39930,8 +41048,8 @@
         },
         {
           "apiName": "RtlFreeAnsiString",
-          "category": "system/windows-programming",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1793,
           "key": "ntdll.dll!RtlFreeAnsiString",
           "reasons": [
@@ -39941,8 +41059,8 @@
         },
         {
           "apiName": "RtlFreeOemString",
-          "category": "system/windows-programming",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1798,
           "key": "ntdll.dll!RtlFreeOemString",
           "reasons": [
@@ -39952,8 +41070,8 @@
         },
         {
           "apiName": "RtlFreeUnicodeString",
-          "category": "system/windows-programming",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1801,
           "key": "ntdll.dll!RtlFreeUnicodeString",
           "reasons": [
@@ -40425,19 +41543,20 @@
         },
         {
           "apiName": "RtlInitAnsiString",
-          "category": "system/windows-programming",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1910,
           "key": "ntdll.dll!RtlInitAnsiString",
           "reasons": [
-            "payload_sensitive_parameter"
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
           ],
           "risk": "medium"
         },
         {
           "apiName": "RtlInitAnsiStringEx",
-          "category": "system/windows-programming",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1911,
           "key": "ntdll.dll!RtlInitAnsiStringEx",
           "reasons": [
@@ -40482,8 +41601,8 @@
         },
         {
           "apiName": "RtlInitializeSListHead",
-          "category": "system/kernel",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1934,
           "key": "ntdll.dll!RtlInitializeSListHead",
           "reasons": [
@@ -40494,19 +41613,20 @@
         },
         {
           "apiName": "RtlInitString",
-          "category": "system/windows-programming",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1939,
           "key": "ntdll.dll!RtlInitString",
           "reasons": [
-            "payload_sensitive_parameter"
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
           ],
           "risk": "medium"
         },
         {
           "apiName": "RtlInitStringEx",
-          "category": "system/windows-programming",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1940,
           "key": "ntdll.dll!RtlInitStringEx",
           "reasons": [
@@ -40516,8 +41636,8 @@
         },
         {
           "apiName": "RtlInitUnicodeString",
-          "category": "system/windows-programming",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1942,
           "key": "ntdll.dll!RtlInitUnicodeString",
           "reasons": [
@@ -40620,8 +41740,8 @@
         },
         {
           "apiName": "RtlInterlockedFlushSList",
-          "category": "system/kernel",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1958,
           "key": "ntdll.dll!RtlInterlockedFlushSList",
           "reasons": [
@@ -40632,8 +41752,8 @@
         },
         {
           "apiName": "RtlInterlockedPopEntrySList",
-          "category": "system/kernel",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1959,
           "key": "ntdll.dll!RtlInterlockedPopEntrySList",
           "reasons": [
@@ -40644,8 +41764,8 @@
         },
         {
           "apiName": "RtlInterlockedPushEntrySList",
-          "category": "system/kernel",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1960,
           "key": "ntdll.dll!RtlInterlockedPushEntrySList",
           "reasons": [
@@ -40656,8 +41776,8 @@
         },
         {
           "apiName": "RtlInterlockedPushListSListEx",
-          "category": "system/kernel",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1962,
           "key": "ntdll.dll!RtlInterlockedPushListSListEx",
           "reasons": [
@@ -40680,8 +41800,8 @@
         },
         {
           "apiName": "RtlIpv4AddressToStringA",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1966,
           "key": "ntdll.dll!RtlIpv4AddressToStringA",
           "reasons": [
@@ -40692,8 +41812,8 @@
         },
         {
           "apiName": "RtlIpv4AddressToStringExA",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1967,
           "key": "ntdll.dll!RtlIpv4AddressToStringExA",
           "reasons": [
@@ -40704,8 +41824,8 @@
         },
         {
           "apiName": "RtlIpv4AddressToStringExW",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1968,
           "key": "ntdll.dll!RtlIpv4AddressToStringExW",
           "reasons": [
@@ -40716,8 +41836,8 @@
         },
         {
           "apiName": "RtlIpv4AddressToStringW",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1969,
           "key": "ntdll.dll!RtlIpv4AddressToStringW",
           "reasons": [
@@ -40728,8 +41848,8 @@
         },
         {
           "apiName": "RtlIpv4StringToAddressA",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1970,
           "key": "ntdll.dll!RtlIpv4StringToAddressA",
           "reasons": [
@@ -40740,8 +41860,8 @@
         },
         {
           "apiName": "RtlIpv4StringToAddressExA",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1971,
           "key": "ntdll.dll!RtlIpv4StringToAddressExA",
           "reasons": [
@@ -40752,8 +41872,8 @@
         },
         {
           "apiName": "RtlIpv4StringToAddressExW",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1972,
           "key": "ntdll.dll!RtlIpv4StringToAddressExW",
           "reasons": [
@@ -40764,8 +41884,8 @@
         },
         {
           "apiName": "RtlIpv4StringToAddressW",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1973,
           "key": "ntdll.dll!RtlIpv4StringToAddressW",
           "reasons": [
@@ -40776,8 +41896,8 @@
         },
         {
           "apiName": "RtlIpv6AddressToStringA",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1974,
           "key": "ntdll.dll!RtlIpv6AddressToStringA",
           "reasons": [
@@ -40788,8 +41908,8 @@
         },
         {
           "apiName": "RtlIpv6AddressToStringExA",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1975,
           "key": "ntdll.dll!RtlIpv6AddressToStringExA",
           "reasons": [
@@ -40800,8 +41920,8 @@
         },
         {
           "apiName": "RtlIpv6AddressToStringExW",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1976,
           "key": "ntdll.dll!RtlIpv6AddressToStringExW",
           "reasons": [
@@ -40812,8 +41932,8 @@
         },
         {
           "apiName": "RtlIpv6AddressToStringW",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1977,
           "key": "ntdll.dll!RtlIpv6AddressToStringW",
           "reasons": [
@@ -40824,8 +41944,8 @@
         },
         {
           "apiName": "RtlIpv6StringToAddressA",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1978,
           "key": "ntdll.dll!RtlIpv6StringToAddressA",
           "reasons": [
@@ -40836,8 +41956,8 @@
         },
         {
           "apiName": "RtlIpv6StringToAddressExA",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1979,
           "key": "ntdll.dll!RtlIpv6StringToAddressExA",
           "reasons": [
@@ -40848,8 +41968,8 @@
         },
         {
           "apiName": "RtlIpv6StringToAddressExW",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1980,
           "key": "ntdll.dll!RtlIpv6StringToAddressExW",
           "reasons": [
@@ -40860,8 +41980,8 @@
         },
         {
           "apiName": "RtlIpv6StringToAddressW",
-          "category": "networking/win-sock",
-          "family": "networking",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 1981,
           "key": "ntdll.dll!RtlIpv6StringToAddressW",
           "reasons": [
@@ -40911,17 +42031,6 @@
           "family": "rtl",
           "id": 2001,
           "key": "ntdll.dll!RtlIsNameInUnUpcasedExpression",
-          "reasons": [
-            "payload_sensitive_parameter"
-          ],
-          "risk": "medium"
-        },
-        {
-          "apiName": "RtlIsNameLegalDOS8Dot3",
-          "category": "system/windows-programming",
-          "family": "system",
-          "id": 2002,
-          "key": "ntdll.dll!RtlIsNameLegalDOS8Dot3",
           "reasons": [
             "payload_sensitive_parameter"
           ],
@@ -41135,15 +42244,14 @@
         },
         {
           "apiName": "RtlNormalizeSecurityDescriptor",
-          "category": "security",
-          "family": "security",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 2070,
           "key": "ntdll.dll!RtlNormalizeSecurityDescriptor",
           "reasons": [
-            "payload_risk_policy",
             "payload_sensitive_parameter"
           ],
-          "risk": "high"
+          "risk": "medium"
         },
         {
           "apiName": "RtlNormalizeString",
@@ -41298,6 +42406,18 @@
           "risk": "medium"
         },
         {
+          "apiName": "RtlpRefreshCachedUILanguage",
+          "category": "ntdll/rtl",
+          "family": "rtl",
+          "id": 2134,
+          "key": "ntdll.dll!RtlpRefreshCachedUILanguage",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
           "apiName": "RtlQueryActivationContextApplicationSettings",
           "category": "ntdll/rtl",
           "family": "rtl",
@@ -41323,8 +42443,8 @@
         },
         {
           "apiName": "RtlQueryDepthSList",
-          "category": "system/kernel",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 2158,
           "key": "ntdll.dll!RtlQueryDepthSList",
           "reasons": [
@@ -41838,8 +42958,8 @@
         },
         {
           "apiName": "RtlUnicodeStringToAnsiString",
-          "category": "system/windows-programming",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 2384,
           "key": "ntdll.dll!RtlUnicodeStringToAnsiString",
           "reasons": [
@@ -41871,8 +42991,8 @@
         },
         {
           "apiName": "RtlUnicodeStringToOemString",
-          "category": "system/windows-programming",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 2388,
           "key": "ntdll.dll!RtlUnicodeStringToOemString",
           "reasons": [
@@ -41915,13 +43035,12 @@
         },
         {
           "apiName": "RtlUnicodeToMultiByteSize",
-          "category": "system/windows-programming",
-          "family": "system",
+          "category": "ntdll/rtl",
+          "family": "rtl",
           "id": 2392,
           "key": "ntdll.dll!RtlUnicodeToMultiByteSize",
           "reasons": [
-            "payload_sensitive_parameter",
-            "payload_string_or_buffer_decoder"
+            "payload_sensitive_parameter"
           ],
           "risk": "medium"
         },
@@ -42123,6 +43242,413 @@
           "key": "ntdll.dll!RtlxAnsiStringToUnicodeSize",
           "reasons": [
             "payload_sensitive_parameter"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "sprintf",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 2496,
+          "key": "ntdll.dll!sprintf",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "strcat",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2501,
+          "key": "ntdll.dll!strcat",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "strcpy",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2505,
+          "key": "ntdll.dll!strcpy",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "strncat",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2509,
+          "key": "ntdll.dll!strncat",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "strncpy",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2512,
+          "key": "ntdll.dll!strncpy",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "strstr",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2518,
+          "key": "ntdll.dll!strstr",
+          "reasons": [
+            "payload_sensitive_parameter"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "strtol",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2520,
+          "key": "ntdll.dll!strtol",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "strtoul",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2521,
+          "key": "ntdll.dll!strtoul",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "swprintf",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 2522,
+          "key": "ntdll.dll!swprintf",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "swprintf_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 2523,
+          "key": "ntdll.dll!swprintf_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "swscanf_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 2524,
+          "key": "ntdll.dll!swscanf_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "vsprintf",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 2598,
+          "key": "ntdll.dll!vsprintf",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "vswprintf_s",
+          "category": "ntdll/ntdll",
+          "family": "ntdll",
+          "id": 2600,
+          "key": "ntdll.dll!vswprintf_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcscat",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2601,
+          "key": "ntdll.dll!wcscat",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcscat_s",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2602,
+          "key": "ntdll.dll!wcscat_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcschr",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2603,
+          "key": "ntdll.dll!wcschr",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcscmp",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2604,
+          "key": "ntdll.dll!wcscmp",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcscpy",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2605,
+          "key": "ntdll.dll!wcscpy",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcscpy_s",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2606,
+          "key": "ntdll.dll!wcscpy_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcscspn",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2607,
+          "key": "ntdll.dll!wcscspn",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcslen",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2608,
+          "key": "ntdll.dll!wcslen",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcsncat",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2609,
+          "key": "ntdll.dll!wcsncat",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcsncat_s",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2610,
+          "key": "ntdll.dll!wcsncat_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcsncmp",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2611,
+          "key": "ntdll.dll!wcsncmp",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcsncpy",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2612,
+          "key": "ntdll.dll!wcsncpy",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcsncpy_s",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2613,
+          "key": "ntdll.dll!wcsncpy_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcsnlen",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2614,
+          "key": "ntdll.dll!wcsnlen",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcspbrk",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2615,
+          "key": "ntdll.dll!wcspbrk",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcsrchr",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2616,
+          "key": "ntdll.dll!wcsrchr",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcsspn",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2617,
+          "key": "ntdll.dll!wcsspn",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcsstr",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2618,
+          "key": "ntdll.dll!wcsstr",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcstok_s",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2619,
+          "key": "ntdll.dll!wcstok_s",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcstol",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2620,
+          "key": "ntdll.dll!wcstol",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
+          ],
+          "risk": "medium"
+        },
+        {
+          "apiName": "wcstoul",
+          "category": "ntdll/crt",
+          "family": "crt",
+          "id": 2622,
+          "key": "ntdll.dll!wcstoul",
+          "reasons": [
+            "payload_sensitive_parameter",
+            "payload_string_or_buffer_decoder"
           ],
           "risk": "medium"
         },
@@ -44776,7 +46302,7 @@
           "risk": "high"
         }
       ],
-      "payloadBlockedInSameDll": 890,
+      "payloadBlockedInSameDll": 986,
       "recommendation": "design_manual_decoder_batch_before_runtime_promotion",
       "runtimeHooksEnabledByDefault": false,
       "sourceFiles": [
@@ -44785,7 +46311,7 @@
         "definitions/win32/loader.json",
         "definitions/win32/resolver.json"
       ],
-      "totalApis": 592
+      "totalApis": 600
     }
   ],
   "policy": {
@@ -44800,10 +46326,10 @@
     "policyInput": "classification == manual_decoder_required"
   },
   "summary": {
-    "manualDecoderRequired": 660,
-    "payloadBlockedInManualDlls": 1140,
+    "manualDecoderRequired": 668,
+    "payloadBlockedInManualDlls": 1236,
     "runtimeHooksEnabledByDefault": 0,
-    "totalApis": 660,
+    "totalApis": 668,
     "totalDlls": 2
   }
 }

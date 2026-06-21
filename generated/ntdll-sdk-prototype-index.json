@@ -1,0 +1,5949 @@
+{
+  "baseline": {
+    "exportCount": 2516,
+    "file": "generated/ntdll-win11-export-baseline.json"
+  },
+  "prototypes": [
+    {
+      "callingConvention": "cdecl",
+      "name": "_i64tow",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Val",
+          "type": "__int64"
+        },
+        {
+          "direction": "in",
+          "name": "_DstBuf",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Radix",
+          "type": "int"
+        }
+      ],
+      "returnType": "_CRT_INSECURE_DEPRECATE(_i64tow_s) wchar_t *",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_i64tow_s",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Val",
+          "type": "__int64"
+        },
+        {
+          "direction": "out",
+          "name": "_DstBuf",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInWords",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Radix",
+          "type": "int"
+        }
+      ],
+      "returnType": "errno_t",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_itow_s",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Val",
+          "type": "int"
+        },
+        {
+          "direction": "out",
+          "name": "_DstBuf",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInWords",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Radix",
+          "type": "int"
+        }
+      ],
+      "returnType": "} errno_t",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_ltow_s",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Val",
+          "type": "long"
+        },
+        {
+          "direction": "out",
+          "name": "_DstBuf",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInWords",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Radix",
+          "type": "int"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_1_1(errno_t, _itow_s, int, _Value, wchar_t, _Dest, int, _Radix) __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_1_1(wchar_t *, __RETURN_POLICY_DST, , _itow, int, _Value, , wchar_t, _Dest, int, _Radix) errno_t",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_memccpy",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_Dst",
+          "nullable": true,
+          "type": "void *"
+        },
+        {
+          "direction": "in",
+          "name": "_Src",
+          "type": "const void *"
+        },
+        {
+          "direction": "in",
+          "name": "_Val",
+          "type": "int"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "void *",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_memicmp",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Buf1",
+          "nullable": true,
+          "type": "const void *"
+        },
+        {
+          "direction": "in",
+          "name": "_Buf2",
+          "nullable": true,
+          "type": "const void *"
+        },
+        {
+          "direction": "in",
+          "name": "_Size",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_snprintf_s",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_DstBuf",
+          "type": "char *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInBytes",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Format",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "varargs",
+          "type": "...",
+          "variadic": true
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/stdio.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_snscanf_s",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Src",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Format",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "varargs",
+          "type": "...",
+          "variadic": true
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/stdio.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_snwprintf_s",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_DstBuf",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInWords",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Format",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "varargs",
+          "type": "...",
+          "variadic": true
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/stdio.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_snwscanf_s",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Src",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Format",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "varargs",
+          "type": "...",
+          "variadic": true
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/stdio.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_strcmpi",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str1",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_Str2",
+          "type": "const char *"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_stricmp",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str1",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_Str2",
+          "type": "const char *"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_strlwr_s",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "_Str",
+          "type": "char *"
+        },
+        {
+          "direction": "in",
+          "name": "_Size",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(errno_t, strerror_s, char, _Buffer, int, _ErrorMessage) errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_strnicmp",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str1",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_Str2",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_strnset_s",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "_Str",
+          "type": "char *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInBytes",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Val",
+          "type": "int"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_2(errno_t, strncpy_s, char, _Dest, const char *, _Source, size_t, _Count) __DEFINE_CPP_OVERLOAD_STANDARD_NFUNC_0_2_EX(char *, __RETURN_POLICY_DST, _CRTIMP_NOIA64, strncpy, strncpy_s, char, , char, _Dest, const char *, _Source, size_t, _Count) errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_strset_s",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "_Dst",
+          "type": "char *"
+        },
+        {
+          "direction": "in",
+          "name": "_DstSize",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Value",
+          "type": "int"
+        }
+      ],
+      "returnType": "errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_strupr_s",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "_Str",
+          "type": "char *"
+        },
+        {
+          "direction": "in",
+          "name": "_Size",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_ui64tow",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Val",
+          "type": "unsigned __int64"
+        },
+        {
+          "direction": "in",
+          "name": "_DstBuf",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Radix",
+          "type": "int"
+        }
+      ],
+      "returnType": "_CRT_INSECURE_DEPRECATE(_ui64tow_s) wchar_t *",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_ui64tow_s",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Val",
+          "type": "unsigned __int64"
+        },
+        {
+          "direction": "out",
+          "name": "_DstBuf",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInWords",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Radix",
+          "type": "int"
+        }
+      ],
+      "returnType": "errno_t",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_ultow_s",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Val",
+          "type": "unsigned long"
+        },
+        {
+          "direction": "out",
+          "name": "_DstBuf",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInWords",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Radix",
+          "type": "int"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_1_1(errno_t, _ltow_s, long, _Value, wchar_t, _Dest, int, _Radix) __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_1_1(wchar_t *, __RETURN_POLICY_DST, , _ltow, long, _Value, , wchar_t, _Dest, int, _Radix) errno_t",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_vscprintf",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Format",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_ArgList",
+          "type": "va_list"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_2(int, vsprintf_s, char, _Dest, const char *, _Format, va_list, _Args) __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_ARGLIST(int, __RETURN_POLICY_SAME, , sprintf, vsprintf, , char, _Dest, const char *, _Format) int",
+      "source": {
+        "file": "km/crt/stdio.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_vscwprintf",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Format",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_ArgList",
+          "type": "va_list"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/stdio.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_vsnprintf_s",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_DstBuf",
+          "type": "char *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInBytes",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Format",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_ArgList",
+          "type": "va_list"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/stdio.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_vsnwprintf_s",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_DstBuf",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInWords",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Format",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_ArgList",
+          "type": "va_list"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_2_ARGLIST(int, _snwprintf_s, _vsnwprintf_s, wchar_t, _Dest, size_t, _Count, const wchar_t *, _Format) int",
+      "source": {
+        "file": "km/crt/stdio.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_wcsicmp",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str1",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Str2",
+          "type": "const wchar_t *"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(errno_t, __wcserror_s, wchar_t, _Buffer, const wchar_t *, _ErrorMessage) int",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_wcslwr_s",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "_Str",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInWords",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(errno_t, _wcsset_s, wchar_t, _Str, wchar_t, _Val) __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX(wchar_t *, __RETURN_POLICY_DST, , _wcsset, _wcsset_s, wchar_t, , wchar_t, _Str, wchar_t, _Val) errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_wcsnicmp",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str1",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Str2",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_wcsnset_s",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "_Dst",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInWords",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Val",
+          "type": "wchar_t"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_wcsset_s",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "_Dst",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInWords",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Value",
+          "type": "wchar_t"
+        }
+      ],
+      "returnType": "errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_wcstoi64",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "out",
+          "name": "_EndPtr",
+          "nullable": true,
+          "type": "wchar_t **"
+        },
+        {
+          "direction": "in",
+          "name": "_Radix",
+          "type": "int"
+        }
+      ],
+      "returnType": "__int64",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_wcstoui64",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "out",
+          "name": "_EndPtr",
+          "nullable": true,
+          "type": "wchar_t **"
+        },
+        {
+          "direction": "in",
+          "name": "_Radix",
+          "type": "int"
+        }
+      ],
+      "returnType": "unsigned __int64",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_wcsupr_s",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "_Str",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Size",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(errno_t, _wcslwr_s_l, wchar_t, _String, _locale_t, _Locale) __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX(wchar_t *, __RETURN_POLICY_DST, , _wcslwr_l, _wcslwr_s_l, wchar_t, , wchar_t, _String, _locale_t, _Locale) errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_wmakepath_s",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_PathResult",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInBytes",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Drive",
+          "nullable": true,
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Dir",
+          "nullable": true,
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Filename",
+          "nullable": true,
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Ext",
+          "nullable": true,
+          "type": "const wchar_t *"
+        }
+      ],
+      "returnType": "errno_t",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_wsplitpath_s",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_FullPath",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "out",
+          "name": "_Drive",
+          "nullable": true,
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_DriveSize",
+          "type": "size_t"
+        },
+        {
+          "direction": "out",
+          "name": "_Dir",
+          "nullable": true,
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_DirSize",
+          "type": "size_t"
+        },
+        {
+          "direction": "out",
+          "name": "_Filename",
+          "nullable": true,
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_FilenameSize",
+          "type": "size_t"
+        },
+        {
+          "direction": "out",
+          "name": "_Ext",
+          "nullable": true,
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_ExtSize",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "errno_t",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_wtoi",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const wchar_t *"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_wtoi64",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const wchar_t *"
+        }
+      ],
+      "returnType": "__int64",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "_wtol",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const wchar_t *"
+        }
+      ],
+      "returnType": "long",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "DbgPrompt",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Prompt",
+          "type": "PCCH"
+        },
+        {
+          "direction": "out",
+          "name": "Response",
+          "type": "PCH"
+        },
+        {
+          "direction": "in",
+          "name": "Length",
+          "type": "ULONG"
+        }
+      ],
+      "returnType": "ULONG",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "iswalnum",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_C",
+          "type": "wint_t"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "iswalpha",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_C",
+          "type": "wint_t"
+        }
+      ],
+      "returnType": ") int",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "iswascii",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_C",
+          "type": "wint_t"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "iswctype",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_C",
+          "type": "wint_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Type",
+          "type": "wctype_t"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "iswdigit",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_C",
+          "type": "wint_t"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "iswgraph",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_C",
+          "type": "wint_t"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "iswlower",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_C",
+          "type": "wint_t"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "iswprint",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_C",
+          "type": "wint_t"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "iswspace",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_C",
+          "type": "wint_t"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "iswxdigit",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_C",
+          "type": "wint_t"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "memchr",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Buf",
+          "nullable": true,
+          "type": "const void *"
+        },
+        {
+          "direction": "in",
+          "name": "_Val",
+          "type": "int"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "_CONST_RETURN void *",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "memcmp",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Buf1",
+          "type": "const void *"
+        },
+        {
+          "direction": "in",
+          "name": "_Buf2",
+          "type": "const void *"
+        },
+        {
+          "direction": "in",
+          "name": "_Size",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "memcpy",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_Dst",
+          "type": "void *"
+        },
+        {
+          "direction": "in",
+          "name": "_Src",
+          "type": "const void *"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "_CRT_INSECURE_DEPRECATE_MEMORY(memcpy_s) ((unsigned char*)_Dst, , _MaxCount, (((unsigned char*)_Dst)[ ] == ((unsigned char*)_Src)[ ])) void *",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "memcpy_s",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_Dst",
+          "nullable": true,
+          "type": "void *"
+        },
+        {
+          "direction": "in",
+          "name": "_DstSize",
+          "type": "rsize_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Src",
+          "nullable": true,
+          "type": "const void *"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "rsize_t"
+        }
+      ],
+      "returnType": "errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "memmove",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_Dst",
+          "nullable": true,
+          "type": "void *"
+        },
+        {
+          "direction": "in",
+          "name": "_Src",
+          "nullable": true,
+          "type": "const void *"
+        },
+        {
+          "direction": "in",
+          "name": "_Size",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "_CRT_INSECURE_DEPRECATE_MEMORY(memmove_s) void *",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "memmove_s",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_Dst",
+          "nullable": true,
+          "type": "void *"
+        },
+        {
+          "direction": "in",
+          "name": "_DstSize",
+          "type": "rsize_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Src",
+          "nullable": true,
+          "type": "const void *"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "rsize_t"
+        }
+      ],
+      "returnType": "errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "memset",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_Dst",
+          "type": "void *"
+        },
+        {
+          "direction": "in",
+          "name": "_Val",
+          "type": "int"
+        },
+        {
+          "direction": "in",
+          "name": "_Size",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "((unsigned char*)_Dst, , _Size, (((unsigned char*)_Dst)[ ] == _Val)) void *",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "NtOpenProcess",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "ProcessHandle",
+          "type": "PHANDLE"
+        },
+        {
+          "direction": "in",
+          "name": "DesiredAccess",
+          "type": "ACCESS_MASK"
+        },
+        {
+          "direction": "in",
+          "name": "ObjectAttributes",
+          "type": "POBJECT_ATTRIBUTES"
+        },
+        {
+          "direction": "in",
+          "name": "ClientId",
+          "nullable": true,
+          "type": "PCLIENT_ID"
+        }
+      ],
+      "returnType": "__kernel_entry NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "RtlAddFunctionTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "FunctionTable",
+          "type": "PRUNTIME_FUNCTION"
+        },
+        {
+          "direction": "in",
+          "name": "EntryCount",
+          "type": "DWORD"
+        },
+        {
+          "direction": "in",
+          "name": "BaseAddress",
+          "type": "DWORD64"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlAddGrowableFunctionTable",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "DynamicTable",
+          "type": "PVOID*"
+        },
+        {
+          "direction": "in",
+          "name": "FunctionTable",
+          "type": "PRUNTIME_FUNCTION"
+        },
+        {
+          "direction": "in",
+          "name": "EntryCount",
+          "type": "DWORD"
+        },
+        {
+          "direction": "in",
+          "name": "MaximumEntryCount",
+          "type": "DWORD"
+        },
+        {
+          "direction": "in",
+          "name": "RangeBase",
+          "type": "ULONG_PTR"
+        },
+        {
+          "direction": "in",
+          "name": "RangeEnd",
+          "type": "ULONG_PTR"
+        }
+      ],
+      "returnType": "DWORD",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlCaptureContext",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "ContextRecord",
+          "type": "PCONTEXT"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlCaptureContext2",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "ContextRecord",
+          "type": "PCONTEXT"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlCaptureStackBackTrace",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "FramesToSkip",
+          "type": "DWORD"
+        },
+        {
+          "direction": "in",
+          "name": "FramesToCapture",
+          "type": "DWORD"
+        },
+        {
+          "direction": "out",
+          "name": "BackTrace",
+          "type": "PVOID*"
+        },
+        {
+          "direction": "out",
+          "name": "BackTraceHash",
+          "nullable": true,
+          "type": "PDWORD"
+        }
+      ],
+      "returnType": "WORD",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlCharToInteger",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "String",
+          "type": "PCSZ"
+        },
+        {
+          "direction": "in",
+          "name": "Base",
+          "nullable": true,
+          "type": "ULONG"
+        },
+        {
+          "direction": "out",
+          "name": "Value",
+          "type": "PULONG"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlCompareMemory",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Source1",
+          "type": "const VOID*"
+        },
+        {
+          "direction": "in",
+          "name": "Source2",
+          "type": "const VOID*"
+        },
+        {
+          "direction": "in",
+          "name": "Length",
+          "type": "SIZE_T"
+        }
+      ],
+      "returnType": "SIZE_T",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlCompareString",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "String1",
+          "type": "const STRING *"
+        },
+        {
+          "direction": "in",
+          "name": "String2",
+          "type": "const STRING *"
+        },
+        {
+          "direction": "in",
+          "name": "CaseInSensitive",
+          "type": "BOOLEAN"
+        }
+      ],
+      "returnType": "LONG",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlContractHashTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "HashTable",
+          "type": "PRTL_DYNAMIC_HASH_TABLE"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlCopyString",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "DestinationString",
+          "type": "PSTRING"
+        },
+        {
+          "direction": "in",
+          "name": "SourceString",
+          "nullable": true,
+          "type": "const STRING *"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlCrc32",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Buffer",
+          "type": "const void *"
+        },
+        {
+          "direction": "in",
+          "name": "Size",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "InitialCrc",
+          "type": "DWORD"
+        }
+      ],
+      "returnType": "DWORD",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlCrc64",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Buffer",
+          "type": "const void *"
+        },
+        {
+          "direction": "in",
+          "name": "Size",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "InitialCrc",
+          "type": "ULONGLONG"
+        }
+      ],
+      "returnType": "ULONGLONG",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlCreateHashTable",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "HashTable",
+          "type": "(NULL == *HashTable, (*HashTable, __drv_allocatesMem(Mem))) PRTL_DYNAMIC_HASH_TABLE *"
+        },
+        {
+          "direction": "in",
+          "name": "Shift",
+          "type": "ULONG"
+        },
+        {
+          "direction": "in",
+          "name": "Flags",
+          "type": "ULONG"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlCreateHashTableEx",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "HashTable",
+          "type": "(NULL == *HashTable, (*HashTable, __drv_allocatesMem(Mem))) PRTL_DYNAMIC_HASH_TABLE *"
+        },
+        {
+          "direction": "in",
+          "name": "InitialSize",
+          "type": "ULONG"
+        },
+        {
+          "direction": "in",
+          "name": "Shift",
+          "type": "ULONG"
+        },
+        {
+          "direction": "in",
+          "name": "Flags",
+          "type": "ULONG"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlDelete",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Links",
+          "type": "PRTL_SPLAY_LINKS"
+        }
+      ],
+      "returnType": "PRTL_SPLAY_LINKS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlDeleteElementGenericTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_GENERIC_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Buffer",
+          "type": "PVOID"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlDeleteElementGenericTableAvl",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_AVL_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Buffer",
+          "type": "PVOID"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlDeleteElementGenericTableAvlEx",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_AVL_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "NodeOrParent",
+          "type": "PVOID"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "RtlDeleteFunctionTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "FunctionTable",
+          "type": "PRUNTIME_FUNCTION"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlDeleteGrowableFunctionTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "DynamicTable",
+          "type": "PVOID"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlDeleteHashTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "arg0",
+          "type": "((HashTable->Flags & RTL_HASH_ALLOCATED_HEADER)"
+        },
+        {
+          "direction": "in",
+          "name": "HashTable",
+          "type": "__drv_freesMem(Mem) ) PRTL_DYNAMIC_HASH_TABLE"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlDeleteNoSplay",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Links",
+          "type": "PRTL_SPLAY_LINKS"
+        },
+        {
+          "direction": "inout",
+          "name": "Root",
+          "type": "PRTL_SPLAY_LINKS *"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlDrainNonVolatileFlush",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "NvToken",
+          "type": "PVOID"
+        }
+      ],
+      "returnType": "DWORD",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlEndEnumerationHashTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "HashTable",
+          "type": "PRTL_DYNAMIC_HASH_TABLE"
+        },
+        {
+          "direction": "inout",
+          "name": "Enumerator",
+          "type": "PRTL_DYNAMIC_HASH_TABLE_ENUMERATOR"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlEndStrongEnumerationHashTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "HashTable",
+          "type": "PRTL_DYNAMIC_HASH_TABLE"
+        },
+        {
+          "direction": "inout",
+          "name": "Enumerator",
+          "type": "PRTL_DYNAMIC_HASH_TABLE_ENUMERATOR"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlEndWeakEnumerationHashTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "HashTable",
+          "type": "PRTL_DYNAMIC_HASH_TABLE"
+        },
+        {
+          "direction": "inout",
+          "name": "Enumerator",
+          "type": "PRTL_DYNAMIC_HASH_TABLE_ENUMERATOR"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlEnumerateEntryHashTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "HashTable",
+          "type": "PRTL_DYNAMIC_HASH_TABLE"
+        },
+        {
+          "direction": "inout",
+          "name": "Enumerator",
+          "type": "PRTL_DYNAMIC_HASH_TABLE_ENUMERATOR"
+        }
+      ],
+      "returnType": "PRTL_DYNAMIC_HASH_TABLE_ENTRY",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlEnumerateGenericTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_GENERIC_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Restart",
+          "type": "BOOLEAN"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlEnumerateGenericTableAvl",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_AVL_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Restart",
+          "type": "BOOLEAN"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlEnumerateGenericTableLikeADirectory",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_AVL_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "MatchFunction",
+          "nullable": true,
+          "type": "PRTL_AVL_MATCH_FUNCTION"
+        },
+        {
+          "direction": "in",
+          "name": "MatchData",
+          "nullable": true,
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "NextFlag",
+          "type": "ULONG"
+        },
+        {
+          "direction": "inout",
+          "name": "RestartKey",
+          "type": "PVOID *"
+        },
+        {
+          "direction": "inout",
+          "name": "DeleteCount",
+          "type": "PULONG"
+        },
+        {
+          "direction": "in",
+          "name": "Buffer",
+          "type": "PVOID"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlEnumerateGenericTableWithoutSplaying",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_GENERIC_TABLE"
+        },
+        {
+          "direction": "inout",
+          "name": "RestartKey",
+          "type": "PVOID *"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlEnumerateGenericTableWithoutSplayingAvl",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_AVL_TABLE"
+        },
+        {
+          "direction": "inout",
+          "name": "RestartKey",
+          "type": "PVOID *"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlEqualString",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "String1",
+          "type": "const STRING *"
+        },
+        {
+          "direction": "in",
+          "name": "String2",
+          "type": "const STRING *"
+        },
+        {
+          "direction": "in",
+          "name": "CaseInSensitive",
+          "type": "BOOLEAN"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlEthernetAddressToStringA",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Addr",
+          "type": "const DL_EUI48 *"
+        },
+        {
+          "direction": "out",
+          "name": "S",
+          "type": "PSTR"
+        }
+      ],
+      "returnType": "PSTR",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlEthernetAddressToStringW",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Addr",
+          "type": "const DL_EUI48 *"
+        },
+        {
+          "direction": "out",
+          "name": "S",
+          "type": "PWSTR"
+        }
+      ],
+      "returnType": "PWSTR",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlEthernetStringToAddressA",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "S",
+          "type": "PCSTR"
+        },
+        {
+          "direction": "out",
+          "name": "Terminator",
+          "type": "PCSTR *"
+        },
+        {
+          "direction": "out",
+          "name": "Addr",
+          "type": "DL_EUI48 *"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlEthernetStringToAddressW",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "S",
+          "type": "PCWSTR"
+        },
+        {
+          "direction": "out",
+          "name": "Terminator",
+          "type": "LPCWSTR *"
+        },
+        {
+          "direction": "out",
+          "name": "Addr",
+          "type": "DL_EUI48 *"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlExpandHashTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "HashTable",
+          "type": "PRTL_DYNAMIC_HASH_TABLE"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlExtendCorrelationVector",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "CorrelationVector",
+          "type": "PCORRELATION_VECTOR"
+        }
+      ],
+      "returnType": "DWORD",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlFillNonVolatileMemory",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "NvToken",
+          "type": "PVOID"
+        },
+        {
+          "direction": "out",
+          "name": "NvDestination",
+          "type": "VOID UNALIGNED *"
+        },
+        {
+          "direction": "in",
+          "name": "Size",
+          "type": "SIZE_T"
+        },
+        {
+          "direction": "in",
+          "name": "Value",
+          "type": "const BYTE"
+        },
+        {
+          "direction": "in",
+          "name": "Flags",
+          "type": "DWORD"
+        }
+      ],
+      "returnType": "DWORD",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlFirstEntrySList",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "ListHead",
+          "type": "const SLIST_HEADER *"
+        }
+      ],
+      "returnType": "PSLIST_ENTRY",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlFlushNonVolatileMemory",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "NvToken",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "NvBuffer",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "Size",
+          "type": "SIZE_T"
+        },
+        {
+          "direction": "in",
+          "name": "Flags",
+          "type": "DWORD"
+        }
+      ],
+      "returnType": "DWORD",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlFlushNonVolatileMemoryRanges",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "NvToken",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "NvRanges",
+          "type": "PNV_MEMORY_RANGE"
+        },
+        {
+          "direction": "in",
+          "name": "NumRanges",
+          "type": "SIZE_T"
+        },
+        {
+          "direction": "in",
+          "name": "Flags",
+          "type": "DWORD"
+        }
+      ],
+      "returnType": "DWORD",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlFreeNonVolatileToken",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "NvToken",
+          "type": "PVOID"
+        }
+      ],
+      "returnType": "DWORD",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlGetActiveConsoleId",
+      "parameters": [],
+      "returnType": "ULONG",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlGetCallersAddress",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "CallersAddress",
+          "type": "PVOID *"
+        },
+        {
+          "direction": "out",
+          "name": "CallersCaller",
+          "type": "PVOID *"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlGetConsoleSessionForegroundProcessId",
+      "parameters": [],
+      "returnType": "ULONGLONG",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlGetElementGenericTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_GENERIC_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "I",
+          "type": "ULONG"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlGetElementGenericTableAvl",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_AVL_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "I",
+          "type": "ULONG"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlGetEnabledExtendedFeatures",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "FeatureMask",
+          "type": "ULONG64"
+        }
+      ],
+      "returnType": "ULONG64",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlGetNextEntryHashTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "HashTable",
+          "type": "PRTL_DYNAMIC_HASH_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Context",
+          "type": "PRTL_DYNAMIC_HASH_TABLE_CONTEXT"
+        }
+      ],
+      "returnType": "PRTL_DYNAMIC_HASH_TABLE_ENTRY",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlGetNonVolatileToken",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "NvBuffer",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "Size",
+          "type": "SIZE_T"
+        },
+        {
+          "direction": "in",
+          "name": "NvToken",
+          "type": "PVOID *"
+        }
+      ],
+      "returnType": "| WRITE_NV_MEMORY_FLAG_NON_TEMPORAL) | FILL_NV_MEMORY_FLAG_NON_TEMPORAL) DWORD",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlGetNtProductType",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "NtProductType",
+          "type": "PNT_PRODUCT_TYPE"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlGetNtSystemRoot",
+      "parameters": [],
+      "returnType": "PCWSTR",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlGetPersistedStateLocation",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "SourceID",
+          "type": "PCWSTR"
+        },
+        {
+          "direction": "in",
+          "name": "CustomValue",
+          "nullable": true,
+          "type": "PCWSTR"
+        },
+        {
+          "direction": "in",
+          "name": "DefaultPath",
+          "nullable": true,
+          "type": "PCWSTR"
+        },
+        {
+          "direction": "in",
+          "name": "StateLocationType",
+          "type": "STATE_LOCATION_TYPE"
+        },
+        {
+          "direction": "out",
+          "name": "TargetPath",
+          "nullable": true,
+          "type": "PWCHAR"
+        },
+        {
+          "direction": "in",
+          "name": "BufferLengthIn",
+          "type": "ULONG"
+        },
+        {
+          "direction": "out",
+          "name": "BufferLengthOut",
+          "nullable": true,
+          "type": "PULONG"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlGetProductInfo",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "OSMajorVersion",
+          "type": "DWORD"
+        },
+        {
+          "direction": "in",
+          "name": "OSMinorVersion",
+          "type": "DWORD"
+        },
+        {
+          "direction": "in",
+          "name": "SpMajorVersion",
+          "type": "DWORD"
+        },
+        {
+          "direction": "in",
+          "name": "SpMinorVersion",
+          "type": "DWORD"
+        },
+        {
+          "direction": "out",
+          "name": "ReturnedProductType",
+          "type": "PDWORD"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlGetReturnAddressHijackTarget",
+      "parameters": [],
+      "returnType": "ULONG_PTR",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlGetSuiteMask",
+      "parameters": [],
+      "returnType": "ULONG",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlGetSystemGlobalData",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "DataId",
+          "type": "RTL_SYSTEM_GLOBAL_DATA_ID"
+        },
+        {
+          "direction": "inout",
+          "name": "Buffer",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "Size",
+          "type": "DWORD"
+        }
+      ],
+      "returnType": "DWORD",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlGrowFunctionTable",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "DynamicTable",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "NewEntryCount",
+          "type": "DWORD"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIncrementCorrelationVector",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "CorrelationVector",
+          "type": "PCORRELATION_VECTOR"
+        }
+      ],
+      "returnType": "DWORD",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlInitEnumerationHashTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "HashTable",
+          "type": "PRTL_DYNAMIC_HASH_TABLE"
+        },
+        {
+          "direction": "out",
+          "name": "Enumerator",
+          "type": "PRTL_DYNAMIC_HASH_TABLE_ENUMERATOR"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlInitializeCorrelationVector",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "CorrelationVector",
+          "type": "PCORRELATION_VECTOR"
+        },
+        {
+          "direction": "in",
+          "name": "Version",
+          "type": "int"
+        },
+        {
+          "direction": "in",
+          "name": "Guid",
+          "nullable": true,
+          "type": "const GUID *"
+        }
+      ],
+      "returnType": "DWORD",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlInitializeGenericTable",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "Table",
+          "type": "PRTL_GENERIC_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "CompareRoutine",
+          "type": "PRTL_GENERIC_COMPARE_ROUTINE"
+        },
+        {
+          "direction": "in",
+          "name": "AllocateRoutine",
+          "type": "PRTL_GENERIC_ALLOCATE_ROUTINE"
+        },
+        {
+          "direction": "in",
+          "name": "FreeRoutine",
+          "type": "PRTL_GENERIC_FREE_ROUTINE"
+        },
+        {
+          "direction": "in",
+          "name": "TableContext",
+          "nullable": true,
+          "type": "PVOID"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlInitializeGenericTableAvl",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "Table",
+          "type": "PRTL_AVL_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "CompareRoutine",
+          "type": "PRTL_AVL_COMPARE_ROUTINE"
+        },
+        {
+          "direction": "in",
+          "name": "AllocateRoutine",
+          "type": "PRTL_AVL_ALLOCATE_ROUTINE"
+        },
+        {
+          "direction": "in",
+          "name": "FreeRoutine",
+          "type": "PRTL_AVL_FREE_ROUTINE"
+        },
+        {
+          "direction": "in",
+          "name": "TableContext",
+          "nullable": true,
+          "type": "PVOID"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlInitializeSListHead",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "ListHead",
+          "type": "PSLIST_HEADER"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlInitStrongEnumerationHashTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "HashTable",
+          "type": "PRTL_DYNAMIC_HASH_TABLE"
+        },
+        {
+          "direction": "out",
+          "name": "Enumerator",
+          "type": "PRTL_DYNAMIC_HASH_TABLE_ENUMERATOR"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlInitWeakEnumerationHashTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "HashTable",
+          "type": "PRTL_DYNAMIC_HASH_TABLE"
+        },
+        {
+          "direction": "out",
+          "name": "Enumerator",
+          "type": "PRTL_DYNAMIC_HASH_TABLE_ENUMERATOR"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlInsertElementGenericTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_GENERIC_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Buffer",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "BufferSize",
+          "type": "CLONG"
+        },
+        {
+          "direction": "out",
+          "name": "NewElement",
+          "nullable": true,
+          "type": "PBOOLEAN"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlInsertElementGenericTableAvl",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_AVL_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Buffer",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "BufferSize",
+          "type": "CLONG"
+        },
+        {
+          "direction": "out",
+          "name": "NewElement",
+          "nullable": true,
+          "type": "PBOOLEAN"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlInsertElementGenericTableFull",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_GENERIC_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Buffer",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "BufferSize",
+          "type": "CLONG"
+        },
+        {
+          "direction": "out",
+          "name": "NewElement",
+          "nullable": true,
+          "type": "PBOOLEAN"
+        },
+        {
+          "direction": "in",
+          "name": "NodeOrParent",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "SearchResult",
+          "type": "TABLE_SEARCH_RESULT"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlInsertElementGenericTableFullAvl",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_AVL_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Buffer",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "BufferSize",
+          "type": "CLONG"
+        },
+        {
+          "direction": "out",
+          "name": "NewElement",
+          "nullable": true,
+          "type": "PBOOLEAN"
+        },
+        {
+          "direction": "in",
+          "name": "NodeOrParent",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "SearchResult",
+          "type": "TABLE_SEARCH_RESULT"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlInsertEntryHashTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "HashTable",
+          "type": "PRTL_DYNAMIC_HASH_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Entry",
+          "type": "__drv_aliasesMem PRTL_DYNAMIC_HASH_TABLE_ENTRY"
+        },
+        {
+          "direction": "in",
+          "name": "Signature",
+          "type": "ULONG_PTR"
+        },
+        {
+          "direction": "inout",
+          "name": "Context",
+          "nullable": true,
+          "type": "PRTL_DYNAMIC_HASH_TABLE_CONTEXT"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "RtlInstallFunctionTableCallback",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "TableIdentifier",
+          "type": "DWORD64"
+        },
+        {
+          "direction": "in",
+          "name": "BaseAddress",
+          "type": "DWORD64"
+        },
+        {
+          "direction": "in",
+          "name": "Length",
+          "type": "DWORD"
+        },
+        {
+          "direction": "in",
+          "name": "Callback",
+          "type": "PGET_RUNTIME_FUNCTION_CALLBACK"
+        },
+        {
+          "direction": "in",
+          "name": "Context",
+          "nullable": true,
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "OutOfProcessCallbackDll",
+          "nullable": true,
+          "type": "PCWSTR"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlInterlockedFlushSList",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "ListHead",
+          "type": "PSLIST_HEADER"
+        }
+      ],
+      "returnType": "PSLIST_ENTRY",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlInterlockedPopEntrySList",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "ListHead",
+          "type": "PSLIST_HEADER"
+        }
+      ],
+      "returnType": "PSLIST_ENTRY",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlInterlockedPushEntrySList",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "ListHead",
+          "type": "PSLIST_HEADER"
+        },
+        {
+          "direction": "inout",
+          "name": "ListEntry",
+          "type": "__drv_aliasesMem PSLIST_ENTRY"
+        }
+      ],
+      "returnType": "PSLIST_ENTRY",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlInterlockedPushListSListEx",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "ListHead",
+          "type": "PSLIST_HEADER"
+        },
+        {
+          "direction": "inout",
+          "name": "List",
+          "type": "__drv_aliasesMem PSLIST_ENTRY"
+        },
+        {
+          "direction": "inout",
+          "name": "ListEnd",
+          "type": "PSLIST_ENTRY"
+        },
+        {
+          "direction": "in",
+          "name": "Count",
+          "type": "DWORD"
+        }
+      ],
+      "returnType": "PSLIST_ENTRY",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIpv4AddressToStringA",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Addr",
+          "type": "const struct in_addr *"
+        },
+        {
+          "direction": "out",
+          "name": "S",
+          "type": "PSTR"
+        }
+      ],
+      "returnType": "PSTR",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIpv4AddressToStringExA",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Address",
+          "type": "const struct in_addr *"
+        },
+        {
+          "direction": "in",
+          "name": "Port",
+          "type": "USHORT"
+        },
+        {
+          "direction": "out",
+          "name": "AddressString",
+          "type": "PSTR"
+        },
+        {
+          "direction": "inout",
+          "name": "AddressStringLength",
+          "type": "PULONG"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIpv4AddressToStringExW",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Address",
+          "type": "const struct in_addr *"
+        },
+        {
+          "direction": "in",
+          "name": "Port",
+          "type": "USHORT"
+        },
+        {
+          "direction": "out",
+          "name": "AddressString",
+          "type": "PWSTR"
+        },
+        {
+          "direction": "inout",
+          "name": "AddressStringLength",
+          "type": "PULONG"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIpv4AddressToStringW",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Addr",
+          "type": "const struct in_addr *"
+        },
+        {
+          "direction": "out",
+          "name": "S",
+          "type": "PWSTR"
+        }
+      ],
+      "returnType": "PWSTR",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIpv4StringToAddressA",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "S",
+          "type": "PCSTR"
+        },
+        {
+          "direction": "in",
+          "name": "Strict",
+          "type": "BOOLEAN"
+        },
+        {
+          "direction": "out",
+          "name": "Terminator",
+          "type": "PCSTR *"
+        },
+        {
+          "direction": "out",
+          "name": "Addr",
+          "type": "struct in_addr *"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIpv4StringToAddressExA",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "AddressString",
+          "type": "PCSTR"
+        },
+        {
+          "direction": "in",
+          "name": "Strict",
+          "type": "BOOLEAN"
+        },
+        {
+          "direction": "out",
+          "name": "Address",
+          "type": "struct in_addr *"
+        },
+        {
+          "direction": "out",
+          "name": "Port",
+          "type": "PUSHORT"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIpv4StringToAddressExW",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "AddressString",
+          "type": "PCWSTR"
+        },
+        {
+          "direction": "in",
+          "name": "Strict",
+          "type": "BOOLEAN"
+        },
+        {
+          "direction": "out",
+          "name": "Address",
+          "type": "struct in_addr *"
+        },
+        {
+          "direction": "out",
+          "name": "Port",
+          "type": "PUSHORT"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIpv4StringToAddressW",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "S",
+          "type": "PCWSTR"
+        },
+        {
+          "direction": "in",
+          "name": "Strict",
+          "type": "BOOLEAN"
+        },
+        {
+          "direction": "out",
+          "name": "Terminator",
+          "type": "LPCWSTR *"
+        },
+        {
+          "direction": "out",
+          "name": "Addr",
+          "type": "struct in_addr *"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIpv6AddressToStringA",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Addr",
+          "type": "const struct in6_addr *"
+        },
+        {
+          "direction": "out",
+          "name": "S",
+          "type": "PSTR"
+        }
+      ],
+      "returnType": "PSTR",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIpv6AddressToStringExA",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Address",
+          "type": "const struct in6_addr *"
+        },
+        {
+          "direction": "in",
+          "name": "ScopeId",
+          "type": "ULONG"
+        },
+        {
+          "direction": "in",
+          "name": "Port",
+          "type": "USHORT"
+        },
+        {
+          "direction": "out",
+          "name": "AddressString",
+          "type": "PSTR"
+        },
+        {
+          "direction": "inout",
+          "name": "AddressStringLength",
+          "type": "PULONG"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIpv6AddressToStringExW",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Address",
+          "type": "const struct in6_addr *"
+        },
+        {
+          "direction": "in",
+          "name": "ScopeId",
+          "type": "ULONG"
+        },
+        {
+          "direction": "in",
+          "name": "Port",
+          "type": "USHORT"
+        },
+        {
+          "direction": "out",
+          "name": "AddressString",
+          "type": "PWSTR"
+        },
+        {
+          "direction": "inout",
+          "name": "AddressStringLength",
+          "type": "PULONG"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIpv6AddressToStringW",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Addr",
+          "type": "const struct in6_addr *"
+        },
+        {
+          "direction": "out",
+          "name": "S",
+          "type": "PWSTR"
+        }
+      ],
+      "returnType": "PWSTR",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIpv6StringToAddressA",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "S",
+          "type": "PCSTR"
+        },
+        {
+          "direction": "out",
+          "name": "Terminator",
+          "type": "PCSTR *"
+        },
+        {
+          "direction": "out",
+          "name": "Addr",
+          "type": "struct in6_addr *"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIpv6StringToAddressExA",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "AddressString",
+          "type": "PCSTR"
+        },
+        {
+          "direction": "out",
+          "name": "Address",
+          "type": "struct in6_addr *"
+        },
+        {
+          "direction": "out",
+          "name": "ScopeId",
+          "type": "PULONG"
+        },
+        {
+          "direction": "out",
+          "name": "Port",
+          "type": "PUSHORT"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIpv6StringToAddressExW",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "AddressString",
+          "type": "PCWSTR"
+        },
+        {
+          "direction": "out",
+          "name": "Address",
+          "type": "struct in6_addr *"
+        },
+        {
+          "direction": "out",
+          "name": "ScopeId",
+          "type": "PULONG"
+        },
+        {
+          "direction": "out",
+          "name": "Port",
+          "type": "PUSHORT"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIpv6StringToAddressW",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "S",
+          "type": "PCWSTR"
+        },
+        {
+          "direction": "out",
+          "name": "Terminator",
+          "type": "PCWSTR *"
+        },
+        {
+          "direction": "out",
+          "name": "Addr",
+          "type": "struct in6_addr *"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "shared/ip2string.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIsApiSetImplemented",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "apiSetName",
+          "type": "PCSTR"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIsEcCode",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "CodePointer",
+          "type": "DWORD64"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIsGenericTableEmpty",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_GENERIC_TABLE"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIsGenericTableEmptyAvl",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_AVL_TABLE"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIsMultiSessionSku",
+      "parameters": [],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIsMultiUsersInSessionSku",
+      "parameters": [],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIsStateSeparationEnabled",
+      "parameters": [],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIsUntrustedObject",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Handle",
+          "nullable": true,
+          "type": "HANDLE"
+        },
+        {
+          "direction": "in",
+          "name": "Object",
+          "nullable": true,
+          "type": "PVOID"
+        },
+        {
+          "direction": "out",
+          "name": "UntrustedObject",
+          "type": "PBOOLEAN"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlIsZeroMemory",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Buffer",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "Length",
+          "type": "SIZE_T"
+        }
+      ],
+      "returnType": "\\ __pragma(const_seg(pop)) {ImagePolicyEntryTypeBool, , (const VOID*) }, {ImagePolicyEntryTypeInt8, , (const VOID*) }, {ImagePolicyEntryTypeUInt8, , (const VOID*) }, {ImagePolicyEntryTypeInt16, , (const VOID*) }, {ImagePolicyEntryTypeUInt16, , (const VOID*) }, {ImagePolicyEntryTypeInt32, , (const VOID*) }, {ImagePolicyEntryTypeUInt32, , (const VOID*) }, {ImagePolicyEntryTypeInt64, , (const VOID*) }, {ImagePolicyEntryTypeUInt64, , (const VOID*) }, {ImagePolicyEntryTypeAnsiString, , }, {ImagePolicyEntryTypeUnicodeString, , }, {ImagePolicyEntryTypeOverride, , 0}, BOOLEAN",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlLookupElementGenericTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_GENERIC_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Buffer",
+          "type": "PVOID"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlLookupElementGenericTableAvl",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_AVL_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Buffer",
+          "type": "PVOID"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlLookupElementGenericTableFull",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_GENERIC_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Buffer",
+          "type": "PVOID"
+        },
+        {
+          "direction": "out",
+          "name": "NodeOrParent",
+          "type": "PVOID *"
+        },
+        {
+          "direction": "out",
+          "name": "SearchResult",
+          "type": "TABLE_SEARCH_RESULT *"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlLookupElementGenericTableFullAvl",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_AVL_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Buffer",
+          "type": "PVOID"
+        },
+        {
+          "direction": "out",
+          "name": "NodeOrParent",
+          "type": "PVOID *"
+        },
+        {
+          "direction": "out",
+          "name": "SearchResult",
+          "type": "TABLE_SEARCH_RESULT *"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlLookupEntryHashTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "HashTable",
+          "type": "PRTL_DYNAMIC_HASH_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Signature",
+          "type": "ULONG_PTR"
+        },
+        {
+          "direction": "out",
+          "name": "Context",
+          "nullable": true,
+          "type": "PRTL_DYNAMIC_HASH_TABLE_CONTEXT"
+        }
+      ],
+      "returnType": "PRTL_DYNAMIC_HASH_TABLE_ENTRY",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlLookupFirstMatchingElementGenericTableAvl",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_AVL_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Buffer",
+          "type": "PVOID"
+        },
+        {
+          "direction": "out",
+          "name": "RestartKey",
+          "type": "PVOID *"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlLookupFunctionEntry",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "ControlPc",
+          "type": "DWORD64"
+        },
+        {
+          "direction": "out",
+          "name": "ImageBase",
+          "type": "PDWORD64"
+        },
+        {
+          "direction": "inout",
+          "name": "HistoryTable",
+          "nullable": true,
+          "type": "PUNWIND_HISTORY_TABLE"
+        }
+      ],
+      "returnType": "PRUNTIME_FUNCTION",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlMapGenericMask",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "AccessMask",
+          "type": "PACCESS_MASK"
+        },
+        {
+          "direction": "in",
+          "name": "GenericMapping",
+          "type": "const GENERIC_MAPPING *"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlNormalizeSecurityDescriptor",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "SecurityDescriptor",
+          "type": "PSECURITY_DESCRIPTOR *"
+        },
+        {
+          "direction": "in",
+          "name": "SecurityDescriptorLength",
+          "type": "DWORD"
+        },
+        {
+          "direction": "out",
+          "name": "NewSecurityDescriptor",
+          "nullable": true,
+          "type": "PSECURITY_DESCRIPTOR *"
+        },
+        {
+          "direction": "out",
+          "name": "NewSecurityDescriptorLength",
+          "nullable": true,
+          "type": "PDWORD"
+        },
+        {
+          "direction": "in",
+          "name": "CheckOnly",
+          "type": "BOOLEAN"
+        }
+      ],
+      "returnType": "__drv_maxIRQL(APC_LEVEL) BOOLEAN",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlNumberGenericTableElements",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_GENERIC_TABLE"
+        }
+      ],
+      "returnType": "ULONG",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlNumberGenericTableElementsAvl",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Table",
+          "type": "PRTL_AVL_TABLE"
+        }
+      ],
+      "returnType": "ULONG",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlOsDeploymentState",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Flags",
+          "type": "DWORD"
+        }
+      ],
+      "returnType": "OS_DEPLOYEMENT_STATE_VALUES",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlPcToFileHeader",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "PcValue",
+          "type": "PVOID"
+        },
+        {
+          "direction": "out",
+          "name": "BaseOfImage",
+          "type": "PVOID*"
+        }
+      ],
+      "returnType": "PVOID",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlPrefixUnicodeString",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "String1",
+          "type": "PCUNICODE_STRING"
+        },
+        {
+          "direction": "in",
+          "name": "String2",
+          "type": "PCUNICODE_STRING"
+        },
+        {
+          "direction": "in",
+          "name": "CaseInSensitive",
+          "type": "BOOLEAN"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlQueryDepthSList",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "ListHead",
+          "type": "PSLIST_HEADER"
+        }
+      ],
+      "returnType": "WORD",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlQueryRegistryValueWithFallback",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "PrimaryHandle",
+          "nullable": true,
+          "type": "HANDLE"
+        },
+        {
+          "direction": "in",
+          "name": "FallbackHandle",
+          "nullable": true,
+          "type": "HANDLE"
+        },
+        {
+          "direction": "in",
+          "name": "ValueName",
+          "type": "PUNICODE_STRING"
+        },
+        {
+          "direction": "in",
+          "name": "ValueLength",
+          "type": "ULONG"
+        },
+        {
+          "direction": "out",
+          "name": "ValueType",
+          "nullable": true,
+          "type": "PULONG"
+        },
+        {
+          "direction": "out",
+          "name": "ValueData",
+          "type": "PVOID"
+        },
+        {
+          "direction": "out",
+          "name": "ResultLength",
+          "type": "PULONG"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlRaiseException",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "ExceptionRecord",
+          "type": "PEXCEPTION_RECORD"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlRealPredecessor",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Links",
+          "type": "PRTL_SPLAY_LINKS"
+        }
+      ],
+      "returnType": "PRTL_SPLAY_LINKS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlRealSuccessor",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Links",
+          "type": "PRTL_SPLAY_LINKS"
+        }
+      ],
+      "returnType": "PRTL_SPLAY_LINKS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlRemoveEntryHashTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "HashTable",
+          "type": "PRTL_DYNAMIC_HASH_TABLE"
+        },
+        {
+          "direction": "in",
+          "name": "Entry",
+          "type": "PRTL_DYNAMIC_HASH_TABLE_ENTRY"
+        },
+        {
+          "direction": "inout",
+          "name": "Context",
+          "nullable": true,
+          "type": "PRTL_DYNAMIC_HASH_TABLE_CONTEXT"
+        }
+      ],
+      "returnType": "BOOLEAN",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "RtlRestoreContext",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "ContextRecord",
+          "type": "PCONTEXT"
+        },
+        {
+          "direction": "in",
+          "name": "ExceptionRecord",
+          "nullable": true,
+          "type": "struct _EXCEPTION_RECORD*"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlRunOnceBeginInitialize",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "RunOnce",
+          "type": "PRTL_RUN_ONCE"
+        },
+        {
+          "direction": "in",
+          "name": "Flags",
+          "type": "ULONG"
+        },
+        {
+          "direction": "in",
+          "name": "Context",
+          "nullable": true,
+          "type": "PVOID *"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlRunOnceComplete",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "RunOnce",
+          "type": "PRTL_RUN_ONCE"
+        },
+        {
+          "direction": "in",
+          "name": "Flags",
+          "type": "ULONG"
+        },
+        {
+          "direction": "in",
+          "name": "Context",
+          "nullable": true,
+          "type": "PVOID"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlRunOnceExecuteOnce",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "RunOnce",
+          "type": "PRTL_RUN_ONCE"
+        },
+        {
+          "direction": "in",
+          "name": "InitFn",
+          "type": "__callback PRTL_RUN_ONCE_INIT_FN"
+        },
+        {
+          "direction": "inout",
+          "name": "Parameter",
+          "nullable": true,
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "Context",
+          "nullable": true,
+          "type": "PVOID *"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlRunOnceInitialize",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "RunOnce",
+          "type": "PRTL_RUN_ONCE"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlSplay",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "Links",
+          "type": "PRTL_SPLAY_LINKS"
+        }
+      ],
+      "returnType": "PRTL_SPLAY_LINKS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlStronglyEnumerateEntryHashTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "HashTable",
+          "type": "PRTL_DYNAMIC_HASH_TABLE"
+        },
+        {
+          "direction": "inout",
+          "name": "Enumerator",
+          "type": "PRTL_DYNAMIC_HASH_TABLE_ENUMERATOR"
+        }
+      ],
+      "returnType": "PRTL_DYNAMIC_HASH_TABLE_ENTRY",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlSubtreePredecessor",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Links",
+          "type": "PRTL_SPLAY_LINKS"
+        }
+      ],
+      "returnType": "PRTL_SPLAY_LINKS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlSubtreeSuccessor",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Links",
+          "type": "PRTL_SPLAY_LINKS"
+        }
+      ],
+      "returnType": "PRTL_SPLAY_LINKS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlUnwind",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "TargetFrame",
+          "nullable": true,
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "TargetIp",
+          "nullable": true,
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "ExceptionRecord",
+          "nullable": true,
+          "type": "PEXCEPTION_RECORD"
+        },
+        {
+          "direction": "in",
+          "name": "ReturnValue",
+          "type": "PVOID"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlUnwindEx",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "TargetFrame",
+          "nullable": true,
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "TargetIp",
+          "nullable": true,
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "ExceptionRecord",
+          "nullable": true,
+          "type": "PEXCEPTION_RECORD"
+        },
+        {
+          "direction": "in",
+          "name": "ReturnValue",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "ContextRecord",
+          "type": "PCONTEXT"
+        },
+        {
+          "direction": "in",
+          "name": "HistoryTable",
+          "nullable": true,
+          "type": "PUNWIND_HISTORY_TABLE"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlUpcaseUnicodeString",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "DestinationString",
+          "type": "(AllocateDestinationString, (DestinationString->Buffer, __drv_allocatesMem(Mem))) PUNICODE_STRING"
+        },
+        {
+          "direction": "in",
+          "name": "SourceString",
+          "type": "PCUNICODE_STRING"
+        },
+        {
+          "direction": "in",
+          "name": "AllocateDestinationString",
+          "type": "BOOLEAN"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlUpperChar",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Character",
+          "type": "CHAR"
+        }
+      ],
+      "returnType": "CHAR",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlUpperString",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "DestinationString",
+          "type": "PSTRING"
+        },
+        {
+          "direction": "in",
+          "name": "SourceString",
+          "type": "const STRING *"
+        }
+      ],
+      "returnType": "VOID",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlValidateCorrelationVector",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "Vector",
+          "type": "PCORRELATION_VECTOR"
+        }
+      ],
+      "returnType": "DWORD",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlVirtualUnwind",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "HandlerType",
+          "type": "DWORD"
+        },
+        {
+          "direction": "in",
+          "name": "ImageBase",
+          "type": "DWORD64"
+        },
+        {
+          "direction": "in",
+          "name": "ControlPc",
+          "type": "DWORD64"
+        },
+        {
+          "direction": "in",
+          "name": "FunctionEntry",
+          "type": "PRUNTIME_FUNCTION"
+        },
+        {
+          "direction": "inout",
+          "name": "ContextRecord",
+          "type": "PCONTEXT"
+        },
+        {
+          "direction": "out",
+          "name": "HandlerData",
+          "type": "PVOID*"
+        },
+        {
+          "direction": "out",
+          "name": "EstablisherFrame",
+          "type": "PDWORD64"
+        },
+        {
+          "direction": "inout",
+          "name": "ContextPointers",
+          "nullable": true,
+          "type": "PKNONVOLATILE_CONTEXT_POINTERS"
+        }
+      ],
+      "returnType": "PEXCEPTION_ROUTINE",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlWalkFrameChain",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "Callers",
+          "type": "(Count - (Flags >> RTL_STACK_WALKING_MODE_FRAMES_TO_SKIP_SHIFT)) PVOID *"
+        },
+        {
+          "direction": "in",
+          "name": "Count",
+          "type": "ULONG"
+        },
+        {
+          "direction": "in",
+          "name": "Flags",
+          "type": "ULONG"
+        }
+      ],
+      "returnType": "ULONG",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlWeaklyEnumerateEntryHashTable",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "HashTable",
+          "type": "PRTL_DYNAMIC_HASH_TABLE"
+        },
+        {
+          "direction": "inout",
+          "name": "Enumerator",
+          "type": "PRTL_DYNAMIC_HASH_TABLE_ENUMERATOR"
+        }
+      ],
+      "returnType": "PRTL_DYNAMIC_HASH_TABLE_ENTRY",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "RtlWriteNonVolatileMemory",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "NvToken",
+          "type": "PVOID"
+        },
+        {
+          "direction": "out",
+          "name": "NvDestination",
+          "type": "VOID UNALIGNED *"
+        },
+        {
+          "direction": "in",
+          "name": "Source",
+          "type": "const VOID UNALIGNED *"
+        },
+        {
+          "direction": "in",
+          "name": "Size",
+          "type": "SIZE_T"
+        },
+        {
+          "direction": "in",
+          "name": "Flags",
+          "type": "DWORD"
+        }
+      ],
+      "returnType": "DWORD",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "sprintf_s",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_DstBuf",
+          "type": "char *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInBytes",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Format",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "varargs",
+          "type": "...",
+          "variadic": true
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_2_ARGLIST(int, _snprintf_s, _vsnprintf_s, char, _Dest, size_t, _MaxCount, const char *,_Format) int",
+      "source": {
+        "file": "km/crt/stdio.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "sscanf",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Src",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_Format",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "varargs",
+          "type": "...",
+          "variadic": true
+        }
+      ],
+      "returnType": "_CRT_INSECURE_DEPRECATE_CORE(sscanf_s) int",
+      "source": {
+        "file": "km/crt/stdio.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "sscanf_s",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Src",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_Format",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "varargs",
+          "type": "...",
+          "variadic": true
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/stdio.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "strcat_s",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "_Dst",
+          "type": "char *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInBytes",
+          "type": "rsize_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Src",
+          "type": "const char *"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(errno_t, strcpy_s, char, _Dest, const char *, _Source) __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1(char *, __RETURN_POLICY_DST, __EMPTY_DECLSPEC, strcpy, ( + 1), char, _Dest, const char *, _Source) errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "strchr",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_Val",
+          "type": "int"
+        }
+      ],
+      "returnType": "_CONST_RETURN char *",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "strcmp",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str1",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_Str2",
+          "type": "const char *"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(errno_t, strcat_s, char, _Dest, const char *, _Source) __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1(char *, __RETURN_POLICY_DST, __EMPTY_DECLSPEC, strcat, ( + + 1), char, _Dest, const char *, _Source) int",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "strcpy_s",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_Dst",
+          "type": "char *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInBytes",
+          "type": "rsize_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Src",
+          "type": "const char *"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(errno_t, _strset_s, char, _Dest, int, _Value) __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1(char *, __RETURN_POLICY_DST, __EMPTY_DECLSPEC, _strset, , char, _Dest, int, _Value) errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "strcspn",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_Control",
+          "type": "const char *"
+        }
+      ],
+      "returnType": "size_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "strlen",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const char *"
+        }
+      ],
+      "returnType": "size_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "strncat_s",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "_Dst",
+          "type": "char *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInBytes",
+          "type": "rsize_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Src",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "rsize_t"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(errno_t, _strlwr_s_l, char, _String, _locale_t, _Locale) __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX(char *, __RETURN_POLICY_DST, , _strlwr_l, _strlwr_s_l, char, , char, _String, _locale_t, _Locale) errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "strncmp",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str1",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_Str2",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_2(errno_t, strncat_s, char, _Dest, const char *, _Source, size_t, _Count) __DEFINE_CPP_OVERLOAD_STANDARD_NFUNC_0_2_EX(char *, __RETURN_POLICY_DST, , strncat, strncat_s, char, , char, _Dest, const char *, _Source, size_t, _Count) int",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "strncpy_s",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_Dst",
+          "type": "char *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInBytes",
+          "type": "rsize_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Src",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "rsize_t"
+        }
+      ],
+      "returnType": "errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "strnlen",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "(_MaxCount > , (return == )) (_MaxCount <= , ) size_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "strpbrk",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_Control",
+          "type": "const char *"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_2(errno_t, _strnset_s, char, _Dest, int, _Val, size_t, _Count) __DEFINE_CPP_OVERLOAD_STANDARD_NFUNC_0_2_EX(char *, __RETURN_POLICY_DST, , _strnset, _strnset_s, char, , char, _Dest, int, _Val, size_t, _Count) _CONST_RETURN char *",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "strrchr",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_Ch",
+          "type": "int"
+        }
+      ],
+      "returnType": "_CONST_RETURN char *",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "strspn",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_Control",
+          "type": "const char *"
+        }
+      ],
+      "returnType": "(return <= ) size_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "strstr",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_SubStr",
+          "type": "const char *"
+        }
+      ],
+      "returnType": "_CONST_RETURN char *",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "strtok_s",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "_Str",
+          "nullable": true,
+          "type": "char *"
+        },
+        {
+          "direction": "in",
+          "name": "_Delim",
+          "type": "const char *"
+        },
+        {
+          "direction": "inout",
+          "name": "_Context",
+          "nullable": true,
+          "type": "char **"
+        }
+      ],
+      "returnType": "char *",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "swprintf",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "arg0",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "arg1",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "varargs",
+          "type": "...",
+          "variadic": true
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_2(int, vswprintf_s, wchar_t, _Dest, const wchar_t *, _Format, va_list, _Args) _CRT_INSECURE_DEPRECATE_CORE(swprintf) int",
+      "source": {
+        "file": "km/crt/stdio.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "swprintf_s",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_Dst",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInWords",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Format",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "varargs",
+          "type": "...",
+          "variadic": true
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/stdio.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "swscanf_s",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Src",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Format",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "varargs",
+          "type": "...",
+          "variadic": true
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/stdio.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "towlower",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_C",
+          "type": "wint_t"
+        }
+      ],
+      "returnType": "wint_t",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "towupper",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_C",
+          "type": "wint_t"
+        }
+      ],
+      "returnType": "wint_t",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "VerSetConditionMask",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "ConditionMask",
+          "type": "ULONGLONG"
+        },
+        {
+          "direction": "in",
+          "name": "TypeMask",
+          "type": "DWORD"
+        },
+        {
+          "direction": "in",
+          "name": "Condition",
+          "type": "BYTE"
+        }
+      ],
+      "returnType": "(( )=VerSetConditionMask(( ),( ),( ))) ULONGLONG",
+      "source": {
+        "file": "um/winnt.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "vsprintf_s",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_DstBuf",
+          "type": "char *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInBytes",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Format",
+          "type": "const char *"
+        },
+        {
+          "direction": "in",
+          "name": "_ArgList",
+          "type": "va_list"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_3(int, _vsnprintf_s, char, _Dest, size_t, _MaxCount, const char *, _Format, va_list, _Args) __DEFINE_CPP_OVERLOAD_STANDARD_NFUNC_0_2_ARGLIST_EX(int, __RETURN_POLICY_SAME, , _snprintf, _vsnprintf, char, , char, _Dest, size_t, _Count, const char *, _Format) int",
+      "source": {
+        "file": "km/crt/stdio.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "vswprintf_s",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_Dst",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInWords",
+          "type": "size_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Format",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_ArgList",
+          "type": "va_list"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1_ARGLIST(int, swprintf_s, vswprintf_s, wchar_t, _Dest, const wchar_t *, _Format) int",
+      "source": {
+        "file": "km/crt/stdio.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcscat_s",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "_Dst",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInWords",
+          "type": "rsize_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Src",
+          "type": "const wchar_t *"
+        }
+      ],
+      "returnType": "errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcschr",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Ch",
+          "type": "wchar_t"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(errno_t, wcscat_s, wchar_t, _Dest, const wchar_t *, _Source) __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1(wchar_t *, __RETURN_POLICY_DST, , wcscat, ( + + 1), wchar_t, _Dest, const wchar_t *, _Source) (return != 0, (_Str, _Str+ -1)) _CONST_RETURN wchar_t *",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcscmp",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str1",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Str2",
+          "type": "const wchar_t *"
+        }
+      ],
+      "returnType": "int",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcscpy_s",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_Dst",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInWords",
+          "type": "rsize_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Src",
+          "type": "const wchar_t *"
+        }
+      ],
+      "returnType": "errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcscspn",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Control",
+          "type": "const wchar_t *"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(errno_t, wcscpy_s, wchar_t, _Dest, const wchar_t *, _Source) __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1(wchar_t *, __RETURN_POLICY_DST, , wcscpy, ( + 1), wchar_t, _Dest, const wchar_t *, _Source) size_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcslen",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const wchar_t *"
+        }
+      ],
+      "returnType": "size_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcsncat_s",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "_Dst",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInWords",
+          "type": "rsize_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Src",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "rsize_t"
+        }
+      ],
+      "returnType": "errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcsncmp",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str1",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Str2",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_2(errno_t, wcsncat_s, wchar_t, _Dest, const wchar_t *, _Source, size_t, _Count) __DEFINE_CPP_OVERLOAD_STANDARD_NFUNC_0_2_EX(wchar_t *, __RETURN_POLICY_DST, , wcsncat, wcsncat_s, wchar_t, , wchar_t, _Dest, const wchar_t *, _Source, size_t, _Count) int",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcsncpy_s",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "_Dst",
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SizeInWords",
+          "type": "rsize_t"
+        },
+        {
+          "direction": "in",
+          "name": "_Src",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "rsize_t"
+        }
+      ],
+      "returnType": "errno_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcsnlen",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Src",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_MaxCount",
+          "type": "size_t"
+        }
+      ],
+      "returnType": "(_MaxCount > , (return == )) (_MaxCount <= , ) size_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcspbrk",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Control",
+          "type": "const wchar_t *"
+        }
+      ],
+      "returnType": "__DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_2(errno_t, wcsncpy_s, wchar_t, _Dest, const wchar_t *, _Source, size_t, _Count) __DEFINE_CPP_OVERLOAD_STANDARD_NFUNC_0_2_EX(wchar_t *, __RETURN_POLICY_DST, , wcsncpy, wcsncpy_s, wchar_t, , wchar_t, _Dest, const wchar_t *, _Source, size_t, _Count) _CONST_RETURN wchar_t *",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcsrchr",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Ch",
+          "type": "wchar_t"
+        }
+      ],
+      "returnType": "_CONST_RETURN wchar_t *",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcsspn",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Control",
+          "type": "const wchar_t *"
+        }
+      ],
+      "returnType": "(return <= ) size_t",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcsstr",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_SubStr",
+          "type": "const wchar_t *"
+        }
+      ],
+      "returnType": "(return != 0, (_Str, _Str+ -1)) _CONST_RETURN wchar_t *",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcstok_s",
+      "parameters": [
+        {
+          "direction": "inout",
+          "name": "_Str",
+          "nullable": true,
+          "type": "wchar_t *"
+        },
+        {
+          "direction": "in",
+          "name": "_Delim",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "inout",
+          "name": "_Context",
+          "nullable": true,
+          "type": "wchar_t **"
+        }
+      ],
+      "returnType": "wchar_t *",
+      "source": {
+        "file": "km/crt/string.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcstol",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "out",
+          "name": "_EndPtr",
+          "nullable": true,
+          "type": "wchar_t **"
+        },
+        {
+          "direction": "in",
+          "name": "_Radix",
+          "type": "int"
+        }
+      ],
+      "returnType": "long",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "cdecl",
+      "name": "wcstoul",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "_Str",
+          "type": "const wchar_t *"
+        },
+        {
+          "direction": "out",
+          "name": "_EndPtr",
+          "nullable": true,
+          "type": "wchar_t **"
+        },
+        {
+          "direction": "in",
+          "name": "_Radix",
+          "type": "int"
+        }
+      ],
+      "returnType": "unsigned long",
+      "source": {
+        "file": "km/crt/wchar.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "ZwAllocateLocallyUniqueId",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "Luid",
+          "type": "PLUID"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "ZwDeviceIoControlFile",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "FileHandle",
+          "type": "HANDLE"
+        },
+        {
+          "direction": "in",
+          "name": "Event",
+          "nullable": true,
+          "type": "HANDLE"
+        },
+        {
+          "direction": "in",
+          "name": "ApcRoutine",
+          "nullable": true,
+          "type": "PIO_APC_ROUTINE"
+        },
+        {
+          "direction": "in",
+          "name": "ApcContext",
+          "nullable": true,
+          "type": "PVOID"
+        },
+        {
+          "direction": "out",
+          "name": "IoStatusBlock",
+          "type": "PIO_STATUS_BLOCK"
+        },
+        {
+          "direction": "in",
+          "name": "IoControlCode",
+          "type": "ULONG"
+        },
+        {
+          "direction": "in",
+          "name": "InputBuffer",
+          "nullable": true,
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "InputBufferLength",
+          "type": "ULONG"
+        },
+        {
+          "direction": "out",
+          "name": "OutputBuffer",
+          "nullable": true,
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "OutputBufferLength",
+          "type": "ULONG"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "ZwDisplayString",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "String",
+          "type": "PUNICODE_STRING"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "ZwOpenProcess",
+      "parameters": [
+        {
+          "direction": "out",
+          "name": "ProcessHandle",
+          "type": "PHANDLE"
+        },
+        {
+          "direction": "in",
+          "name": "DesiredAccess",
+          "type": "ACCESS_MASK"
+        },
+        {
+          "direction": "in",
+          "name": "ObjectAttributes",
+          "type": "POBJECT_ATTRIBUTES"
+        },
+        {
+          "direction": "in",
+          "name": "ClientId",
+          "nullable": true,
+          "type": "PCLIENT_ID"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "ZwPowerInformation",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "InformationLevel",
+          "type": "POWER_INFORMATION_LEVEL"
+        },
+        {
+          "direction": "in",
+          "name": "InputBuffer",
+          "nullable": true,
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "InputBufferLength",
+          "type": "ULONG"
+        },
+        {
+          "direction": "out",
+          "name": "OutputBuffer",
+          "nullable": true,
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "OutputBufferLength",
+          "type": "ULONG"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "ZwQueryVolumeInformationFile",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "FileHandle",
+          "type": "HANDLE"
+        },
+        {
+          "direction": "out",
+          "name": "IoStatusBlock",
+          "type": "PIO_STATUS_BLOCK"
+        },
+        {
+          "direction": "out",
+          "name": "FsInformation",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "Length",
+          "type": "ULONG"
+        },
+        {
+          "direction": "in",
+          "name": "FsInformationClass",
+          "type": "FS_INFORMATION_CLASS"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "ZwSetInformationThread",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "ThreadHandle",
+          "type": "HANDLE"
+        },
+        {
+          "direction": "in",
+          "name": "ThreadInformationClass",
+          "type": "THREADINFOCLASS"
+        },
+        {
+          "direction": "in",
+          "name": "ThreadInformation",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "ThreadInformationLength",
+          "type": "ULONG"
+        }
+      ],
+      "returnType": "FIELD_OFFSET(PCI_BUS_INTERFACE_STANDARD, PrepareMultistageResume) NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "ZwTerminateProcess",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "ProcessHandle",
+          "nullable": true,
+          "type": "HANDLE"
+        },
+        {
+          "direction": "in",
+          "name": "ExitStatus",
+          "type": "NTSTATUS"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "km/ntddk.h"
+      }
+    }
+  ],
+  "schemaVersion": "0.1.0",
+  "source": {
+    "includeRoot": "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0",
+    "name": "Windows SDK headers",
+    "note": "Generated from installed Windows SDK headers for ntdll export prototype enrichment."
+  }
+}
