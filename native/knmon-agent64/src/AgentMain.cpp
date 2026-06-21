@@ -39,6 +39,7 @@
 #include <cstring>
 #include <iomanip>
 #include <intrin.h>
+#include <memory>
 #include <new>
 #include <sstream>
 #include <string>
@@ -894,9 +895,9 @@ struct HookDefinition
     const char* Tier2Profile = "";
 };
 
-constexpr std::size_t MaxHookRecords = 8192;
+constexpr std::size_t MaxHookRecords = 32768;
 constexpr std::size_t MaxModuleRecords = 512;
-constexpr std::size_t HookDefinitionCount = 314;
+constexpr std::size_t ManualHookDefinitionCount = 314;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1172,17 +1173,19 @@ bool Tier2ProfileEnabled(const char* profile)
 
 bool HookDefinitionEnabled(const HookDefinition& definition)
 {
+    const bool explicitApiSelection = !g_selectedApiSelection.empty();
+
     if (!DefinitionSelectedByApiFilter(definition))
     {
         return false;
     }
 
-    if (definition.Tier1Generic && !Tier1ProfileEnabled(definition.Tier1Profile))
+    if (!explicitApiSelection && definition.Tier1Generic && !Tier1ProfileEnabled(definition.Tier1Profile))
     {
         return false;
     }
 
-    if (definition.Tier2Generic && !Tier2ProfileEnabled(definition.Tier2Profile))
+    if (!explicitApiSelection && definition.Tier2Generic && !Tier2ProfileEnabled(definition.Tier2Profile))
     {
         return false;
     }
@@ -2296,113 +2299,62 @@ void CommitTransportRecord(knmon::KnMonTransportRecord* record, const LARGE_INTE
     }
 }
 
+bool GeneratedModuleNameEquals(std::string_view left, const char* right)
+{
+    bool equal = false;
+
+    do
+    {
+        if (right == nullptr)
+        {
+            break;
+        }
+
+        std::size_t index = 0;
+        for (; index < left.size() && right[index] != '\0'; ++index)
+        {
+            char a = left[index];
+            char b = right[index];
+
+            if (a >= 'A' && a <= 'Z')
+            {
+                a = static_cast<char>(a - 'A' + 'a');
+            }
+
+            if (b >= 'A' && b <= 'Z')
+            {
+                b = static_cast<char>(b - 'A' + 'a');
+            }
+
+            if (a != b)
+            {
+                break;
+            }
+        }
+
+        equal = index == left.size() && right[index] == '\0';
+    }
+    while (false);
+
+    return equal;
+}
+
 std::uint16_t ModuleId(const char* moduleName)
 {
     std::uint16_t result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Unknown);
 
-    if (std::strcmp(moduleName, "kernel32.dll") == 0)
+    if (moduleName == nullptr)
     {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Kernel32);
+        return result;
     }
-    else if (std::strcmp(moduleName, "ntdll.dll") == 0)
+
+    for (const knmon::KnMonGeneratedModuleMetadata& module : knmon::KnMonGeneratedModules)
     {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Ntdll);
-    }
-    else if (std::strcmp(moduleName, "kernelbase.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::KernelBase);
-    }
-    else if (_stricmp(moduleName, "advapi32.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Advapi32);
-    }
-    else if (_stricmp(moduleName, "bcrypt.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Bcrypt);
-    }
-    else if (_stricmp(moduleName, "crypt32.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Crypt32);
-    }
-    else if (_stricmp(moduleName, "ws2_32.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Ws2_32);
-    }
-    else if (_stricmp(moduleName, "rpcrt4.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Rpcrt4);
-    }
-    else if (_stricmp(moduleName, "wininet.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Wininet);
-    }
-    else if (_stricmp(moduleName, "winhttp.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Winhttp);
-    }
-    else if (_stricmp(moduleName, "user32.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::User32);
-    }
-    else if (_stricmp(moduleName, "gdi32.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Gdi32);
-    }
-    else if (_stricmp(moduleName, "psapi.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Psapi);
-    }
-    else if (_stricmp(moduleName, "version.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Version);
-    }
-    else if (_stricmp(moduleName, "shell32.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Shell32);
-    }
-    else if (_stricmp(moduleName, "ole32.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Ole32);
-    }
-    else if (_stricmp(moduleName, "api-ms-win-core-winrt-l1-1-0.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::ApiMsWinCoreWinrtL110);
-    }
-    else if (_stricmp(moduleName, "oleaut32.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Oleaut32);
-    }
-    else if (_stricmp(moduleName, "secur32.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Secur32);
-    }
-    else if (_stricmp(moduleName, "userenv.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Userenv);
-    }
-    else if (_stricmp(moduleName, "dnsapi.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Dnsapi);
-    }
-    else if (_stricmp(moduleName, "iphlpapi.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Iphlpapi);
-    }
-    else if (_stricmp(moduleName, "setupapi.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Setupapi);
-    }
-    else if (_stricmp(moduleName, "shlwapi.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Shlwapi);
-    }
-    else if (_stricmp(moduleName, "wintrust.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Wintrust);
-    }
-    else if (_stricmp(moduleName, "dbghelp.dll") == 0)
-    {
-        result = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Dbghelp);
+        if (GeneratedModuleNameEquals(module.Name, moduleName))
+        {
+            result = module.Id;
+            break;
+        }
     }
 
     return result;
@@ -2779,6 +2731,7 @@ enum class GenericReturnFormat : std::uint32_t
     Bool = 1,
     UInt32 = 2,
     Pointer = 3,
+    UInt64 = 4,
 };
 
 void EmitGenericSingleArgumentEvent(
@@ -2942,6 +2895,225 @@ void EmitGenericReturnOnlyEvent(
         CopyAsciiText(record->Text2, &record->Text2Length, sizeof(record->Text2), "");
         CommitTransportRecord(record, overheadStart);
     }
+}
+
+enum class GeneratedGenericErrorSource : std::uint32_t
+{
+    None = 0,
+    GetLastError = 1,
+    ReturnNtStatus = 2,
+    ReturnHResult = 3,
+    ReturnWin32 = 4,
+};
+
+struct GeneratedGenericHookMetadata
+{
+    std::uint16_t ApiId = 0;
+    const char* ModuleName = "";
+    const char* ApiName = "";
+    const char* Family = "";
+    const char* Category = "";
+    const char* Risk = "";
+    const char* HookPolicy = "";
+    const char* CoverageStatus = "";
+    const char* InventoryKey = "";
+    GenericReturnFormat ReturnFormat = GenericReturnFormat::UInt32;
+    std::uint16_t ParameterCount = 0;
+    GeneratedGenericErrorSource ErrorSource = GeneratedGenericErrorSource::None;
+};
+
+DWORD GeneratedGenericErrorCode(
+    const GeneratedGenericHookMetadata& metadata,
+    std::uint64_t returnValue,
+    DWORD lastError)
+{
+    DWORD errorCode = 0;
+
+    switch (metadata.ErrorSource)
+    {
+    case GeneratedGenericErrorSource::GetLastError:
+        if (
+            (metadata.ReturnFormat == GenericReturnFormat::Bool && returnValue == 0) ||
+            (metadata.ReturnFormat == GenericReturnFormat::Pointer && returnValue == 0))
+        {
+            errorCode = lastError;
+        }
+        break;
+    case GeneratedGenericErrorSource::ReturnNtStatus:
+        if (!NT_SUCCESS(static_cast<NTSTATUS>(static_cast<LONG>(returnValue & 0xffffffffULL))))
+        {
+            errorCode = static_cast<DWORD>(returnValue & 0xffffffffULL);
+        }
+        break;
+    case GeneratedGenericErrorSource::ReturnHResult:
+        if (FAILED(static_cast<HRESULT>(static_cast<LONG>(returnValue & 0xffffffffULL))))
+        {
+            errorCode = static_cast<DWORD>(returnValue & 0xffffffffULL);
+        }
+        break;
+    case GeneratedGenericErrorSource::ReturnWin32:
+        if (returnValue != 0)
+        {
+            errorCode = static_cast<DWORD>(returnValue & 0xffffffffULL);
+        }
+        break;
+    case GeneratedGenericErrorSource::None:
+    default:
+        break;
+    }
+
+    return errorCode;
+}
+
+void EmitGeneratedGenericEvent(
+    const GeneratedGenericHookMetadata& metadata,
+    const std::uint64_t* arguments,
+    std::size_t argumentCount,
+    std::uint64_t returnValue,
+    DWORD errorCode,
+    const LARGE_INTEGER& start,
+    const LARGE_INTEGER& end)
+{
+    LARGE_INTEGER overheadStart = {};
+    QueryPerformanceCounter(&overheadStart);
+    knmon::KnMonTransportRecord* record = ReserveTransportRecord();
+    if (record != nullptr)
+    {
+        FillTransportCommon(record, static_cast<knmon::KnMonTransportApiId>(metadata.ApiId), metadata.ModuleName, start, end, errorCode);
+        record->Flags |= knmon::KnMonTransportRecordFlagGenericInventory;
+        record->ReturnValue = returnValue;
+
+        const std::size_t cappedArgumentCount = std::min<std::size_t>(argumentCount, knmon::KnMonTransportSlotCount64);
+        for (std::size_t index = 0; index < cappedArgumentCount; ++index)
+        {
+            record->Values64[index] = arguments == nullptr ? 0 : arguments[index];
+        }
+
+        record->Values32[0] = static_cast<std::uint32_t>(cappedArgumentCount);
+        record->Values32[1] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+        record->Values32[2] = static_cast<std::uint32_t>(metadata.ReturnFormat);
+
+        std::ostringstream metadataText;
+        metadataText << "tier=generated"
+                     << ";profile=generated-abi"
+                     << ";family=" << (metadata.Family == nullptr ? "generic" : metadata.Family)
+                     << ";category=" << (metadata.Category == nullptr ? "generic" : metadata.Category)
+                     << ";module=" << (metadata.ModuleName == nullptr ? "" : metadata.ModuleName)
+                     << ";coverage=" << (metadata.CoverageStatus == nullptr ? "generated_generic" : metadata.CoverageStatus);
+
+        if (metadata.Risk != nullptr && metadata.Risk[0] != '\0')
+        {
+            metadataText << ";risk=" << metadata.Risk;
+        }
+
+        if (metadata.HookPolicy != nullptr && metadata.HookPolicy[0] != '\0')
+        {
+            metadataText << ";policy=" << metadata.HookPolicy;
+        }
+
+        if (metadata.InventoryKey != nullptr && metadata.InventoryKey[0] != '\0')
+        {
+            metadataText << ";inventoryKey=" << metadata.InventoryKey;
+        }
+
+        CopyAsciiText(record->Text0, &record->Text0Length, sizeof(record->Text0), metadata.ApiName);
+        CopyAsciiText(record->Text1, &record->Text1Length, sizeof(record->Text1), metadataText.str().c_str());
+        CopyAsciiText(record->Text2, &record->Text2Length, sizeof(record->Text2), "");
+        CommitTransportRecord(record, overheadStart);
+    }
+}
+
+template <typename FunctionT, typename... Args>
+std::uintptr_t InvokeGeneratedValueHook(
+    void** originalSlot,
+    const GeneratedGenericHookMetadata& metadata,
+    Args... args)
+{
+    if (g_inHook || !HooksEnabled() || originalSlot == nullptr || *originalSlot == nullptr)
+    {
+        if (originalSlot == nullptr || *originalSlot == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return 0;
+        }
+
+        const FunctionT original = reinterpret_cast<FunctionT>(*originalSlot);
+        return original(args...);
+    }
+
+    HookReentryGuard guard;
+    const FunctionT original = reinterpret_cast<FunctionT>(*originalSlot);
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const std::uintptr_t result = original(args...);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        const std::array<std::uint64_t, sizeof...(Args)> argumentValues =
+        {{
+            static_cast<std::uint64_t>(args)...
+        }};
+        const DWORD eventError = GeneratedGenericErrorCode(metadata, static_cast<std::uint64_t>(result), lastError);
+        EmitGeneratedGenericEvent(
+            metadata,
+            argumentValues.data(),
+            argumentValues.size(),
+            static_cast<std::uint64_t>(result),
+            eventError,
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+template <typename FunctionT, typename... Args>
+void InvokeGeneratedVoidHook(
+    void** originalSlot,
+    const GeneratedGenericHookMetadata& metadata,
+    Args... args)
+{
+    if (g_inHook || !HooksEnabled() || originalSlot == nullptr || *originalSlot == nullptr)
+    {
+        if (originalSlot != nullptr && *originalSlot != nullptr)
+        {
+            const FunctionT original = reinterpret_cast<FunctionT>(*originalSlot);
+            original(args...);
+        }
+
+        return;
+    }
+
+    HookReentryGuard guard;
+    const FunctionT original = reinterpret_cast<FunctionT>(*originalSlot);
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    original(args...);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        const std::array<std::uint64_t, sizeof...(Args)> argumentValues =
+        {{
+            static_cast<std::uint64_t>(args)...
+        }};
+        EmitGeneratedGenericEvent(
+            metadata,
+            argumentValues.data(),
+            argumentValues.size(),
+            0,
+            0,
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
 }
 
 void EmitGenericGetSystemTimeEvent(
@@ -7773,7 +7945,15 @@ NTSTATUS NTAPI HookedNtCreateFile(PHANDLE fileHandle, ACCESS_MASK desiredAccess,
 NTSTATUS NTAPI HookedLdrLoadDll(PWSTR pathToFile, ULONG flags, PUNICODE_STRING moduleFileName, PHANDLE moduleHandle);
 NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functionName, ULONG ordinal, PVOID* functionAddress);
 
-std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
+#include "GeneratedAgentHooks.inc"
+
+constexpr std::size_t HookDefinitionCount = ManualHookDefinitionCount + GeneratedAgentHookDefinitionCount;
+#if defined(_WIN64)
+static_assert(GeneratedAgentHookRequiredApiCount >= 700, "generated hook target must satisfy the 700 API coverage goal");
+static_assert(GeneratedAgentHookCoveredApiCount >= GeneratedAgentHookRequiredApiCount, "generated hooks must cover every hookable API definition");
+#endif
+
+std::array<HookDefinition, ManualHookDefinitionCount> BuildManualHookDefinitions()
 {
     return {
         HookDefinition { "kernel32.dll", "CreateFileW", reinterpret_cast<void*>(HookedCreateFileW), reinterpret_cast<void**>(&g_originalCreateFileW), true, true, false, 0, 0 },
@@ -8091,6 +8271,15 @@ std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
         HookDefinition { "ws2_32.dll", "freeaddrinfo", reinterpret_cast<void*>(HookedFreeAddrInfo), reinterpret_cast<void**>(&g_originalFreeAddrInfo), false, true, false, 0, 0 },
         HookDefinition { "ws2_32.dll", "WSAGetLastError", reinterpret_cast<void*>(HookedWSAGetLastError), reinterpret_cast<void**>(&g_originalWSAGetLastError), false, true, false, 111, 0 },
     };
+}
+
+std::array<HookDefinition, HookDefinitionCount> BuildHookDefinitions()
+{
+    std::array<HookDefinition, HookDefinitionCount> definitions = {};
+    const std::array<HookDefinition, ManualHookDefinitionCount> manualDefinitions = BuildManualHookDefinitions();
+    std::copy(manualDefinitions.begin(), manualDefinitions.end(), definitions.begin());
+    AppendGeneratedHookDefinitions(definitions.data() + manualDefinitions.size(), GeneratedAgentHookDefinitionCount);
+    return definitions;
 }
 
 bool ImportMatchesDefinition(std::uint8_t* base, std::uint32_t size, IMAGE_THUNK_DATA* originalThunk, const HookDefinition& definition)
@@ -8854,18 +9043,18 @@ bool SweepLoadedModules(const char* reason, bool reportHookStatus, SweepStats* o
 {
     bool installedCoverage = false;
     SweepStats stats = {};
-    std::array<ModuleInfo, MaxModuleRecords> modules = {};
-    std::array<HookDefinition, HookDefinitionCount> definitions = BuildHookDefinitions();
-    ResolveHookDefinitions(definitions);
-    const std::size_t moduleCount = CaptureModuleSnapshot(modules, &stats);
+    auto modules = std::make_unique<std::array<ModuleInfo, MaxModuleRecords>>();
+    auto definitions = std::make_unique<std::array<HookDefinition, HookDefinitionCount>>(BuildHookDefinitions());
+    ResolveHookDefinitions(*definitions);
+    const std::size_t moduleCount = CaptureModuleSnapshot(*modules, &stats);
 
     AcquireSRWLockExclusive(&g_hookLock);
     for (std::size_t moduleIndex = 0; moduleIndex < moduleCount; ++moduleIndex)
     {
-        ModuleInfo& module = modules[moduleIndex];
+        ModuleInfo& module = (*modules)[moduleIndex];
         const std::uint32_t patchedBefore = stats.PatchedSlots;
 
-        for (HookDefinition& definition : definitions)
+        for (HookDefinition& definition : *definitions)
         {
             PatchImportInModule(module, definition, stats);
         }
@@ -8885,7 +9074,7 @@ bool SweepLoadedModules(const char* reason, bool reportHookStatus, SweepStats* o
     SendIatSweepStatus(reason, stats);
     installedCoverage = stats.PatchedSlots > 0;
 
-    for (HookDefinition& definition : definitions)
+    for (HookDefinition& definition : *definitions)
     {
         if (reportHookStatus && definition.ReportStatus)
         {

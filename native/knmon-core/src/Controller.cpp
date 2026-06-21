@@ -3725,6 +3725,70 @@ GenericArgumentSchema ParseGenericArgumentSchema(const std::string& text)
     return schema;
 }
 
+bool GenericTypeLooksBool(const std::string& type)
+{
+    const std::string lower = LowerAscii(type);
+    return lower == "bool" || lower == "boolean" || lower == "winbool";
+}
+
+bool GenericTypeLooksPointer(const std::string& type)
+{
+    const std::string lower = LowerAscii(type);
+    bool pointer = lower.find('*') != std::string::npos;
+
+    if (!pointer)
+    {
+        pointer =
+            lower.find("handle") != std::string::npos ||
+            lower == "socket" ||
+            lower == "hmodule" ||
+            lower == "hwnd" ||
+            lower == "hkey" ||
+            lower == "hmenu" ||
+            lower == "hcursor" ||
+            lower == "hicon" ||
+            lower == "hdc" ||
+            lower == "bstr" ||
+            lower == "hstring" ||
+            lower.starts_with("p");
+    }
+
+    return pointer;
+}
+
+std::string GenericArgumentValueText(
+    const KnMonCaptureResult& result,
+    const KnMonGeneratedParameterMetadata* metadata,
+    const std::string& fallbackType,
+    std::uint64_t value)
+{
+    std::string text;
+    const std::string type = metadata == nullptr ? fallbackType : MetadataValue(metadata->Type, fallbackType);
+
+    if (metadata != nullptr && (!metadata->Enum.empty() || !metadata->Flags.empty()))
+    {
+        text = HexConstantValue(value);
+    }
+    else if (GenericTypeLooksBool(type))
+    {
+        text = BoolText(static_cast<std::uint32_t>(value));
+    }
+    else if (GenericTypeLooksPointer(type))
+    {
+        text = HexPointerValue(value, result.Architecture);
+    }
+    else if (value <= 0xffffffffULL)
+    {
+        text = HexDwordValue(static_cast<std::uint32_t>(value));
+    }
+    else
+    {
+        text = HexConstantValue(value);
+    }
+
+    return text;
+}
+
 std::string GenericReturnValueText(const KnMonCaptureResult& result, const KnMonTransportRecord& record)
 {
     std::string value = "void";
@@ -3739,6 +3803,9 @@ std::string GenericReturnValueText(const KnMonCaptureResult& result, const KnMon
         break;
     case 3:
         value = HexPointerValue(record.ReturnValue, result.Architecture);
+        break;
+    case 4:
+        value = HexConstantValue(record.ReturnValue);
         break;
     case 0:
     default:
@@ -3775,15 +3842,18 @@ std::string GenericTransportApiPayload(
     const std::string& text1,
     const std::string& text2)
 {
-    const std::string apiName = text0.empty() ? TransportApiName(record.ApiId) : text0;
-    const std::string moduleName = MetadataTokenValue(text1, "module", TransportModuleName(record.ModuleId));
+    const KnMonGeneratedApiMetadata* apiMetadata = FindGeneratedApiMetadata(record.ApiId);
+    const std::string metadataApiName = apiMetadata == nullptr ? TransportApiName(record.ApiId) : MetadataValue(apiMetadata->Name, TransportApiName(record.ApiId));
+    const std::string metadataModuleName = apiMetadata == nullptr ? TransportModuleName(record.ModuleId) : MetadataValue(apiMetadata->ModuleName, TransportModuleName(record.ModuleId));
+    const std::string apiName = text0.empty() ? metadataApiName : text0;
+    const std::string moduleName = MetadataTokenValue(text1, "module", metadataModuleName);
     const std::string tier = MetadataTokenValue(text1, "tier", "tier1");
-    const std::string apiFamily = MetadataTokenValue(text1, "family", "tier1");
-    const std::string apiCategory = MetadataTokenValue(text1, "category", "tier1/generic");
+    const std::string apiFamily = MetadataTokenValue(text1, "family", apiMetadata == nullptr ? "tier1" : MetadataValue(apiMetadata->Family, "tier1"));
+    const std::string apiCategory = MetadataTokenValue(text1, "category", apiMetadata == nullptr ? "tier1/generic" : MetadataValue(apiMetadata->Category, "tier1/generic"));
     const std::string profile = MetadataTokenValue(text1, "profile", "tier1");
-    const std::string apiRisk = MetadataTokenValue(text1, "risk", "medium");
-    const std::string coverageStatus = MetadataTokenValue(text1, "coverage", "generic_decoded");
-    const std::string hookPolicy = MetadataTokenValue(text1, "policy", DefaultGenericHookPolicy(tier, coverageStatus));
+    const std::string apiRisk = MetadataTokenValue(text1, "risk", apiMetadata == nullptr ? "medium" : MetadataValue(apiMetadata->Risk, "medium"));
+    const std::string coverageStatus = MetadataTokenValue(text1, "coverage", apiMetadata == nullptr ? "generic_decoded" : MetadataValue(apiMetadata->CoverageStatus, "generic_decoded"));
+    const std::string hookPolicy = MetadataTokenValue(text1, "policy", apiMetadata == nullptr ? DefaultGenericHookPolicy(tier, coverageStatus) : MetadataValue(apiMetadata->HookPolicy, DefaultGenericHookPolicy(tier, coverageStatus)));
     const std::string resolvedHostModule = MetadataTokenValue(text1, "host", "");
     const std::string inventoryKey = MetadataTokenValue(text1, "inventoryKey", moduleName + "!" + apiName);
     const std::string agentName = FileNameFromPath(result.AgentPath);
@@ -3791,23 +3861,54 @@ std::string GenericTransportApiPayload(
 
     if (record.Values32[0] > 0)
     {
-        const GenericArgumentSchema schema = ParseGenericArgumentSchema(text2);
-        const bool scalarArgument = schema.DecodeHint == "raw" || schema.DecodeHint == "scalar" || schema.DecodeHint == "object";
-        const std::string argumentValue = scalarArgument ?
-            DwordDecimalHexText(static_cast<std::uint32_t>(record.Values64[0])) :
-            HexPointerValue(record.Values64[0], result.Architecture);
-        const std::string decoded = scalarArgument ? argumentValue : (schema.DecodeHint + ";pointer=" + argumentValue);
+        if (apiMetadata != nullptr)
+        {
+            const std::uint32_t argumentCount = std::min<std::uint32_t>(
+                record.Values32[0],
+                static_cast<std::uint32_t>(std::min<std::size_t>(KnMonTransportSlotCount64, apiMetadata->ParameterCount)));
+            for (std::uint32_t index = 0; index < argumentCount; ++index)
+            {
+                const KnMonGeneratedParameterMetadata* parameterMetadata = FindGeneratedParameterMetadata(record.ApiId, static_cast<std::uint16_t>(index));
+                const std::string fallbackName = "arg" + std::to_string(index);
+                const std::string fallbackType = parameterMetadata == nullptr ? "ULONG_PTR" : MetadataValue(parameterMetadata->Type, "ULONG_PTR");
+                const std::string fallbackDirection = parameterMetadata == nullptr ? "in" : MetadataValue(parameterMetadata->Direction, "in");
+                const std::string argumentValue = GenericArgumentValueText(result, parameterMetadata, fallbackType, record.Values64[index]);
+                if (index > 0)
+                {
+                    args << ",";
+                }
+                args << ArgumentJsonFromMetadata(
+                    record.ApiId,
+                    static_cast<int>(index),
+                    fallbackType,
+                    fallbackName,
+                    fallbackDirection,
+                    argumentValue,
+                    argumentValue,
+                    argumentValue,
+                    DecodeStatusName(record.Values32[1]));
+            }
+        }
+        else
+        {
+            const GenericArgumentSchema schema = ParseGenericArgumentSchema(text2);
+            const bool scalarArgument = schema.DecodeHint == "raw" || schema.DecodeHint == "scalar" || schema.DecodeHint == "object";
+            const std::string argumentValue = scalarArgument ?
+                DwordDecimalHexText(static_cast<std::uint32_t>(record.Values64[0])) :
+                HexPointerValue(record.Values64[0], result.Architecture);
+            const std::string decoded = scalarArgument ? argumentValue : (schema.DecodeHint + ";pointer=" + argumentValue);
 
-        args << ArgumentJsonFromMetadata(
-            record.ApiId,
-            0,
-            schema.Type,
-            schema.Name,
-            schema.Direction,
-            argumentValue,
-            argumentValue,
-            decoded,
-            DecodeStatusName(record.Values32[1]));
+            args << ArgumentJsonFromMetadata(
+                record.ApiId,
+                0,
+                schema.Type,
+                schema.Name,
+                schema.Direction,
+                argumentValue,
+                argumentValue,
+                decoded,
+                DecodeStatusName(record.Values32[1]));
+        }
     }
 
     std::ostringstream stream;

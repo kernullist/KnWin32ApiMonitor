@@ -21,6 +21,7 @@ const idAssignmentsPath = path.join(repoRoot, "definitions", "metadata", "id-ass
 const bulkDefinitionPath = path.join(repoRoot, "definitions", "win32", "generated-win32metadata-bulk.json");
 const ntdllDefinitionPath = path.join(repoRoot, "definitions", "nt", "ntdll-win11-exports.json");
 const ntdllEvidencePath = path.join(repoRoot, "generated", "ntdll-win11-export-baseline.json");
+const phntPrototypeIndexPath = path.join(repoRoot, "generated", "phnt-ntdll-prototype-index.json");
 const ntdllPath = "C:/Windows/System32/ntdll.dll";
 
 if (!Number.isInteger(targetDefinedApis) || targetDefinedApis < 1)
@@ -47,11 +48,14 @@ for (const item of apiDocuments)
 const inventory = readJson(inventoryPath);
 const inventoryRows = inventory.apis ?? [];
 const inventoryByKey = new Map(inventoryRows.map((entry) => [apiKey(entry.module, entry.name), entry]));
+const phntPrototypeIndex = fs.existsSync(phntPrototypeIndexPath) ? readJson(phntPrototypeIndexPath) : null;
+const phntPrototypesByName = new Map((phntPrototypeIndex?.prototypes ?? []).map((prototype) => [prototype.name, prototype]));
 const ntdllExports = readPeExports(ntdllPath);
-const ntdllApis = buildNtdllDefinitions(ntdllExports, inventoryByKey, existingKeys);
+const ntdllApis = buildNtdllDefinitions(ntdllExports, inventoryByKey, existingKeys, phntPrototypesByName);
 const newNtdllKeys = new Set(ntdllApis.map((api) => apiKey(api.module, api.name)));
-const definedCountBeforeBulk = existingDefinedCount(apiDocuments) + ntdllApis.filter((api) => api.coverageStatus !== "unsupported").length;
-const bulkTarget = Math.max(0, targetDefinedApis - definedCountBeforeBulk);
+const previousBulkCount = fs.existsSync(bulkDefinitionPath) ? ((readJson(bulkDefinitionPath).apis ?? []).length) : 0;
+const definedCountBeforeBulk = existingRuntimeHookableCount(apiDocuments) + ntdllApis.filter(isRuntimeHookableDefinition).length;
+const bulkTarget = Math.max(previousBulkCount, targetDefinedApis - definedCountBeforeBulk);
 const bulkApis = buildBulkDefinitions(inventoryRows, existingKeys, newNtdllKeys, bulkTarget);
 
 const generatedDocuments = [
@@ -99,7 +103,8 @@ else
       win32metadataBulk: bulkApis.length,
       ntdllExports: ntdllApis.length,
       ntdllKnownMetadata: ntdllApis.filter((api) => api.coverageStatus !== "unsupported").length,
-      ntdllUnsupported: ntdllApis.filter((api) => api.coverageStatus === "unsupported").length
+      ntdllUnsupported: ntdllApis.filter((api) => api.coverageStatus === "unsupported").length,
+      phntPrototypeMatches: ntdllApis.filter((api) => String(api.minWindowsVersion ?? "").includes("prototype source PHNT")).length
     },
     output: {
       bulkDefinitionPath: relative(bulkDefinitionPath),
@@ -128,7 +133,7 @@ function relative(filePath)
   return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
-function existingDefinedCount(documents)
+function existingRuntimeHookableCount(documents)
 {
   let count = 0;
   for (const item of documents)
@@ -141,7 +146,7 @@ function existingDefinedCount(documents)
 
     for (const api of item.document.apis ?? [])
     {
-      if (api.coverageStatus !== "unsupported")
+      if (isRuntimeHookableDefinition(api))
       {
         ++count;
       }
@@ -149,6 +154,11 @@ function existingDefinedCount(documents)
   }
 
   return count;
+}
+
+function isRuntimeHookableDefinition(api)
+{
+  return api.hookPolicy !== "unsupported" && api.hookPolicy !== "definition_only" && api.coverageStatus !== "unsupported";
 }
 
 function buildBulkDefinitions(rows, existing, ntdllKeys, needed)
@@ -184,7 +194,7 @@ function buildBulkDefinitions(rows, existing, ntdllKeys, needed)
   return output;
 }
 
-function buildNtdllDefinitions(exports, inventoryMap, existing)
+function buildNtdllDefinitions(exports, inventoryMap, existing, phntMap)
 {
   const apis = [];
 
@@ -208,10 +218,97 @@ function buildNtdllDefinitions(exports, inventoryMap, existing)
       continue;
     }
 
+    const phntPrototype = phntMap.get(exported.name);
+    if (phntPrototype)
+    {
+      apis.push(definitionFromPhntPrototype(exported, phntPrototype));
+      continue;
+    }
+
     apis.push(definitionFromExport(exported));
   }
 
   return apis.sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function definitionFromPhntPrototype(exported, prototype)
+{
+  const family = familyFromApiName(exported.name);
+  const runtimeSafe = phntPrototypeIsRuntimeSafe(prototype);
+  return {
+    module: "ntdll.dll",
+    name: exported.name,
+    ordinal: exported.ordinal,
+    family,
+    category: categoryFromApiName(exported.name),
+    risk: riskFromExportName(exported.name, family),
+    hookPolicy: runtimeSafe ? "iat" : "definition_only",
+    coverageStatus: "defined",
+    minWindowsVersion: `Windows 11 24H2 export baseline 10.0.26100; prototype source PHNT ${prototype.source?.file ?? ""}`,
+    architectures: ["x64"],
+    callingConvention: normalizeCallingConvention(prototype.callingConvention),
+    returnType: normalizePrototypeType(prototype.returnType),
+    errorSource: normalizeErrorSource(undefined, normalizePrototypeType(prototype.returnType)),
+    parameters: (prototype.parameters ?? []).map((parameter, index) => parameterFromPrototype(parameter, index))
+  };
+}
+
+function phntPrototypeIsRuntimeSafe(prototype)
+{
+  if ((prototype.parameters ?? []).length > 16)
+  {
+    return false;
+  }
+
+  if (unsafeGenericAbiType(prototype.returnType))
+  {
+    return false;
+  }
+
+  for (const parameter of prototype.parameters ?? [])
+  {
+    if (parameter.variadic || unsafeGenericAbiType(parameter.type))
+    {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function unsafeGenericAbiType(type)
+{
+  const text = String(type ?? "").toLowerCase();
+  return text.includes("float") || text.includes("double") || (text.startsWith("struct ") && !text.includes("*"));
+}
+
+function parameterFromPrototype(parameter, index)
+{
+  const normalized = {
+    name: sanitizeParameterName(parameter.name, index),
+    type: normalizePrototypeType(parameter.type ?? "ULONG_PTR"),
+    direction: normalizeDirection(parameter.direction),
+    decodeHint: parameter.variadic ? "scalar" : undefined
+  };
+
+  const output = {
+    name: normalized.name,
+    type: normalized.type,
+    direction: normalized.direction,
+    decode: decodeAliasForParameter(normalized)
+  };
+
+  if (parameter.nullable || isNullableParameter(normalized))
+  {
+    output.nullable = true;
+  }
+
+  if (normalized.direction === "out" || normalized.direction === "inout")
+  {
+    output.captureTiming = "post";
+  }
+
+  return output;
 }
 
 function definitionFromInventory(entry, overrides = {})
@@ -370,6 +467,26 @@ function normalizeCallingConvention(value)
   return "winapi";
 }
 
+function normalizePrototypeType(value)
+{
+  let type = String(value ?? "ULONG_PTR")
+    .replace(/\bCONST\b/g, "const")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (type.length === 0)
+  {
+    type = "ULONG_PTR";
+  }
+
+  if (type === "VOID")
+  {
+    type = "void";
+  }
+
+  return type;
+}
+
 function normalizeErrorSource(value, returnType)
 {
   if (value === "GetLastError" || value === "return_ntstatus" || value === "HRESULT" || value === "none")
@@ -377,12 +494,12 @@ function normalizeErrorSource(value, returnType)
     return value;
   }
 
-  if (returnType === "NTSTATUS")
+  if (String(returnType ?? "").toUpperCase() === "NTSTATUS")
   {
     return "return_ntstatus";
   }
 
-  if (returnType === "HRESULT")
+  if (String(returnType ?? "").toUpperCase() === "HRESULT")
   {
     return "HRESULT";
   }

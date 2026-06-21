@@ -597,7 +597,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0062",
+      "batchId": "tier2-batch-0063",
       "blockedApis": 0,
       "byFamily": {
         "networking": 1
@@ -632,7 +632,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0063",
+      "batchId": "tier2-batch-0064",
       "blockedApis": 0,
       "byFamily": {
         "system": 1
@@ -667,7 +667,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0068",
+      "batchId": "tier2-batch-0069",
       "blockedApis": 0,
       "byFamily": {
         "network-management": 1
@@ -702,7 +702,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0070",
+      "batchId": "tier2-batch-0071",
       "blockedApis": 0,
       "byFamily": {
         "ui": 1
@@ -737,7 +737,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0078",
+      "batchId": "tier2-batch-0079",
       "blockedApis": 0,
       "byFamily": {
         "network-management": 1
@@ -772,7 +772,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0079",
+      "batchId": "tier2-batch-0080",
       "blockedApis": 0,
       "byFamily": {
         "graphics": 1
@@ -807,7 +807,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0085",
+      "batchId": "tier2-batch-0086",
       "blockedApis": 0,
       "byFamily": {
         "system": 1
@@ -842,7 +842,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0088",
+      "batchId": "tier2-batch-0089",
       "blockedApis": 0,
       "byFamily": {
         "system": 1
@@ -877,7 +877,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0091",
+      "batchId": "tier2-batch-0092",
       "blockedApis": 0,
       "byFamily": {
         "system": 1
@@ -912,7 +912,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0093",
+      "batchId": "tier2-batch-0094",
       "blockedApis": 0,
       "byFamily": {
         "networking": 1
@@ -947,7 +947,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0097",
+      "batchId": "tier2-batch-0098",
       "blockedApis": 0,
       "byFamily": {
         "networking": 1
@@ -982,7 +982,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0099",
+      "batchId": "tier2-batch-0100",
       "blockedApis": 0,
       "byFamily": {
         "network-management": 1
@@ -1269,7 +1269,7 @@
       "totalApis": 2
     },
     {
-      "batchId": "tier2-batch-0065",
+      "batchId": "tier2-batch-0066",
       "blockedApis": 0,
       "byFamily": {
         "system": 2
@@ -1305,7 +1305,7 @@
       "totalApis": 2
     },
     {
-      "batchId": "tier2-batch-0084",
+      "batchId": "tier2-batch-0085",
       "blockedApis": 0,
       "byFamily": {
         "ui": 2
@@ -1341,7 +1341,7 @@
       "totalApis": 2
     },
     {
-      "batchId": "tier2-batch-0098",
+      "batchId": "tier2-batch-0099",
       "blockedApis": 0,
       "byFamily": {
         "system": 2
@@ -1377,7 +1377,7 @@
       "totalApis": 2
     },
     {
-      "batchId": "tier2-batch-0101",
+      "batchId": "tier2-batch-0102",
       "blockedApis": 0,
       "byFamily": {
         "system": 2
@@ -1413,7 +1413,7 @@
       "totalApis": 2
     },
     {
-      "batchId": "tier2-batch-0102",
+      "batchId": "tier2-batch-0103",
       "blockedApis": 0,
       "byFamily": {
         "network-management": 2
@@ -1937,7 +1937,7 @@
       "totalApis": 3
     },
     {
-      "batchId": "tier2-batch-0067",
+      "batchId": "tier2-batch-0068",
       "blockedApis": 0,
       "byFamily": {
         "network-management": 3
@@ -1974,7 +1974,7 @@
       "totalApis": 3
     },
     {
-      "batchId": "tier2-batch-0077",
+      "batchId": "tier2-batch-0078",
       "blockedApis": 0,
       "byFamily": {
         "ui": 3
@@ -2126,7 +2126,7 @@
       "totalApis": 4
     },
     {
-      "batchId": "tier2-batch-0092",
+      "batchId": "tier2-batch-0093",
       "blockedApis": 0,
       "byFamily": {
         "devices": 4
@@ -2164,7 +2164,7 @@
       "totalApis": 4
     },
     {
-      "batchId": "tier2-batch-0100",
+      "batchId": "tier2-batch-0101",
       "blockedApis": 0,
       "byFamily": {
         "networking": 4
@@ -2202,7 +2202,7 @@
       "totalApis": 4
     },
     {
-      "batchId": "tier2-batch-0072",
+      "batchId": "tier2-batch-0073",
       "blockedApis": 0,
       "byFamily": {
         "system": 5
@@ -2241,7 +2241,7 @@
       "totalApis": 5
     },
     {
-      "batchId": "tier2-batch-0076",
+      "batchId": "tier2-batch-0077",
       "blockedApis": 0,
       "byFamily": {
         "ui": 5
@@ -2397,7 +2397,7 @@
       "totalApis": 6
     },
     {
-      "batchId": "tier2-batch-0075",
+      "batchId": "tier2-batch-0076",
       "blockedApis": 0,
       "byFamily": {
         "devices": 6
@@ -2436,7 +2436,7 @@
       "totalApis": 6
     },
     {
-      "batchId": "tier2-batch-0087",
+      "batchId": "tier2-batch-0088",
       "blockedApis": 0,
       "byFamily": {
         "ui": 6
@@ -2475,7 +2475,7 @@
       "totalApis": 6
     },
     {
-      "batchId": "tier2-batch-0094",
+      "batchId": "tier2-batch-0095",
       "blockedApis": 0,
       "byFamily": {
         "networking": 6
@@ -2514,7 +2514,7 @@
       "totalApis": 6
     },
     {
-      "batchId": "tier2-batch-0069",
+      "batchId": "tier2-batch-0070",
       "blockedApis": 0,
       "byFamily": {
         "system": 8
@@ -2592,7 +2592,7 @@
       "totalApis": 14
     },
     {
-      "batchId": "tier2-batch-0095",
+      "batchId": "tier2-batch-0096",
       "blockedApis": 0,
       "byFamily": {
         "media": 10
@@ -2670,7 +2670,7 @@
       "totalApis": 13
     },
     {
-      "batchId": "tier2-batch-0066",
+      "batchId": "tier2-batch-0067",
       "blockedApis": 0,
       "byFamily": {
         "graphics": 14
@@ -2709,7 +2709,7 @@
       "totalApis": 14
     },
     {
-      "batchId": "tier2-batch-0064",
+      "batchId": "tier2-batch-0065",
       "blockedApis": 0,
       "byFamily": {
         "system": 15
@@ -2865,7 +2865,7 @@
       "totalApis": 26
     },
     {
-      "batchId": "tier2-batch-0071",
+      "batchId": "tier2-batch-0072",
       "blockedApis": 0,
       "byFamily": {
         "system": 21
@@ -3079,7 +3079,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0073",
+      "batchId": "tier2-batch-0074",
       "blockedApis": 0,
       "byFamily": {
         "security": 1
@@ -3114,7 +3114,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0080",
+      "batchId": "tier2-batch-0081",
       "blockedApis": 0,
       "byFamily": {
         "security": 1
@@ -3149,7 +3149,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0081",
+      "batchId": "tier2-batch-0082",
       "blockedApis": 0,
       "byFamily": {
         "security": 1
@@ -3184,7 +3184,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0083",
+      "batchId": "tier2-batch-0084",
       "blockedApis": 0,
       "byFamily": {
         "security": 1
@@ -3219,7 +3219,7 @@
       "totalApis": 1
     },
     {
-      "batchId": "tier2-batch-0090",
+      "batchId": "tier2-batch-0091",
       "blockedApis": 0,
       "byFamily": {
         "security": 1
@@ -3332,7 +3332,7 @@
       "totalApis": 4
     },
     {
-      "batchId": "tier2-batch-0086",
+      "batchId": "tier2-batch-0087",
       "blockedApis": 0,
       "byFamily": {
         "system": 9,
@@ -3408,7 +3408,7 @@
       "totalApis": 2
     },
     {
-      "batchId": "tier2-batch-0074",
+      "batchId": "tier2-batch-0075",
       "blockedApis": 0,
       "byFamily": {
         "security": 2
@@ -3444,7 +3444,7 @@
       "totalApis": 2
     },
     {
-      "batchId": "tier2-batch-0082",
+      "batchId": "tier2-batch-0083",
       "blockedApis": 0,
       "byFamily": {
         "system": 2
@@ -3480,7 +3480,7 @@
       "totalApis": 2
     },
     {
-      "batchId": "tier2-batch-0089",
+      "batchId": "tier2-batch-0090",
       "blockedApis": 0,
       "byFamily": {
         "system": 2
@@ -3516,7 +3516,7 @@
       "totalApis": 2
     },
     {
-      "batchId": "tier2-batch-0096",
+      "batchId": "tier2-batch-0097",
       "blockedApis": 0,
       "byFamily": {
         "security": 2
@@ -3713,7 +3713,7 @@
       "totalApis": 4
     },
     {
-      "batchId": "tier2-batch-0103",
+      "batchId": "tier2-batch-0104",
       "blockedApis": 2,
       "byFamily": {
         "system": 2
@@ -3788,6 +3788,51 @@
       "sourceModule": null,
       "targetModule": "kernelbase.dll",
       "totalApis": 94
+    },
+    {
+      "batchId": "tier2-batch-0062",
+      "blockedApis": 0,
+      "byFamily": {
+        "diagnostics": 4,
+        "ipc": 1,
+        "loader": 7,
+        "nt-native": 28,
+        "rtl": 46,
+        "tracing": 1
+      },
+      "byRisk": {
+        "high": 9,
+        "medium": 78
+      },
+      "explicitAllowlistRequired": 9,
+      "installableWithoutAllowlist": 78,
+      "kind": "missing_parameter_return_only_module",
+      "priority": 252,
+      "profileSelectors": [
+        "missing-metadata-safe",
+        "module:ntdll.dll",
+        "strategy:missing_parameter_metadata"
+      ],
+      "representativeApis": [
+        "ntdll.dll!AlpcMaxAllowedMessageLength",
+        "ntdll.dll!DbgBreakPoint",
+        "ntdll.dll!DbgUiConnectToDbg",
+        "ntdll.dll!DbgUiGetThreadDebugObject",
+        "ntdll.dll!DbgUserBreakPoint"
+      ],
+      "requiredEvidence": [
+        "zero-argument metadata evidence from Microsoft inventory",
+        "return-only event rendering without argument slots",
+        "x64 and x86 native smoke before runtime profile expansion",
+        "shared-memory drop and hook-overhead gates",
+        "no raw payload, string body, credential, or arbitrary pointer-memory capture"
+      ],
+      "resolvedHostModule": null,
+      "reviewClass": "explicit_allowlist_required",
+      "runtimeHooksEnabledByDefault": false,
+      "sourceModule": "ntdll.dll",
+      "targetModule": "ntdll.dll",
+      "totalApis": 87
     }
   ],
   "policy": {
@@ -3804,11 +3849,11 @@
     "tier2ProfileBatchPlanSchemaVersion": "0.1.0"
   },
   "summary": {
-    "allowlistGatedBatchApis": 146,
-    "allowlistGatedBatches": 20,
+    "allowlistGatedBatchApis": 233,
+    "allowlistGatedBatches": 21,
     "apisByReviewClass": {
       "blocked": 2,
-      "explicit_allowlist_required": 146,
+      "explicit_allowlist_required": 233,
       "initial_candidate": 54,
       "review_ready": 452
     },
@@ -3818,45 +3863,51 @@
     "byFamily": {
       "data": 1,
       "devices": 47,
+      "diagnostics": 4,
       "foundation": 2,
       "gaming": 30,
       "globalization": 29,
       "graphics": 27,
+      "ipc": 1,
+      "loader": 7,
       "management": 2,
       "media": 24,
       "network-management": 28,
       "networking": 14,
+      "nt-native": 28,
+      "rtl": 46,
       "security": 19,
       "storage": 60,
       "system": 268,
+      "tracing": 1,
       "ui": 97,
       "web": 6
     },
     "byKind": {
       "api_set_resolved_host": 16,
       "blocked_api_set_unresolved": 1,
-      "missing_parameter_return_only_module": 86
+      "missing_parameter_return_only_module": 87
     },
     "byReviewClass": {
       "blocked": 1,
-      "explicit_allowlist_required": 20,
+      "explicit_allowlist_required": 21,
       "initial_candidate": 41,
       "review_ready": 41
     },
     "byRisk": {
       "critical": 11,
-      "high": 19,
-      "medium": 624
+      "high": 28,
+      "medium": 702
     },
-    "explicitAllowlistRequiredApis": 30,
+    "explicitAllowlistRequiredApis": 39,
     "initialCandidateApis": 54,
     "initialCandidateBatches": 41,
-    "manifestApis": 654,
-    "manifestBatches": 103,
+    "manifestApis": 741,
+    "manifestBatches": 104,
     "reviewReadyApis": 452,
     "reviewReadyBatches": 41,
     "runtimeHooksEnabledByDefault": 0,
-    "sourceApis": 654,
-    "sourceBatches": 103
+    "sourceApis": 741,
+    "sourceBatches": 104
   }
 }

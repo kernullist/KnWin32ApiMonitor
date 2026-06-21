@@ -147,6 +147,24 @@
     },
     {
       "examples": [
+        "ntdll.dll!NtAcceptConnectPort",
+        "ntdll.dll!NtAccessCheck",
+        "ntdll.dll!NtAccessCheckAndAuditAlarm",
+        "ntdll.dll!NtAccessCheckByType",
+        "ntdll.dll!NtAccessCheckByTypeAndAuditAlarm",
+        "ntdll.dll!NtAccessCheckByTypeResultList",
+        "ntdll.dll!NtAccessCheckByTypeResultListAndAuditAlarm",
+        "ntdll.dll!NtAccessCheckByTypeResultListAndAuditAlarmByHandle"
+      ],
+      "family": "nt-native",
+      "impact": 1918,
+      "tier1": 945,
+      "tier2": 28,
+      "withParameters": 945,
+      "withSdkHeader": 0
+    },
+    {
+      "examples": [
         "advapi32.dll!AddUsersToEncryptedFile",
         "advapi32.dll!CloseEncryptedFileRaw",
         "advapi32.dll!DecryptFileA",
@@ -162,6 +180,24 @@
       "tier2": 60,
       "withParameters": 908,
       "withSdkHeader": 631
+    },
+    {
+      "examples": [
+        "ntdll.dll!RtlAbsoluteToSelfRelativeSD",
+        "ntdll.dll!RtlAcquirePebLock",
+        "ntdll.dll!RtlAcquirePrivilege",
+        "ntdll.dll!RtlAcquireReleaseSRWLockExclusive",
+        "ntdll.dll!RtlAcquireResourceExclusive",
+        "ntdll.dll!RtlAcquireResourceShared",
+        "ntdll.dll!RtlAcquireSRWLockExclusive",
+        "ntdll.dll!RtlAcquireSRWLockShared"
+      ],
+      "family": "rtl",
+      "impact": 1470,
+      "tier1": 712,
+      "tier2": 46,
+      "withParameters": 712,
+      "withSdkHeader": 0
     },
     {
       "examples": [
@@ -201,6 +237,24 @@
     },
     {
       "examples": [
+        "ntdll.dll!LdrAccessResource",
+        "ntdll.dll!LdrAddDllDirectory",
+        "ntdll.dll!LdrAddLoadAsDataTable",
+        "ntdll.dll!LdrAddRefDll",
+        "ntdll.dll!LdrAppxHandleIntegrityFailure",
+        "ntdll.dll!LdrCallEnclave",
+        "ntdll.dll!LdrControlFlowGuardEnforced",
+        "ntdll.dll!LdrCreateEnclave"
+      ],
+      "family": "loader",
+      "impact": 141,
+      "tier1": 67,
+      "tier2": 7,
+      "withParameters": 67,
+      "withSdkHeader": 0
+    },
+    {
+      "examples": [
         "ieframe.dll!IEAssociateThreadWithTab",
         "ieframe.dll!IECancelSaveFile",
         "ieframe.dll!IECreateDirectory",
@@ -215,6 +269,60 @@
       "tier1": 46,
       "tier2": 6,
       "withParameters": 46,
+      "withSdkHeader": 0
+    },
+    {
+      "examples": [
+        "ntdll.dll!TpAllocAlpcCompletion",
+        "ntdll.dll!TpAllocAlpcCompletionEx",
+        "ntdll.dll!TpAllocCleanupGroup",
+        "ntdll.dll!TpAllocIoCompletion",
+        "ntdll.dll!TpAllocPool",
+        "ntdll.dll!TpAllocTimer",
+        "ntdll.dll!TpAllocWait",
+        "ntdll.dll!TpAllocWork"
+      ],
+      "family": "threadpool",
+      "impact": 92,
+      "tier1": 46,
+      "tier2": 0,
+      "withParameters": 46,
+      "withSdkHeader": 0
+    },
+    {
+      "examples": [
+        "ntdll.dll!EtwCheckCoverage",
+        "ntdll.dll!EtwEnumerateProcessRegGuids",
+        "ntdll.dll!EtwEventActivityIdControl",
+        "ntdll.dll!EtwEventEnabled",
+        "ntdll.dll!EtwEventProviderEnabled",
+        "ntdll.dll!EtwEventRegister",
+        "ntdll.dll!EtwEventSetInformation",
+        "ntdll.dll!EtwEventUnregister"
+      ],
+      "family": "tracing",
+      "impact": 45,
+      "tier1": 22,
+      "tier2": 1,
+      "withParameters": 22,
+      "withSdkHeader": 0
+    },
+    {
+      "examples": [
+        "ntdll.dll!DbgBreakPoint",
+        "ntdll.dll!DbgPrint",
+        "ntdll.dll!DbgPrintEx",
+        "ntdll.dll!DbgPrintReturnControlC",
+        "ntdll.dll!DbgPrompt",
+        "ntdll.dll!DbgQueryDebugFilterState",
+        "ntdll.dll!DbgSetDebugFilterState",
+        "ntdll.dll!DbgUiConnectToDbg"
+      ],
+      "family": "diagnostics",
+      "impact": 34,
+      "tier1": 15,
+      "tier2": 4,
+      "withParameters": 15,
       "withSdkHeader": 0
     },
     {
@@ -252,115 +360,19 @@
       "tier2": 2,
       "withParameters": 15,
       "withSdkHeader": 16
-    },
-    {
-      "examples": [
-        "api-ms-win-gaming-deviceinformation-l1-1-0.dll!GetGamingDeviceModelInformation",
-        "api-ms-win-gaming-expandedresources-l1-1-0.dll!GetExpandedResourceExclusiveCpuCount",
-        "api-ms-win-gaming-expandedresources-l1-1-0.dll!HasExpandedResources",
-        "api-ms-win-gaming-expandedresources-l1-1-0.dll!ReleaseExclusiveCpuSets",
-        "api-ms-win-gaming-tcui-l1-1-0.dll!ProcessPendingGameUI",
-        "api-ms-win-gaming-tcui-l1-1-0.dll!ShowChangeFriendRelationshipUI",
-        "api-ms-win-gaming-tcui-l1-1-0.dll!ShowGameInviteUI",
-        "api-ms-win-gaming-tcui-l1-1-0.dll!ShowPlayerPickerUI"
-      ],
-      "family": "gaming",
-      "impact": 30,
-      "tier1": 0,
-      "tier2": 30,
-      "withParameters": 28,
-      "withSdkHeader": 12
-    },
-    {
-      "examples": [
-        "wininet.dll!HttpOpenRequestW",
-        "wininet.dll!HttpSendRequestW",
-        "wininet.dll!InternetOpenUrlW",
-        "wininet.dll!InternetQueryOptionW",
-        "wininet.dll!InternetReadFile",
-        "wininet.dll!InternetSetOptionW",
-        "wininet.dll!InternetWriteFile"
-      ],
-      "family": "internet",
-      "impact": 14,
-      "tier1": 7,
-      "tier2": 0,
-      "withParameters": 7,
-      "withSdkHeader": 7
-    },
-    {
-      "examples": [
-        "winhttp.dll!WinHttpOpenRequest",
-        "winhttp.dll!WinHttpQueryHeaders",
-        "winhttp.dll!WinHttpReadData",
-        "winhttp.dll!WinHttpReceiveResponse",
-        "winhttp.dll!WinHttpSendRequest",
-        "winhttp.dll!WinHttpWriteData"
-      ],
-      "family": "http",
-      "impact": 12,
-      "tier1": 6,
-      "tier2": 0,
-      "withParameters": 6,
-      "withSdkHeader": 6
-    },
-    {
-      "examples": [
-        "advapi32.dll!ControlService",
-        "advapi32.dll!CreateServiceW",
-        "advapi32.dll!DeleteService",
-        "advapi32.dll!OpenSCManagerW",
-        "advapi32.dll!OpenServiceW",
-        "advapi32.dll!StartServiceW"
-      ],
-      "family": "service-control",
-      "impact": 12,
-      "tier1": 6,
-      "tier2": 0,
-      "withParameters": 6,
-      "withSdkHeader": 6
-    },
-    {
-      "examples": [
-        "bcrypt.dll!BCryptDecrypt",
-        "bcrypt.dll!BCryptEncrypt",
-        "bcrypt.dll!BCryptGenerateSymmetricKey",
-        "bcrypt.dll!BCryptHashData",
-        "bcrypt.dll!BCryptSetProperty"
-      ],
-      "family": "crypto",
-      "impact": 10,
-      "tier1": 5,
-      "tier2": 0,
-      "withParameters": 5,
-      "withSdkHeader": 5
-    },
-    {
-      "examples": [
-        "crypt32.dll!CertFindCertificateInStore",
-        "crypt32.dll!CertFreeCertificateContext",
-        "crypt32.dll!CertGetCertificateChain",
-        "crypt32.dll!CertVerifyCertificateChainPolicy"
-      ],
-      "family": "certificate",
-      "impact": 8,
-      "tier1": 4,
-      "tier2": 0,
-      "withParameters": 4,
-      "withSdkHeader": 4
     }
   ],
   "schemaVersion": "0.1.0",
   "summary": {
-    "blockedByMissingDecoder": 15931,
-    "blockedByMissingHookStrategy": 4467,
+    "blockedByMissingDecoder": 17768,
+    "blockedByMissingHookStrategy": 2630,
     "byCoverageStatus": {
-      "defined": 521,
+      "defined": 2451,
       "definition_only": 49,
       "hooked": 4,
       "not_defined": 17385,
       "smoke_verified": 126,
-      "unsupported": 2443
+      "unsupported": 513
     },
     "byFamily": {
       "ai": 4,
@@ -424,9 +436,9 @@
     },
     "byHookTier": {
       "0": 130,
-      "1": 15931,
-      "2": 654,
-      "3": 3813
+      "1": 17768,
+      "2": 741,
+      "3": 1889
     },
     "byModule": {
       "aclui.dll": 3,
@@ -807,7 +819,7 @@
     "totalApis": 20528,
     "withMicrosoftLearnDocs": 13819,
     "withModuleMapping": 20528,
-    "withParameterMetadata": 17693,
+    "withParameterMetadata": 19536,
     "withSdkHeaderValidation": 12605
   }
 }
