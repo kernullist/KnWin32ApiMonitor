@@ -74,6 +74,7 @@ enum class KnMonAgentMessageType : std::uint32_t
     AgentShutdown = 6,
     ResolverPointerCandidate = 7,
     ResolverPointerUnsupported = 8,
+    ResolverPointerInstrumented = 9,
 };
 
 enum class KnMonTransportEventKind : std::uint16_t
@@ -264,6 +265,7 @@ struct KnMonLaunchRequest
     std::string AgentPath;
     std::string WorkingDirectory;
     std::string CommandLineArguments;
+    std::string ApiSelection;
     std::uint32_t OwnerProcessId = 0;
     std::uint32_t HelperProcessId = 0;
     std::string CancellationEventName;
@@ -284,6 +286,7 @@ struct KnMonAttachRequest
     std::uint32_t HelperProcessId = 0;
     std::string AgentPath;
     std::string CancellationEventName;
+    std::string ApiSelection;
     std::uint32_t TimeoutMs = 5000;
     std::uint32_t DurationMs = 3000;
     KnMonAgentArchitecture Architecture = KnMonAgentArchitecture::Unknown;
@@ -301,6 +304,7 @@ struct KnMonProcessTreeRequest
     std::uint32_t HelperProcessId = 0;
     std::string AgentPath;
     std::string CancellationEventName;
+    std::string ApiSelection;
     std::uint32_t TimeoutMs = 7000;
     std::uint32_t DurationMs = 3000;
     std::uint32_t PollIntervalMs = 100;
@@ -365,6 +369,7 @@ struct KnMonCaptureResult
     std::string InjectionMethod = "early-bird APC";
     std::string TargetPath;
     std::string AgentPath;
+    std::string ApiSelection;
     std::uint32_t AttachProcessId = 0;
     std::string DetachPolicy;
     std::string AttachState;

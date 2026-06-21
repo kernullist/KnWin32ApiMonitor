@@ -59,18 +59,19 @@ export async function replaySessionPath(sessionPath: string): Promise<SessionRep
   });
 }
 
-export async function attachTargetProcessCapture(pid: number, durationMs: number): Promise<CaptureResult> {
+export async function attachTargetProcessCapture(pid: number, durationMs: number, selectedApis: string[] = []): Promise<CaptureResult> {
   if (!isTauriRuntime()) {
     throw new Error("Bounded attach capture requires the Tauri desktop runtime and build/native/Debug/knmon-native-helper.exe.");
   }
 
   return invoke<CaptureResult>("attach_target_process_capture", {
     pid,
-    durationMs
+    durationMs,
+    selectedApis
   });
 }
 
-export async function superviseProcessTree(pid: number, durationMs: number, childPolicy: ProcessTreeResult["childPolicy"]): Promise<ProcessTreeResult> {
+export async function superviseProcessTree(pid: number, durationMs: number, childPolicy: ProcessTreeResult["childPolicy"], selectedApis: string[] = []): Promise<ProcessTreeResult> {
   if (!isTauriRuntime()) {
     throw new Error("Process-tree supervision requires the Tauri desktop runtime and build/native/Debug/knmon-native-helper.exe.");
   }
@@ -78,7 +79,8 @@ export async function superviseProcessTree(pid: number, durationMs: number, chil
   return invoke<ProcessTreeResult>("supervise_process_tree", {
     rootPid: pid,
     durationMs,
-    childPolicy
+    childPolicy,
+    selectedApis
   });
 }
 
@@ -118,17 +120,18 @@ export async function stopNativeSession(sessionId: string): Promise<NativeSessio
   });
 }
 
-export async function startStreamingAttachSession(pid: number): Promise<NativeSession> {
+export async function startStreamingAttachSession(pid: number, selectedApis: string[] = []): Promise<NativeSession> {
   if (!isTauriRuntime()) {
     throw new Error("Streaming attach sessions require the Tauri desktop runtime.");
   }
 
   return invoke<NativeSession>("start_streaming_attach_session", {
-    pid
+    pid,
+    selectedApis
   });
 }
 
-export async function startLaunchMonitorSession(targetPath: string, workingDirectory: string, launchArguments: string): Promise<NativeSession> {
+export async function startLaunchMonitorSession(targetPath: string, workingDirectory: string, launchArguments: string, selectedApis: string[] = []): Promise<NativeSession> {
   if (!isTauriRuntime()) {
     throw new Error("Launch monitoring requires the Tauri desktop runtime.");
   }
@@ -136,7 +139,8 @@ export async function startLaunchMonitorSession(targetPath: string, workingDirec
   return invoke<NativeSession>("start_launch_monitor_session", {
     targetPath,
     workingDirectory,
-    launchArguments
+    launchArguments,
+    selectedApis
   });
 }
 
@@ -297,13 +301,14 @@ export async function removeMissingNativeTraceIndexEntries(dryRun: boolean): Pro
   });
 }
 
-export async function startDaemonSupervisedSession(pid: number): Promise<NativeSession> {
+export async function startDaemonSupervisedSession(pid: number, selectedApis: string[] = []): Promise<NativeSession> {
   if (!isTauriRuntime()) {
     throw new Error("Daemon-supervised sessions require the Tauri desktop runtime.");
   }
 
   return invoke<NativeSession>("start_daemon_supervised_session", {
-    pid
+    pid,
+    selectedApis
   });
 }
 

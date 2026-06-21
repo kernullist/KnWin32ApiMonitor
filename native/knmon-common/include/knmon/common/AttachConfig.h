@@ -5,11 +5,12 @@
 namespace knmon
 {
 inline constexpr std::uint32_t KnMonAttachConfigMagic = 0x31434e4b;
-inline constexpr std::uint16_t KnMonAttachConfigAbiVersion = 1;
+inline constexpr std::uint16_t KnMonAttachConfigAbiVersion = 2;
 inline constexpr std::uint32_t KnMonAttachConfigOperationIdChars = 64;
 inline constexpr std::uint32_t KnMonAttachConfigPipeNameChars = 260;
 inline constexpr std::uint32_t KnMonAttachConfigTransportNameChars = 128;
 inline constexpr std::uint32_t KnMonAttachConfigControlNameChars = 128;
+inline constexpr std::uint32_t KnMonAttachConfigSelectedApisChars = 8192;
 inline constexpr std::uint32_t KnMonAgentStateMagic = 0x31534e4b;
 inline constexpr std::uint16_t KnMonAgentStateAbiVersion = 1;
 inline constexpr std::uint32_t KnMonAgentStateOperationIdChars = 64;
@@ -55,6 +56,7 @@ struct KnMonAttachConfigV1
     wchar_t PipeName[KnMonAttachConfigPipeNameChars] = {};
     wchar_t TransportName[KnMonAttachConfigTransportNameChars] = {};
     wchar_t ControlEventName[KnMonAttachConfigControlNameChars] = {};
+    wchar_t SelectedApis[KnMonAttachConfigSelectedApisChars] = {};
     std::uint64_t Reserved[8] = {};
 };
 

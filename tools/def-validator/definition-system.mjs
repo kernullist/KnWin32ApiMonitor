@@ -779,6 +779,39 @@ function cppBool(value) {
   return value ? "true" : "false";
 }
 
+function cppUInt64(value) {
+  const number = BigInt(String(value ?? "0"));
+  return `0x${number.toString(16)}ULL`;
+}
+
+function buildGeneratedValueSets(metadataIndex) {
+  const sets = [];
+
+  for (const valueSet of [...metadataIndex.enums].sort((left, right) => left.name.localeCompare(right.name))) {
+    for (const value of valueSet.values ?? []) {
+      sets.push({
+        set: valueSet.name,
+        kind: "enum",
+        name: value.name,
+        value: value.value
+      });
+    }
+  }
+
+  for (const valueSet of [...metadataIndex.flags].sort((left, right) => left.name.localeCompare(right.name))) {
+    for (const value of valueSet.values ?? []) {
+      sets.push({
+        set: valueSet.name,
+        kind: "flags",
+        name: value.name,
+        value: value.value
+      });
+    }
+  }
+
+  return sets;
+}
+
 function buildGeneratedParameters(apiId, parameters, metadataIndex, firstParameterIndex) {
   const generated = [];
   const parameterIndexByName = new Map();
@@ -801,8 +834,8 @@ function buildGeneratedParameters(apiId, parameters, metadataIndex, firstParamet
       captureTiming: parameter.captureTiming ?? defaultCaptureTiming(parameter.direction),
       nullable: parameter.nullable ?? false,
       maxBytes: parameter.maxBytes ?? alias?.maxPreviewBytes ?? 0,
-      enum: parameter.enum ?? "",
-      flags: parameter.flags ?? "",
+      enum: parameter.enum ?? alias?.enum ?? "",
+      flags: parameter.flags ?? alias?.flags ?? "",
       lengthFrom: parameter.lengthFrom ?? "",
       lengthFromIndex: Number.isInteger(lengthFromIndex) ? lengthFromIndex : -1,
       lengthExpression: parameter.lengthExpression ? normalizeLengthExpression(parameter.lengthExpression) : ""
@@ -828,6 +861,7 @@ export function buildGeneratedDecoderTables(apiDocuments, metadataIndex) {
 
   const apis = [];
   const parameters = [];
+  const valueSets = buildGeneratedValueSets(metadataIndex);
 
   for (const record of apiRecords) {
     const api = record.api;
@@ -882,7 +916,8 @@ export function buildGeneratedDecoderTables(apiDocuments, metadataIndex) {
     modules,
     apis,
     parameters,
-    decodeAliases
+    decodeAliases,
+    valueSets
   };
 }
 
@@ -941,6 +976,14 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
     "    std::string_view LengthFrom;",
     "    std::int32_t LengthFromIndex;",
     "    std::string_view LengthExpression;",
+    "};",
+    "",
+    "struct KnMonGeneratedConstantMetadata",
+    "{",
+    "    std::string_view SetName;",
+    "    std::string_view Kind;",
+    "    std::string_view Name;",
+    "    std::uint64_t Value;",
     "};",
     ""
   ];
@@ -1007,6 +1050,19 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
   lines.push("}};");
   lines.push("");
 
+  lines.push(`inline constexpr std::array<KnMonGeneratedConstantMetadata, ${decoderTables.valueSets.length}> KnMonGeneratedConstants =`);
+  lines.push("{{");
+  for (const value of decoderTables.valueSets) {
+    lines.push("    {");
+    lines.push(`        ${cppString(value.set)},`);
+    lines.push(`        ${cppString(value.kind)},`);
+    lines.push(`        ${cppString(value.name)},`);
+    lines.push(`        ${cppUInt64(value.value)}`);
+    lines.push("    },");
+  }
+  lines.push("}};");
+  lines.push("");
+
   lines.push(
     "inline constexpr const KnMonGeneratedModuleMetadata* FindGeneratedModuleMetadata(std::uint16_t id)",
     "{",
@@ -1026,6 +1082,19 @@ export function buildGeneratedApiMetadataHeader(decoderTables) {
     "    for (const auto& entry : KnMonGeneratedApis)",
     "    {",
     "        if (entry.Id == id)",
+    "        {",
+    "            return &entry;",
+    "        }",
+    "    }",
+    "",
+    "    return nullptr;",
+    "}",
+    "",
+    "inline constexpr const KnMonGeneratedConstantMetadata* FindGeneratedConstantMetadata(std::string_view setName, std::string_view kind, std::uint64_t value)",
+    "{",
+    "    for (const auto& entry : KnMonGeneratedConstants)",
+    "    {",
+    "        if (entry.SetName == setName && entry.Kind == kind && entry.Value == value)",
     "        {",
     "            return &entry;",
     "        }",

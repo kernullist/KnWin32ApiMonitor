@@ -403,13 +403,13 @@ Current verified behavior:
 7. Successful dynamic load triggers a `dynamic_load` IAT re-sweep.
 8. Post-load File I/O from `knmon-dynamic-probe.dll` is captured after the re-sweep.
 9. `GetProcAddress` and `LdrGetProcedureAddress` resolver calls for `KnMonDynamicProbe` are captured as resolver-tagged shared-memory `api_call` events.
-10. Resolver records include bounded function-name evidence and return/status values without claiming returned-pointer instrumentation.
-11. Resolver-returned pointers are classified through low-volume candidate-ledger agent messages without code mutation:
-   - known generated APIs such as `kernel32.dll!GetCurrentProcessId` are reported as `resolver_pointer_candidate` with module/RVA/definition evidence and `instrumented=false`
+10. Resolver records include bounded function-name evidence and return/status values.
+11. Resolver-returned pointers are classified through low-volume resolver-ledger agent messages, and known generated APIs with live wrappers are substituted at the resolver return boundary without inline/EAT patching:
+   - known generated APIs such as `kernel32.dll!GetCurrentProcessId` are reported as `resolver_pointer_instrumented` with module/RVA/definition/original/replacement evidence and `instrumented=true`
    - repository-only exports such as `KnMonDynamicProbe` are reported as `resolver_pointer_unsupported` with `unsupported_definition_missing`
-   - controller audit events and UI output summaries surface the candidate or unsupported reason before high-volume hook status noise
+   - controller audit events and UI output summaries surface the instrumented, candidate, or unsupported reason before high-volume hook status noise
    - capture results plus legacy and `.knapm` session manifests expose `resolverPointerCandidates` and `resolverPointerUnsupported` counters
-   - no `resolver_pointer_call` event is emitted by the candidate-ledger slice
+   - no separate `resolver_pointer_call` event is emitted; substituted pointers call the existing monitored wrappers and emit normal bounded `api_call` records
 12. Unloaded owner-module restoration races are handled without stale writes and healthy shutdown reports `restoredHooks=installedHooks`.
 13. The first Wave 2 live slice captures selected `ws2_32.dll` Winsock bootstrap, connect metadata, and address-resolution APIs through the same shared-memory transport:
    - `WSAStartup`

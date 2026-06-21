@@ -481,7 +481,7 @@ Current loader-aware behavior:
 4. The sample target loads `knmon-dynamic-probe.dll`; `LoadLibraryW` is captured as a loader `api_call`.
 5. A successful dynamic load triggers a re-sweep with `reason=dynamic_load`.
 6. The dynamic probe DLL performs File I/O after load, proving post-load IAT coverage.
-7. The sample resolves `KnMonDynamicProbe` through `GetProcAddress` and `LdrGetProcedureAddress`, proving resolver API call visibility without claiming returned-pointer instrumentation.
+7. The sample resolves `KnMonDynamicProbe` through `GetProcAddress` and `LdrGetProcedureAddress`, proving resolver API call visibility; known generated APIs such as `GetCurrentProcessId` are additionally substituted with monitored wrappers when returned through those resolver APIs.
 
 Current agent limitations:
 

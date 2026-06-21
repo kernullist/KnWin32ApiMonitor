@@ -790,6 +790,7 @@ NtCreateFileFn g_originalNtCreateFile = nullptr;
 LdrLoadDllFn g_originalLdrLoadDll = nullptr;
 LdrGetProcedureAddressFn g_originalLdrGetProcedureAddress = nullptr;
 std::wstring g_operationId;
+std::string g_selectedApiSelection;
 volatile LONG g_workerStarted = 0;
 
 enum class AgentLifecycleState : LONG
@@ -827,6 +828,7 @@ struct AgentWorkerConfig
     std::wstring PipeName;
     std::wstring TransportName;
     std::wstring OperationId;
+    std::wstring SelectedApis;
     bool TransportRequired = false;
 };
 
@@ -845,6 +847,7 @@ struct ModuleInfo
 struct ResolverPointerClassification
 {
     bool Candidate = false;
+    bool Instrumented = false;
     bool HasRequestedModule = false;
     bool HasTargetModule = false;
     bool TargetExecutable = false;
@@ -855,6 +858,9 @@ struct ResolverPointerClassification
     std::string RequestedModuleName;
     std::string TargetModuleName;
     std::string TargetModulePath;
+    std::string InstrumentationReason;
+    void* OriginalFunction = nullptr;
+    void* ReplacementFunction = nullptr;
     ModuleInfo RequestedModule = {};
     ModuleInfo TargetModule = {};
     const knmon::KnMonGeneratedApiMetadata* Metadata = nullptr;
@@ -888,8 +894,8 @@ struct HookDefinition
     const char* Tier2Profile = "";
 };
 
-constexpr std::size_t MaxHookRecords = 1024;
-constexpr std::size_t MaxModuleRecords = 256;
+constexpr std::size_t MaxHookRecords = 8192;
+constexpr std::size_t MaxModuleRecords = 512;
 constexpr std::size_t HookDefinitionCount = 314;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
@@ -1079,6 +1085,51 @@ bool HasProfileToken(const std::string& value, const char* profile)
     return found;
 }
 
+bool ApiSelectionContains(const std::string& token)
+{
+    return HasProfileToken(g_selectedApiSelection, token.c_str());
+}
+
+bool DefinitionSelectedByApiFilter(const HookDefinition& definition)
+{
+    bool selected = true;
+
+    do
+    {
+        if (g_selectedApiSelection.empty())
+        {
+            break;
+        }
+
+        selected = false;
+        if (definition.ImportModuleName == nullptr || definition.ApiName == nullptr)
+        {
+            break;
+        }
+
+        const std::string moduleName = LowerAscii(definition.ImportModuleName);
+        const std::string apiName = LowerAscii(definition.ApiName);
+        if (moduleName.empty() || apiName.empty())
+        {
+            break;
+        }
+
+        if (definition.LoaderApi || apiName == "getprocaddress" || apiName == "ldrgetprocedureaddress")
+        {
+            selected = true;
+            break;
+        }
+
+        selected =
+            ApiSelectionContains(moduleName + "!" + apiName) ||
+            ApiSelectionContains(moduleName + "!*") ||
+            ApiSelectionContains(moduleName);
+    }
+    while (false);
+
+    return selected;
+}
+
 bool Tier1ProfileEnabled(const char* profile)
 {
     bool enabled = false;
@@ -1121,6 +1172,11 @@ bool Tier2ProfileEnabled(const char* profile)
 
 bool HookDefinitionEnabled(const HookDefinition& definition)
 {
+    if (!DefinitionSelectedByApiFilter(definition))
+    {
+        return false;
+    }
+
     if (definition.Tier1Generic && !Tier1ProfileEnabled(definition.Tier1Profile))
     {
         return false;
@@ -1202,7 +1258,8 @@ knmon::KnMonAgentControlStatus CopyAttachConfig(
         if (
             !WideBufferTerminated(config->OperationId) ||
             !WideBufferTerminated(config->PipeName) ||
-            !WideBufferTerminated(config->TransportName))
+            !WideBufferTerminated(config->TransportName) ||
+            !WideBufferTerminated(config->SelectedApis))
         {
             break;
         }
@@ -1211,6 +1268,7 @@ knmon::KnMonAgentControlStatus CopyAttachConfig(
         copied.OperationId = WideBufferToString(config->OperationId);
         copied.PipeName = WideBufferToString(config->PipeName);
         copied.TransportName = WideBufferToString(config->TransportName);
+        copied.SelectedApis = WideBufferToString(config->SelectedApis);
         copied.TransportRequired = true;
 
         if (copied.OperationId.empty() || copied.PipeName.empty() || copied.TransportName.empty())
@@ -1926,6 +1984,9 @@ std::uint32_t CopyCertStoreProviderText(char* destination, std::uint32_t* length
 template <typename T>
 bool ReadCurrentProcessValue(const T* address, T* value);
 
+template <typename T>
+bool WriteCurrentProcessValue(T* address, const T& value);
+
 std::uint64_t DurationUs(const LARGE_INTEGER& start, const LARGE_INTEGER& end);
 
 std::uint32_t CopyAnsiStringText(char* destination, std::uint32_t* length, std::size_t capacity, const ANSI_STRING* value)
@@ -2449,6 +2510,31 @@ bool ReadCurrentProcessValue(const T* address, T* value)
     return read;
 }
 
+template <typename T>
+bool WriteCurrentProcessValue(T* address, const T& value)
+{
+    bool written = false;
+
+    do
+    {
+        if (address == nullptr)
+        {
+            break;
+        }
+
+        SIZE_T bytesWritten = 0;
+        if (!WriteProcessMemory(GetCurrentProcess(), address, &value, sizeof(T), &bytesWritten))
+        {
+            break;
+        }
+
+        written = bytesWritten == sizeof(T);
+    }
+    while (false);
+
+    return written;
+}
+
 DWORD NtStatusToDosError(NTSTATUS status)
 {
     DWORD result = 0;
@@ -2888,7 +2974,10 @@ void EmitCreateFileWEvent(
     LPCWSTR fileName,
     DWORD desiredAccess,
     DWORD shareMode,
-    DWORD creationDisposition)
+    LPSECURITY_ATTRIBUTES securityAttributes,
+    DWORD creationDisposition,
+    DWORD flagsAndAttributes,
+    HANDLE templateFile)
 {
     LARGE_INTEGER overheadStart = {};
     QueryPerformanceCounter(&overheadStart);
@@ -2897,9 +2986,12 @@ void EmitCreateFileWEvent(
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CreateFileW, "kernel32.dll", start, end, errorCode);
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(securityAttributes));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(templateFile));
         record->Values32[0] = desiredAccess;
         record->Values32[1] = shareMode;
         record->Values32[2] = creationDisposition;
+        record->Values32[3] = flagsAndAttributes;
         CopyWideText(record->Text0, &record->Text0Length, sizeof(record->Text0), fileName);
         CommitTransportRecord(record, overheadStart);
     }
@@ -2913,7 +3005,10 @@ void EmitCreateFileAEvent(
     LPCSTR fileName,
     DWORD desiredAccess,
     DWORD shareMode,
-    DWORD creationDisposition)
+    LPSECURITY_ATTRIBUTES securityAttributes,
+    DWORD creationDisposition,
+    DWORD flagsAndAttributes,
+    HANDLE templateFile)
 {
     LARGE_INTEGER overheadStart = {};
     QueryPerformanceCounter(&overheadStart);
@@ -2922,9 +3017,12 @@ void EmitCreateFileAEvent(
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CreateFileA, "kernel32.dll", start, end, errorCode);
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
+        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(securityAttributes));
+        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(templateFile));
         record->Values32[0] = desiredAccess;
         record->Values32[1] = shareMode;
         record->Values32[2] = creationDisposition;
+        record->Values32[3] = flagsAndAttributes;
         CopyAsciiText(record->Text0, &record->Text0Length, sizeof(record->Text0), fileName);
         CommitTransportRecord(record, overheadStart);
     }
@@ -8549,33 +8647,189 @@ ResolverPointerClassification ClassifyResolverPointer(
     return classification;
 }
 
-void SendResolverPointerClassification(
+bool ResolverHookDefinitionMatches(const ResolverPointerClassification& classification, const HookDefinition& definition)
+{
+    bool matches = false;
+
+    do
+    {
+        if (classification.Metadata == nullptr)
+        {
+            break;
+        }
+
+        if (definition.ImportModuleName == nullptr || definition.ApiName == nullptr)
+        {
+            break;
+        }
+
+        matches =
+            StringViewEqualsAsciiNoCase(classification.Metadata->ModuleName, definition.ImportModuleName) &&
+            StringViewEqualsAsciiNoCase(classification.Metadata->Name, definition.ApiName);
+    }
+    while (false);
+
+    return matches;
+}
+
+void* SelectResolverPointerReplacement(ResolverPointerClassification& classification, const void* returnedPointer)
+{
+    void* replacement = nullptr;
+    bool matchedDefinition = false;
+    bool matchedDisabledDefinition = false;
+
+    do
+    {
+        if (!classification.Candidate)
+        {
+            break;
+        }
+
+        classification.InstrumentationReason = "instrumentation_not_attempted";
+        if (returnedPointer == nullptr)
+        {
+            classification.InstrumentationReason = "instrumentation_null_result";
+            break;
+        }
+
+        std::array<HookDefinition, HookDefinitionCount> definitions = BuildHookDefinitions();
+        for (HookDefinition& definition : definitions)
+        {
+            if (!ResolverHookDefinitionMatches(classification, definition))
+            {
+                continue;
+            }
+
+            matchedDefinition = true;
+            if (!HookDefinitionEnabled(definition))
+            {
+                matchedDisabledDefinition = true;
+                continue;
+            }
+
+            if (definition.ReplacementFunction == nullptr)
+            {
+                classification.InstrumentationReason = "instrumentation_replacement_missing";
+                break;
+            }
+
+            if (definition.OriginalFunction == nullptr)
+            {
+                classification.InstrumentationReason = "instrumentation_original_slot_missing";
+                break;
+            }
+
+            void* returnedFunction = const_cast<void*>(returnedPointer);
+            if (returnedFunction == definition.ReplacementFunction)
+            {
+                classification.InstrumentationReason = "instrumentation_already_replaced";
+                break;
+            }
+
+            void* currentOriginal = *definition.OriginalFunction;
+            if (currentOriginal == nullptr)
+            {
+                InterlockedCompareExchangePointer(
+                    reinterpret_cast<PVOID volatile*>(definition.OriginalFunction),
+                    returnedFunction,
+                    nullptr);
+                currentOriginal = *definition.OriginalFunction;
+            }
+
+            if (currentOriginal == nullptr)
+            {
+                classification.InstrumentationReason = "instrumentation_original_store_failed";
+                break;
+            }
+
+            if (currentOriginal == definition.ReplacementFunction)
+            {
+                classification.InstrumentationReason = "instrumentation_original_is_replacement";
+                break;
+            }
+
+            classification.OriginalFunction = currentOriginal;
+            classification.ReplacementFunction = definition.ReplacementFunction;
+            classification.InstrumentationReason = "instrumentation_replacement_selected";
+            replacement = definition.ReplacementFunction;
+            break;
+        }
+
+        if (replacement != nullptr)
+        {
+            break;
+        }
+
+        if (!matchedDefinition)
+        {
+            classification.InstrumentationReason = "instrumentation_hook_definition_missing";
+            break;
+        }
+
+        if (matchedDisabledDefinition && classification.InstrumentationReason == "instrumentation_not_attempted")
+        {
+            classification.InstrumentationReason = "instrumentation_profile_disabled";
+            break;
+        }
+    }
+    while (false);
+
+    return replacement;
+}
+
+const char* ResolverPointerMessageType(const ResolverPointerClassification& classification)
+{
+    const char* messageType = "resolver_pointer_unsupported";
+
+    if (classification.Instrumented)
+    {
+        messageType = "resolver_pointer_instrumented";
+    }
+    else if (classification.Candidate)
+    {
+        messageType = "resolver_pointer_candidate";
+    }
+
+    return messageType;
+}
+
+const char* ResolverPointerClassificationText(const ResolverPointerClassification& classification)
+{
+    const char* text = "unsupported";
+
+    if (classification.Instrumented)
+    {
+        text = "instrumented";
+    }
+    else if (classification.Candidate)
+    {
+        text = "candidate";
+    }
+
+    return text;
+}
+
+void SendResolverPointerClassificationMessage(
     const char* resolverApi,
-    HMODULE requestedModule,
-    const std::string& requestedName,
+    const ResolverPointerClassification& classification,
     bool lookupByOrdinal,
-    std::uint32_t ordinal,
+    HMODULE requestedModule,
     const void* returnedPointer)
 {
-    const ResolverPointerClassification classification = ClassifyResolverPointer(
-        requestedModule,
-        requestedName,
-        lookupByOrdinal,
-        ordinal,
-        returnedPointer);
-
     const LONG64 sequence = NextSequence();
     std::ostringstream stream;
-    stream << MessagePrefix(classification.Candidate ? "resolver_pointer_candidate" : "resolver_pointer_unsupported", sequence) << ",";
+    stream << MessagePrefix(ResolverPointerMessageType(classification), sequence) << ",";
     stream << "\"resolverApi\":" << Q(resolverApi == nullptr ? "unknown" : resolverApi) << ",";
-    stream << "\"classification\":" << Q(classification.Candidate ? "candidate" : "unsupported") << ",";
+    stream << "\"classification\":" << Q(ResolverPointerClassificationText(classification)) << ",";
     stream << "\"reason\":" << Q(classification.Reason) << ",";
     stream << "\"lookupKind\":" << Q(lookupByOrdinal ? "ordinal" : "name") << ",";
     stream << "\"requestedName\":" << Q(lookupByOrdinal ? "" : classification.RequestedName) << ",";
-    stream << "\"requestedOrdinal\":" << (lookupByOrdinal ? ordinal : 0) << ",";
+    stream << "\"requestedOrdinal\":" << (lookupByOrdinal ? classification.Ordinal : 0) << ",";
     stream << "\"requestedModule\":" << Q(classification.RequestedModuleName) << ",";
     stream << "\"requestedModuleBase\":" << Q(PointerText(requestedModule)) << ",";
     stream << "\"returnedPointer\":" << Q(PointerText(returnedPointer)) << ",";
+    stream << "\"originalPointer\":" << Q(PointerText(classification.OriginalFunction)) << ",";
+    stream << "\"replacementPointer\":" << Q(PointerText(classification.ReplacementFunction)) << ",";
     stream << "\"targetModule\":" << Q(classification.TargetModuleName) << ",";
     stream << "\"targetModulePath\":" << Q(classification.TargetModulePath) << ",";
     stream << "\"targetModuleBase\":" << Q(PointerText(classification.TargetModule.Base)) << ",";
@@ -8587,8 +8841,11 @@ void SendResolverPointerClassification(
     stream << "\"definitionName\":" << Q(classification.Metadata == nullptr ? "" : std::string(classification.Metadata->Name)) << ",";
     stream << "\"hookPolicy\":" << Q(classification.Metadata == nullptr ? "" : std::string(classification.Metadata->HookPolicy)) << ",";
     stream << "\"coverageStatus\":" << Q(classification.Metadata == nullptr ? "" : std::string(classification.Metadata->CoverageStatus)) << ",";
-    stream << "\"instrumented\":false,";
-    stream << "\"message\":\"Resolver returned pointer classified without code mutation.\"";
+    stream << "\"instrumented\":" << (classification.Instrumented ? "true" : "false") << ",";
+    stream << "\"instrumentationReason\":" << Q(classification.InstrumentationReason) << ",";
+    stream << "\"message\":" << Q(classification.Instrumented ?
+        "Resolver returned pointer substituted with monitored wrapper." :
+        "Resolver returned pointer classified without substitution.");
     stream << "}";
     SendJson(stream.str());
 }
@@ -8763,7 +9020,18 @@ HANDLE WINAPI HookedCreateFileW(
     const DWORD eventError = failed ? lastError : 0;
     if (HooksEnabled())
     {
-        EmitCreateFileWEvent(result, eventError, start, end, fileName, desiredAccess, shareMode, creationDisposition);
+        EmitCreateFileWEvent(
+            result,
+            eventError,
+            start,
+            end,
+            fileName,
+            desiredAccess,
+            shareMode,
+            securityAttributes,
+            creationDisposition,
+            flagsAndAttributes,
+            templateFile);
     }
 
     SetLastError(lastError);
@@ -8802,7 +9070,18 @@ HANDLE WINAPI HookedCreateFileA(
     const DWORD eventError = failed ? lastError : 0;
     if (HooksEnabled())
     {
-        EmitCreateFileAEvent(result, eventError, start, end, fileName, desiredAccess, shareMode, creationDisposition);
+        EmitCreateFileAEvent(
+            result,
+            eventError,
+            start,
+            end,
+            fileName,
+            desiredAccess,
+            shareMode,
+            securityAttributes,
+            creationDisposition,
+            flagsAndAttributes,
+            templateFile);
     }
 
     SetLastError(lastError);
@@ -13552,6 +13831,7 @@ FARPROC WINAPI HookedGetProcAddress(HMODULE module, LPCSTR procName)
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
     FARPROC result = g_originalGetProcAddress(module, procName);
+    FARPROC resolvedResult = result;
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13565,13 +13845,28 @@ FARPROC WINAPI HookedGetProcAddress(HMODULE module, LPCSTR procName)
             const std::uint32_t ordinal = lookupByOrdinal ?
                 static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(procName) & 0xffffu) :
                 0;
-            SendResolverPointerClassification(
-                "GetProcAddress",
+            ResolverPointerClassification classification = ClassifyResolverPointer(
                 module,
                 CaptureResolverProcName(procName, lookupByOrdinal),
                 lookupByOrdinal,
                 ordinal,
                 reinterpret_cast<const void*>(result));
+            void* replacement = SelectResolverPointerReplacement(
+                classification,
+                reinterpret_cast<const void*>(result));
+            if (replacement != nullptr)
+            {
+                classification.Instrumented = true;
+                classification.InstrumentationReason = "instrumented_return_value_substituted";
+                result = reinterpret_cast<FARPROC>(replacement);
+            }
+
+            SendResolverPointerClassificationMessage(
+                "GetProcAddress",
+                classification,
+                lookupByOrdinal,
+                module,
+                reinterpret_cast<const void*>(resolvedResult));
         }
     }
 
@@ -13715,12 +14010,33 @@ NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functio
         {
             const std::string requestedName = CaptureResolverAnsiStringName(functionName);
             const bool lookupByOrdinal = requestedName.empty() && ordinal != 0;
-            SendResolverPointerClassification(
-                "LdrGetProcedureAddress",
+            ResolverPointerClassification classification = ClassifyResolverPointer(
                 module,
                 requestedName,
                 lookupByOrdinal,
                 lookupByOrdinal ? ordinal : 0,
+                resolvedAddress);
+            void* replacement = SelectResolverPointerReplacement(classification, resolvedAddress);
+            if (replacement != nullptr)
+            {
+                PVOID replacementAddress = replacement;
+                if (WriteCurrentProcessValue(functionAddress, replacementAddress))
+                {
+                    classification.Instrumented = true;
+                    classification.InstrumentationReason = "instrumented_output_pointer_substituted";
+                }
+                else
+                {
+                    classification.InstrumentationReason = "instrumentation_output_pointer_write_failed";
+                    classification.ReplacementFunction = nullptr;
+                }
+            }
+
+            SendResolverPointerClassificationMessage(
+                "LdrGetProcedureAddress",
+                classification,
+                lookupByOrdinal,
+                module,
                 resolvedAddress);
         }
     }
@@ -16083,6 +16399,7 @@ bool ResetDisabledAgentForReinitialize()
         InterlockedExchange64(&g_droppedEvents, 0);
         InterlockedExchange64(&g_sequence, 0);
         g_operationId.clear();
+        g_selectedApiSelection.clear();
         InterlockedExchange(&g_workerStarted, 0);
         SetLifecycleState(AgentLifecycleState::Starting);
         reset = true;
@@ -16108,10 +16425,12 @@ DWORD WINAPI AgentWorker(void* context)
         runtimeConfig.PipeName = ReadEnv(L"KNMON_AGENT_PIPE");
         runtimeConfig.TransportName = ReadEnv(L"KNMON_TRANSPORT_NAME");
         runtimeConfig.OperationId = ReadEnv(L"KNMON_OPERATION_ID");
+        runtimeConfig.SelectedApis = ReadEnv(L"KNMON_SELECTED_APIS");
         runtimeConfig.TransportRequired = EnvEnabled(L"KNMON_TRANSPORT_REQUIRED");
     }
 
     g_operationId = runtimeConfig.OperationId;
+    g_selectedApiSelection = LowerAscii(WideToUtf8(runtimeConfig.SelectedApis.c_str()));
 
     do
     {

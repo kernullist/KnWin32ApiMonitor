@@ -12656,7 +12656,7 @@
       "decode": "com_init_flags",
       "direction": "in",
       "enum": "",
-      "flags": "",
+      "flags": "com_init_flags",
       "index": 1,
       "lengthExpression": "",
       "lengthFrom": "",
@@ -12808,7 +12808,7 @@
       "captureTiming": "pre",
       "decode": "ro_init_type",
       "direction": "in",
-      "enum": "",
+      "enum": "ro_init_type",
       "flags": "",
       "index": 0,
       "lengthExpression": "",
@@ -14168,7 +14168,7 @@
       "captureTiming": "pre",
       "decode": "std_handle_selector",
       "direction": "in",
-      "enum": "",
+      "enum": "std_handle_selector",
       "flags": "",
       "index": 0,
       "lengthExpression": "",
@@ -14254,7 +14254,7 @@
       "decode": "handle_information_mask",
       "direction": "in",
       "enum": "",
-      "flags": "",
+      "flags": "handle_information_flags",
       "index": 1,
       "lengthExpression": "",
       "lengthFrom": "",
@@ -14271,7 +14271,7 @@
       "decode": "handle_information_flags",
       "direction": "in",
       "enum": "",
-      "flags": "",
+      "flags": "handle_information_flags",
       "index": 2,
       "lengthExpression": "",
       "lengthFrom": "",
@@ -14305,7 +14305,7 @@
       "decode": "get_module_handle_ex_flags",
       "direction": "in",
       "enum": "",
-      "flags": "",
+      "flags": "get_module_handle_ex_flags",
       "index": 0,
       "lengthExpression": "",
       "lengthFrom": "",
@@ -15702,5 +15702,1135 @@
       "definitions/metadata/flags.json",
       "definitions/metadata/id-assignments.json"
     ]
-  }
+  },
+  "valueSets": [
+    {
+      "kind": "enum",
+      "name": "CREATE_NEW",
+      "set": "file_creation_disposition",
+      "value": "0x00000001"
+    },
+    {
+      "kind": "enum",
+      "name": "CREATE_ALWAYS",
+      "set": "file_creation_disposition",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "enum",
+      "name": "OPEN_EXISTING",
+      "set": "file_creation_disposition",
+      "value": "0x00000003"
+    },
+    {
+      "kind": "enum",
+      "name": "OPEN_ALWAYS",
+      "set": "file_creation_disposition",
+      "value": "0x00000004"
+    },
+    {
+      "kind": "enum",
+      "name": "TRUNCATE_EXISTING",
+      "set": "file_creation_disposition",
+      "value": "0x00000005"
+    },
+    {
+      "kind": "enum",
+      "name": "FILE_SUPERSEDE",
+      "set": "nt_file_disposition",
+      "value": "0x00000000"
+    },
+    {
+      "kind": "enum",
+      "name": "FILE_OPEN",
+      "set": "nt_file_disposition",
+      "value": "0x00000001"
+    },
+    {
+      "kind": "enum",
+      "name": "FILE_CREATE",
+      "set": "nt_file_disposition",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "enum",
+      "name": "FILE_OPEN_IF",
+      "set": "nt_file_disposition",
+      "value": "0x00000003"
+    },
+    {
+      "kind": "enum",
+      "name": "FILE_OVERWRITE",
+      "set": "nt_file_disposition",
+      "value": "0x00000004"
+    },
+    {
+      "kind": "enum",
+      "name": "FILE_OVERWRITE_IF",
+      "set": "nt_file_disposition",
+      "value": "0x00000005"
+    },
+    {
+      "kind": "enum",
+      "name": "RO_INIT_SINGLETHREADED",
+      "set": "ro_init_type",
+      "value": "0x00000000"
+    },
+    {
+      "kind": "enum",
+      "name": "RO_INIT_MULTITHREADED",
+      "set": "ro_init_type",
+      "value": "0x00000001"
+    },
+    {
+      "kind": "enum",
+      "name": "STD_INPUT_HANDLE",
+      "set": "std_handle_selector",
+      "value": "0xFFFFFFF6"
+    },
+    {
+      "kind": "enum",
+      "name": "STD_OUTPUT_HANDLE",
+      "set": "std_handle_selector",
+      "value": "0xFFFFFFF5"
+    },
+    {
+      "kind": "enum",
+      "name": "STD_ERROR_HANDLE",
+      "set": "std_handle_selector",
+      "value": "0xFFFFFFF4"
+    },
+    {
+      "kind": "enum",
+      "name": "WAIT_OBJECT_0",
+      "set": "wait_result",
+      "value": "0x00000000"
+    },
+    {
+      "kind": "enum",
+      "name": "WAIT_ABANDONED",
+      "set": "wait_result",
+      "value": "0x00000080"
+    },
+    {
+      "kind": "enum",
+      "name": "WAIT_TIMEOUT",
+      "set": "wait_result",
+      "value": "0x00000102"
+    },
+    {
+      "kind": "enum",
+      "name": "WAIT_FAILED",
+      "set": "wait_result",
+      "value": "0xFFFFFFFF"
+    },
+    {
+      "kind": "flags",
+      "name": "COINIT_MULTITHREADED",
+      "set": "com_init_flags",
+      "value": "0x00000000"
+    },
+    {
+      "kind": "flags",
+      "name": "COINIT_APARTMENTTHREADED",
+      "set": "com_init_flags",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "flags",
+      "name": "COINIT_DISABLE_OLE1DDE",
+      "set": "com_init_flags",
+      "value": "0x00000004"
+    },
+    {
+      "kind": "flags",
+      "name": "COINIT_SPEED_OVER_MEMORY",
+      "set": "com_init_flags",
+      "value": "0x00000008"
+    },
+    {
+      "kind": "flags",
+      "name": "EVENT_MODIFY_STATE",
+      "set": "event_access_flags",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "flags",
+      "name": "DELETE",
+      "set": "event_access_flags",
+      "value": "0x00010000"
+    },
+    {
+      "kind": "flags",
+      "name": "READ_CONTROL",
+      "set": "event_access_flags",
+      "value": "0x00020000"
+    },
+    {
+      "kind": "flags",
+      "name": "WRITE_DAC",
+      "set": "event_access_flags",
+      "value": "0x00040000"
+    },
+    {
+      "kind": "flags",
+      "name": "WRITE_OWNER",
+      "set": "event_access_flags",
+      "value": "0x00080000"
+    },
+    {
+      "kind": "flags",
+      "name": "SYNCHRONIZE",
+      "set": "event_access_flags",
+      "value": "0x00100000"
+    },
+    {
+      "kind": "flags",
+      "name": "GENERIC_READ",
+      "set": "file_access_mask",
+      "value": "0x80000000"
+    },
+    {
+      "kind": "flags",
+      "name": "GENERIC_WRITE",
+      "set": "file_access_mask",
+      "value": "0x40000000"
+    },
+    {
+      "kind": "flags",
+      "name": "GENERIC_EXECUTE",
+      "set": "file_access_mask",
+      "value": "0x20000000"
+    },
+    {
+      "kind": "flags",
+      "name": "GENERIC_ALL",
+      "set": "file_access_mask",
+      "value": "0x10000000"
+    },
+    {
+      "kind": "flags",
+      "name": "DELETE",
+      "set": "file_access_mask",
+      "value": "0x00010000"
+    },
+    {
+      "kind": "flags",
+      "name": "READ_CONTROL",
+      "set": "file_access_mask",
+      "value": "0x00020000"
+    },
+    {
+      "kind": "flags",
+      "name": "WRITE_DAC",
+      "set": "file_access_mask",
+      "value": "0x00040000"
+    },
+    {
+      "kind": "flags",
+      "name": "WRITE_OWNER",
+      "set": "file_access_mask",
+      "value": "0x00080000"
+    },
+    {
+      "kind": "flags",
+      "name": "SYNCHRONIZE",
+      "set": "file_access_mask",
+      "value": "0x00100000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_READ_DATA",
+      "set": "file_access_mask",
+      "value": "0x00000001"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_WRITE_DATA",
+      "set": "file_access_mask",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_APPEND_DATA",
+      "set": "file_access_mask",
+      "value": "0x00000004"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_READ_EA",
+      "set": "file_access_mask",
+      "value": "0x00000008"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_WRITE_EA",
+      "set": "file_access_mask",
+      "value": "0x00000010"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_EXECUTE",
+      "set": "file_access_mask",
+      "value": "0x00000020"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_READ_ATTRIBUTES",
+      "set": "file_access_mask",
+      "value": "0x00000080"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_WRITE_ATTRIBUTES",
+      "set": "file_access_mask",
+      "value": "0x00000100"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_ATTRIBUTE_READONLY",
+      "set": "file_flags_attributes",
+      "value": "0x00000001"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_ATTRIBUTE_HIDDEN",
+      "set": "file_flags_attributes",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_ATTRIBUTE_SYSTEM",
+      "set": "file_flags_attributes",
+      "value": "0x00000004"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_ATTRIBUTE_DIRECTORY",
+      "set": "file_flags_attributes",
+      "value": "0x00000010"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_ATTRIBUTE_ARCHIVE",
+      "set": "file_flags_attributes",
+      "value": "0x00000020"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_ATTRIBUTE_DEVICE",
+      "set": "file_flags_attributes",
+      "value": "0x00000040"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_ATTRIBUTE_NORMAL",
+      "set": "file_flags_attributes",
+      "value": "0x00000080"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_ATTRIBUTE_TEMPORARY",
+      "set": "file_flags_attributes",
+      "value": "0x00000100"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_ATTRIBUTE_REPARSE_POINT",
+      "set": "file_flags_attributes",
+      "value": "0x00000400"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_ATTRIBUTE_COMPRESSED",
+      "set": "file_flags_attributes",
+      "value": "0x00000800"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_FLAG_WRITE_THROUGH",
+      "set": "file_flags_attributes",
+      "value": "0x80000000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_FLAG_OVERLAPPED",
+      "set": "file_flags_attributes",
+      "value": "0x40000000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_FLAG_NO_BUFFERING",
+      "set": "file_flags_attributes",
+      "value": "0x20000000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_FLAG_RANDOM_ACCESS",
+      "set": "file_flags_attributes",
+      "value": "0x10000000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_FLAG_SEQUENTIAL_SCAN",
+      "set": "file_flags_attributes",
+      "value": "0x08000000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_FLAG_DELETE_ON_CLOSE",
+      "set": "file_flags_attributes",
+      "value": "0x04000000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_FLAG_BACKUP_SEMANTICS",
+      "set": "file_flags_attributes",
+      "value": "0x02000000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_FLAG_POSIX_SEMANTICS",
+      "set": "file_flags_attributes",
+      "value": "0x01000000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_FLAG_OPEN_REPARSE_POINT",
+      "set": "file_flags_attributes",
+      "value": "0x00200000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_FLAG_OPEN_NO_RECALL",
+      "set": "file_flags_attributes",
+      "value": "0x00100000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_FLAG_FIRST_PIPE_INSTANCE",
+      "set": "file_flags_attributes",
+      "value": "0x00080000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_MAP_COPY",
+      "set": "file_mapping_access_flags",
+      "value": "0x00000001"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_MAP_WRITE",
+      "set": "file_mapping_access_flags",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_MAP_READ",
+      "set": "file_mapping_access_flags",
+      "value": "0x00000004"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_MAP_EXECUTE",
+      "set": "file_mapping_access_flags",
+      "value": "0x00000020"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_MAP_ALL_ACCESS",
+      "set": "file_mapping_access_flags",
+      "value": "0x000f001f"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_READONLY",
+      "set": "file_mapping_protection_flags",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_READWRITE",
+      "set": "file_mapping_protection_flags",
+      "value": "0x00000004"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_WRITECOPY",
+      "set": "file_mapping_protection_flags",
+      "value": "0x00000008"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_EXECUTE_READ",
+      "set": "file_mapping_protection_flags",
+      "value": "0x00000020"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_EXECUTE_READWRITE",
+      "set": "file_mapping_protection_flags",
+      "value": "0x00000040"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_EXECUTE_WRITECOPY",
+      "set": "file_mapping_protection_flags",
+      "value": "0x00000080"
+    },
+    {
+      "kind": "flags",
+      "name": "SEC_COMMIT",
+      "set": "file_mapping_protection_flags",
+      "value": "0x08000000"
+    },
+    {
+      "kind": "flags",
+      "name": "SEC_NOCACHE",
+      "set": "file_mapping_protection_flags",
+      "value": "0x10000000"
+    },
+    {
+      "kind": "flags",
+      "name": "SEC_RESERVE",
+      "set": "file_mapping_protection_flags",
+      "value": "0x04000000"
+    },
+    {
+      "kind": "flags",
+      "name": "SEC_LARGE_PAGES",
+      "set": "file_mapping_protection_flags",
+      "value": "0x80000000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_SHARE_READ",
+      "set": "file_share_mask",
+      "value": "0x00000001"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_SHARE_WRITE",
+      "set": "file_share_mask",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_SHARE_DELETE",
+      "set": "file_share_mask",
+      "value": "0x00000004"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_TYPE_DISK",
+      "set": "file_type_flags",
+      "value": "0x00000001"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_TYPE_CHAR",
+      "set": "file_type_flags",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_TYPE_PIPE",
+      "set": "file_type_flags",
+      "value": "0x00000003"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_TYPE_REMOTE",
+      "set": "file_type_flags",
+      "value": "0x00008000"
+    },
+    {
+      "kind": "flags",
+      "name": "GET_MODULE_HANDLE_EX_FLAG_PIN",
+      "set": "get_module_handle_ex_flags",
+      "value": "0x00000001"
+    },
+    {
+      "kind": "flags",
+      "name": "GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT",
+      "set": "get_module_handle_ex_flags",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "flags",
+      "name": "GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS",
+      "set": "get_module_handle_ex_flags",
+      "value": "0x00000004"
+    },
+    {
+      "kind": "flags",
+      "name": "HANDLE_FLAG_INHERIT",
+      "set": "handle_information_flags",
+      "value": "0x00000001"
+    },
+    {
+      "kind": "flags",
+      "name": "HANDLE_FLAG_PROTECT_FROM_CLOSE",
+      "set": "handle_information_flags",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "flags",
+      "name": "DONT_RESOLVE_DLL_REFERENCES",
+      "set": "load_library_flags",
+      "value": "0x00000001"
+    },
+    {
+      "kind": "flags",
+      "name": "LOAD_LIBRARY_AS_DATAFILE",
+      "set": "load_library_flags",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "flags",
+      "name": "LOAD_WITH_ALTERED_SEARCH_PATH",
+      "set": "load_library_flags",
+      "value": "0x00000008"
+    },
+    {
+      "kind": "flags",
+      "name": "LOAD_IGNORE_CODE_AUTHZ_LEVEL",
+      "set": "load_library_flags",
+      "value": "0x00000010"
+    },
+    {
+      "kind": "flags",
+      "name": "LOAD_LIBRARY_AS_IMAGE_RESOURCE",
+      "set": "load_library_flags",
+      "value": "0x00000020"
+    },
+    {
+      "kind": "flags",
+      "name": "LOAD_LIBRARY_AS_DATAFILE_EXCLUSIVE",
+      "set": "load_library_flags",
+      "value": "0x00000040"
+    },
+    {
+      "kind": "flags",
+      "name": "LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR",
+      "set": "load_library_flags",
+      "value": "0x00000100"
+    },
+    {
+      "kind": "flags",
+      "name": "LOAD_LIBRARY_SEARCH_APPLICATION_DIR",
+      "set": "load_library_flags",
+      "value": "0x00000200"
+    },
+    {
+      "kind": "flags",
+      "name": "LOAD_LIBRARY_SEARCH_USER_DIRS",
+      "set": "load_library_flags",
+      "value": "0x00000400"
+    },
+    {
+      "kind": "flags",
+      "name": "LOAD_LIBRARY_SEARCH_SYSTEM32",
+      "set": "load_library_flags",
+      "value": "0x00000800"
+    },
+    {
+      "kind": "flags",
+      "name": "LOAD_LIBRARY_SEARCH_DEFAULT_DIRS",
+      "set": "load_library_flags",
+      "value": "0x00001000"
+    },
+    {
+      "kind": "flags",
+      "name": "LOAD_LIBRARY_SAFE_CURRENT_DIRS",
+      "set": "load_library_flags",
+      "value": "0x00002000"
+    },
+    {
+      "kind": "flags",
+      "name": "MEM_COMMIT",
+      "set": "memory_allocation_type",
+      "value": "0x00001000"
+    },
+    {
+      "kind": "flags",
+      "name": "MEM_RESERVE",
+      "set": "memory_allocation_type",
+      "value": "0x00002000"
+    },
+    {
+      "kind": "flags",
+      "name": "MEM_RESET",
+      "set": "memory_allocation_type",
+      "value": "0x00080000"
+    },
+    {
+      "kind": "flags",
+      "name": "MEM_TOP_DOWN",
+      "set": "memory_allocation_type",
+      "value": "0x00100000"
+    },
+    {
+      "kind": "flags",
+      "name": "MEM_WRITE_WATCH",
+      "set": "memory_allocation_type",
+      "value": "0x00200000"
+    },
+    {
+      "kind": "flags",
+      "name": "MEM_PHYSICAL",
+      "set": "memory_allocation_type",
+      "value": "0x00400000"
+    },
+    {
+      "kind": "flags",
+      "name": "MEM_RESET_UNDO",
+      "set": "memory_allocation_type",
+      "value": "0x01000000"
+    },
+    {
+      "kind": "flags",
+      "name": "MEM_LARGE_PAGES",
+      "set": "memory_allocation_type",
+      "value": "0x20000000"
+    },
+    {
+      "kind": "flags",
+      "name": "MEM_DECOMMIT",
+      "set": "memory_free_type",
+      "value": "0x00004000"
+    },
+    {
+      "kind": "flags",
+      "name": "MEM_RELEASE",
+      "set": "memory_free_type",
+      "value": "0x00008000"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_NOACCESS",
+      "set": "memory_protection_flags",
+      "value": "0x00000001"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_READONLY",
+      "set": "memory_protection_flags",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_READWRITE",
+      "set": "memory_protection_flags",
+      "value": "0x00000004"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_WRITECOPY",
+      "set": "memory_protection_flags",
+      "value": "0x00000008"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_EXECUTE",
+      "set": "memory_protection_flags",
+      "value": "0x00000010"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_EXECUTE_READ",
+      "set": "memory_protection_flags",
+      "value": "0x00000020"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_EXECUTE_READWRITE",
+      "set": "memory_protection_flags",
+      "value": "0x00000040"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_EXECUTE_WRITECOPY",
+      "set": "memory_protection_flags",
+      "value": "0x00000080"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_GUARD",
+      "set": "memory_protection_flags",
+      "value": "0x00000100"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_NOCACHE",
+      "set": "memory_protection_flags",
+      "value": "0x00000200"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_WRITECOMBINE",
+      "set": "memory_protection_flags",
+      "value": "0x00000400"
+    },
+    {
+      "kind": "flags",
+      "name": "PAGE_TARGETS_INVALID",
+      "set": "memory_protection_flags",
+      "value": "0x40000000"
+    },
+    {
+      "kind": "flags",
+      "name": "MEM_COMMIT",
+      "set": "memory_state_flags",
+      "value": "0x00001000"
+    },
+    {
+      "kind": "flags",
+      "name": "MEM_RESERVE",
+      "set": "memory_state_flags",
+      "value": "0x00002000"
+    },
+    {
+      "kind": "flags",
+      "name": "MEM_FREE",
+      "set": "memory_state_flags",
+      "value": "0x00010000"
+    },
+    {
+      "kind": "flags",
+      "name": "MEM_PRIVATE",
+      "set": "memory_type_flags",
+      "value": "0x00020000"
+    },
+    {
+      "kind": "flags",
+      "name": "MEM_MAPPED",
+      "set": "memory_type_flags",
+      "value": "0x00040000"
+    },
+    {
+      "kind": "flags",
+      "name": "MEM_IMAGE",
+      "set": "memory_type_flags",
+      "value": "0x01000000"
+    },
+    {
+      "kind": "flags",
+      "name": "MUTEX_MODIFY_STATE",
+      "set": "mutex_access_flags",
+      "value": "0x00000001"
+    },
+    {
+      "kind": "flags",
+      "name": "DELETE",
+      "set": "mutex_access_flags",
+      "value": "0x00010000"
+    },
+    {
+      "kind": "flags",
+      "name": "READ_CONTROL",
+      "set": "mutex_access_flags",
+      "value": "0x00020000"
+    },
+    {
+      "kind": "flags",
+      "name": "WRITE_DAC",
+      "set": "mutex_access_flags",
+      "value": "0x00040000"
+    },
+    {
+      "kind": "flags",
+      "name": "WRITE_OWNER",
+      "set": "mutex_access_flags",
+      "value": "0x00080000"
+    },
+    {
+      "kind": "flags",
+      "name": "SYNCHRONIZE",
+      "set": "mutex_access_flags",
+      "value": "0x00100000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_DIRECTORY_FILE",
+      "set": "nt_create_options",
+      "value": "0x00000001"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_WRITE_THROUGH",
+      "set": "nt_create_options",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_SEQUENTIAL_ONLY",
+      "set": "nt_create_options",
+      "value": "0x00000004"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_NO_INTERMEDIATE_BUFFERING",
+      "set": "nt_create_options",
+      "value": "0x00000008"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_SYNCHRONOUS_IO_ALERT",
+      "set": "nt_create_options",
+      "value": "0x00000010"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_SYNCHRONOUS_IO_NONALERT",
+      "set": "nt_create_options",
+      "value": "0x00000020"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_NON_DIRECTORY_FILE",
+      "set": "nt_create_options",
+      "value": "0x00000040"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_CREATE_TREE_CONNECTION",
+      "set": "nt_create_options",
+      "value": "0x00000080"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_COMPLETE_IF_OPLOCKED",
+      "set": "nt_create_options",
+      "value": "0x00000100"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_NO_EA_KNOWLEDGE",
+      "set": "nt_create_options",
+      "value": "0x00000200"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_OPEN_REMOTE_INSTANCE",
+      "set": "nt_create_options",
+      "value": "0x00000400"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_RANDOM_ACCESS",
+      "set": "nt_create_options",
+      "value": "0x00000800"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_DELETE_ON_CLOSE",
+      "set": "nt_create_options",
+      "value": "0x00001000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_OPEN_BY_FILE_ID",
+      "set": "nt_create_options",
+      "value": "0x00002000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_OPEN_FOR_BACKUP_INTENT",
+      "set": "nt_create_options",
+      "value": "0x00004000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_NO_COMPRESSION",
+      "set": "nt_create_options",
+      "value": "0x00008000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_OPEN_REQUIRING_OPLOCK",
+      "set": "nt_create_options",
+      "value": "0x00010000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_DISALLOW_EXCLUSIVE",
+      "set": "nt_create_options",
+      "value": "0x00020000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_SESSION_AWARE",
+      "set": "nt_create_options",
+      "value": "0x00040000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_RESERVE_OPFILTER",
+      "set": "nt_create_options",
+      "value": "0x00100000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_OPEN_REPARSE_POINT",
+      "set": "nt_create_options",
+      "value": "0x00200000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_OPEN_NO_RECALL",
+      "set": "nt_create_options",
+      "value": "0x00400000"
+    },
+    {
+      "kind": "flags",
+      "name": "FILE_OPEN_FOR_FREE_SPACE_QUERY",
+      "set": "nt_create_options",
+      "value": "0x00800000"
+    },
+    {
+      "kind": "flags",
+      "name": "SEMAPHORE_MODIFY_STATE",
+      "set": "semaphore_access_flags",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "flags",
+      "name": "DELETE",
+      "set": "semaphore_access_flags",
+      "value": "0x00010000"
+    },
+    {
+      "kind": "flags",
+      "name": "READ_CONTROL",
+      "set": "semaphore_access_flags",
+      "value": "0x00020000"
+    },
+    {
+      "kind": "flags",
+      "name": "WRITE_DAC",
+      "set": "semaphore_access_flags",
+      "value": "0x00040000"
+    },
+    {
+      "kind": "flags",
+      "name": "WRITE_OWNER",
+      "set": "semaphore_access_flags",
+      "value": "0x00080000"
+    },
+    {
+      "kind": "flags",
+      "name": "SYNCHRONIZE",
+      "set": "semaphore_access_flags",
+      "value": "0x00100000"
+    },
+    {
+      "kind": "flags",
+      "name": "THREAD_TERMINATE",
+      "set": "thread_access_flags",
+      "value": "0x00000001"
+    },
+    {
+      "kind": "flags",
+      "name": "THREAD_SUSPEND_RESUME",
+      "set": "thread_access_flags",
+      "value": "0x00000002"
+    },
+    {
+      "kind": "flags",
+      "name": "THREAD_GET_CONTEXT",
+      "set": "thread_access_flags",
+      "value": "0x00000008"
+    },
+    {
+      "kind": "flags",
+      "name": "THREAD_SET_CONTEXT",
+      "set": "thread_access_flags",
+      "value": "0x00000010"
+    },
+    {
+      "kind": "flags",
+      "name": "THREAD_SET_INFORMATION",
+      "set": "thread_access_flags",
+      "value": "0x00000020"
+    },
+    {
+      "kind": "flags",
+      "name": "THREAD_QUERY_INFORMATION",
+      "set": "thread_access_flags",
+      "value": "0x00000040"
+    },
+    {
+      "kind": "flags",
+      "name": "THREAD_SET_THREAD_TOKEN",
+      "set": "thread_access_flags",
+      "value": "0x00000080"
+    },
+    {
+      "kind": "flags",
+      "name": "THREAD_IMPERSONATE",
+      "set": "thread_access_flags",
+      "value": "0x00000100"
+    },
+    {
+      "kind": "flags",
+      "name": "THREAD_DIRECT_IMPERSONATION",
+      "set": "thread_access_flags",
+      "value": "0x00000200"
+    },
+    {
+      "kind": "flags",
+      "name": "THREAD_SET_LIMITED_INFORMATION",
+      "set": "thread_access_flags",
+      "value": "0x00000400"
+    },
+    {
+      "kind": "flags",
+      "name": "THREAD_QUERY_LIMITED_INFORMATION",
+      "set": "thread_access_flags",
+      "value": "0x00000800"
+    },
+    {
+      "kind": "flags",
+      "name": "DELETE",
+      "set": "thread_access_flags",
+      "value": "0x00010000"
+    },
+    {
+      "kind": "flags",
+      "name": "READ_CONTROL",
+      "set": "thread_access_flags",
+      "value": "0x00020000"
+    },
+    {
+      "kind": "flags",
+      "name": "WRITE_DAC",
+      "set": "thread_access_flags",
+      "value": "0x00040000"
+    },
+    {
+      "kind": "flags",
+      "name": "WRITE_OWNER",
+      "set": "thread_access_flags",
+      "value": "0x00080000"
+    },
+    {
+      "kind": "flags",
+      "name": "SYNCHRONIZE",
+      "set": "thread_access_flags",
+      "value": "0x00100000"
+    },
+    {
+      "kind": "flags",
+      "name": "CREATE_SUSPENDED",
+      "set": "thread_creation_flags",
+      "value": "0x00000004"
+    },
+    {
+      "kind": "flags",
+      "name": "STACK_SIZE_PARAM_IS_A_RESERVATION",
+      "set": "thread_creation_flags",
+      "value": "0x00010000"
+    }
+  ]
 }

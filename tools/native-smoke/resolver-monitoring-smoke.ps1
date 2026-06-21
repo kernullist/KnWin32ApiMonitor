@@ -102,10 +102,11 @@ if ($ldrArgs -notmatch "0x[0-9a-fA-F]+")
 $resolverPointerCalls = @($result.agentMessages | Where-Object { $_.messageType -eq "resolver_pointer_call" })
 if ($resolverPointerCalls.Count -ne 0)
 {
-    throw "Resolver candidate ledger smoke must not emit resolver_pointer_call events."
+    throw "Resolver substitution smoke must not emit resolver_pointer_call events."
 }
 
 $ledgerMessages = @($result.agentMessages | Where-Object {
+    $_.messageType -eq "resolver_pointer_instrumented" -or
     $_.messageType -eq "resolver_pointer_candidate" -or
     $_.messageType -eq "resolver_pointer_unsupported"
 })
@@ -115,7 +116,11 @@ if ($ledgerMessages.Count -lt 2)
     throw "Resolver pointer ledger evidence missing."
 }
 
-$candidateLedgerCount = @($ledgerMessages | Where-Object { $_.messageType -eq "resolver_pointer_candidate" }).Count
+$instrumentedLedgerCount = @($ledgerMessages | Where-Object { $_.messageType -eq "resolver_pointer_instrumented" }).Count
+$candidateLedgerCount = @($ledgerMessages | Where-Object {
+    $_.messageType -eq "resolver_pointer_candidate" -or
+    $_.messageType -eq "resolver_pointer_instrumented"
+}).Count
 $unsupportedLedgerCount = @($ledgerMessages | Where-Object { $_.messageType -eq "resolver_pointer_unsupported" }).Count
 
 if ([uint64]$result.resolverPointerCandidates -ne [uint64]$candidateLedgerCount)
@@ -128,35 +133,73 @@ if ([uint64]$result.resolverPointerUnsupported -ne [uint64]$unsupportedLedgerCou
     throw "Resolver pointer unsupported counter mismatch: result=$($result.resolverPointerUnsupported) ledger=$unsupportedLedgerCount"
 }
 
-if ($candidateLedgerCount -lt 1 -or $unsupportedLedgerCount -lt 1)
+if ($instrumentedLedgerCount -lt 1 -or $unsupportedLedgerCount -lt 1)
 {
-    throw "Resolver pointer counters did not include both candidate and unsupported evidence: candidates=$candidateLedgerCount unsupported=$unsupportedLedgerCount"
+    throw "Resolver pointer counters did not include both instrumented and unsupported evidence: instrumented=$instrumentedLedgerCount unsupported=$unsupportedLedgerCount"
 }
 
-$candidate = @($ledgerMessages | Where-Object {
-    $_.messageType -eq "resolver_pointer_candidate" -and
+$getProcInstrumented = @($ledgerMessages | Where-Object {
+    $_.messageType -eq "resolver_pointer_instrumented" -and
+    $_.resolverApi -eq "GetProcAddress" -and
     $_.definitionName -eq "GetCurrentProcessId" -and
     $_.definitionApiId -eq 141
 } | Select-Object -First 1)
 
-if ($candidate.Count -ne 1)
+if ($getProcInstrumented.Count -ne 1)
 {
-    throw "Resolver pointer candidate evidence for GetCurrentProcessId missing."
+    throw "Resolver pointer instrumentation evidence for GetProcAddress(GetCurrentProcessId) missing."
 }
 
-if ($candidate[0].instrumented -ne $false)
+if ($getProcInstrumented[0].instrumented -ne $true)
 {
-    throw "Resolver pointer candidate must be explicitly uninstrumented."
+    throw "GetProcAddress(GetCurrentProcessId) must be explicitly instrumented."
 }
 
-if ($candidate[0].targetExecutable -ne $true -or [uint64]$candidate[0].targetRva -eq 0)
+if ($getProcInstrumented[0].targetExecutable -ne $true -or [uint64]$getProcInstrumented[0].targetRva -eq 0)
 {
-    throw "Resolver pointer candidate did not include executable target RVA evidence."
+    throw "Resolver pointer instrumentation did not include executable target RVA evidence."
 }
 
-if ($candidate[0].hookPolicy -ne "iat")
+if ($getProcInstrumented[0].hookPolicy -ne "iat")
 {
-    throw "Resolver pointer candidate did not map to generated hook policy: $($candidate[0].hookPolicy)"
+    throw "Resolver pointer instrumentation did not map to generated hook policy: $($getProcInstrumented[0].hookPolicy)"
+}
+
+if ($getProcInstrumented[0].replacementPointer -notmatch "^0x[0-9a-fA-F]+$")
+{
+    throw "GetProcAddress instrumentation did not include replacement pointer evidence."
+}
+
+if ($getProcInstrumented[0].instrumentationReason -ne "instrumented_return_value_substituted")
+{
+    throw "GetProcAddress instrumentation reason mismatch: $($getProcInstrumented[0].instrumentationReason)"
+}
+
+$ldrInstrumented = @($ledgerMessages | Where-Object {
+    $_.messageType -eq "resolver_pointer_instrumented" -and
+    $_.resolverApi -eq "LdrGetProcedureAddress" -and
+    $_.definitionName -eq "GetCurrentProcessId" -and
+    $_.definitionApiId -eq 141
+} | Select-Object -First 1)
+
+if ($ldrInstrumented.Count -ne 1)
+{
+    throw "Resolver pointer instrumentation evidence for LdrGetProcedureAddress(GetCurrentProcessId) missing."
+}
+
+if ($ldrInstrumented[0].instrumented -ne $true)
+{
+    throw "LdrGetProcedureAddress(GetCurrentProcessId) must be explicitly instrumented."
+}
+
+if ($ldrInstrumented[0].replacementPointer -notmatch "^0x[0-9a-fA-F]+$")
+{
+    throw "LdrGetProcedureAddress instrumentation did not include replacement pointer evidence."
+}
+
+if ($ldrInstrumented[0].instrumentationReason -ne "instrumented_output_pointer_substituted")
+{
+    throw "LdrGetProcedureAddress instrumentation reason mismatch: $($ldrInstrumented[0].instrumentationReason)"
 }
 
 $unsupported = @($ledgerMessages | Where-Object {
@@ -170,16 +213,16 @@ if ($unsupported.Count -ne 1)
     throw "Resolver pointer unsupported evidence for KnMonDynamicProbe missing."
 }
 
-$candidateAudit = @($result.auditEvents | Where-Object {
-    $_.eventType -eq "resolver_pointer_candidate" -and
+$instrumentedAudit = @($result.auditEvents | Where-Object {
+    $_.eventType -eq "resolver_pointer_instrumented" -and
     $_.operation -eq "resolver_pointer_classification" -and
     $_.message -match "GetCurrentProcessId" -and
-    $_.message -match "instrumented=false"
+    $_.message -match "instrumented=true"
 } | Select-Object -First 1)
 
-if ($candidateAudit.Count -ne 1)
+if ($instrumentedAudit.Count -ne 1)
 {
-    throw "Resolver pointer candidate audit output missing."
+    throw "Resolver pointer instrumented audit output missing."
 }
 
 $unsupportedAudit = @($result.auditEvents | Where-Object {

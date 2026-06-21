@@ -27,6 +27,85 @@ namespace
 {
 constexpr std::uint64_t ExpectedFileIoHookCount = 6;
 
+bool HasApiSelection(const std::string& value)
+{
+    return !value.empty();
+}
+
+std::string LowerAscii(std::string value)
+{
+    for (char& ch : value)
+    {
+        if (ch >= 'A' && ch <= 'Z')
+        {
+            ch = static_cast<char>(ch - 'A' + 'a');
+        }
+    }
+
+    return value;
+}
+
+bool SelectionContainsToken(const std::string& selection, const std::string& token)
+{
+    bool found = false;
+    std::size_t start = 0;
+    const std::string target = LowerAscii(token);
+
+    while (start <= selection.size())
+    {
+        std::size_t end = selection.find_first_of(",; ", start);
+        if (end == std::string::npos)
+        {
+            end = selection.size();
+        }
+
+        const std::string current = LowerAscii(selection.substr(start, end - start));
+        if (current == target)
+        {
+            found = true;
+            break;
+        }
+
+        if (end == selection.size())
+        {
+            break;
+        }
+
+        start = end + 1;
+    }
+
+    return found;
+}
+
+bool ApiIdentityMatchesSelection(const std::string& moduleName, const std::string& apiName, const std::string& selection)
+{
+    bool matches = true;
+
+    do
+    {
+        if (!HasApiSelection(selection))
+        {
+            break;
+        }
+
+        matches = false;
+        const std::string module = LowerAscii(moduleName);
+        const std::string api = LowerAscii(apiName);
+        if (module.empty() || api.empty())
+        {
+            break;
+        }
+
+        matches =
+            SelectionContainsToken(selection, module + "!" + api) ||
+            SelectionContainsToken(selection, module + "!*") ||
+            SelectionContainsToken(selection, module);
+    }
+    while (false);
+
+    return matches;
+}
+
 std::string WideToUtf8(const wchar_t* value)
 {
     std::string result;
@@ -90,38 +169,54 @@ std::wstring Utf8ToWide(const std::string& value)
 std::string FormatWindowsError(DWORD errorCode)
 {
     std::string result;
-    LPWSTR message = nullptr;
 
     do
     {
-        const DWORD length = FormatMessageW(
-            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-            nullptr,
-            errorCode,
-            0,
-            reinterpret_cast<LPWSTR>(&message),
-            0,
-            nullptr);
-
-        if (length == 0 || message == nullptr)
+        const DWORD languageIds[] =
         {
-            std::ostringstream stream;
-            stream << "Windows error " << errorCode;
-            result = stream.str();
-            break;
-        }
+            MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+            MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT)
+        };
 
-        result = WideToUtf8(message);
-        while (!result.empty() && (result.back() == '\r' || result.back() == '\n' || result.back() == ' '))
+        for (const DWORD languageId : languageIds)
         {
-            result.pop_back();
+            LPWSTR message = nullptr;
+            const DWORD length = FormatMessageW(
+                FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                nullptr,
+                errorCode,
+                languageId,
+                reinterpret_cast<LPWSTR>(&message),
+                0,
+                nullptr);
+
+            if (length != 0 && message != nullptr)
+            {
+                result = WideToUtf8(message);
+                while (!result.empty() && (result.back() == '\r' || result.back() == '\n' || result.back() == ' '))
+                {
+                    result.pop_back();
+                }
+            }
+
+            if (message != nullptr)
+            {
+                LocalFree(message);
+            }
+
+            if (!result.empty())
+            {
+                break;
+            }
         }
     }
     while (false);
 
-    if (message != nullptr)
+    if (result.empty())
     {
-        LocalFree(message);
+        std::ostringstream stream;
+        stream << "Windows error " << errorCode;
+        result = stream.str();
     }
 
     return result;
@@ -1127,11 +1222,6 @@ std::string ProcessPolicyDecisionName(KnMonProcessPolicyDecision decision)
     return name;
 }
 
-bool IsRepositorySampleImage(const std::string& imageName)
-{
-    return _stricmp(imageName.c_str(), "knmon-sample-fileio.exe") == 0;
-}
-
 bool CollectProcessSnapshot(std::vector<ProcessSnapshotInfo>* processes, DWORD* errorCode)
 {
     bool collected = false;
@@ -1475,15 +1565,6 @@ KnMonChildPolicyDecision EvaluateChildPolicy(
             decision.EligibilityStatus = node.EligibilityStatus;
             decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachSkipped);
             decision.Reason = "Child process exited before policy evaluation.";
-            break;
-        }
-
-        if (!IsRepositorySampleImage(node.ImageName))
-        {
-            node.EligibilityStatus = ProcessEligibilityName(KnMonProcessEligibility::Unsupported);
-            decision.EligibilityStatus = node.EligibilityStatus;
-            decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::Unsupported);
-            decision.Reason = "Only repository sample children are eligible for Phase 11B child attach policy.";
             break;
         }
 
@@ -2414,6 +2495,163 @@ std::string HexDwordValue(std::uint32_t value)
     return HexFixed(value, 8);
 }
 
+int NumericDigitValue(char ch)
+{
+    if (ch >= '0' && ch <= '9')
+    {
+        return ch - '0';
+    }
+
+    if (ch >= 'a' && ch <= 'f')
+    {
+        return ch - 'a' + 10;
+    }
+
+    if (ch >= 'A' && ch <= 'F')
+    {
+        return ch - 'A' + 10;
+    }
+
+    return -1;
+}
+
+bool ParseUnsignedIntegerText(const std::string& text, std::uint64_t* value)
+{
+    bool parsed = false;
+
+    do
+    {
+        if (value == nullptr)
+        {
+            break;
+        }
+
+        std::size_t index = 0;
+        while (index < text.size() && (text[index] == ' ' || text[index] == '\t'))
+        {
+            ++index;
+        }
+
+        int base = 10;
+        if (index + 2 <= text.size() && text[index] == '0' && (text[index + 1] == 'x' || text[index + 1] == 'X'))
+        {
+            base = 16;
+            index += 2;
+        }
+
+        std::uint64_t result = 0;
+        bool sawDigit = false;
+        for (; index < text.size(); ++index)
+        {
+            const int digit = NumericDigitValue(text[index]);
+            if (digit < 0 || digit >= base)
+            {
+                break;
+            }
+
+            result = (result * static_cast<std::uint64_t>(base)) + static_cast<std::uint64_t>(digit);
+            sawDigit = true;
+        }
+
+        if (!sawDigit)
+        {
+            break;
+        }
+
+        *value = result;
+        parsed = true;
+    }
+    while (false);
+
+    return parsed;
+}
+
+std::string HexConstantValue(std::uint64_t value)
+{
+    if (value <= 0xffffffffULL)
+    {
+        return HexDwordValue(static_cast<std::uint32_t>(value));
+    }
+
+    return HexFixed(value, 16);
+}
+
+std::string GeneratedEnumValueText(std::string_view setName, std::uint64_t value)
+{
+    std::ostringstream stream;
+    const KnMonGeneratedConstantMetadata* exact = FindGeneratedConstantMetadata(setName, "enum", value);
+
+    stream << HexConstantValue(value) << " (";
+    stream << (exact == nullptr ? "unknown" : std::string(exact->Name));
+    stream << ")";
+    return stream.str();
+}
+
+std::string GeneratedFlagsValueText(std::string_view setName, std::uint64_t value)
+{
+    const KnMonGeneratedConstantMetadata* exact = FindGeneratedConstantMetadata(setName, "flags", value);
+    if (exact != nullptr)
+    {
+        return HexConstantValue(value) + " (" + std::string(exact->Name) + ")";
+    }
+
+    std::ostringstream stream;
+    std::uint64_t remaining = value;
+    bool hasName = false;
+
+    stream << HexConstantValue(value) << " (";
+
+    while (remaining != 0)
+    {
+        const KnMonGeneratedConstantMetadata* best = nullptr;
+        for (const KnMonGeneratedConstantMetadata& entry : KnMonGeneratedConstants)
+        {
+            if (entry.Kind != "flags" || entry.SetName != setName || entry.Value == 0)
+            {
+                continue;
+            }
+
+            if ((remaining & entry.Value) == entry.Value && (best == nullptr || entry.Value > best->Value))
+            {
+                best = &entry;
+            }
+        }
+
+        if (best == nullptr)
+        {
+            break;
+        }
+
+        if (hasName)
+        {
+            stream << "|";
+        }
+
+        stream << best->Name;
+        remaining &= ~best->Value;
+        hasName = true;
+    }
+
+    if (remaining != 0)
+    {
+        if (hasName)
+        {
+            stream << "|";
+        }
+
+        stream << "unknown=" << HexConstantValue(remaining);
+        hasName = true;
+    }
+
+    if (!hasName)
+    {
+        stream << "none";
+    }
+
+    stream << ")";
+    return stream.str();
+}
+
 std::string WinHttpOptionText(std::uint32_t value)
 {
     std::ostringstream stream;
@@ -3270,6 +3508,43 @@ std::string ArgumentJson(
     return stream.str();
 }
 
+std::string EnhanceDecodedValueWithGeneratedConstants(
+    const KnMonGeneratedParameterMetadata* metadata,
+    const std::string& decodedValue,
+    const std::string& decodeStatus)
+{
+    std::string result = decodedValue;
+
+    do
+    {
+        if (metadata == nullptr || decodeStatus != "decoded")
+        {
+            break;
+        }
+
+        std::uint64_t numericValue = 0;
+        if (!ParseUnsignedIntegerText(decodedValue, &numericValue))
+        {
+            break;
+        }
+
+        if (!metadata->Flags.empty())
+        {
+            result = GeneratedFlagsValueText(metadata->Flags, numericValue);
+            break;
+        }
+
+        if (!metadata->Enum.empty())
+        {
+            result = GeneratedEnumValueText(metadata->Enum, numericValue);
+            break;
+        }
+    }
+    while (false);
+
+    return result;
+}
+
 std::string ArgumentJsonFromMetadata(
     std::uint16_t apiId,
     int index,
@@ -3287,8 +3562,9 @@ std::string ArgumentJsonFromMetadata(
     const std::string direction = metadata == nullptr ? fallbackDirection : MetadataValue(metadata->Direction, fallbackDirection);
     const std::string decodeAlias = metadata == nullptr ? "" : std::string(metadata->Decode);
     const std::string captureTiming = metadata == nullptr ? "" : std::string(metadata->CaptureTiming);
+    const std::string enhancedDecodedValue = EnhanceDecodedValueWithGeneratedConstants(metadata, decodedValue, decodeStatus);
 
-    return ArgumentJson(index, type, name, direction, preCallValue, postCallValue, decodedValue, decodeStatus, decodeAlias, captureTiming);
+    return ArgumentJson(index, type, name, direction, preCallValue, postCallValue, enhancedDecodedValue, decodeStatus, decodeAlias, captureTiming);
 }
 
 std::string ApiCallPayload(
@@ -3522,7 +3798,8 @@ std::string GenericTransportApiPayload(
             HexPointerValue(record.Values64[0], result.Architecture);
         const std::string decoded = scalarArgument ? argumentValue : (schema.DecodeHint + ";pointer=" + argumentValue);
 
-        args << ArgumentJson(
+        args << ArgumentJsonFromMetadata(
+            record.ApiId,
             0,
             schema.Type,
             schema.Name,
@@ -3530,9 +3807,7 @@ std::string GenericTransportApiPayload(
             argumentValue,
             argumentValue,
             decoded,
-            DecodeStatusName(record.Values32[1]),
-            "generic_pointer",
-            "pre_post");
+            DecodeStatusName(record.Values32[1]));
     }
 
     std::ostringstream stream;
@@ -3603,14 +3878,20 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPCWSTR", "lpFileName", "in", text0, text0, text0) << ",";
         args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "dwDesiredAccess", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0])) << ",";
         args << ArgumentJsonFromMetadata(record.ApiId, 2, "DWORD", "dwShareMode", "in", HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1])) << ",";
-        args << ArgumentJsonFromMetadata(record.ApiId, 3, "DWORD", "dwCreationDisposition", "in", HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2]));
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "LPSECURITY_ATTRIBUTES", "lpSecurityAttributes", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture)) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 4, "DWORD", "dwCreationDisposition", "in", HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 5, "DWORD", "dwFlagsAndAttributes", "in", HexDwordValue(record.Values32[3]), HexDwordValue(record.Values32[3]), HexDwordValue(record.Values32[3])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 6, "HANDLE", "hTemplateFile", "in", HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture));
         payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
         break;
     case KnMonTransportApiId::CreateFileA:
         args << ArgumentJsonFromMetadata(record.ApiId, 0, "LPCSTR", "lpFileName", "in", text0, text0, text0) << ",";
         args << ArgumentJsonFromMetadata(record.ApiId, 1, "DWORD", "dwDesiredAccess", "in", HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0]), HexDwordValue(record.Values32[0])) << ",";
         args << ArgumentJsonFromMetadata(record.ApiId, 2, "DWORD", "dwShareMode", "in", HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1]), HexDwordValue(record.Values32[1])) << ",";
-        args << ArgumentJsonFromMetadata(record.ApiId, 3, "DWORD", "dwCreationDisposition", "in", HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2]));
+        args << ArgumentJsonFromMetadata(record.ApiId, 3, "LPSECURITY_ATTRIBUTES", "lpSecurityAttributes", "in", HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture), HexPointerValue(record.Values64[0], result.Architecture)) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 4, "DWORD", "dwCreationDisposition", "in", HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2]), HexDwordValue(record.Values32[2])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 5, "DWORD", "dwFlagsAndAttributes", "in", HexDwordValue(record.Values32[3]), HexDwordValue(record.Values32[3]), HexDwordValue(record.Values32[3])) << ",";
+        args << ArgumentJsonFromMetadata(record.ApiId, 6, "HANDLE", "hTemplateFile", "in", HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture), HexPointerValue(record.Values64[1], result.Architecture));
         payload = ApiCallPayload(result, record, HexPointerValue(record.ReturnValue, result.Architecture), args.str(), "");
         break;
     case KnMonTransportApiId::ReadFile:
@@ -5030,6 +5311,9 @@ void RecordHookOverhead(KnMonCaptureResult& result, std::uint64_t overheadUs)
     result.HookOverheadAvgUs = ((result.HookOverheadAvgUs * (nextCount - 1)) + overheadUs) / nextCount;
 }
 
+std::string ExtractJsonString(const std::string& payload, const std::string& key);
+bool PayloadMatchesApiSelection(const std::string& payload, const std::string& selection);
+
 void DrainSharedTransport(
     KnMonCaptureResult& result,
     SharedTransportSession& transport,
@@ -5050,7 +5334,7 @@ void DrainSharedTransport(
     SharedTransportDrainResult drainResult = reader.DrainAvailable([&](const KnMonTransportRecord& record)
     {
         const std::string payload = BuildTransportApiPayload(result, record);
-        if (!payload.empty())
+        if (!payload.empty() && PayloadMatchesApiSelection(payload, result.ApiSelection))
         {
             RecordHookOverhead(result, record.HookOverheadUs);
             KnMonAgentMessage message = BuildAgentMessage(result, payload);
@@ -5307,6 +5591,7 @@ bool ReadPipeMessage(HANDLE pipeHandle, DWORD timeoutMs, std::string* payload, D
 }
 
 std::string ExtractJsonString(const std::string& payload, const std::string& key);
+bool ExtractJsonBool(const std::string& payload, const std::string& key);
 std::uint64_t ExtractJsonUInt64(const std::string& payload, const std::string& key);
 
 KnMonAgentHandshake BuildHandshake(const KnMonLaunchResult& result, const std::string& rawPayload)
@@ -5483,6 +5768,75 @@ std::string ExtractJsonString(const std::string& payload, const std::string& key
     return result;
 }
 
+bool PayloadMatchesApiSelection(const std::string& payload, const std::string& selection)
+{
+    bool matches = true;
+
+    do
+    {
+        if (!HasApiSelection(selection))
+        {
+            break;
+        }
+
+        const std::string moduleName = ExtractJsonString(payload, "module");
+        const std::string apiName = ExtractJsonString(payload, "api");
+        matches = ApiIdentityMatchesSelection(moduleName, apiName, selection);
+    }
+    while (false);
+
+    return matches;
+}
+
+bool ExtractJsonBool(const std::string& payload, const std::string& key)
+{
+    bool result = false;
+
+    do
+    {
+        const std::string quotedKey = "\"" + key + "\"";
+        std::size_t position = payload.find(quotedKey);
+        if (position == std::string::npos)
+        {
+            break;
+        }
+
+        std::size_t delimiter = std::string::npos;
+        while (position != std::string::npos)
+        {
+            std::size_t scan = position + quotedKey.size();
+            while (scan < payload.size() && payload[scan] == ' ')
+            {
+                ++scan;
+            }
+
+            if (scan < payload.size() && payload[scan] == ':')
+            {
+                delimiter = scan;
+                break;
+            }
+
+            position = payload.find(quotedKey, position + quotedKey.size());
+        }
+
+        if (delimiter == std::string::npos)
+        {
+            break;
+        }
+
+        position = delimiter + 1;
+        while (position < payload.size() && payload[position] == ' ')
+        {
+            ++position;
+        }
+
+        result = payload.compare(position, 4, "true") == 0;
+    }
+    while (false);
+
+    return result;
+}
+
 std::uint64_t ExtractJsonUInt64(const std::string& payload, const std::string& key)
 {
     std::uint64_t result = 0;
@@ -5558,7 +5912,10 @@ KnMonAgentMessage BuildAgentMessage(const KnMonCaptureResult& result, const std:
 
 bool IsResolverPointerMessageType(const std::string& messageType)
 {
-    return messageType == "resolver_pointer_candidate" || messageType == "resolver_pointer_unsupported";
+    return
+        messageType == "resolver_pointer_instrumented" ||
+        messageType == "resolver_pointer_candidate" ||
+        messageType == "resolver_pointer_unsupported";
 }
 
 std::string ResolverPointerAuditMessage(const KnMonAgentMessage& message)
@@ -5573,8 +5930,11 @@ std::string ResolverPointerAuditMessage(const KnMonAgentMessage& message)
     const std::string targetModule = ExtractJsonString(payload, "targetModule");
     const std::string targetRvaHex = ExtractJsonString(payload, "targetRvaHex");
     const std::string definitionName = ExtractJsonString(payload, "definitionName");
+    const std::string replacementPointer = ExtractJsonString(payload, "replacementPointer");
+    const std::string instrumentationReason = ExtractJsonString(payload, "instrumentationReason");
     const std::uint64_t definitionApiId = ExtractJsonUInt64(payload, "definitionApiId");
     const std::uint64_t requestedOrdinal = ExtractJsonUInt64(payload, "requestedOrdinal");
+    const bool instrumented = ExtractJsonBool(payload, "instrumented");
     std::ostringstream stream;
 
     stream << "Resolver pointer " << (classification.empty() ? "classified" : classification);
@@ -5617,13 +5977,23 @@ std::string ResolverPointerAuditMessage(const KnMonAgentMessage& message)
         stream << "; reason=" << reason;
     }
 
-    stream << "; instrumented=false";
+    if (instrumented && !replacementPointer.empty())
+    {
+        stream << "; replacement=" << replacementPointer;
+    }
+
+    if (!instrumentationReason.empty())
+    {
+        stream << "; instrumentationReason=" << instrumentationReason;
+    }
+
+    stream << "; instrumented=" << (instrumented ? "true" : "false");
     return stream.str();
 }
 
 void AddResolverPointerAudit(KnMonCaptureResult& result, const KnMonAgentMessage& message)
 {
-    if (message.MessageType == "resolver_pointer_candidate")
+    if (message.MessageType == "resolver_pointer_candidate" || message.MessageType == "resolver_pointer_instrumented")
     {
         ++result.ResolverPointerCandidates;
     }
@@ -5957,6 +6327,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
     result.CancellationEventName = request.CancellationEventName;
     result.TargetPath = request.TargetPath;
     result.AgentPath = request.AgentPath;
+    result.ApiSelection = request.ApiSelection;
     result.Architecture = ArchitectureName(requestedArchitecture);
     result.CaptureMode = request.DurationMs == 0 ? "continuous-native-launch" : "bounded-native-launch";
     result.InjectionMethod = "early-bird APC";
@@ -6016,8 +6387,11 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         }
         else if (message.MessageType == "api_call")
         {
-            result.CapturedEvents.push_back(message);
-            AddAudit(result, "api_call_received", "agent_event_read", message.RawPayload);
+            if (PayloadMatchesApiSelection(payload, result.ApiSelection))
+            {
+                result.CapturedEvents.push_back(message);
+                AddAudit(result, "api_call_received", "agent_event_read", message.RawPayload);
+            }
         }
         else if (IsResolverPointerMessageType(message.MessageType))
         {
@@ -6189,6 +6563,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         EnvironmentOverride modeEnv(L"KNMON_CAPTURE_MODE", L"launch");
         EnvironmentOverride transportEnv(L"KNMON_TRANSPORT_NAME", transport.MappingName);
         EnvironmentOverride transportRequiredEnv(L"KNMON_TRANSPORT_REQUIRED", L"1");
+        EnvironmentOverride selectedApisEnv(L"KNMON_SELECTED_APIS", Utf8ToWide(request.ApiSelection));
 
         startupInfo.dwFlags |= STARTF_USESHOWWINDOW;
         startupInfo.wShowWindow = SW_SHOWNORMAL;
@@ -6560,11 +6935,15 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             break;
         }
 
-        if (hookInstalledCount < ExpectedFileIoHookCount)
+        if (!HasApiSelection(request.ApiSelection) && hookInstalledCount < ExpectedFileIoHookCount)
         {
             SetResultError(result, ERROR_HOOK_NOT_INSTALLED, "knmon-core", "hook_install_count_required", "Launch capture did not report the required stable File I/O hooks.");
             fatalError = true;
             break;
+        }
+        else if (HasApiSelection(request.ApiSelection))
+        {
+            AddAudit(result, "api_selection_filter_applied", "hook_install_count", "API selection filter is active; fixed File I/O hook-count gate was skipped.");
         }
 
         if (!targetExited && !agentShutdownReceived)
@@ -6934,8 +7313,11 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                 }
                 else if (message.MessageType == "api_call")
                 {
-                    result.CapturedEvents.push_back(message);
-                    AddAudit(result, "api_call_received", "agent_event_read", message.RawPayload);
+                    if (PayloadMatchesApiSelection(payload, result.ApiSelection))
+                    {
+                        result.CapturedEvents.push_back(message);
+                        AddAudit(result, "api_call_received", "agent_event_read", message.RawPayload);
+                    }
                 }
                 else if (IsResolverPointerMessageType(message.MessageType))
                 {
@@ -7152,6 +7534,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
     result.UpdatedUtc = NowUtc();
     result.CancellationEventName = request.CancellationEventName;
     result.AgentPath = request.AgentPath;
+    result.ApiSelection = request.ApiSelection;
     result.AttachProcessId = request.ProcessId;
     result.TargetProcessId = request.ProcessId;
     result.Architecture = ArchitectureName(requestedArchitecture);
@@ -7209,8 +7592,11 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         }
         else if (message.MessageType == "api_call")
         {
-            result.CapturedEvents.push_back(message);
-            AddAudit(result, "api_call_received", "agent_event_read", message.RawPayload);
+            if (PayloadMatchesApiSelection(payload, result.ApiSelection))
+            {
+                result.CapturedEvents.push_back(message);
+                AddAudit(result, "api_call_received", "agent_event_read", message.RawPayload);
+            }
         }
         else if (IsResolverPointerMessageType(message.MessageType))
         {
@@ -7478,7 +7864,8 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         if (
             !CopyWideBounded(attachConfig.OperationId, std::size(attachConfig.OperationId), Utf8ToWide(result.OperationId)) ||
             !CopyWideBounded(attachConfig.PipeName, std::size(attachConfig.PipeName), pipeName) ||
-            !CopyWideBounded(attachConfig.TransportName, std::size(attachConfig.TransportName), transport.MappingName))
+            !CopyWideBounded(attachConfig.TransportName, std::size(attachConfig.TransportName), transport.MappingName) ||
+            !CopyWideBounded(attachConfig.SelectedApis, std::size(attachConfig.SelectedApis), Utf8ToWide(request.ApiSelection)))
         {
             SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "remote_initialize_failed", "Attach config strings exceed fixed ABI buffers.");
             fatalError = true;
@@ -7808,14 +8195,18 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
             break;
         }
 
-        if (hookInstalledCount < ExpectedFileIoHookCount)
+        if (!HasApiSelection(request.ApiSelection) && hookInstalledCount < ExpectedFileIoHookCount)
         {
             SetResultError(result, ERROR_HOOK_NOT_INSTALLED, "knmon-core", "hook_install_count_required", "Attach did not report the required stable File I/O hooks.");
             fatalError = true;
             break;
         }
+        else if (HasApiSelection(request.ApiSelection))
+        {
+            AddAudit(result, "api_selection_filter_applied", "hook_install_count", "API selection filter is active; fixed File I/O hook-count gate was skipped.");
+        }
 
-        if (result.CapturedEvents.empty())
+        if (!HasApiSelection(request.ApiSelection) && result.CapturedEvents.empty())
         {
             SetResultError(result, ERROR_NO_DATA, "knmon-core", "api_call_required", "Attach capture did not receive API events.");
             fatalError = true;
@@ -8073,6 +8464,7 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
                 attachRequest.Architecture = request.Architecture;
                 attachRequest.InjectionMethod = KnMonInjectionMethod::RemoteLoadLibrary;
                 attachRequest.CancellationEventName = request.CancellationEventName;
+                attachRequest.ApiSelection = request.ApiSelection;
 
                 KnMonCaptureResult attachResult = AttachCapture(attachRequest);
                 if (attachResult.CancelObserved)

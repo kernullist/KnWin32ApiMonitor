@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import {
   attachTargetProcessCapture,
   buildNativeSessionCatalogIndex,
@@ -50,7 +51,7 @@ import {
   stopNativeSession,
   superviseProcessTree
 } from "./backend";
-import { apiTree, captureProfiles } from "./catalogData";
+import { apiCatalogEntries, apiTree, captureProfiles } from "./catalogData";
 import { downloadJsonl, estimateSessionBytes } from "./session";
 import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, NativeOperation, NativeSession, NativeSessionCatalog, NativeSessionCatalogRow, NativeTraceBatch, NativeTraceIndex, NativeTraceIndexEvent, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
 import {
@@ -84,6 +85,38 @@ const inspectorTabs: Array<{ id: InspectorTab; label: string }> = [
 const traceRowHeight = 27;
 const traceOverscanRows = 6;
 const boundedCaptureMaxDurationMs = 30000;
+const minInspectorHeight = 170;
+const maxInspectorHeight = 620;
+
+type ColumnConfig = {
+  id: string;
+  label: string;
+  width: number;
+  minWidth: number;
+};
+
+const traceColumns: ColumnConfig[] = [
+  { id: "event", label: "#", width: 52, minWidth: 42 },
+  { id: "time", label: "Time", width: 72, minWidth: 58 },
+  { id: "pid", label: "PID", width: 70, minWidth: 52 },
+  { id: "tid", label: "TID", width: 70, minWidth: 52 },
+  { id: "module", label: "Module", width: 116, minWidth: 84 },
+  { id: "api", label: "API", width: 126, minWidth: 96 },
+  { id: "arguments", label: "Arguments", width: 300, minWidth: 170 },
+  { id: "return", label: "Return", width: 142, minWidth: 96 },
+  { id: "error", label: "Error", width: 185, minWidth: 120 },
+  { id: "duration", label: "Duration", width: 82, minWidth: 72 },
+  { id: "tags", label: "Tags", width: 150, minWidth: 92 }
+];
+
+const detailColumns: ColumnConfig[] = [
+  { id: "index", label: "#", width: 44, minWidth: 36 },
+  { id: "type", label: "Type", width: 150, minWidth: 90 },
+  { id: "name", label: "Name", width: 190, minWidth: 110 },
+  { id: "pre", label: "Pre-call", width: 230, minWidth: 140 },
+  { id: "post", label: "Post-call", width: 230, minWidth: 140 },
+  { id: "decoded", label: "Decoded", width: 260, minWidth: 150 }
+];
 
 type ReplaySource =
   | { kind: "catalog"; label: string; path: string; validationStatus: string };
@@ -128,20 +161,124 @@ function formatBytes(value: number): string {
   return `${(value / 1024 / 1024).toFixed(2)} MB`;
 }
 
-function renderApiTree(nodes: ApiNode[], depth = 0): JSX.Element {
+type ApiNodeCheckState = "checked" | "unchecked" | "mixed";
+
+type ApiTreeCheckboxProps = {
+  state: ApiNodeCheckState;
+  onChange: () => void;
+  label: string;
+  disabled?: boolean;
+};
+
+function collectApiLeafKeys(nodes: ApiNode[]): string[] {
+  const keys: string[] = [];
+
+  for (const node of nodes) {
+    if (node.children && node.children.length > 0) {
+      keys.push(...collectApiLeafKeys(node.children));
+    }
+    else if (node.selectionKey) {
+      keys.push(node.selectionKey);
+    }
+  }
+
+  return keys;
+}
+
+function getApiNodeCheckState(node: ApiNode, selectedKeys: Set<string>): ApiNodeCheckState {
+  const leafKeys = collectApiLeafKeys([node]);
+  if (leafKeys.length === 0) {
+    return "unchecked";
+  }
+
+  const selectedCount = leafKeys.filter((key) => selectedKeys.has(key)).length;
+  if (selectedCount === 0) {
+    return "unchecked";
+  }
+
+  return selectedCount === leafKeys.length ? "checked" : "mixed";
+}
+
+function countSelectedApiLeafKeys(nodes: ApiNode[], selectedKeys: Set<string>): number {
+  return collectApiLeafKeys(nodes).filter((key) => selectedKeys.has(key)).length;
+}
+
+function ApiTreeCheckbox({ state, onChange, label, disabled = false }: ApiTreeCheckboxProps): JSX.Element {
+  const checkboxRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (checkboxRef.current) {
+      checkboxRef.current.indeterminate = state === "mixed";
+    }
+  }, [state]);
+
+  return (
+    <input
+      ref={checkboxRef}
+      type="checkbox"
+      checked={state === "checked"}
+      aria-checked={state === "mixed" ? "mixed" : state === "checked"}
+      aria-label={label}
+      disabled={disabled}
+      onChange={onChange}
+    />
+  );
+}
+
+function renderApiTree(
+  nodes: ApiNode[],
+  selectedKeys: Set<string>,
+  expandedNodes: Set<string>,
+  onToggleNode: (node: ApiNode) => void,
+  onToggleExpanded: (nodeId: string) => void,
+  disabled: boolean,
+  depth = 0
+): JSX.Element {
   return (
     <div className="tree-group">
-      {nodes.map((node) => (
-        <div key={node.id}>
-          <div className="tree-row" style={{ paddingLeft: 8 + depth * 16 }}>
-            {node.children ? <ChevronRight size={13} className="tree-caret" /> : <span className="tree-leaf" />}
-            <input type="checkbox" checked={node.checked} readOnly />
-            <FileText size={14} className={node.checked ? "tree-icon enabled" : "tree-icon"} />
-            <span>{node.label}</span>
+      {nodes.map((node) => {
+        const checkState = getApiNodeCheckState(node, selectedKeys);
+        const expanded = expandedNodes.has(node.id);
+        const selectedCount = node.children ? countSelectedApiLeafKeys([node], selectedKeys) : checkState === "checked" ? 1 : 0;
+        const totalCount = node.children ? collectApiLeafKeys([node]).length : 1;
+
+        return (
+          <div key={node.id}>
+            <div className="tree-row" style={{ paddingLeft: 8 + depth * 16 }}>
+              {node.children ? (
+                <button
+                  type="button"
+                  className={expanded ? "tree-caret expanded" : "tree-caret"}
+                  aria-label={expanded ? `Collapse ${node.label}` : `Expand ${node.label}`}
+                  onClick={() => onToggleExpanded(node.id)}
+                >
+                  <ChevronRight size={13} />
+                </button>
+              ) : (
+                <span className="tree-leaf" />
+              )}
+              <ApiTreeCheckbox
+                state={checkState}
+                label={`Monitor ${node.label}`}
+                disabled={disabled}
+                onChange={() => onToggleNode(node)}
+              />
+              <FileText size={14} className={checkState !== "unchecked" ? "tree-icon enabled" : "tree-icon"} />
+              <span title={node.selectionKey ?? node.label}>{node.label}</span>
+              <small>{node.children ? `${selectedCount}/${totalCount}` : node.module}</small>
+            </div>
+            {node.children && expanded ? renderApiTree(
+              node.children,
+              selectedKeys,
+              expandedNodes,
+              onToggleNode,
+              onToggleExpanded,
+              disabled,
+              depth + 1
+            ) : null}
           </div>
-          {node.children ? renderApiTree(node.children, depth + 1) : null}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -213,12 +350,14 @@ function resolverPointerOutputEvents(result: CaptureResult): AuditEvent[] {
   return result.agentMessages
     .map((message) => getRecord(message))
     .filter((message): message is Record<string, unknown> =>
+      message?.messageType === "resolver_pointer_instrumented" ||
       message?.messageType === "resolver_pointer_candidate" ||
       message?.messageType === "resolver_pointer_unsupported"
     )
     .map((message) => {
       const messageType = readStringField(message, "messageType");
-      const classification = readStringField(message, "classification") || (messageType === "resolver_pointer_candidate" ? "candidate" : "unsupported");
+      const classification = readStringField(message, "classification")
+        || (messageType === "resolver_pointer_instrumented" ? "instrumented" : (messageType === "resolver_pointer_candidate" ? "candidate" : "unsupported"));
       const resolverApi = readStringField(message, "resolverApi") || "resolver";
       const requestedModule = readStringField(message, "requestedModule");
       const requestedName = readStringField(message, "requestedName");
@@ -233,10 +372,14 @@ function resolverPointerOutputEvents(result: CaptureResult): AuditEvent[] {
       const definitionApiId = readNumberField(message, "definitionApiId");
       const reason = readStringField(message, "reason");
       const instrumented = readBooleanField(message, "instrumented");
+      const replacementPointer = readStringField(message, "replacementPointer");
+      const instrumentationReason = readStringField(message, "instrumentationReason");
       const mapped = definitionName ? `; apiId=${definitionApiId ?? 0} ${definitionName}` : "";
       const target = targetModule ? ` -> ${targetModule}${targetRvaHex ? `+${targetRvaHex}` : ""}` : "";
+      const replacement = instrumented && replacementPointer ? `; replacement=${replacementPointer}` : "";
+      const instrumentation = instrumentationReason ? `; instrumentationReason=${instrumentationReason}` : "";
       const source = `${requestedModule ? `${requestedModule}!` : ""}${requestedSymbol}`;
-      const messageText = `${classification} via ${resolverApi}: ${source}${target}${mapped}; reason=${reason || "none"}; instrumented=${instrumented ? "true" : "false"}`;
+      const messageText = `${classification} via ${resolverApi}: ${source}${target}${mapped}; reason=${reason || "none"}${replacement}${instrumentation}; instrumented=${instrumented ? "true" : "false"}`;
 
       return makeAuditEvent(messageType, "resolver_pointer_classification", messageText);
     });
@@ -372,6 +515,14 @@ function directoryNameFromPath(path: string): string {
   return path.slice(0, separatorIndex);
 }
 
+function clampNumber(value: number, minimum: number, maximum: number): number {
+  return Math.min(maximum, Math.max(minimum, value));
+}
+
+function sumColumnWidths(widths: number[]): number {
+  return widths.reduce((total, width) => total + width, 0);
+}
+
 function App() {
   const [leftTab, setLeftTab] = useState<LeftTab>("targets");
   const [targets, setTargets] = useState<TargetProcess[]>([]);
@@ -418,6 +569,12 @@ function App() {
   const [replaySource, setReplaySource] = useState<ReplaySource | null>(null);
   const [traceScrollTop, setTraceScrollTop] = useState(0);
   const [traceViewportHeight, setTraceViewportHeight] = useState(0);
+  const [traceAutoScroll, setTraceAutoScroll] = useState(true);
+  const [inspectorHeight, setInspectorHeight] = useState(260);
+  const [traceColumnWidths, setTraceColumnWidths] = useState(() => traceColumns.map((column) => column.width));
+  const [detailColumnWidths, setDetailColumnWidths] = useState(() => detailColumns.map((column) => column.width));
+  const [selectedApiKeys, setSelectedApiKeys] = useState<Set<string>>(() => new Set(collectApiLeafKeys(apiTree)));
+  const [expandedApiNodes, setExpandedApiNodes] = useState<Set<string>>(() => new Set(apiTree.map((node) => node.id)));
   const [outputEvents, setOutputEvents] = useState<AuditEvent[]>([
     makeAuditEvent("backend_ready", "native_init", "Native desktop backend ready. Launch a target or attach to a running process.")
   ]);
@@ -429,6 +586,16 @@ function App() {
   const traceScrollRef = useRef<HTMLDivElement | null>(null);
   const traceIngestWorker = useRef<Worker | null>(null);
   const pendingTraceIngestCommands = useRef<TraceIngestCommand[]>([]);
+  const traceAutoScrollRef = useRef(traceAutoScroll);
+  const selectedEventIdRef = useRef(selectedEventId);
+
+  useEffect(() => {
+    traceAutoScrollRef.current = traceAutoScroll;
+  }, [traceAutoScroll]);
+
+  useEffect(() => {
+    selectedEventIdRef.current = selectedEventId;
+  }, [selectedEventId]);
 
   useEffect(() => {
     const worker = new Worker(new URL("./traceIngest.worker.ts", import.meta.url), { type: "module" });
@@ -440,7 +607,10 @@ function App() {
 
       setEvents(event.data.events);
       setTotalCapturedEvents(event.data.totalCapturedEvents);
-      setSelectedEventId(event.data.selectedEventId);
+      if (traceAutoScrollRef.current || selectedEventIdRef.current === 0) {
+        selectedEventIdRef.current = event.data.selectedEventId;
+        setSelectedEventId(event.data.selectedEventId);
+      }
     };
 
     worker.onerror = (event) => {
@@ -892,6 +1062,26 @@ function App() {
     ? traceHighlightState.eventHighlightsById.get(selectedEvent.eventId) ?? null
     : null;
   const selectedTarget = selectedTargetPid === null ? null : targets.find((target) => target.pid === selectedTargetPid) ?? null;
+  const apiLeafKeys = useMemo(() => collectApiLeafKeys(apiTree), []);
+  const selectedApiList = useMemo(
+    () => apiLeafKeys.filter((key) => selectedApiKeys.has(key)),
+    [apiLeafKeys, selectedApiKeys]
+  );
+  const selectedApiModules = useMemo(() => {
+    const modules = new Set<string>();
+    for (const entry of apiCatalogEntries) {
+      if (selectedApiKeys.has(entry.selectionKey)) {
+        modules.add(entry.module);
+      }
+    }
+
+    return modules.size;
+  }, [selectedApiKeys]);
+  const apiSelectionRequest = selectedApiList.length === apiLeafKeys.length ? [] : selectedApiList;
+  const apiSelectionSummary = selectedApiList.length === apiLeafKeys.length
+    ? "all current hooks"
+    : `${selectedApiList.length}/${apiLeafKeys.length} APIs`;
+  const apiSelectionBlocked = selectedApiList.length === 0;
   const targetBlockReason = targetEligibilityReason(selectedTarget);
   const activeNativeOperation = nativeOperations.find(isNativeOperationActive) ?? null;
   const activeNativeSession = nativeSessions.find(isNativeSessionActive) ?? null;
@@ -918,8 +1108,8 @@ function App() {
         : displayNativeSession
           ? displayNativeSession.sessionState
           : "idle";
-  const canLaunchMonitor = !launchDialogOpen && !nativeBusy && activeNativeOperation === null && activeNativeSession === null;
-  const canRunTargetAction = targetBlockReason === null && !nativeBusy && activeNativeOperation === null && activeNativeSession === null;
+  const canLaunchMonitor = !apiSelectionBlocked && !launchDialogOpen && !nativeBusy && activeNativeOperation === null && activeNativeSession === null;
+  const canRunTargetAction = !apiSelectionBlocked && targetBlockReason === null && !nativeBusy && activeNativeOperation === null && activeNativeSession === null;
   const drainNativeSession = activeNativeSession && !isDaemonSession(activeNativeSession)
     ? activeNativeSession
     : currentLaunchSession && !isDaemonSession(currentLaunchSession) && !terminalDrainCompleted.current.has(currentLaunchSession.sessionId)
@@ -944,6 +1134,145 @@ function App() {
     () => filteredEvents.slice(virtualTraceWindow.startIndex, virtualTraceWindow.endIndex),
     [filteredEvents, virtualTraceWindow.startIndex, virtualTraceWindow.endIndex]
   );
+  const traceGridTemplate = useMemo(() => traceColumnWidths.map((width) => `${width}px`).join(" "), [traceColumnWidths]);
+  const traceTableWidth = useMemo(() => sumColumnWidths(traceColumnWidths), [traceColumnWidths]);
+  const detailTableWidth = useMemo(() => sumColumnWidths(detailColumnWidths), [detailColumnWidths]);
+  const mainPanelStyle = {
+    "--inspector-height": `${inspectorHeight}px`
+  } as CSSProperties;
+
+  function handleTraceAutoScrollChange(checked: boolean) {
+    setTraceAutoScroll(checked);
+    traceAutoScrollRef.current = checked;
+
+    if (!checked) {
+      return;
+    }
+
+    const latestEvent = filteredEvents[filteredEvents.length - 1] ?? events[events.length - 1];
+    if (!latestEvent) {
+      return;
+    }
+
+    selectedEventIdRef.current = latestEvent.eventId;
+    setSelectedEventId(latestEvent.eventId);
+  }
+
+  function startColumnResize(
+    columns: ColumnConfig[],
+    widths: number[],
+    setWidths: (updater: (current: number[]) => number[]) => void,
+    index: number,
+    event: ReactPointerEvent<HTMLButtonElement>
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const startX = event.clientX;
+    const startWidth = widths[index] ?? columns[index].width;
+    const minWidth = columns[index].minWidth;
+
+    document.body.classList.add("column-resizing");
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const nextWidth = Math.round(Math.max(minWidth, startWidth + moveEvent.clientX - startX));
+      setWidths((current) => current.map((width, currentIndex) => currentIndex === index ? nextWidth : width));
+    };
+
+    const handlePointerUp = () => {
+      document.body.classList.remove("column-resizing");
+      window.removeEventListener("pointermove", handlePointerMove);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp, { once: true });
+  }
+
+  function resetColumnWidth(
+    columns: ColumnConfig[],
+    setWidths: (updater: (current: number[]) => number[]) => void,
+    index: number
+  ) {
+    setWidths((current) => current.map((width, currentIndex) => currentIndex === index ? columns[index].width : width));
+  }
+
+  function handleInspectorResizeStart(event: ReactPointerEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const startY = event.clientY;
+    const startHeight = inspectorHeight;
+
+    document.body.classList.add("panel-resizing");
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const nextHeight = clampNumber(Math.round(startHeight + startY - moveEvent.clientY), minInspectorHeight, maxInspectorHeight);
+      setInspectorHeight(nextHeight);
+    };
+
+    const handlePointerUp = () => {
+      document.body.classList.remove("panel-resizing");
+      window.removeEventListener("pointermove", handlePointerMove);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp, { once: true });
+  }
+
+  function handleToggleApiNode(node: ApiNode) {
+    const nodeLeafKeys = collectApiLeafKeys([node]);
+    if (nodeLeafKeys.length === 0) {
+      return;
+    }
+
+    setSelectedApiKeys((current) => {
+      const next = new Set(current);
+      const allSelected = nodeLeafKeys.every((key) => next.has(key));
+
+      for (const key of nodeLeafKeys) {
+        if (allSelected) {
+          next.delete(key);
+        }
+        else {
+          next.add(key);
+        }
+      }
+
+      return next;
+    });
+  }
+
+  function handleToggleApiExpanded(nodeId: string) {
+    setExpandedApiNodes((current) => {
+      const next = new Set(current);
+      if (next.has(nodeId)) {
+        next.delete(nodeId);
+      }
+      else {
+        next.add(nodeId);
+      }
+
+      return next;
+    });
+  }
+
+  function handleSelectAllApis() {
+    setSelectedApiKeys(new Set(apiLeafKeys));
+  }
+
+  function handleClearApiSelection() {
+    setSelectedApiKeys(new Set());
+  }
+
+  function handleApplyCaptureProfile(profileId: string) {
+    const profile = captureProfiles.find((item) => item.id === profileId);
+    if (!profile) {
+      return;
+    }
+
+    const validKeys = new Set(apiLeafKeys);
+    const profileKeys = profile.enabledApis.filter((key) => validKeys.has(key));
+    setSelectedApiKeys(new Set(profileKeys));
+    appendOutput([makeAuditEvent("api_profile_applied", "api_selection", `${profile.name}; selected=${profileKeys.length}/${apiLeafKeys.length}`)]);
+  }
 
   useEffect(() => {
     const element = traceScrollRef.current;
@@ -956,7 +1285,7 @@ function App() {
 
   useEffect(() => {
     const element = traceScrollRef.current;
-    if (!element || selectedTraceIndex < 0) {
+    if (!traceAutoScroll || !element || selectedTraceIndex < 0) {
       return;
     }
 
@@ -971,7 +1300,7 @@ function App() {
       element.scrollTop = nextScrollTop;
       setTraceScrollTop(nextScrollTop);
     }
-  }, [selectedTraceIndex, filteredEvents.length]);
+  }, [traceAutoScroll, selectedTraceIndex, filteredEvents.length]);
 
   useEffect(() => {
     if (!drainNativeSession) {
@@ -1043,13 +1372,19 @@ function App() {
   }
 
   async function startLaunchMonitorForTarget(targetPath: string, workingDirectory: string) {
+    if (apiSelectionBlocked) {
+      appendOutput([makeAuditEvent("launch_blocked", "api_selection", "Select at least one API before starting launch monitoring.")]);
+      setInspectorTab("output");
+      return;
+    }
+
     setNativeBusy(true);
     setLaunchSession(null);
     setProcessExitNotice(null);
 
     try {
-      appendOutput([makeAuditEvent("launch_requested", "start_launch_monitor_session", `Early-bird launch monitor requested for ${targetPath}.`)]);
-      const session = await startLaunchMonitorSession(targetPath, workingDirectory, launchArguments.trim());
+      appendOutput([makeAuditEvent("launch_requested", "start_launch_monitor_session", `Early-bird launch monitor requested for ${targetPath}; scope=${apiSelectionSummary}.`)]);
+      const session = await startLaunchMonitorSession(targetPath, workingDirectory, launchArguments.trim(), apiSelectionRequest);
       terminalDrainCompleted.current.delete(session.sessionId);
       streamBatchCursors.current[session.sessionId] = 0;
       setLaunchSession(session);
@@ -1431,13 +1766,19 @@ function App() {
       return;
     }
 
+    if (apiSelectionBlocked) {
+      appendOutput([makeAuditEvent("attach_blocked", "api_selection", "Select at least one API before attaching to a process.")]);
+      setInspectorTab("output");
+      return;
+    }
+
     setNativeBusy(true);
     setAttachResult(null);
     setProcessExitNotice(null);
 
     try {
-      appendOutput([makeAuditEvent("attach_requested", "attach_target_process_capture", `Bounded attach requested for PID ${selectedTarget.pid}.`)]);
-      const result = await attachTargetProcessCapture(selectedTarget.pid, attachDurationMs);
+      appendOutput([makeAuditEvent("attach_requested", "attach_target_process_capture", `Bounded attach requested for PID ${selectedTarget.pid}; scope=${apiSelectionSummary}.`)]);
+      const result = await attachTargetProcessCapture(selectedTarget.pid, attachDurationMs, apiSelectionRequest);
       setAttachResult(result);
       setCaptureResult(result);
       setBackendMode(result.backendMode);
@@ -1462,12 +1803,18 @@ function App() {
       return;
     }
 
+    if (apiSelectionBlocked) {
+      appendOutput([makeAuditEvent("stream_attach_blocked", "api_selection", "Select at least one API before starting attach monitoring.")]);
+      setInspectorTab("output");
+      return;
+    }
+
     setNativeBusy(true);
     setProcessExitNotice(null);
 
     try {
-      appendOutput([makeAuditEvent("stream_attach_requested", "start_streaming_attach_session", `Streaming attach requested for PID ${selectedTarget.pid}.`)]);
-      const session = await startStreamingAttachSession(selectedTarget.pid);
+      appendOutput([makeAuditEvent("stream_attach_requested", "start_streaming_attach_session", `Streaming attach requested for PID ${selectedTarget.pid}; scope=${apiSelectionSummary}.`)]);
+      const session = await startStreamingAttachSession(selectedTarget.pid, apiSelectionRequest);
       terminalDrainCompleted.current.delete(session.sessionId);
       streamBatchCursors.current[session.sessionId] = 0;
       setNativeSessions((current) => {
@@ -1491,12 +1838,18 @@ function App() {
       return;
     }
 
+    if (apiSelectionBlocked) {
+      appendOutput([makeAuditEvent("daemon_session_blocked", "api_selection", "Select at least one API before starting daemon attach monitoring.")]);
+      setInspectorTab("output");
+      return;
+    }
+
     setNativeBusy(true);
     setProcessExitNotice(null);
 
     try {
-      appendOutput([makeAuditEvent("daemon_session_requested", "start_daemon_supervised_session", `Daemon-supervised attach requested for PID ${selectedTarget.pid}.`)]);
-      const session = await startDaemonSupervisedSession(selectedTarget.pid);
+      appendOutput([makeAuditEvent("daemon_session_requested", "start_daemon_supervised_session", `Daemon-supervised attach requested for PID ${selectedTarget.pid}; scope=${apiSelectionSummary}.`)]);
+      const session = await startDaemonSupervisedSession(selectedTarget.pid, apiSelectionRequest);
       terminalDrainCompleted.current.delete(session.sessionId);
       setNativeSessions((current) => {
         const remaining = current.filter((item) => item.sessionId !== session.sessionId);
@@ -1519,13 +1872,19 @@ function App() {
       return;
     }
 
+    if (apiSelectionBlocked) {
+      appendOutput([makeAuditEvent("process_tree_blocked", "api_selection", "Select at least one API before starting process-tree supervision.")]);
+      setInspectorTab("output");
+      return;
+    }
+
     setNativeBusy(true);
     setProcessTreeResult(null);
     setProcessExitNotice(null);
 
     try {
-      appendOutput([makeAuditEvent("process_tree_requested", "supervise_process_tree", `Supervision requested for PID ${selectedTarget.pid}; policy=${childPolicy}.`)]);
-      const result = await superviseProcessTree(selectedTarget.pid, treeDurationMs, childPolicy);
+      appendOutput([makeAuditEvent("process_tree_requested", "supervise_process_tree", `Supervision requested for PID ${selectedTarget.pid}; policy=${childPolicy}; scope=${apiSelectionSummary}.`)]);
+      const result = await superviseProcessTree(selectedTarget.pid, treeDurationMs, childPolicy, apiSelectionRequest);
       const childAuditEvents = result.childAttachResults.flatMap((capture) => capture.auditEvents);
       const childResolverEvents = result.childAttachResults.flatMap((capture) => resolverPointerOutputEvents(capture));
       const childDroppedEvents = result.childAttachResults.reduce((total, capture) => total + capture.droppedEvents, 0);
@@ -1689,6 +2048,44 @@ function App() {
                     <RefreshCcw size={13} />
                   </button>
                 </div>
+              </div>
+              <div className={apiSelectionBlocked ? "api-scope-panel blocked" : "api-scope-panel"}>
+                <div className="api-scope-header">
+                  <div>
+                    <strong>Monitoring Scope</strong>
+                    <span>{apiSelectionSummary}; {selectedApiModules} modules</span>
+                  </div>
+                  <button type="button" className="tool-button" onClick={() => setLeftTab("apis")} disabled={nativeBusy}>
+                    <Layers size={13} />
+                    <span>Edit</span>
+                  </button>
+                </div>
+                <div className="api-scope-actions">
+                  <button type="button" onClick={handleSelectAllApis} disabled={nativeBusy}>All</button>
+                  <button type="button" onClick={handleClearApiSelection} disabled={nativeBusy}>None</button>
+                  <select
+                    aria-label="Apply API profile"
+                    value=""
+                    onChange={(event) => handleApplyCaptureProfile(event.target.value)}
+                    disabled={nativeBusy}
+                  >
+                    <option value="" disabled>Profile</option>
+                    {captureProfiles.map((profile) => (
+                      <option value={profile.id} key={profile.id}>{profile.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="api-scope-tree compact" aria-label="Monitoring API selection">
+                  {renderApiTree(
+                    apiTree,
+                    selectedApiKeys,
+                    expandedApiNodes,
+                    handleToggleApiNode,
+                    handleToggleApiExpanded,
+                    nativeBusy || activeNativeSession !== null
+                  )}
+                </div>
+                {apiSelectionBlocked ? <div className="scope-warning">Select at least one API before launch or attach.</div> : null}
               </div>
               <div className="section-title">
                 <Server size={14} />
@@ -2201,9 +2598,42 @@ function App() {
             <section className="rail-section">
               <div className="section-title">
                 <Layers size={14} />
-                <span>Capture Filter</span>
+                <span>Monitoring APIs</span>
               </div>
-              {renderApiTree(apiTree)}
+              <div className={apiSelectionBlocked ? "api-scope-panel full blocked" : "api-scope-panel full"}>
+                <div className="api-scope-header">
+                  <div>
+                    <strong>{selectedApiList.length}/{apiLeafKeys.length} APIs</strong>
+                    <span>{selectedApiModules} selected modules; partial selection is sent as an agent allowlist</span>
+                  </div>
+                </div>
+                <div className="api-scope-actions">
+                  <button type="button" onClick={handleSelectAllApis} disabled={nativeBusy || activeNativeSession !== null}>All</button>
+                  <button type="button" onClick={handleClearApiSelection} disabled={nativeBusy || activeNativeSession !== null}>None</button>
+                  <select
+                    aria-label="Apply API profile"
+                    value=""
+                    onChange={(event) => handleApplyCaptureProfile(event.target.value)}
+                    disabled={nativeBusy || activeNativeSession !== null}
+                  >
+                    <option value="" disabled>Profile</option>
+                    {captureProfiles.map((profile) => (
+                      <option value={profile.id} key={profile.id}>{profile.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="api-scope-tree" aria-label="Monitoring API checkbox tree">
+                  {renderApiTree(
+                    apiTree,
+                    selectedApiKeys,
+                    expandedApiNodes,
+                    handleToggleApiNode,
+                    handleToggleApiExpanded,
+                    nativeBusy || activeNativeSession !== null
+                  )}
+                </div>
+                {apiSelectionBlocked ? <div className="scope-warning">No API selected. Launch and attach are disabled.</div> : null}
+              </div>
             </section>
           ) : null}
 
@@ -2215,10 +2645,16 @@ function App() {
               </div>
               <div className="profile-list">
                 {captureProfiles.map((profile) => (
-                  <button type="button" className="profile-row" key={profile.id}>
+                  <button
+                    type="button"
+                    className="profile-row"
+                    key={profile.id}
+                    onClick={() => handleApplyCaptureProfile(profile.id)}
+                    disabled={nativeBusy || activeNativeSession !== null}
+                  >
                     <strong>{profile.name}</strong>
                     <span>{profile.description}</span>
-                    <small>{profile.enabledApis.length} APIs enabled</small>
+                    <small>{profile.enabledApis.length} APIs</small>
                   </button>
                 ))}
               </div>
@@ -2226,7 +2662,7 @@ function App() {
           ) : null}
         </aside>
 
-        <section className="main-panel">
+        <section className="main-panel" style={mainPanelStyle}>
           <div className="trace-control">
             <div className="filter-box">
               <Search size={14} />
@@ -2260,6 +2696,14 @@ function App() {
               </button>
             </div>
             <div className="trace-stats">
+              <label className="auto-scroll-toggle" title="Follow the latest trace row while events stream">
+                <input
+                  type="checkbox"
+                  checked={traceAutoScroll}
+                  onChange={(event) => handleTraceAutoScrollChange(event.target.checked)}
+                />
+                <span>Auto-scroll</span>
+              </label>
               <span>{filteredEvents.length}/{events.length} rows</span>
               <span>{totalTraceEventCount} total</span>
               {trimmedTraceEventCount > 0 ? <span>last {events.length} shown</span> : null}
@@ -2507,24 +2951,34 @@ function App() {
             ref={traceScrollRef}
             onScroll={(event) => setTraceScrollTop(event.currentTarget.scrollTop)}
           >
-            <table className="trace-table trace-table-head">
+            <table className="trace-table trace-table-head" style={{ minWidth: traceTableWidth, width: traceTableWidth }}>
+              <colgroup>
+                {traceColumns.map((column, index) => (
+                  <col key={column.id} style={{ width: traceColumnWidths[index] }} />
+                ))}
+              </colgroup>
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Time</th>
-                  <th>PID</th>
-                  <th>TID</th>
-                  <th>Module</th>
-                  <th>API</th>
-                  <th>Arguments</th>
-                  <th>Return</th>
-                  <th>Error</th>
-                  <th>Duration</th>
-                  <th>Tags</th>
+                  {traceColumns.map((column, index) => (
+                    <th className="resizable-column" key={column.id} style={{ width: traceColumnWidths[index] }}>
+                      <span>{column.label}</span>
+                      <button
+                        type="button"
+                        className="column-resize-handle"
+                        aria-label={`Resize ${column.label} column`}
+                        title="Drag to resize; double-click to reset"
+                        onPointerDown={(event) => startColumnResize(traceColumns, traceColumnWidths, setTraceColumnWidths, index, event)}
+                        onDoubleClick={(event) => {
+                          event.preventDefault();
+                          resetColumnWidth(traceColumns, setTraceColumnWidths, index);
+                        }}
+                      />
+                    </th>
+                  ))}
                 </tr>
               </thead>
             </table>
-            <div className="trace-virtual-body" style={{ height: virtualTraceWindow.totalHeight }}>
+            <div className="trace-virtual-body" style={{ height: virtualTraceWindow.totalHeight, minWidth: traceTableWidth, width: traceTableWidth }}>
               <div className="trace-virtual-window" style={{ transform: `translateY(${virtualTraceWindow.offsetTop}px)` }}>
                 {visibleTraceEvents.map((event, index) => {
                   const eventHighlight = traceHighlightState.eventHighlightsById.get(event.eventId) ?? null;
@@ -2539,7 +2993,7 @@ function App() {
                         (virtualTraceWindow.startIndex + index) % 2 === 1 ? "alt" : "",
                         highlightingEnabled && eventHighlight ? `highlight-${eventHighlight.highestSeverity}` : ""
                       ].filter(Boolean).join(" ")}
-                      style={{ height: traceRowHeight }}
+                      style={{ height: traceRowHeight, gridTemplateColumns: traceGridTemplate, minWidth: traceTableWidth, width: traceTableWidth }}
                       onClick={() => setSelectedEventId(event.eventId)}
                     >
                       <span>{event.eventId}</span>
@@ -2567,6 +3021,15 @@ function App() {
             </div>
             {filteredEvents.length === 0 ? <div className="trace-empty">No trace events match the current filter or query.</div> : null}
           </div>
+
+          <div
+            className="trace-panel-resizer"
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="Resize trace details"
+            title="Drag to resize trace rows and details"
+            onPointerDown={handleInspectorResizeStart}
+          />
 
           <div className="inspector">
             <div className="inspector-tabs">
@@ -2604,15 +3067,30 @@ function App() {
                     </div>
                   ) : null}
                   {selectedEvent && inspectorTab === "parameters" ? (
-                    <table className="detail-table">
+                    <table className="detail-table" style={{ minWidth: detailTableWidth, width: detailTableWidth }}>
+                      <colgroup>
+                        {detailColumns.map((column, index) => (
+                          <col key={column.id} style={{ width: detailColumnWidths[index] }} />
+                        ))}
+                      </colgroup>
                       <thead>
                         <tr>
-                          <th>#</th>
-                          <th>Type</th>
-                          <th>Name</th>
-                          <th>Pre-call</th>
-                          <th>Post-call</th>
-                          <th>Decoded</th>
+                          {detailColumns.map((column, index) => (
+                            <th className="resizable-column" key={column.id} style={{ width: detailColumnWidths[index] }}>
+                              <span>{column.label}</span>
+                              <button
+                                type="button"
+                                className="column-resize-handle"
+                                aria-label={`Resize ${column.label} column`}
+                                title="Drag to resize; double-click to reset"
+                                onPointerDown={(event) => startColumnResize(detailColumns, detailColumnWidths, setDetailColumnWidths, index, event)}
+                                onDoubleClick={(event) => {
+                                  event.preventDefault();
+                                  resetColumnWidth(detailColumns, setDetailColumnWidths, index);
+                                }}
+                              />
+                            </th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>

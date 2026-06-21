@@ -3356,7 +3356,9 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
 
             for (const auto& line : agentLines)
             {
-                if (PayloadContains(line, "\"messageType\":\"resolver_pointer_candidate\""))
+                if (
+                    PayloadContains(line, "\"messageType\":\"resolver_pointer_candidate\"") ||
+                    PayloadContains(line, "\"messageType\":\"resolver_pointer_instrumented\""))
                 {
                     ++resolverPointerCandidates;
                 }
@@ -3880,7 +3882,9 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
                 }
 
                 hasDropped = hasDropped || PayloadContains(line, "\"messageType\":\"dropped_events\"");
-                if (PayloadContains(line, "\"messageType\":\"resolver_pointer_candidate\""))
+                if (
+                    PayloadContains(line, "\"messageType\":\"resolver_pointer_candidate\"") ||
+                    PayloadContains(line, "\"messageType\":\"resolver_pointer_instrumented\""))
                 {
                     ++resolverPointerCandidates;
                 }
@@ -7274,6 +7278,7 @@ int LaunchSessionCommand(const std::vector<std::string>& args)
     request.AgentPath = GetOption(args, "--agent");
     request.WorkingDirectory = GetOption(args, "--cwd");
     request.CommandLineArguments = GetOption(args, "--args");
+    request.ApiSelection = GetOption(args, "--api-selection");
     request.OwnerProcessId = ownerProcessId;
     request.HelperProcessId = GetCurrentProcessId();
     request.CancellationEventName = cancellationEventName;
@@ -7430,6 +7435,7 @@ std::string AttachCaptureJson(const std::vector<std::string>& args)
     request.ProcessId = pidOption == "self" ? GetCurrentProcessId() : GetUInt32Option(args, "--pid", 0);
     request.AgentPath = GetOption(args, "--agent");
     request.CancellationEventName = CancellationEventNameFromArgs(args, request.OperationId);
+    request.ApiSelection = GetOption(args, "--api-selection");
     request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
     request.DurationMs = GetUInt32Option(args, "--duration-ms", 3000);
     request.Architecture = NativeHelperArchitecture();
@@ -7515,6 +7521,7 @@ int AttachSessionCommand(const std::vector<std::string>& args)
     request.HelperProcessId = GetCurrentProcessId();
     request.AgentPath = GetOption(args, "--agent");
     request.CancellationEventName = cancellationEventName;
+    request.ApiSelection = GetOption(args, "--api-selection");
     request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
     request.DurationMs = GetUInt32Option(args, "--duration-ms", 0);
     request.Architecture = NativeHelperArchitecture();
@@ -7624,6 +7631,7 @@ std::string SuperviseTreeJson(const std::vector<std::string>& args)
     request.RootProcessId = pidOption == "self" ? GetCurrentProcessId() : GetUInt32Option(args, "--pid", 0);
     request.AgentPath = GetOption(args, "--agent");
     request.CancellationEventName = CancellationEventNameFromArgs(args, request.OperationId);
+    request.ApiSelection = GetOption(args, "--api-selection");
     request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
     request.DurationMs = GetUInt32Option(args, "--duration-ms", 3000);
     request.PollIntervalMs = GetUInt32Option(args, "--poll-ms", 100);
@@ -9225,6 +9233,7 @@ std::string DaemonStartSessionJson(const std::vector<std::string>& args)
 
         const std::uint32_t durationMs = GetUInt32Option(args, "--duration-ms", 0);
         const std::uint32_t timeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
+        const std::string apiSelection = GetOption(args, "--api-selection");
         const std::string operationId = OperationIdFromArgs(args);
         const std::string sessionId = SessionIdFromArgs(args, operationId);
         const std::string cancellationEventName = CancellationEventNameForOperation(operationId);
@@ -9306,6 +9315,12 @@ std::string DaemonStartSessionJson(const std::vector<std::string>& args)
             "--daemon-control-endpoint",
             status.ControlEndpoint
         };
+
+        if (!apiSelection.empty())
+        {
+            childArgs.push_back("--api-selection");
+            childArgs.push_back(apiSelection);
+        }
 
         const bool launched = LaunchBackgroundHelper(
             childArgs,
@@ -9505,7 +9520,7 @@ void PrintUsage()
     std::cout << "{";
     std::cout << "\"schemaVersion\":\"0.1.0\",";
     std::cout << "\"success\":false,";
-    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | launch-session --target path [--cwd dir] [--session-id id] [--operation-id id] [--owner-pid pid] [--duration-ms ms optional bounded mode] [--stream-batches] [--batch-size n] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms optional bounded mode] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] [--knapm-compression none|zstd] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-audit [--runtime-dir dir] | daemon-recovery-plan [--runtime-dir dir] | daemon-recovery-apply [--runtime-dir dir] [--dry-run|--apply-registry-prune] | daemon-prune-stale [--runtime-dir dir] [--dry-run] | daemon-start-session --pid pid --write-knapm path [--knapm-compression none|zstd] [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] | cancel-operation --operation-id id | classify-session --session-record path | catalog-sessions --root dir [--catalog path] [--rebuild] | catalog-query --catalog path [--limit n] [--state state] [--target pid-or-text] | catalog-remove-missing --catalog path [--dry-run] | catalog-index-build --root dir --database path [--rebuild] | catalog-index-query --database path [--limit n] [--state state] [--target pid-or-text] | catalog-index-remove-missing --database path [--dry-run] | trace-index-build --root dir --database path [--rebuild] | trace-index-query --database path [--text text] [--api api] [--module module] [--session id-or-path] [--pid pid] [--limit n] | trace-index-remove-missing --database path [--dry-run] | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
+    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | launch-session --target path [--cwd dir] [--session-id id] [--operation-id id] [--owner-pid pid] [--duration-ms ms optional bounded mode] [--api-selection module!api;...] [--stream-batches] [--batch-size n] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--api-selection module!api;...] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms optional bounded mode] [--api-selection module!api;...] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] [--knapm-compression none|zstd] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-audit [--runtime-dir dir] | daemon-recovery-plan [--runtime-dir dir] | daemon-recovery-apply [--runtime-dir dir] [--dry-run|--apply-registry-prune] | daemon-prune-stale [--runtime-dir dir] [--dry-run] | daemon-start-session --pid pid --write-knapm path [--knapm-compression none|zstd] [--api-selection module!api;...] [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] [--api-selection module!api;...] | cancel-operation --operation-id id | classify-session --session-record path | catalog-sessions --root dir [--catalog path] [--rebuild] | catalog-query --catalog path [--limit n] [--state state] [--target pid-or-text] | catalog-remove-missing --catalog path [--dry-run] | catalog-index-build --root dir --database path [--rebuild] | catalog-index-query --database path [--limit n] [--state state] [--target pid-or-text] | catalog-index-remove-missing --database path [--dry-run] | trace-index-build --root dir --database path [--rebuild] | trace-index-query --database path [--text text] [--api api] [--module module] [--session id-or-path] [--pid pid] [--limit n] | trace-index-remove-missing --database path [--dry-run] | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
     std::cout << "}\n";
 }
 }

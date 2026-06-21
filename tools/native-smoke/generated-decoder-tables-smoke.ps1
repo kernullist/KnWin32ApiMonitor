@@ -10,12 +10,22 @@ if (-not (Test-Path -LiteralPath $HelperPath))
 }
 
 npm run defs:decoder-tables | Out-Host
+if ($LASTEXITCODE -ne 0)
+{
+    throw "Generated decoder table validation failed."
+}
 
 $result = & $HelperPath capture-sample | ConvertFrom-Json
 
 if (-not $result.success)
 {
     throw "Generated decoder capture failed: $($result.operation): $($result.message)"
+}
+
+$localizedErrors = @($result.capturedEvents | Where-Object { $_.lastErrorCode -ne 0 -and $_.lastErrorMessage -match "[\u3130-\u318F\uAC00-\uD7AF]" })
+if ($localizedErrors.Count -ne 0)
+{
+    throw "Last-error messages must be rendered in English: $($localizedErrors | ConvertTo-Json -Depth 8)"
 }
 
 $createFile = @($result.capturedEvents | Where-Object { $_.api -eq "CreateFileW" } | Select-Object -First 1)
@@ -34,6 +44,11 @@ if ($createFile[0].hookPolicy -ne "iat" -or $createFile[0].coverageStatus -ne "s
     throw "CreateFileW generated hook metadata mismatch: hook=$($createFile[0].hookPolicy) coverage=$($createFile[0].coverageStatus)"
 }
 
+if ($createFile[0].lastErrorCode -eq 2 -and $createFile[0].lastErrorMessage -notmatch "The system cannot find the file specified")
+{
+    throw "CreateFileW last-error message was not rendered in English: $($createFile[0].lastErrorMessage)"
+}
+
 $fileName = @($createFile[0].arguments | Where-Object { $_.name -eq "lpFileName" } | Select-Object -First 1)
 if ($fileName.Count -ne 1)
 {
@@ -43,6 +58,30 @@ if ($fileName.Count -ne 1)
 if ($fileName[0].decodeAlias -ne "utf16_string" -or $fileName[0].captureTiming -ne "pre")
 {
     throw "CreateFileW generated parameter metadata mismatch: decode=$($fileName[0].decodeAlias) timing=$($fileName[0].captureTiming)"
+}
+
+$desiredAccess = @($createFile[0].arguments | Where-Object { $_.name -eq "dwDesiredAccess" } | Select-Object -First 1)
+if ($desiredAccess.Count -ne 1 -or $desiredAccess[0].decodedValue -notmatch "GENERIC_")
+{
+    throw "CreateFileW desired access constants were not decoded: $($desiredAccess | ConvertTo-Json -Depth 8)"
+}
+
+$shareMode = @($createFile[0].arguments | Where-Object { $_.name -eq "dwShareMode" } | Select-Object -First 1)
+if ($shareMode.Count -ne 1 -or $shareMode[0].decodedValue -notmatch "FILE_SHARE_")
+{
+    throw "CreateFileW share mode constants were not decoded: $($shareMode | ConvertTo-Json -Depth 8)"
+}
+
+$creationDisposition = @($createFile[0].arguments | Where-Object { $_.name -eq "dwCreationDisposition" } | Select-Object -First 1)
+if ($creationDisposition.Count -ne 1 -or $creationDisposition[0].decodedValue -notmatch "CREATE_|OPEN_|TRUNCATE_")
+{
+    throw "CreateFileW creation disposition constants were not decoded: $($creationDisposition | ConvertTo-Json -Depth 8)"
+}
+
+$flagsAndAttributes = @($createFile[0].arguments | Where-Object { $_.name -eq "dwFlagsAndAttributes" } | Select-Object -First 1)
+if ($flagsAndAttributes.Count -ne 1 -or $flagsAndAttributes[0].decodedValue -notmatch "FILE_ATTRIBUTE_|FILE_FLAG_")
+{
+    throw "CreateFileW flags and attributes constants were not decoded: $($flagsAndAttributes | ConvertTo-Json -Depth 8)"
 }
 
 $ntCreate = @($result.capturedEvents | Where-Object { $_.api -eq "NtCreateFile" } | Select-Object -First 1)
@@ -73,4 +112,4 @@ if ($resolver[0].apiFamily -ne "resolver" -or $resolver[0].apiCategory -ne "dyna
     throw "GetProcAddress generated resolver metadata missing: family=$($resolver[0].apiFamily) category=$($resolver[0].apiCategory)"
 }
 
-Write-Host "Generated decoder tables smoke passed: events=$($result.capturedEvents.Count) createFileDecode=$($fileName[0].decodeAlias) resolverCategory=$($resolver[0].apiCategory)"
+Write-Host "Generated decoder tables smoke passed: events=$($result.capturedEvents.Count) createFileDecode=$($fileName[0].decodeAlias) constants=$($desiredAccess[0].decodedValue) resolverCategory=$($resolver[0].apiCategory)"

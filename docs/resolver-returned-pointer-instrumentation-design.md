@@ -1,19 +1,21 @@
 # Resolver-Returned Pointer Instrumentation Design
 
-Status: reviewed design with candidate-ledger implementation, no pointer-call instrumentation.
+Status: reviewed design with resolver-ledger implementation and resolver-return pointer substitution for known wrapped APIs.
 
-Updated: 2026-06-20
+Updated: 2026-06-21
 
 ## Goal
 
 Close the coverage gap between resolver visibility and actual calls made through
 function pointers returned by `GetProcAddress` or `LdrGetProcedureAddress`
-without overstating current IAT hook coverage.
+without broad inline hooks, EAT patching, or unsafe system-DLL IAT mutation.
 
-The current product can claim resolver call visibility. It cannot claim that a
-later direct call through the returned function pointer is instrumented unless a
-separate reviewed method has installed and proven call interception for that
-specific pointer target.
+The current product can claim resolver call visibility. For resolver results
+that map to a generated API with an existing monitored wrapper, it can also
+claim return-pointer substitution: `GetProcAddress` returns the wrapper pointer,
+and `LdrGetProcedureAddress` writes the wrapper pointer to the caller-provided
+output slot. Calls through those returned pointers emit the same bounded
+`api_call` records as ordinary wrapper calls.
 
 ## Current Behavior
 
@@ -25,16 +27,17 @@ Current loader-aware coverage provides these paths:
 4. Resolver call monitoring for `GetProcAddress` and
    `LdrGetProcedureAddress`.
 5. Bounded shared-memory `api_call` records for the selected imported APIs.
-6. Candidate-ledger lifecycle messages for resolver-returned pointers:
+6. Resolver-ledger lifecycle messages for resolver-returned pointers:
+   - `resolver_pointer_instrumented`
    - `resolver_pointer_candidate`
    - `resolver_pointer_unsupported`
-7. Controller audit/output summaries for candidate-ledger messages.
+7. Controller audit/output summaries for resolver-ledger messages.
 
 This captures APIs reached through import slots in eligible modules. It also
 captures resolver calls with bounded function-name evidence and return/status
-values. The candidate ledger classifies returned pointers, but it does not
-automatically capture a later call through a raw function pointer returned by
-the resolver.
+values. The resolver ledger classifies returned pointers and substitutes known
+wrapped APIs at the resolver return boundary. It does not patch provider module
+code or export tables.
 
 ## Coverage Model
 
@@ -81,7 +84,8 @@ Claim not allowed:
 
 The resolver returned a non-null pointer that can be mapped to a loaded module,
 an executable image range, and a known or safely reportable export identity. No
-call interception has been installed.
+call interception has been installed for this result, usually because no enabled
+wrapper definition is available.
 
 Claim allowed:
 
@@ -95,19 +99,23 @@ Claim not allowed:
 
 ### Resolver Pointer Instrumented
 
-A reviewed pointer-call interception method has been installed for the resolved
-target and has an explicit rollback record.
+A reviewed resolver-return substitution has been applied for the resolved
+target. The original function pointer is preserved in the wrapper's original
+slot, and the caller receives the wrapper pointer through the resolver return
+value or output pointer.
 
 Claim allowed:
 
-1. Calls reaching that installed interception point are instrumented.
-2. The installed method, API id, target module identity, target RVA, rollback
-   state, and hook lifecycle evidence can be used as proof.
+1. Calls made through the substituted pointer are instrumented by the existing
+   wrapper.
+2. API id, target module identity, target RVA, original pointer, replacement
+   pointer, and instrumentation reason can be used as proof.
 
 Claim not allowed:
 
 1. Other resolver-returned pointers for the same API are covered unless they
-   share the exact installed interception point.
+   receive the same substitution or already flow through an instrumented import
+   slot.
 2. Inline/EAT/breakpoint/skip-call behavior is implied unless the reviewed
    method explicitly says so.
 
@@ -132,13 +140,14 @@ Common unsupported reasons:
 Unsupported does not mean failure of resolver monitoring. It means the product
 must not claim pointer-call coverage for that resolver result.
 
-## Recommended Implementation Path
+## Implemented Path
 
-The first implementation slice is a candidate ledger only. It does not patch
-code, patch export tables, rewrite caller variables, wrap arbitrary function
-pointers, or install broad detours.
+The implemented slice keeps the candidate ledger and adds resolver-return
+substitution for known APIs that already have monitored wrappers. It does not
+patch provider code, patch export tables, wrap arbitrary function pointers, or
+install broad detours.
 
-Candidate ledger responsibilities:
+Resolver ledger responsibilities:
 
 1. On each successful resolver event, classify the returned pointer.
 2. Map the pointer to the current loaded-module list by base and image size.
@@ -147,26 +156,34 @@ Candidate ledger responsibilities:
 4. Resolve an export identity by module, RVA, function name, ordinal, and
    forwarder host where possible.
 5. Compare the export identity to generated API definitions and hook policy.
-6. Emit low-volume lifecycle evidence:
+6. If an enabled `HookDefinition` with a replacement wrapper exists, preserve
+   the original pointer and substitute the resolver return boundary:
+   - `GetProcAddress`: return the monitored wrapper pointer.
+   - `LdrGetProcedureAddress`: write the monitored wrapper pointer to the
+     caller output slot.
+7. Emit low-volume lifecycle evidence:
+   - `resolver_pointer_instrumented`
    - `resolver_pointer_candidate`
    - `resolver_pointer_unsupported`
-7. Keep `api_call` events reserved for actual API calls, not resolver
-   classification.
-8. Preserve current hot-path constraints: fixed-size shared-memory records for
+8. Keep `api_call` events reserved for actual API calls, not resolver
+   classification. Substituted pointer calls emit existing `api_call` records
+   through the normal wrapper path.
+9. Preserve current hot-path constraints: fixed-size shared-memory records for
    high-volume hooks, no JSON serialization in target hook fast paths, no
    blocking writes, and no heap-heavy payload capture.
 
-This gives the product honest coverage reporting before introducing a risky
-call-interception method.
+This gives the product honest resolver coverage without broad system-module IAT
+mutation or inline patching.
 
 ## Future Hook Method
 
-Any future pointer-call interception should be opt-in, allowlisted, and
-definition-driven. Broad inline detours are not approved by this design.
+Any future pointer-call interception beyond resolver-return substitution should
+be opt-in, allowlisted, and definition-driven. Broad inline detours are not
+approved by this design.
 
-A future prototype may be reviewed only after the candidate ledger is stable.
-The smallest acceptable prototype is one low-risk, low-volume, fixed-signature
-API in a repository-owned sample target, with both x64 and x86 rollback smoke
+A future prototype may be reviewed only after substitution remains stable. The
+smallest acceptable prototype is one low-risk, low-volume, fixed-signature API
+in a repository-owned sample target, with both x64 and x86 rollback smoke
 coverage.
 
 Required hook descriptor fields:
@@ -207,9 +224,9 @@ Rollback requirements:
 
 ## Transport ABI
 
-No transport ABI change is required for this design-only step.
+No transport ABI change is required for resolver-return substitution.
 
-The candidate-ledger implementation can use low-volume lifecycle events because
+The resolver-ledger implementation uses low-volume lifecycle events because
 resolver classification is tied to resolver calls, not high-volume API call
 hooks.
 
@@ -222,12 +239,15 @@ Potential future additive event kinds:
 5. `resolver_pointer_rollback`
 6. `resolver_pointer_call`
 
-The only high-volume future event is `resolver_pointer_call`, and it must use
-the same bounded binary shared-memory principles as existing `api_call` records.
-Do not put JSON serialization, export parsing, symbol resolution, PE parsing, or
-heap-heavy decode work into a hot call path.
+The current implementation does not emit `resolver_pointer_call`. Calls through
+substituted pointers enter the existing wrappers and emit normal bounded
+`api_call` records. If a future implementation adds a distinct high-volume
+`resolver_pointer_call`, it must use the same bounded binary shared-memory
+principles as existing `api_call` records. Do not put JSON serialization,
+export parsing, symbol resolution, PE parsing, or heap-heavy decode work into a
+hot call path.
 
-Minimum candidate lifecycle fields:
+Minimum resolver lifecycle fields:
 
 1. Resolver event sequence or correlation id.
 2. Process id and thread id.
@@ -237,10 +257,12 @@ Minimum candidate lifecycle fields:
 6. Classified module id or module path hash.
 7. Export RVA when known.
 8. Classification:
+   - `instrumented`
    - `candidate`
    - `unsupported`
 9. Reason code.
 10. Definition API id when mapped.
+11. Original pointer and replacement pointer when instrumented.
 
 ## Failure And Race Handling
 
@@ -275,7 +297,7 @@ Required handling:
      `blocked_remote_memory`, `blocked_com_vtable`, or
      `blocked_injection_helper`
 9. Transport pressure:
-   - candidate lifecycle evidence may be dropped according to low-volume control
+   - resolver lifecycle evidence may be dropped according to low-volume control
      channel policy, but dropped counts must be visible
 
 ## Smoke Plan
@@ -283,9 +305,10 @@ Required handling:
 Use `knmon-dynamic-probe.dll` because it already proves dynamic-load IAT
 re-sweep and resolver monitoring.
 
-### Phase A: Candidate Ledger Smoke
+### Phase A: Resolver Substitution Smoke
 
-Purpose: prove honest classification without pointer-call instrumentation.
+Purpose: prove honest classification plus resolver-return substitution for a
+known generated API.
 
 Sample behavior:
 
@@ -298,24 +321,29 @@ Sample behavior:
 Expected monitor evidence:
 
 1. Resolver `api_call` events are present.
-2. `resolver_pointer_candidate` or `resolver_pointer_unsupported` lifecycle
-   events are present with reason codes.
-3. No `resolver_pointer_call` event is emitted.
-4. Coverage report labels the result as resolver observed or candidate, not
-   instrumented.
-5. Healthy path reports zero target transport drops.
-6. Shutdown still reports restored hooks equal installed hooks and failed hooks
+2. `resolver_pointer_instrumented` lifecycle events are present for
+   `GetCurrentProcessId` through both `GetProcAddress` and
+   `LdrGetProcedureAddress`.
+3. Instrumented lifecycle events include original pointer, replacement pointer,
+   target module, target RVA, definition id, and substitution reason evidence.
+4. `resolver_pointer_unsupported` remains present for repository-only probe
+   exports such as `KnMonDynamicProbe`.
+5. No `resolver_pointer_call` event is emitted; calls through substituted
+   pointers emit normal bounded `api_call` events through the existing wrapper.
+6. Healthy path reports zero target transport drops.
+7. Shutdown still reports restored hooks equal installed hooks and failed hooks
    equal zero.
 
-### Phase B: Future Instrumented Prototype Smoke
+### Phase B: Future Non-Substitution Hook Smoke
 
-Purpose: only after a separately approved hook method exists.
+Purpose: only after a separately approved non-substitution hook method exists.
 
 Expected monitor evidence:
 
 1. Candidate classification appears before install.
-2. Install lifecycle reports `resolver_pointer_instrumented`.
-3. A call through the resolved pointer emits `resolver_pointer_call`.
+2. Install lifecycle reports the non-substitution hook method.
+3. A call through the resolved pointer emits `resolver_pointer_call` if a
+   distinct high-volume pointer-call event is approved.
 4. Return/error/timing evidence matches the generated definition.
 5. Rollback lifecycle proves original state restoration.
 6. Negative smokes cover blocked API, ordinal-only metadata miss, forwarded
@@ -340,22 +368,27 @@ The following are not approved by this design:
 13. Callback or window-message procedure instrumentation.
 14. Claiming pointer-call coverage from resolver visibility alone.
 
-## Acceptance Criteria For The Next Implementation Slice
+## Acceptance Criteria For The Implemented Slice
 
-The next implementation goal should stop at candidate-ledger behavior.
+The implemented slice stops at resolver-return substitution for known wrapped
+APIs.
 
 Done means:
 
-1. Resolver-returned pointers are classified as candidate or unsupported.
+1. Resolver-returned pointers are classified as instrumented, candidate, or
+   unsupported.
 2. The classification preserves module/export/API identity where safe.
 3. Unsupported states are explicit and reason-coded.
-4. No code patching, export patching, breakpoint mutation, pointer rewriting, or
+4. No provider code patching, export patching, breakpoint mutation, or
    trampoline installation is added.
-5. `knmon-dynamic-probe.dll` smoke proves resolver visibility plus candidate
-   ledger evidence.
-6. Capture results and session manifests expose candidate/unsupported ledger
-   counters without making them pointer-call coverage.
-7. Existing `npm run defs:validate`, native smoke, and `npm run verify` gates
+5. `GetProcAddress` return values and `LdrGetProcedureAddress` output pointers
+   are substituted only when an enabled monitored wrapper exists.
+6. `knmon-dynamic-probe.dll` smoke proves resolver visibility plus substitution
+   evidence for `GetCurrentProcessId` and unsupported evidence for
+   repository-only exports.
+7. Capture results and session manifests expose resolver ledger counters, with
+   instrumented entries counted as candidates.
+8. Existing `npm run defs:validate`, native smoke, and `npm run verify` gates
    remain green.
-8. README and roadmap continue to state that resolver observation is not
-   pointer-call instrumentation.
+9. README and roadmap state that resolver substitution is not inline/EAT
+   instrumentation and does not emit separate `resolver_pointer_call` events.

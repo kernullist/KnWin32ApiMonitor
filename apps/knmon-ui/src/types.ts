@@ -578,7 +578,27 @@ export interface ApiNode {
   id: string;
   label: string;
   checked: boolean;
+  selectionKey?: string;
+  module?: string;
+  api?: string;
+  family?: string;
+  category?: string;
+  risk?: string;
+  hookPolicy?: string;
+  coverageStatus?: string;
+  count?: number;
   children?: ApiNode[];
+}
+
+export interface ApiCatalogEntry {
+  selectionKey: string;
+  module: string;
+  api: string;
+  family: string;
+  category: string;
+  risk: string;
+  hookPolicy: string;
+  coverageStatus: string;
 }
 
 export interface CaptureProfile {
