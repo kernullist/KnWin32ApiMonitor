@@ -423,17 +423,15 @@ function App() {
   ]);
   const nextQueryClauseId = useRef(1);
   const streamBatchCursors = useRef<Record<string, number>>({});
-  const streamBatchPollInFlight = useRef<Set<string>>(new Set());
-  const nativeOwnershipPollInFlight = useRef(false);
   const terminalDrainCompleted = useRef<Set<string>>(new Set());
   const lastSessionTargetAlive = useRef<Record<string, boolean>>({});
   const notifiedExitedSessions = useRef<Set<string>>(new Set());
   const traceScrollRef = useRef<HTMLDivElement | null>(null);
   const traceIngestWorker = useRef<Worker | null>(null);
+  const pendingTraceIngestCommands = useRef<TraceIngestCommand[]>([]);
 
   useEffect(() => {
     const worker = new Worker(new URL("./traceIngest.worker.ts", import.meta.url), { type: "module" });
-    traceIngestWorker.current = worker;
 
     worker.onmessage = (event: MessageEvent<TraceIngestSnapshot>) => {
       if (event.data.type !== "snapshot") {
@@ -452,8 +450,15 @@ function App() {
       ].slice(0, 80));
     };
 
+    traceIngestWorker.current = worker;
+    const pendingCommands = pendingTraceIngestCommands.current.splice(0);
+    pendingCommands.forEach((command) => {
+      worker.postMessage(command);
+    });
+
     return () => {
       traceIngestWorker.current = null;
+      pendingTraceIngestCommands.current = [];
       worker.terminate();
     };
   }, []);
@@ -521,7 +526,7 @@ function App() {
 
   function postTraceIngest(command: TraceIngestCommand) {
     if (!traceIngestWorker.current) {
-      appendOutput([makeAuditEvent("trace_ingest_unavailable", "trace_ingest_worker", "Trace ingest worker is not ready.")]);
+      pendingTraceIngestCommands.current.push(command);
       return;
     }
 
@@ -787,13 +792,14 @@ function App() {
     }
 
     let active = true;
+    let pollInFlight = false;
 
     const refreshNativeOwnership = async () => {
-      if (nativeOwnershipPollInFlight.current) {
+      if (pollInFlight) {
         return;
       }
 
-      nativeOwnershipPollInFlight.current = true;
+      pollInFlight = true;
       try {
         const [operations, sessions, daemonSessions] = await Promise.all([
           listNativeOperations(),
@@ -814,7 +820,7 @@ function App() {
         }
       }
       finally {
-        nativeOwnershipPollInFlight.current = false;
+        pollInFlight = false;
       }
     };
 
@@ -825,7 +831,6 @@ function App() {
 
     return () => {
       active = false;
-      nativeOwnershipPollInFlight.current = false;
       window.clearInterval(timer);
     };
   }, [nativePollingEnabled]);
@@ -979,15 +984,16 @@ function App() {
 
     let active = true;
     let timer: number | undefined;
+    let pollInFlight = false;
     const sessionSnapshot = drainNativeSession;
     const sessionId = sessionSnapshot.sessionId;
 
     const refreshTraceBatches = async () => {
-      if (streamBatchPollInFlight.current.has(sessionId)) {
+      if (pollInFlight) {
         return;
       }
 
-      streamBatchPollInFlight.current.add(sessionId);
+      pollInFlight = true;
       const cursor = streamBatchCursors.current[sessionId] ?? 0;
       try {
         const batches = await drainNativeTraceBatches(sessionId, cursor);
@@ -1010,7 +1016,7 @@ function App() {
         }
       }
       finally {
-        streamBatchPollInFlight.current.delete(sessionId);
+        pollInFlight = false;
       }
     };
 
@@ -1023,7 +1029,6 @@ function App() {
 
     return () => {
       active = false;
-      streamBatchPollInFlight.current.delete(sessionId);
       if (timer !== undefined) {
         window.clearInterval(timer);
       }
@@ -1034,7 +1039,6 @@ function App() {
     postTraceIngest({ type: "reset" });
     setReplaySource(null);
     setProcessExitNotice(null);
-    streamBatchPollInFlight.current.clear();
     terminalDrainCompleted.current.clear();
   }
 
