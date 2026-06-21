@@ -12,7 +12,11 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 pub const PROTOCOL_MAJOR: u16 = 0;
 pub const PROTOCOL_MINOR: u16 = 1;
 pub const PROTOCOL_PATCH: u16 = 0;
-const STREAM_BATCH_QUEUE_LIMIT: usize = 64;
+const STREAM_BATCH_QUEUE_LIMIT: usize = 128;
+const STREAM_BATCH_DRAIN_LIMIT: usize = 32;
+const INTERACTIVE_TRANSPORT_CAPACITY: &str = "16384";
+const STREAM_CONTROL_TIMEOUT_MS: u32 = 7_000;
+const APP_EXIT_LAUNCH_CLEANUP_WAIT_MS: u64 = 1_500;
 
 #[cfg(windows)]
 mod process_liveness
@@ -21,6 +25,7 @@ mod process_liveness
     use std::ptr::null_mut;
 
     const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
+    const PROCESS_TERMINATE: u32 = 0x0001;
     const STILL_ACTIVE: u32 = 259;
 
     #[link(name = "kernel32")]
@@ -28,7 +33,9 @@ mod process_liveness
     {
         fn OpenProcess(dwDesiredAccess: u32, bInheritHandle: i32, dwProcessId: u32) -> *mut c_void;
         fn GetExitCodeProcess(hProcess: *mut c_void, lpExitCode: *mut u32) -> i32;
+        fn TerminateProcess(hProcess: *mut c_void, uExitCode: u32) -> i32;
         fn CloseHandle(hObject: *mut c_void) -> i32;
+        fn GetLastError() -> u32;
     }
 
     pub fn is_process_alive(process_id: u32) -> bool
@@ -69,6 +76,47 @@ mod process_liveness
 
         alive
     }
+
+    pub fn terminate_process(process_id: u32, exit_code: u32) -> Result<(), u32>
+    {
+        let result;
+        let mut process_handle = null_mut();
+
+        unsafe
+        {
+            loop
+            {
+                if process_id == 0
+                {
+                    result = Err(87);
+                    break;
+                }
+
+                process_handle = OpenProcess(PROCESS_TERMINATE | PROCESS_QUERY_LIMITED_INFORMATION, 0, process_id);
+                if process_handle.is_null()
+                {
+                    result = Err(GetLastError());
+                    break;
+                }
+
+                if TerminateProcess(process_handle, exit_code) == 0
+                {
+                    result = Err(GetLastError());
+                    break;
+                }
+
+                result = Ok(());
+                break;
+            }
+
+            if !process_handle.is_null()
+            {
+                CloseHandle(process_handle);
+            }
+        }
+
+        result
+    }
 }
 
 #[cfg(not(windows))]
@@ -77,6 +125,11 @@ mod process_liveness
     pub fn is_process_alive(_process_id: u32) -> bool
     {
         false
+    }
+
+    pub fn terminate_process(_process_id: u32, _exit_code: u32) -> Result<(), u32>
+    {
+        Err(1)
     }
 }
 
@@ -989,6 +1042,14 @@ fn session_state_from_operation_state(state: &str) -> String
     }
 }
 
+fn is_terminal_operation_state(state: &str) -> bool
+{
+    matches!(
+        state,
+        "completed" | "cancelled" | "cleanup_failed" | "failed" | "stopped" | "stale" | "recovery_required"
+    )
+}
+
 fn session_view(record: &NativeOperationRecord) -> NativeSession
 {
     let now_ms = now_epoch_ms();
@@ -1384,10 +1445,101 @@ pub fn stop_native_session(session_id: String) -> Result<NativeSession, String>
         .ok_or_else(|| format!("session not found after stop: {session_id}"))
 }
 
-pub fn start_streaming_attach_session(process_id: u32, duration_ms: u32) -> Result<NativeSession, String>
+pub fn cleanup_active_sessions_on_exit() -> Vec<String>
 {
-    let duration = normalize_duration_ms(duration_ms);
-    let helper_timeout = helper_inner_timeout_ms(duration);
+    let candidates: Vec<(String, String, String, u32, u32)> = {
+        let mut registry = operation_registry().lock().unwrap();
+        registry
+            .values_mut()
+            .filter(|record| {
+                matches!(
+                    record.operation_kind.as_str(),
+                    "launch_capture_stream" | "attach_capture_stream"
+                ) &&
+                    !is_terminal_operation_state(&record.state)
+            })
+            .map(|record| {
+                record.cancel_requested = true;
+                record.state = "cancel_requested".to_string();
+                (
+                    record.operation_id.clone(),
+                    record.session_id.clone(),
+                    record.operation_kind.clone(),
+                    record.target_process_id,
+                    record.helper_process_id,
+                )
+            })
+            .collect()
+    };
+
+    let mut notes = Vec::new();
+    for (operation_id, session_id, operation_kind, target_process_id, helper_process_id) in candidates
+    {
+        const LAUNCH_OPERATION_KIND: &str = "launch_capture_stream";
+
+        if target_process_id == 0 && operation_kind == LAUNCH_OPERATION_KIND
+        {
+            notes.push(format!("{session_id}: launch target pid is not known yet; helper owner-death cleanup will handle it."));
+            continue;
+        }
+
+        match signal_cancel_operation(&operation_id)
+        {
+            Ok(signal) if signal.success =>
+            {
+                notes.push(format!("{session_id}: stop signal sent."));
+            }
+            Ok(signal) =>
+            {
+                notes.push(format!("{session_id}: stop signal failed with {}.", signal.win32_error_code));
+            }
+            Err(error) =>
+            {
+                notes.push(format!("{session_id}: stop signal failed: {error}"));
+            }
+        }
+
+        let wait_start = Instant::now();
+        while helper_process_id != 0 &&
+            process_liveness::is_process_alive(helper_process_id) &&
+            wait_start.elapsed() < Duration::from_millis(APP_EXIT_LAUNCH_CLEANUP_WAIT_MS)
+        {
+            thread::sleep(Duration::from_millis(50));
+        }
+
+        if operation_kind != LAUNCH_OPERATION_KIND
+        {
+            notes.push(format!("{session_id}: monitoring session stop requested without terminating target."));
+            continue;
+        }
+
+        if process_liveness::is_process_alive(target_process_id)
+        {
+            match process_liveness::terminate_process(target_process_id, 1)
+            {
+                Ok(()) =>
+                {
+                    notes.push(format!("{session_id}: launched target {target_process_id} terminated on app exit."));
+                }
+                Err(error) =>
+                {
+                    notes.push(format!("{session_id}: failed to terminate launched target {target_process_id}; win32={error}."));
+                }
+            }
+        }
+        else
+        {
+            notes.push(format!("{session_id}: launched target {target_process_id} already exited."));
+        }
+    }
+
+    notes
+}
+
+pub fn start_streaming_attach_session(process_id: u32) -> Result<NativeSession, String>
+{
+    let duration = 0;
+    let helper_timeout = STREAM_CONTROL_TIMEOUT_MS;
     let operation_id = new_operation_id("ui-stream", process_id);
     let session_id = new_session_id(&operation_id);
     register_native_operation(&operation_id, "attach_capture_stream", process_id, duration);
@@ -1399,8 +1551,6 @@ pub fn start_streaming_attach_session(process_id: u32, duration_ms: u32) -> Resu
         "attach-session".to_string(),
         "--pid".to_string(),
         process_id.to_string(),
-        "--duration-ms".to_string(),
-        duration.to_string(),
         "--timeout-ms".to_string(),
         helper_timeout.to_string(),
         "--operation-id".to_string(),
@@ -1415,6 +1565,7 @@ pub fn start_streaming_attach_session(process_id: u32, duration_ms: u32) -> Resu
     ];
 
     let mut child = Command::new(&helper_path)
+        .env("KNMON_TRANSPORT_CAPACITY", INTERACTIVE_TRANSPORT_CAPACITY)
         .args(&args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -1503,7 +1654,6 @@ pub fn start_launch_monitor_session(
     target_path: String,
     working_directory: String,
     launch_arguments: String,
-    duration_ms: u32,
 ) -> Result<NativeSession, String>
 {
     let target = target_path.trim();
@@ -1512,8 +1662,8 @@ pub fn start_launch_monitor_session(
         return Err("launch target path is required".to_string());
     }
 
-    let duration = normalize_duration_ms(duration_ms);
-    let helper_timeout = helper_inner_timeout_ms(duration);
+    let duration = 0;
+    let helper_timeout = STREAM_CONTROL_TIMEOUT_MS;
     let operation_id = new_operation_id("ui-launch", 0);
     let session_id = new_session_id(&operation_id);
     register_native_operation(&operation_id, "launch_capture_stream", 0, duration);
@@ -1525,10 +1675,10 @@ pub fn start_launch_monitor_session(
         "launch-session".to_string(),
         "--target".to_string(),
         target.to_string(),
-        "--duration-ms".to_string(),
-        duration.to_string(),
         "--timeout-ms".to_string(),
         helper_timeout.to_string(),
+        "--owner-pid".to_string(),
+        std::process::id().to_string(),
         "--operation-id".to_string(),
         operation_id.clone(),
         "--session-id".to_string(),
@@ -1553,6 +1703,7 @@ pub fn start_launch_monitor_session(
     }
 
     let mut child = Command::new(&helper_path)
+        .env("KNMON_TRANSPORT_CAPACITY", INTERACTIVE_TRANSPORT_CAPACITY)
         .args(&args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -1663,10 +1814,9 @@ pub fn native_daemon_status() -> Result<NativeDaemonStatus, String>
     parse_helper_json(&helper_output, "daemon-status")
 }
 
-pub fn start_daemon_supervised_session(process_id: u32, duration_ms: u32) -> Result<NativeSession, String>
+pub fn start_daemon_supervised_session(process_id: u32) -> Result<NativeSession, String>
 {
-    let duration = normalize_duration_ms(duration_ms);
-    let helper_timeout = helper_inner_timeout_ms(duration);
+    let helper_timeout = STREAM_CONTROL_TIMEOUT_MS;
     let operation_id = new_operation_id("ui-daemon", process_id);
     let session_id = new_session_id(&operation_id);
     let session_path = default_daemon_session_path(&session_id);
@@ -1677,8 +1827,6 @@ pub fn start_daemon_supervised_session(process_id: u32, duration_ms: u32) -> Res
         default_daemon_runtime_path().to_string_lossy().to_string(),
         "--pid".to_string(),
         process_id.to_string(),
-        "--duration-ms".to_string(),
-        duration.to_string(),
         "--timeout-ms".to_string(),
         helper_timeout.to_string(),
         "--operation-id".to_string(),
@@ -2082,12 +2230,15 @@ pub fn drain_native_trace_batches(session_id: String, after_batch_sequence: u64)
         .find(|record| record.session_id == session_id)
         .ok_or_else(|| format!("session not found: {session_id}"))?;
 
-    Ok(record
+    let batches: Vec<NativeTraceBatch> = record
         .trace_batches
         .iter()
         .filter(|batch| batch.batch_sequence > after_batch_sequence)
         .cloned()
-        .collect())
+        .collect();
+    let overflow = batches.len().saturating_sub(STREAM_BATCH_DRAIN_LIMIT);
+
+    Ok(batches.into_iter().skip(overflow).collect())
 }
 
 pub fn backend_status() -> &'static str
@@ -2456,7 +2607,7 @@ fn run_helper_args_with_timeout(args: &[String], timeout_ms: u32, operation_id: 
 
 fn normalize_duration_ms(duration_ms: u32) -> u32
 {
-    duration_ms.clamp(250, 30_000)
+    duration_ms.clamp(250, 600_000)
 }
 
 fn helper_inner_timeout_ms(duration_ms: u32) -> u32
@@ -2619,8 +2770,11 @@ mod tests
         }
 
         let batches = drain_native_trace_batches(session_id, 0).unwrap();
-        assert_eq!(batches.len(), STREAM_BATCH_QUEUE_LIMIT);
-        assert_eq!(batches[0].batch_sequence, 4);
+        assert_eq!(batches.len(), STREAM_BATCH_DRAIN_LIMIT);
+        assert_eq!(
+            batches[0].batch_sequence,
+            STREAM_BATCH_QUEUE_LIMIT as u64 + 4 - STREAM_BATCH_DRAIN_LIMIT as u64
+        );
         assert_eq!(batches.last().unwrap().batch_sequence, STREAM_BATCH_QUEUE_LIMIT as u64 + 3);
         assert_eq!(batches.last().unwrap().host_dropped_batches, 3);
     }

@@ -2062,11 +2062,15 @@ input[type="checkbox"] {
 .rail-section {
   display: flex;
   flex-direction: column;
+  overflow: auto;
   scrollbar-gutter: stable;
 }
 
 .rail-section > .controlled-launch {
   order: 1;
+  position: sticky;
+  top: 0;
+  z-index: 8;
   border-top: 0;
   border-bottom: 1px solid var(--border-strong);
 }
@@ -2081,15 +2085,23 @@ input[type="checkbox"] {
 
 .rail-section > .process-list {
   order: 4;
+  flex: 1 1 180px;
+  min-height: 140px;
+  overflow: auto;
   border-bottom: 1px solid var(--border-strong);
+  scrollbar-gutter: stable;
 }
 
 .rail-section > .target-actions-panel {
   order: 5;
+  flex: 0 0 auto;
 }
 
 .rail-section > .session-catalog-panel {
   order: 6;
+  flex: 0 1 260px;
+  min-height: 96px;
+  overflow: auto;
 }
 
 .segmented,

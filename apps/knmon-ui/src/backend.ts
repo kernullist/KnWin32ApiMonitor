@@ -118,18 +118,17 @@ export async function stopNativeSession(sessionId: string): Promise<NativeSessio
   });
 }
 
-export async function startStreamingAttachSession(pid: number, durationMs: number): Promise<NativeSession> {
+export async function startStreamingAttachSession(pid: number): Promise<NativeSession> {
   if (!isTauriRuntime()) {
     throw new Error("Streaming attach sessions require the Tauri desktop runtime.");
   }
 
   return invoke<NativeSession>("start_streaming_attach_session", {
-    pid,
-    durationMs
+    pid
   });
 }
 
-export async function startLaunchMonitorSession(targetPath: string, workingDirectory: string, launchArguments: string, durationMs: number): Promise<NativeSession> {
+export async function startLaunchMonitorSession(targetPath: string, workingDirectory: string, launchArguments: string): Promise<NativeSession> {
   if (!isTauriRuntime()) {
     throw new Error("Launch monitoring requires the Tauri desktop runtime.");
   }
@@ -137,8 +136,7 @@ export async function startLaunchMonitorSession(targetPath: string, workingDirec
   return invoke<NativeSession>("start_launch_monitor_session", {
     targetPath,
     workingDirectory,
-    launchArguments,
-    durationMs
+    launchArguments
   });
 }
 
@@ -299,14 +297,13 @@ export async function removeMissingNativeTraceIndexEntries(dryRun: boolean): Pro
   });
 }
 
-export async function startDaemonSupervisedSession(pid: number, durationMs: number): Promise<NativeSession> {
+export async function startDaemonSupervisedSession(pid: number): Promise<NativeSession> {
   if (!isTauriRuntime()) {
     throw new Error("Daemon-supervised sessions require the Tauri desktop runtime.");
   }
 
   return invoke<NativeSession>("start_daemon_supervised_session", {
-    pid,
-    durationMs
+    pid
   });
 }
 

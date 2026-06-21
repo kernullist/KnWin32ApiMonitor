@@ -82,9 +82,16 @@ const inspectorTabs: Array<{ id: InspectorTab; label: string }> = [
 
 const traceRowHeight = 27;
 const traceOverscanRows = 6;
+const traceDisplayEventLimit = 5000;
+const boundedCaptureMaxDurationMs = 30000;
 
 type ReplaySource =
   | { kind: "catalog"; label: string; path: string; validationStatus: string };
+
+type CapturedEventChunk = {
+  events: AgentApiCallEvent[];
+  contextTags: string[];
+};
 
 type ProcessExitNotice = {
   sessionId: string;
@@ -177,14 +184,14 @@ function createTraceEventFromAgentApiCall(event: AgentApiCallEvent, eventId: num
   };
 }
 
-function clampDurationMs(value: string | number, fallback: number): number {
+function clampDurationMs(value: string | number, fallback: number, maximum = boundedCaptureMaxDurationMs): number {
   const parsed = typeof value === "number" ? value : Number.parseInt(value, 10);
 
   if (!Number.isFinite(parsed)) {
     return fallback;
   }
 
-  return Math.min(30000, Math.max(250, Math.trunc(parsed)));
+  return Math.min(maximum, Math.max(250, Math.trunc(parsed)));
 }
 
 function getRecord(value: unknown): Record<string, unknown> | null {
@@ -337,6 +344,10 @@ function isNativeSessionActive(session: NativeSession): boolean {
   return ["created", "starting", "running", "stop_requested", "stopping_agent", "draining"].includes(session.sessionState);
 }
 
+function isNativeSessionTerminal(session: NativeSession): boolean {
+  return ["stopped", "failed", "stale", "recovery_required"].includes(session.sessionState);
+}
+
 function isDaemonSession(session: NativeSession): boolean {
   return session.sessionKind.startsWith("daemon_") || session.daemonProcessId > 0;
 }
@@ -390,13 +401,13 @@ function App() {
   const [durationThresholdUs, setDurationThresholdUs] = useState(100);
   const [highlightingEnabled, setHighlightingEnabled] = useState(true);
   const [droppedCount, setDroppedCount] = useState(0);
+  const [totalCapturedEvents, setTotalCapturedEvents] = useState(0);
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("parameters");
   const [traceMode, setTraceMode] = useState<TraceMode>("flat");
   const [nativeBusy, setNativeBusy] = useState(false);
   const [launchTargetPath, setLaunchTargetPath] = useState("");
   const [launchWorkingDirectory, setLaunchWorkingDirectory] = useState("");
   const [launchArguments, setLaunchArguments] = useState("");
-  const [launchDurationMs, setLaunchDurationMs] = useState(3000);
   const [launchDialogOpen, setLaunchDialogOpen] = useState(false);
   const [attachDurationMs, setAttachDurationMs] = useState(3000);
   const [treeDurationMs, setTreeDurationMs] = useState(3000);
@@ -429,6 +440,8 @@ function App() {
   const nextEventId = useRef(1);
   const nextQueryClauseId = useRef(1);
   const streamBatchCursors = useRef<Record<string, number>>({});
+  const streamBatchPollInFlight = useRef<Set<string>>(new Set());
+  const terminalDrainCompleted = useRef<Set<string>>(new Set());
   const lastSessionTargetAlive = useRef<Record<string, boolean>>({});
   const notifiedExitedSessions = useRef<Set<string>>(new Set());
   const traceScrollRef = useRef<HTMLDivElement | null>(null);
@@ -696,23 +709,50 @@ function App() {
     });
   }
 
-  function appendCapturedEvents(capturedEvents: AgentApiCallEvent[], contextTags: string[]) {
-    if (capturedEvents.length === 0) {
+  function appendCapturedEventChunks(chunks: CapturedEventChunk[]) {
+    const incomingCount = chunks.reduce((count, chunk) => count + chunk.events.length, 0);
+    if (incomingCount === 0) {
       return;
     }
 
-    const traceEvents = capturedEvents.map((event, index) => {
-      const traceEvent = createTraceEventFromAgentApiCall(event, nextEventId.current + index);
+    const retainFromIncoming = Math.max(0, incomingCount - traceDisplayEventLimit);
+    let incomingIndex = 0;
+    const traceEvents: TraceEvent[] = [];
 
-      return {
-        ...traceEvent,
-        tags: Array.from(new Set([...traceEvent.tags, ...contextTags]))
-      };
+    chunks.forEach((chunk) => {
+      chunk.events.forEach((event) => {
+        const eventId = nextEventId.current + incomingIndex;
+        incomingIndex += 1;
+
+        if (incomingIndex <= retainFromIncoming) {
+          return;
+        }
+
+        const traceEvent = createTraceEventFromAgentApiCall(event, eventId);
+
+        traceEvents.push({
+          ...traceEvent,
+          tags: Array.from(new Set([...traceEvent.tags, ...chunk.contextTags]))
+        });
+      });
     });
 
-    nextEventId.current += traceEvents.length;
-    setEvents((current) => [...current, ...traceEvents].slice(-400));
-    setSelectedEventId(traceEvents[traceEvents.length - 1].eventId);
+    nextEventId.current += incomingCount;
+    setTotalCapturedEvents((current) => current + incomingCount);
+
+    if (traceEvents.length > 0) {
+      setEvents((current) => {
+        const next = [...current, ...traceEvents];
+        const overflow = next.length - traceDisplayEventLimit;
+
+        return overflow > 0 ? next.slice(overflow) : next;
+      });
+      setSelectedEventId(traceEvents[traceEvents.length - 1].eventId);
+    }
+  }
+
+  function appendCapturedEvents(capturedEvents: AgentApiCallEvent[], contextTags: string[]) {
+    appendCapturedEventChunks([{ events: capturedEvents, contextTags }]);
   }
 
   function appendTraceBatches(batches: NativeTraceBatch[]) {
@@ -720,13 +760,22 @@ function App() {
       return;
     }
 
-    batches.forEach((batch) => {
-      appendCapturedEvents(batch.events, ["ui-stream", `batch:${batch.batchSequence}`]);
-    });
+    appendCapturedEventChunks(batches.map((batch) => ({
+      events: batch.events,
+      contextTags: ["ui-stream", `session:${batch.sessionId}`, `batch:${batch.batchSequence}`]
+    })));
 
     const latest = batches[batches.length - 1];
     setDroppedCount(latest.droppedEvents);
     streamBatchCursors.current[latest.sessionId] = latest.batchSequence;
+  }
+
+  function replaceTraceEvents(nextEvents: TraceEvent[], selectedId?: number) {
+    const displayedEvents = nextEvents.slice(-traceDisplayEventLimit);
+    setEvents(displayedEvents);
+    setTotalCapturedEvents(nextEvents.length);
+    nextEventId.current = nextTraceEventId(nextEvents);
+    setSelectedEventId(selectedId ?? displayedEvents[displayedEvents.length - 1]?.eventId ?? 0);
   }
 
   async function handleLoadNativeTargets() {
@@ -850,15 +899,40 @@ function App() {
   const targetBlockReason = targetEligibilityReason(selectedTarget);
   const activeNativeOperation = nativeOperations.find(isNativeOperationActive) ?? null;
   const activeNativeSession = nativeSessions.find(isNativeSessionActive) ?? null;
-  const topbarPulseClass = processExitNotice ? "pulse stopped" : activeNativeSession || nativeBusy ? "pulse running" : "pulse";
-  const topbarStatusLabel = processExitNotice ? "target exited" : activeNativeSession ? activeNativeSession.sessionState : nativeBusy ? "working" : "idle";
   const currentLaunchSession = launchSession
     ? nativeSessions.find((session) => session.sessionId === launchSession.sessionId) ?? launchSession
     : null;
+  const displayNativeSession = activeNativeSession ?? currentLaunchSession;
+  const canStopNativeSession = activeNativeSession !== null && !activeNativeSession.stopRequested;
+  const launchMonitorActive = activeNativeSession?.sessionKind === "launch_capture_stream";
+  const launchButtonLabel = launchDialogOpen ? "Choose Target" : launchMonitorActive ? "Monitoring" : nativeBusy ? "Working" : "Launch & Monitor";
+  const topbarPulseClass = processExitNotice
+    ? "pulse stopped"
+    : activeNativeSession || nativeBusy
+      ? "pulse running"
+      : displayNativeSession && isNativeSessionTerminal(displayNativeSession)
+        ? "pulse stopped"
+        : "pulse";
+  const topbarStatusLabel = processExitNotice
+    ? "target exited"
+    : activeNativeSession
+      ? activeNativeSession.sessionState
+      : nativeBusy
+        ? "working"
+        : displayNativeSession
+          ? displayNativeSession.sessionState
+          : "idle";
   const canLaunchMonitor = !launchDialogOpen && !nativeBusy && activeNativeOperation === null && activeNativeSession === null;
   const canRunTargetAction = targetBlockReason === null && !nativeBusy && activeNativeOperation === null && activeNativeSession === null;
+  const drainNativeSession = activeNativeSession && !isDaemonSession(activeNativeSession)
+    ? activeNativeSession
+    : currentLaunchSession && !isDaemonSession(currentLaunchSession) && !terminalDrainCompleted.current.has(currentLaunchSession.sessionId)
+      ? currentLaunchSession
+      : null;
   const processTreeSummary = summarizeProcessTree(processTreeResult);
   const sessionBytes = useMemo(() => estimateSessionBytes(events), [events]);
+  const totalTraceEventCount = Math.max(totalCapturedEvents, displayNativeSession?.recordsStreamed ?? 0);
+  const trimmedTraceEventCount = Math.max(0, totalTraceEventCount - events.length);
   const selectedCatalogRow = sessionCatalog?.sessions.find((row) => row.path === selectedCatalogPath) ?? null;
   const selectedTraceIndexEvent = traceIndex?.events.find((event) => traceIndexEventKey(event) === selectedTraceIndexEventKey) ?? null;
   const virtualTraceWindow = useMemo(() => {
@@ -904,23 +978,39 @@ function App() {
   }, [selectedTraceIndex, filteredEvents.length]);
 
   useEffect(() => {
-    if (!activeNativeSession) {
+    if (!drainNativeSession) {
       return undefined;
     }
 
-    if (isDaemonSession(activeNativeSession)) {
+    if (isDaemonSession(drainNativeSession)) {
       return undefined;
     }
 
     let active = true;
-    const sessionId = activeNativeSession.sessionId;
+    let timer: number | undefined;
+    const sessionSnapshot = drainNativeSession;
+    const sessionId = sessionSnapshot.sessionId;
 
     const refreshTraceBatches = async () => {
+      if (streamBatchPollInFlight.current.has(sessionId)) {
+        return;
+      }
+
+      streamBatchPollInFlight.current.add(sessionId);
       const cursor = streamBatchCursors.current[sessionId] ?? 0;
       try {
         const batches = await drainNativeTraceBatches(sessionId, cursor);
         if (active && batches.length > 0) {
           appendTraceBatches(batches);
+        }
+
+        if (active && isNativeSessionTerminal(sessionSnapshot)) {
+          terminalDrainCompleted.current.add(sessionId);
+          active = false;
+
+          if (timer !== undefined) {
+            window.clearInterval(timer);
+          }
         }
       } catch (error) {
         if (active) {
@@ -928,25 +1018,36 @@ function App() {
           appendOutput([makeAuditEvent("stream_batch_poll_failed", "drain_native_trace_batches", message)]);
         }
       }
+      finally {
+        streamBatchPollInFlight.current.delete(sessionId);
+      }
     };
 
     void refreshTraceBatches();
-    const timer = window.setInterval(() => {
-      void refreshTraceBatches();
-    }, 350);
+    if (!isNativeSessionTerminal(sessionSnapshot)) {
+      timer = window.setInterval(() => {
+        void refreshTraceBatches();
+      }, 350);
+    }
 
     return () => {
       active = false;
-      window.clearInterval(timer);
+      streamBatchPollInFlight.current.delete(sessionId);
+      if (timer !== undefined) {
+        window.clearInterval(timer);
+      }
     };
-  }, [activeNativeSession?.sessionId]);
+  }, [drainNativeSession?.sessionId, drainNativeSession?.sessionState]);
 
   function handleClear() {
     setEvents([]);
     setSelectedEventId(0);
+    setTotalCapturedEvents(0);
     setReplaySource(null);
     setProcessExitNotice(null);
     nextEventId.current = 1;
+    streamBatchPollInFlight.current.clear();
+    terminalDrainCompleted.current.clear();
   }
 
   async function startLaunchMonitorForTarget(targetPath: string, workingDirectory: string) {
@@ -956,7 +1057,8 @@ function App() {
 
     try {
       appendOutput([makeAuditEvent("launch_requested", "start_launch_monitor_session", `Early-bird launch monitor requested for ${targetPath}.`)]);
-      const session = await startLaunchMonitorSession(targetPath, workingDirectory, launchArguments.trim(), launchDurationMs);
+      const session = await startLaunchMonitorSession(targetPath, workingDirectory, launchArguments.trim());
+      terminalDrainCompleted.current.delete(session.sessionId);
       streamBatchCursors.current[session.sessionId] = 0;
       setLaunchSession(session);
       setBackendMode("native-capture");
@@ -1263,9 +1365,7 @@ function App() {
       setBackendMode(result.backendMode);
       setLastSession(result.session);
       setDroppedCount(result.session.droppedEvents);
-      setEvents(result.traceEvents);
-      nextEventId.current = nextTraceEventId(result.traceEvents);
-      setSelectedEventId(event.eventId);
+      replaceTraceEvents(result.traceEvents, event.eventId);
       setReplaySource({
         kind: "catalog",
         label: traceIndexEventLabel(event),
@@ -1300,9 +1400,7 @@ function App() {
       setBackendMode(result.backendMode);
       setLastSession(result.session);
       setDroppedCount(result.session.droppedEvents);
-      setEvents(result.traceEvents);
-      nextEventId.current = nextTraceEventId(result.traceEvents);
-      setSelectedEventId(result.traceEvents[result.traceEvents.length - 1]?.eventId ?? 0);
+      replaceTraceEvents(result.traceEvents);
       setReplaySource({
         kind: "catalog",
         label: catalogRowLabel(row),
@@ -1322,6 +1420,7 @@ function App() {
       const message = error instanceof Error ? error.message : String(error);
       setEvents([]);
       setSelectedEventId(0);
+      setTotalCapturedEvents(0);
       nextEventId.current = 1;
       setReplaySource({
         kind: "catalog",
@@ -1379,7 +1478,8 @@ function App() {
 
     try {
       appendOutput([makeAuditEvent("stream_attach_requested", "start_streaming_attach_session", `Streaming attach requested for PID ${selectedTarget.pid}.`)]);
-      const session = await startStreamingAttachSession(selectedTarget.pid, attachDurationMs);
+      const session = await startStreamingAttachSession(selectedTarget.pid);
+      terminalDrainCompleted.current.delete(session.sessionId);
       streamBatchCursors.current[session.sessionId] = 0;
       setNativeSessions((current) => {
         const remaining = current.filter((item) => item.sessionId !== session.sessionId);
@@ -1407,7 +1507,8 @@ function App() {
 
     try {
       appendOutput([makeAuditEvent("daemon_session_requested", "start_daemon_supervised_session", `Daemon-supervised attach requested for PID ${selectedTarget.pid}.`)]);
-      const session = await startDaemonSupervisedSession(selectedTarget.pid, attachDurationMs);
+      const session = await startDaemonSupervisedSession(selectedTarget.pid);
+      terminalDrainCompleted.current.delete(session.sessionId);
       setNativeSessions((current) => {
         const remaining = current.filter((item) => item.sessionId !== session.sessionId);
         return [session, ...remaining];
@@ -1522,7 +1623,7 @@ function App() {
             disabled={!canLaunchMonitor}
           >
             <Rocket size={15} />
-            <span>Launch &amp; Monitor</span>
+            <span>{launchButtonLabel}</span>
           </button>
           <button
             className="tool-button command-button"
@@ -1539,7 +1640,7 @@ function App() {
             type="button"
             title={activeNativeSession?.recoveryAction || "Stop native session"}
             onClick={handleStopNativeSession}
-            disabled={!activeNativeSession || activeNativeSession.stopRequested}
+            disabled={!canStopNativeSession}
           >
             <Square size={14} />
             <span>Stop</span>
@@ -1648,7 +1749,10 @@ function App() {
                   <div className="operation-strip">
                     <span>{activeNativeOperation.operationKind}</span>
                     <strong>{activeNativeOperation.state}</strong>
-                    <span>{formatElapsedMs(activeNativeOperation.elapsedMs)} / {formatElapsedMs(activeNativeOperation.durationMs)}</span>
+                    <span>
+                      {formatElapsedMs(activeNativeOperation.elapsedMs)} /{" "}
+                      {activeNativeOperation.durationMs === 0 ? "manual stop" : formatElapsedMs(activeNativeOperation.durationMs)}
+                    </span>
                     <button
                       type="button"
                       className="tool-button"
@@ -1677,7 +1781,7 @@ function App() {
                       type="button"
                       className="tool-button"
                       onClick={handleStopNativeSession}
-                      disabled={activeNativeSession.stopRequested}
+                      disabled={!canStopNativeSession}
                       title={activeNativeSession.recoveryAction || "Stop native session"}
                     >
                       <Square size={13} />
@@ -1700,7 +1804,7 @@ function App() {
                     <span>Attach Monitor</span>
                   </div>
                   <div className="action-controls attach-controls">
-                    <label htmlFor="attach-duration">Duration</label>
+                    <label htmlFor="attach-duration">Capture ms</label>
                     <input
                       id="attach-duration"
                       type="number"
@@ -1842,32 +1946,25 @@ function App() {
                     onChange={(event) => setLaunchArguments(event.target.value)}
                     placeholder="optional command-line parameters"
                   />
-                  <label htmlFor="launch-duration">Duration</label>
-                  <input
-                    id="launch-duration"
-                    type="number"
-                    min={250}
-                    max={30000}
-                    step={250}
-                    value={launchDurationMs}
-                    onChange={(event) => setLaunchDurationMs(clampDurationMs(event.target.value, launchDurationMs))}
-                  />
+                  <label>Lifetime</label>
+                  <span className="launch-selected-path">until stopped</span>
                 </div>
                 <div className="launch-mode-strip">
                   <span>early-bird APC</span>
                   <span>same-bitness</span>
                   <span>agent64</span>
+                  <span>manual stop</span>
                 </div>
                 <div className="launch-actions">
                   <button type="button" className="tool-button primary launch-primary-button" onClick={handleStartLaunchMonitor} disabled={!canLaunchMonitor}>
                     <Play size={14} />
-                    <span>Launch &amp; Monitor</span>
+                    <span>{launchButtonLabel}</span>
                   </button>
                   <button type="button" className="tool-button" onClick={handleRefreshSessionCatalog} disabled={nativeBusy}>
                     <RefreshCcw size={14} />
                     <span>Refresh Catalog</span>
                   </button>
-                  <button type="button" className="tool-button" onClick={handleStopNativeSession} disabled={!activeNativeSession || activeNativeSession.stopRequested}>
+                  <button type="button" className="tool-button" onClick={handleStopNativeSession} disabled={!canStopNativeSession}>
                     <Square size={13} />
                     <span>Stop Session</span>
                   </button>
@@ -2175,6 +2272,8 @@ function App() {
             </div>
             <div className="trace-stats">
               <span>{filteredEvents.length}/{events.length} rows</span>
+              <span>{totalTraceEventCount} total</span>
+              {trimmedTraceEventCount > 0 ? <span>last {events.length} shown</span> : null}
               <span>DOM {visibleTraceEvents.length}</span>
               {compiledTraceQuery.activeClauseCount > 0 ? <span>{compiledTraceQuery.activeClauseCount} query</span> : null}
               {compiledTraceQuery.invalidClauses.length > 0 ? <span>{compiledTraceQuery.invalidClauses.length} invalid</span> : null}
@@ -2581,6 +2680,7 @@ function App() {
                       <div><Braces size={14} /> schemaVersion={selectedEvent?.schemaVersion ?? "0.1.0"}</div>
                       <div><Filter size={14} /> backend={backendMode}; filter="{filter || "*"}"; mode={traceMode}</div>
                       <div><Filter size={14} /> queryMode={traceQueryMatchMode}; activeClauses={compiledTraceQuery.activeClauseCount}; invalidClauses={compiledTraceQuery.invalidClauses.length}; filteredRows={filteredEvents.length}</div>
+                      <div><Activity size={14} /> totalCaptured={totalTraceEventCount}; displayedRows={events.length}; trimmedRows={trimmedTraceEventCount}; displayLimit={traceDisplayEventLimit}</div>
                       <div><CircleDot size={14} /> highlighting={highlightingEnabled ? "enabled" : "disabled"}; highlightedRows={traceHighlightState.eventHighlights.length}</div>
                       <div><Database size={14} /> sessionBytes={formatBytes(sessionBytes)}; droppedEvents={droppedCount}</div>
                       {replaySource ? <div><FolderOpen size={14} /> replay={replaySource.kind}; status={replaySource.validationStatus}; path={replaySource.path}</div> : null}
@@ -2602,9 +2702,10 @@ function App() {
       </main>
 
       <footer className="statusbar">
-        <span>State: {activeNativeSession ? activeNativeSession.sessionState : "idle"}</span>
+        <span>State: {displayNativeSession ? displayNativeSession.sessionState : "idle"}</span>
         {processExitNotice ? <span>Target exited: {processExitNotice.targetProcessId}</span> : null}
-        <span>Events: {events.length}</span>
+        <span>Events: {events.length}/{totalTraceEventCount}</span>
+        {trimmedTraceEventCount > 0 ? <span>Trimmed: {trimmedTraceEventCount}</span> : null}
         <span>Dropped: {droppedCount}</span>
         <span>Session: {formatBytes(sessionBytes)}</span>
         <span>Backend: {backendMode}</span>

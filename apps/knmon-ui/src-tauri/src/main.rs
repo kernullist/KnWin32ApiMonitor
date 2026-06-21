@@ -9,6 +9,7 @@ use knmon_tauri::{
     capture_sample_fileio,
     capture_sample_fileio_session,
     catalog_native_sessions as catalog_native_sessions_backend,
+    cleanup_active_sessions_on_exit as cleanup_active_sessions_on_exit_backend,
     launch_sample_early_bird,
     drain_native_trace_batches as drain_native_trace_batches_backend,
     native_target_processes,
@@ -124,9 +125,9 @@ fn stop_native_session(session_id: String) -> Result<NativeSession, String>
 }
 
 #[tauri::command]
-fn start_streaming_attach_session(pid: u32, duration_ms: u32) -> Result<NativeSession, String>
+fn start_streaming_attach_session(pid: u32) -> Result<NativeSession, String>
 {
-    start_streaming_attach_session_backend(pid, duration_ms)
+    start_streaming_attach_session_backend(pid)
 }
 
 #[tauri::command]
@@ -134,10 +135,9 @@ fn start_launch_monitor_session(
     target_path: String,
     working_directory: String,
     launch_arguments: String,
-    duration_ms: u32,
 ) -> Result<NativeSession, String>
 {
-    start_launch_monitor_session_backend(target_path, working_directory, launch_arguments, duration_ms)
+    start_launch_monitor_session_backend(target_path, working_directory, launch_arguments)
 }
 
 #[tauri::command]
@@ -252,9 +252,9 @@ fn remove_missing_native_trace_index_entries(
 }
 
 #[tauri::command]
-fn start_daemon_supervised_session(pid: u32, duration_ms: u32) -> Result<NativeSession, String>
+fn start_daemon_supervised_session(pid: u32) -> Result<NativeSession, String>
 {
-    start_daemon_supervised_session_backend(pid, duration_ms)
+    start_daemon_supervised_session_backend(pid)
 }
 
 #[tauri::command]
@@ -279,6 +279,12 @@ fn main()
 {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .on_window_event(|_window, event| {
+            if matches!(event, tauri::WindowEvent::CloseRequested { .. })
+            {
+                let _ = cleanup_active_sessions_on_exit_backend();
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             list_native_target_processes,
             launch_sample_early_bird_capture,

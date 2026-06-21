@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="KN Win32 API Monitor icon">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="80" x2="900" y2="960" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#172537"/>
+      <stop offset="0.45" stop-color="#07121c"/>
+      <stop offset="1" stop-color="#03070d"/>
+    </linearGradient>
+    <radialGradient id="coreGlow" cx="52%" cy="48%" r="58%">
+      <stop offset="0" stop-color="#49d8ff" stop-opacity="0.34"/>
+      <stop offset="0.48" stop-color="#167997" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#03070d" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cyanTrace" x1="214" y1="198" x2="788" y2="818" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8ff5ff"/>
+      <stop offset="0.52" stop-color="#21b8ff"/>
+      <stop offset="1" stop-color="#3977ff"/>
+    </linearGradient>
+    <linearGradient id="goldTrace" x1="330" y1="520" x2="742" y2="238" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2ee7ff"/>
+      <stop offset="0.54" stop-color="#f8cb63"/>
+      <stop offset="1" stop-color="#fff1b1"/>
+    </linearGradient>
+    <linearGradient id="chip" x1="318" y1="286" x2="715" y2="735" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#192b3c"/>
+      <stop offset="1" stop-color="#09121b"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="28" stdDeviation="30" flood-color="#000000" flood-opacity="0.52"/>
+    </filter>
+    <filter id="traceGlow" x="-35%" y="-35%" width="170%" height="170%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="14" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.08 0 0 0 0 0.77 0 0 0 0 1 0 0 0 0.72 0" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <clipPath id="roundIcon">
+      <rect x="42" y="42" width="940" height="940" rx="218"/>
+    </clipPath>
+  </defs>
+
+  <rect x="42" y="42" width="940" height="940" rx="218" fill="url(#bg)" filter="url(#softShadow)"/>
+  <g clip-path="url(#roundIcon)">
+    <rect x="42" y="42" width="940" height="940" rx="218" fill="url(#coreGlow)"/>
+    <path d="M135 276H366M658 276H888M135 748H386M638 748H888M512 100V246M512 778V924" stroke="#3a5368" stroke-width="18" stroke-linecap="round" opacity="0.38"/>
+    <path d="M186 402H306M718 402H838M186 622H306M718 622H838" stroke="#24485d" stroke-width="12" stroke-linecap="round" opacity="0.42"/>
+    <circle cx="512" cy="276" r="17" fill="#58dfff" opacity="0.72"/>
+    <circle cx="512" cy="748" r="17" fill="#58dfff" opacity="0.52"/>
+    <circle cx="186" cy="402" r="13" fill="#f7c65e" opacity="0.7"/>
+    <circle cx="838" cy="622" r="13" fill="#42ceff" opacity="0.68"/>
+  </g>
+
+  <rect x="307" y="283" width="410" height="458" rx="92" fill="url(#chip)" stroke="#4b6579" stroke-width="20"/>
+  <rect x="366" y="349" width="292" height="322" rx="50" fill="#08121b" stroke="#1e9dca" stroke-width="12" opacity="0.9"/>
+  <path d="M423 438H601M423 513H548M423 588H620" stroke="#557083" stroke-width="23" stroke-linecap="round" opacity="0.66"/>
+  <path d="M632 438H676M579 513H676M650 588H676" stroke="#f8c961" stroke-width="23" stroke-linecap="round" opacity="0.9"/>
+
+  <g filter="url(#traceGlow)">
+    <path d="M265 220V804" stroke="url(#cyanTrace)" stroke-width="86" stroke-linecap="round"/>
+    <path d="M325 520L731 254" stroke="url(#goldTrace)" stroke-width="72" stroke-linecap="round"/>
+    <path d="M326 522L742 790" stroke="url(#cyanTrace)" stroke-width="82" stroke-linecap="round"/>
+  </g>
+
+  <circle cx="265" cy="220" r="52" fill="#07121c" stroke="#8ff5ff" stroke-width="24"/>
+  <circle cx="731" cy="254" r="46" fill="#07121c" stroke="#ffe18a" stroke-width="22"/>
+  <circle cx="742" cy="790" r="50" fill="#07121c" stroke="#55ccff" stroke-width="23"/>
+  <circle cx="326" cy="522" r="58" fill="#06131e" stroke="#ffffff" stroke-width="12" opacity="0.86"/>
+  <circle cx="326" cy="522" r="24" fill="#f8c961"/>
+
+  <rect x="42" y="42" width="940" height="940" rx="218" fill="none" stroke="#5f7f96" stroke-width="18" opacity="0.48"/>
+  <rect x="67" y="67" width="890" height="890" rx="196" fill="none" stroke="#ffffff" stroke-width="6" opacity="0.12"/>
+</svg>

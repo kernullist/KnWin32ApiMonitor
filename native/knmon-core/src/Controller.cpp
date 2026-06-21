@@ -5958,7 +5958,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
     result.TargetPath = request.TargetPath;
     result.AgentPath = request.AgentPath;
     result.Architecture = ArchitectureName(requestedArchitecture);
-    result.CaptureMode = "bounded-native-launch";
+    result.CaptureMode = request.DurationMs == 0 ? "continuous-native-launch" : "bounded-native-launch";
     result.InjectionMethod = "early-bird APC";
     result.DetachPolicy = "self-disable-no-unload";
     result.AgentAbiVersion = KnMonAgentStateAbiVersion;
@@ -5968,6 +5968,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
     STARTUPINFOW startupInfo = {};
     startupInfo.cb = sizeof(startupInfo);
     HANDLE pipeHandle = INVALID_HANDLE_VALUE;
+    HANDLE ownerProcessHandle = nullptr;
     SharedTransportSession transport;
     void* remoteDllPath = nullptr;
     std::uintptr_t remoteStopAddress = 0;
@@ -5979,6 +5980,8 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
     bool stopRequested = false;
     bool agentShutdownReceived = false;
     bool cancellationLogged = false;
+    bool ownerExitLogged = false;
+    bool ownerExited = false;
     std::uint64_t hookInstalledCount = 0;
     std::uint64_t shutdownInstalledHooks = 0;
     std::uint64_t shutdownRestoredHooks = 0;
@@ -6068,6 +6071,33 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             {
                 AddAudit(result, "operation_cancel_requested", stage, "Cancellation was requested for this launch capture operation.");
                 cancellationLogged = true;
+            }
+
+            observed = true;
+        }
+
+        return observed;
+    };
+
+    auto observeOwnerExit = [&]() -> bool
+    {
+        bool observed = false;
+
+        if (ownerProcessHandle != nullptr && WaitForSingleObject(ownerProcessHandle, 0) == WAIT_OBJECT_0)
+        {
+            ownerExited = true;
+            result.CancelRequested = true;
+            result.CancelObserved = true;
+            result.CancelStage = "owner_process_exit";
+            if (result.OperationState != "stopping_agent" && result.OperationState != "draining")
+            {
+                result.OperationState = "cancel_requested";
+            }
+
+            if (!ownerExitLogged)
+            {
+                AddAudit(result, "owner_process_exited", "launch_capture", "Owner process exited; launch monitor cleanup was requested.");
+                ownerExitLogged = true;
             }
 
             observed = true;
@@ -6186,6 +6216,19 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         AddAudit(result, "process_created_suspended", "CreateProcessW", "Target process created suspended for early-bird launch capture.");
         EmitCaptureStreamSessionFrame(streamCallbacks, "session_state", result);
 
+        if (request.OwnerProcessId != 0 && request.OwnerProcessId != GetCurrentProcessId())
+        {
+            ownerProcessHandle = OpenProcess(SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, FALSE, request.OwnerProcessId);
+            if (ownerProcessHandle == nullptr)
+            {
+                AddAudit(result, "owner_process_observe_unavailable", "OpenProcess", "Launch owner process could not be opened for exit observation.", GetLastError(), "win32");
+            }
+            else
+            {
+                AddAudit(result, "owner_process_observe_ready", "OpenProcess", "Launch owner process is being observed for app-exit cleanup.");
+            }
+        }
+
         const std::uint64_t remoteSize = static_cast<std::uint64_t>((agentPath.size() + 1) * sizeof(wchar_t));
         remoteDllPath = VirtualAllocEx(processInfo.hProcess, nullptr, static_cast<SIZE_T>(remoteSize), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
         if (remoteDllPath == nullptr)
@@ -6264,7 +6307,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         }
 
         AddAudit(result, "agent_pipe_connected", "agent_pipe_connect", "Launch agent event pipe connected.");
-        AddAudit(result, "launch_capture_started", "launch_capture", "Bounded early-bird launch capture started.");
+        AddAudit(result, "launch_capture_started", "launch_capture", request.DurationMs == 0 ? "Continuous early-bird launch monitor started." : "Bounded early-bird launch capture started.");
 
         bool launchWindowRevealCompleted = false;
         ULONGLONG nextWindowRevealTick = GetTickCount64() + 250ULL;
@@ -6291,9 +6334,15 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             return revealed;
         };
 
-        const ULONGLONG captureDeadline = GetTickCount64() + static_cast<ULONGLONG>(request.DurationMs);
-        while (GetTickCount64() < captureDeadline)
+        const bool continuousCapture = request.DurationMs == 0;
+        const ULONGLONG captureDeadline = continuousCapture ? 0 : GetTickCount64() + static_cast<ULONGLONG>(request.DurationMs);
+        while (continuousCapture || GetTickCount64() < captureDeadline)
         {
+            if (observeOwnerExit())
+            {
+                break;
+            }
+
             if (observeCancellation("launch_capture"))
             {
                 break;
@@ -6335,7 +6384,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             if (WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
             {
                 targetExited = true;
-                AddAudit(result, "target_exited", "launch_capture", "Target exited before launch capture duration elapsed.");
+                AddAudit(result, "target_exited", "launch_capture", continuousCapture ? "Target exited while launch monitor was active." : "Target exited before launch capture duration elapsed.");
                 break;
             }
         }
@@ -6359,6 +6408,11 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
                     break;
                 }
 
+                if (observeOwnerExit())
+                {
+                    break;
+                }
+
                 if (WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
                 {
                     targetExited = true;
@@ -6377,13 +6431,13 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
         if (result.CancelObserved)
         {
-            AddAudit(result, "launch_capture_cancelled", "launch_capture", "Bounded launch capture cancellation observed; cleanup follows.");
+            AddAudit(result, "launch_capture_cancelled", "launch_capture", ownerExited ? "Launch owner exited; cleanup follows." : "Launch monitor cancellation observed; cleanup follows.");
             result.OperationState = "stopping_agent";
             result.SessionState = result.SessionId.empty() ? result.SessionState : "stopping_agent";
         }
         else
         {
-            AddAudit(result, "launch_capture_window_completed", "launch_capture", "Bounded launch capture window completed.");
+            AddAudit(result, "launch_capture_window_completed", "launch_capture", continuousCapture ? "Launch monitor target stream ended." : "Bounded launch capture window completed.");
             result.OperationState = "stopping_agent";
             result.SessionState = result.SessionId.empty() ? result.SessionState : "stopping_agent";
         }
@@ -6553,7 +6607,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             result.OperationState = "cancelled";
             result.SessionState = result.SessionId.empty() ? result.SessionState : "stopped";
             result.StoppedUtc = NowUtc();
-            result.Message = "Launch capture cancelled after cleanup.";
+            result.Message = ownerExited ? "Launch monitor stopped because the owner app exited." : "Launch capture cancelled after cleanup.";
             break;
         }
 
@@ -6564,8 +6618,8 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         result.OperationState = "completed";
         result.SessionState = result.SessionId.empty() ? result.SessionState : "stopped";
         result.StoppedUtc = NowUtc();
-        result.Message = "Controlled early-bird launch capture completed.";
-        AddAudit(result, "launch_capture_completed", "launch_capture", "Bounded early-bird launch capture completed.");
+        result.Message = continuousCapture ? "Controlled early-bird launch monitor stopped." : "Controlled early-bird launch capture completed.";
+        AddAudit(result, "launch_capture_completed", "launch_capture", continuousCapture ? "Continuous early-bird launch monitor stopped." : "Bounded early-bird launch capture completed.");
     }
     while (false);
 
@@ -6585,6 +6639,11 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
     {
         TerminateProcess(processInfo.hProcess, 1);
         AddAudit(result, "cleanup_completed", "TerminateProcess", "Suspended target was terminated because launch failed before resume.");
+    }
+    else if (ownerExited && processCreated && processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_TIMEOUT)
+    {
+        TerminateProcess(processInfo.hProcess, 1);
+        AddAudit(result, "cleanup_completed", "TerminateProcess", "Launched target was terminated because the owner app exited.");
     }
     else
     {
@@ -6609,6 +6668,11 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
     if (processInfo.hProcess != nullptr)
     {
         CloseHandle(processInfo.hProcess);
+    }
+
+    if (ownerProcessHandle != nullptr)
+    {
+        CloseHandle(ownerProcessHandle);
     }
 
     CloseCancellationContext(cancellationContext);
@@ -7091,7 +7155,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
     result.AttachProcessId = request.ProcessId;
     result.TargetProcessId = request.ProcessId;
     result.Architecture = ArchitectureName(requestedArchitecture);
-    result.CaptureMode = "bounded-native-attach";
+    result.CaptureMode = request.DurationMs == 0 ? "continuous-native-attach" : "bounded-native-attach";
     result.InjectionMethod = "remote LoadLibraryW";
     result.DetachPolicy = "self-disable-no-unload";
     result.AttachState = "not_loaded";
@@ -7579,10 +7643,11 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         }
 
         AddAudit(result, "agent_pipe_connected", "agent_pipe_connect", "Attach agent event pipe connected.");
-        AddAudit(result, "attach_capture_started", "attach_capture", "Bounded attach capture started.");
+        AddAudit(result, "attach_capture_started", "attach_capture", request.DurationMs == 0 ? "Continuous attach monitor started." : "Bounded attach capture started.");
 
-        const ULONGLONG captureDeadline = GetTickCount64() + static_cast<ULONGLONG>(request.DurationMs);
-        while (GetTickCount64() < captureDeadline)
+        const bool continuousCapture = request.DurationMs == 0;
+        const ULONGLONG captureDeadline = continuousCapture ? 0 : GetTickCount64() + static_cast<ULONGLONG>(request.DurationMs);
+        while (continuousCapture || GetTickCount64() < captureDeadline)
         {
             if (observeCancellation("attach_capture"))
             {
@@ -7616,7 +7681,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
             if (WaitForSingleObject(processHandle, 0) == WAIT_OBJECT_0)
             {
-                AddAudit(result, "target_exited_early", "attach_capture", "Target exited before attach duration elapsed.");
+                AddAudit(result, "target_exited_early", "attach_capture", continuousCapture ? "Target exited while attach monitor was active." : "Target exited before attach duration elapsed.");
                 break;
             }
         }
@@ -7630,13 +7695,13 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         UpdateTransportMetrics(result, transport);
         if (result.CancelObserved)
         {
-            AddAudit(result, "attach_capture_cancelled", "attach_capture", "Bounded attach capture cancellation observed; requesting self-disable cleanup.");
+            AddAudit(result, "attach_capture_cancelled", "attach_capture", "Attach monitor cancellation observed; requesting self-disable cleanup.");
             result.OperationState = "stopping_agent";
             result.SessionState = result.SessionId.empty() ? result.SessionState : "stopping_agent";
         }
         else
         {
-            AddAudit(result, "attach_capture_completed", "attach_capture", "Bounded attach capture window completed.");
+            AddAudit(result, "attach_capture_completed", "attach_capture", continuousCapture ? "Attach monitor target stream ended." : "Bounded attach capture window completed.");
             result.OperationState = "stopping_agent";
             result.SessionState = result.SessionId.empty() ? result.SessionState : "stopping_agent";
         }
@@ -7783,7 +7848,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         result.OperationState = "completed";
         result.SessionState = result.SessionId.empty() ? result.SessionState : "stopped";
         result.StoppedUtc = NowUtc();
-        result.Message = "Controlled running-process attach capture completed with self-disable detach evidence.";
+        result.Message = continuousCapture ? "Controlled running-process attach monitor stopped with self-disable detach evidence." : "Controlled running-process attach capture completed with self-disable detach evidence.";
     }
     while (false);
 
