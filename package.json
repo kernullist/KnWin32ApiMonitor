@@ -30,6 +30,7 @@
     "tier1-generic:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/tier1-generic-profile-smoke.ps1",
     "tier2-generic:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/tier2-generic-profile-smoke.ps1",
     "defs:generate": "node tools/def-validator/generate-definition-ids.mjs --write",
+    "defs:bulk-expansion": "node tools/def-validator/generate-bulk-monitoring-definitions.mjs --write --target-defined=700",
     "defs:inventory": "node tools/def-validator/generate-api-inventory.mjs --write",
     "defs:inventory:check": "node tools/def-validator/generate-api-inventory.mjs --check",
     "defs:inventory:validate": "node tools/def-validator/validate-api-inventory.mjs",

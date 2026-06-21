@@ -1,5 +1,5 @@
 {
-  "blockedByMissingDecoderOrHookStrategy": 17956,
+  "blockedByMissingDecoderOrHookStrategy": 20398,
   "nextFamilies": [
     {
       "examples": [
@@ -13,9 +13,9 @@
         "advapi32.dll!ChangeServiceConfigW"
       ],
       "family": "system",
-      "impact": 8729,
+      "impact": 8728,
       "tier1": 4230,
-      "tier2": 269,
+      "tier2": 268,
       "withParameters": 4364,
       "withSdkHeader": 3208
     },
@@ -353,22 +353,27 @@
   "schemaVersion": "0.1.0",
   "summary": {
     "blockedByMissingDecoder": 15931,
-    "blockedByMissingHookStrategy": 2025,
+    "blockedByMissingHookStrategy": 4467,
     "byCoverageStatus": {
+      "defined": 521,
       "definition_only": 49,
       "hooked": 4,
-      "not_defined": 17907,
-      "smoke_verified": 126
+      "not_defined": 17385,
+      "smoke_verified": 126,
+      "unsupported": 2443
     },
     "byFamily": {
       "ai": 4,
+      "api-set": 4,
       "certificate": 6,
       "com": 7,
+      "crt": 65,
       "crypto": 10,
       "crypto-message": 4,
       "data": 90,
       "device-setup": 2,
       "devices": 1861,
+      "diagnostics": 19,
       "dns": 2,
       "file": 3,
       "file-io": 6,
@@ -380,7 +385,8 @@
       "handle": 4,
       "http": 10,
       "internet": 10,
-      "loader": 5,
+      "ipc": 15,
+      "loader": 85,
       "management": 18,
       "media": 627,
       "memory": 8,
@@ -389,6 +395,8 @@
       "network-management": 1629,
       "network-metadata": 2,
       "networking": 1583,
+      "nt-native": 982,
+      "ntdll": 194,
       "ole-automation": 4,
       "process": 6,
       "profile": 3,
@@ -396,16 +404,20 @@
       "resolver": 2,
       "resource": 3,
       "rpc": 12,
+      "rtl": 968,
       "security": 1243,
       "service-control": 6,
       "shell": 2,
       "shell-path": 2,
       "sspi": 4,
       "storage": 984,
+      "subsystem": 13,
       "symbols": 2,
       "synchronization": 12,
-      "system": 4885,
+      "system": 4884,
       "thread": 4,
+      "threadpool": 65,
+      "tracing": 38,
       "trust": 2,
       "ui": 1978,
       "web": 58
@@ -413,8 +425,8 @@
     "byHookTier": {
       "0": 130,
       "1": 15931,
-      "2": 655,
-      "3": 1370
+      "2": 654,
+      "3": 3813
     },
     "byModule": {
       "aclui.dll": 3,
@@ -653,7 +665,7 @@
       "newdev.dll": 11,
       "ninput.dll": 30,
       "normaliz.dll": 2,
-      "ntdll.dll": 74,
+      "ntdll.dll": 2516,
       "ntdllk.dll": 1,
       "ntdsapi.dll": 81,
       "ntlanman.dll": 10,
@@ -783,18 +795,18 @@
     },
     "byRisk": {
       "critical": 708,
-      "high": 1238,
+      "high": 1766,
       "low": 52,
-      "medium": 16088
+      "medium": 18002
     },
     "bySource": {
-      "existingDefinitionOnly": 4,
+      "existingDefinitionOnly": 2446,
       "win32Metadata": 18082
     },
     "currentlyEmittedByAgentHooks": 130,
-    "totalApis": 18086,
+    "totalApis": 20528,
     "withMicrosoftLearnDocs": 13819,
-    "withModuleMapping": 18086,
+    "withModuleMapping": 20528,
     "withParameterMetadata": 17693,
     "withSdkHeaderValidation": 12605
   }
