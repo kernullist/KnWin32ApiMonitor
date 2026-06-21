@@ -64,6 +64,7 @@ import {
 import type { TraceIssueGroup, TraceQueryClause, TraceQueryField, TraceQueryMatchMode, TraceQueryOperator } from "./traceQuery";
 import { buildTraceHighlightState } from "./traceHighlights";
 import type { TraceHighlightSummary } from "./traceHighlights";
+import { traceDisplayEventLimit } from "./traceIngestConfig";
 import { buildTraceThreadGroups, buildTraceTimeline } from "./traceViews";
 import type { TraceThreadGroup, TraceTimelineBucket } from "./traceViews";
 import { computeVirtualTraceWindow } from "./virtualTrace";
@@ -82,7 +83,6 @@ const inspectorTabs: Array<{ id: InspectorTab; label: string }> = [
 
 const traceRowHeight = 27;
 const traceOverscanRows = 6;
-const traceDisplayEventLimit = 5000;
 const boundedCaptureMaxDurationMs = 30000;
 
 type ReplaySource =
@@ -91,6 +91,20 @@ type ReplaySource =
 type CapturedEventChunk = {
   events: AgentApiCallEvent[];
   contextTags: string[];
+};
+
+type TraceIngestCommand =
+  | { type: "reset" }
+  | { type: "replace"; events: TraceEvent[]; selectedEventId?: number }
+  | { type: "enqueue-events"; chunks: CapturedEventChunk[] }
+  | { type: "enqueue-batches"; batches: NativeTraceBatch[] };
+
+type TraceIngestSnapshot = {
+  type: "snapshot";
+  events: TraceEvent[];
+  totalCapturedEvents: number;
+  selectedEventId: number;
+  processedEvents: number;
 };
 
 type ProcessExitNotice = {
@@ -156,32 +170,6 @@ function makeAuditEvent(eventType: string, operation: string, message: string, w
 function fileNameFromPath(value: string): string {
   const parts = value.split(/[\\/]/u);
   return parts[parts.length - 1] || value;
-}
-
-function createTraceEventFromAgentApiCall(event: AgentApiCallEvent, eventId: number): TraceEvent {
-  return {
-    schemaVersion: event.schemaVersion,
-    eventId,
-    relativeTimeMs: event.sequence * 10,
-    pid: event.pid,
-    tid: event.tid,
-    process: event.process,
-    module: event.module,
-    api: event.api,
-    arguments: event.arguments,
-    returnValue: event.returnValue,
-    error: event.lastErrorCode === 0
-      ? null
-      : {
-          kind: "win32",
-          code: `0x${event.lastErrorCode.toString(16).padStart(8, "0")}`,
-          message: event.lastErrorMessage
-        },
-    durationUs: event.durationUs,
-    tags: event.tags,
-    stack: event.stack,
-    bufferPreview: event.bufferPreview || undefined
-  };
 }
 
 function clampDurationMs(value: string | number, fallback: number, maximum = boundedCaptureMaxDurationMs): number {
@@ -360,10 +348,6 @@ function formatElapsedMs(value: number): string {
   return `${(value / 1000).toFixed(1)}s`;
 }
 
-function nextTraceEventId(events: TraceEvent[]): number {
-  return events.reduce((maximum, event) => Math.max(maximum, event.eventId), 0) + 1;
-}
-
 function catalogRowLabel(row: NativeSessionCatalogRow): string {
   return row.targetImage || row.sessionId || fileNameFromPath(row.path);
 }
@@ -437,14 +421,42 @@ function App() {
   const [outputEvents, setOutputEvents] = useState<AuditEvent[]>([
     makeAuditEvent("backend_ready", "native_init", "Native desktop backend ready. Launch a target or attach to a running process.")
   ]);
-  const nextEventId = useRef(1);
   const nextQueryClauseId = useRef(1);
   const streamBatchCursors = useRef<Record<string, number>>({});
   const streamBatchPollInFlight = useRef<Set<string>>(new Set());
+  const nativeOwnershipPollInFlight = useRef(false);
   const terminalDrainCompleted = useRef<Set<string>>(new Set());
   const lastSessionTargetAlive = useRef<Record<string, boolean>>({});
   const notifiedExitedSessions = useRef<Set<string>>(new Set());
   const traceScrollRef = useRef<HTMLDivElement | null>(null);
+  const traceIngestWorker = useRef<Worker | null>(null);
+
+  useEffect(() => {
+    const worker = new Worker(new URL("./traceIngest.worker.ts", import.meta.url), { type: "module" });
+    traceIngestWorker.current = worker;
+
+    worker.onmessage = (event: MessageEvent<TraceIngestSnapshot>) => {
+      if (event.data.type !== "snapshot") {
+        return;
+      }
+
+      setEvents(event.data.events);
+      setTotalCapturedEvents(event.data.totalCapturedEvents);
+      setSelectedEventId(event.data.selectedEventId);
+    };
+
+    worker.onerror = (event) => {
+      setOutputEvents((current) => [
+        makeAuditEvent("trace_ingest_worker_failed", "trace_ingest_worker", event.message || "Trace ingest worker failed."),
+        ...current
+      ].slice(0, 80));
+    };
+
+    return () => {
+      traceIngestWorker.current = null;
+      worker.terminate();
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -505,6 +517,15 @@ function App() {
 
   function appendOutput(eventsToAppend: AuditEvent[]) {
     setOutputEvents((current) => [...eventsToAppend, ...current].slice(0, 80));
+  }
+
+  function postTraceIngest(command: TraceIngestCommand) {
+    if (!traceIngestWorker.current) {
+      appendOutput([makeAuditEvent("trace_ingest_unavailable", "trace_ingest_worker", "Trace ingest worker is not ready.")]);
+      return;
+    }
+
+    traceIngestWorker.current.postMessage(command);
   }
 
   function observeTargetExitTransitions(sessions: NativeSession[]) {
@@ -715,40 +736,7 @@ function App() {
       return;
     }
 
-    const retainFromIncoming = Math.max(0, incomingCount - traceDisplayEventLimit);
-    let incomingIndex = 0;
-    const traceEvents: TraceEvent[] = [];
-
-    chunks.forEach((chunk) => {
-      chunk.events.forEach((event) => {
-        const eventId = nextEventId.current + incomingIndex;
-        incomingIndex += 1;
-
-        if (incomingIndex <= retainFromIncoming) {
-          return;
-        }
-
-        const traceEvent = createTraceEventFromAgentApiCall(event, eventId);
-
-        traceEvents.push({
-          ...traceEvent,
-          tags: Array.from(new Set([...traceEvent.tags, ...chunk.contextTags]))
-        });
-      });
-    });
-
-    nextEventId.current += incomingCount;
-    setTotalCapturedEvents((current) => current + incomingCount);
-
-    if (traceEvents.length > 0) {
-      setEvents((current) => {
-        const next = [...current, ...traceEvents];
-        const overflow = next.length - traceDisplayEventLimit;
-
-        return overflow > 0 ? next.slice(overflow) : next;
-      });
-      setSelectedEventId(traceEvents[traceEvents.length - 1].eventId);
-    }
+    postTraceIngest({ type: "enqueue-events", chunks });
   }
 
   function appendCapturedEvents(capturedEvents: AgentApiCallEvent[], contextTags: string[]) {
@@ -760,10 +748,7 @@ function App() {
       return;
     }
 
-    appendCapturedEventChunks(batches.map((batch) => ({
-      events: batch.events,
-      contextTags: ["ui-stream", `session:${batch.sessionId}`, `batch:${batch.batchSequence}`]
-    })));
+    postTraceIngest({ type: "enqueue-batches", batches });
 
     const latest = batches[batches.length - 1];
     setDroppedCount(latest.droppedEvents);
@@ -771,11 +756,7 @@ function App() {
   }
 
   function replaceTraceEvents(nextEvents: TraceEvent[], selectedId?: number) {
-    const displayedEvents = nextEvents.slice(-traceDisplayEventLimit);
-    setEvents(displayedEvents);
-    setTotalCapturedEvents(nextEvents.length);
-    nextEventId.current = nextTraceEventId(nextEvents);
-    setSelectedEventId(selectedId ?? displayedEvents[displayedEvents.length - 1]?.eventId ?? 0);
+    postTraceIngest({ type: "replace", events: nextEvents, selectedEventId: selectedId });
   }
 
   async function handleLoadNativeTargets() {
@@ -795,18 +776,24 @@ function App() {
     }
   }
 
+  const nativePollingEnabled =
+    nativeBusy ||
+    nativeOperations.some((operation) => isNativeOperationActive(operation)) ||
+    nativeSessions.some((session) => isNativeSessionActive(session));
+
   useEffect(() => {
-    if (
-      !nativeBusy &&
-      nativeOperations.every((operation) => !isNativeOperationActive(operation)) &&
-      nativeSessions.every((session) => !isNativeSessionActive(session))
-    ) {
+    if (!nativePollingEnabled) {
       return undefined;
     }
 
     let active = true;
 
     const refreshNativeOwnership = async () => {
+      if (nativeOwnershipPollInFlight.current) {
+        return;
+      }
+
+      nativeOwnershipPollInFlight.current = true;
       try {
         const [operations, sessions, daemonSessions] = await Promise.all([
           listNativeOperations(),
@@ -826,6 +813,9 @@ function App() {
           appendOutput([makeAuditEvent("native_ownership_poll_failed", "list_native_sessions", message)]);
         }
       }
+      finally {
+        nativeOwnershipPollInFlight.current = false;
+      }
     };
 
     void refreshNativeOwnership();
@@ -835,9 +825,10 @@ function App() {
 
     return () => {
       active = false;
+      nativeOwnershipPollInFlight.current = false;
       window.clearInterval(timer);
     };
-  }, [nativeBusy, nativeOperations, nativeSessions]);
+  }, [nativePollingEnabled]);
 
   const compiledTraceQuery = useMemo(
     () => compileTraceQuery(traceQueryClauses, traceQueryMatchMode),
@@ -1040,12 +1031,9 @@ function App() {
   }, [drainNativeSession?.sessionId, drainNativeSession?.sessionState]);
 
   function handleClear() {
-    setEvents([]);
-    setSelectedEventId(0);
-    setTotalCapturedEvents(0);
+    postTraceIngest({ type: "reset" });
     setReplaySource(null);
     setProcessExitNotice(null);
-    nextEventId.current = 1;
     streamBatchPollInFlight.current.clear();
     terminalDrainCompleted.current.clear();
   }
@@ -1418,10 +1406,7 @@ function App() {
       setInspectorTab("output");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setEvents([]);
-      setSelectedEventId(0);
-      setTotalCapturedEvents(0);
-      nextEventId.current = 1;
+      postTraceIngest({ type: "reset" });
       setReplaySource({
         kind: "catalog",
         label: catalogRowLabel(row),
