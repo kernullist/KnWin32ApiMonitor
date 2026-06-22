@@ -10440,12 +10440,74 @@ T* ImageRvaToPointer(std::uint8_t* base, std::uint32_t size, DWORD rva, std::siz
     return result;
 }
 
-bool ReadImageImportDirectory(HMODULE module, std::uint32_t size, IMAGE_IMPORT_DESCRIPTOR** imports)
+bool ImageAsciiStringEquals(
+    const std::uint8_t* base,
+    std::uint32_t size,
+    const char* imageText,
+    const char* expected,
+    bool ignoreCase)
+{
+    bool equal = false;
+
+    do
+    {
+        if (base == nullptr || imageText == nullptr || expected == nullptr)
+        {
+            break;
+        }
+
+        std::size_t index = 0;
+        while (ImageRangeContains(base, size, imageText + index, 1))
+        {
+            char left = imageText[index];
+            char right = expected[index];
+            if (ignoreCase)
+            {
+                if (left >= 'A' && left <= 'Z')
+                {
+                    left = static_cast<char>(left - 'A' + 'a');
+                }
+
+                if (right >= 'A' && right <= 'Z')
+                {
+                    right = static_cast<char>(right - 'A' + 'a');
+                }
+            }
+
+            if (left != right)
+            {
+                break;
+            }
+
+            if (left == '\0')
+            {
+                equal = true;
+                break;
+            }
+
+            ++index;
+        }
+    }
+    while (false);
+
+    return equal;
+}
+
+bool ReadImageImportDirectory(
+    HMODULE module,
+    std::uint32_t size,
+    IMAGE_IMPORT_DESCRIPTOR** imports,
+    std::size_t* descriptorCount = nullptr)
 {
     bool present = false;
 
     do
     {
+        if (descriptorCount != nullptr)
+        {
+            *descriptorCount = 0;
+        }
+
         if (module == nullptr || imports == nullptr)
         {
             break;
@@ -10470,8 +10532,25 @@ bool ReadImageImportDirectory(HMODULE module, std::uint32_t size, IMAGE_IMPORT_D
             break;
         }
 
+        if (ntHeaders->OptionalHeader.NumberOfRvaAndSizes <= IMAGE_DIRECTORY_ENTRY_IMPORT)
+        {
+            break;
+        }
+
         const IMAGE_DATA_DIRECTORY& importDirectory = ntHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
         if (importDirectory.VirtualAddress == 0 || importDirectory.Size < sizeof(IMAGE_IMPORT_DESCRIPTOR))
+        {
+            break;
+        }
+
+        if (importDirectory.VirtualAddress >= size)
+        {
+            break;
+        }
+
+        const std::uint32_t maxDirectoryBytes = size - importDirectory.VirtualAddress;
+        const std::uint32_t importDirectoryBytes = importDirectory.Size < maxDirectoryBytes ? importDirectory.Size : maxDirectoryBytes;
+        if (importDirectoryBytes < sizeof(IMAGE_IMPORT_DESCRIPTOR))
         {
             break;
         }
@@ -10487,6 +10566,10 @@ bool ReadImageImportDirectory(HMODULE module, std::uint32_t size, IMAGE_IMPORT_D
         }
 
         *imports = importDescriptor;
+        if (descriptorCount != nullptr)
+        {
+            *descriptorCount = importDirectoryBytes / sizeof(IMAGE_IMPORT_DESCRIPTOR);
+        }
         present = true;
     }
     while (false);
@@ -11496,7 +11579,7 @@ bool ImportMatchesDefinition(std::uint8_t* base, std::uint32_t size, IMAGE_THUNK
             break;
         }
 
-        if (std::strcmp(reinterpret_cast<const char*>(importByName->Name), definition.ApiName) == 0)
+        if (ImageAsciiStringEquals(base, size, reinterpret_cast<const char*>(importByName->Name), definition.ApiName, false))
         {
             matches = true;
         }
@@ -11527,27 +11610,29 @@ void PatchImportInModule(ModuleInfo& module, HookDefinition& definition, SweepSt
 
         auto* base = reinterpret_cast<std::uint8_t*>(module.Base);
         IMAGE_IMPORT_DESCRIPTOR* importDescriptor = nullptr;
-        if (!ReadImageImportDirectory(module.Base, module.SizeOfImage, &importDescriptor))
+        std::size_t importDescriptorCount = 0;
+        if (!ReadImageImportDirectory(module.Base, module.SizeOfImage, &importDescriptor, &importDescriptorCount))
         {
             break;
         }
 
-        for (; importDescriptor->Name != 0; ++importDescriptor)
+        for (std::size_t importIndex = 0; importIndex < importDescriptorCount && importDescriptor[importIndex].Name != 0; ++importIndex)
         {
-            const char* importedModuleName = ImageRvaToPointer<char>(base, module.SizeOfImage, importDescriptor->Name, 1);
-            if (importedModuleName == nullptr || _stricmp(importedModuleName, definition.ImportModuleName) != 0)
+            const IMAGE_IMPORT_DESCRIPTOR& currentImport = importDescriptor[importIndex];
+            const char* importedModuleName = ImageRvaToPointer<char>(base, module.SizeOfImage, currentImport.Name, 1);
+            if (!ImageAsciiStringEquals(base, module.SizeOfImage, importedModuleName, definition.ImportModuleName, true))
             {
                 continue;
             }
 
-            auto* firstThunk = ImageRvaToPointer<IMAGE_THUNK_DATA>(base, module.SizeOfImage, importDescriptor->FirstThunk);
+            auto* firstThunk = ImageRvaToPointer<IMAGE_THUNK_DATA>(base, module.SizeOfImage, currentImport.FirstThunk);
             if (firstThunk == nullptr)
             {
                 continue;
             }
 
-            auto* originalThunk = ImageRvaToPointer<IMAGE_THUNK_DATA>(base, module.SizeOfImage, importDescriptor->OriginalFirstThunk);
-            if (importDescriptor->OriginalFirstThunk == 0)
+            auto* originalThunk = ImageRvaToPointer<IMAGE_THUNK_DATA>(base, module.SizeOfImage, currentImport.OriginalFirstThunk);
+            if (currentImport.OriginalFirstThunk == 0)
             {
                 originalThunk = firstThunk;
             }
@@ -11642,19 +11727,94 @@ void ResolveHookDefinitions(std::array<HookDefinition, HookDefinitionCount>& def
     }
 }
 
-bool AddressBelongsToLoadedModule(const void* address)
+void ReleaseAcquiredModule(HMODULE module)
+{
+    if (module != nullptr)
+    {
+        FreeLibrary(module);
+    }
+}
+
+bool AcquireLoadedModuleFromAddress(const void* address, HMODULE* module)
 {
     bool loaded = false;
-    HMODULE module = nullptr;
+    HMODULE localModule = nullptr;
 
     if (address != nullptr)
     {
         loaded = GetModuleHandleExW(
-            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
             reinterpret_cast<LPCWSTR>(address),
-            &module) != FALSE;
+            &localModule) != FALSE;
     }
 
+    if (module != nullptr)
+    {
+        *module = loaded ? localModule : nullptr;
+    }
+    else
+    {
+        ReleaseAcquiredModule(localModule);
+    }
+
+    return loaded;
+}
+
+bool AcquireHookRecordOwner(const HookRecord& record, HMODULE* acquiredModule = nullptr)
+{
+    bool loaded = false;
+    HMODULE loadedModule = nullptr;
+
+    do
+    {
+        if (acquiredModule != nullptr)
+        {
+            *acquiredModule = nullptr;
+        }
+
+        if (record.ThunkAddress == nullptr || record.OwnerModule == nullptr)
+        {
+            break;
+        }
+
+        if (!AcquireLoadedModuleFromAddress(record.ThunkAddress, &loadedModule))
+        {
+            break;
+        }
+
+        if (loadedModule != record.OwnerModule)
+        {
+            break;
+        }
+
+        if (record.OwnerModuleName[0] != '\0')
+        {
+            char loadedModulePath[512] = {};
+            const DWORD copied = GetModuleFileNameA(loadedModule, loadedModulePath, static_cast<DWORD>(sizeof(loadedModulePath)));
+            if (copied == 0)
+            {
+                break;
+            }
+
+            loadedModulePath[sizeof(loadedModulePath) - 1] = '\0';
+            LowerAsciiInPlace(loadedModulePath);
+            if (std::strcmp(FileNameFromPathText(loadedModulePath), record.OwnerModuleName) != 0)
+            {
+                break;
+            }
+        }
+
+        if (acquiredModule != nullptr)
+        {
+            *acquiredModule = loadedModule;
+            loadedModule = nullptr;
+        }
+
+        loaded = true;
+    }
+    while (false);
+
+    ReleaseAcquiredModule(loadedModule);
     return loaded;
 }
 
@@ -12314,7 +12474,8 @@ HookLifecycleCounts UninstallHooks()
 
         ++counts.InstalledHooks;
 
-        if (!AddressBelongsToLoadedModule(record.ThunkAddress))
+        HMODULE ownerModule = nullptr;
+        if (!AcquireHookRecordOwner(record, &ownerModule))
         {
             record.Restored = true;
             ++counts.RestoredHooks;
@@ -12324,7 +12485,10 @@ HookLifecycleCounts UninstallHooks()
         DWORD oldProtect = 0;
         if (!VirtualProtect(record.ThunkAddress, sizeof(void*), PAGE_READWRITE, &oldProtect))
         {
-            if (!AddressBelongsToLoadedModule(record.ThunkAddress))
+            ReleaseAcquiredModule(ownerModule);
+            ownerModule = nullptr;
+
+            if (!AcquireHookRecordOwner(record))
             {
                 record.Restored = true;
                 ++counts.RestoredHooks;
@@ -12355,6 +12519,8 @@ HookLifecycleCounts UninstallHooks()
             record.Failed = true;
             ++counts.FailedHooks;
         }
+
+        ReleaseAcquiredModule(ownerModule);
     }
     ReleaseSRWLockExclusive(&g_hookLock);
 
