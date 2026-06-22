@@ -2738,7 +2738,16 @@ enum class GenericReturnFormat : std::uint32_t
     UInt32 = 2,
     Pointer = 3,
     UInt64 = 4,
+    Double = 5,
 };
+
+std::uint64_t DoubleBits(double value)
+{
+    std::uint64_t bits = 0;
+    static_assert(sizeof(bits) == sizeof(value), "double bit copy size mismatch");
+    std::memcpy(&bits, &value, sizeof(bits));
+    return bits;
+}
 
 void EmitGenericSingleArgumentEvent(
     const char* moduleName,
@@ -6066,6 +6075,53 @@ void InvokeGeneratedVoidHook(
     }
 
     SetLastError(lastError);
+}
+
+template <typename FunctionT, typename... Args>
+double InvokeGeneratedDoubleHook(
+    void** originalSlot,
+    const GeneratedGenericHookMetadata& metadata,
+    Args... args)
+{
+    if (g_inHook || !HooksEnabled() || originalSlot == nullptr || *originalSlot == nullptr)
+    {
+        if (originalSlot == nullptr || *originalSlot == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return 0.0;
+        }
+
+        const FunctionT original = reinterpret_cast<FunctionT>(*originalSlot);
+        return original(args...);
+    }
+
+    HookReentryGuard guard;
+    const FunctionT original = reinterpret_cast<FunctionT>(*originalSlot);
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const double result = original(args...);
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        const std::array<std::uint64_t, sizeof...(Args)> argumentValues =
+        {{
+            DoubleBits(args)...
+        }};
+        EmitGeneratedGenericEvent(
+            metadata,
+            argumentValues.data(),
+            argumentValues.size(),
+            DoubleBits(result),
+            0,
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
+    return result;
 }
 
 void EmitGenericGetSystemTimeEvent(
@@ -10942,7 +10998,8 @@ extern "C" __declspec(dllexport) std::uintptr_t KnMonInvokeGeneratedValueHookByI
     std::uintptr_t arg12,
     std::uintptr_t arg13,
     std::uintptr_t arg14,
-    std::uintptr_t arg15)
+    std::uintptr_t arg15,
+    std::uintptr_t arg16)
 {
     if (index >= GeneratedAgentHookMetadata.size())
     {
@@ -10950,7 +11007,7 @@ extern "C" __declspec(dllexport) std::uintptr_t KnMonInvokeGeneratedValueHookByI
         return 0;
     }
 
-    return InvokeGeneratedValueHook<GeneratedAgentValueFunction_16>(
+    return InvokeGeneratedValueHook<GeneratedAgentValueFunction_17>(
         &g_generatedAgentOriginalFunctions[index],
         GeneratedAgentHookMetadata[index],
         arg0,
@@ -10968,7 +11025,8 @@ extern "C" __declspec(dllexport) std::uintptr_t KnMonInvokeGeneratedValueHookByI
         arg12,
         arg13,
         arg14,
-        arg15);
+        arg15,
+        arg16);
 }
 
 extern "C" __declspec(dllexport) void KnMonInvokeGeneratedVoidHookByIndex(
@@ -10988,7 +11046,8 @@ extern "C" __declspec(dllexport) void KnMonInvokeGeneratedVoidHookByIndex(
     std::uintptr_t arg12,
     std::uintptr_t arg13,
     std::uintptr_t arg14,
-    std::uintptr_t arg15)
+    std::uintptr_t arg15,
+    std::uintptr_t arg16)
 {
     if (index >= GeneratedAgentHookMetadata.size())
     {
@@ -10996,7 +11055,7 @@ extern "C" __declspec(dllexport) void KnMonInvokeGeneratedVoidHookByIndex(
         return;
     }
 
-    InvokeGeneratedVoidHook<GeneratedAgentVoidFunction_16>(
+    InvokeGeneratedVoidHook<GeneratedAgentVoidFunction_17>(
         &g_generatedAgentOriginalFunctions[index],
         GeneratedAgentHookMetadata[index],
         arg0,
@@ -11014,7 +11073,45 @@ extern "C" __declspec(dllexport) void KnMonInvokeGeneratedVoidHookByIndex(
         arg12,
         arg13,
         arg14,
-        arg15);
+        arg15,
+        arg16);
+}
+
+extern "C" __declspec(dllexport) double KnMonInvokeGeneratedDoubleHookByIndex(
+    std::size_t index,
+    double arg0,
+    double arg1)
+{
+    double result = 0.0;
+
+    do
+    {
+        if (index >= GeneratedAgentHookMetadata.size())
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            break;
+        }
+
+        if (GeneratedAgentHookMetadata[index].ParameterCount <= 1)
+        {
+            using GeneratedAgentDoubleUnaryFunction = double(WINAPI*)(double);
+            result = InvokeGeneratedDoubleHook<GeneratedAgentDoubleUnaryFunction>(
+                &g_generatedAgentOriginalFunctions[index],
+                GeneratedAgentHookMetadata[index],
+                arg0);
+            break;
+        }
+
+        using GeneratedAgentDoubleBinaryFunction = double(WINAPI*)(double, double);
+        result = InvokeGeneratedDoubleHook<GeneratedAgentDoubleBinaryFunction>(
+            &g_generatedAgentOriginalFunctions[index],
+            GeneratedAgentHookMetadata[index],
+            arg0,
+            arg1);
+    }
+    while (false);
+
+    return result;
 }
 #endif
 

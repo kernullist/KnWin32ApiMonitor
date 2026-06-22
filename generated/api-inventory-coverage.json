@@ -367,8 +367,7 @@
     "blockedByMissingDecoder": 27907,
     "blockedByMissingHookStrategy": 2145,
     "byCoverageStatus": {
-      "defined": 29933,
-      "definition_only": 49,
+      "defined": 29982,
       "hooked": 4,
       "not_defined": 70,
       "smoke_verified": 126

@@ -21,7 +21,8 @@ extern "C" std::uintptr_t KnMonInvokeGeneratedValueHookByIndex(
     std::uintptr_t arg12,
     std::uintptr_t arg13,
     std::uintptr_t arg14,
-    std::uintptr_t arg15
+    std::uintptr_t arg15,
+    std::uintptr_t arg16
 );
 
 extern "C" void KnMonInvokeGeneratedVoidHookByIndex(
@@ -41,2567 +42,2574 @@ extern "C" void KnMonInvokeGeneratedVoidHookByIndex(
     std::uintptr_t arg12,
     std::uintptr_t arg13,
     std::uintptr_t arg14,
-    std::uintptr_t arg15
+    std::uintptr_t arg15,
+    std::uintptr_t arg16
 );
+
+extern "C" double KnMonInvokeGeneratedDoubleHookByIndex(
+    std::size_t index,
+    double arg0,
+    double arg1
+);
+
+std::uintptr_t WINAPI HookedGeneratedApi13175_bcp_colfmt(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12800, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13176_bcp_collen(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12801, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13177_bcp_colptr(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12802, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13178_bcp_columns(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12803, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13179_bcp_control(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12804, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13180_bcp_done(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12805, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13181_bcp_exec(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12806, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13182_bcp_getcolfmt(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12807, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13183_bcp_initA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12808, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13184_bcp_initW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12809, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13185_bcp_moretext(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12810, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13186_bcp_readfmtA(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12811, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13187_bcp_readfmtW(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12812, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13188_bcp_sendrow(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12813, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13189_bcp_setcolfmt(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12814, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13190_bcp_writefmtA(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12815, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13191_bcp_writefmtW(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12816, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13192_dbprtypeA(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12817, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13193_dbprtypeW(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12818, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13194_SQLCloseEnumServers(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12819, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13195_SQLGetNextEnumeration(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12820, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13196_SQLInitEnumServers(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12821, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13197_SQLLinkedCatalogsA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12822, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13198_SQLLinkedCatalogsW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12823, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13199_SQLLinkedServers(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12824, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13200_AccessibleObjectFromWindow(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12825, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13201_AccNotifyTouchInteraction(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12826, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13202_AccSetRunningUtilityState(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12827, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13203_CreateStdAccessibleObject(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12828, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13204_CreateStdAccessibleProxyA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12829, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13205_CreateStdAccessibleProxyW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12830, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13206_GetOleaccVersionInfo(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12831, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13207_GetProcessHandleFromHwnd(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12832, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13208_GetRoleTextA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12833, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13209_GetRoleTextW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12834, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13210_GetStateTextA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12835, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13211_GetStateTextW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12836, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13212_ObjectFromLresult(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12837, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13213_OleUIBusyA(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12838, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13214_OleUIBusyW(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12839, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13215_OleUICanConvertOrActivateAs(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12840, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13216_OleUIChangeIconA(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12841, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13217_OleUIChangeIconW(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12842, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13218_OleUIChangeSourceA(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12843, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13219_OleUIChangeSourceW(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12844, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13220_OleUIConvertA(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12845, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13221_OleUIConvertW(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12846, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13222_OleUIEditLinksA(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12847, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13223_OleUIEditLinksW(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12848, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13224_OleUIInsertObjectA(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12849, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13225_OleUIInsertObjectW(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12850, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13226_OleUIObjectPropertiesA(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12851, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13227_OleUIObjectPropertiesW(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12852, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13228_OleUIPasteSpecialA(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12853, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13229_OleUIPasteSpecialW(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12854, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13230_OleUIPromptUserA(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12855, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13231_OleUIPromptUserW(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12856, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13232_FreeInterfaceContextTable(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12857, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13233_GetInterfaceContextTableForHostName(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12858, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13234_OnDemandGetRoutingHint(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12859, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13235_OnDemandRegisterNotification(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12860, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13236_OnDemandUnRegisterNotification(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12861, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13237_glAreTexturesResident(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(12862, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13238_glArrayElement(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12863, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13239_glBegin(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12864, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13240_glBindTexture(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12865, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13241_glBlendFunc(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12866, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13242_glCallList(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12867, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13243_glCallLists(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12868, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13244_glClear(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12869, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13245_glClearStencil(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12870, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13246_glClipPlane(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12871, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13247_glColor3b(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12872, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13248_glColor3bv(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12873, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13249_glColor3dv(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12874, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13250_glColor3fv(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12875, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13251_glColor3i(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12876, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13252_glColor3iv(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12877, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13253_glColor3s(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12878, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13254_glColor3sv(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12879, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13255_glColor3ub(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12880, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13256_glColor3ubv(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12881, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13257_glColor3ui(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12882, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13258_glColor3uiv(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12883, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13259_glColor3us(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12884, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13260_glColor3usv(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12885, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13261_glColor4b(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12886, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13262_glColor4bv(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12887, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13263_glColor4dv(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12888, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13264_glColor4fv(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12889, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13265_glColor4i(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12890, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+void WINAPI HookedGeneratedApi13266_glColor4iv(std::uintptr_t arg0)
+{
+    KnMonInvokeGeneratedVoidHookByIndex(12891, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
 
 void WINAPI HookedGeneratedApi13267_glColor4s(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12800, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12892, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13268_glColor4sv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12801, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12893, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13269_glColor4ub(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12802, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12894, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13270_glColor4ubv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12803, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12895, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13271_glColor4ui(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12804, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12896, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13272_glColor4uiv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12805, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12897, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13273_glColor4us(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12806, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12898, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13274_glColor4usv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12807, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12899, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13275_glColorMask(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12808, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12900, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13276_glColorMaterial(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12809, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12901, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13277_glColorPointer(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12810, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12902, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13278_glCopyPixels(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12811, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12903, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13279_glCopyTexImage1D(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12812, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12904, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13280_glCopyTexImage2D(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12813, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12905, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13281_glCopyTexSubImage1D(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12814, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12906, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13282_glCopyTexSubImage2D(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12815, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12907, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13283_glCullFace(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12816, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12908, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13284_glDeleteLists(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12817, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12909, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13285_glDeleteTextures(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12818, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12910, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13286_glDepthFunc(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12819, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12911, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13287_glDepthMask(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12820, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12912, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13288_glDisable(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12821, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12913, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13289_glDisableClientState(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12822, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12914, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13290_glDrawArrays(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12823, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12915, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13291_glDrawBuffer(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12824, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12916, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13292_glDrawElements(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12825, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12917, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13293_glDrawPixels(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12826, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12918, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13294_glEdgeFlag(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12827, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12919, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13295_glEdgeFlagPointer(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12828, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12920, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13296_glEdgeFlagv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12829, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12921, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13297_glEnable(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12830, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12922, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13298_glEnableClientState(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12831, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12923, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13299_glEvalCoord1dv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12832, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12924, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13300_glEvalCoord1fv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12833, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12925, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13301_glEvalCoord2dv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12834, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12926, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13302_glEvalCoord2fv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12835, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12927, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13303_glEvalMesh1(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12836, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12928, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13304_glEvalMesh2(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12837, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12929, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13305_glEvalPoint1(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12838, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12930, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13306_glEvalPoint2(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12839, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12931, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13307_glFeedbackBuffer(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12840, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12932, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13308_glFogfv(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12841, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12933, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13309_glFogi(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12842, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12934, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13310_glFogiv(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12843, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12935, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13311_glFrontFace(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12844, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12936, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13312_glGenLists(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(12845, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(12937, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13313_glGenTextures(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12846, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12938, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13314_glGetBooleanv(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12847, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12939, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13315_glGetClipPlane(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12848, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12940, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13316_glGetDoublev(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12849, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12941, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13317_glGetFloatv(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12850, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12942, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13318_glGetIntegerv(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12851, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12943, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13319_glGetLightfv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12852, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12944, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13320_glGetLightiv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12853, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12945, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13321_glGetMapdv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12854, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12946, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13322_glGetMapfv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12855, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12947, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13323_glGetMapiv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12856, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12948, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13324_glGetMaterialfv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12857, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12949, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13325_glGetMaterialiv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12858, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12950, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13326_glGetPixelMapfv(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12859, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12951, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13327_glGetPixelMapuiv(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12860, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12952, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13328_glGetPixelMapusv(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12861, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12953, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13329_glGetPointerv(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12862, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12954, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13330_glGetPolygonStipple(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12863, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12955, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13331_glGetString(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(12864, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(12956, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13332_glGetTexEnvfv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12865, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12957, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13333_glGetTexEnviv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12866, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12958, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13334_glGetTexGendv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12867, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12959, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13335_glGetTexGenfv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12868, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12960, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13336_glGetTexGeniv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12869, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12961, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13337_glGetTexImage(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12870, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12962, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13338_glGetTexLevelParameterfv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12871, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12963, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13339_glGetTexLevelParameteriv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12872, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12964, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13340_glGetTexParameterfv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12873, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12965, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13341_glGetTexParameteriv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12874, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12966, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13342_glHint(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12875, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12967, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13343_glIndexdv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12876, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12968, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13344_glIndexfv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12877, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12969, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13345_glIndexi(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12878, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12970, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13346_glIndexiv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12879, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12971, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13347_glIndexMask(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12880, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12972, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13348_glIndexPointer(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12881, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12973, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13349_glIndexs(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12882, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12974, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13350_glIndexsv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12883, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12975, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13351_glIndexub(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12884, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12976, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13352_glIndexubv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12885, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12977, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13353_glInterleavedArrays(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12886, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12978, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13354_glIsEnabled(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(12887, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(12979, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13355_glIsList(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(12888, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(12980, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13356_glIsTexture(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(12889, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(12981, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13357_glLightfv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12890, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12982, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13358_glLighti(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12891, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12983, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13359_glLightiv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12892, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12984, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13360_glLightModelfv(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12893, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12985, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13361_glLightModeli(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12894, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12986, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13362_glLightModeliv(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12895, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12987, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13363_glLineStipple(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12896, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12988, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13364_glListBase(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12897, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12989, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13365_glLoadMatrixd(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12898, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12990, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13366_glLoadMatrixf(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12899, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12991, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13367_glLoadName(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12900, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12992, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13368_glLogicOp(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12901, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12993, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13369_glMaterialfv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12902, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12994, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13370_glMateriali(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12903, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12995, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13371_glMaterialiv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12904, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12996, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13372_glMatrixMode(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12905, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12997, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13373_glMultMatrixd(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12906, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12998, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13374_glMultMatrixf(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12907, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(12999, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13375_glNewList(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12908, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13000, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13376_glNormal3b(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12909, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13001, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13377_glNormal3bv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12910, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13002, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13378_glNormal3dv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12911, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13003, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13379_glNormal3fv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12912, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13004, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13380_glNormal3i(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12913, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13005, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13381_glNormal3iv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12914, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13006, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13382_glNormal3s(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12915, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13007, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13383_glNormal3sv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12916, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13008, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13384_glNormalPointer(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12917, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13009, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13385_glPixelMapfv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12918, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13010, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13386_glPixelMapuiv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12919, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13011, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13387_glPixelMapusv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12920, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13012, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13388_glPixelStorei(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12921, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13013, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13389_glPixelTransferi(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12922, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13014, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13390_glPolygonMode(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12923, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13015, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13391_glPolygonStipple(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12924, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13016, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13392_glPrioritizeTextures(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12925, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13017, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13393_glPushAttrib(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12926, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13018, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13394_glPushClientAttrib(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12927, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13019, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13395_glPushName(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12928, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13020, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13396_glRasterPos2dv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12929, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13021, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13397_glRasterPos2fv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12930, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13022, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13398_glRasterPos2i(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12931, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13023, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13399_glRasterPos2iv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12932, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13024, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13400_glRasterPos2s(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12933, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13025, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13401_glRasterPos2sv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12934, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13026, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13402_glRasterPos3dv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12935, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13027, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13403_glRasterPos3fv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12936, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13028, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13404_glRasterPos3i(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12937, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13029, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13405_glRasterPos3iv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12938, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13030, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13406_glRasterPos3s(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12939, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13031, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13407_glRasterPos3sv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12940, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13032, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13408_glRasterPos4dv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12941, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13033, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13409_glRasterPos4fv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12942, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13034, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13410_glRasterPos4i(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12943, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13035, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13411_glRasterPos4iv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12944, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13036, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13412_glRasterPos4s(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12945, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13037, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13413_glRasterPos4sv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12946, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13038, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13414_glReadBuffer(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12947, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13039, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13415_glReadPixels(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12948, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13040, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13416_glRectdv(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12949, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13041, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13417_glRectfv(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12950, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13042, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13418_glRecti(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12951, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13043, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13419_glRectiv(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12952, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13044, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13420_glRects(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12953, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13045, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13421_glRectsv(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12954, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13046, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13422_glRenderMode(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(12955, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13047, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13423_glScissor(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12956, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13048, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13424_glSelectBuffer(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12957, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13049, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13425_glShadeModel(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12958, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13050, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13426_glStencilFunc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12959, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13051, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13427_glStencilMask(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12960, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13052, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13428_glStencilOp(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12961, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13053, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13429_glTexCoord1dv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12962, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13054, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13430_glTexCoord1fv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12963, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13055, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13431_glTexCoord1i(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12964, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13056, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13432_glTexCoord1iv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12965, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13057, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13433_glTexCoord1s(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12966, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13058, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13434_glTexCoord1sv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12967, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13059, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13435_glTexCoord2dv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12968, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13060, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13436_glTexCoord2fv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12969, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13061, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13437_glTexCoord2i(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12970, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13062, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13438_glTexCoord2iv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12971, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13063, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13439_glTexCoord2s(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12972, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13064, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13440_glTexCoord2sv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12973, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13065, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13441_glTexCoord3dv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12974, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13066, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13442_glTexCoord3fv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12975, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13067, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13443_glTexCoord3i(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12976, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13068, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13444_glTexCoord3iv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12977, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13069, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13445_glTexCoord3s(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12978, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13070, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13446_glTexCoord3sv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12979, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13071, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13447_glTexCoord4dv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12980, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13072, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13448_glTexCoord4fv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12981, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13073, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13449_glTexCoord4i(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12982, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13074, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13450_glTexCoord4iv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12983, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13075, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13451_glTexCoord4s(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12984, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13076, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13452_glTexCoord4sv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12985, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13077, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13453_glTexCoordPointer(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12986, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13078, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13454_glTexEnvfv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12987, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13079, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13455_glTexEnvi(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12988, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13080, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13456_glTexEnviv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12989, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13081, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13457_glTexGendv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12990, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13082, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13458_glTexGenfv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12991, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13083, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13459_glTexGeni(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12992, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13084, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13460_glTexGeniv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12993, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13085, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13461_glTexImage1D(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12994, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13086, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13462_glTexImage2D(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7, std::uintptr_t arg8)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12995, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13087, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13463_glTexParameterfv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12996, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13088, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13464_glTexParameteri(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12997, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13089, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13465_glTexParameteriv(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12998, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13090, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13466_glTexSubImage1D(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(12999, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13091, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13467_glTexSubImage2D(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7, std::uintptr_t arg8)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13000, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13092, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13468_glVertex2dv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13001, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13093, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13469_glVertex2fv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13002, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13094, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13470_glVertex2i(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13003, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13095, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13471_glVertex2iv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13004, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13096, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13472_glVertex2s(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13005, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13097, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13473_glVertex2sv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13006, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13098, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13474_glVertex3dv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13007, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13099, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13475_glVertex3fv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13008, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13100, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13476_glVertex3i(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13009, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13101, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13477_glVertex3iv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13010, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13102, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13478_glVertex3s(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13011, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13103, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13479_glVertex3sv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13012, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13104, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13480_glVertex4dv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13013, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13105, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13481_glVertex4fv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13014, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13106, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13482_glVertex4i(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13015, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13107, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13483_glVertex4iv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13016, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13108, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13484_glVertex4s(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13017, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13109, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13485_glVertex4sv(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13018, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13110, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13486_glVertexPointer(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13019, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13111, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13487_glViewport(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13020, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13112, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13488_wglCopyContext(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13021, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13113, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13489_wglCreateContext(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13022, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13114, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13490_wglCreateLayerContext(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13023, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13115, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13491_wglDeleteContext(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13024, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13116, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13492_wglDescribeLayerPlane(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13025, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13117, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13493_wglGetLayerPaletteEntries(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13026, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13118, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13494_wglGetProcAddress(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13027, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13119, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13495_wglMakeCurrent(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13028, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13120, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13496_wglRealizeLayerPalette(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13029, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13121, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13497_wglSetLayerPaletteEntries(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13030, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13122, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13498_wglShareLists(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13031, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13123, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13499_wglSwapLayerBuffers(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13032, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13124, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13500_wglSwapMultipleBuffers(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13033, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13125, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13501_wglUseFontBitmapsA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13034, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13126, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13502_wglUseFontBitmapsW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13035, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13127, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13503_PeerCollabAddContact(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13036, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13128, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13504_PeerCollabAsyncInviteContact(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13037, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13129, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13505_PeerCollabAsyncInviteEndpoint(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13038, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13130, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13506_PeerCollabCancelInvitation(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13039, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13131, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13507_PeerCollabCloseHandle(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13040, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13132, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13508_PeerCollabDeleteContact(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13041, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13133, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13509_PeerCollabDeleteEndpointData(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13042, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13134, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13510_PeerCollabDeleteObject(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13043, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13135, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13511_PeerCollabEnumApplicationRegistrationInfo(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13044, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13136, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13512_PeerCollabEnumApplications(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13045, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13137, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13513_PeerCollabEnumContacts(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13046, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13138, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13514_PeerCollabEnumEndpoints(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13047, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13139, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13515_PeerCollabEnumObjects(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13048, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13140, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13516_PeerCollabEnumPeopleNearMe(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13049, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13141, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13517_PeerCollabExportContact(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13050, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13142, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13518_PeerCollabGetAppLaunchInfo(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13051, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13143, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13519_PeerCollabGetApplicationRegistrationInfo(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13052, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13144, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13520_PeerCollabGetContact(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13053, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13145, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13521_PeerCollabGetEndpointName(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13054, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13146, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13522_PeerCollabGetEventData(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13055, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13147, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13523_PeerCollabGetInvitationResponse(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13056, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13148, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13524_PeerCollabGetPresenceInfo(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13057, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13149, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13525_PeerCollabGetSigninOptions(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13058, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13150, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13526_PeerCollabInviteContact(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13059, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13151, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13527_PeerCollabInviteEndpoint(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13060, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13152, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13528_PeerCollabParseContact(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13061, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13153, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13529_PeerCollabQueryContactData(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13062, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13154, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13530_PeerCollabRefreshEndpointData(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13063, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13155, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13531_PeerCollabRegisterApplication(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13064, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13156, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13532_PeerCollabRegisterEvent(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13065, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13157, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13533_PeerCollabSetEndpointName(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13066, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13158, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13534_PeerCollabSetObject(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13067, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13159, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13535_PeerCollabSetPresenceInfo(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13068, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13160, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13536_PeerCollabSignin(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13069, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13161, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13537_PeerCollabSignout(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13070, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13162, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13538_PeerCollabStartup(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13071, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13163, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13539_PeerCollabSubscribeEndpointData(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13072, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13164, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13540_PeerCollabUnregisterApplication(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13073, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13165, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13541_PeerCollabUnregisterEvent(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13074, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13166, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13542_PeerCollabUnsubscribeEndpointData(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13075, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13167, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13543_PeerCollabUpdateContact(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13076, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13168, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13544_PeerCreatePeerName(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13077, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13169, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13545_PeerEndEnumeration(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13078, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13170, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13546_PeerEnumGroups(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13079, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13171, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13547_PeerEnumIdentities(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13080, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13172, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13548_PeerFreeData(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13081, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13173, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13549_PeerGetItemCount(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13082, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13174, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13550_PeerGetNextItem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13083, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13175, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13551_PeerGroupAddRecord(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13084, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13176, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13552_PeerGroupClose(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13085, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13177, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13553_PeerGroupCloseDirectConnection(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13086, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13178, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13554_PeerGroupConnect(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13087, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13179, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13555_PeerGroupConnectByAddress(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13088, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13180, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13556_PeerGroupCreate(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13089, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13181, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13557_PeerGroupCreateInvitation(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13090, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13182, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13558_PeerGroupCreatePasswordInvitation(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13091, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13183, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13559_PeerGroupDelete(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13092, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13184, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13560_PeerGroupDeleteRecord(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13093, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13185, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13561_PeerGroupEnumConnections(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13094, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13186, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13562_PeerGroupEnumMembers(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13095, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13187, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13563_PeerGroupEnumRecords(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13096, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13188, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13564_PeerGroupExportConfig(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13097, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13189, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13565_PeerGroupExportDatabase(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13098, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13190, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13566_PeerGroupGetEventData(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13099, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13191, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13567_PeerGroupGetProperties(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13100, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13192, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13568_PeerGroupGetRecord(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13101, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13193, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13569_PeerGroupGetStatus(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13102, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13194, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13570_PeerGroupImportConfig(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13103, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13195, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13571_PeerGroupImportDatabase(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13104, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13196, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13572_PeerGroupIssueCredentials(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13105, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13197, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13573_PeerGroupJoin(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13106, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13198, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13574_PeerGroupOpen(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13107, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13199, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13575_PeerGroupOpenDirectConnection(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13108, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13200, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13576_PeerGroupParseInvitation(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13109, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13201, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13577_PeerGroupPasswordJoin(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13110, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13202, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13578_PeerGroupPeerTimeToUniversalTime(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13111, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13203, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13579_PeerGroupRegisterEvent(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13112, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13204, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13580_PeerGroupResumePasswordAuthentication(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13113, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13205, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13581_PeerGroupSearchRecords(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13114, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13206, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13582_PeerGroupSendData(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13115, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13207, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13583_PeerGroupSetProperties(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13116, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13208, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13584_PeerGroupStartup(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13117, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13209, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13585_PeerGroupUniversalTimeToPeerTime(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13118, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13210, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13586_PeerGroupUnregisterEvent(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13119, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13211, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13587_PeerGroupUpdateRecord(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13120, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13212, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13588_PeerHostNameToPeerName(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13121, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13213, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13589_PeerIdentityCreate(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13122, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13214, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13590_PeerIdentityDelete(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13123, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13215, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13591_PeerIdentityExport(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13124, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13216, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13592_PeerIdentityGetCryptKey(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13125, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13217, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13593_PeerIdentityGetDefault(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13126, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13218, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13594_PeerIdentityGetFriendlyName(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13127, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13219, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13595_PeerIdentityGetXML(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13128, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13220, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13596_PeerIdentityImport(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13129, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13221, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13597_PeerIdentitySetFriendlyName(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13130, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13222, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13598_PeerNameToPeerHostName(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13131, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13223, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13599_PeerPnrpEndResolve(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13132, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13224, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13600_PeerPnrpGetCloudInfo(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13133, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13225, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13601_PeerPnrpGetEndpoint(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13134, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13226, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13602_PeerPnrpRegister(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13135, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13227, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13603_PeerPnrpResolve(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13136, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13228, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13604_PeerPnrpStartResolve(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13137, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13229, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13605_PeerPnrpStartup(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13138, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13230, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13606_PeerPnrpUnregister(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13139, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13231, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13607_PeerPnrpUpdateRegistration(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13140, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13232, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13608_PeerGraphAddRecord(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13141, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13233, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13609_PeerGraphClose(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13142, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13234, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13610_PeerGraphCloseDirectConnection(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13143, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13235, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13611_PeerGraphConnect(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13144, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13236, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13612_PeerGraphCreate(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13145, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13237, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13613_PeerGraphDelete(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13146, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13238, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13614_PeerGraphDeleteRecord(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13147, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13239, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13615_PeerGraphEndEnumeration(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13148, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13240, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13616_PeerGraphEnumConnections(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13149, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13241, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13617_PeerGraphEnumNodes(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13150, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13242, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13618_PeerGraphEnumRecords(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13151, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13243, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13619_PeerGraphExportDatabase(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13152, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13244, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13620_PeerGraphFreeData(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13153, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13245, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13621_PeerGraphGetEventData(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13154, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13246, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13622_PeerGraphGetItemCount(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13155, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13247, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13623_PeerGraphGetNextItem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13156, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13248, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13624_PeerGraphGetNodeInfo(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13157, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13249, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13625_PeerGraphGetProperties(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13158, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13250, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13626_PeerGraphGetRecord(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13159, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13251, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13627_PeerGraphGetStatus(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13160, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13252, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13628_PeerGraphImportDatabase(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13161, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13253, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13629_PeerGraphListen(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13162, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13254, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13630_PeerGraphOpen(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13163, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13255, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13631_PeerGraphOpenDirectConnection(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13164, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13256, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13632_PeerGraphPeerTimeToUniversalTime(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13165, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13257, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13633_PeerGraphRegisterEvent(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13166, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13258, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13634_PeerGraphSearchRecords(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13167, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13259, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13635_PeerGraphSendData(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13168, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13260, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13636_PeerGraphSetNodeAttributes(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13169, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13261, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13637_PeerGraphSetPresence(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13170, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13262, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13638_PeerGraphSetProperties(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13171, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13263, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13639_PeerGraphStartup(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13172, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13264, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13640_PeerGraphUniversalTimeToPeerTime(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13173, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13265, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13641_PeerGraphUnregisterEvent(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13174, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13266, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13642_PeerGraphUpdateRecord(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13175, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13267, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13643_PeerGraphValidateDeferredRecords(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13176, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13268, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13644_PdhAddCounterA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13177, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13269, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13645_PdhAddCounterW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13178, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13270, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13646_PdhAddEnglishCounterA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13179, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13271, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13647_PdhAddEnglishCounterW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13180, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13272, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13648_PdhBindInputDataSourceA(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13181, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13273, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13649_PdhBindInputDataSourceW(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13182, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13274, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13650_PdhBrowseCountersA(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13183, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13275, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13651_PdhBrowseCountersHA(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13184, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13276, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13652_PdhBrowseCountersHW(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13185, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13277, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13653_PdhBrowseCountersW(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13186, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13278, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13654_PdhCalculateCounterFromRawValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13187, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13279, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13655_PdhCloseLog(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13188, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13280, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13656_PdhCloseQuery(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13189, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13281, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13657_PdhCollectQueryData(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13190, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13282, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13658_PdhCollectQueryDataEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13191, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13283, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13659_PdhCollectQueryDataWithTime(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13192, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13284, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13660_PdhComputeCounterStatistics(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13193, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13285, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13661_PdhConnectMachineA(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13194, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13286, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13662_PdhConnectMachineW(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13195, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13287, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13663_PdhCreateSQLTablesA(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13196, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13288, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13664_PdhCreateSQLTablesW(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13197, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13289, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13665_PdhEnumLogSetNamesA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13198, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13290, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13666_PdhEnumLogSetNamesW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13199, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13291, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13667_PdhEnumMachinesA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13200, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13292, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13668_PdhEnumMachinesHA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13201, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13293, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13669_PdhEnumMachinesHW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13202, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13294, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13670_PdhEnumMachinesW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13203, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13295, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13671_PdhEnumObjectItemsA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7, std::uintptr_t arg8)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13204, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13296, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13672_PdhEnumObjectItemsHA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7, std::uintptr_t arg8)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13205, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13297, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13673_PdhEnumObjectItemsHW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7, std::uintptr_t arg8)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13206, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13298, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13674_PdhEnumObjectItemsW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7, std::uintptr_t arg8)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13207, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13299, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13675_PdhEnumObjectsA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13208, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13300, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13676_PdhEnumObjectsHA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13209, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13301, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13677_PdhEnumObjectsHW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13210, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13302, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13678_PdhEnumObjectsW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13211, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13303, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13679_PdhExpandCounterPathA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13212, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13304, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13680_PdhExpandCounterPathW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13213, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13305, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13681_PdhExpandWildCardPathA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13214, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13306, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13682_PdhExpandWildCardPathHA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13215, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13307, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13683_PdhExpandWildCardPathHW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13216, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13308, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13684_PdhExpandWildCardPathW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13217, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13309, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13685_PdhFormatFromRawValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13218, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13310, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13686_PdhGetCounterInfoA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13219, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13687_PdhGetCounterInfoW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13220, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13688_PdhGetCounterTimeBase(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13221, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13689_PdhGetDataSourceTimeRangeA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13222, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13690_PdhGetDataSourceTimeRangeH(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13223, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13691_PdhGetDataSourceTimeRangeW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13224, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13692_PdhGetDefaultPerfCounterA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13225, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13693_PdhGetDefaultPerfCounterHA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13226, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13694_PdhGetDefaultPerfCounterHW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13227, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13695_PdhGetDefaultPerfCounterW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13228, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13696_PdhGetDefaultPerfObjectA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13229, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13697_PdhGetDefaultPerfObjectHA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13230, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13698_PdhGetDefaultPerfObjectHW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13231, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13699_PdhGetDefaultPerfObjectW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13232, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13700_PdhGetDllVersion(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13233, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13701_PdhGetFormattedCounterArrayA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13234, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13702_PdhGetFormattedCounterArrayW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13235, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13703_PdhGetFormattedCounterValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13236, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13704_PdhGetLogFileSize(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13237, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13705_PdhGetLogSetGUID(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13238, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13706_PdhGetRawCounterArrayA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13239, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13707_PdhGetRawCounterArrayW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13240, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13708_PdhGetRawCounterValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13241, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13709_PdhIsRealTimeQuery(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13242, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13710_PdhLookupPerfIndexByNameA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13243, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13711_PdhLookupPerfIndexByNameW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13244, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13712_PdhLookupPerfNameByIndexA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13245, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13713_PdhLookupPerfNameByIndexW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13246, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13714_PdhMakeCounterPathA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13247, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13715_PdhMakeCounterPathW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13248, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13716_PdhOpenLogA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13249, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13717_PdhOpenLogW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13250, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13718_PdhOpenQueryA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13251, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13719_PdhOpenQueryH(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13252, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13720_PdhOpenQueryW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13253, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13721_PdhParseCounterPathA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13254, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13722_PdhParseCounterPathW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13255, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13723_PdhParseInstanceNameA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13256, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13724_PdhParseInstanceNameW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13257, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13725_PdhReadRawLogRecord(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13258, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13726_PdhRemoveCounter(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13259, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13727_PdhSelectDataSourceA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13260, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13728_PdhSelectDataSourceW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13261, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13729_PdhSetCounterScaleFactor(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13262, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13730_PdhSetDefaultRealTimeDataSource(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13263, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13731_PdhSetLogSetRunID(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13264, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13732_PdhSetQueryTimeRange(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13265, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13733_PdhUpdateLogA(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13266, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13734_PdhUpdateLogFileCatalog(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13267, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13735_PdhUpdateLogW(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13268, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13736_PdhValidatePathA(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13269, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13737_PdhValidatePathExA(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13270, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13738_PdhValidatePathExW(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13271, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13739_PdhValidatePathW(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13272, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13740_PdhVerifySQLDBA(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13273, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13741_PdhVerifySQLDBW(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13274, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13742_PeerDistClientAddContentInformation(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13275, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13743_PeerDistClientAddData(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13276, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13744_PeerDistClientBlockRead(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13277, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13745_PeerDistClientCancelAsyncOperation(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13278, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13746_PeerDistClientCloseContent(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13279, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13747_PeerDistClientCompleteContentInformation(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13280, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13748_PeerDistClientFlushContent(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13281, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13749_PeerDistClientGetInformationByHandle(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13282, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13750_PeerDistClientOpenContent(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13283, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13751_PeerDistClientStreamRead(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13284, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13752_PeerDistGetOverlappedResult(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13285, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13753_PeerDistGetStatus(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13286, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13754_PeerDistGetStatusEx(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13287, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13755_PeerDistRegisterForStatusChangeNotification(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13288, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13756_PeerDistRegisterForStatusChangeNotificationEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13289, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13757_PeerDistServerCancelAsyncOperation(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13290, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13758_PeerDistServerCloseContentInformation(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13291, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13759_PeerDistServerCloseStreamHandle(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13292, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13760_PeerDistServerOpenContentInformation(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13293, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13761_PeerDistServerOpenContentInformationEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7, std::uintptr_t arg8)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13294, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13762_PeerDistServerPublishAddToStream(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13295, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13763_PeerDistServerPublishCompleteStream(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13296, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13764_PeerDistServerPublishStream(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13297, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13765_PeerDistServerRetrieveContentInformation(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13298, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13766_PeerDistServerUnpublish(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13299, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13767_PeerDistShutdown(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13300, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13768_PeerDistStartup(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13301, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13769_PeerDistUnregisterForStatusChangeNotification(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13302, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13770_CallNtPowerInformation(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13303, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13771_DeletePwrScheme(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13304, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13772_DevicePowerEnumDevices(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13305, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13773_DevicePowerOpen(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13306, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13774_DevicePowerSetDeviceState(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13307, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13775_EnumPwrSchemes(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13308, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13776_GetActivePwrScheme(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13309, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13777_GetCurrentPowerPolicies(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13310, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi13778_GetPwrCapabilities(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13311, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13311, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 extern "C" void* KnMonGetGeneratedHookAddressChunk25(std::size_t localIndex)
@@ -2609,1029 +2617,1029 @@ extern "C" void* KnMonGetGeneratedHookAddressChunk25(std::size_t localIndex)
     switch (localIndex)
     {
     case 0:
-        return reinterpret_cast<void*>(HookedGeneratedApi13267_glColor4s);
+        return reinterpret_cast<void*>(HookedGeneratedApi13175_bcp_colfmt);
     case 1:
-        return reinterpret_cast<void*>(HookedGeneratedApi13268_glColor4sv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13176_bcp_collen);
     case 2:
-        return reinterpret_cast<void*>(HookedGeneratedApi13269_glColor4ub);
+        return reinterpret_cast<void*>(HookedGeneratedApi13177_bcp_colptr);
     case 3:
-        return reinterpret_cast<void*>(HookedGeneratedApi13270_glColor4ubv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13178_bcp_columns);
     case 4:
-        return reinterpret_cast<void*>(HookedGeneratedApi13271_glColor4ui);
+        return reinterpret_cast<void*>(HookedGeneratedApi13179_bcp_control);
     case 5:
-        return reinterpret_cast<void*>(HookedGeneratedApi13272_glColor4uiv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13180_bcp_done);
     case 6:
-        return reinterpret_cast<void*>(HookedGeneratedApi13273_glColor4us);
+        return reinterpret_cast<void*>(HookedGeneratedApi13181_bcp_exec);
     case 7:
-        return reinterpret_cast<void*>(HookedGeneratedApi13274_glColor4usv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13182_bcp_getcolfmt);
     case 8:
-        return reinterpret_cast<void*>(HookedGeneratedApi13275_glColorMask);
+        return reinterpret_cast<void*>(HookedGeneratedApi13183_bcp_initA);
     case 9:
-        return reinterpret_cast<void*>(HookedGeneratedApi13276_glColorMaterial);
+        return reinterpret_cast<void*>(HookedGeneratedApi13184_bcp_initW);
     case 10:
-        return reinterpret_cast<void*>(HookedGeneratedApi13277_glColorPointer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13185_bcp_moretext);
     case 11:
-        return reinterpret_cast<void*>(HookedGeneratedApi13278_glCopyPixels);
+        return reinterpret_cast<void*>(HookedGeneratedApi13186_bcp_readfmtA);
     case 12:
-        return reinterpret_cast<void*>(HookedGeneratedApi13279_glCopyTexImage1D);
+        return reinterpret_cast<void*>(HookedGeneratedApi13187_bcp_readfmtW);
     case 13:
-        return reinterpret_cast<void*>(HookedGeneratedApi13280_glCopyTexImage2D);
+        return reinterpret_cast<void*>(HookedGeneratedApi13188_bcp_sendrow);
     case 14:
-        return reinterpret_cast<void*>(HookedGeneratedApi13281_glCopyTexSubImage1D);
+        return reinterpret_cast<void*>(HookedGeneratedApi13189_bcp_setcolfmt);
     case 15:
-        return reinterpret_cast<void*>(HookedGeneratedApi13282_glCopyTexSubImage2D);
+        return reinterpret_cast<void*>(HookedGeneratedApi13190_bcp_writefmtA);
     case 16:
-        return reinterpret_cast<void*>(HookedGeneratedApi13283_glCullFace);
+        return reinterpret_cast<void*>(HookedGeneratedApi13191_bcp_writefmtW);
     case 17:
-        return reinterpret_cast<void*>(HookedGeneratedApi13284_glDeleteLists);
+        return reinterpret_cast<void*>(HookedGeneratedApi13192_dbprtypeA);
     case 18:
-        return reinterpret_cast<void*>(HookedGeneratedApi13285_glDeleteTextures);
+        return reinterpret_cast<void*>(HookedGeneratedApi13193_dbprtypeW);
     case 19:
-        return reinterpret_cast<void*>(HookedGeneratedApi13286_glDepthFunc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13194_SQLCloseEnumServers);
     case 20:
-        return reinterpret_cast<void*>(HookedGeneratedApi13287_glDepthMask);
+        return reinterpret_cast<void*>(HookedGeneratedApi13195_SQLGetNextEnumeration);
     case 21:
-        return reinterpret_cast<void*>(HookedGeneratedApi13288_glDisable);
+        return reinterpret_cast<void*>(HookedGeneratedApi13196_SQLInitEnumServers);
     case 22:
-        return reinterpret_cast<void*>(HookedGeneratedApi13289_glDisableClientState);
+        return reinterpret_cast<void*>(HookedGeneratedApi13197_SQLLinkedCatalogsA);
     case 23:
-        return reinterpret_cast<void*>(HookedGeneratedApi13290_glDrawArrays);
+        return reinterpret_cast<void*>(HookedGeneratedApi13198_SQLLinkedCatalogsW);
     case 24:
-        return reinterpret_cast<void*>(HookedGeneratedApi13291_glDrawBuffer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13199_SQLLinkedServers);
     case 25:
-        return reinterpret_cast<void*>(HookedGeneratedApi13292_glDrawElements);
+        return reinterpret_cast<void*>(HookedGeneratedApi13200_AccessibleObjectFromWindow);
     case 26:
-        return reinterpret_cast<void*>(HookedGeneratedApi13293_glDrawPixels);
+        return reinterpret_cast<void*>(HookedGeneratedApi13201_AccNotifyTouchInteraction);
     case 27:
-        return reinterpret_cast<void*>(HookedGeneratedApi13294_glEdgeFlag);
+        return reinterpret_cast<void*>(HookedGeneratedApi13202_AccSetRunningUtilityState);
     case 28:
-        return reinterpret_cast<void*>(HookedGeneratedApi13295_glEdgeFlagPointer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13203_CreateStdAccessibleObject);
     case 29:
-        return reinterpret_cast<void*>(HookedGeneratedApi13296_glEdgeFlagv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13204_CreateStdAccessibleProxyA);
     case 30:
-        return reinterpret_cast<void*>(HookedGeneratedApi13297_glEnable);
+        return reinterpret_cast<void*>(HookedGeneratedApi13205_CreateStdAccessibleProxyW);
     case 31:
-        return reinterpret_cast<void*>(HookedGeneratedApi13298_glEnableClientState);
+        return reinterpret_cast<void*>(HookedGeneratedApi13206_GetOleaccVersionInfo);
     case 32:
-        return reinterpret_cast<void*>(HookedGeneratedApi13299_glEvalCoord1dv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13207_GetProcessHandleFromHwnd);
     case 33:
-        return reinterpret_cast<void*>(HookedGeneratedApi13300_glEvalCoord1fv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13208_GetRoleTextA);
     case 34:
-        return reinterpret_cast<void*>(HookedGeneratedApi13301_glEvalCoord2dv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13209_GetRoleTextW);
     case 35:
-        return reinterpret_cast<void*>(HookedGeneratedApi13302_glEvalCoord2fv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13210_GetStateTextA);
     case 36:
-        return reinterpret_cast<void*>(HookedGeneratedApi13303_glEvalMesh1);
+        return reinterpret_cast<void*>(HookedGeneratedApi13211_GetStateTextW);
     case 37:
-        return reinterpret_cast<void*>(HookedGeneratedApi13304_glEvalMesh2);
+        return reinterpret_cast<void*>(HookedGeneratedApi13212_ObjectFromLresult);
     case 38:
-        return reinterpret_cast<void*>(HookedGeneratedApi13305_glEvalPoint1);
+        return reinterpret_cast<void*>(HookedGeneratedApi13213_OleUIBusyA);
     case 39:
-        return reinterpret_cast<void*>(HookedGeneratedApi13306_glEvalPoint2);
+        return reinterpret_cast<void*>(HookedGeneratedApi13214_OleUIBusyW);
     case 40:
-        return reinterpret_cast<void*>(HookedGeneratedApi13307_glFeedbackBuffer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13215_OleUICanConvertOrActivateAs);
     case 41:
-        return reinterpret_cast<void*>(HookedGeneratedApi13308_glFogfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13216_OleUIChangeIconA);
     case 42:
-        return reinterpret_cast<void*>(HookedGeneratedApi13309_glFogi);
+        return reinterpret_cast<void*>(HookedGeneratedApi13217_OleUIChangeIconW);
     case 43:
-        return reinterpret_cast<void*>(HookedGeneratedApi13310_glFogiv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13218_OleUIChangeSourceA);
     case 44:
-        return reinterpret_cast<void*>(HookedGeneratedApi13311_glFrontFace);
+        return reinterpret_cast<void*>(HookedGeneratedApi13219_OleUIChangeSourceW);
     case 45:
-        return reinterpret_cast<void*>(HookedGeneratedApi13312_glGenLists);
+        return reinterpret_cast<void*>(HookedGeneratedApi13220_OleUIConvertA);
     case 46:
-        return reinterpret_cast<void*>(HookedGeneratedApi13313_glGenTextures);
+        return reinterpret_cast<void*>(HookedGeneratedApi13221_OleUIConvertW);
     case 47:
-        return reinterpret_cast<void*>(HookedGeneratedApi13314_glGetBooleanv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13222_OleUIEditLinksA);
     case 48:
-        return reinterpret_cast<void*>(HookedGeneratedApi13315_glGetClipPlane);
+        return reinterpret_cast<void*>(HookedGeneratedApi13223_OleUIEditLinksW);
     case 49:
-        return reinterpret_cast<void*>(HookedGeneratedApi13316_glGetDoublev);
+        return reinterpret_cast<void*>(HookedGeneratedApi13224_OleUIInsertObjectA);
     case 50:
-        return reinterpret_cast<void*>(HookedGeneratedApi13317_glGetFloatv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13225_OleUIInsertObjectW);
     case 51:
-        return reinterpret_cast<void*>(HookedGeneratedApi13318_glGetIntegerv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13226_OleUIObjectPropertiesA);
     case 52:
-        return reinterpret_cast<void*>(HookedGeneratedApi13319_glGetLightfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13227_OleUIObjectPropertiesW);
     case 53:
-        return reinterpret_cast<void*>(HookedGeneratedApi13320_glGetLightiv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13228_OleUIPasteSpecialA);
     case 54:
-        return reinterpret_cast<void*>(HookedGeneratedApi13321_glGetMapdv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13229_OleUIPasteSpecialW);
     case 55:
-        return reinterpret_cast<void*>(HookedGeneratedApi13322_glGetMapfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13230_OleUIPromptUserA);
     case 56:
-        return reinterpret_cast<void*>(HookedGeneratedApi13323_glGetMapiv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13231_OleUIPromptUserW);
     case 57:
-        return reinterpret_cast<void*>(HookedGeneratedApi13324_glGetMaterialfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13232_FreeInterfaceContextTable);
     case 58:
-        return reinterpret_cast<void*>(HookedGeneratedApi13325_glGetMaterialiv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13233_GetInterfaceContextTableForHostName);
     case 59:
-        return reinterpret_cast<void*>(HookedGeneratedApi13326_glGetPixelMapfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13234_OnDemandGetRoutingHint);
     case 60:
-        return reinterpret_cast<void*>(HookedGeneratedApi13327_glGetPixelMapuiv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13235_OnDemandRegisterNotification);
     case 61:
-        return reinterpret_cast<void*>(HookedGeneratedApi13328_glGetPixelMapusv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13236_OnDemandUnRegisterNotification);
     case 62:
-        return reinterpret_cast<void*>(HookedGeneratedApi13329_glGetPointerv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13237_glAreTexturesResident);
     case 63:
-        return reinterpret_cast<void*>(HookedGeneratedApi13330_glGetPolygonStipple);
+        return reinterpret_cast<void*>(HookedGeneratedApi13238_glArrayElement);
     case 64:
-        return reinterpret_cast<void*>(HookedGeneratedApi13331_glGetString);
+        return reinterpret_cast<void*>(HookedGeneratedApi13239_glBegin);
     case 65:
-        return reinterpret_cast<void*>(HookedGeneratedApi13332_glGetTexEnvfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13240_glBindTexture);
     case 66:
-        return reinterpret_cast<void*>(HookedGeneratedApi13333_glGetTexEnviv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13241_glBlendFunc);
     case 67:
-        return reinterpret_cast<void*>(HookedGeneratedApi13334_glGetTexGendv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13242_glCallList);
     case 68:
-        return reinterpret_cast<void*>(HookedGeneratedApi13335_glGetTexGenfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13243_glCallLists);
     case 69:
-        return reinterpret_cast<void*>(HookedGeneratedApi13336_glGetTexGeniv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13244_glClear);
     case 70:
-        return reinterpret_cast<void*>(HookedGeneratedApi13337_glGetTexImage);
+        return reinterpret_cast<void*>(HookedGeneratedApi13245_glClearStencil);
     case 71:
-        return reinterpret_cast<void*>(HookedGeneratedApi13338_glGetTexLevelParameterfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13246_glClipPlane);
     case 72:
-        return reinterpret_cast<void*>(HookedGeneratedApi13339_glGetTexLevelParameteriv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13247_glColor3b);
     case 73:
-        return reinterpret_cast<void*>(HookedGeneratedApi13340_glGetTexParameterfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13248_glColor3bv);
     case 74:
-        return reinterpret_cast<void*>(HookedGeneratedApi13341_glGetTexParameteriv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13249_glColor3dv);
     case 75:
-        return reinterpret_cast<void*>(HookedGeneratedApi13342_glHint);
+        return reinterpret_cast<void*>(HookedGeneratedApi13250_glColor3fv);
     case 76:
-        return reinterpret_cast<void*>(HookedGeneratedApi13343_glIndexdv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13251_glColor3i);
     case 77:
-        return reinterpret_cast<void*>(HookedGeneratedApi13344_glIndexfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13252_glColor3iv);
     case 78:
-        return reinterpret_cast<void*>(HookedGeneratedApi13345_glIndexi);
+        return reinterpret_cast<void*>(HookedGeneratedApi13253_glColor3s);
     case 79:
-        return reinterpret_cast<void*>(HookedGeneratedApi13346_glIndexiv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13254_glColor3sv);
     case 80:
-        return reinterpret_cast<void*>(HookedGeneratedApi13347_glIndexMask);
+        return reinterpret_cast<void*>(HookedGeneratedApi13255_glColor3ub);
     case 81:
-        return reinterpret_cast<void*>(HookedGeneratedApi13348_glIndexPointer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13256_glColor3ubv);
     case 82:
-        return reinterpret_cast<void*>(HookedGeneratedApi13349_glIndexs);
+        return reinterpret_cast<void*>(HookedGeneratedApi13257_glColor3ui);
     case 83:
-        return reinterpret_cast<void*>(HookedGeneratedApi13350_glIndexsv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13258_glColor3uiv);
     case 84:
-        return reinterpret_cast<void*>(HookedGeneratedApi13351_glIndexub);
+        return reinterpret_cast<void*>(HookedGeneratedApi13259_glColor3us);
     case 85:
-        return reinterpret_cast<void*>(HookedGeneratedApi13352_glIndexubv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13260_glColor3usv);
     case 86:
-        return reinterpret_cast<void*>(HookedGeneratedApi13353_glInterleavedArrays);
+        return reinterpret_cast<void*>(HookedGeneratedApi13261_glColor4b);
     case 87:
-        return reinterpret_cast<void*>(HookedGeneratedApi13354_glIsEnabled);
+        return reinterpret_cast<void*>(HookedGeneratedApi13262_glColor4bv);
     case 88:
-        return reinterpret_cast<void*>(HookedGeneratedApi13355_glIsList);
+        return reinterpret_cast<void*>(HookedGeneratedApi13263_glColor4dv);
     case 89:
-        return reinterpret_cast<void*>(HookedGeneratedApi13356_glIsTexture);
+        return reinterpret_cast<void*>(HookedGeneratedApi13264_glColor4fv);
     case 90:
-        return reinterpret_cast<void*>(HookedGeneratedApi13357_glLightfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13265_glColor4i);
     case 91:
-        return reinterpret_cast<void*>(HookedGeneratedApi13358_glLighti);
+        return reinterpret_cast<void*>(HookedGeneratedApi13266_glColor4iv);
     case 92:
-        return reinterpret_cast<void*>(HookedGeneratedApi13359_glLightiv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13267_glColor4s);
     case 93:
-        return reinterpret_cast<void*>(HookedGeneratedApi13360_glLightModelfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13268_glColor4sv);
     case 94:
-        return reinterpret_cast<void*>(HookedGeneratedApi13361_glLightModeli);
+        return reinterpret_cast<void*>(HookedGeneratedApi13269_glColor4ub);
     case 95:
-        return reinterpret_cast<void*>(HookedGeneratedApi13362_glLightModeliv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13270_glColor4ubv);
     case 96:
-        return reinterpret_cast<void*>(HookedGeneratedApi13363_glLineStipple);
+        return reinterpret_cast<void*>(HookedGeneratedApi13271_glColor4ui);
     case 97:
-        return reinterpret_cast<void*>(HookedGeneratedApi13364_glListBase);
+        return reinterpret_cast<void*>(HookedGeneratedApi13272_glColor4uiv);
     case 98:
-        return reinterpret_cast<void*>(HookedGeneratedApi13365_glLoadMatrixd);
+        return reinterpret_cast<void*>(HookedGeneratedApi13273_glColor4us);
     case 99:
-        return reinterpret_cast<void*>(HookedGeneratedApi13366_glLoadMatrixf);
+        return reinterpret_cast<void*>(HookedGeneratedApi13274_glColor4usv);
     case 100:
-        return reinterpret_cast<void*>(HookedGeneratedApi13367_glLoadName);
+        return reinterpret_cast<void*>(HookedGeneratedApi13275_glColorMask);
     case 101:
-        return reinterpret_cast<void*>(HookedGeneratedApi13368_glLogicOp);
+        return reinterpret_cast<void*>(HookedGeneratedApi13276_glColorMaterial);
     case 102:
-        return reinterpret_cast<void*>(HookedGeneratedApi13369_glMaterialfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13277_glColorPointer);
     case 103:
-        return reinterpret_cast<void*>(HookedGeneratedApi13370_glMateriali);
+        return reinterpret_cast<void*>(HookedGeneratedApi13278_glCopyPixels);
     case 104:
-        return reinterpret_cast<void*>(HookedGeneratedApi13371_glMaterialiv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13279_glCopyTexImage1D);
     case 105:
-        return reinterpret_cast<void*>(HookedGeneratedApi13372_glMatrixMode);
+        return reinterpret_cast<void*>(HookedGeneratedApi13280_glCopyTexImage2D);
     case 106:
-        return reinterpret_cast<void*>(HookedGeneratedApi13373_glMultMatrixd);
+        return reinterpret_cast<void*>(HookedGeneratedApi13281_glCopyTexSubImage1D);
     case 107:
-        return reinterpret_cast<void*>(HookedGeneratedApi13374_glMultMatrixf);
+        return reinterpret_cast<void*>(HookedGeneratedApi13282_glCopyTexSubImage2D);
     case 108:
-        return reinterpret_cast<void*>(HookedGeneratedApi13375_glNewList);
+        return reinterpret_cast<void*>(HookedGeneratedApi13283_glCullFace);
     case 109:
-        return reinterpret_cast<void*>(HookedGeneratedApi13376_glNormal3b);
+        return reinterpret_cast<void*>(HookedGeneratedApi13284_glDeleteLists);
     case 110:
-        return reinterpret_cast<void*>(HookedGeneratedApi13377_glNormal3bv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13285_glDeleteTextures);
     case 111:
-        return reinterpret_cast<void*>(HookedGeneratedApi13378_glNormal3dv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13286_glDepthFunc);
     case 112:
-        return reinterpret_cast<void*>(HookedGeneratedApi13379_glNormal3fv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13287_glDepthMask);
     case 113:
-        return reinterpret_cast<void*>(HookedGeneratedApi13380_glNormal3i);
+        return reinterpret_cast<void*>(HookedGeneratedApi13288_glDisable);
     case 114:
-        return reinterpret_cast<void*>(HookedGeneratedApi13381_glNormal3iv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13289_glDisableClientState);
     case 115:
-        return reinterpret_cast<void*>(HookedGeneratedApi13382_glNormal3s);
+        return reinterpret_cast<void*>(HookedGeneratedApi13290_glDrawArrays);
     case 116:
-        return reinterpret_cast<void*>(HookedGeneratedApi13383_glNormal3sv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13291_glDrawBuffer);
     case 117:
-        return reinterpret_cast<void*>(HookedGeneratedApi13384_glNormalPointer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13292_glDrawElements);
     case 118:
-        return reinterpret_cast<void*>(HookedGeneratedApi13385_glPixelMapfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13293_glDrawPixels);
     case 119:
-        return reinterpret_cast<void*>(HookedGeneratedApi13386_glPixelMapuiv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13294_glEdgeFlag);
     case 120:
-        return reinterpret_cast<void*>(HookedGeneratedApi13387_glPixelMapusv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13295_glEdgeFlagPointer);
     case 121:
-        return reinterpret_cast<void*>(HookedGeneratedApi13388_glPixelStorei);
+        return reinterpret_cast<void*>(HookedGeneratedApi13296_glEdgeFlagv);
     case 122:
-        return reinterpret_cast<void*>(HookedGeneratedApi13389_glPixelTransferi);
+        return reinterpret_cast<void*>(HookedGeneratedApi13297_glEnable);
     case 123:
-        return reinterpret_cast<void*>(HookedGeneratedApi13390_glPolygonMode);
+        return reinterpret_cast<void*>(HookedGeneratedApi13298_glEnableClientState);
     case 124:
-        return reinterpret_cast<void*>(HookedGeneratedApi13391_glPolygonStipple);
+        return reinterpret_cast<void*>(HookedGeneratedApi13299_glEvalCoord1dv);
     case 125:
-        return reinterpret_cast<void*>(HookedGeneratedApi13392_glPrioritizeTextures);
+        return reinterpret_cast<void*>(HookedGeneratedApi13300_glEvalCoord1fv);
     case 126:
-        return reinterpret_cast<void*>(HookedGeneratedApi13393_glPushAttrib);
+        return reinterpret_cast<void*>(HookedGeneratedApi13301_glEvalCoord2dv);
     case 127:
-        return reinterpret_cast<void*>(HookedGeneratedApi13394_glPushClientAttrib);
+        return reinterpret_cast<void*>(HookedGeneratedApi13302_glEvalCoord2fv);
     case 128:
-        return reinterpret_cast<void*>(HookedGeneratedApi13395_glPushName);
+        return reinterpret_cast<void*>(HookedGeneratedApi13303_glEvalMesh1);
     case 129:
-        return reinterpret_cast<void*>(HookedGeneratedApi13396_glRasterPos2dv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13304_glEvalMesh2);
     case 130:
-        return reinterpret_cast<void*>(HookedGeneratedApi13397_glRasterPos2fv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13305_glEvalPoint1);
     case 131:
-        return reinterpret_cast<void*>(HookedGeneratedApi13398_glRasterPos2i);
+        return reinterpret_cast<void*>(HookedGeneratedApi13306_glEvalPoint2);
     case 132:
-        return reinterpret_cast<void*>(HookedGeneratedApi13399_glRasterPos2iv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13307_glFeedbackBuffer);
     case 133:
-        return reinterpret_cast<void*>(HookedGeneratedApi13400_glRasterPos2s);
+        return reinterpret_cast<void*>(HookedGeneratedApi13308_glFogfv);
     case 134:
-        return reinterpret_cast<void*>(HookedGeneratedApi13401_glRasterPos2sv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13309_glFogi);
     case 135:
-        return reinterpret_cast<void*>(HookedGeneratedApi13402_glRasterPos3dv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13310_glFogiv);
     case 136:
-        return reinterpret_cast<void*>(HookedGeneratedApi13403_glRasterPos3fv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13311_glFrontFace);
     case 137:
-        return reinterpret_cast<void*>(HookedGeneratedApi13404_glRasterPos3i);
+        return reinterpret_cast<void*>(HookedGeneratedApi13312_glGenLists);
     case 138:
-        return reinterpret_cast<void*>(HookedGeneratedApi13405_glRasterPos3iv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13313_glGenTextures);
     case 139:
-        return reinterpret_cast<void*>(HookedGeneratedApi13406_glRasterPos3s);
+        return reinterpret_cast<void*>(HookedGeneratedApi13314_glGetBooleanv);
     case 140:
-        return reinterpret_cast<void*>(HookedGeneratedApi13407_glRasterPos3sv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13315_glGetClipPlane);
     case 141:
-        return reinterpret_cast<void*>(HookedGeneratedApi13408_glRasterPos4dv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13316_glGetDoublev);
     case 142:
-        return reinterpret_cast<void*>(HookedGeneratedApi13409_glRasterPos4fv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13317_glGetFloatv);
     case 143:
-        return reinterpret_cast<void*>(HookedGeneratedApi13410_glRasterPos4i);
+        return reinterpret_cast<void*>(HookedGeneratedApi13318_glGetIntegerv);
     case 144:
-        return reinterpret_cast<void*>(HookedGeneratedApi13411_glRasterPos4iv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13319_glGetLightfv);
     case 145:
-        return reinterpret_cast<void*>(HookedGeneratedApi13412_glRasterPos4s);
+        return reinterpret_cast<void*>(HookedGeneratedApi13320_glGetLightiv);
     case 146:
-        return reinterpret_cast<void*>(HookedGeneratedApi13413_glRasterPos4sv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13321_glGetMapdv);
     case 147:
-        return reinterpret_cast<void*>(HookedGeneratedApi13414_glReadBuffer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13322_glGetMapfv);
     case 148:
-        return reinterpret_cast<void*>(HookedGeneratedApi13415_glReadPixels);
+        return reinterpret_cast<void*>(HookedGeneratedApi13323_glGetMapiv);
     case 149:
-        return reinterpret_cast<void*>(HookedGeneratedApi13416_glRectdv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13324_glGetMaterialfv);
     case 150:
-        return reinterpret_cast<void*>(HookedGeneratedApi13417_glRectfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13325_glGetMaterialiv);
     case 151:
-        return reinterpret_cast<void*>(HookedGeneratedApi13418_glRecti);
+        return reinterpret_cast<void*>(HookedGeneratedApi13326_glGetPixelMapfv);
     case 152:
-        return reinterpret_cast<void*>(HookedGeneratedApi13419_glRectiv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13327_glGetPixelMapuiv);
     case 153:
-        return reinterpret_cast<void*>(HookedGeneratedApi13420_glRects);
+        return reinterpret_cast<void*>(HookedGeneratedApi13328_glGetPixelMapusv);
     case 154:
-        return reinterpret_cast<void*>(HookedGeneratedApi13421_glRectsv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13329_glGetPointerv);
     case 155:
-        return reinterpret_cast<void*>(HookedGeneratedApi13422_glRenderMode);
+        return reinterpret_cast<void*>(HookedGeneratedApi13330_glGetPolygonStipple);
     case 156:
-        return reinterpret_cast<void*>(HookedGeneratedApi13423_glScissor);
+        return reinterpret_cast<void*>(HookedGeneratedApi13331_glGetString);
     case 157:
-        return reinterpret_cast<void*>(HookedGeneratedApi13424_glSelectBuffer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13332_glGetTexEnvfv);
     case 158:
-        return reinterpret_cast<void*>(HookedGeneratedApi13425_glShadeModel);
+        return reinterpret_cast<void*>(HookedGeneratedApi13333_glGetTexEnviv);
     case 159:
-        return reinterpret_cast<void*>(HookedGeneratedApi13426_glStencilFunc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13334_glGetTexGendv);
     case 160:
-        return reinterpret_cast<void*>(HookedGeneratedApi13427_glStencilMask);
+        return reinterpret_cast<void*>(HookedGeneratedApi13335_glGetTexGenfv);
     case 161:
-        return reinterpret_cast<void*>(HookedGeneratedApi13428_glStencilOp);
+        return reinterpret_cast<void*>(HookedGeneratedApi13336_glGetTexGeniv);
     case 162:
-        return reinterpret_cast<void*>(HookedGeneratedApi13429_glTexCoord1dv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13337_glGetTexImage);
     case 163:
-        return reinterpret_cast<void*>(HookedGeneratedApi13430_glTexCoord1fv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13338_glGetTexLevelParameterfv);
     case 164:
-        return reinterpret_cast<void*>(HookedGeneratedApi13431_glTexCoord1i);
+        return reinterpret_cast<void*>(HookedGeneratedApi13339_glGetTexLevelParameteriv);
     case 165:
-        return reinterpret_cast<void*>(HookedGeneratedApi13432_glTexCoord1iv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13340_glGetTexParameterfv);
     case 166:
-        return reinterpret_cast<void*>(HookedGeneratedApi13433_glTexCoord1s);
+        return reinterpret_cast<void*>(HookedGeneratedApi13341_glGetTexParameteriv);
     case 167:
-        return reinterpret_cast<void*>(HookedGeneratedApi13434_glTexCoord1sv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13342_glHint);
     case 168:
-        return reinterpret_cast<void*>(HookedGeneratedApi13435_glTexCoord2dv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13343_glIndexdv);
     case 169:
-        return reinterpret_cast<void*>(HookedGeneratedApi13436_glTexCoord2fv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13344_glIndexfv);
     case 170:
-        return reinterpret_cast<void*>(HookedGeneratedApi13437_glTexCoord2i);
+        return reinterpret_cast<void*>(HookedGeneratedApi13345_glIndexi);
     case 171:
-        return reinterpret_cast<void*>(HookedGeneratedApi13438_glTexCoord2iv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13346_glIndexiv);
     case 172:
-        return reinterpret_cast<void*>(HookedGeneratedApi13439_glTexCoord2s);
+        return reinterpret_cast<void*>(HookedGeneratedApi13347_glIndexMask);
     case 173:
-        return reinterpret_cast<void*>(HookedGeneratedApi13440_glTexCoord2sv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13348_glIndexPointer);
     case 174:
-        return reinterpret_cast<void*>(HookedGeneratedApi13441_glTexCoord3dv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13349_glIndexs);
     case 175:
-        return reinterpret_cast<void*>(HookedGeneratedApi13442_glTexCoord3fv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13350_glIndexsv);
     case 176:
-        return reinterpret_cast<void*>(HookedGeneratedApi13443_glTexCoord3i);
+        return reinterpret_cast<void*>(HookedGeneratedApi13351_glIndexub);
     case 177:
-        return reinterpret_cast<void*>(HookedGeneratedApi13444_glTexCoord3iv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13352_glIndexubv);
     case 178:
-        return reinterpret_cast<void*>(HookedGeneratedApi13445_glTexCoord3s);
+        return reinterpret_cast<void*>(HookedGeneratedApi13353_glInterleavedArrays);
     case 179:
-        return reinterpret_cast<void*>(HookedGeneratedApi13446_glTexCoord3sv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13354_glIsEnabled);
     case 180:
-        return reinterpret_cast<void*>(HookedGeneratedApi13447_glTexCoord4dv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13355_glIsList);
     case 181:
-        return reinterpret_cast<void*>(HookedGeneratedApi13448_glTexCoord4fv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13356_glIsTexture);
     case 182:
-        return reinterpret_cast<void*>(HookedGeneratedApi13449_glTexCoord4i);
+        return reinterpret_cast<void*>(HookedGeneratedApi13357_glLightfv);
     case 183:
-        return reinterpret_cast<void*>(HookedGeneratedApi13450_glTexCoord4iv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13358_glLighti);
     case 184:
-        return reinterpret_cast<void*>(HookedGeneratedApi13451_glTexCoord4s);
+        return reinterpret_cast<void*>(HookedGeneratedApi13359_glLightiv);
     case 185:
-        return reinterpret_cast<void*>(HookedGeneratedApi13452_glTexCoord4sv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13360_glLightModelfv);
     case 186:
-        return reinterpret_cast<void*>(HookedGeneratedApi13453_glTexCoordPointer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13361_glLightModeli);
     case 187:
-        return reinterpret_cast<void*>(HookedGeneratedApi13454_glTexEnvfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13362_glLightModeliv);
     case 188:
-        return reinterpret_cast<void*>(HookedGeneratedApi13455_glTexEnvi);
+        return reinterpret_cast<void*>(HookedGeneratedApi13363_glLineStipple);
     case 189:
-        return reinterpret_cast<void*>(HookedGeneratedApi13456_glTexEnviv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13364_glListBase);
     case 190:
-        return reinterpret_cast<void*>(HookedGeneratedApi13457_glTexGendv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13365_glLoadMatrixd);
     case 191:
-        return reinterpret_cast<void*>(HookedGeneratedApi13458_glTexGenfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13366_glLoadMatrixf);
     case 192:
-        return reinterpret_cast<void*>(HookedGeneratedApi13459_glTexGeni);
+        return reinterpret_cast<void*>(HookedGeneratedApi13367_glLoadName);
     case 193:
-        return reinterpret_cast<void*>(HookedGeneratedApi13460_glTexGeniv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13368_glLogicOp);
     case 194:
-        return reinterpret_cast<void*>(HookedGeneratedApi13461_glTexImage1D);
+        return reinterpret_cast<void*>(HookedGeneratedApi13369_glMaterialfv);
     case 195:
-        return reinterpret_cast<void*>(HookedGeneratedApi13462_glTexImage2D);
+        return reinterpret_cast<void*>(HookedGeneratedApi13370_glMateriali);
     case 196:
-        return reinterpret_cast<void*>(HookedGeneratedApi13463_glTexParameterfv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13371_glMaterialiv);
     case 197:
-        return reinterpret_cast<void*>(HookedGeneratedApi13464_glTexParameteri);
+        return reinterpret_cast<void*>(HookedGeneratedApi13372_glMatrixMode);
     case 198:
-        return reinterpret_cast<void*>(HookedGeneratedApi13465_glTexParameteriv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13373_glMultMatrixd);
     case 199:
-        return reinterpret_cast<void*>(HookedGeneratedApi13466_glTexSubImage1D);
+        return reinterpret_cast<void*>(HookedGeneratedApi13374_glMultMatrixf);
     case 200:
-        return reinterpret_cast<void*>(HookedGeneratedApi13467_glTexSubImage2D);
+        return reinterpret_cast<void*>(HookedGeneratedApi13375_glNewList);
     case 201:
-        return reinterpret_cast<void*>(HookedGeneratedApi13468_glVertex2dv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13376_glNormal3b);
     case 202:
-        return reinterpret_cast<void*>(HookedGeneratedApi13469_glVertex2fv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13377_glNormal3bv);
     case 203:
-        return reinterpret_cast<void*>(HookedGeneratedApi13470_glVertex2i);
+        return reinterpret_cast<void*>(HookedGeneratedApi13378_glNormal3dv);
     case 204:
-        return reinterpret_cast<void*>(HookedGeneratedApi13471_glVertex2iv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13379_glNormal3fv);
     case 205:
-        return reinterpret_cast<void*>(HookedGeneratedApi13472_glVertex2s);
+        return reinterpret_cast<void*>(HookedGeneratedApi13380_glNormal3i);
     case 206:
-        return reinterpret_cast<void*>(HookedGeneratedApi13473_glVertex2sv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13381_glNormal3iv);
     case 207:
-        return reinterpret_cast<void*>(HookedGeneratedApi13474_glVertex3dv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13382_glNormal3s);
     case 208:
-        return reinterpret_cast<void*>(HookedGeneratedApi13475_glVertex3fv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13383_glNormal3sv);
     case 209:
-        return reinterpret_cast<void*>(HookedGeneratedApi13476_glVertex3i);
+        return reinterpret_cast<void*>(HookedGeneratedApi13384_glNormalPointer);
     case 210:
-        return reinterpret_cast<void*>(HookedGeneratedApi13477_glVertex3iv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13385_glPixelMapfv);
     case 211:
-        return reinterpret_cast<void*>(HookedGeneratedApi13478_glVertex3s);
+        return reinterpret_cast<void*>(HookedGeneratedApi13386_glPixelMapuiv);
     case 212:
-        return reinterpret_cast<void*>(HookedGeneratedApi13479_glVertex3sv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13387_glPixelMapusv);
     case 213:
-        return reinterpret_cast<void*>(HookedGeneratedApi13480_glVertex4dv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13388_glPixelStorei);
     case 214:
-        return reinterpret_cast<void*>(HookedGeneratedApi13481_glVertex4fv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13389_glPixelTransferi);
     case 215:
-        return reinterpret_cast<void*>(HookedGeneratedApi13482_glVertex4i);
+        return reinterpret_cast<void*>(HookedGeneratedApi13390_glPolygonMode);
     case 216:
-        return reinterpret_cast<void*>(HookedGeneratedApi13483_glVertex4iv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13391_glPolygonStipple);
     case 217:
-        return reinterpret_cast<void*>(HookedGeneratedApi13484_glVertex4s);
+        return reinterpret_cast<void*>(HookedGeneratedApi13392_glPrioritizeTextures);
     case 218:
-        return reinterpret_cast<void*>(HookedGeneratedApi13485_glVertex4sv);
+        return reinterpret_cast<void*>(HookedGeneratedApi13393_glPushAttrib);
     case 219:
-        return reinterpret_cast<void*>(HookedGeneratedApi13486_glVertexPointer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13394_glPushClientAttrib);
     case 220:
-        return reinterpret_cast<void*>(HookedGeneratedApi13487_glViewport);
+        return reinterpret_cast<void*>(HookedGeneratedApi13395_glPushName);
     case 221:
-        return reinterpret_cast<void*>(HookedGeneratedApi13488_wglCopyContext);
+        return reinterpret_cast<void*>(HookedGeneratedApi13396_glRasterPos2dv);
     case 222:
-        return reinterpret_cast<void*>(HookedGeneratedApi13489_wglCreateContext);
+        return reinterpret_cast<void*>(HookedGeneratedApi13397_glRasterPos2fv);
     case 223:
-        return reinterpret_cast<void*>(HookedGeneratedApi13490_wglCreateLayerContext);
+        return reinterpret_cast<void*>(HookedGeneratedApi13398_glRasterPos2i);
     case 224:
-        return reinterpret_cast<void*>(HookedGeneratedApi13491_wglDeleteContext);
+        return reinterpret_cast<void*>(HookedGeneratedApi13399_glRasterPos2iv);
     case 225:
-        return reinterpret_cast<void*>(HookedGeneratedApi13492_wglDescribeLayerPlane);
+        return reinterpret_cast<void*>(HookedGeneratedApi13400_glRasterPos2s);
     case 226:
-        return reinterpret_cast<void*>(HookedGeneratedApi13493_wglGetLayerPaletteEntries);
+        return reinterpret_cast<void*>(HookedGeneratedApi13401_glRasterPos2sv);
     case 227:
-        return reinterpret_cast<void*>(HookedGeneratedApi13494_wglGetProcAddress);
+        return reinterpret_cast<void*>(HookedGeneratedApi13402_glRasterPos3dv);
     case 228:
-        return reinterpret_cast<void*>(HookedGeneratedApi13495_wglMakeCurrent);
+        return reinterpret_cast<void*>(HookedGeneratedApi13403_glRasterPos3fv);
     case 229:
-        return reinterpret_cast<void*>(HookedGeneratedApi13496_wglRealizeLayerPalette);
+        return reinterpret_cast<void*>(HookedGeneratedApi13404_glRasterPos3i);
     case 230:
-        return reinterpret_cast<void*>(HookedGeneratedApi13497_wglSetLayerPaletteEntries);
+        return reinterpret_cast<void*>(HookedGeneratedApi13405_glRasterPos3iv);
     case 231:
-        return reinterpret_cast<void*>(HookedGeneratedApi13498_wglShareLists);
+        return reinterpret_cast<void*>(HookedGeneratedApi13406_glRasterPos3s);
     case 232:
-        return reinterpret_cast<void*>(HookedGeneratedApi13499_wglSwapLayerBuffers);
+        return reinterpret_cast<void*>(HookedGeneratedApi13407_glRasterPos3sv);
     case 233:
-        return reinterpret_cast<void*>(HookedGeneratedApi13500_wglSwapMultipleBuffers);
+        return reinterpret_cast<void*>(HookedGeneratedApi13408_glRasterPos4dv);
     case 234:
-        return reinterpret_cast<void*>(HookedGeneratedApi13501_wglUseFontBitmapsA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13409_glRasterPos4fv);
     case 235:
-        return reinterpret_cast<void*>(HookedGeneratedApi13502_wglUseFontBitmapsW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13410_glRasterPos4i);
     case 236:
-        return reinterpret_cast<void*>(HookedGeneratedApi13503_PeerCollabAddContact);
+        return reinterpret_cast<void*>(HookedGeneratedApi13411_glRasterPos4iv);
     case 237:
-        return reinterpret_cast<void*>(HookedGeneratedApi13504_PeerCollabAsyncInviteContact);
+        return reinterpret_cast<void*>(HookedGeneratedApi13412_glRasterPos4s);
     case 238:
-        return reinterpret_cast<void*>(HookedGeneratedApi13505_PeerCollabAsyncInviteEndpoint);
+        return reinterpret_cast<void*>(HookedGeneratedApi13413_glRasterPos4sv);
     case 239:
-        return reinterpret_cast<void*>(HookedGeneratedApi13506_PeerCollabCancelInvitation);
+        return reinterpret_cast<void*>(HookedGeneratedApi13414_glReadBuffer);
     case 240:
-        return reinterpret_cast<void*>(HookedGeneratedApi13507_PeerCollabCloseHandle);
+        return reinterpret_cast<void*>(HookedGeneratedApi13415_glReadPixels);
     case 241:
-        return reinterpret_cast<void*>(HookedGeneratedApi13508_PeerCollabDeleteContact);
+        return reinterpret_cast<void*>(HookedGeneratedApi13416_glRectdv);
     case 242:
-        return reinterpret_cast<void*>(HookedGeneratedApi13509_PeerCollabDeleteEndpointData);
+        return reinterpret_cast<void*>(HookedGeneratedApi13417_glRectfv);
     case 243:
-        return reinterpret_cast<void*>(HookedGeneratedApi13510_PeerCollabDeleteObject);
+        return reinterpret_cast<void*>(HookedGeneratedApi13418_glRecti);
     case 244:
-        return reinterpret_cast<void*>(HookedGeneratedApi13511_PeerCollabEnumApplicationRegistrationInfo);
+        return reinterpret_cast<void*>(HookedGeneratedApi13419_glRectiv);
     case 245:
-        return reinterpret_cast<void*>(HookedGeneratedApi13512_PeerCollabEnumApplications);
+        return reinterpret_cast<void*>(HookedGeneratedApi13420_glRects);
     case 246:
-        return reinterpret_cast<void*>(HookedGeneratedApi13513_PeerCollabEnumContacts);
+        return reinterpret_cast<void*>(HookedGeneratedApi13421_glRectsv);
     case 247:
-        return reinterpret_cast<void*>(HookedGeneratedApi13514_PeerCollabEnumEndpoints);
+        return reinterpret_cast<void*>(HookedGeneratedApi13422_glRenderMode);
     case 248:
-        return reinterpret_cast<void*>(HookedGeneratedApi13515_PeerCollabEnumObjects);
+        return reinterpret_cast<void*>(HookedGeneratedApi13423_glScissor);
     case 249:
-        return reinterpret_cast<void*>(HookedGeneratedApi13516_PeerCollabEnumPeopleNearMe);
+        return reinterpret_cast<void*>(HookedGeneratedApi13424_glSelectBuffer);
     case 250:
-        return reinterpret_cast<void*>(HookedGeneratedApi13517_PeerCollabExportContact);
+        return reinterpret_cast<void*>(HookedGeneratedApi13425_glShadeModel);
     case 251:
-        return reinterpret_cast<void*>(HookedGeneratedApi13518_PeerCollabGetAppLaunchInfo);
+        return reinterpret_cast<void*>(HookedGeneratedApi13426_glStencilFunc);
     case 252:
-        return reinterpret_cast<void*>(HookedGeneratedApi13519_PeerCollabGetApplicationRegistrationInfo);
+        return reinterpret_cast<void*>(HookedGeneratedApi13427_glStencilMask);
     case 253:
-        return reinterpret_cast<void*>(HookedGeneratedApi13520_PeerCollabGetContact);
+        return reinterpret_cast<void*>(HookedGeneratedApi13428_glStencilOp);
     case 254:
-        return reinterpret_cast<void*>(HookedGeneratedApi13521_PeerCollabGetEndpointName);
+        return reinterpret_cast<void*>(HookedGeneratedApi13429_glTexCoord1dv);
     case 255:
-        return reinterpret_cast<void*>(HookedGeneratedApi13522_PeerCollabGetEventData);
+        return reinterpret_cast<void*>(HookedGeneratedApi13430_glTexCoord1fv);
     case 256:
-        return reinterpret_cast<void*>(HookedGeneratedApi13523_PeerCollabGetInvitationResponse);
+        return reinterpret_cast<void*>(HookedGeneratedApi13431_glTexCoord1i);
     case 257:
-        return reinterpret_cast<void*>(HookedGeneratedApi13524_PeerCollabGetPresenceInfo);
+        return reinterpret_cast<void*>(HookedGeneratedApi13432_glTexCoord1iv);
     case 258:
-        return reinterpret_cast<void*>(HookedGeneratedApi13525_PeerCollabGetSigninOptions);
+        return reinterpret_cast<void*>(HookedGeneratedApi13433_glTexCoord1s);
     case 259:
-        return reinterpret_cast<void*>(HookedGeneratedApi13526_PeerCollabInviteContact);
+        return reinterpret_cast<void*>(HookedGeneratedApi13434_glTexCoord1sv);
     case 260:
-        return reinterpret_cast<void*>(HookedGeneratedApi13527_PeerCollabInviteEndpoint);
+        return reinterpret_cast<void*>(HookedGeneratedApi13435_glTexCoord2dv);
     case 261:
-        return reinterpret_cast<void*>(HookedGeneratedApi13528_PeerCollabParseContact);
+        return reinterpret_cast<void*>(HookedGeneratedApi13436_glTexCoord2fv);
     case 262:
-        return reinterpret_cast<void*>(HookedGeneratedApi13529_PeerCollabQueryContactData);
+        return reinterpret_cast<void*>(HookedGeneratedApi13437_glTexCoord2i);
     case 263:
-        return reinterpret_cast<void*>(HookedGeneratedApi13530_PeerCollabRefreshEndpointData);
+        return reinterpret_cast<void*>(HookedGeneratedApi13438_glTexCoord2iv);
     case 264:
-        return reinterpret_cast<void*>(HookedGeneratedApi13531_PeerCollabRegisterApplication);
+        return reinterpret_cast<void*>(HookedGeneratedApi13439_glTexCoord2s);
     case 265:
-        return reinterpret_cast<void*>(HookedGeneratedApi13532_PeerCollabRegisterEvent);
+        return reinterpret_cast<void*>(HookedGeneratedApi13440_glTexCoord2sv);
     case 266:
-        return reinterpret_cast<void*>(HookedGeneratedApi13533_PeerCollabSetEndpointName);
+        return reinterpret_cast<void*>(HookedGeneratedApi13441_glTexCoord3dv);
     case 267:
-        return reinterpret_cast<void*>(HookedGeneratedApi13534_PeerCollabSetObject);
+        return reinterpret_cast<void*>(HookedGeneratedApi13442_glTexCoord3fv);
     case 268:
-        return reinterpret_cast<void*>(HookedGeneratedApi13535_PeerCollabSetPresenceInfo);
+        return reinterpret_cast<void*>(HookedGeneratedApi13443_glTexCoord3i);
     case 269:
-        return reinterpret_cast<void*>(HookedGeneratedApi13536_PeerCollabSignin);
+        return reinterpret_cast<void*>(HookedGeneratedApi13444_glTexCoord3iv);
     case 270:
-        return reinterpret_cast<void*>(HookedGeneratedApi13537_PeerCollabSignout);
+        return reinterpret_cast<void*>(HookedGeneratedApi13445_glTexCoord3s);
     case 271:
-        return reinterpret_cast<void*>(HookedGeneratedApi13538_PeerCollabStartup);
+        return reinterpret_cast<void*>(HookedGeneratedApi13446_glTexCoord3sv);
     case 272:
-        return reinterpret_cast<void*>(HookedGeneratedApi13539_PeerCollabSubscribeEndpointData);
+        return reinterpret_cast<void*>(HookedGeneratedApi13447_glTexCoord4dv);
     case 273:
-        return reinterpret_cast<void*>(HookedGeneratedApi13540_PeerCollabUnregisterApplication);
+        return reinterpret_cast<void*>(HookedGeneratedApi13448_glTexCoord4fv);
     case 274:
-        return reinterpret_cast<void*>(HookedGeneratedApi13541_PeerCollabUnregisterEvent);
+        return reinterpret_cast<void*>(HookedGeneratedApi13449_glTexCoord4i);
     case 275:
-        return reinterpret_cast<void*>(HookedGeneratedApi13542_PeerCollabUnsubscribeEndpointData);
+        return reinterpret_cast<void*>(HookedGeneratedApi13450_glTexCoord4iv);
     case 276:
-        return reinterpret_cast<void*>(HookedGeneratedApi13543_PeerCollabUpdateContact);
+        return reinterpret_cast<void*>(HookedGeneratedApi13451_glTexCoord4s);
     case 277:
-        return reinterpret_cast<void*>(HookedGeneratedApi13544_PeerCreatePeerName);
+        return reinterpret_cast<void*>(HookedGeneratedApi13452_glTexCoord4sv);
     case 278:
-        return reinterpret_cast<void*>(HookedGeneratedApi13545_PeerEndEnumeration);
+        return reinterpret_cast<void*>(HookedGeneratedApi13453_glTexCoordPointer);
     case 279:
-        return reinterpret_cast<void*>(HookedGeneratedApi13546_PeerEnumGroups);
+        return reinterpret_cast<void*>(HookedGeneratedApi13454_glTexEnvfv);
     case 280:
-        return reinterpret_cast<void*>(HookedGeneratedApi13547_PeerEnumIdentities);
+        return reinterpret_cast<void*>(HookedGeneratedApi13455_glTexEnvi);
     case 281:
-        return reinterpret_cast<void*>(HookedGeneratedApi13548_PeerFreeData);
+        return reinterpret_cast<void*>(HookedGeneratedApi13456_glTexEnviv);
     case 282:
-        return reinterpret_cast<void*>(HookedGeneratedApi13549_PeerGetItemCount);
+        return reinterpret_cast<void*>(HookedGeneratedApi13457_glTexGendv);
     case 283:
-        return reinterpret_cast<void*>(HookedGeneratedApi13550_PeerGetNextItem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13458_glTexGenfv);
     case 284:
-        return reinterpret_cast<void*>(HookedGeneratedApi13551_PeerGroupAddRecord);
+        return reinterpret_cast<void*>(HookedGeneratedApi13459_glTexGeni);
     case 285:
-        return reinterpret_cast<void*>(HookedGeneratedApi13552_PeerGroupClose);
+        return reinterpret_cast<void*>(HookedGeneratedApi13460_glTexGeniv);
     case 286:
-        return reinterpret_cast<void*>(HookedGeneratedApi13553_PeerGroupCloseDirectConnection);
+        return reinterpret_cast<void*>(HookedGeneratedApi13461_glTexImage1D);
     case 287:
-        return reinterpret_cast<void*>(HookedGeneratedApi13554_PeerGroupConnect);
+        return reinterpret_cast<void*>(HookedGeneratedApi13462_glTexImage2D);
     case 288:
-        return reinterpret_cast<void*>(HookedGeneratedApi13555_PeerGroupConnectByAddress);
+        return reinterpret_cast<void*>(HookedGeneratedApi13463_glTexParameterfv);
     case 289:
-        return reinterpret_cast<void*>(HookedGeneratedApi13556_PeerGroupCreate);
+        return reinterpret_cast<void*>(HookedGeneratedApi13464_glTexParameteri);
     case 290:
-        return reinterpret_cast<void*>(HookedGeneratedApi13557_PeerGroupCreateInvitation);
+        return reinterpret_cast<void*>(HookedGeneratedApi13465_glTexParameteriv);
     case 291:
-        return reinterpret_cast<void*>(HookedGeneratedApi13558_PeerGroupCreatePasswordInvitation);
+        return reinterpret_cast<void*>(HookedGeneratedApi13466_glTexSubImage1D);
     case 292:
-        return reinterpret_cast<void*>(HookedGeneratedApi13559_PeerGroupDelete);
+        return reinterpret_cast<void*>(HookedGeneratedApi13467_glTexSubImage2D);
     case 293:
-        return reinterpret_cast<void*>(HookedGeneratedApi13560_PeerGroupDeleteRecord);
+        return reinterpret_cast<void*>(HookedGeneratedApi13468_glVertex2dv);
     case 294:
-        return reinterpret_cast<void*>(HookedGeneratedApi13561_PeerGroupEnumConnections);
+        return reinterpret_cast<void*>(HookedGeneratedApi13469_glVertex2fv);
     case 295:
-        return reinterpret_cast<void*>(HookedGeneratedApi13562_PeerGroupEnumMembers);
+        return reinterpret_cast<void*>(HookedGeneratedApi13470_glVertex2i);
     case 296:
-        return reinterpret_cast<void*>(HookedGeneratedApi13563_PeerGroupEnumRecords);
+        return reinterpret_cast<void*>(HookedGeneratedApi13471_glVertex2iv);
     case 297:
-        return reinterpret_cast<void*>(HookedGeneratedApi13564_PeerGroupExportConfig);
+        return reinterpret_cast<void*>(HookedGeneratedApi13472_glVertex2s);
     case 298:
-        return reinterpret_cast<void*>(HookedGeneratedApi13565_PeerGroupExportDatabase);
+        return reinterpret_cast<void*>(HookedGeneratedApi13473_glVertex2sv);
     case 299:
-        return reinterpret_cast<void*>(HookedGeneratedApi13566_PeerGroupGetEventData);
+        return reinterpret_cast<void*>(HookedGeneratedApi13474_glVertex3dv);
     case 300:
-        return reinterpret_cast<void*>(HookedGeneratedApi13567_PeerGroupGetProperties);
+        return reinterpret_cast<void*>(HookedGeneratedApi13475_glVertex3fv);
     case 301:
-        return reinterpret_cast<void*>(HookedGeneratedApi13568_PeerGroupGetRecord);
+        return reinterpret_cast<void*>(HookedGeneratedApi13476_glVertex3i);
     case 302:
-        return reinterpret_cast<void*>(HookedGeneratedApi13569_PeerGroupGetStatus);
+        return reinterpret_cast<void*>(HookedGeneratedApi13477_glVertex3iv);
     case 303:
-        return reinterpret_cast<void*>(HookedGeneratedApi13570_PeerGroupImportConfig);
+        return reinterpret_cast<void*>(HookedGeneratedApi13478_glVertex3s);
     case 304:
-        return reinterpret_cast<void*>(HookedGeneratedApi13571_PeerGroupImportDatabase);
+        return reinterpret_cast<void*>(HookedGeneratedApi13479_glVertex3sv);
     case 305:
-        return reinterpret_cast<void*>(HookedGeneratedApi13572_PeerGroupIssueCredentials);
+        return reinterpret_cast<void*>(HookedGeneratedApi13480_glVertex4dv);
     case 306:
-        return reinterpret_cast<void*>(HookedGeneratedApi13573_PeerGroupJoin);
+        return reinterpret_cast<void*>(HookedGeneratedApi13481_glVertex4fv);
     case 307:
-        return reinterpret_cast<void*>(HookedGeneratedApi13574_PeerGroupOpen);
+        return reinterpret_cast<void*>(HookedGeneratedApi13482_glVertex4i);
     case 308:
-        return reinterpret_cast<void*>(HookedGeneratedApi13575_PeerGroupOpenDirectConnection);
+        return reinterpret_cast<void*>(HookedGeneratedApi13483_glVertex4iv);
     case 309:
-        return reinterpret_cast<void*>(HookedGeneratedApi13576_PeerGroupParseInvitation);
+        return reinterpret_cast<void*>(HookedGeneratedApi13484_glVertex4s);
     case 310:
-        return reinterpret_cast<void*>(HookedGeneratedApi13577_PeerGroupPasswordJoin);
+        return reinterpret_cast<void*>(HookedGeneratedApi13485_glVertex4sv);
     case 311:
-        return reinterpret_cast<void*>(HookedGeneratedApi13578_PeerGroupPeerTimeToUniversalTime);
+        return reinterpret_cast<void*>(HookedGeneratedApi13486_glVertexPointer);
     case 312:
-        return reinterpret_cast<void*>(HookedGeneratedApi13579_PeerGroupRegisterEvent);
+        return reinterpret_cast<void*>(HookedGeneratedApi13487_glViewport);
     case 313:
-        return reinterpret_cast<void*>(HookedGeneratedApi13580_PeerGroupResumePasswordAuthentication);
+        return reinterpret_cast<void*>(HookedGeneratedApi13488_wglCopyContext);
     case 314:
-        return reinterpret_cast<void*>(HookedGeneratedApi13581_PeerGroupSearchRecords);
+        return reinterpret_cast<void*>(HookedGeneratedApi13489_wglCreateContext);
     case 315:
-        return reinterpret_cast<void*>(HookedGeneratedApi13582_PeerGroupSendData);
+        return reinterpret_cast<void*>(HookedGeneratedApi13490_wglCreateLayerContext);
     case 316:
-        return reinterpret_cast<void*>(HookedGeneratedApi13583_PeerGroupSetProperties);
+        return reinterpret_cast<void*>(HookedGeneratedApi13491_wglDeleteContext);
     case 317:
-        return reinterpret_cast<void*>(HookedGeneratedApi13584_PeerGroupStartup);
+        return reinterpret_cast<void*>(HookedGeneratedApi13492_wglDescribeLayerPlane);
     case 318:
-        return reinterpret_cast<void*>(HookedGeneratedApi13585_PeerGroupUniversalTimeToPeerTime);
+        return reinterpret_cast<void*>(HookedGeneratedApi13493_wglGetLayerPaletteEntries);
     case 319:
-        return reinterpret_cast<void*>(HookedGeneratedApi13586_PeerGroupUnregisterEvent);
+        return reinterpret_cast<void*>(HookedGeneratedApi13494_wglGetProcAddress);
     case 320:
-        return reinterpret_cast<void*>(HookedGeneratedApi13587_PeerGroupUpdateRecord);
+        return reinterpret_cast<void*>(HookedGeneratedApi13495_wglMakeCurrent);
     case 321:
-        return reinterpret_cast<void*>(HookedGeneratedApi13588_PeerHostNameToPeerName);
+        return reinterpret_cast<void*>(HookedGeneratedApi13496_wglRealizeLayerPalette);
     case 322:
-        return reinterpret_cast<void*>(HookedGeneratedApi13589_PeerIdentityCreate);
+        return reinterpret_cast<void*>(HookedGeneratedApi13497_wglSetLayerPaletteEntries);
     case 323:
-        return reinterpret_cast<void*>(HookedGeneratedApi13590_PeerIdentityDelete);
+        return reinterpret_cast<void*>(HookedGeneratedApi13498_wglShareLists);
     case 324:
-        return reinterpret_cast<void*>(HookedGeneratedApi13591_PeerIdentityExport);
+        return reinterpret_cast<void*>(HookedGeneratedApi13499_wglSwapLayerBuffers);
     case 325:
-        return reinterpret_cast<void*>(HookedGeneratedApi13592_PeerIdentityGetCryptKey);
+        return reinterpret_cast<void*>(HookedGeneratedApi13500_wglSwapMultipleBuffers);
     case 326:
-        return reinterpret_cast<void*>(HookedGeneratedApi13593_PeerIdentityGetDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13501_wglUseFontBitmapsA);
     case 327:
-        return reinterpret_cast<void*>(HookedGeneratedApi13594_PeerIdentityGetFriendlyName);
+        return reinterpret_cast<void*>(HookedGeneratedApi13502_wglUseFontBitmapsW);
     case 328:
-        return reinterpret_cast<void*>(HookedGeneratedApi13595_PeerIdentityGetXML);
+        return reinterpret_cast<void*>(HookedGeneratedApi13503_PeerCollabAddContact);
     case 329:
-        return reinterpret_cast<void*>(HookedGeneratedApi13596_PeerIdentityImport);
+        return reinterpret_cast<void*>(HookedGeneratedApi13504_PeerCollabAsyncInviteContact);
     case 330:
-        return reinterpret_cast<void*>(HookedGeneratedApi13597_PeerIdentitySetFriendlyName);
+        return reinterpret_cast<void*>(HookedGeneratedApi13505_PeerCollabAsyncInviteEndpoint);
     case 331:
-        return reinterpret_cast<void*>(HookedGeneratedApi13598_PeerNameToPeerHostName);
+        return reinterpret_cast<void*>(HookedGeneratedApi13506_PeerCollabCancelInvitation);
     case 332:
-        return reinterpret_cast<void*>(HookedGeneratedApi13599_PeerPnrpEndResolve);
+        return reinterpret_cast<void*>(HookedGeneratedApi13507_PeerCollabCloseHandle);
     case 333:
-        return reinterpret_cast<void*>(HookedGeneratedApi13600_PeerPnrpGetCloudInfo);
+        return reinterpret_cast<void*>(HookedGeneratedApi13508_PeerCollabDeleteContact);
     case 334:
-        return reinterpret_cast<void*>(HookedGeneratedApi13601_PeerPnrpGetEndpoint);
+        return reinterpret_cast<void*>(HookedGeneratedApi13509_PeerCollabDeleteEndpointData);
     case 335:
-        return reinterpret_cast<void*>(HookedGeneratedApi13602_PeerPnrpRegister);
+        return reinterpret_cast<void*>(HookedGeneratedApi13510_PeerCollabDeleteObject);
     case 336:
-        return reinterpret_cast<void*>(HookedGeneratedApi13603_PeerPnrpResolve);
+        return reinterpret_cast<void*>(HookedGeneratedApi13511_PeerCollabEnumApplicationRegistrationInfo);
     case 337:
-        return reinterpret_cast<void*>(HookedGeneratedApi13604_PeerPnrpStartResolve);
+        return reinterpret_cast<void*>(HookedGeneratedApi13512_PeerCollabEnumApplications);
     case 338:
-        return reinterpret_cast<void*>(HookedGeneratedApi13605_PeerPnrpStartup);
+        return reinterpret_cast<void*>(HookedGeneratedApi13513_PeerCollabEnumContacts);
     case 339:
-        return reinterpret_cast<void*>(HookedGeneratedApi13606_PeerPnrpUnregister);
+        return reinterpret_cast<void*>(HookedGeneratedApi13514_PeerCollabEnumEndpoints);
     case 340:
-        return reinterpret_cast<void*>(HookedGeneratedApi13607_PeerPnrpUpdateRegistration);
+        return reinterpret_cast<void*>(HookedGeneratedApi13515_PeerCollabEnumObjects);
     case 341:
-        return reinterpret_cast<void*>(HookedGeneratedApi13608_PeerGraphAddRecord);
+        return reinterpret_cast<void*>(HookedGeneratedApi13516_PeerCollabEnumPeopleNearMe);
     case 342:
-        return reinterpret_cast<void*>(HookedGeneratedApi13609_PeerGraphClose);
+        return reinterpret_cast<void*>(HookedGeneratedApi13517_PeerCollabExportContact);
     case 343:
-        return reinterpret_cast<void*>(HookedGeneratedApi13610_PeerGraphCloseDirectConnection);
+        return reinterpret_cast<void*>(HookedGeneratedApi13518_PeerCollabGetAppLaunchInfo);
     case 344:
-        return reinterpret_cast<void*>(HookedGeneratedApi13611_PeerGraphConnect);
+        return reinterpret_cast<void*>(HookedGeneratedApi13519_PeerCollabGetApplicationRegistrationInfo);
     case 345:
-        return reinterpret_cast<void*>(HookedGeneratedApi13612_PeerGraphCreate);
+        return reinterpret_cast<void*>(HookedGeneratedApi13520_PeerCollabGetContact);
     case 346:
-        return reinterpret_cast<void*>(HookedGeneratedApi13613_PeerGraphDelete);
+        return reinterpret_cast<void*>(HookedGeneratedApi13521_PeerCollabGetEndpointName);
     case 347:
-        return reinterpret_cast<void*>(HookedGeneratedApi13614_PeerGraphDeleteRecord);
+        return reinterpret_cast<void*>(HookedGeneratedApi13522_PeerCollabGetEventData);
     case 348:
-        return reinterpret_cast<void*>(HookedGeneratedApi13615_PeerGraphEndEnumeration);
+        return reinterpret_cast<void*>(HookedGeneratedApi13523_PeerCollabGetInvitationResponse);
     case 349:
-        return reinterpret_cast<void*>(HookedGeneratedApi13616_PeerGraphEnumConnections);
+        return reinterpret_cast<void*>(HookedGeneratedApi13524_PeerCollabGetPresenceInfo);
     case 350:
-        return reinterpret_cast<void*>(HookedGeneratedApi13617_PeerGraphEnumNodes);
+        return reinterpret_cast<void*>(HookedGeneratedApi13525_PeerCollabGetSigninOptions);
     case 351:
-        return reinterpret_cast<void*>(HookedGeneratedApi13618_PeerGraphEnumRecords);
+        return reinterpret_cast<void*>(HookedGeneratedApi13526_PeerCollabInviteContact);
     case 352:
-        return reinterpret_cast<void*>(HookedGeneratedApi13619_PeerGraphExportDatabase);
+        return reinterpret_cast<void*>(HookedGeneratedApi13527_PeerCollabInviteEndpoint);
     case 353:
-        return reinterpret_cast<void*>(HookedGeneratedApi13620_PeerGraphFreeData);
+        return reinterpret_cast<void*>(HookedGeneratedApi13528_PeerCollabParseContact);
     case 354:
-        return reinterpret_cast<void*>(HookedGeneratedApi13621_PeerGraphGetEventData);
+        return reinterpret_cast<void*>(HookedGeneratedApi13529_PeerCollabQueryContactData);
     case 355:
-        return reinterpret_cast<void*>(HookedGeneratedApi13622_PeerGraphGetItemCount);
+        return reinterpret_cast<void*>(HookedGeneratedApi13530_PeerCollabRefreshEndpointData);
     case 356:
-        return reinterpret_cast<void*>(HookedGeneratedApi13623_PeerGraphGetNextItem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13531_PeerCollabRegisterApplication);
     case 357:
-        return reinterpret_cast<void*>(HookedGeneratedApi13624_PeerGraphGetNodeInfo);
+        return reinterpret_cast<void*>(HookedGeneratedApi13532_PeerCollabRegisterEvent);
     case 358:
-        return reinterpret_cast<void*>(HookedGeneratedApi13625_PeerGraphGetProperties);
+        return reinterpret_cast<void*>(HookedGeneratedApi13533_PeerCollabSetEndpointName);
     case 359:
-        return reinterpret_cast<void*>(HookedGeneratedApi13626_PeerGraphGetRecord);
+        return reinterpret_cast<void*>(HookedGeneratedApi13534_PeerCollabSetObject);
     case 360:
-        return reinterpret_cast<void*>(HookedGeneratedApi13627_PeerGraphGetStatus);
+        return reinterpret_cast<void*>(HookedGeneratedApi13535_PeerCollabSetPresenceInfo);
     case 361:
-        return reinterpret_cast<void*>(HookedGeneratedApi13628_PeerGraphImportDatabase);
+        return reinterpret_cast<void*>(HookedGeneratedApi13536_PeerCollabSignin);
     case 362:
-        return reinterpret_cast<void*>(HookedGeneratedApi13629_PeerGraphListen);
+        return reinterpret_cast<void*>(HookedGeneratedApi13537_PeerCollabSignout);
     case 363:
-        return reinterpret_cast<void*>(HookedGeneratedApi13630_PeerGraphOpen);
+        return reinterpret_cast<void*>(HookedGeneratedApi13538_PeerCollabStartup);
     case 364:
-        return reinterpret_cast<void*>(HookedGeneratedApi13631_PeerGraphOpenDirectConnection);
+        return reinterpret_cast<void*>(HookedGeneratedApi13539_PeerCollabSubscribeEndpointData);
     case 365:
-        return reinterpret_cast<void*>(HookedGeneratedApi13632_PeerGraphPeerTimeToUniversalTime);
+        return reinterpret_cast<void*>(HookedGeneratedApi13540_PeerCollabUnregisterApplication);
     case 366:
-        return reinterpret_cast<void*>(HookedGeneratedApi13633_PeerGraphRegisterEvent);
+        return reinterpret_cast<void*>(HookedGeneratedApi13541_PeerCollabUnregisterEvent);
     case 367:
-        return reinterpret_cast<void*>(HookedGeneratedApi13634_PeerGraphSearchRecords);
+        return reinterpret_cast<void*>(HookedGeneratedApi13542_PeerCollabUnsubscribeEndpointData);
     case 368:
-        return reinterpret_cast<void*>(HookedGeneratedApi13635_PeerGraphSendData);
+        return reinterpret_cast<void*>(HookedGeneratedApi13543_PeerCollabUpdateContact);
     case 369:
-        return reinterpret_cast<void*>(HookedGeneratedApi13636_PeerGraphSetNodeAttributes);
+        return reinterpret_cast<void*>(HookedGeneratedApi13544_PeerCreatePeerName);
     case 370:
-        return reinterpret_cast<void*>(HookedGeneratedApi13637_PeerGraphSetPresence);
+        return reinterpret_cast<void*>(HookedGeneratedApi13545_PeerEndEnumeration);
     case 371:
-        return reinterpret_cast<void*>(HookedGeneratedApi13638_PeerGraphSetProperties);
+        return reinterpret_cast<void*>(HookedGeneratedApi13546_PeerEnumGroups);
     case 372:
-        return reinterpret_cast<void*>(HookedGeneratedApi13639_PeerGraphStartup);
+        return reinterpret_cast<void*>(HookedGeneratedApi13547_PeerEnumIdentities);
     case 373:
-        return reinterpret_cast<void*>(HookedGeneratedApi13640_PeerGraphUniversalTimeToPeerTime);
+        return reinterpret_cast<void*>(HookedGeneratedApi13548_PeerFreeData);
     case 374:
-        return reinterpret_cast<void*>(HookedGeneratedApi13641_PeerGraphUnregisterEvent);
+        return reinterpret_cast<void*>(HookedGeneratedApi13549_PeerGetItemCount);
     case 375:
-        return reinterpret_cast<void*>(HookedGeneratedApi13642_PeerGraphUpdateRecord);
+        return reinterpret_cast<void*>(HookedGeneratedApi13550_PeerGetNextItem);
     case 376:
-        return reinterpret_cast<void*>(HookedGeneratedApi13643_PeerGraphValidateDeferredRecords);
+        return reinterpret_cast<void*>(HookedGeneratedApi13551_PeerGroupAddRecord);
     case 377:
-        return reinterpret_cast<void*>(HookedGeneratedApi13644_PdhAddCounterA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13552_PeerGroupClose);
     case 378:
-        return reinterpret_cast<void*>(HookedGeneratedApi13645_PdhAddCounterW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13553_PeerGroupCloseDirectConnection);
     case 379:
-        return reinterpret_cast<void*>(HookedGeneratedApi13646_PdhAddEnglishCounterA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13554_PeerGroupConnect);
     case 380:
-        return reinterpret_cast<void*>(HookedGeneratedApi13647_PdhAddEnglishCounterW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13555_PeerGroupConnectByAddress);
     case 381:
-        return reinterpret_cast<void*>(HookedGeneratedApi13648_PdhBindInputDataSourceA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13556_PeerGroupCreate);
     case 382:
-        return reinterpret_cast<void*>(HookedGeneratedApi13649_PdhBindInputDataSourceW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13557_PeerGroupCreateInvitation);
     case 383:
-        return reinterpret_cast<void*>(HookedGeneratedApi13650_PdhBrowseCountersA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13558_PeerGroupCreatePasswordInvitation);
     case 384:
-        return reinterpret_cast<void*>(HookedGeneratedApi13651_PdhBrowseCountersHA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13559_PeerGroupDelete);
     case 385:
-        return reinterpret_cast<void*>(HookedGeneratedApi13652_PdhBrowseCountersHW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13560_PeerGroupDeleteRecord);
     case 386:
-        return reinterpret_cast<void*>(HookedGeneratedApi13653_PdhBrowseCountersW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13561_PeerGroupEnumConnections);
     case 387:
-        return reinterpret_cast<void*>(HookedGeneratedApi13654_PdhCalculateCounterFromRawValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi13562_PeerGroupEnumMembers);
     case 388:
-        return reinterpret_cast<void*>(HookedGeneratedApi13655_PdhCloseLog);
+        return reinterpret_cast<void*>(HookedGeneratedApi13563_PeerGroupEnumRecords);
     case 389:
-        return reinterpret_cast<void*>(HookedGeneratedApi13656_PdhCloseQuery);
+        return reinterpret_cast<void*>(HookedGeneratedApi13564_PeerGroupExportConfig);
     case 390:
-        return reinterpret_cast<void*>(HookedGeneratedApi13657_PdhCollectQueryData);
+        return reinterpret_cast<void*>(HookedGeneratedApi13565_PeerGroupExportDatabase);
     case 391:
-        return reinterpret_cast<void*>(HookedGeneratedApi13658_PdhCollectQueryDataEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi13566_PeerGroupGetEventData);
     case 392:
-        return reinterpret_cast<void*>(HookedGeneratedApi13659_PdhCollectQueryDataWithTime);
+        return reinterpret_cast<void*>(HookedGeneratedApi13567_PeerGroupGetProperties);
     case 393:
-        return reinterpret_cast<void*>(HookedGeneratedApi13660_PdhComputeCounterStatistics);
+        return reinterpret_cast<void*>(HookedGeneratedApi13568_PeerGroupGetRecord);
     case 394:
-        return reinterpret_cast<void*>(HookedGeneratedApi13661_PdhConnectMachineA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13569_PeerGroupGetStatus);
     case 395:
-        return reinterpret_cast<void*>(HookedGeneratedApi13662_PdhConnectMachineW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13570_PeerGroupImportConfig);
     case 396:
-        return reinterpret_cast<void*>(HookedGeneratedApi13663_PdhCreateSQLTablesA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13571_PeerGroupImportDatabase);
     case 397:
-        return reinterpret_cast<void*>(HookedGeneratedApi13664_PdhCreateSQLTablesW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13572_PeerGroupIssueCredentials);
     case 398:
-        return reinterpret_cast<void*>(HookedGeneratedApi13665_PdhEnumLogSetNamesA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13573_PeerGroupJoin);
     case 399:
-        return reinterpret_cast<void*>(HookedGeneratedApi13666_PdhEnumLogSetNamesW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13574_PeerGroupOpen);
     case 400:
-        return reinterpret_cast<void*>(HookedGeneratedApi13667_PdhEnumMachinesA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13575_PeerGroupOpenDirectConnection);
     case 401:
-        return reinterpret_cast<void*>(HookedGeneratedApi13668_PdhEnumMachinesHA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13576_PeerGroupParseInvitation);
     case 402:
-        return reinterpret_cast<void*>(HookedGeneratedApi13669_PdhEnumMachinesHW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13577_PeerGroupPasswordJoin);
     case 403:
-        return reinterpret_cast<void*>(HookedGeneratedApi13670_PdhEnumMachinesW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13578_PeerGroupPeerTimeToUniversalTime);
     case 404:
-        return reinterpret_cast<void*>(HookedGeneratedApi13671_PdhEnumObjectItemsA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13579_PeerGroupRegisterEvent);
     case 405:
-        return reinterpret_cast<void*>(HookedGeneratedApi13672_PdhEnumObjectItemsHA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13580_PeerGroupResumePasswordAuthentication);
     case 406:
-        return reinterpret_cast<void*>(HookedGeneratedApi13673_PdhEnumObjectItemsHW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13581_PeerGroupSearchRecords);
     case 407:
-        return reinterpret_cast<void*>(HookedGeneratedApi13674_PdhEnumObjectItemsW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13582_PeerGroupSendData);
     case 408:
-        return reinterpret_cast<void*>(HookedGeneratedApi13675_PdhEnumObjectsA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13583_PeerGroupSetProperties);
     case 409:
-        return reinterpret_cast<void*>(HookedGeneratedApi13676_PdhEnumObjectsHA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13584_PeerGroupStartup);
     case 410:
-        return reinterpret_cast<void*>(HookedGeneratedApi13677_PdhEnumObjectsHW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13585_PeerGroupUniversalTimeToPeerTime);
     case 411:
-        return reinterpret_cast<void*>(HookedGeneratedApi13678_PdhEnumObjectsW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13586_PeerGroupUnregisterEvent);
     case 412:
-        return reinterpret_cast<void*>(HookedGeneratedApi13679_PdhExpandCounterPathA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13587_PeerGroupUpdateRecord);
     case 413:
-        return reinterpret_cast<void*>(HookedGeneratedApi13680_PdhExpandCounterPathW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13588_PeerHostNameToPeerName);
     case 414:
-        return reinterpret_cast<void*>(HookedGeneratedApi13681_PdhExpandWildCardPathA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13589_PeerIdentityCreate);
     case 415:
-        return reinterpret_cast<void*>(HookedGeneratedApi13682_PdhExpandWildCardPathHA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13590_PeerIdentityDelete);
     case 416:
-        return reinterpret_cast<void*>(HookedGeneratedApi13683_PdhExpandWildCardPathHW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13591_PeerIdentityExport);
     case 417:
-        return reinterpret_cast<void*>(HookedGeneratedApi13684_PdhExpandWildCardPathW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13592_PeerIdentityGetCryptKey);
     case 418:
-        return reinterpret_cast<void*>(HookedGeneratedApi13685_PdhFormatFromRawValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi13593_PeerIdentityGetDefault);
     case 419:
-        return reinterpret_cast<void*>(HookedGeneratedApi13686_PdhGetCounterInfoA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13594_PeerIdentityGetFriendlyName);
     case 420:
-        return reinterpret_cast<void*>(HookedGeneratedApi13687_PdhGetCounterInfoW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13595_PeerIdentityGetXML);
     case 421:
-        return reinterpret_cast<void*>(HookedGeneratedApi13688_PdhGetCounterTimeBase);
+        return reinterpret_cast<void*>(HookedGeneratedApi13596_PeerIdentityImport);
     case 422:
-        return reinterpret_cast<void*>(HookedGeneratedApi13689_PdhGetDataSourceTimeRangeA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13597_PeerIdentitySetFriendlyName);
     case 423:
-        return reinterpret_cast<void*>(HookedGeneratedApi13690_PdhGetDataSourceTimeRangeH);
+        return reinterpret_cast<void*>(HookedGeneratedApi13598_PeerNameToPeerHostName);
     case 424:
-        return reinterpret_cast<void*>(HookedGeneratedApi13691_PdhGetDataSourceTimeRangeW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13599_PeerPnrpEndResolve);
     case 425:
-        return reinterpret_cast<void*>(HookedGeneratedApi13692_PdhGetDefaultPerfCounterA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13600_PeerPnrpGetCloudInfo);
     case 426:
-        return reinterpret_cast<void*>(HookedGeneratedApi13693_PdhGetDefaultPerfCounterHA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13601_PeerPnrpGetEndpoint);
     case 427:
-        return reinterpret_cast<void*>(HookedGeneratedApi13694_PdhGetDefaultPerfCounterHW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13602_PeerPnrpRegister);
     case 428:
-        return reinterpret_cast<void*>(HookedGeneratedApi13695_PdhGetDefaultPerfCounterW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13603_PeerPnrpResolve);
     case 429:
-        return reinterpret_cast<void*>(HookedGeneratedApi13696_PdhGetDefaultPerfObjectA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13604_PeerPnrpStartResolve);
     case 430:
-        return reinterpret_cast<void*>(HookedGeneratedApi13697_PdhGetDefaultPerfObjectHA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13605_PeerPnrpStartup);
     case 431:
-        return reinterpret_cast<void*>(HookedGeneratedApi13698_PdhGetDefaultPerfObjectHW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13606_PeerPnrpUnregister);
     case 432:
-        return reinterpret_cast<void*>(HookedGeneratedApi13699_PdhGetDefaultPerfObjectW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13607_PeerPnrpUpdateRegistration);
     case 433:
-        return reinterpret_cast<void*>(HookedGeneratedApi13700_PdhGetDllVersion);
+        return reinterpret_cast<void*>(HookedGeneratedApi13608_PeerGraphAddRecord);
     case 434:
-        return reinterpret_cast<void*>(HookedGeneratedApi13701_PdhGetFormattedCounterArrayA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13609_PeerGraphClose);
     case 435:
-        return reinterpret_cast<void*>(HookedGeneratedApi13702_PdhGetFormattedCounterArrayW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13610_PeerGraphCloseDirectConnection);
     case 436:
-        return reinterpret_cast<void*>(HookedGeneratedApi13703_PdhGetFormattedCounterValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi13611_PeerGraphConnect);
     case 437:
-        return reinterpret_cast<void*>(HookedGeneratedApi13704_PdhGetLogFileSize);
+        return reinterpret_cast<void*>(HookedGeneratedApi13612_PeerGraphCreate);
     case 438:
-        return reinterpret_cast<void*>(HookedGeneratedApi13705_PdhGetLogSetGUID);
+        return reinterpret_cast<void*>(HookedGeneratedApi13613_PeerGraphDelete);
     case 439:
-        return reinterpret_cast<void*>(HookedGeneratedApi13706_PdhGetRawCounterArrayA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13614_PeerGraphDeleteRecord);
     case 440:
-        return reinterpret_cast<void*>(HookedGeneratedApi13707_PdhGetRawCounterArrayW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13615_PeerGraphEndEnumeration);
     case 441:
-        return reinterpret_cast<void*>(HookedGeneratedApi13708_PdhGetRawCounterValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi13616_PeerGraphEnumConnections);
     case 442:
-        return reinterpret_cast<void*>(HookedGeneratedApi13709_PdhIsRealTimeQuery);
+        return reinterpret_cast<void*>(HookedGeneratedApi13617_PeerGraphEnumNodes);
     case 443:
-        return reinterpret_cast<void*>(HookedGeneratedApi13710_PdhLookupPerfIndexByNameA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13618_PeerGraphEnumRecords);
     case 444:
-        return reinterpret_cast<void*>(HookedGeneratedApi13711_PdhLookupPerfIndexByNameW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13619_PeerGraphExportDatabase);
     case 445:
-        return reinterpret_cast<void*>(HookedGeneratedApi13712_PdhLookupPerfNameByIndexA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13620_PeerGraphFreeData);
     case 446:
-        return reinterpret_cast<void*>(HookedGeneratedApi13713_PdhLookupPerfNameByIndexW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13621_PeerGraphGetEventData);
     case 447:
-        return reinterpret_cast<void*>(HookedGeneratedApi13714_PdhMakeCounterPathA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13622_PeerGraphGetItemCount);
     case 448:
-        return reinterpret_cast<void*>(HookedGeneratedApi13715_PdhMakeCounterPathW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13623_PeerGraphGetNextItem);
     case 449:
-        return reinterpret_cast<void*>(HookedGeneratedApi13716_PdhOpenLogA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13624_PeerGraphGetNodeInfo);
     case 450:
-        return reinterpret_cast<void*>(HookedGeneratedApi13717_PdhOpenLogW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13625_PeerGraphGetProperties);
     case 451:
-        return reinterpret_cast<void*>(HookedGeneratedApi13718_PdhOpenQueryA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13626_PeerGraphGetRecord);
     case 452:
-        return reinterpret_cast<void*>(HookedGeneratedApi13719_PdhOpenQueryH);
+        return reinterpret_cast<void*>(HookedGeneratedApi13627_PeerGraphGetStatus);
     case 453:
-        return reinterpret_cast<void*>(HookedGeneratedApi13720_PdhOpenQueryW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13628_PeerGraphImportDatabase);
     case 454:
-        return reinterpret_cast<void*>(HookedGeneratedApi13721_PdhParseCounterPathA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13629_PeerGraphListen);
     case 455:
-        return reinterpret_cast<void*>(HookedGeneratedApi13722_PdhParseCounterPathW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13630_PeerGraphOpen);
     case 456:
-        return reinterpret_cast<void*>(HookedGeneratedApi13723_PdhParseInstanceNameA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13631_PeerGraphOpenDirectConnection);
     case 457:
-        return reinterpret_cast<void*>(HookedGeneratedApi13724_PdhParseInstanceNameW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13632_PeerGraphPeerTimeToUniversalTime);
     case 458:
-        return reinterpret_cast<void*>(HookedGeneratedApi13725_PdhReadRawLogRecord);
+        return reinterpret_cast<void*>(HookedGeneratedApi13633_PeerGraphRegisterEvent);
     case 459:
-        return reinterpret_cast<void*>(HookedGeneratedApi13726_PdhRemoveCounter);
+        return reinterpret_cast<void*>(HookedGeneratedApi13634_PeerGraphSearchRecords);
     case 460:
-        return reinterpret_cast<void*>(HookedGeneratedApi13727_PdhSelectDataSourceA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13635_PeerGraphSendData);
     case 461:
-        return reinterpret_cast<void*>(HookedGeneratedApi13728_PdhSelectDataSourceW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13636_PeerGraphSetNodeAttributes);
     case 462:
-        return reinterpret_cast<void*>(HookedGeneratedApi13729_PdhSetCounterScaleFactor);
+        return reinterpret_cast<void*>(HookedGeneratedApi13637_PeerGraphSetPresence);
     case 463:
-        return reinterpret_cast<void*>(HookedGeneratedApi13730_PdhSetDefaultRealTimeDataSource);
+        return reinterpret_cast<void*>(HookedGeneratedApi13638_PeerGraphSetProperties);
     case 464:
-        return reinterpret_cast<void*>(HookedGeneratedApi13731_PdhSetLogSetRunID);
+        return reinterpret_cast<void*>(HookedGeneratedApi13639_PeerGraphStartup);
     case 465:
-        return reinterpret_cast<void*>(HookedGeneratedApi13732_PdhSetQueryTimeRange);
+        return reinterpret_cast<void*>(HookedGeneratedApi13640_PeerGraphUniversalTimeToPeerTime);
     case 466:
-        return reinterpret_cast<void*>(HookedGeneratedApi13733_PdhUpdateLogA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13641_PeerGraphUnregisterEvent);
     case 467:
-        return reinterpret_cast<void*>(HookedGeneratedApi13734_PdhUpdateLogFileCatalog);
+        return reinterpret_cast<void*>(HookedGeneratedApi13642_PeerGraphUpdateRecord);
     case 468:
-        return reinterpret_cast<void*>(HookedGeneratedApi13735_PdhUpdateLogW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13643_PeerGraphValidateDeferredRecords);
     case 469:
-        return reinterpret_cast<void*>(HookedGeneratedApi13736_PdhValidatePathA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13644_PdhAddCounterA);
     case 470:
-        return reinterpret_cast<void*>(HookedGeneratedApi13737_PdhValidatePathExA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13645_PdhAddCounterW);
     case 471:
-        return reinterpret_cast<void*>(HookedGeneratedApi13738_PdhValidatePathExW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13646_PdhAddEnglishCounterA);
     case 472:
-        return reinterpret_cast<void*>(HookedGeneratedApi13739_PdhValidatePathW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13647_PdhAddEnglishCounterW);
     case 473:
-        return reinterpret_cast<void*>(HookedGeneratedApi13740_PdhVerifySQLDBA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13648_PdhBindInputDataSourceA);
     case 474:
-        return reinterpret_cast<void*>(HookedGeneratedApi13741_PdhVerifySQLDBW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13649_PdhBindInputDataSourceW);
     case 475:
-        return reinterpret_cast<void*>(HookedGeneratedApi13742_PeerDistClientAddContentInformation);
+        return reinterpret_cast<void*>(HookedGeneratedApi13650_PdhBrowseCountersA);
     case 476:
-        return reinterpret_cast<void*>(HookedGeneratedApi13743_PeerDistClientAddData);
+        return reinterpret_cast<void*>(HookedGeneratedApi13651_PdhBrowseCountersHA);
     case 477:
-        return reinterpret_cast<void*>(HookedGeneratedApi13744_PeerDistClientBlockRead);
+        return reinterpret_cast<void*>(HookedGeneratedApi13652_PdhBrowseCountersHW);
     case 478:
-        return reinterpret_cast<void*>(HookedGeneratedApi13745_PeerDistClientCancelAsyncOperation);
+        return reinterpret_cast<void*>(HookedGeneratedApi13653_PdhBrowseCountersW);
     case 479:
-        return reinterpret_cast<void*>(HookedGeneratedApi13746_PeerDistClientCloseContent);
+        return reinterpret_cast<void*>(HookedGeneratedApi13654_PdhCalculateCounterFromRawValue);
     case 480:
-        return reinterpret_cast<void*>(HookedGeneratedApi13747_PeerDistClientCompleteContentInformation);
+        return reinterpret_cast<void*>(HookedGeneratedApi13655_PdhCloseLog);
     case 481:
-        return reinterpret_cast<void*>(HookedGeneratedApi13748_PeerDistClientFlushContent);
+        return reinterpret_cast<void*>(HookedGeneratedApi13656_PdhCloseQuery);
     case 482:
-        return reinterpret_cast<void*>(HookedGeneratedApi13749_PeerDistClientGetInformationByHandle);
+        return reinterpret_cast<void*>(HookedGeneratedApi13657_PdhCollectQueryData);
     case 483:
-        return reinterpret_cast<void*>(HookedGeneratedApi13750_PeerDistClientOpenContent);
+        return reinterpret_cast<void*>(HookedGeneratedApi13658_PdhCollectQueryDataEx);
     case 484:
-        return reinterpret_cast<void*>(HookedGeneratedApi13751_PeerDistClientStreamRead);
+        return reinterpret_cast<void*>(HookedGeneratedApi13659_PdhCollectQueryDataWithTime);
     case 485:
-        return reinterpret_cast<void*>(HookedGeneratedApi13752_PeerDistGetOverlappedResult);
+        return reinterpret_cast<void*>(HookedGeneratedApi13660_PdhComputeCounterStatistics);
     case 486:
-        return reinterpret_cast<void*>(HookedGeneratedApi13753_PeerDistGetStatus);
+        return reinterpret_cast<void*>(HookedGeneratedApi13661_PdhConnectMachineA);
     case 487:
-        return reinterpret_cast<void*>(HookedGeneratedApi13754_PeerDistGetStatusEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi13662_PdhConnectMachineW);
     case 488:
-        return reinterpret_cast<void*>(HookedGeneratedApi13755_PeerDistRegisterForStatusChangeNotification);
+        return reinterpret_cast<void*>(HookedGeneratedApi13663_PdhCreateSQLTablesA);
     case 489:
-        return reinterpret_cast<void*>(HookedGeneratedApi13756_PeerDistRegisterForStatusChangeNotificationEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi13664_PdhCreateSQLTablesW);
     case 490:
-        return reinterpret_cast<void*>(HookedGeneratedApi13757_PeerDistServerCancelAsyncOperation);
+        return reinterpret_cast<void*>(HookedGeneratedApi13665_PdhEnumLogSetNamesA);
     case 491:
-        return reinterpret_cast<void*>(HookedGeneratedApi13758_PeerDistServerCloseContentInformation);
+        return reinterpret_cast<void*>(HookedGeneratedApi13666_PdhEnumLogSetNamesW);
     case 492:
-        return reinterpret_cast<void*>(HookedGeneratedApi13759_PeerDistServerCloseStreamHandle);
+        return reinterpret_cast<void*>(HookedGeneratedApi13667_PdhEnumMachinesA);
     case 493:
-        return reinterpret_cast<void*>(HookedGeneratedApi13760_PeerDistServerOpenContentInformation);
+        return reinterpret_cast<void*>(HookedGeneratedApi13668_PdhEnumMachinesHA);
     case 494:
-        return reinterpret_cast<void*>(HookedGeneratedApi13761_PeerDistServerOpenContentInformationEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi13669_PdhEnumMachinesHW);
     case 495:
-        return reinterpret_cast<void*>(HookedGeneratedApi13762_PeerDistServerPublishAddToStream);
+        return reinterpret_cast<void*>(HookedGeneratedApi13670_PdhEnumMachinesW);
     case 496:
-        return reinterpret_cast<void*>(HookedGeneratedApi13763_PeerDistServerPublishCompleteStream);
+        return reinterpret_cast<void*>(HookedGeneratedApi13671_PdhEnumObjectItemsA);
     case 497:
-        return reinterpret_cast<void*>(HookedGeneratedApi13764_PeerDistServerPublishStream);
+        return reinterpret_cast<void*>(HookedGeneratedApi13672_PdhEnumObjectItemsHA);
     case 498:
-        return reinterpret_cast<void*>(HookedGeneratedApi13765_PeerDistServerRetrieveContentInformation);
+        return reinterpret_cast<void*>(HookedGeneratedApi13673_PdhEnumObjectItemsHW);
     case 499:
-        return reinterpret_cast<void*>(HookedGeneratedApi13766_PeerDistServerUnpublish);
+        return reinterpret_cast<void*>(HookedGeneratedApi13674_PdhEnumObjectItemsW);
     case 500:
-        return reinterpret_cast<void*>(HookedGeneratedApi13767_PeerDistShutdown);
+        return reinterpret_cast<void*>(HookedGeneratedApi13675_PdhEnumObjectsA);
     case 501:
-        return reinterpret_cast<void*>(HookedGeneratedApi13768_PeerDistStartup);
+        return reinterpret_cast<void*>(HookedGeneratedApi13676_PdhEnumObjectsHA);
     case 502:
-        return reinterpret_cast<void*>(HookedGeneratedApi13769_PeerDistUnregisterForStatusChangeNotification);
+        return reinterpret_cast<void*>(HookedGeneratedApi13677_PdhEnumObjectsHW);
     case 503:
-        return reinterpret_cast<void*>(HookedGeneratedApi13770_CallNtPowerInformation);
+        return reinterpret_cast<void*>(HookedGeneratedApi13678_PdhEnumObjectsW);
     case 504:
-        return reinterpret_cast<void*>(HookedGeneratedApi13771_DeletePwrScheme);
+        return reinterpret_cast<void*>(HookedGeneratedApi13679_PdhExpandCounterPathA);
     case 505:
-        return reinterpret_cast<void*>(HookedGeneratedApi13772_DevicePowerEnumDevices);
+        return reinterpret_cast<void*>(HookedGeneratedApi13680_PdhExpandCounterPathW);
     case 506:
-        return reinterpret_cast<void*>(HookedGeneratedApi13773_DevicePowerOpen);
+        return reinterpret_cast<void*>(HookedGeneratedApi13681_PdhExpandWildCardPathA);
     case 507:
-        return reinterpret_cast<void*>(HookedGeneratedApi13774_DevicePowerSetDeviceState);
+        return reinterpret_cast<void*>(HookedGeneratedApi13682_PdhExpandWildCardPathHA);
     case 508:
-        return reinterpret_cast<void*>(HookedGeneratedApi13775_EnumPwrSchemes);
+        return reinterpret_cast<void*>(HookedGeneratedApi13683_PdhExpandWildCardPathHW);
     case 509:
-        return reinterpret_cast<void*>(HookedGeneratedApi13776_GetActivePwrScheme);
+        return reinterpret_cast<void*>(HookedGeneratedApi13684_PdhExpandWildCardPathW);
     case 510:
-        return reinterpret_cast<void*>(HookedGeneratedApi13777_GetCurrentPowerPolicies);
+        return reinterpret_cast<void*>(HookedGeneratedApi13685_PdhFormatFromRawValue);
     case 511:
-        return reinterpret_cast<void*>(HookedGeneratedApi13778_GetPwrCapabilities);
+        return reinterpret_cast<void*>(HookedGeneratedApi13686_PdhGetCounterInfoA);
     default:
         break;
     }

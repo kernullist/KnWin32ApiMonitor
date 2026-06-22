@@ -21,7 +21,8 @@ extern "C" std::uintptr_t KnMonInvokeGeneratedValueHookByIndex(
     std::uintptr_t arg12,
     std::uintptr_t arg13,
     std::uintptr_t arg14,
-    std::uintptr_t arg15
+    std::uintptr_t arg15,
+    std::uintptr_t arg16
 );
 
 extern "C" void KnMonInvokeGeneratedVoidHookByIndex(
@@ -41,2567 +42,2574 @@ extern "C" void KnMonInvokeGeneratedVoidHookByIndex(
     std::uintptr_t arg12,
     std::uintptr_t arg13,
     std::uintptr_t arg14,
-    std::uintptr_t arg15
+    std::uintptr_t arg15,
+    std::uintptr_t arg16
 );
+
+extern "C" double KnMonInvokeGeneratedDoubleHookByIndex(
+    std::size_t index,
+    double arg0,
+    double arg1
+);
+
+std::uintptr_t WINAPI HookedGeneratedApi13687_PdhGetCounterInfoW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13312, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13688_PdhGetCounterTimeBase(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13313, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13689_PdhGetDataSourceTimeRangeA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13314, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13690_PdhGetDataSourceTimeRangeH(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13315, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13691_PdhGetDataSourceTimeRangeW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13316, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13692_PdhGetDefaultPerfCounterA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13317, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13693_PdhGetDefaultPerfCounterHA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13318, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13694_PdhGetDefaultPerfCounterHW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13319, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13695_PdhGetDefaultPerfCounterW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13320, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13696_PdhGetDefaultPerfObjectA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13321, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13697_PdhGetDefaultPerfObjectHA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13322, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13698_PdhGetDefaultPerfObjectHW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13323, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13699_PdhGetDefaultPerfObjectW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13324, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13700_PdhGetDllVersion(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13325, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13701_PdhGetFormattedCounterArrayA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13326, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13702_PdhGetFormattedCounterArrayW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13327, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13703_PdhGetFormattedCounterValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13328, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13704_PdhGetLogFileSize(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13329, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13705_PdhGetLogSetGUID(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13330, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13706_PdhGetRawCounterArrayA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13331, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13707_PdhGetRawCounterArrayW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13332, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13708_PdhGetRawCounterValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13333, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13709_PdhIsRealTimeQuery(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13334, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13710_PdhLookupPerfIndexByNameA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13335, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13711_PdhLookupPerfIndexByNameW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13336, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13712_PdhLookupPerfNameByIndexA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13337, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13713_PdhLookupPerfNameByIndexW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13338, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13714_PdhMakeCounterPathA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13339, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13715_PdhMakeCounterPathW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13340, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13716_PdhOpenLogA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13341, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13717_PdhOpenLogW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13342, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13718_PdhOpenQueryA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13343, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13719_PdhOpenQueryH(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13344, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13720_PdhOpenQueryW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13345, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13721_PdhParseCounterPathA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13346, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13722_PdhParseCounterPathW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13347, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13723_PdhParseInstanceNameA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13348, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13724_PdhParseInstanceNameW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13349, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13725_PdhReadRawLogRecord(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13350, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13726_PdhRemoveCounter(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13351, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13727_PdhSelectDataSourceA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13352, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13728_PdhSelectDataSourceW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13353, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13729_PdhSetCounterScaleFactor(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13354, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13730_PdhSetDefaultRealTimeDataSource(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13355, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13731_PdhSetLogSetRunID(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13356, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13732_PdhSetQueryTimeRange(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13357, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13733_PdhUpdateLogA(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13358, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13734_PdhUpdateLogFileCatalog(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13359, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13735_PdhUpdateLogW(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13360, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13736_PdhValidatePathA(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13361, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13737_PdhValidatePathExA(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13362, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13738_PdhValidatePathExW(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13363, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13739_PdhValidatePathW(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13364, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13740_PdhVerifySQLDBA(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13365, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13741_PdhVerifySQLDBW(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13366, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13742_PeerDistClientAddContentInformation(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13367, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13743_PeerDistClientAddData(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13368, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13744_PeerDistClientBlockRead(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13369, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13745_PeerDistClientCancelAsyncOperation(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13370, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13746_PeerDistClientCloseContent(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13371, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13747_PeerDistClientCompleteContentInformation(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13372, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13748_PeerDistClientFlushContent(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13373, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13749_PeerDistClientGetInformationByHandle(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13374, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13750_PeerDistClientOpenContent(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13375, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13751_PeerDistClientStreamRead(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13376, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13752_PeerDistGetOverlappedResult(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13377, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13753_PeerDistGetStatus(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13378, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13754_PeerDistGetStatusEx(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13379, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13755_PeerDistRegisterForStatusChangeNotification(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13380, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13756_PeerDistRegisterForStatusChangeNotificationEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13381, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13757_PeerDistServerCancelAsyncOperation(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13382, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13758_PeerDistServerCloseContentInformation(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13383, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13759_PeerDistServerCloseStreamHandle(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13384, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13760_PeerDistServerOpenContentInformation(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13385, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13761_PeerDistServerOpenContentInformationEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7, std::uintptr_t arg8)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13386, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13762_PeerDistServerPublishAddToStream(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13387, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13763_PeerDistServerPublishCompleteStream(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13388, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13764_PeerDistServerPublishStream(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13389, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13765_PeerDistServerRetrieveContentInformation(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13390, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13766_PeerDistServerUnpublish(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13391, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13767_PeerDistShutdown(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13392, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13768_PeerDistStartup(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13393, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13769_PeerDistUnregisterForStatusChangeNotification(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13394, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13770_CallNtPowerInformation(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13395, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13771_DeletePwrScheme(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13396, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13772_DevicePowerEnumDevices(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13397, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13773_DevicePowerOpen(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13398, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13774_DevicePowerSetDeviceState(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13399, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13775_EnumPwrSchemes(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13400, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13776_GetActivePwrScheme(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13401, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13777_GetCurrentPowerPolicies(std::uintptr_t arg0, std::uintptr_t arg1)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13402, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+std::uintptr_t WINAPI HookedGeneratedApi13778_GetPwrCapabilities(std::uintptr_t arg0)
+{
+    return KnMonInvokeGeneratedValueHookByIndex(13403, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
 
 std::uintptr_t WINAPI HookedGeneratedApi13779_GetPwrDiskSpindownRange(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13312, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13404, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13780_IsAdminOverrideActive(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13313, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13405, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13781_PowerCanRestoreIndividualDefaultPowerScheme(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13314, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13406, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13782_PowerCreatePossibleSetting(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13315, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13407, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13783_PowerCreateSetting(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13316, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13408, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13784_PowerDeleteScheme(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13317, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13409, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13785_PowerDeterminePlatformRoleEx(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13318, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13410, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13786_PowerDuplicateScheme(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13319, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13411, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13787_PowerEnumerate(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13320, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13412, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13788_PowerGetActiveScheme(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13321, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13413, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13789_PowerGetUserConfiguredACPowerMode(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13322, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13414, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13790_PowerGetUserConfiguredDCPowerMode(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13323, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13415, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13791_PowerImportPowerScheme(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13324, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13416, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13792_PowerIsSettingRangeDefined(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13325, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13417, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13793_PowerOpenSystemPowerKey(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13326, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13418, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13794_PowerOpenUserPowerKey(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13327, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13419, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13795_PowerReadACDefaultIndex(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13328, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13420, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13796_PowerReadACValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13329, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13421, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13797_PowerReadACValueIndex(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13330, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13422, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13798_PowerReadDCDefaultIndex(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13331, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13423, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13799_PowerReadDCValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13332, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13424, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13800_PowerReadDCValueIndex(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13333, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13425, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13801_PowerReadDescription(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13334, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13426, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13802_PowerReadFriendlyName(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13335, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13427, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13803_PowerReadIconResourceSpecifier(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13336, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13428, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13804_PowerReadPossibleDescription(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13337, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13429, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13805_PowerReadPossibleFriendlyName(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13338, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13430, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13806_PowerReadPossibleValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13339, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13431, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13807_PowerReadSettingAttributes(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13340, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13432, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13808_PowerReadValueIncrement(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13341, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13433, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13809_PowerReadValueMax(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13342, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13434, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13810_PowerReadValueMin(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13343, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13435, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13811_PowerReadValueUnitsSpecifier(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13344, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13436, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13812_PowerRegisterForEffectivePowerModeNotifications(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13345, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13437, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13813_PowerRegisterSuspendResumeNotification(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13346, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13438, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13814_PowerRemovePowerSetting(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13347, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13439, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13815_PowerReportThermalEvent(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13348, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13440, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13816_PowerRestoreIndividualDefaultPowerScheme(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13349, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13441, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13817_PowerSetActiveScheme(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13350, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13442, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13818_PowerSettingAccessCheck(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13351, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13443, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13819_PowerSettingAccessCheckEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13352, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13444, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13820_PowerSettingRegisterNotification(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13353, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13445, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13821_PowerSettingUnregisterNotification(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13354, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13446, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13822_PowerSetUserConfiguredACPowerMode(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13355, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13447, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13823_PowerSetUserConfiguredDCPowerMode(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13356, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13448, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13824_PowerUnregisterFromEffectivePowerModeNotifications(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13357, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13449, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13825_PowerUnregisterSuspendResumeNotification(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13358, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13450, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13826_PowerWriteACDefaultIndex(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13359, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13451, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13827_PowerWriteACValueIndex(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13360, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13452, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13828_PowerWriteDCDefaultIndex(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13361, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13453, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13829_PowerWriteDCValueIndex(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13362, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13454, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13830_PowerWriteDescription(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13363, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13455, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13831_PowerWriteFriendlyName(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13364, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13456, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13832_PowerWriteIconResourceSpecifier(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13365, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13457, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13833_PowerWritePossibleDescription(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13366, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13458, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13834_PowerWritePossibleFriendlyName(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13367, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13459, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13835_PowerWritePossibleValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13368, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13460, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13836_PowerWriteSettingAttributes(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13369, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13461, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13837_PowerWriteValueIncrement(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13370, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13462, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13838_PowerWriteValueMax(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13371, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13463, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13839_PowerWriteValueMin(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13372, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13464, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13840_PowerWriteValueUnitsSpecifier(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13373, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13465, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13841_ReadGlobalPwrPolicy(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13374, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13466, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13842_ReadProcessorPwrScheme(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13375, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13467, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13843_ReadPwrScheme(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13376, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13468, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13844_SetActivePwrScheme(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13377, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13469, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13845_SetSuspendState(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13378, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13470, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13846_ValidatePowerPolicies(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13379, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13471, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13847_WriteGlobalPwrPolicy(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13380, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13472, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13848_WriteProcessorPwrScheme(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13381, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13473, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13849_WritePwrScheme(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13382, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13474, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13850_PTCloseProvider(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13383, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13475, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13851_PTOpenProvider(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13384, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13476, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13852_PTOpenProviderEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13385, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13477, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13853_PTQuerySchemaVersionSupport(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13386, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13478, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13854_PTReleaseMemory(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13387, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13479, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13855_PrjAllocateAlignedBuffer(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13388, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13480, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13856_PrjClearNegativePathCache(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13389, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13481, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13857_PrjCompleteCommand(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13390, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13482, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13858_PrjDeleteFile(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13391, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13483, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13859_PrjDoesNameContainWildCards(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13392, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13484, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13860_PrjFileNameCompare(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13393, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13485, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13861_PrjFileNameMatch(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13394, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13486, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13862_PrjFillDirEntryBuffer(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13395, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13487, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13863_PrjFillDirEntryBuffer2(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13396, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13488, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13864_PrjFreeAlignedBuffer(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13397, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13489, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13865_PrjGetOnDiskFileState(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13398, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13490, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13866_PrjGetVirtualizationInstanceInfo(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13399, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13491, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13867_PrjMarkDirectoryAsPlaceholder(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13400, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13492, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13868_PrjStartVirtualizing(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13401, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13493, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13869_PrjStopVirtualizing(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13402, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13494, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13870_PrjUpdateFileIfNeeded(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13403, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13495, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13871_PrjWriteFileData(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13404, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13496, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13872_PrjWritePlaceholderInfo(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13405, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13497, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13873_PrjWritePlaceholderInfo2(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13406, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13498, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13874_ClearPropVariantArray(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13407, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13499, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi13875_ClearVariantArray(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13408, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13500, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13876_InitPropVariantFromBooleanVector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13409, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13501, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13877_InitPropVariantFromBuffer(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13410, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13502, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13878_InitPropVariantFromCLSID(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13411, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13503, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13879_InitPropVariantFromDoubleVector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13412, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13504, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13880_InitPropVariantFromFileTime(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13413, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13505, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13881_InitPropVariantFromFileTimeVector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13414, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13506, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13882_InitPropVariantFromGUIDAsString(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13415, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13507, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13883_InitPropVariantFromInt16Vector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13416, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13508, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13884_InitPropVariantFromInt32Vector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13417, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13509, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13885_InitPropVariantFromInt64Vector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13418, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13510, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13886_InitPropVariantFromPropVariantVectorElem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13419, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13511, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13887_InitPropVariantFromResource(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13420, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13512, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13888_InitPropVariantFromStringAsVector(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13421, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13513, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13889_InitPropVariantFromStringVector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13422, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13514, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13890_InitPropVariantFromUInt16Vector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13423, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13515, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13891_InitPropVariantFromUInt32Vector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13424, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13516, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13892_InitPropVariantFromUInt64Vector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13425, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13517, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13893_InitPropVariantVectorFromPropVariant(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13426, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13518, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13894_InitVariantFromBooleanArray(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13427, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13519, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13895_InitVariantFromBuffer(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13428, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13520, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13896_InitVariantFromDoubleArray(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13429, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13521, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13897_InitVariantFromFileTime(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13430, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13522, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13898_InitVariantFromFileTimeArray(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13431, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13523, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13899_InitVariantFromGUIDAsString(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13432, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13524, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13900_InitVariantFromInt16Array(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13433, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13525, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13901_InitVariantFromInt32Array(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13434, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13526, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13902_InitVariantFromInt64Array(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13435, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13527, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13903_InitVariantFromResource(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13436, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13528, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13904_InitVariantFromStringArray(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13437, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13529, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13905_InitVariantFromUInt16Array(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13438, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13530, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13906_InitVariantFromUInt32Array(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13439, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13531, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13907_InitVariantFromUInt64Array(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13440, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13532, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13908_InitVariantFromVariantArrayElem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13441, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13533, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13909_PropVariantChangeType(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13442, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13534, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13910_PropVariantCompareEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13443, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13535, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13911_PropVariantGetBooleanElem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13444, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13536, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13912_PropVariantGetDoubleElem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13445, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13537, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13913_PropVariantGetElementCount(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13446, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13538, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13914_PropVariantGetFileTimeElem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13447, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13539, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13915_PropVariantGetInt16Elem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13448, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13540, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13916_PropVariantGetInt32Elem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13449, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13541, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13917_PropVariantGetInt64Elem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13450, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13542, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13918_PropVariantGetStringElem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13451, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13543, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13919_PropVariantGetUInt16Elem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13452, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13544, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13920_PropVariantGetUInt32Elem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13453, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13545, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13921_PropVariantGetUInt64Elem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13454, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13546, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13922_PropVariantToBoolean(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13455, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13547, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13923_PropVariantToBooleanVector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13456, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13548, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13924_PropVariantToBooleanVectorAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13457, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13549, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13925_PropVariantToBooleanWithDefault(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13458, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13550, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13926_PropVariantToBSTR(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13459, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13551, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13927_PropVariantToBuffer(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13460, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13552, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13928_PropVariantToDouble(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13461, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13553, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13929_PropVariantToDoubleVector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13462, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13554, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13930_PropVariantToDoubleVectorAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13463, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13555, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13931_PropVariantToFileTime(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13464, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13556, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13932_PropVariantToFileTimeVector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13465, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13557, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13933_PropVariantToFileTimeVectorAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13466, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13558, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13934_PropVariantToGUID(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13467, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13559, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13935_PropVariantToInt16(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13468, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13560, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13936_PropVariantToInt16Vector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13469, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13561, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13937_PropVariantToInt16VectorAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13470, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13562, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13938_PropVariantToInt16WithDefault(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13471, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13563, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13939_PropVariantToInt32(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13472, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13564, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13940_PropVariantToInt32Vector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13473, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13565, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13941_PropVariantToInt32VectorAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13474, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13566, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13942_PropVariantToInt32WithDefault(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13475, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13567, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13943_PropVariantToInt64(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13476, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13568, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13944_PropVariantToInt64Vector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13477, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13569, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13945_PropVariantToInt64VectorAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13478, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13570, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13946_PropVariantToInt64WithDefault(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13479, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13571, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13947_PropVariantToString(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13480, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13572, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13948_PropVariantToStringAlloc(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13481, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13573, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13949_PropVariantToStringVector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13482, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13574, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13950_PropVariantToStringVectorAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13483, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13575, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13951_PropVariantToStringWithDefault(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13484, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13576, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13952_PropVariantToStrRet(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13485, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13577, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13953_PropVariantToUInt16(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13486, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13578, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13954_PropVariantToUInt16Vector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13487, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13579, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13955_PropVariantToUInt16VectorAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13488, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13580, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13956_PropVariantToUInt16WithDefault(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13489, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13581, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13957_PropVariantToUInt32(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13490, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13582, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13958_PropVariantToUInt32Vector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13491, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13583, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13959_PropVariantToUInt32VectorAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13492, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13584, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13960_PropVariantToUInt32WithDefault(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13493, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13585, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13961_PropVariantToUInt64(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13494, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13586, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13962_PropVariantToUInt64Vector(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13495, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13587, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13963_PropVariantToUInt64VectorAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13496, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13588, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13964_PropVariantToUInt64WithDefault(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13497, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13589, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13965_PropVariantToVariant(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13498, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13590, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13966_PropVariantToWinRTPropertyValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13499, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13591, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13967_PSCoerceToCanonicalValue(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13500, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13592, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13968_PSCreateMemoryPropertyStore(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13501, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13593, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13969_PSCreatePropertyChangeArray(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13502, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13594, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13970_PSCreateSimplePropertyChange(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13503, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13595, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13971_PSEnumeratePropertyDescriptions(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13504, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13596, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13972_PSFormatForDisplay(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13505, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13597, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13973_PSFormatForDisplayAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13506, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13598, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13974_PSGetImageReferenceForValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13507, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13599, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13975_PSGetNamedPropertyFromPropertyStorage(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13508, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13600, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13976_PSGetNameFromPropertyKey(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13509, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13601, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13977_PSGetPropertyDescription(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13510, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13602, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13978_PSGetPropertyDescriptionByName(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13511, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13603, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13979_PSGetPropertyDescriptionListFromString(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13512, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13604, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13980_PSGetPropertyFromPropertyStorage(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13513, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13605, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13981_PSGetPropertyKeyFromName(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13514, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13606, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13982_PSGetPropertySystem(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13515, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13607, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13983_PSLookupPropertyHandlerCLSID(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13516, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13608, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13984_PSPropertyKeyFromString(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13517, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13609, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13985_PSRegisterPropertySchema(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13518, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13610, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13986_PSStringFromPropertyKey(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13519, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13611, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13987_PSUnregisterPropertySchema(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13520, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13612, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13988_StgDeserializePropVariant(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13521, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13613, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13989_StgSerializePropVariant(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13522, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13614, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13990_VariantCompare(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13523, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13615, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13991_VariantGetBooleanElem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13524, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13616, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13992_VariantGetDoubleElem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13525, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13617, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13993_VariantGetElementCount(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13526, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13618, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13994_VariantGetInt16Elem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13527, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13619, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13995_VariantGetInt32Elem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13528, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13620, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13996_VariantGetInt64Elem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13529, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13621, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13997_VariantGetStringElem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13530, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13622, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13998_VariantGetUInt16Elem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13531, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13623, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi13999_VariantGetUInt32Elem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13532, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13624, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14000_VariantGetUInt64Elem(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13533, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13625, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14001_VariantToBoolean(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13534, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13626, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14002_VariantToBooleanArray(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13535, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13627, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14003_VariantToBooleanArrayAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13536, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13628, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14004_VariantToBooleanWithDefault(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13537, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13629, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14005_VariantToBuffer(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13538, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13630, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14006_VariantToDosDateTime(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13539, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13631, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14007_VariantToDouble(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13540, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13632, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14008_VariantToDoubleArray(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13541, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13633, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14009_VariantToDoubleArrayAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13542, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13634, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14010_VariantToFileTime(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13543, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13635, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14011_VariantToGUID(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13544, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13636, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14012_VariantToInt16(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13545, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13637, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14013_VariantToInt16Array(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13546, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13638, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14014_VariantToInt16ArrayAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13547, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13639, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14015_VariantToInt16WithDefault(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13548, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13640, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14016_VariantToInt32(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13549, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13641, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14017_VariantToInt32Array(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13550, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13642, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14018_VariantToInt32ArrayAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13551, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13643, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14019_VariantToInt32WithDefault(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13552, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13644, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14020_VariantToInt64(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13553, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13645, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14021_VariantToInt64Array(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13554, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13646, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14022_VariantToInt64ArrayAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13555, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13647, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14023_VariantToInt64WithDefault(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13556, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13648, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14024_VariantToPropVariant(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13557, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13649, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14025_VariantToString(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13558, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13650, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14026_VariantToStringAlloc(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13559, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13651, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14027_VariantToStringArray(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13560, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13652, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14028_VariantToStringArrayAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13561, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13653, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14029_VariantToStringWithDefault(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13562, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13654, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14030_VariantToStrRet(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13563, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13655, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14031_VariantToUInt16(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13564, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13656, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14032_VariantToUInt16Array(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13565, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13657, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14033_VariantToUInt16ArrayAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13566, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13658, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14034_VariantToUInt16WithDefault(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13567, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13659, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14035_VariantToUInt32(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13568, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13660, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14036_VariantToUInt32Array(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13569, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13661, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14037_VariantToUInt32ArrayAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13570, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13662, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14038_VariantToUInt32WithDefault(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13571, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13663, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14039_VariantToUInt64(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13572, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13664, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14040_VariantToUInt64Array(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13573, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13665, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14041_VariantToUInt64ArrayAlloc(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13574, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13666, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14042_VariantToUInt64WithDefault(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13575, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13667, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14043_EmptyWorkingSet(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13576, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13668, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14044_EnumDeviceDrivers(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13577, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13669, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14045_EnumPageFilesA(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13578, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13670, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14046_EnumPageFilesW(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13579, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13671, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14047_EnumProcesses(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13580, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13672, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14048_EnumProcessModulesEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13581, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13673, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14049_GetDeviceDriverBaseNameA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13582, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13674, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14050_GetDeviceDriverBaseNameW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13583, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13675, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14051_GetDeviceDriverFileNameA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13584, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13676, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14052_GetDeviceDriverFileNameW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13585, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13677, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14053_GetMappedFileNameA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13586, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13678, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14054_GetMappedFileNameW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13587, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13679, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14055_GetModuleBaseNameA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13588, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13680, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14056_GetModuleFileNameExA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13589, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13681, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14057_GetPerformanceInfo(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13590, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13682, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14058_GetProcessImageFileNameA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13591, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13683, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14059_GetProcessImageFileNameW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13592, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13684, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14060_GetWsChanges(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13593, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13685, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14061_GetWsChangesEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13594, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13686, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14062_InitializeProcessForWsWatch(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13595, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13687, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14063_QueryWorkingSet(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13596, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13688, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14064_QueryWorkingSetEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13597, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13689, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14065_LoadIFilterEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13598, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13690, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14066_QOSAddSocketToFlow(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13599, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13691, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14067_QOSCancel(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13600, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13692, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14068_QOSCloseHandle(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13601, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13693, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14069_QOSCreateHandle(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13602, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13694, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14070_QOSEnumerateFlows(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13603, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13695, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14071_QOSNotifyFlow(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13604, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13696, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14072_QOSQueryFlow(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13605, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13697, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14073_QOSRemoveSocketFromFlow(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13606, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13698, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14074_QOSSetFlow(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13607, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13699, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14075_QOSStartTrackingClient(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13608, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13700, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14076_QOSStopTrackingClient(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13609, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13701, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14077_RasClearConnectionStatistics(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13610, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13702, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14078_RasClearLinkStatistics(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13611, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13703, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14079_RasConnectionNotificationA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13612, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13704, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14080_RasConnectionNotificationW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13613, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13705, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14081_RasCreatePhonebookEntryA(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13614, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13706, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14082_RasCreatePhonebookEntryW(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13615, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13707, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14083_RasDeleteEntryA(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13616, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13708, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14084_RasDeleteEntryW(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13617, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13709, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14085_RasDeleteSubEntryA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13618, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13710, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14086_RasDeleteSubEntryW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13619, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13711, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14087_RasDialA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13620, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13712, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14088_RasDialW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13621, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13713, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14089_RasEditPhonebookEntryA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13622, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13714, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14090_RasEditPhonebookEntryW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13623, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13715, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14091_RasEnumAutodialAddressesA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13624, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13716, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14092_RasEnumAutodialAddressesW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13625, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13717, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14093_RasEnumConnectionsA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13626, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13718, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14094_RasEnumConnectionsW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13627, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13719, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14095_RasEnumDevicesA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13628, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13720, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14096_RasEnumDevicesW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13629, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13721, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14097_RasEnumEntriesA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13630, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13722, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14098_RasEnumEntriesW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13631, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13723, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi14099_RasFreeEapUserIdentityA(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13632, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13724, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi14100_RasFreeEapUserIdentityW(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13633, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13725, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14101_RasGetAutodialAddressA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13634, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13726, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14102_RasGetAutodialAddressW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13635, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13727, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14103_RasGetAutodialEnableA(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13636, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13728, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14104_RasGetAutodialEnableW(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13637, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13729, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14105_RasGetAutodialParamA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13638, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13730, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14106_RasGetAutodialParamW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13639, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13731, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14107_RasGetConnectionStatistics(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13640, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13732, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14108_RasGetConnectStatusA(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13641, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13733, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14109_RasGetConnectStatusW(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13642, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13734, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14110_RasGetCountryInfoA(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13643, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13735, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14111_RasGetCountryInfoW(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13644, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13736, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14112_RasGetCredentialsA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13645, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13737, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14113_RasGetCredentialsW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13646, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13738, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14114_RasGetCustomAuthDataA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13647, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13739, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14115_RasGetCustomAuthDataW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13648, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13740, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14116_RasGetEapUserDataA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13649, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13741, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14117_RasGetEapUserDataW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13650, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13742, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14118_RasGetEapUserIdentityA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13651, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13743, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14119_RasGetEapUserIdentityW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13652, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13744, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14120_RasGetEntryDialParamsA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13653, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13745, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14121_RasGetEntryDialParamsW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13654, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13746, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14122_RasGetEntryPropertiesA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13655, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13747, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14123_RasGetEntryPropertiesW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13656, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13748, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14124_RasGetErrorStringA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13657, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13749, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14125_RasGetErrorStringW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13658, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13750, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14126_RasGetLinkStatistics(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13659, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13751, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14127_RasGetPCscf(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13660, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13752, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14128_RasGetProjectionInfoA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13661, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13753, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14129_RasGetProjectionInfoEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13662, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13754, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14130_RasGetProjectionInfoW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13663, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13755, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14131_RasGetSubEntryHandleA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13664, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13756, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14132_RasGetSubEntryHandleW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13665, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13757, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14133_RasGetSubEntryPropertiesA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13666, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13758, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14134_RasGetSubEntryPropertiesW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13667, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13759, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14135_RasHangUpA(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13668, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13760, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14136_RasHangUpW(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13669, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13761, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14137_RasInvokeEapUI(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13670, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13762, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14138_RasRenameEntryA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13671, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13763, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14139_RasRenameEntryW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13672, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13764, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14140_RasSetAutodialAddressA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13673, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13765, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14141_RasSetAutodialAddressW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13674, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13766, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14142_RasSetAutodialEnableA(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13675, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13767, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14143_RasSetAutodialEnableW(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13676, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13768, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14144_RasSetAutodialParamA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13677, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13769, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14145_RasSetAutodialParamW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13678, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13770, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14146_RasSetCredentialsA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13679, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13771, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14147_RasSetCredentialsW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13680, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13772, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14148_RasSetCustomAuthDataA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13681, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13773, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14149_RasSetCustomAuthDataW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13682, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13774, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14150_RasSetEapUserDataA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13683, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13775, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14151_RasSetEapUserDataW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13684, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13776, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14152_RasSetEntryDialParamsA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13685, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13777, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14153_RasSetEntryDialParamsW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13686, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13778, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14154_RasSetEntryPropertiesA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13687, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13779, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14155_RasSetEntryPropertiesW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13688, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13780, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14156_RasSetSubEntryPropertiesA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13689, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13781, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14157_RasSetSubEntryPropertiesW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13690, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13782, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14158_RasUpdateConnection(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13691, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13783, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14159_RasValidateEntryNameA(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13692, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13784, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14160_RasValidateEntryNameW(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13693, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13785, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14161_RasDialDlgA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13694, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13786, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14162_RasDialDlgW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13695, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13787, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14163_RasEntryDlgA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13696, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13788, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14164_RasEntryDlgW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13697, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13789, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14165_RasPhonebookDlgA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13698, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13790, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14166_RasPhonebookDlgW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13699, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13791, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14167_CloseClusterCryptProvider(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13700, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13792, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14168_ClusAddClusterHealthFault(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13701, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13793, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14169_ClusGetClusterHealthFaults(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13702, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13794, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14170_ClusRemoveClusterHealthFault(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13703, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13795, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14171_ClusterClearBackupStateForSharedVolume(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13704, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13796, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14172_ClusterDecrypt(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13705, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13797, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14173_ClusterEncrypt(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13706, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13798, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14174_ClusterGetVolumeNameForVolumeMountPoint(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13707, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13799, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14175_ClusterGetVolumePathName(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13708, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13800, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14176_ClusterIsPathOnSharedVolume(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13709, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13801, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14177_ClusterPrepareSharedVolumeForBackup(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13710, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13802, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14178_ClusWorkerCheckTerminate(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13711, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13803, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14179_ClusWorkerCreate(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13712, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13804, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14180_ClusWorkersTerminate(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13713, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13805, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void WINAPI HookedGeneratedApi14181_ClusWorkerTerminate(std::uintptr_t arg0)
 {
-    KnMonInvokeGeneratedVoidHookByIndex(13714, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    KnMonInvokeGeneratedVoidHookByIndex(13806, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14182_ClusWorkerTerminateEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13715, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13807, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14183_FreeClusterCrypt(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13716, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13808, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14184_FreeClusterHealthFault(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13717, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13809, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14185_FreeClusterHealthFaultArray(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13718, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13810, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14186_InitializeClusterHealthFault(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13719, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13811, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14187_InitializeClusterHealthFaultArray(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13720, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13812, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14188_OpenClusterCryptProvider(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13721, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13813, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14189_OpenClusterCryptProviderEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13722, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13814, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14190_ResUtilAddUnknownProperties(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13723, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13815, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14191_ResUtilCreateDirectoryTree(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13724, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13816, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14192_ResUtilDupGroup(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13725, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13817, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14193_ResUtilDupParameterBlock(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13726, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13818, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14194_ResUtilDupResource(std::uintptr_t arg0, std::uintptr_t arg1)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13727, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13819, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14195_ResUtilDupString(std::uintptr_t arg0)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13728, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13820, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14196_ResUtilEnumGroups(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13729, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13821, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14197_ResUtilEnumGroupsEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13730, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13822, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 std::uintptr_t WINAPI HookedGeneratedApi14198_ResUtilEnumPrivateProperties(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
 {
-    return KnMonInvokeGeneratedValueHookByIndex(13731, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14199_ResUtilEnumProperties(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13732, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14200_ResUtilEnumResources(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13733, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14201_ResUtilEnumResourcesEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13734, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14202_ResUtilEnumResourcesEx2(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13735, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14203_ResUtilExpandEnvironmentStrings(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13736, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14204_ResUtilFindBinaryProperty(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13737, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14205_ResUtilFindDependentDiskResourceDriveLetter(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13738, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14206_ResUtilFindDwordProperty(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13739, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14207_ResUtilFindExpandedSzProperty(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13740, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14208_ResUtilFindExpandSzProperty(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13741, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14209_ResUtilFindFileTimeProperty(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13742, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14210_ResUtilFindLongProperty(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13743, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14211_ResUtilFindMultiSzProperty(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13744, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14212_ResUtilFindSzProperty(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13745, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14213_ResUtilFindULargeIntegerProperty(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13746, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14214_ResUtilFreeEnvironment(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13747, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-void WINAPI HookedGeneratedApi14215_ResUtilFreeParameterBlock(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    KnMonInvokeGeneratedVoidHookByIndex(13748, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14216_ResUtilGetAllProperties(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13749, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14217_ResUtilGetBinaryProperty(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13750, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14218_ResUtilGetBinaryValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13751, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14219_ResUtilGetClusterGroupType(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13752, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14220_ResUtilGetClusterId(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13753, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14221_ResUtilGetClusterRoleState(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13754, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14222_ResUtilGetCoreClusterResources(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13755, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14223_ResUtilGetCoreClusterResourcesEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13756, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14224_ResUtilGetCoreGroup(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13757, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14225_ResUtilGetDwordProperty(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13758, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14226_ResUtilGetDwordValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13759, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14227_ResUtilGetEnvironmentWithNetName(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13760, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14228_ResUtilGetFileTimeProperty(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13761, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14229_ResUtilGetLongProperty(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13762, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14230_ResUtilGetMultiSzProperty(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13763, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14231_ResUtilGetPrivateProperties(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13764, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14232_ResUtilGetProperties(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13765, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14233_ResUtilGetPropertiesToParameterBlock(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13766, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14234_ResUtilGetProperty(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13767, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14235_ResUtilGetPropertyFormats(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13768, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14236_ResUtilGetPropertySize(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13769, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14237_ResUtilGetQwordValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13770, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14238_ResUtilGetResourceDependency(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13771, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14239_ResUtilGetResourceDependencyByClass(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13772, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14240_ResUtilGetResourceDependencyByClassEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13773, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14241_ResUtilGetResourceDependencyByName(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13774, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14242_ResUtilGetResourceDependencyByNameEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13775, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14243_ResUtilGetResourceDependencyEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13776, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14244_ResUtilGetResourceDependentIPAddressProps(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13777, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14245_ResUtilGetResourceName(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13778, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14246_ResUtilGetResourceNameDependency(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13779, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14247_ResUtilGetResourceNameDependencyEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13780, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14248_ResUtilGetSzProperty(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13781, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14249_ResUtilGetSzValue(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13782, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14250_ResUtilGroupsEqual(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13783, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14251_ResUtilIsPathValid(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13784, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14252_ResUtilIsResourceClassEqual(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13785, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14253_ResUtilLeftPaxosIsLessThanRight(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13786, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14254_ResUtilNodeEnum(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13787, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14255_ResUtilPaxosComparer(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13788, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14256_ResUtilPropertyListFromParameterBlock(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13789, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14257_ResUtilResourceDepEnum(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13790, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14258_ResUtilResourcesEqual(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13791, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14259_ResUtilResourceTypesEqual(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13792, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14260_ResUtilsDeleteKeyTree(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13793, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14261_ResUtilSetBinaryValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13794, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14262_ResUtilSetDwordValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13795, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14263_ResUtilSetExpandSzValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13796, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14264_ResUtilSetMultiSzValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13797, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14265_ResUtilSetPrivatePropertyList(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13798, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14266_ResUtilSetPropertyParameterBlock(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13799, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14267_ResUtilSetPropertyParameterBlockEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13800, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14268_ResUtilSetPropertyTable(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13801, arg0, arg1, arg2, arg3, arg4, arg5, arg6, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14269_ResUtilSetPropertyTableEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5, std::uintptr_t arg6, std::uintptr_t arg7)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13802, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14270_ResUtilSetQwordValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13803, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14271_ResUtilSetSzValue(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13804, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14272_ResUtilSetUnknownProperties(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13805, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14273_ResUtilSetValueEx(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13806, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14274_ResUtilVerifyPrivatePropertyList(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13807, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14275_ResUtilVerifyPropertyTable(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4, std::uintptr_t arg5)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13808, arg0, arg1, arg2, arg3, arg4, arg5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14276_ResUtilVerifyShutdownSafe(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13809, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14277_MetaDataGetDispenser(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13810, arg0, arg1, arg2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14278_I_RpcNsGetBuffer(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13811, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-void WINAPI HookedGeneratedApi14279_I_RpcNsRaiseException(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    KnMonInvokeGeneratedVoidHookByIndex(13812, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14280_I_RpcNsSendReceive(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13813, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14281_I_RpcReBindBuffer(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13814, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14282_RpcIfIdVectorFree(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13815, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14283_RpcNsBindingExportA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13816, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14284_RpcNsBindingExportPnPA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13817, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14285_RpcNsBindingExportPnPW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13818, arg0, arg1, arg2, arg3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14286_RpcNsBindingExportW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13819, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14287_RpcNsBindingImportBeginA(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13820, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14288_RpcNsBindingImportBeginW(std::uintptr_t arg0, std::uintptr_t arg1, std::uintptr_t arg2, std::uintptr_t arg3, std::uintptr_t arg4)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13821, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14289_RpcNsBindingImportDone(std::uintptr_t arg0)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13822, arg0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-std::uintptr_t WINAPI HookedGeneratedApi14290_RpcNsBindingImportNext(std::uintptr_t arg0, std::uintptr_t arg1)
-{
-    return KnMonInvokeGeneratedValueHookByIndex(13823, arg0, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return KnMonInvokeGeneratedValueHookByIndex(13823, arg0, arg1, arg2, arg3, arg4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 extern "C" void* KnMonGetGeneratedHookAddressChunk26(std::size_t localIndex)
@@ -2609,1029 +2617,1029 @@ extern "C" void* KnMonGetGeneratedHookAddressChunk26(std::size_t localIndex)
     switch (localIndex)
     {
     case 0:
-        return reinterpret_cast<void*>(HookedGeneratedApi13779_GetPwrDiskSpindownRange);
+        return reinterpret_cast<void*>(HookedGeneratedApi13687_PdhGetCounterInfoW);
     case 1:
-        return reinterpret_cast<void*>(HookedGeneratedApi13780_IsAdminOverrideActive);
+        return reinterpret_cast<void*>(HookedGeneratedApi13688_PdhGetCounterTimeBase);
     case 2:
-        return reinterpret_cast<void*>(HookedGeneratedApi13781_PowerCanRestoreIndividualDefaultPowerScheme);
+        return reinterpret_cast<void*>(HookedGeneratedApi13689_PdhGetDataSourceTimeRangeA);
     case 3:
-        return reinterpret_cast<void*>(HookedGeneratedApi13782_PowerCreatePossibleSetting);
+        return reinterpret_cast<void*>(HookedGeneratedApi13690_PdhGetDataSourceTimeRangeH);
     case 4:
-        return reinterpret_cast<void*>(HookedGeneratedApi13783_PowerCreateSetting);
+        return reinterpret_cast<void*>(HookedGeneratedApi13691_PdhGetDataSourceTimeRangeW);
     case 5:
-        return reinterpret_cast<void*>(HookedGeneratedApi13784_PowerDeleteScheme);
+        return reinterpret_cast<void*>(HookedGeneratedApi13692_PdhGetDefaultPerfCounterA);
     case 6:
-        return reinterpret_cast<void*>(HookedGeneratedApi13785_PowerDeterminePlatformRoleEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi13693_PdhGetDefaultPerfCounterHA);
     case 7:
-        return reinterpret_cast<void*>(HookedGeneratedApi13786_PowerDuplicateScheme);
+        return reinterpret_cast<void*>(HookedGeneratedApi13694_PdhGetDefaultPerfCounterHW);
     case 8:
-        return reinterpret_cast<void*>(HookedGeneratedApi13787_PowerEnumerate);
+        return reinterpret_cast<void*>(HookedGeneratedApi13695_PdhGetDefaultPerfCounterW);
     case 9:
-        return reinterpret_cast<void*>(HookedGeneratedApi13788_PowerGetActiveScheme);
+        return reinterpret_cast<void*>(HookedGeneratedApi13696_PdhGetDefaultPerfObjectA);
     case 10:
-        return reinterpret_cast<void*>(HookedGeneratedApi13789_PowerGetUserConfiguredACPowerMode);
+        return reinterpret_cast<void*>(HookedGeneratedApi13697_PdhGetDefaultPerfObjectHA);
     case 11:
-        return reinterpret_cast<void*>(HookedGeneratedApi13790_PowerGetUserConfiguredDCPowerMode);
+        return reinterpret_cast<void*>(HookedGeneratedApi13698_PdhGetDefaultPerfObjectHW);
     case 12:
-        return reinterpret_cast<void*>(HookedGeneratedApi13791_PowerImportPowerScheme);
+        return reinterpret_cast<void*>(HookedGeneratedApi13699_PdhGetDefaultPerfObjectW);
     case 13:
-        return reinterpret_cast<void*>(HookedGeneratedApi13792_PowerIsSettingRangeDefined);
+        return reinterpret_cast<void*>(HookedGeneratedApi13700_PdhGetDllVersion);
     case 14:
-        return reinterpret_cast<void*>(HookedGeneratedApi13793_PowerOpenSystemPowerKey);
+        return reinterpret_cast<void*>(HookedGeneratedApi13701_PdhGetFormattedCounterArrayA);
     case 15:
-        return reinterpret_cast<void*>(HookedGeneratedApi13794_PowerOpenUserPowerKey);
+        return reinterpret_cast<void*>(HookedGeneratedApi13702_PdhGetFormattedCounterArrayW);
     case 16:
-        return reinterpret_cast<void*>(HookedGeneratedApi13795_PowerReadACDefaultIndex);
+        return reinterpret_cast<void*>(HookedGeneratedApi13703_PdhGetFormattedCounterValue);
     case 17:
-        return reinterpret_cast<void*>(HookedGeneratedApi13796_PowerReadACValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi13704_PdhGetLogFileSize);
     case 18:
-        return reinterpret_cast<void*>(HookedGeneratedApi13797_PowerReadACValueIndex);
+        return reinterpret_cast<void*>(HookedGeneratedApi13705_PdhGetLogSetGUID);
     case 19:
-        return reinterpret_cast<void*>(HookedGeneratedApi13798_PowerReadDCDefaultIndex);
+        return reinterpret_cast<void*>(HookedGeneratedApi13706_PdhGetRawCounterArrayA);
     case 20:
-        return reinterpret_cast<void*>(HookedGeneratedApi13799_PowerReadDCValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi13707_PdhGetRawCounterArrayW);
     case 21:
-        return reinterpret_cast<void*>(HookedGeneratedApi13800_PowerReadDCValueIndex);
+        return reinterpret_cast<void*>(HookedGeneratedApi13708_PdhGetRawCounterValue);
     case 22:
-        return reinterpret_cast<void*>(HookedGeneratedApi13801_PowerReadDescription);
+        return reinterpret_cast<void*>(HookedGeneratedApi13709_PdhIsRealTimeQuery);
     case 23:
-        return reinterpret_cast<void*>(HookedGeneratedApi13802_PowerReadFriendlyName);
+        return reinterpret_cast<void*>(HookedGeneratedApi13710_PdhLookupPerfIndexByNameA);
     case 24:
-        return reinterpret_cast<void*>(HookedGeneratedApi13803_PowerReadIconResourceSpecifier);
+        return reinterpret_cast<void*>(HookedGeneratedApi13711_PdhLookupPerfIndexByNameW);
     case 25:
-        return reinterpret_cast<void*>(HookedGeneratedApi13804_PowerReadPossibleDescription);
+        return reinterpret_cast<void*>(HookedGeneratedApi13712_PdhLookupPerfNameByIndexA);
     case 26:
-        return reinterpret_cast<void*>(HookedGeneratedApi13805_PowerReadPossibleFriendlyName);
+        return reinterpret_cast<void*>(HookedGeneratedApi13713_PdhLookupPerfNameByIndexW);
     case 27:
-        return reinterpret_cast<void*>(HookedGeneratedApi13806_PowerReadPossibleValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi13714_PdhMakeCounterPathA);
     case 28:
-        return reinterpret_cast<void*>(HookedGeneratedApi13807_PowerReadSettingAttributes);
+        return reinterpret_cast<void*>(HookedGeneratedApi13715_PdhMakeCounterPathW);
     case 29:
-        return reinterpret_cast<void*>(HookedGeneratedApi13808_PowerReadValueIncrement);
+        return reinterpret_cast<void*>(HookedGeneratedApi13716_PdhOpenLogA);
     case 30:
-        return reinterpret_cast<void*>(HookedGeneratedApi13809_PowerReadValueMax);
+        return reinterpret_cast<void*>(HookedGeneratedApi13717_PdhOpenLogW);
     case 31:
-        return reinterpret_cast<void*>(HookedGeneratedApi13810_PowerReadValueMin);
+        return reinterpret_cast<void*>(HookedGeneratedApi13718_PdhOpenQueryA);
     case 32:
-        return reinterpret_cast<void*>(HookedGeneratedApi13811_PowerReadValueUnitsSpecifier);
+        return reinterpret_cast<void*>(HookedGeneratedApi13719_PdhOpenQueryH);
     case 33:
-        return reinterpret_cast<void*>(HookedGeneratedApi13812_PowerRegisterForEffectivePowerModeNotifications);
+        return reinterpret_cast<void*>(HookedGeneratedApi13720_PdhOpenQueryW);
     case 34:
-        return reinterpret_cast<void*>(HookedGeneratedApi13813_PowerRegisterSuspendResumeNotification);
+        return reinterpret_cast<void*>(HookedGeneratedApi13721_PdhParseCounterPathA);
     case 35:
-        return reinterpret_cast<void*>(HookedGeneratedApi13814_PowerRemovePowerSetting);
+        return reinterpret_cast<void*>(HookedGeneratedApi13722_PdhParseCounterPathW);
     case 36:
-        return reinterpret_cast<void*>(HookedGeneratedApi13815_PowerReportThermalEvent);
+        return reinterpret_cast<void*>(HookedGeneratedApi13723_PdhParseInstanceNameA);
     case 37:
-        return reinterpret_cast<void*>(HookedGeneratedApi13816_PowerRestoreIndividualDefaultPowerScheme);
+        return reinterpret_cast<void*>(HookedGeneratedApi13724_PdhParseInstanceNameW);
     case 38:
-        return reinterpret_cast<void*>(HookedGeneratedApi13817_PowerSetActiveScheme);
+        return reinterpret_cast<void*>(HookedGeneratedApi13725_PdhReadRawLogRecord);
     case 39:
-        return reinterpret_cast<void*>(HookedGeneratedApi13818_PowerSettingAccessCheck);
+        return reinterpret_cast<void*>(HookedGeneratedApi13726_PdhRemoveCounter);
     case 40:
-        return reinterpret_cast<void*>(HookedGeneratedApi13819_PowerSettingAccessCheckEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi13727_PdhSelectDataSourceA);
     case 41:
-        return reinterpret_cast<void*>(HookedGeneratedApi13820_PowerSettingRegisterNotification);
+        return reinterpret_cast<void*>(HookedGeneratedApi13728_PdhSelectDataSourceW);
     case 42:
-        return reinterpret_cast<void*>(HookedGeneratedApi13821_PowerSettingUnregisterNotification);
+        return reinterpret_cast<void*>(HookedGeneratedApi13729_PdhSetCounterScaleFactor);
     case 43:
-        return reinterpret_cast<void*>(HookedGeneratedApi13822_PowerSetUserConfiguredACPowerMode);
+        return reinterpret_cast<void*>(HookedGeneratedApi13730_PdhSetDefaultRealTimeDataSource);
     case 44:
-        return reinterpret_cast<void*>(HookedGeneratedApi13823_PowerSetUserConfiguredDCPowerMode);
+        return reinterpret_cast<void*>(HookedGeneratedApi13731_PdhSetLogSetRunID);
     case 45:
-        return reinterpret_cast<void*>(HookedGeneratedApi13824_PowerUnregisterFromEffectivePowerModeNotifications);
+        return reinterpret_cast<void*>(HookedGeneratedApi13732_PdhSetQueryTimeRange);
     case 46:
-        return reinterpret_cast<void*>(HookedGeneratedApi13825_PowerUnregisterSuspendResumeNotification);
+        return reinterpret_cast<void*>(HookedGeneratedApi13733_PdhUpdateLogA);
     case 47:
-        return reinterpret_cast<void*>(HookedGeneratedApi13826_PowerWriteACDefaultIndex);
+        return reinterpret_cast<void*>(HookedGeneratedApi13734_PdhUpdateLogFileCatalog);
     case 48:
-        return reinterpret_cast<void*>(HookedGeneratedApi13827_PowerWriteACValueIndex);
+        return reinterpret_cast<void*>(HookedGeneratedApi13735_PdhUpdateLogW);
     case 49:
-        return reinterpret_cast<void*>(HookedGeneratedApi13828_PowerWriteDCDefaultIndex);
+        return reinterpret_cast<void*>(HookedGeneratedApi13736_PdhValidatePathA);
     case 50:
-        return reinterpret_cast<void*>(HookedGeneratedApi13829_PowerWriteDCValueIndex);
+        return reinterpret_cast<void*>(HookedGeneratedApi13737_PdhValidatePathExA);
     case 51:
-        return reinterpret_cast<void*>(HookedGeneratedApi13830_PowerWriteDescription);
+        return reinterpret_cast<void*>(HookedGeneratedApi13738_PdhValidatePathExW);
     case 52:
-        return reinterpret_cast<void*>(HookedGeneratedApi13831_PowerWriteFriendlyName);
+        return reinterpret_cast<void*>(HookedGeneratedApi13739_PdhValidatePathW);
     case 53:
-        return reinterpret_cast<void*>(HookedGeneratedApi13832_PowerWriteIconResourceSpecifier);
+        return reinterpret_cast<void*>(HookedGeneratedApi13740_PdhVerifySQLDBA);
     case 54:
-        return reinterpret_cast<void*>(HookedGeneratedApi13833_PowerWritePossibleDescription);
+        return reinterpret_cast<void*>(HookedGeneratedApi13741_PdhVerifySQLDBW);
     case 55:
-        return reinterpret_cast<void*>(HookedGeneratedApi13834_PowerWritePossibleFriendlyName);
+        return reinterpret_cast<void*>(HookedGeneratedApi13742_PeerDistClientAddContentInformation);
     case 56:
-        return reinterpret_cast<void*>(HookedGeneratedApi13835_PowerWritePossibleValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi13743_PeerDistClientAddData);
     case 57:
-        return reinterpret_cast<void*>(HookedGeneratedApi13836_PowerWriteSettingAttributes);
+        return reinterpret_cast<void*>(HookedGeneratedApi13744_PeerDistClientBlockRead);
     case 58:
-        return reinterpret_cast<void*>(HookedGeneratedApi13837_PowerWriteValueIncrement);
+        return reinterpret_cast<void*>(HookedGeneratedApi13745_PeerDistClientCancelAsyncOperation);
     case 59:
-        return reinterpret_cast<void*>(HookedGeneratedApi13838_PowerWriteValueMax);
+        return reinterpret_cast<void*>(HookedGeneratedApi13746_PeerDistClientCloseContent);
     case 60:
-        return reinterpret_cast<void*>(HookedGeneratedApi13839_PowerWriteValueMin);
+        return reinterpret_cast<void*>(HookedGeneratedApi13747_PeerDistClientCompleteContentInformation);
     case 61:
-        return reinterpret_cast<void*>(HookedGeneratedApi13840_PowerWriteValueUnitsSpecifier);
+        return reinterpret_cast<void*>(HookedGeneratedApi13748_PeerDistClientFlushContent);
     case 62:
-        return reinterpret_cast<void*>(HookedGeneratedApi13841_ReadGlobalPwrPolicy);
+        return reinterpret_cast<void*>(HookedGeneratedApi13749_PeerDistClientGetInformationByHandle);
     case 63:
-        return reinterpret_cast<void*>(HookedGeneratedApi13842_ReadProcessorPwrScheme);
+        return reinterpret_cast<void*>(HookedGeneratedApi13750_PeerDistClientOpenContent);
     case 64:
-        return reinterpret_cast<void*>(HookedGeneratedApi13843_ReadPwrScheme);
+        return reinterpret_cast<void*>(HookedGeneratedApi13751_PeerDistClientStreamRead);
     case 65:
-        return reinterpret_cast<void*>(HookedGeneratedApi13844_SetActivePwrScheme);
+        return reinterpret_cast<void*>(HookedGeneratedApi13752_PeerDistGetOverlappedResult);
     case 66:
-        return reinterpret_cast<void*>(HookedGeneratedApi13845_SetSuspendState);
+        return reinterpret_cast<void*>(HookedGeneratedApi13753_PeerDistGetStatus);
     case 67:
-        return reinterpret_cast<void*>(HookedGeneratedApi13846_ValidatePowerPolicies);
+        return reinterpret_cast<void*>(HookedGeneratedApi13754_PeerDistGetStatusEx);
     case 68:
-        return reinterpret_cast<void*>(HookedGeneratedApi13847_WriteGlobalPwrPolicy);
+        return reinterpret_cast<void*>(HookedGeneratedApi13755_PeerDistRegisterForStatusChangeNotification);
     case 69:
-        return reinterpret_cast<void*>(HookedGeneratedApi13848_WriteProcessorPwrScheme);
+        return reinterpret_cast<void*>(HookedGeneratedApi13756_PeerDistRegisterForStatusChangeNotificationEx);
     case 70:
-        return reinterpret_cast<void*>(HookedGeneratedApi13849_WritePwrScheme);
+        return reinterpret_cast<void*>(HookedGeneratedApi13757_PeerDistServerCancelAsyncOperation);
     case 71:
-        return reinterpret_cast<void*>(HookedGeneratedApi13850_PTCloseProvider);
+        return reinterpret_cast<void*>(HookedGeneratedApi13758_PeerDistServerCloseContentInformation);
     case 72:
-        return reinterpret_cast<void*>(HookedGeneratedApi13851_PTOpenProvider);
+        return reinterpret_cast<void*>(HookedGeneratedApi13759_PeerDistServerCloseStreamHandle);
     case 73:
-        return reinterpret_cast<void*>(HookedGeneratedApi13852_PTOpenProviderEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi13760_PeerDistServerOpenContentInformation);
     case 74:
-        return reinterpret_cast<void*>(HookedGeneratedApi13853_PTQuerySchemaVersionSupport);
+        return reinterpret_cast<void*>(HookedGeneratedApi13761_PeerDistServerOpenContentInformationEx);
     case 75:
-        return reinterpret_cast<void*>(HookedGeneratedApi13854_PTReleaseMemory);
+        return reinterpret_cast<void*>(HookedGeneratedApi13762_PeerDistServerPublishAddToStream);
     case 76:
-        return reinterpret_cast<void*>(HookedGeneratedApi13855_PrjAllocateAlignedBuffer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13763_PeerDistServerPublishCompleteStream);
     case 77:
-        return reinterpret_cast<void*>(HookedGeneratedApi13856_PrjClearNegativePathCache);
+        return reinterpret_cast<void*>(HookedGeneratedApi13764_PeerDistServerPublishStream);
     case 78:
-        return reinterpret_cast<void*>(HookedGeneratedApi13857_PrjCompleteCommand);
+        return reinterpret_cast<void*>(HookedGeneratedApi13765_PeerDistServerRetrieveContentInformation);
     case 79:
-        return reinterpret_cast<void*>(HookedGeneratedApi13858_PrjDeleteFile);
+        return reinterpret_cast<void*>(HookedGeneratedApi13766_PeerDistServerUnpublish);
     case 80:
-        return reinterpret_cast<void*>(HookedGeneratedApi13859_PrjDoesNameContainWildCards);
+        return reinterpret_cast<void*>(HookedGeneratedApi13767_PeerDistShutdown);
     case 81:
-        return reinterpret_cast<void*>(HookedGeneratedApi13860_PrjFileNameCompare);
+        return reinterpret_cast<void*>(HookedGeneratedApi13768_PeerDistStartup);
     case 82:
-        return reinterpret_cast<void*>(HookedGeneratedApi13861_PrjFileNameMatch);
+        return reinterpret_cast<void*>(HookedGeneratedApi13769_PeerDistUnregisterForStatusChangeNotification);
     case 83:
-        return reinterpret_cast<void*>(HookedGeneratedApi13862_PrjFillDirEntryBuffer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13770_CallNtPowerInformation);
     case 84:
-        return reinterpret_cast<void*>(HookedGeneratedApi13863_PrjFillDirEntryBuffer2);
+        return reinterpret_cast<void*>(HookedGeneratedApi13771_DeletePwrScheme);
     case 85:
-        return reinterpret_cast<void*>(HookedGeneratedApi13864_PrjFreeAlignedBuffer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13772_DevicePowerEnumDevices);
     case 86:
-        return reinterpret_cast<void*>(HookedGeneratedApi13865_PrjGetOnDiskFileState);
+        return reinterpret_cast<void*>(HookedGeneratedApi13773_DevicePowerOpen);
     case 87:
-        return reinterpret_cast<void*>(HookedGeneratedApi13866_PrjGetVirtualizationInstanceInfo);
+        return reinterpret_cast<void*>(HookedGeneratedApi13774_DevicePowerSetDeviceState);
     case 88:
-        return reinterpret_cast<void*>(HookedGeneratedApi13867_PrjMarkDirectoryAsPlaceholder);
+        return reinterpret_cast<void*>(HookedGeneratedApi13775_EnumPwrSchemes);
     case 89:
-        return reinterpret_cast<void*>(HookedGeneratedApi13868_PrjStartVirtualizing);
+        return reinterpret_cast<void*>(HookedGeneratedApi13776_GetActivePwrScheme);
     case 90:
-        return reinterpret_cast<void*>(HookedGeneratedApi13869_PrjStopVirtualizing);
+        return reinterpret_cast<void*>(HookedGeneratedApi13777_GetCurrentPowerPolicies);
     case 91:
-        return reinterpret_cast<void*>(HookedGeneratedApi13870_PrjUpdateFileIfNeeded);
+        return reinterpret_cast<void*>(HookedGeneratedApi13778_GetPwrCapabilities);
     case 92:
-        return reinterpret_cast<void*>(HookedGeneratedApi13871_PrjWriteFileData);
+        return reinterpret_cast<void*>(HookedGeneratedApi13779_GetPwrDiskSpindownRange);
     case 93:
-        return reinterpret_cast<void*>(HookedGeneratedApi13872_PrjWritePlaceholderInfo);
+        return reinterpret_cast<void*>(HookedGeneratedApi13780_IsAdminOverrideActive);
     case 94:
-        return reinterpret_cast<void*>(HookedGeneratedApi13873_PrjWritePlaceholderInfo2);
+        return reinterpret_cast<void*>(HookedGeneratedApi13781_PowerCanRestoreIndividualDefaultPowerScheme);
     case 95:
-        return reinterpret_cast<void*>(HookedGeneratedApi13874_ClearPropVariantArray);
+        return reinterpret_cast<void*>(HookedGeneratedApi13782_PowerCreatePossibleSetting);
     case 96:
-        return reinterpret_cast<void*>(HookedGeneratedApi13875_ClearVariantArray);
+        return reinterpret_cast<void*>(HookedGeneratedApi13783_PowerCreateSetting);
     case 97:
-        return reinterpret_cast<void*>(HookedGeneratedApi13876_InitPropVariantFromBooleanVector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13784_PowerDeleteScheme);
     case 98:
-        return reinterpret_cast<void*>(HookedGeneratedApi13877_InitPropVariantFromBuffer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13785_PowerDeterminePlatformRoleEx);
     case 99:
-        return reinterpret_cast<void*>(HookedGeneratedApi13878_InitPropVariantFromCLSID);
+        return reinterpret_cast<void*>(HookedGeneratedApi13786_PowerDuplicateScheme);
     case 100:
-        return reinterpret_cast<void*>(HookedGeneratedApi13879_InitPropVariantFromDoubleVector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13787_PowerEnumerate);
     case 101:
-        return reinterpret_cast<void*>(HookedGeneratedApi13880_InitPropVariantFromFileTime);
+        return reinterpret_cast<void*>(HookedGeneratedApi13788_PowerGetActiveScheme);
     case 102:
-        return reinterpret_cast<void*>(HookedGeneratedApi13881_InitPropVariantFromFileTimeVector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13789_PowerGetUserConfiguredACPowerMode);
     case 103:
-        return reinterpret_cast<void*>(HookedGeneratedApi13882_InitPropVariantFromGUIDAsString);
+        return reinterpret_cast<void*>(HookedGeneratedApi13790_PowerGetUserConfiguredDCPowerMode);
     case 104:
-        return reinterpret_cast<void*>(HookedGeneratedApi13883_InitPropVariantFromInt16Vector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13791_PowerImportPowerScheme);
     case 105:
-        return reinterpret_cast<void*>(HookedGeneratedApi13884_InitPropVariantFromInt32Vector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13792_PowerIsSettingRangeDefined);
     case 106:
-        return reinterpret_cast<void*>(HookedGeneratedApi13885_InitPropVariantFromInt64Vector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13793_PowerOpenSystemPowerKey);
     case 107:
-        return reinterpret_cast<void*>(HookedGeneratedApi13886_InitPropVariantFromPropVariantVectorElem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13794_PowerOpenUserPowerKey);
     case 108:
-        return reinterpret_cast<void*>(HookedGeneratedApi13887_InitPropVariantFromResource);
+        return reinterpret_cast<void*>(HookedGeneratedApi13795_PowerReadACDefaultIndex);
     case 109:
-        return reinterpret_cast<void*>(HookedGeneratedApi13888_InitPropVariantFromStringAsVector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13796_PowerReadACValue);
     case 110:
-        return reinterpret_cast<void*>(HookedGeneratedApi13889_InitPropVariantFromStringVector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13797_PowerReadACValueIndex);
     case 111:
-        return reinterpret_cast<void*>(HookedGeneratedApi13890_InitPropVariantFromUInt16Vector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13798_PowerReadDCDefaultIndex);
     case 112:
-        return reinterpret_cast<void*>(HookedGeneratedApi13891_InitPropVariantFromUInt32Vector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13799_PowerReadDCValue);
     case 113:
-        return reinterpret_cast<void*>(HookedGeneratedApi13892_InitPropVariantFromUInt64Vector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13800_PowerReadDCValueIndex);
     case 114:
-        return reinterpret_cast<void*>(HookedGeneratedApi13893_InitPropVariantVectorFromPropVariant);
+        return reinterpret_cast<void*>(HookedGeneratedApi13801_PowerReadDescription);
     case 115:
-        return reinterpret_cast<void*>(HookedGeneratedApi13894_InitVariantFromBooleanArray);
+        return reinterpret_cast<void*>(HookedGeneratedApi13802_PowerReadFriendlyName);
     case 116:
-        return reinterpret_cast<void*>(HookedGeneratedApi13895_InitVariantFromBuffer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13803_PowerReadIconResourceSpecifier);
     case 117:
-        return reinterpret_cast<void*>(HookedGeneratedApi13896_InitVariantFromDoubleArray);
+        return reinterpret_cast<void*>(HookedGeneratedApi13804_PowerReadPossibleDescription);
     case 118:
-        return reinterpret_cast<void*>(HookedGeneratedApi13897_InitVariantFromFileTime);
+        return reinterpret_cast<void*>(HookedGeneratedApi13805_PowerReadPossibleFriendlyName);
     case 119:
-        return reinterpret_cast<void*>(HookedGeneratedApi13898_InitVariantFromFileTimeArray);
+        return reinterpret_cast<void*>(HookedGeneratedApi13806_PowerReadPossibleValue);
     case 120:
-        return reinterpret_cast<void*>(HookedGeneratedApi13899_InitVariantFromGUIDAsString);
+        return reinterpret_cast<void*>(HookedGeneratedApi13807_PowerReadSettingAttributes);
     case 121:
-        return reinterpret_cast<void*>(HookedGeneratedApi13900_InitVariantFromInt16Array);
+        return reinterpret_cast<void*>(HookedGeneratedApi13808_PowerReadValueIncrement);
     case 122:
-        return reinterpret_cast<void*>(HookedGeneratedApi13901_InitVariantFromInt32Array);
+        return reinterpret_cast<void*>(HookedGeneratedApi13809_PowerReadValueMax);
     case 123:
-        return reinterpret_cast<void*>(HookedGeneratedApi13902_InitVariantFromInt64Array);
+        return reinterpret_cast<void*>(HookedGeneratedApi13810_PowerReadValueMin);
     case 124:
-        return reinterpret_cast<void*>(HookedGeneratedApi13903_InitVariantFromResource);
+        return reinterpret_cast<void*>(HookedGeneratedApi13811_PowerReadValueUnitsSpecifier);
     case 125:
-        return reinterpret_cast<void*>(HookedGeneratedApi13904_InitVariantFromStringArray);
+        return reinterpret_cast<void*>(HookedGeneratedApi13812_PowerRegisterForEffectivePowerModeNotifications);
     case 126:
-        return reinterpret_cast<void*>(HookedGeneratedApi13905_InitVariantFromUInt16Array);
+        return reinterpret_cast<void*>(HookedGeneratedApi13813_PowerRegisterSuspendResumeNotification);
     case 127:
-        return reinterpret_cast<void*>(HookedGeneratedApi13906_InitVariantFromUInt32Array);
+        return reinterpret_cast<void*>(HookedGeneratedApi13814_PowerRemovePowerSetting);
     case 128:
-        return reinterpret_cast<void*>(HookedGeneratedApi13907_InitVariantFromUInt64Array);
+        return reinterpret_cast<void*>(HookedGeneratedApi13815_PowerReportThermalEvent);
     case 129:
-        return reinterpret_cast<void*>(HookedGeneratedApi13908_InitVariantFromVariantArrayElem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13816_PowerRestoreIndividualDefaultPowerScheme);
     case 130:
-        return reinterpret_cast<void*>(HookedGeneratedApi13909_PropVariantChangeType);
+        return reinterpret_cast<void*>(HookedGeneratedApi13817_PowerSetActiveScheme);
     case 131:
-        return reinterpret_cast<void*>(HookedGeneratedApi13910_PropVariantCompareEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi13818_PowerSettingAccessCheck);
     case 132:
-        return reinterpret_cast<void*>(HookedGeneratedApi13911_PropVariantGetBooleanElem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13819_PowerSettingAccessCheckEx);
     case 133:
-        return reinterpret_cast<void*>(HookedGeneratedApi13912_PropVariantGetDoubleElem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13820_PowerSettingRegisterNotification);
     case 134:
-        return reinterpret_cast<void*>(HookedGeneratedApi13913_PropVariantGetElementCount);
+        return reinterpret_cast<void*>(HookedGeneratedApi13821_PowerSettingUnregisterNotification);
     case 135:
-        return reinterpret_cast<void*>(HookedGeneratedApi13914_PropVariantGetFileTimeElem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13822_PowerSetUserConfiguredACPowerMode);
     case 136:
-        return reinterpret_cast<void*>(HookedGeneratedApi13915_PropVariantGetInt16Elem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13823_PowerSetUserConfiguredDCPowerMode);
     case 137:
-        return reinterpret_cast<void*>(HookedGeneratedApi13916_PropVariantGetInt32Elem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13824_PowerUnregisterFromEffectivePowerModeNotifications);
     case 138:
-        return reinterpret_cast<void*>(HookedGeneratedApi13917_PropVariantGetInt64Elem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13825_PowerUnregisterSuspendResumeNotification);
     case 139:
-        return reinterpret_cast<void*>(HookedGeneratedApi13918_PropVariantGetStringElem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13826_PowerWriteACDefaultIndex);
     case 140:
-        return reinterpret_cast<void*>(HookedGeneratedApi13919_PropVariantGetUInt16Elem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13827_PowerWriteACValueIndex);
     case 141:
-        return reinterpret_cast<void*>(HookedGeneratedApi13920_PropVariantGetUInt32Elem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13828_PowerWriteDCDefaultIndex);
     case 142:
-        return reinterpret_cast<void*>(HookedGeneratedApi13921_PropVariantGetUInt64Elem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13829_PowerWriteDCValueIndex);
     case 143:
-        return reinterpret_cast<void*>(HookedGeneratedApi13922_PropVariantToBoolean);
+        return reinterpret_cast<void*>(HookedGeneratedApi13830_PowerWriteDescription);
     case 144:
-        return reinterpret_cast<void*>(HookedGeneratedApi13923_PropVariantToBooleanVector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13831_PowerWriteFriendlyName);
     case 145:
-        return reinterpret_cast<void*>(HookedGeneratedApi13924_PropVariantToBooleanVectorAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13832_PowerWriteIconResourceSpecifier);
     case 146:
-        return reinterpret_cast<void*>(HookedGeneratedApi13925_PropVariantToBooleanWithDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13833_PowerWritePossibleDescription);
     case 147:
-        return reinterpret_cast<void*>(HookedGeneratedApi13926_PropVariantToBSTR);
+        return reinterpret_cast<void*>(HookedGeneratedApi13834_PowerWritePossibleFriendlyName);
     case 148:
-        return reinterpret_cast<void*>(HookedGeneratedApi13927_PropVariantToBuffer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13835_PowerWritePossibleValue);
     case 149:
-        return reinterpret_cast<void*>(HookedGeneratedApi13928_PropVariantToDouble);
+        return reinterpret_cast<void*>(HookedGeneratedApi13836_PowerWriteSettingAttributes);
     case 150:
-        return reinterpret_cast<void*>(HookedGeneratedApi13929_PropVariantToDoubleVector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13837_PowerWriteValueIncrement);
     case 151:
-        return reinterpret_cast<void*>(HookedGeneratedApi13930_PropVariantToDoubleVectorAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13838_PowerWriteValueMax);
     case 152:
-        return reinterpret_cast<void*>(HookedGeneratedApi13931_PropVariantToFileTime);
+        return reinterpret_cast<void*>(HookedGeneratedApi13839_PowerWriteValueMin);
     case 153:
-        return reinterpret_cast<void*>(HookedGeneratedApi13932_PropVariantToFileTimeVector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13840_PowerWriteValueUnitsSpecifier);
     case 154:
-        return reinterpret_cast<void*>(HookedGeneratedApi13933_PropVariantToFileTimeVectorAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13841_ReadGlobalPwrPolicy);
     case 155:
-        return reinterpret_cast<void*>(HookedGeneratedApi13934_PropVariantToGUID);
+        return reinterpret_cast<void*>(HookedGeneratedApi13842_ReadProcessorPwrScheme);
     case 156:
-        return reinterpret_cast<void*>(HookedGeneratedApi13935_PropVariantToInt16);
+        return reinterpret_cast<void*>(HookedGeneratedApi13843_ReadPwrScheme);
     case 157:
-        return reinterpret_cast<void*>(HookedGeneratedApi13936_PropVariantToInt16Vector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13844_SetActivePwrScheme);
     case 158:
-        return reinterpret_cast<void*>(HookedGeneratedApi13937_PropVariantToInt16VectorAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13845_SetSuspendState);
     case 159:
-        return reinterpret_cast<void*>(HookedGeneratedApi13938_PropVariantToInt16WithDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13846_ValidatePowerPolicies);
     case 160:
-        return reinterpret_cast<void*>(HookedGeneratedApi13939_PropVariantToInt32);
+        return reinterpret_cast<void*>(HookedGeneratedApi13847_WriteGlobalPwrPolicy);
     case 161:
-        return reinterpret_cast<void*>(HookedGeneratedApi13940_PropVariantToInt32Vector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13848_WriteProcessorPwrScheme);
     case 162:
-        return reinterpret_cast<void*>(HookedGeneratedApi13941_PropVariantToInt32VectorAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13849_WritePwrScheme);
     case 163:
-        return reinterpret_cast<void*>(HookedGeneratedApi13942_PropVariantToInt32WithDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13850_PTCloseProvider);
     case 164:
-        return reinterpret_cast<void*>(HookedGeneratedApi13943_PropVariantToInt64);
+        return reinterpret_cast<void*>(HookedGeneratedApi13851_PTOpenProvider);
     case 165:
-        return reinterpret_cast<void*>(HookedGeneratedApi13944_PropVariantToInt64Vector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13852_PTOpenProviderEx);
     case 166:
-        return reinterpret_cast<void*>(HookedGeneratedApi13945_PropVariantToInt64VectorAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13853_PTQuerySchemaVersionSupport);
     case 167:
-        return reinterpret_cast<void*>(HookedGeneratedApi13946_PropVariantToInt64WithDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13854_PTReleaseMemory);
     case 168:
-        return reinterpret_cast<void*>(HookedGeneratedApi13947_PropVariantToString);
+        return reinterpret_cast<void*>(HookedGeneratedApi13855_PrjAllocateAlignedBuffer);
     case 169:
-        return reinterpret_cast<void*>(HookedGeneratedApi13948_PropVariantToStringAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13856_PrjClearNegativePathCache);
     case 170:
-        return reinterpret_cast<void*>(HookedGeneratedApi13949_PropVariantToStringVector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13857_PrjCompleteCommand);
     case 171:
-        return reinterpret_cast<void*>(HookedGeneratedApi13950_PropVariantToStringVectorAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13858_PrjDeleteFile);
     case 172:
-        return reinterpret_cast<void*>(HookedGeneratedApi13951_PropVariantToStringWithDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13859_PrjDoesNameContainWildCards);
     case 173:
-        return reinterpret_cast<void*>(HookedGeneratedApi13952_PropVariantToStrRet);
+        return reinterpret_cast<void*>(HookedGeneratedApi13860_PrjFileNameCompare);
     case 174:
-        return reinterpret_cast<void*>(HookedGeneratedApi13953_PropVariantToUInt16);
+        return reinterpret_cast<void*>(HookedGeneratedApi13861_PrjFileNameMatch);
     case 175:
-        return reinterpret_cast<void*>(HookedGeneratedApi13954_PropVariantToUInt16Vector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13862_PrjFillDirEntryBuffer);
     case 176:
-        return reinterpret_cast<void*>(HookedGeneratedApi13955_PropVariantToUInt16VectorAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13863_PrjFillDirEntryBuffer2);
     case 177:
-        return reinterpret_cast<void*>(HookedGeneratedApi13956_PropVariantToUInt16WithDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13864_PrjFreeAlignedBuffer);
     case 178:
-        return reinterpret_cast<void*>(HookedGeneratedApi13957_PropVariantToUInt32);
+        return reinterpret_cast<void*>(HookedGeneratedApi13865_PrjGetOnDiskFileState);
     case 179:
-        return reinterpret_cast<void*>(HookedGeneratedApi13958_PropVariantToUInt32Vector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13866_PrjGetVirtualizationInstanceInfo);
     case 180:
-        return reinterpret_cast<void*>(HookedGeneratedApi13959_PropVariantToUInt32VectorAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13867_PrjMarkDirectoryAsPlaceholder);
     case 181:
-        return reinterpret_cast<void*>(HookedGeneratedApi13960_PropVariantToUInt32WithDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13868_PrjStartVirtualizing);
     case 182:
-        return reinterpret_cast<void*>(HookedGeneratedApi13961_PropVariantToUInt64);
+        return reinterpret_cast<void*>(HookedGeneratedApi13869_PrjStopVirtualizing);
     case 183:
-        return reinterpret_cast<void*>(HookedGeneratedApi13962_PropVariantToUInt64Vector);
+        return reinterpret_cast<void*>(HookedGeneratedApi13870_PrjUpdateFileIfNeeded);
     case 184:
-        return reinterpret_cast<void*>(HookedGeneratedApi13963_PropVariantToUInt64VectorAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13871_PrjWriteFileData);
     case 185:
-        return reinterpret_cast<void*>(HookedGeneratedApi13964_PropVariantToUInt64WithDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13872_PrjWritePlaceholderInfo);
     case 186:
-        return reinterpret_cast<void*>(HookedGeneratedApi13965_PropVariantToVariant);
+        return reinterpret_cast<void*>(HookedGeneratedApi13873_PrjWritePlaceholderInfo2);
     case 187:
-        return reinterpret_cast<void*>(HookedGeneratedApi13966_PropVariantToWinRTPropertyValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi13874_ClearPropVariantArray);
     case 188:
-        return reinterpret_cast<void*>(HookedGeneratedApi13967_PSCoerceToCanonicalValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi13875_ClearVariantArray);
     case 189:
-        return reinterpret_cast<void*>(HookedGeneratedApi13968_PSCreateMemoryPropertyStore);
+        return reinterpret_cast<void*>(HookedGeneratedApi13876_InitPropVariantFromBooleanVector);
     case 190:
-        return reinterpret_cast<void*>(HookedGeneratedApi13969_PSCreatePropertyChangeArray);
+        return reinterpret_cast<void*>(HookedGeneratedApi13877_InitPropVariantFromBuffer);
     case 191:
-        return reinterpret_cast<void*>(HookedGeneratedApi13970_PSCreateSimplePropertyChange);
+        return reinterpret_cast<void*>(HookedGeneratedApi13878_InitPropVariantFromCLSID);
     case 192:
-        return reinterpret_cast<void*>(HookedGeneratedApi13971_PSEnumeratePropertyDescriptions);
+        return reinterpret_cast<void*>(HookedGeneratedApi13879_InitPropVariantFromDoubleVector);
     case 193:
-        return reinterpret_cast<void*>(HookedGeneratedApi13972_PSFormatForDisplay);
+        return reinterpret_cast<void*>(HookedGeneratedApi13880_InitPropVariantFromFileTime);
     case 194:
-        return reinterpret_cast<void*>(HookedGeneratedApi13973_PSFormatForDisplayAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13881_InitPropVariantFromFileTimeVector);
     case 195:
-        return reinterpret_cast<void*>(HookedGeneratedApi13974_PSGetImageReferenceForValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi13882_InitPropVariantFromGUIDAsString);
     case 196:
-        return reinterpret_cast<void*>(HookedGeneratedApi13975_PSGetNamedPropertyFromPropertyStorage);
+        return reinterpret_cast<void*>(HookedGeneratedApi13883_InitPropVariantFromInt16Vector);
     case 197:
-        return reinterpret_cast<void*>(HookedGeneratedApi13976_PSGetNameFromPropertyKey);
+        return reinterpret_cast<void*>(HookedGeneratedApi13884_InitPropVariantFromInt32Vector);
     case 198:
-        return reinterpret_cast<void*>(HookedGeneratedApi13977_PSGetPropertyDescription);
+        return reinterpret_cast<void*>(HookedGeneratedApi13885_InitPropVariantFromInt64Vector);
     case 199:
-        return reinterpret_cast<void*>(HookedGeneratedApi13978_PSGetPropertyDescriptionByName);
+        return reinterpret_cast<void*>(HookedGeneratedApi13886_InitPropVariantFromPropVariantVectorElem);
     case 200:
-        return reinterpret_cast<void*>(HookedGeneratedApi13979_PSGetPropertyDescriptionListFromString);
+        return reinterpret_cast<void*>(HookedGeneratedApi13887_InitPropVariantFromResource);
     case 201:
-        return reinterpret_cast<void*>(HookedGeneratedApi13980_PSGetPropertyFromPropertyStorage);
+        return reinterpret_cast<void*>(HookedGeneratedApi13888_InitPropVariantFromStringAsVector);
     case 202:
-        return reinterpret_cast<void*>(HookedGeneratedApi13981_PSGetPropertyKeyFromName);
+        return reinterpret_cast<void*>(HookedGeneratedApi13889_InitPropVariantFromStringVector);
     case 203:
-        return reinterpret_cast<void*>(HookedGeneratedApi13982_PSGetPropertySystem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13890_InitPropVariantFromUInt16Vector);
     case 204:
-        return reinterpret_cast<void*>(HookedGeneratedApi13983_PSLookupPropertyHandlerCLSID);
+        return reinterpret_cast<void*>(HookedGeneratedApi13891_InitPropVariantFromUInt32Vector);
     case 205:
-        return reinterpret_cast<void*>(HookedGeneratedApi13984_PSPropertyKeyFromString);
+        return reinterpret_cast<void*>(HookedGeneratedApi13892_InitPropVariantFromUInt64Vector);
     case 206:
-        return reinterpret_cast<void*>(HookedGeneratedApi13985_PSRegisterPropertySchema);
+        return reinterpret_cast<void*>(HookedGeneratedApi13893_InitPropVariantVectorFromPropVariant);
     case 207:
-        return reinterpret_cast<void*>(HookedGeneratedApi13986_PSStringFromPropertyKey);
+        return reinterpret_cast<void*>(HookedGeneratedApi13894_InitVariantFromBooleanArray);
     case 208:
-        return reinterpret_cast<void*>(HookedGeneratedApi13987_PSUnregisterPropertySchema);
+        return reinterpret_cast<void*>(HookedGeneratedApi13895_InitVariantFromBuffer);
     case 209:
-        return reinterpret_cast<void*>(HookedGeneratedApi13988_StgDeserializePropVariant);
+        return reinterpret_cast<void*>(HookedGeneratedApi13896_InitVariantFromDoubleArray);
     case 210:
-        return reinterpret_cast<void*>(HookedGeneratedApi13989_StgSerializePropVariant);
+        return reinterpret_cast<void*>(HookedGeneratedApi13897_InitVariantFromFileTime);
     case 211:
-        return reinterpret_cast<void*>(HookedGeneratedApi13990_VariantCompare);
+        return reinterpret_cast<void*>(HookedGeneratedApi13898_InitVariantFromFileTimeArray);
     case 212:
-        return reinterpret_cast<void*>(HookedGeneratedApi13991_VariantGetBooleanElem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13899_InitVariantFromGUIDAsString);
     case 213:
-        return reinterpret_cast<void*>(HookedGeneratedApi13992_VariantGetDoubleElem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13900_InitVariantFromInt16Array);
     case 214:
-        return reinterpret_cast<void*>(HookedGeneratedApi13993_VariantGetElementCount);
+        return reinterpret_cast<void*>(HookedGeneratedApi13901_InitVariantFromInt32Array);
     case 215:
-        return reinterpret_cast<void*>(HookedGeneratedApi13994_VariantGetInt16Elem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13902_InitVariantFromInt64Array);
     case 216:
-        return reinterpret_cast<void*>(HookedGeneratedApi13995_VariantGetInt32Elem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13903_InitVariantFromResource);
     case 217:
-        return reinterpret_cast<void*>(HookedGeneratedApi13996_VariantGetInt64Elem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13904_InitVariantFromStringArray);
     case 218:
-        return reinterpret_cast<void*>(HookedGeneratedApi13997_VariantGetStringElem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13905_InitVariantFromUInt16Array);
     case 219:
-        return reinterpret_cast<void*>(HookedGeneratedApi13998_VariantGetUInt16Elem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13906_InitVariantFromUInt32Array);
     case 220:
-        return reinterpret_cast<void*>(HookedGeneratedApi13999_VariantGetUInt32Elem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13907_InitVariantFromUInt64Array);
     case 221:
-        return reinterpret_cast<void*>(HookedGeneratedApi14000_VariantGetUInt64Elem);
+        return reinterpret_cast<void*>(HookedGeneratedApi13908_InitVariantFromVariantArrayElem);
     case 222:
-        return reinterpret_cast<void*>(HookedGeneratedApi14001_VariantToBoolean);
+        return reinterpret_cast<void*>(HookedGeneratedApi13909_PropVariantChangeType);
     case 223:
-        return reinterpret_cast<void*>(HookedGeneratedApi14002_VariantToBooleanArray);
+        return reinterpret_cast<void*>(HookedGeneratedApi13910_PropVariantCompareEx);
     case 224:
-        return reinterpret_cast<void*>(HookedGeneratedApi14003_VariantToBooleanArrayAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13911_PropVariantGetBooleanElem);
     case 225:
-        return reinterpret_cast<void*>(HookedGeneratedApi14004_VariantToBooleanWithDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13912_PropVariantGetDoubleElem);
     case 226:
-        return reinterpret_cast<void*>(HookedGeneratedApi14005_VariantToBuffer);
+        return reinterpret_cast<void*>(HookedGeneratedApi13913_PropVariantGetElementCount);
     case 227:
-        return reinterpret_cast<void*>(HookedGeneratedApi14006_VariantToDosDateTime);
+        return reinterpret_cast<void*>(HookedGeneratedApi13914_PropVariantGetFileTimeElem);
     case 228:
-        return reinterpret_cast<void*>(HookedGeneratedApi14007_VariantToDouble);
+        return reinterpret_cast<void*>(HookedGeneratedApi13915_PropVariantGetInt16Elem);
     case 229:
-        return reinterpret_cast<void*>(HookedGeneratedApi14008_VariantToDoubleArray);
+        return reinterpret_cast<void*>(HookedGeneratedApi13916_PropVariantGetInt32Elem);
     case 230:
-        return reinterpret_cast<void*>(HookedGeneratedApi14009_VariantToDoubleArrayAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13917_PropVariantGetInt64Elem);
     case 231:
-        return reinterpret_cast<void*>(HookedGeneratedApi14010_VariantToFileTime);
+        return reinterpret_cast<void*>(HookedGeneratedApi13918_PropVariantGetStringElem);
     case 232:
-        return reinterpret_cast<void*>(HookedGeneratedApi14011_VariantToGUID);
+        return reinterpret_cast<void*>(HookedGeneratedApi13919_PropVariantGetUInt16Elem);
     case 233:
-        return reinterpret_cast<void*>(HookedGeneratedApi14012_VariantToInt16);
+        return reinterpret_cast<void*>(HookedGeneratedApi13920_PropVariantGetUInt32Elem);
     case 234:
-        return reinterpret_cast<void*>(HookedGeneratedApi14013_VariantToInt16Array);
+        return reinterpret_cast<void*>(HookedGeneratedApi13921_PropVariantGetUInt64Elem);
     case 235:
-        return reinterpret_cast<void*>(HookedGeneratedApi14014_VariantToInt16ArrayAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13922_PropVariantToBoolean);
     case 236:
-        return reinterpret_cast<void*>(HookedGeneratedApi14015_VariantToInt16WithDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13923_PropVariantToBooleanVector);
     case 237:
-        return reinterpret_cast<void*>(HookedGeneratedApi14016_VariantToInt32);
+        return reinterpret_cast<void*>(HookedGeneratedApi13924_PropVariantToBooleanVectorAlloc);
     case 238:
-        return reinterpret_cast<void*>(HookedGeneratedApi14017_VariantToInt32Array);
+        return reinterpret_cast<void*>(HookedGeneratedApi13925_PropVariantToBooleanWithDefault);
     case 239:
-        return reinterpret_cast<void*>(HookedGeneratedApi14018_VariantToInt32ArrayAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13926_PropVariantToBSTR);
     case 240:
-        return reinterpret_cast<void*>(HookedGeneratedApi14019_VariantToInt32WithDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13927_PropVariantToBuffer);
     case 241:
-        return reinterpret_cast<void*>(HookedGeneratedApi14020_VariantToInt64);
+        return reinterpret_cast<void*>(HookedGeneratedApi13928_PropVariantToDouble);
     case 242:
-        return reinterpret_cast<void*>(HookedGeneratedApi14021_VariantToInt64Array);
+        return reinterpret_cast<void*>(HookedGeneratedApi13929_PropVariantToDoubleVector);
     case 243:
-        return reinterpret_cast<void*>(HookedGeneratedApi14022_VariantToInt64ArrayAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13930_PropVariantToDoubleVectorAlloc);
     case 244:
-        return reinterpret_cast<void*>(HookedGeneratedApi14023_VariantToInt64WithDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13931_PropVariantToFileTime);
     case 245:
-        return reinterpret_cast<void*>(HookedGeneratedApi14024_VariantToPropVariant);
+        return reinterpret_cast<void*>(HookedGeneratedApi13932_PropVariantToFileTimeVector);
     case 246:
-        return reinterpret_cast<void*>(HookedGeneratedApi14025_VariantToString);
+        return reinterpret_cast<void*>(HookedGeneratedApi13933_PropVariantToFileTimeVectorAlloc);
     case 247:
-        return reinterpret_cast<void*>(HookedGeneratedApi14026_VariantToStringAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13934_PropVariantToGUID);
     case 248:
-        return reinterpret_cast<void*>(HookedGeneratedApi14027_VariantToStringArray);
+        return reinterpret_cast<void*>(HookedGeneratedApi13935_PropVariantToInt16);
     case 249:
-        return reinterpret_cast<void*>(HookedGeneratedApi14028_VariantToStringArrayAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13936_PropVariantToInt16Vector);
     case 250:
-        return reinterpret_cast<void*>(HookedGeneratedApi14029_VariantToStringWithDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13937_PropVariantToInt16VectorAlloc);
     case 251:
-        return reinterpret_cast<void*>(HookedGeneratedApi14030_VariantToStrRet);
+        return reinterpret_cast<void*>(HookedGeneratedApi13938_PropVariantToInt16WithDefault);
     case 252:
-        return reinterpret_cast<void*>(HookedGeneratedApi14031_VariantToUInt16);
+        return reinterpret_cast<void*>(HookedGeneratedApi13939_PropVariantToInt32);
     case 253:
-        return reinterpret_cast<void*>(HookedGeneratedApi14032_VariantToUInt16Array);
+        return reinterpret_cast<void*>(HookedGeneratedApi13940_PropVariantToInt32Vector);
     case 254:
-        return reinterpret_cast<void*>(HookedGeneratedApi14033_VariantToUInt16ArrayAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13941_PropVariantToInt32VectorAlloc);
     case 255:
-        return reinterpret_cast<void*>(HookedGeneratedApi14034_VariantToUInt16WithDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13942_PropVariantToInt32WithDefault);
     case 256:
-        return reinterpret_cast<void*>(HookedGeneratedApi14035_VariantToUInt32);
+        return reinterpret_cast<void*>(HookedGeneratedApi13943_PropVariantToInt64);
     case 257:
-        return reinterpret_cast<void*>(HookedGeneratedApi14036_VariantToUInt32Array);
+        return reinterpret_cast<void*>(HookedGeneratedApi13944_PropVariantToInt64Vector);
     case 258:
-        return reinterpret_cast<void*>(HookedGeneratedApi14037_VariantToUInt32ArrayAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13945_PropVariantToInt64VectorAlloc);
     case 259:
-        return reinterpret_cast<void*>(HookedGeneratedApi14038_VariantToUInt32WithDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13946_PropVariantToInt64WithDefault);
     case 260:
-        return reinterpret_cast<void*>(HookedGeneratedApi14039_VariantToUInt64);
+        return reinterpret_cast<void*>(HookedGeneratedApi13947_PropVariantToString);
     case 261:
-        return reinterpret_cast<void*>(HookedGeneratedApi14040_VariantToUInt64Array);
+        return reinterpret_cast<void*>(HookedGeneratedApi13948_PropVariantToStringAlloc);
     case 262:
-        return reinterpret_cast<void*>(HookedGeneratedApi14041_VariantToUInt64ArrayAlloc);
+        return reinterpret_cast<void*>(HookedGeneratedApi13949_PropVariantToStringVector);
     case 263:
-        return reinterpret_cast<void*>(HookedGeneratedApi14042_VariantToUInt64WithDefault);
+        return reinterpret_cast<void*>(HookedGeneratedApi13950_PropVariantToStringVectorAlloc);
     case 264:
-        return reinterpret_cast<void*>(HookedGeneratedApi14043_EmptyWorkingSet);
+        return reinterpret_cast<void*>(HookedGeneratedApi13951_PropVariantToStringWithDefault);
     case 265:
-        return reinterpret_cast<void*>(HookedGeneratedApi14044_EnumDeviceDrivers);
+        return reinterpret_cast<void*>(HookedGeneratedApi13952_PropVariantToStrRet);
     case 266:
-        return reinterpret_cast<void*>(HookedGeneratedApi14045_EnumPageFilesA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13953_PropVariantToUInt16);
     case 267:
-        return reinterpret_cast<void*>(HookedGeneratedApi14046_EnumPageFilesW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13954_PropVariantToUInt16Vector);
     case 268:
-        return reinterpret_cast<void*>(HookedGeneratedApi14047_EnumProcesses);
+        return reinterpret_cast<void*>(HookedGeneratedApi13955_PropVariantToUInt16VectorAlloc);
     case 269:
-        return reinterpret_cast<void*>(HookedGeneratedApi14048_EnumProcessModulesEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi13956_PropVariantToUInt16WithDefault);
     case 270:
-        return reinterpret_cast<void*>(HookedGeneratedApi14049_GetDeviceDriverBaseNameA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13957_PropVariantToUInt32);
     case 271:
-        return reinterpret_cast<void*>(HookedGeneratedApi14050_GetDeviceDriverBaseNameW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13958_PropVariantToUInt32Vector);
     case 272:
-        return reinterpret_cast<void*>(HookedGeneratedApi14051_GetDeviceDriverFileNameA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13959_PropVariantToUInt32VectorAlloc);
     case 273:
-        return reinterpret_cast<void*>(HookedGeneratedApi14052_GetDeviceDriverFileNameW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13960_PropVariantToUInt32WithDefault);
     case 274:
-        return reinterpret_cast<void*>(HookedGeneratedApi14053_GetMappedFileNameA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13961_PropVariantToUInt64);
     case 275:
-        return reinterpret_cast<void*>(HookedGeneratedApi14054_GetMappedFileNameW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13962_PropVariantToUInt64Vector);
     case 276:
-        return reinterpret_cast<void*>(HookedGeneratedApi14055_GetModuleBaseNameA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13963_PropVariantToUInt64VectorAlloc);
     case 277:
-        return reinterpret_cast<void*>(HookedGeneratedApi14056_GetModuleFileNameExA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13964_PropVariantToUInt64WithDefault);
     case 278:
-        return reinterpret_cast<void*>(HookedGeneratedApi14057_GetPerformanceInfo);
+        return reinterpret_cast<void*>(HookedGeneratedApi13965_PropVariantToVariant);
     case 279:
-        return reinterpret_cast<void*>(HookedGeneratedApi14058_GetProcessImageFileNameA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13966_PropVariantToWinRTPropertyValue);
     case 280:
-        return reinterpret_cast<void*>(HookedGeneratedApi14059_GetProcessImageFileNameW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13967_PSCoerceToCanonicalValue);
     case 281:
-        return reinterpret_cast<void*>(HookedGeneratedApi14060_GetWsChanges);
+        return reinterpret_cast<void*>(HookedGeneratedApi13968_PSCreateMemoryPropertyStore);
     case 282:
-        return reinterpret_cast<void*>(HookedGeneratedApi14061_GetWsChangesEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi13969_PSCreatePropertyChangeArray);
     case 283:
-        return reinterpret_cast<void*>(HookedGeneratedApi14062_InitializeProcessForWsWatch);
+        return reinterpret_cast<void*>(HookedGeneratedApi13970_PSCreateSimplePropertyChange);
     case 284:
-        return reinterpret_cast<void*>(HookedGeneratedApi14063_QueryWorkingSet);
+        return reinterpret_cast<void*>(HookedGeneratedApi13971_PSEnumeratePropertyDescriptions);
     case 285:
-        return reinterpret_cast<void*>(HookedGeneratedApi14064_QueryWorkingSetEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi13972_PSFormatForDisplay);
     case 286:
-        return reinterpret_cast<void*>(HookedGeneratedApi14065_LoadIFilterEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi13973_PSFormatForDisplayAlloc);
     case 287:
-        return reinterpret_cast<void*>(HookedGeneratedApi14066_QOSAddSocketToFlow);
+        return reinterpret_cast<void*>(HookedGeneratedApi13974_PSGetImageReferenceForValue);
     case 288:
-        return reinterpret_cast<void*>(HookedGeneratedApi14067_QOSCancel);
+        return reinterpret_cast<void*>(HookedGeneratedApi13975_PSGetNamedPropertyFromPropertyStorage);
     case 289:
-        return reinterpret_cast<void*>(HookedGeneratedApi14068_QOSCloseHandle);
+        return reinterpret_cast<void*>(HookedGeneratedApi13976_PSGetNameFromPropertyKey);
     case 290:
-        return reinterpret_cast<void*>(HookedGeneratedApi14069_QOSCreateHandle);
+        return reinterpret_cast<void*>(HookedGeneratedApi13977_PSGetPropertyDescription);
     case 291:
-        return reinterpret_cast<void*>(HookedGeneratedApi14070_QOSEnumerateFlows);
+        return reinterpret_cast<void*>(HookedGeneratedApi13978_PSGetPropertyDescriptionByName);
     case 292:
-        return reinterpret_cast<void*>(HookedGeneratedApi14071_QOSNotifyFlow);
+        return reinterpret_cast<void*>(HookedGeneratedApi13979_PSGetPropertyDescriptionListFromString);
     case 293:
-        return reinterpret_cast<void*>(HookedGeneratedApi14072_QOSQueryFlow);
+        return reinterpret_cast<void*>(HookedGeneratedApi13980_PSGetPropertyFromPropertyStorage);
     case 294:
-        return reinterpret_cast<void*>(HookedGeneratedApi14073_QOSRemoveSocketFromFlow);
+        return reinterpret_cast<void*>(HookedGeneratedApi13981_PSGetPropertyKeyFromName);
     case 295:
-        return reinterpret_cast<void*>(HookedGeneratedApi14074_QOSSetFlow);
+        return reinterpret_cast<void*>(HookedGeneratedApi13982_PSGetPropertySystem);
     case 296:
-        return reinterpret_cast<void*>(HookedGeneratedApi14075_QOSStartTrackingClient);
+        return reinterpret_cast<void*>(HookedGeneratedApi13983_PSLookupPropertyHandlerCLSID);
     case 297:
-        return reinterpret_cast<void*>(HookedGeneratedApi14076_QOSStopTrackingClient);
+        return reinterpret_cast<void*>(HookedGeneratedApi13984_PSPropertyKeyFromString);
     case 298:
-        return reinterpret_cast<void*>(HookedGeneratedApi14077_RasClearConnectionStatistics);
+        return reinterpret_cast<void*>(HookedGeneratedApi13985_PSRegisterPropertySchema);
     case 299:
-        return reinterpret_cast<void*>(HookedGeneratedApi14078_RasClearLinkStatistics);
+        return reinterpret_cast<void*>(HookedGeneratedApi13986_PSStringFromPropertyKey);
     case 300:
-        return reinterpret_cast<void*>(HookedGeneratedApi14079_RasConnectionNotificationA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13987_PSUnregisterPropertySchema);
     case 301:
-        return reinterpret_cast<void*>(HookedGeneratedApi14080_RasConnectionNotificationW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13988_StgDeserializePropVariant);
     case 302:
-        return reinterpret_cast<void*>(HookedGeneratedApi14081_RasCreatePhonebookEntryA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13989_StgSerializePropVariant);
     case 303:
-        return reinterpret_cast<void*>(HookedGeneratedApi14082_RasCreatePhonebookEntryW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13990_VariantCompare);
     case 304:
-        return reinterpret_cast<void*>(HookedGeneratedApi14083_RasDeleteEntryA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13991_VariantGetBooleanElem);
     case 305:
-        return reinterpret_cast<void*>(HookedGeneratedApi14084_RasDeleteEntryW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13992_VariantGetDoubleElem);
     case 306:
-        return reinterpret_cast<void*>(HookedGeneratedApi14085_RasDeleteSubEntryA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13993_VariantGetElementCount);
     case 307:
-        return reinterpret_cast<void*>(HookedGeneratedApi14086_RasDeleteSubEntryW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13994_VariantGetInt16Elem);
     case 308:
-        return reinterpret_cast<void*>(HookedGeneratedApi14087_RasDialA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13995_VariantGetInt32Elem);
     case 309:
-        return reinterpret_cast<void*>(HookedGeneratedApi14088_RasDialW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13996_VariantGetInt64Elem);
     case 310:
-        return reinterpret_cast<void*>(HookedGeneratedApi14089_RasEditPhonebookEntryA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13997_VariantGetStringElem);
     case 311:
-        return reinterpret_cast<void*>(HookedGeneratedApi14090_RasEditPhonebookEntryW);
+        return reinterpret_cast<void*>(HookedGeneratedApi13998_VariantGetUInt16Elem);
     case 312:
-        return reinterpret_cast<void*>(HookedGeneratedApi14091_RasEnumAutodialAddressesA);
+        return reinterpret_cast<void*>(HookedGeneratedApi13999_VariantGetUInt32Elem);
     case 313:
-        return reinterpret_cast<void*>(HookedGeneratedApi14092_RasEnumAutodialAddressesW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14000_VariantGetUInt64Elem);
     case 314:
-        return reinterpret_cast<void*>(HookedGeneratedApi14093_RasEnumConnectionsA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14001_VariantToBoolean);
     case 315:
-        return reinterpret_cast<void*>(HookedGeneratedApi14094_RasEnumConnectionsW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14002_VariantToBooleanArray);
     case 316:
-        return reinterpret_cast<void*>(HookedGeneratedApi14095_RasEnumDevicesA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14003_VariantToBooleanArrayAlloc);
     case 317:
-        return reinterpret_cast<void*>(HookedGeneratedApi14096_RasEnumDevicesW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14004_VariantToBooleanWithDefault);
     case 318:
-        return reinterpret_cast<void*>(HookedGeneratedApi14097_RasEnumEntriesA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14005_VariantToBuffer);
     case 319:
-        return reinterpret_cast<void*>(HookedGeneratedApi14098_RasEnumEntriesW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14006_VariantToDosDateTime);
     case 320:
-        return reinterpret_cast<void*>(HookedGeneratedApi14099_RasFreeEapUserIdentityA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14007_VariantToDouble);
     case 321:
-        return reinterpret_cast<void*>(HookedGeneratedApi14100_RasFreeEapUserIdentityW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14008_VariantToDoubleArray);
     case 322:
-        return reinterpret_cast<void*>(HookedGeneratedApi14101_RasGetAutodialAddressA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14009_VariantToDoubleArrayAlloc);
     case 323:
-        return reinterpret_cast<void*>(HookedGeneratedApi14102_RasGetAutodialAddressW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14010_VariantToFileTime);
     case 324:
-        return reinterpret_cast<void*>(HookedGeneratedApi14103_RasGetAutodialEnableA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14011_VariantToGUID);
     case 325:
-        return reinterpret_cast<void*>(HookedGeneratedApi14104_RasGetAutodialEnableW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14012_VariantToInt16);
     case 326:
-        return reinterpret_cast<void*>(HookedGeneratedApi14105_RasGetAutodialParamA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14013_VariantToInt16Array);
     case 327:
-        return reinterpret_cast<void*>(HookedGeneratedApi14106_RasGetAutodialParamW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14014_VariantToInt16ArrayAlloc);
     case 328:
-        return reinterpret_cast<void*>(HookedGeneratedApi14107_RasGetConnectionStatistics);
+        return reinterpret_cast<void*>(HookedGeneratedApi14015_VariantToInt16WithDefault);
     case 329:
-        return reinterpret_cast<void*>(HookedGeneratedApi14108_RasGetConnectStatusA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14016_VariantToInt32);
     case 330:
-        return reinterpret_cast<void*>(HookedGeneratedApi14109_RasGetConnectStatusW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14017_VariantToInt32Array);
     case 331:
-        return reinterpret_cast<void*>(HookedGeneratedApi14110_RasGetCountryInfoA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14018_VariantToInt32ArrayAlloc);
     case 332:
-        return reinterpret_cast<void*>(HookedGeneratedApi14111_RasGetCountryInfoW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14019_VariantToInt32WithDefault);
     case 333:
-        return reinterpret_cast<void*>(HookedGeneratedApi14112_RasGetCredentialsA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14020_VariantToInt64);
     case 334:
-        return reinterpret_cast<void*>(HookedGeneratedApi14113_RasGetCredentialsW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14021_VariantToInt64Array);
     case 335:
-        return reinterpret_cast<void*>(HookedGeneratedApi14114_RasGetCustomAuthDataA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14022_VariantToInt64ArrayAlloc);
     case 336:
-        return reinterpret_cast<void*>(HookedGeneratedApi14115_RasGetCustomAuthDataW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14023_VariantToInt64WithDefault);
     case 337:
-        return reinterpret_cast<void*>(HookedGeneratedApi14116_RasGetEapUserDataA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14024_VariantToPropVariant);
     case 338:
-        return reinterpret_cast<void*>(HookedGeneratedApi14117_RasGetEapUserDataW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14025_VariantToString);
     case 339:
-        return reinterpret_cast<void*>(HookedGeneratedApi14118_RasGetEapUserIdentityA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14026_VariantToStringAlloc);
     case 340:
-        return reinterpret_cast<void*>(HookedGeneratedApi14119_RasGetEapUserIdentityW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14027_VariantToStringArray);
     case 341:
-        return reinterpret_cast<void*>(HookedGeneratedApi14120_RasGetEntryDialParamsA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14028_VariantToStringArrayAlloc);
     case 342:
-        return reinterpret_cast<void*>(HookedGeneratedApi14121_RasGetEntryDialParamsW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14029_VariantToStringWithDefault);
     case 343:
-        return reinterpret_cast<void*>(HookedGeneratedApi14122_RasGetEntryPropertiesA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14030_VariantToStrRet);
     case 344:
-        return reinterpret_cast<void*>(HookedGeneratedApi14123_RasGetEntryPropertiesW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14031_VariantToUInt16);
     case 345:
-        return reinterpret_cast<void*>(HookedGeneratedApi14124_RasGetErrorStringA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14032_VariantToUInt16Array);
     case 346:
-        return reinterpret_cast<void*>(HookedGeneratedApi14125_RasGetErrorStringW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14033_VariantToUInt16ArrayAlloc);
     case 347:
-        return reinterpret_cast<void*>(HookedGeneratedApi14126_RasGetLinkStatistics);
+        return reinterpret_cast<void*>(HookedGeneratedApi14034_VariantToUInt16WithDefault);
     case 348:
-        return reinterpret_cast<void*>(HookedGeneratedApi14127_RasGetPCscf);
+        return reinterpret_cast<void*>(HookedGeneratedApi14035_VariantToUInt32);
     case 349:
-        return reinterpret_cast<void*>(HookedGeneratedApi14128_RasGetProjectionInfoA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14036_VariantToUInt32Array);
     case 350:
-        return reinterpret_cast<void*>(HookedGeneratedApi14129_RasGetProjectionInfoEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi14037_VariantToUInt32ArrayAlloc);
     case 351:
-        return reinterpret_cast<void*>(HookedGeneratedApi14130_RasGetProjectionInfoW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14038_VariantToUInt32WithDefault);
     case 352:
-        return reinterpret_cast<void*>(HookedGeneratedApi14131_RasGetSubEntryHandleA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14039_VariantToUInt64);
     case 353:
-        return reinterpret_cast<void*>(HookedGeneratedApi14132_RasGetSubEntryHandleW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14040_VariantToUInt64Array);
     case 354:
-        return reinterpret_cast<void*>(HookedGeneratedApi14133_RasGetSubEntryPropertiesA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14041_VariantToUInt64ArrayAlloc);
     case 355:
-        return reinterpret_cast<void*>(HookedGeneratedApi14134_RasGetSubEntryPropertiesW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14042_VariantToUInt64WithDefault);
     case 356:
-        return reinterpret_cast<void*>(HookedGeneratedApi14135_RasHangUpA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14043_EmptyWorkingSet);
     case 357:
-        return reinterpret_cast<void*>(HookedGeneratedApi14136_RasHangUpW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14044_EnumDeviceDrivers);
     case 358:
-        return reinterpret_cast<void*>(HookedGeneratedApi14137_RasInvokeEapUI);
+        return reinterpret_cast<void*>(HookedGeneratedApi14045_EnumPageFilesA);
     case 359:
-        return reinterpret_cast<void*>(HookedGeneratedApi14138_RasRenameEntryA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14046_EnumPageFilesW);
     case 360:
-        return reinterpret_cast<void*>(HookedGeneratedApi14139_RasRenameEntryW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14047_EnumProcesses);
     case 361:
-        return reinterpret_cast<void*>(HookedGeneratedApi14140_RasSetAutodialAddressA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14048_EnumProcessModulesEx);
     case 362:
-        return reinterpret_cast<void*>(HookedGeneratedApi14141_RasSetAutodialAddressW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14049_GetDeviceDriverBaseNameA);
     case 363:
-        return reinterpret_cast<void*>(HookedGeneratedApi14142_RasSetAutodialEnableA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14050_GetDeviceDriverBaseNameW);
     case 364:
-        return reinterpret_cast<void*>(HookedGeneratedApi14143_RasSetAutodialEnableW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14051_GetDeviceDriverFileNameA);
     case 365:
-        return reinterpret_cast<void*>(HookedGeneratedApi14144_RasSetAutodialParamA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14052_GetDeviceDriverFileNameW);
     case 366:
-        return reinterpret_cast<void*>(HookedGeneratedApi14145_RasSetAutodialParamW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14053_GetMappedFileNameA);
     case 367:
-        return reinterpret_cast<void*>(HookedGeneratedApi14146_RasSetCredentialsA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14054_GetMappedFileNameW);
     case 368:
-        return reinterpret_cast<void*>(HookedGeneratedApi14147_RasSetCredentialsW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14055_GetModuleBaseNameA);
     case 369:
-        return reinterpret_cast<void*>(HookedGeneratedApi14148_RasSetCustomAuthDataA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14056_GetModuleFileNameExA);
     case 370:
-        return reinterpret_cast<void*>(HookedGeneratedApi14149_RasSetCustomAuthDataW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14057_GetPerformanceInfo);
     case 371:
-        return reinterpret_cast<void*>(HookedGeneratedApi14150_RasSetEapUserDataA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14058_GetProcessImageFileNameA);
     case 372:
-        return reinterpret_cast<void*>(HookedGeneratedApi14151_RasSetEapUserDataW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14059_GetProcessImageFileNameW);
     case 373:
-        return reinterpret_cast<void*>(HookedGeneratedApi14152_RasSetEntryDialParamsA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14060_GetWsChanges);
     case 374:
-        return reinterpret_cast<void*>(HookedGeneratedApi14153_RasSetEntryDialParamsW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14061_GetWsChangesEx);
     case 375:
-        return reinterpret_cast<void*>(HookedGeneratedApi14154_RasSetEntryPropertiesA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14062_InitializeProcessForWsWatch);
     case 376:
-        return reinterpret_cast<void*>(HookedGeneratedApi14155_RasSetEntryPropertiesW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14063_QueryWorkingSet);
     case 377:
-        return reinterpret_cast<void*>(HookedGeneratedApi14156_RasSetSubEntryPropertiesA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14064_QueryWorkingSetEx);
     case 378:
-        return reinterpret_cast<void*>(HookedGeneratedApi14157_RasSetSubEntryPropertiesW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14065_LoadIFilterEx);
     case 379:
-        return reinterpret_cast<void*>(HookedGeneratedApi14158_RasUpdateConnection);
+        return reinterpret_cast<void*>(HookedGeneratedApi14066_QOSAddSocketToFlow);
     case 380:
-        return reinterpret_cast<void*>(HookedGeneratedApi14159_RasValidateEntryNameA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14067_QOSCancel);
     case 381:
-        return reinterpret_cast<void*>(HookedGeneratedApi14160_RasValidateEntryNameW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14068_QOSCloseHandle);
     case 382:
-        return reinterpret_cast<void*>(HookedGeneratedApi14161_RasDialDlgA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14069_QOSCreateHandle);
     case 383:
-        return reinterpret_cast<void*>(HookedGeneratedApi14162_RasDialDlgW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14070_QOSEnumerateFlows);
     case 384:
-        return reinterpret_cast<void*>(HookedGeneratedApi14163_RasEntryDlgA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14071_QOSNotifyFlow);
     case 385:
-        return reinterpret_cast<void*>(HookedGeneratedApi14164_RasEntryDlgW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14072_QOSQueryFlow);
     case 386:
-        return reinterpret_cast<void*>(HookedGeneratedApi14165_RasPhonebookDlgA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14073_QOSRemoveSocketFromFlow);
     case 387:
-        return reinterpret_cast<void*>(HookedGeneratedApi14166_RasPhonebookDlgW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14074_QOSSetFlow);
     case 388:
-        return reinterpret_cast<void*>(HookedGeneratedApi14167_CloseClusterCryptProvider);
+        return reinterpret_cast<void*>(HookedGeneratedApi14075_QOSStartTrackingClient);
     case 389:
-        return reinterpret_cast<void*>(HookedGeneratedApi14168_ClusAddClusterHealthFault);
+        return reinterpret_cast<void*>(HookedGeneratedApi14076_QOSStopTrackingClient);
     case 390:
-        return reinterpret_cast<void*>(HookedGeneratedApi14169_ClusGetClusterHealthFaults);
+        return reinterpret_cast<void*>(HookedGeneratedApi14077_RasClearConnectionStatistics);
     case 391:
-        return reinterpret_cast<void*>(HookedGeneratedApi14170_ClusRemoveClusterHealthFault);
+        return reinterpret_cast<void*>(HookedGeneratedApi14078_RasClearLinkStatistics);
     case 392:
-        return reinterpret_cast<void*>(HookedGeneratedApi14171_ClusterClearBackupStateForSharedVolume);
+        return reinterpret_cast<void*>(HookedGeneratedApi14079_RasConnectionNotificationA);
     case 393:
-        return reinterpret_cast<void*>(HookedGeneratedApi14172_ClusterDecrypt);
+        return reinterpret_cast<void*>(HookedGeneratedApi14080_RasConnectionNotificationW);
     case 394:
-        return reinterpret_cast<void*>(HookedGeneratedApi14173_ClusterEncrypt);
+        return reinterpret_cast<void*>(HookedGeneratedApi14081_RasCreatePhonebookEntryA);
     case 395:
-        return reinterpret_cast<void*>(HookedGeneratedApi14174_ClusterGetVolumeNameForVolumeMountPoint);
+        return reinterpret_cast<void*>(HookedGeneratedApi14082_RasCreatePhonebookEntryW);
     case 396:
-        return reinterpret_cast<void*>(HookedGeneratedApi14175_ClusterGetVolumePathName);
+        return reinterpret_cast<void*>(HookedGeneratedApi14083_RasDeleteEntryA);
     case 397:
-        return reinterpret_cast<void*>(HookedGeneratedApi14176_ClusterIsPathOnSharedVolume);
+        return reinterpret_cast<void*>(HookedGeneratedApi14084_RasDeleteEntryW);
     case 398:
-        return reinterpret_cast<void*>(HookedGeneratedApi14177_ClusterPrepareSharedVolumeForBackup);
+        return reinterpret_cast<void*>(HookedGeneratedApi14085_RasDeleteSubEntryA);
     case 399:
-        return reinterpret_cast<void*>(HookedGeneratedApi14178_ClusWorkerCheckTerminate);
+        return reinterpret_cast<void*>(HookedGeneratedApi14086_RasDeleteSubEntryW);
     case 400:
-        return reinterpret_cast<void*>(HookedGeneratedApi14179_ClusWorkerCreate);
+        return reinterpret_cast<void*>(HookedGeneratedApi14087_RasDialA);
     case 401:
-        return reinterpret_cast<void*>(HookedGeneratedApi14180_ClusWorkersTerminate);
+        return reinterpret_cast<void*>(HookedGeneratedApi14088_RasDialW);
     case 402:
-        return reinterpret_cast<void*>(HookedGeneratedApi14181_ClusWorkerTerminate);
+        return reinterpret_cast<void*>(HookedGeneratedApi14089_RasEditPhonebookEntryA);
     case 403:
-        return reinterpret_cast<void*>(HookedGeneratedApi14182_ClusWorkerTerminateEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi14090_RasEditPhonebookEntryW);
     case 404:
-        return reinterpret_cast<void*>(HookedGeneratedApi14183_FreeClusterCrypt);
+        return reinterpret_cast<void*>(HookedGeneratedApi14091_RasEnumAutodialAddressesA);
     case 405:
-        return reinterpret_cast<void*>(HookedGeneratedApi14184_FreeClusterHealthFault);
+        return reinterpret_cast<void*>(HookedGeneratedApi14092_RasEnumAutodialAddressesW);
     case 406:
-        return reinterpret_cast<void*>(HookedGeneratedApi14185_FreeClusterHealthFaultArray);
+        return reinterpret_cast<void*>(HookedGeneratedApi14093_RasEnumConnectionsA);
     case 407:
-        return reinterpret_cast<void*>(HookedGeneratedApi14186_InitializeClusterHealthFault);
+        return reinterpret_cast<void*>(HookedGeneratedApi14094_RasEnumConnectionsW);
     case 408:
-        return reinterpret_cast<void*>(HookedGeneratedApi14187_InitializeClusterHealthFaultArray);
+        return reinterpret_cast<void*>(HookedGeneratedApi14095_RasEnumDevicesA);
     case 409:
-        return reinterpret_cast<void*>(HookedGeneratedApi14188_OpenClusterCryptProvider);
+        return reinterpret_cast<void*>(HookedGeneratedApi14096_RasEnumDevicesW);
     case 410:
-        return reinterpret_cast<void*>(HookedGeneratedApi14189_OpenClusterCryptProviderEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi14097_RasEnumEntriesA);
     case 411:
-        return reinterpret_cast<void*>(HookedGeneratedApi14190_ResUtilAddUnknownProperties);
+        return reinterpret_cast<void*>(HookedGeneratedApi14098_RasEnumEntriesW);
     case 412:
-        return reinterpret_cast<void*>(HookedGeneratedApi14191_ResUtilCreateDirectoryTree);
+        return reinterpret_cast<void*>(HookedGeneratedApi14099_RasFreeEapUserIdentityA);
     case 413:
-        return reinterpret_cast<void*>(HookedGeneratedApi14192_ResUtilDupGroup);
+        return reinterpret_cast<void*>(HookedGeneratedApi14100_RasFreeEapUserIdentityW);
     case 414:
-        return reinterpret_cast<void*>(HookedGeneratedApi14193_ResUtilDupParameterBlock);
+        return reinterpret_cast<void*>(HookedGeneratedApi14101_RasGetAutodialAddressA);
     case 415:
-        return reinterpret_cast<void*>(HookedGeneratedApi14194_ResUtilDupResource);
+        return reinterpret_cast<void*>(HookedGeneratedApi14102_RasGetAutodialAddressW);
     case 416:
-        return reinterpret_cast<void*>(HookedGeneratedApi14195_ResUtilDupString);
+        return reinterpret_cast<void*>(HookedGeneratedApi14103_RasGetAutodialEnableA);
     case 417:
-        return reinterpret_cast<void*>(HookedGeneratedApi14196_ResUtilEnumGroups);
+        return reinterpret_cast<void*>(HookedGeneratedApi14104_RasGetAutodialEnableW);
     case 418:
-        return reinterpret_cast<void*>(HookedGeneratedApi14197_ResUtilEnumGroupsEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi14105_RasGetAutodialParamA);
     case 419:
-        return reinterpret_cast<void*>(HookedGeneratedApi14198_ResUtilEnumPrivateProperties);
+        return reinterpret_cast<void*>(HookedGeneratedApi14106_RasGetAutodialParamW);
     case 420:
-        return reinterpret_cast<void*>(HookedGeneratedApi14199_ResUtilEnumProperties);
+        return reinterpret_cast<void*>(HookedGeneratedApi14107_RasGetConnectionStatistics);
     case 421:
-        return reinterpret_cast<void*>(HookedGeneratedApi14200_ResUtilEnumResources);
+        return reinterpret_cast<void*>(HookedGeneratedApi14108_RasGetConnectStatusA);
     case 422:
-        return reinterpret_cast<void*>(HookedGeneratedApi14201_ResUtilEnumResourcesEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi14109_RasGetConnectStatusW);
     case 423:
-        return reinterpret_cast<void*>(HookedGeneratedApi14202_ResUtilEnumResourcesEx2);
+        return reinterpret_cast<void*>(HookedGeneratedApi14110_RasGetCountryInfoA);
     case 424:
-        return reinterpret_cast<void*>(HookedGeneratedApi14203_ResUtilExpandEnvironmentStrings);
+        return reinterpret_cast<void*>(HookedGeneratedApi14111_RasGetCountryInfoW);
     case 425:
-        return reinterpret_cast<void*>(HookedGeneratedApi14204_ResUtilFindBinaryProperty);
+        return reinterpret_cast<void*>(HookedGeneratedApi14112_RasGetCredentialsA);
     case 426:
-        return reinterpret_cast<void*>(HookedGeneratedApi14205_ResUtilFindDependentDiskResourceDriveLetter);
+        return reinterpret_cast<void*>(HookedGeneratedApi14113_RasGetCredentialsW);
     case 427:
-        return reinterpret_cast<void*>(HookedGeneratedApi14206_ResUtilFindDwordProperty);
+        return reinterpret_cast<void*>(HookedGeneratedApi14114_RasGetCustomAuthDataA);
     case 428:
-        return reinterpret_cast<void*>(HookedGeneratedApi14207_ResUtilFindExpandedSzProperty);
+        return reinterpret_cast<void*>(HookedGeneratedApi14115_RasGetCustomAuthDataW);
     case 429:
-        return reinterpret_cast<void*>(HookedGeneratedApi14208_ResUtilFindExpandSzProperty);
+        return reinterpret_cast<void*>(HookedGeneratedApi14116_RasGetEapUserDataA);
     case 430:
-        return reinterpret_cast<void*>(HookedGeneratedApi14209_ResUtilFindFileTimeProperty);
+        return reinterpret_cast<void*>(HookedGeneratedApi14117_RasGetEapUserDataW);
     case 431:
-        return reinterpret_cast<void*>(HookedGeneratedApi14210_ResUtilFindLongProperty);
+        return reinterpret_cast<void*>(HookedGeneratedApi14118_RasGetEapUserIdentityA);
     case 432:
-        return reinterpret_cast<void*>(HookedGeneratedApi14211_ResUtilFindMultiSzProperty);
+        return reinterpret_cast<void*>(HookedGeneratedApi14119_RasGetEapUserIdentityW);
     case 433:
-        return reinterpret_cast<void*>(HookedGeneratedApi14212_ResUtilFindSzProperty);
+        return reinterpret_cast<void*>(HookedGeneratedApi14120_RasGetEntryDialParamsA);
     case 434:
-        return reinterpret_cast<void*>(HookedGeneratedApi14213_ResUtilFindULargeIntegerProperty);
+        return reinterpret_cast<void*>(HookedGeneratedApi14121_RasGetEntryDialParamsW);
     case 435:
-        return reinterpret_cast<void*>(HookedGeneratedApi14214_ResUtilFreeEnvironment);
+        return reinterpret_cast<void*>(HookedGeneratedApi14122_RasGetEntryPropertiesA);
     case 436:
-        return reinterpret_cast<void*>(HookedGeneratedApi14215_ResUtilFreeParameterBlock);
+        return reinterpret_cast<void*>(HookedGeneratedApi14123_RasGetEntryPropertiesW);
     case 437:
-        return reinterpret_cast<void*>(HookedGeneratedApi14216_ResUtilGetAllProperties);
+        return reinterpret_cast<void*>(HookedGeneratedApi14124_RasGetErrorStringA);
     case 438:
-        return reinterpret_cast<void*>(HookedGeneratedApi14217_ResUtilGetBinaryProperty);
+        return reinterpret_cast<void*>(HookedGeneratedApi14125_RasGetErrorStringW);
     case 439:
-        return reinterpret_cast<void*>(HookedGeneratedApi14218_ResUtilGetBinaryValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi14126_RasGetLinkStatistics);
     case 440:
-        return reinterpret_cast<void*>(HookedGeneratedApi14219_ResUtilGetClusterGroupType);
+        return reinterpret_cast<void*>(HookedGeneratedApi14127_RasGetPCscf);
     case 441:
-        return reinterpret_cast<void*>(HookedGeneratedApi14220_ResUtilGetClusterId);
+        return reinterpret_cast<void*>(HookedGeneratedApi14128_RasGetProjectionInfoA);
     case 442:
-        return reinterpret_cast<void*>(HookedGeneratedApi14221_ResUtilGetClusterRoleState);
+        return reinterpret_cast<void*>(HookedGeneratedApi14129_RasGetProjectionInfoEx);
     case 443:
-        return reinterpret_cast<void*>(HookedGeneratedApi14222_ResUtilGetCoreClusterResources);
+        return reinterpret_cast<void*>(HookedGeneratedApi14130_RasGetProjectionInfoW);
     case 444:
-        return reinterpret_cast<void*>(HookedGeneratedApi14223_ResUtilGetCoreClusterResourcesEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi14131_RasGetSubEntryHandleA);
     case 445:
-        return reinterpret_cast<void*>(HookedGeneratedApi14224_ResUtilGetCoreGroup);
+        return reinterpret_cast<void*>(HookedGeneratedApi14132_RasGetSubEntryHandleW);
     case 446:
-        return reinterpret_cast<void*>(HookedGeneratedApi14225_ResUtilGetDwordProperty);
+        return reinterpret_cast<void*>(HookedGeneratedApi14133_RasGetSubEntryPropertiesA);
     case 447:
-        return reinterpret_cast<void*>(HookedGeneratedApi14226_ResUtilGetDwordValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi14134_RasGetSubEntryPropertiesW);
     case 448:
-        return reinterpret_cast<void*>(HookedGeneratedApi14227_ResUtilGetEnvironmentWithNetName);
+        return reinterpret_cast<void*>(HookedGeneratedApi14135_RasHangUpA);
     case 449:
-        return reinterpret_cast<void*>(HookedGeneratedApi14228_ResUtilGetFileTimeProperty);
+        return reinterpret_cast<void*>(HookedGeneratedApi14136_RasHangUpW);
     case 450:
-        return reinterpret_cast<void*>(HookedGeneratedApi14229_ResUtilGetLongProperty);
+        return reinterpret_cast<void*>(HookedGeneratedApi14137_RasInvokeEapUI);
     case 451:
-        return reinterpret_cast<void*>(HookedGeneratedApi14230_ResUtilGetMultiSzProperty);
+        return reinterpret_cast<void*>(HookedGeneratedApi14138_RasRenameEntryA);
     case 452:
-        return reinterpret_cast<void*>(HookedGeneratedApi14231_ResUtilGetPrivateProperties);
+        return reinterpret_cast<void*>(HookedGeneratedApi14139_RasRenameEntryW);
     case 453:
-        return reinterpret_cast<void*>(HookedGeneratedApi14232_ResUtilGetProperties);
+        return reinterpret_cast<void*>(HookedGeneratedApi14140_RasSetAutodialAddressA);
     case 454:
-        return reinterpret_cast<void*>(HookedGeneratedApi14233_ResUtilGetPropertiesToParameterBlock);
+        return reinterpret_cast<void*>(HookedGeneratedApi14141_RasSetAutodialAddressW);
     case 455:
-        return reinterpret_cast<void*>(HookedGeneratedApi14234_ResUtilGetProperty);
+        return reinterpret_cast<void*>(HookedGeneratedApi14142_RasSetAutodialEnableA);
     case 456:
-        return reinterpret_cast<void*>(HookedGeneratedApi14235_ResUtilGetPropertyFormats);
+        return reinterpret_cast<void*>(HookedGeneratedApi14143_RasSetAutodialEnableW);
     case 457:
-        return reinterpret_cast<void*>(HookedGeneratedApi14236_ResUtilGetPropertySize);
+        return reinterpret_cast<void*>(HookedGeneratedApi14144_RasSetAutodialParamA);
     case 458:
-        return reinterpret_cast<void*>(HookedGeneratedApi14237_ResUtilGetQwordValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi14145_RasSetAutodialParamW);
     case 459:
-        return reinterpret_cast<void*>(HookedGeneratedApi14238_ResUtilGetResourceDependency);
+        return reinterpret_cast<void*>(HookedGeneratedApi14146_RasSetCredentialsA);
     case 460:
-        return reinterpret_cast<void*>(HookedGeneratedApi14239_ResUtilGetResourceDependencyByClass);
+        return reinterpret_cast<void*>(HookedGeneratedApi14147_RasSetCredentialsW);
     case 461:
-        return reinterpret_cast<void*>(HookedGeneratedApi14240_ResUtilGetResourceDependencyByClassEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi14148_RasSetCustomAuthDataA);
     case 462:
-        return reinterpret_cast<void*>(HookedGeneratedApi14241_ResUtilGetResourceDependencyByName);
+        return reinterpret_cast<void*>(HookedGeneratedApi14149_RasSetCustomAuthDataW);
     case 463:
-        return reinterpret_cast<void*>(HookedGeneratedApi14242_ResUtilGetResourceDependencyByNameEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi14150_RasSetEapUserDataA);
     case 464:
-        return reinterpret_cast<void*>(HookedGeneratedApi14243_ResUtilGetResourceDependencyEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi14151_RasSetEapUserDataW);
     case 465:
-        return reinterpret_cast<void*>(HookedGeneratedApi14244_ResUtilGetResourceDependentIPAddressProps);
+        return reinterpret_cast<void*>(HookedGeneratedApi14152_RasSetEntryDialParamsA);
     case 466:
-        return reinterpret_cast<void*>(HookedGeneratedApi14245_ResUtilGetResourceName);
+        return reinterpret_cast<void*>(HookedGeneratedApi14153_RasSetEntryDialParamsW);
     case 467:
-        return reinterpret_cast<void*>(HookedGeneratedApi14246_ResUtilGetResourceNameDependency);
+        return reinterpret_cast<void*>(HookedGeneratedApi14154_RasSetEntryPropertiesA);
     case 468:
-        return reinterpret_cast<void*>(HookedGeneratedApi14247_ResUtilGetResourceNameDependencyEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi14155_RasSetEntryPropertiesW);
     case 469:
-        return reinterpret_cast<void*>(HookedGeneratedApi14248_ResUtilGetSzProperty);
+        return reinterpret_cast<void*>(HookedGeneratedApi14156_RasSetSubEntryPropertiesA);
     case 470:
-        return reinterpret_cast<void*>(HookedGeneratedApi14249_ResUtilGetSzValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi14157_RasSetSubEntryPropertiesW);
     case 471:
-        return reinterpret_cast<void*>(HookedGeneratedApi14250_ResUtilGroupsEqual);
+        return reinterpret_cast<void*>(HookedGeneratedApi14158_RasUpdateConnection);
     case 472:
-        return reinterpret_cast<void*>(HookedGeneratedApi14251_ResUtilIsPathValid);
+        return reinterpret_cast<void*>(HookedGeneratedApi14159_RasValidateEntryNameA);
     case 473:
-        return reinterpret_cast<void*>(HookedGeneratedApi14252_ResUtilIsResourceClassEqual);
+        return reinterpret_cast<void*>(HookedGeneratedApi14160_RasValidateEntryNameW);
     case 474:
-        return reinterpret_cast<void*>(HookedGeneratedApi14253_ResUtilLeftPaxosIsLessThanRight);
+        return reinterpret_cast<void*>(HookedGeneratedApi14161_RasDialDlgA);
     case 475:
-        return reinterpret_cast<void*>(HookedGeneratedApi14254_ResUtilNodeEnum);
+        return reinterpret_cast<void*>(HookedGeneratedApi14162_RasDialDlgW);
     case 476:
-        return reinterpret_cast<void*>(HookedGeneratedApi14255_ResUtilPaxosComparer);
+        return reinterpret_cast<void*>(HookedGeneratedApi14163_RasEntryDlgA);
     case 477:
-        return reinterpret_cast<void*>(HookedGeneratedApi14256_ResUtilPropertyListFromParameterBlock);
+        return reinterpret_cast<void*>(HookedGeneratedApi14164_RasEntryDlgW);
     case 478:
-        return reinterpret_cast<void*>(HookedGeneratedApi14257_ResUtilResourceDepEnum);
+        return reinterpret_cast<void*>(HookedGeneratedApi14165_RasPhonebookDlgA);
     case 479:
-        return reinterpret_cast<void*>(HookedGeneratedApi14258_ResUtilResourcesEqual);
+        return reinterpret_cast<void*>(HookedGeneratedApi14166_RasPhonebookDlgW);
     case 480:
-        return reinterpret_cast<void*>(HookedGeneratedApi14259_ResUtilResourceTypesEqual);
+        return reinterpret_cast<void*>(HookedGeneratedApi14167_CloseClusterCryptProvider);
     case 481:
-        return reinterpret_cast<void*>(HookedGeneratedApi14260_ResUtilsDeleteKeyTree);
+        return reinterpret_cast<void*>(HookedGeneratedApi14168_ClusAddClusterHealthFault);
     case 482:
-        return reinterpret_cast<void*>(HookedGeneratedApi14261_ResUtilSetBinaryValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi14169_ClusGetClusterHealthFaults);
     case 483:
-        return reinterpret_cast<void*>(HookedGeneratedApi14262_ResUtilSetDwordValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi14170_ClusRemoveClusterHealthFault);
     case 484:
-        return reinterpret_cast<void*>(HookedGeneratedApi14263_ResUtilSetExpandSzValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi14171_ClusterClearBackupStateForSharedVolume);
     case 485:
-        return reinterpret_cast<void*>(HookedGeneratedApi14264_ResUtilSetMultiSzValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi14172_ClusterDecrypt);
     case 486:
-        return reinterpret_cast<void*>(HookedGeneratedApi14265_ResUtilSetPrivatePropertyList);
+        return reinterpret_cast<void*>(HookedGeneratedApi14173_ClusterEncrypt);
     case 487:
-        return reinterpret_cast<void*>(HookedGeneratedApi14266_ResUtilSetPropertyParameterBlock);
+        return reinterpret_cast<void*>(HookedGeneratedApi14174_ClusterGetVolumeNameForVolumeMountPoint);
     case 488:
-        return reinterpret_cast<void*>(HookedGeneratedApi14267_ResUtilSetPropertyParameterBlockEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi14175_ClusterGetVolumePathName);
     case 489:
-        return reinterpret_cast<void*>(HookedGeneratedApi14268_ResUtilSetPropertyTable);
+        return reinterpret_cast<void*>(HookedGeneratedApi14176_ClusterIsPathOnSharedVolume);
     case 490:
-        return reinterpret_cast<void*>(HookedGeneratedApi14269_ResUtilSetPropertyTableEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi14177_ClusterPrepareSharedVolumeForBackup);
     case 491:
-        return reinterpret_cast<void*>(HookedGeneratedApi14270_ResUtilSetQwordValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi14178_ClusWorkerCheckTerminate);
     case 492:
-        return reinterpret_cast<void*>(HookedGeneratedApi14271_ResUtilSetSzValue);
+        return reinterpret_cast<void*>(HookedGeneratedApi14179_ClusWorkerCreate);
     case 493:
-        return reinterpret_cast<void*>(HookedGeneratedApi14272_ResUtilSetUnknownProperties);
+        return reinterpret_cast<void*>(HookedGeneratedApi14180_ClusWorkersTerminate);
     case 494:
-        return reinterpret_cast<void*>(HookedGeneratedApi14273_ResUtilSetValueEx);
+        return reinterpret_cast<void*>(HookedGeneratedApi14181_ClusWorkerTerminate);
     case 495:
-        return reinterpret_cast<void*>(HookedGeneratedApi14274_ResUtilVerifyPrivatePropertyList);
+        return reinterpret_cast<void*>(HookedGeneratedApi14182_ClusWorkerTerminateEx);
     case 496:
-        return reinterpret_cast<void*>(HookedGeneratedApi14275_ResUtilVerifyPropertyTable);
+        return reinterpret_cast<void*>(HookedGeneratedApi14183_FreeClusterCrypt);
     case 497:
-        return reinterpret_cast<void*>(HookedGeneratedApi14276_ResUtilVerifyShutdownSafe);
+        return reinterpret_cast<void*>(HookedGeneratedApi14184_FreeClusterHealthFault);
     case 498:
-        return reinterpret_cast<void*>(HookedGeneratedApi14277_MetaDataGetDispenser);
+        return reinterpret_cast<void*>(HookedGeneratedApi14185_FreeClusterHealthFaultArray);
     case 499:
-        return reinterpret_cast<void*>(HookedGeneratedApi14278_I_RpcNsGetBuffer);
+        return reinterpret_cast<void*>(HookedGeneratedApi14186_InitializeClusterHealthFault);
     case 500:
-        return reinterpret_cast<void*>(HookedGeneratedApi14279_I_RpcNsRaiseException);
+        return reinterpret_cast<void*>(HookedGeneratedApi14187_InitializeClusterHealthFaultArray);
     case 501:
-        return reinterpret_cast<void*>(HookedGeneratedApi14280_I_RpcNsSendReceive);
+        return reinterpret_cast<void*>(HookedGeneratedApi14188_OpenClusterCryptProvider);
     case 502:
-        return reinterpret_cast<void*>(HookedGeneratedApi14281_I_RpcReBindBuffer);
+        return reinterpret_cast<void*>(HookedGeneratedApi14189_OpenClusterCryptProviderEx);
     case 503:
-        return reinterpret_cast<void*>(HookedGeneratedApi14282_RpcIfIdVectorFree);
+        return reinterpret_cast<void*>(HookedGeneratedApi14190_ResUtilAddUnknownProperties);
     case 504:
-        return reinterpret_cast<void*>(HookedGeneratedApi14283_RpcNsBindingExportA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14191_ResUtilCreateDirectoryTree);
     case 505:
-        return reinterpret_cast<void*>(HookedGeneratedApi14284_RpcNsBindingExportPnPA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14192_ResUtilDupGroup);
     case 506:
-        return reinterpret_cast<void*>(HookedGeneratedApi14285_RpcNsBindingExportPnPW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14193_ResUtilDupParameterBlock);
     case 507:
-        return reinterpret_cast<void*>(HookedGeneratedApi14286_RpcNsBindingExportW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14194_ResUtilDupResource);
     case 508:
-        return reinterpret_cast<void*>(HookedGeneratedApi14287_RpcNsBindingImportBeginA);
+        return reinterpret_cast<void*>(HookedGeneratedApi14195_ResUtilDupString);
     case 509:
-        return reinterpret_cast<void*>(HookedGeneratedApi14288_RpcNsBindingImportBeginW);
+        return reinterpret_cast<void*>(HookedGeneratedApi14196_ResUtilEnumGroups);
     case 510:
-        return reinterpret_cast<void*>(HookedGeneratedApi14289_RpcNsBindingImportDone);
+        return reinterpret_cast<void*>(HookedGeneratedApi14197_ResUtilEnumGroupsEx);
     case 511:
-        return reinterpret_cast<void*>(HookedGeneratedApi14290_RpcNsBindingImportNext);
+        return reinterpret_cast<void*>(HookedGeneratedApi14198_ResUtilEnumPrivateProperties);
     default:
         break;
     }

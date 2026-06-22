@@ -1,4 +1,4 @@
-export const maxGeneratedGenericArguments = 16;
+export const maxGeneratedGenericArguments = 17;
 
 const generatedGenericCallingConventions = new Set([
   "stdcall",
@@ -111,6 +111,11 @@ export function generatedReturnFormat(returnType)
   if (text === "bool" || text === "boolean" || text === "winbool")
   {
     return "Bool";
+  }
+
+  if (text === "double")
+  {
+    return "Double";
   }
 
   if (

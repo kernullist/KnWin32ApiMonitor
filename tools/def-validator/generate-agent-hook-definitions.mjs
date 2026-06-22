@@ -7,6 +7,7 @@ import {
   generatedGenericAbiSafetyReasons,
   generatedReturnFormat,
   isRuntimeMonitorableDefinition,
+  maxGeneratedGenericArguments,
   runtimeCoverageStatus,
   runtimeHookPolicy
 } from "./runtime-monitoring-policy.mjs";
@@ -60,6 +61,11 @@ function manualHookKeys()
 
 function functionSignaturePrefix(api)
 {
+  if (api.generatedHookAbi === "double")
+  {
+    return "double WINAPI";
+  }
+
   if (generatedReturnFormat(api.returnType) === "Void")
   {
     return "void WINAPI";
@@ -68,18 +74,26 @@ function functionSignaturePrefix(api)
   return "std::uintptr_t WINAPI";
 }
 
-function functionPointerTypeName(api)
+function isDoubleType(type)
 {
-  const prefix = generatedReturnFormat(api.returnType) === "Void" ? "GeneratedAgentVoidFunction" : "GeneratedAgentValueFunction";
-  return `${prefix}_${api.parameterCount}`;
+  return String(type ?? "").toLowerCase() === "double";
 }
 
-function argumentList(count)
+function isGeneratedDoubleHook(api, parameters)
+{
+  return generatedReturnFormat(api.returnType) === "Double" &&
+    parameters.length > 0 &&
+    parameters.length <= 2 &&
+    parameters.every((parameter) => isDoubleType(parameter.type));
+}
+
+function argumentList(hook)
 {
   const args = [];
-  for (let index = 0; index < count; ++index)
+  const type = hook.generatedHookAbi === "double" ? "double" : "std::uintptr_t";
+  for (let index = 0; index < hook.parameterCount; ++index)
   {
-    args.push(`std::uintptr_t arg${index}`);
+    args.push(`${type} arg${index}`);
   }
 
   return args.join(", ");
@@ -99,7 +113,7 @@ function argumentNames(count)
 function paddedArgumentNames(count)
 {
   const args = [];
-  for (let index = 0; index < 16; ++index)
+  for (let index = 0; index < maxGeneratedGenericArguments; ++index)
   {
     args.push(index < count ? `arg${index}` : "0");
   }
@@ -130,7 +144,7 @@ function buildHookFile(hooks, coverage, modules, hookable)
   lines.push(`void* g_generatedAgentOriginalFunctions[${hooks.length === 0 ? 1 : hooks.length}] = {};`);
   lines.push("");
 
-  for (let count = 0; count <= 16; ++count)
+  for (let count = 0; count <= maxGeneratedGenericArguments; ++count)
   {
     const args = Array.from({ length: count }, () => "std::uintptr_t").join(", ");
     lines.push(`using GeneratedAgentValueFunction_${count} = std::uintptr_t(WINAPI*)(${args});`);
@@ -260,18 +274,24 @@ function buildHookChunkFile(hooks, chunkStart, chunkIndex)
   lines.push("");
   lines.push("extern \"C\" std::uintptr_t KnMonInvokeGeneratedValueHookByIndex(");
   lines.push("    std::size_t index,");
-  for (let index = 0; index < 16; ++index)
+  for (let index = 0; index < maxGeneratedGenericArguments; ++index)
   {
-    lines.push(`    std::uintptr_t arg${index}${index === 15 ? "" : ","}`);
+    lines.push(`    std::uintptr_t arg${index}${index === maxGeneratedGenericArguments - 1 ? "" : ","}`);
   }
   lines.push(");");
   lines.push("");
   lines.push("extern \"C\" void KnMonInvokeGeneratedVoidHookByIndex(");
   lines.push("    std::size_t index,");
-  for (let index = 0; index < 16; ++index)
+  for (let index = 0; index < maxGeneratedGenericArguments; ++index)
   {
-    lines.push(`    std::uintptr_t arg${index}${index === 15 ? "" : ","}`);
+    lines.push(`    std::uintptr_t arg${index}${index === maxGeneratedGenericArguments - 1 ? "" : ","}`);
   }
+  lines.push(");");
+  lines.push("");
+  lines.push("extern \"C\" double KnMonInvokeGeneratedDoubleHookByIndex(");
+  lines.push("    std::size_t index,");
+  lines.push("    double arg0,");
+  lines.push("    double arg1");
   lines.push(");");
   lines.push("");
 
@@ -279,11 +299,17 @@ function buildHookChunkFile(hooks, chunkStart, chunkIndex)
   {
     const index = chunkStart + localIndex;
     const name = generatedHookName(hook);
-    const args = argumentList(hook.parameterCount);
+    const args = argumentList(hook);
     const paddedNames = paddedArgumentNames(hook.parameterCount);
     lines.push(`${functionSignaturePrefix(hook)} ${name}(${args})`);
     lines.push("{");
-    if (generatedReturnFormat(hook.returnType) === "Void")
+    if (hook.generatedHookAbi === "double")
+    {
+      const first = hook.parameterCount > 0 ? "arg0" : "0.0";
+      const second = hook.parameterCount > 1 ? "arg1" : "0.0";
+      lines.push(`    return KnMonInvokeGeneratedDoubleHookByIndex(${index}, ${first}, ${second});`);
+    }
+    else if (generatedReturnFormat(hook.returnType) === "Void")
     {
       lines.push(`    KnMonInvokeGeneratedVoidHookByIndex(${index}, ${paddedNames});`);
     }
@@ -367,7 +393,9 @@ function main()
   const unsafe = hookable
     .map((api) => ({
       api,
-      reasons: generatedGenericAbiSafetyReasons(api, parametersByApi.get(api.id) ?? [])
+      reasons: isGeneratedDoubleHook(api, parametersByApi.get(api.id) ?? []) ?
+        [] :
+        generatedGenericAbiSafetyReasons(api, parametersByApi.get(api.id) ?? [])
     }))
     .filter((entry) => entry.reasons.length > 0 && !manual.has(lowerKey(entry.api.module, entry.api.name)));
   if (unsafe.length > 0)
@@ -377,6 +405,10 @@ function main()
 
   const hooks = hookable
     .filter((api) => !manual.has(lowerKey(api.module, api.name)))
+    .map((api) => ({
+      ...api,
+      generatedHookAbi: isGeneratedDoubleHook(api, parametersByApi.get(api.id) ?? []) ? "double" : "integer"
+    }))
     .sort((left, right) => left.id - right.id);
 
   const manualCovered = hookable.filter((api) => manual.has(lowerKey(api.module, api.name))).length;

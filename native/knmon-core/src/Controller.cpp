@@ -4939,6 +4939,28 @@ bool GenericTypeLooksPointer(const std::string& type)
     return pointer;
 }
 
+bool GenericTypeLooksDouble(const std::string& type)
+{
+    const std::string lower = LowerAscii(type);
+    return lower == "double";
+}
+
+double DoubleFromBits(std::uint64_t bits)
+{
+    double value = 0.0;
+    static_assert(sizeof(value) == sizeof(bits), "double bit copy size mismatch");
+    std::memcpy(&value, &bits, sizeof(value));
+    return value;
+}
+
+std::string DoubleDecimalHexText(std::uint64_t bits)
+{
+    std::ostringstream stream;
+    stream << std::setprecision(17) << DoubleFromBits(bits)
+           << " (" << HexConstantValue(bits) << ")";
+    return stream.str();
+}
+
 std::string GenericArgumentValueText(
     const KnMonCaptureResult& result,
     const KnMonGeneratedParameterMetadata* metadata,
@@ -4955,6 +4977,10 @@ std::string GenericArgumentValueText(
     else if (GenericTypeLooksBool(type))
     {
         text = BoolText(static_cast<std::uint32_t>(value));
+    }
+    else if (GenericTypeLooksDouble(type))
+    {
+        text = DoubleDecimalHexText(value);
     }
     else if (GenericTypeLooksPointer(type))
     {
@@ -4990,6 +5016,11 @@ std::string GenericReturnValueText(const KnMonCaptureResult& result, const KnMon
     case 4:
         value = HexConstantValue(record.ReturnValue);
         break;
+    case 5:
+    {
+        value = DoubleDecimalHexText(record.ReturnValue);
+        break;
+    }
     case 0:
     default:
         value = "void";
