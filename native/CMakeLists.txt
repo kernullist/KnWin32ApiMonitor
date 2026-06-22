@@ -117,6 +117,8 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     )
     add_library(knmon-agent64 SHARED
         ${KNMON_AGENT_SOURCE}
+        knmon-common/src/GeneratedApiMetadata.cpp
+        ${KNMON_COMMON_GENERATED_METADATA_PARAMETER_SOURCES}
         ${KNMON_AGENT_GENERATED_HOOK_SOURCES}
     )
     target_compile_definitions(knmon-agent64 PRIVATE
@@ -184,7 +186,6 @@ target_link_libraries(knmon-sample-fileio PRIVATE imm32)
 target_link_libraries(knmon-sample-fileio PRIVATE uiautomationcore)
 target_link_libraries(knmon-sample-fileio PRIVATE wscapi)
 target_link_libraries(knmon-sample-fileio PRIVATE msrating)
-target_link_libraries(knmon-sample-fileio PRIVATE fxsutility)
 target_link_libraries(knmon-sample-fileio PRIVATE dhcpsapi)
 target_link_libraries(knmon-sample-fileio PRIVATE wsnmp32)
 target_link_libraries(knmon-sample-fileio PRIVATE psapi)
@@ -197,10 +198,12 @@ target_link_libraries(knmon-sample-fileio PRIVATE dnsapi)
 target_link_libraries(knmon-sample-fileio PRIVATE setupapi)
 target_link_libraries(knmon-sample-fileio PRIVATE userenv)
 target_link_libraries(knmon-sample-fileio PRIVATE iphlpapi)
+target_link_libraries(knmon-sample-fileio PRIVATE netapi32)
 target_link_libraries(knmon-sample-fileio PRIVATE shlwapi)
 target_link_libraries(knmon-sample-fileio PRIVATE wintrust)
 target_link_libraries(knmon-sample-fileio PRIVATE runtimeobject)
 target_link_libraries(knmon-sample-fileio PRIVATE dbghelp)
+target_link_libraries(knmon-sample-fileio PRIVATE webservices)
 target_compile_definitions(knmon-sample-fileio PRIVATE
     WIN32_LEAN_AND_MEAN
     NOMINMAX

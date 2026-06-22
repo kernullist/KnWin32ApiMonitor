@@ -196,6 +196,11 @@ function Invoke-RepeatedAttachSmoke
             throw "$Architecture first attach did not use LoadLibraryW evidence."
         }
 
+        if ($firstAuditTypes -notcontains "agent_cleanup_verified")
+        {
+            throw "$Architecture first attach did not verify cleanup with agent state."
+        }
+
         $secondAuditTypes = @($second.auditEvents | ForEach-Object { $_.eventType })
         if ($secondAuditTypes -contains "remote_loadlibrary_started" -or $secondAuditTypes -contains "remote_loadlibrary_completed")
         {
@@ -205,6 +210,11 @@ function Invoke-RepeatedAttachSmoke
         if ($secondAuditTypes -notcontains "loaded_agent_detected" -or $secondAuditTypes -notcontains "loaded_agent_state_queried" -or $secondAuditTypes -notcontains "attach_strategy_selected")
         {
             throw "$Architecture loaded-agent reattach audit evidence is incomplete."
+        }
+
+        if ($secondAuditTypes -notcontains "agent_cleanup_verified")
+        {
+            throw "$Architecture loaded-agent reattach did not verify cleanup with agent state."
         }
 
         Write-Host "$Architecture repeated attach smoke passed: first=$($first.capturedEvents.Count) second=$($second.capturedEvents.Count) strategy=$($second.attachStrategy)"

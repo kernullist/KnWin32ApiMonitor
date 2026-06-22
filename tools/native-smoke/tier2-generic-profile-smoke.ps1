@@ -64,6 +64,9 @@ try
     Assert-True ($apiSetArgument.Count -eq 1) "WindowsGetStringLen generic argument missing."
     Assert-True ($apiSetArgument[0].type -eq "HSTRING") "WindowsGetStringLen argument type mismatch: $($apiSetArgument[0].type)"
     Assert-True ($apiSetArgument[0].decodedValue -match "pointer=0x") "WindowsGetStringLen pointer evidence missing: $($apiSetArgument[0].decodedValue)"
+    Assert-True ($apiSetArgument[0].valueKind -eq "string") "WindowsGetStringLen semantic value kind mismatch: $($apiSetArgument[0].valueKind)"
+    Assert-True ($apiSetArgument[0].payloadPolicy -eq "pointer_value_only") "WindowsGetStringLen payload policy mismatch: $($apiSetArgument[0].payloadPolicy)"
+    Assert-True ($apiSetArgument[0].targetMemoryRead -eq $false) "WindowsGetStringLen generic argument must not read target memory."
 
     $returnOnlyEvent = @($result.capturedEvents | Where-Object { $_.api -eq "RevertToSelf" } | Select-Object -First 1)
     Assert-True ($returnOnlyEvent.Count -eq 1) "Tier 2 missing-metadata smoke did not capture RevertToSelf."

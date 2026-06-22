@@ -12,6 +12,7 @@
 
 #include <array>
 #include <algorithm>
+#include <cstdint>
 #include <cwchar>
 #include <cstring>
 #include <filesystem>
@@ -1945,7 +1946,8 @@ bool WaitRemoteThread(
     void* remoteParameter,
     DWORD timeoutMs,
     DWORD* exitCode,
-    DWORD* errorCode)
+    DWORD* errorCode,
+    HANDLE* timedOutThreadHandle = nullptr)
 {
     bool completed = false;
     HANDLE threadHandle = nullptr;
@@ -1960,6 +1962,11 @@ bool WaitRemoteThread(
         if (errorCode != nullptr)
         {
             *errorCode = 0;
+        }
+
+        if (timedOutThreadHandle != nullptr)
+        {
+            *timedOutThreadHandle = nullptr;
         }
 
         threadHandle = CreateRemoteThread(
@@ -1987,6 +1994,13 @@ bool WaitRemoteThread(
             {
                 *errorCode = waitResult == WAIT_TIMEOUT ? WAIT_TIMEOUT : GetLastError();
             }
+
+            if (waitResult == WAIT_TIMEOUT && timedOutThreadHandle != nullptr)
+            {
+                *timedOutThreadHandle = threadHandle;
+                threadHandle = nullptr;
+            }
+
             break;
         }
 
@@ -2331,6 +2345,31 @@ void SetPreflightError(
     AddAudit(result, "preflight_failed", operation, message, errorCode, "knmon-core");
 }
 
+std::string AgentStateSummary(const KnMonAgentStateV1& state)
+{
+    std::ostringstream stream;
+    stream << "lifecycle=" << AgentLifecycleStateName(state.LifecycleState)
+           << "; active=" << ((state.Flags & KnMonAgentStateFlagActive) != 0 ? "true" : "false")
+           << "; busy=" << ((state.Flags & KnMonAgentStateFlagBusy) != 0 ? "true" : "false")
+           << "; resettable=" << ((state.Flags & KnMonAgentStateFlagResettable) != 0 ? "true" : "false")
+           << "; workerStarted=" << state.WorkerStarted
+           << "; hooksEnabled=" << state.HooksEnabled
+           << "; installedHooks=" << state.InstalledHooks
+           << "; restoredHooks=" << state.RestoredHooks
+           << "; failedHooks=" << state.FailedHooks
+           << "; operationId=" << WideToUtf8(state.OperationId);
+    return stream.str();
+}
+
+bool AgentStateProvesSelfDisabledCleanup(const KnMonAgentStateV1& state)
+{
+    const bool disabled = state.LifecycleState == static_cast<std::uint32_t>(KnMonAgentLifecycleState::Disabled);
+    const bool hooksDisabled = state.HooksEnabled == 0 && (state.Flags & KnMonAgentStateFlagActive) == 0;
+    const bool notBusy = (state.Flags & KnMonAgentStateFlagBusy) == 0;
+    const bool hooksRestored = state.RestoredHooks >= state.InstalledHooks && state.FailedHooks == 0;
+    return disabled && hooksDisabled && notBusy && hooksRestored;
+}
+
 template <typename TResult>
 bool RunSameBitnessPreflight(
     TResult& result,
@@ -2397,6 +2436,310 @@ bool RunSameBitnessPreflight(
     while (false);
 
     return passed;
+}
+
+struct LaunchManifestElevationInfo
+{
+    bool ManifestFound = false;
+    bool RequiresAdministrator = false;
+    std::string Source;
+};
+
+bool ReadSmallFileBytes(const std::wstring& path, std::vector<std::uint8_t>* bytes)
+{
+    bool success = false;
+    HANDLE fileHandle = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        if (bytes == nullptr)
+        {
+            break;
+        }
+
+        bytes->clear();
+        fileHandle = CreateFileW(
+            path.c_str(),
+            GENERIC_READ,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            nullptr,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr);
+
+        if (fileHandle == INVALID_HANDLE_VALUE)
+        {
+            break;
+        }
+
+        LARGE_INTEGER fileSize = {};
+        if (!GetFileSizeEx(fileHandle, &fileSize))
+        {
+            break;
+        }
+
+        constexpr LONGLONG MaxManifestBytes = 4 * 1024 * 1024;
+        if (fileSize.QuadPart <= 0 || fileSize.QuadPart > MaxManifestBytes)
+        {
+            break;
+        }
+
+        bytes->resize(static_cast<std::size_t>(fileSize.QuadPart));
+        DWORD bytesRead = 0;
+        if (!ReadFile(fileHandle, bytes->data(), static_cast<DWORD>(bytes->size()), &bytesRead, nullptr))
+        {
+            bytes->clear();
+            break;
+        }
+
+        bytes->resize(static_cast<std::size_t>(bytesRead));
+        success = !bytes->empty();
+    }
+    while (false);
+
+    if (fileHandle != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(fileHandle);
+    }
+
+    return success;
+}
+
+bool ReadEmbeddedManifestBytes(
+    const std::wstring& targetPath,
+    std::vector<std::uint8_t>* bytes,
+    std::string* source)
+{
+    bool success = false;
+    HMODULE resourceModule = nullptr;
+
+    do
+    {
+        if (bytes == nullptr)
+        {
+            break;
+        }
+
+        bytes->clear();
+        if (source != nullptr)
+        {
+            source->clear();
+        }
+
+        resourceModule = LoadLibraryExW(
+            targetPath.c_str(),
+            nullptr,
+            LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE);
+
+        if (resourceModule == nullptr)
+        {
+            break;
+        }
+
+        constexpr WORD ManifestResourceType = 24;
+        constexpr WORD ManifestResourceIds[] = { 1, 2, 3 };
+        for (const WORD resourceId : ManifestResourceIds)
+        {
+            HRSRC resource = FindResourceW(resourceModule, MAKEINTRESOURCEW(resourceId), MAKEINTRESOURCEW(ManifestResourceType));
+            if (resource == nullptr)
+            {
+                continue;
+            }
+
+            const DWORD resourceSize = SizeofResource(resourceModule, resource);
+            HGLOBAL loadedResource = LoadResource(resourceModule, resource);
+            const void* resourceBytes = LockResource(loadedResource);
+            if (resourceSize == 0 || loadedResource == nullptr || resourceBytes == nullptr)
+            {
+                continue;
+            }
+
+            const auto* begin = static_cast<const std::uint8_t*>(resourceBytes);
+            bytes->assign(begin, begin + resourceSize);
+            if (source != nullptr)
+            {
+                *source = "embedded_manifest:id=" + std::to_string(resourceId);
+            }
+
+            success = true;
+            break;
+        }
+    }
+    while (false);
+
+    if (resourceModule != nullptr)
+    {
+        FreeLibrary(resourceModule);
+    }
+
+    return success;
+}
+
+bool ManifestBytesRequireAdministrator(const std::vector<std::uint8_t>& bytes)
+{
+    bool requiresAdministrator = false;
+    std::string compact;
+    compact.reserve(bytes.size());
+
+    for (const std::uint8_t byte : bytes)
+    {
+        if (byte == 0)
+        {
+            continue;
+        }
+
+        char ch = static_cast<char>(byte);
+        if (ch >= 'A' && ch <= 'Z')
+        {
+            ch = static_cast<char>(ch - 'A' + 'a');
+        }
+
+        compact.push_back(ch);
+    }
+
+    do
+    {
+        if (compact.find("requestedexecutionlevel") == std::string::npos)
+        {
+            break;
+        }
+
+        if (compact.find("requireadministrator") == std::string::npos)
+        {
+            break;
+        }
+
+        requiresAdministrator = true;
+    }
+    while (false);
+
+    return requiresAdministrator;
+}
+
+LaunchManifestElevationInfo InspectTargetManifestElevation(const std::wstring& targetPath)
+{
+    LaunchManifestElevationInfo info;
+    std::vector<std::uint8_t> manifestBytes;
+
+    do
+    {
+        if (targetPath.empty())
+        {
+            break;
+        }
+
+        const std::wstring externalManifestPath = targetPath + L".manifest";
+        if (ReadSmallFileBytes(externalManifestPath, &manifestBytes))
+        {
+            info.ManifestFound = true;
+            info.Source = "external_manifest:" + WideToUtf8(externalManifestPath.c_str());
+            info.RequiresAdministrator = ManifestBytesRequireAdministrator(manifestBytes);
+            if (info.RequiresAdministrator)
+            {
+                break;
+            }
+        }
+
+        std::string embeddedSource;
+        if (ReadEmbeddedManifestBytes(targetPath, &manifestBytes, &embeddedSource))
+        {
+            info.ManifestFound = true;
+            info.Source = embeddedSource;
+            info.RequiresAdministrator = ManifestBytesRequireAdministrator(manifestBytes);
+        }
+    }
+    while (false);
+
+    return info;
+}
+
+bool IsCurrentProcessElevated()
+{
+    bool elevated = false;
+    HANDLE tokenHandle = nullptr;
+
+    do
+    {
+        if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &tokenHandle))
+        {
+            break;
+        }
+
+        TOKEN_ELEVATION elevation = {};
+        DWORD returnedLength = 0;
+        if (!GetTokenInformation(tokenHandle, TokenElevation, &elevation, sizeof(elevation), &returnedLength))
+        {
+            break;
+        }
+
+        elevated = elevation.TokenIsElevated != 0;
+    }
+    while (false);
+
+    if (tokenHandle != nullptr)
+    {
+        CloseHandle(tokenHandle);
+    }
+
+    return elevated;
+}
+
+template <typename TResult>
+bool RunLaunchElevationPreflight(TResult& result, const std::string& targetPath)
+{
+    bool passed = false;
+
+    do
+    {
+        const std::wstring wideTargetPath = Utf8ToWide(targetPath);
+        if (wideTargetPath.empty())
+        {
+            SetPreflightError(result, ERROR_INVALID_PARAMETER, "target_manifest_preflight", "Target path is empty or not valid UTF-8.");
+            break;
+        }
+
+        const LaunchManifestElevationInfo manifestInfo = InspectTargetManifestElevation(wideTargetPath);
+        if (!manifestInfo.RequiresAdministrator)
+        {
+            if (manifestInfo.ManifestFound)
+            {
+                AddAudit(result, "preflight_passed", "target_manifest_elevation_preflight", "Target manifest does not require administrator privileges: " + manifestInfo.Source + ".");
+            }
+            else
+            {
+                AddAudit(result, "preflight_passed", "target_manifest_elevation_preflight", "No administrator-only target manifest was detected.");
+            }
+
+            passed = true;
+            break;
+        }
+
+        if (IsCurrentProcessElevated())
+        {
+            AddAudit(result, "preflight_passed", "target_manifest_elevation_preflight", "Target manifest requires administrator privileges and the monitor process is elevated: " + manifestInfo.Source + ".");
+            passed = true;
+            break;
+        }
+
+        const std::string message = "Target manifest requires administrator privileges, but KN Win32 API Monitor is not running elevated. Restart KN Win32 API Monitor as administrator before launching this target. Manifest source: " + manifestInfo.Source + ".";
+        SetPreflightError(result, ERROR_ELEVATION_REQUIRED, "target_requires_elevation", message);
+    }
+    while (false);
+
+    return passed;
+}
+
+template <typename TResult>
+void SetCreateProcessLaunchError(TResult& result, DWORD errorCode, const std::string& fallbackMessage)
+{
+    if (errorCode == ERROR_ELEVATION_REQUIRED)
+    {
+        SetResultError(result, errorCode, "win32", "target_requires_elevation", "CreateProcessW reported that the target requires elevation. Restart KN Win32 API Monitor as administrator before launching this target.");
+    }
+    else
+    {
+        SetResultError(result, errorCode, "win32", "CreateProcessW", fallbackMessage);
+    }
 }
 
 bool ValidateHandshakeEvidence(
@@ -3485,6 +3828,18 @@ std::string TransportText(const char* text, std::uint32_t length, std::size_t ca
     return result;
 }
 
+struct ArgumentSemantic
+{
+    std::string ValueKind;
+    std::string DecodeClass;
+    std::string PayloadPolicy;
+    bool HasTargetMemoryRead = false;
+    bool TargetMemoryRead = false;
+};
+
+bool GenericTypeLooksBool(const std::string& type);
+bool GenericTypeLooksPointer(const std::string& type);
+
 std::string ArgumentJson(
     int index,
     const std::string& type,
@@ -3495,7 +3850,8 @@ std::string ArgumentJson(
     const std::string& decodedValue,
     const std::string& decodeStatus = "decoded",
     const std::string& decodeAlias = "",
-    const std::string& captureTiming = "")
+    const std::string& captureTiming = "",
+    const ArgumentSemantic& semantic = ArgumentSemantic())
 {
     std::ostringstream stream;
     stream << "{";
@@ -3516,8 +3872,657 @@ std::string ArgumentJson(
     {
         stream << ",\"captureTiming\":" << Q(captureTiming);
     }
+    if (!semantic.ValueKind.empty())
+    {
+        stream << ",\"valueKind\":" << Q(semantic.ValueKind);
+    }
+    if (!semantic.DecodeClass.empty())
+    {
+        stream << ",\"decodeClass\":" << Q(semantic.DecodeClass);
+    }
+    if (!semantic.PayloadPolicy.empty())
+    {
+        stream << ",\"payloadPolicy\":" << Q(semantic.PayloadPolicy);
+    }
+    if (semantic.HasTargetMemoryRead)
+    {
+        stream << ",\"targetMemoryRead\":" << (semantic.TargetMemoryRead ? "true" : "false");
+    }
     stream << "}";
     return stream.str();
+}
+
+bool TextContains(const std::string& text, const std::string& token)
+{
+    return text.find(token) != std::string::npos;
+}
+
+bool TypeLooksHandleValue(const std::string& lowerType)
+{
+    bool handle = false;
+
+    do
+    {
+        if (
+            lowerType == "handle" ||
+            lowerType == "hwnd" ||
+            lowerType == "hdc" ||
+            lowerType == "hkey" ||
+            lowerType == "hmenu" ||
+            lowerType == "hcursor" ||
+            lowerType == "hicon" ||
+            lowerType == "hinstance" ||
+            lowerType == "hmodule" ||
+            lowerType == "hmonitor" ||
+            lowerType == "socket" ||
+            lowerType == "sc_handle")
+        {
+            handle = true;
+            break;
+        }
+
+        if (TextContains(lowerType, "_handle") || TextContains(lowerType, "handle_t"))
+        {
+            handle = true;
+            break;
+        }
+
+        if (lowerType.size() > 1 && lowerType[0] == 'h' && !TextContains(lowerType, "*"))
+        {
+            handle =
+                lowerType != "hresult" &&
+                !lowerType.starts_with("http") &&
+                !lowerType.starts_with("hyper");
+        }
+    }
+    while (false);
+
+    return handle;
+}
+
+bool TypeLooksStringLike(const std::string& lowerType)
+{
+    return
+        TextContains(lowerType, "unicode_string") ||
+        TextContains(lowerType, "ansi_string") ||
+        TextContains(lowerType, "oem_string") ||
+        TextContains(lowerType, "utf8_string") ||
+        TextContains(lowerType, "lsa_string") ||
+        (TextContains(lowerType, "ws_string") && !TextContains(lowerType, "ws_xml_string")) ||
+        TextContains(lowerType, "ws_xml_string") ||
+        TextContains(lowerType, "wstr") ||
+        TextContains(lowerType, "pstr") ||
+        TextContains(lowerType, "pcstr") ||
+        TextContains(lowerType, "pcsz") ||
+        TextContains(lowerType, "pwsz") ||
+        TextContains(lowerType, "pcwsz") ||
+        TextContains(lowerType, "lpwstr") ||
+        TextContains(lowerType, "lpcwstr") ||
+        TextContains(lowerType, "lpstr") ||
+        TextContains(lowerType, "lpcstr") ||
+        TextContains(lowerType, "char*") ||
+        TextContains(lowerType, "wchar") ||
+        TextContains(lowerType, "bstr") ||
+        TextContains(lowerType, "hstring") ||
+        TextContains(lowerType, "olechar") ||
+        TextContains(lowerType, "tchar");
+}
+
+bool TypeLooksUtf16StringLike(const std::string& lowerType)
+{
+    return
+        TextContains(lowerType, "unicode_string") ||
+        (TextContains(lowerType, "ws_string") && !TextContains(lowerType, "ws_xml_string")) ||
+        TextContains(lowerType, "wstr") ||
+        TextContains(lowerType, "pwsz") ||
+        TextContains(lowerType, "pcwsz") ||
+        TextContains(lowerType, "pwstr") ||
+        TextContains(lowerType, "pcwstr") ||
+        TextContains(lowerType, "lpwstr") ||
+        TextContains(lowerType, "lpcwstr") ||
+        TextContains(lowerType, "wchar") ||
+        TextContains(lowerType, "olechar") ||
+        TextContains(lowerType, "bstr") ||
+        TextContains(lowerType, "hstring");
+}
+
+bool TypeLooksAnsiStringLike(const std::string& lowerType)
+{
+    return
+        TextContains(lowerType, "ansi_string") ||
+        TextContains(lowerType, "oem_string") ||
+        TextContains(lowerType, "utf8_string") ||
+        TextContains(lowerType, "lsa_string") ||
+        TextContains(lowerType, "ws_xml_string") ||
+        TextContains(lowerType, "pstr") ||
+        TextContains(lowerType, "pcstr") ||
+        TextContains(lowerType, "pcsz") ||
+        TextContains(lowerType, "lpstr") ||
+        TextContains(lowerType, "lpcstr") ||
+        TextContains(lowerType, "char*");
+}
+
+bool TypeLooksBufferLike(const std::string& lowerType, const std::string& lowerName)
+{
+    if (
+        TextContains(lowerName, "callbackdata") ||
+        TextContains(lowerName, "callbackcontext") ||
+        TextContains(lowerName, "callerdata") ||
+        TextContains(lowerName, "callercontext") ||
+        TextContains(lowerName, "userdata") ||
+        TextContains(lowerName, "usercontext") ||
+        TextContains(lowerName, "completioncontext") ||
+        TextContains(lowerName, "flsdata") ||
+        TextContains(lowerName, "tlsdata") ||
+        TextContains(lowerName, "contextdata"))
+    {
+        return false;
+    }
+
+    const bool rawByteBufferType =
+        TextContains(lowerType, "byte*") ||
+        TextContains(lowerType, "uchar*") ||
+        TextContains(lowerType, "u_char*") ||
+        TextContains(lowerType, "pbyte") ||
+        TextContains(lowerType, "puchar") ||
+        TextContains(lowerType, "lpbyte") ||
+        (TextContains(lowerType, "blob") && !TextContains(lowerType, "id3dblob"));
+    const bool rawVoidBufferType =
+        TextContains(lowerType, "void*") ||
+        TextContains(lowerType, "lpvoid") ||
+        TextContains(lowerType, "pvoid");
+    const bool bufferNameHint =
+        TextContains(lowerName, "buffer") ||
+        TextContains(lowerName, "bytes") ||
+        TextContains(lowerName, "data");
+
+    return
+        rawByteBufferType ||
+        (bufferNameHint && rawVoidBufferType);
+}
+
+bool TypeLooksGuidLike(const std::string& lowerType)
+{
+    bool guid = false;
+
+    do
+    {
+        if (TextContains(lowerType, "**"))
+        {
+            break;
+        }
+
+        guid =
+            TextContains(lowerType, "guid") ||
+            TextContains(lowerType, "uuid");
+    }
+    while (false);
+
+    return guid;
+}
+
+bool AliasLooksSid(const std::string& lowerAlias)
+{
+    return
+        lowerAlias == "sid" ||
+        lowerAlias == "psid" ||
+        lowerAlias == "sid_pointer" ||
+        lowerAlias == "sid_optional" ||
+        lowerAlias.ends_with("_sid") ||
+        TextContains(lowerAlias, "security_identifier");
+}
+
+bool TypeLooksScalarPointerLike(const std::string& lowerType)
+{
+    bool scalarPointer = false;
+
+    do
+    {
+        if (TextContains(lowerType, "**"))
+        {
+            break;
+        }
+
+        scalarPointer =
+            TextContains(lowerType, "boolean*") ||
+            TextContains(lowerType, "pboolean") ||
+            TextContains(lowerType, "ushort*") ||
+            TextContains(lowerType, "pushort") ||
+            TextContains(lowerType, "short*") ||
+            TextContains(lowerType, "pshort") ||
+            TextContains(lowerType, "uint16*") ||
+            TextContains(lowerType, "int16*") ||
+            TextContains(lowerType, "word*") ||
+            TextContains(lowerType, "lpword") ||
+            TextContains(lowerType, "uint64*") ||
+            TextContains(lowerType, "uint64_t*") ||
+            TextContains(lowerType, "int64*") ||
+            TextContains(lowerType, "int64_t*") ||
+            TextContains(lowerType, "pint64") ||
+            TextContains(lowerType, "ulong64*") ||
+            TextContains(lowerType, "dword64*") ||
+            TextContains(lowerType, "longlong*") ||
+            TextContains(lowerType, "size_t*") ||
+            TextContains(lowerType, "ssize_t*") ||
+            TextContains(lowerType, "psize_t") ||
+            TextContains(lowerType, "pssize_t") ||
+            TextContains(lowerType, "uint_ptr*") ||
+            TextContains(lowerType, "int_ptr*") ||
+            TextContains(lowerType, "ulong_ptr*") ||
+            TextContains(lowerType, "long_ptr*") ||
+            TextContains(lowerType, "dword_ptr*") ||
+            TextContains(lowerType, "puint_ptr") ||
+            TextContains(lowerType, "pint_ptr") ||
+            TextContains(lowerType, "pulong_ptr") ||
+            TextContains(lowerType, "plong_ptr") ||
+            TextContains(lowerType, "pdword_ptr") ||
+            TextContains(lowerType, "reghandle*") ||
+            TextContains(lowerType, "handle*") ||
+            TextContains(lowerType, "phandle") ||
+            TextContains(lowerType, "uint*") ||
+            TextContains(lowerType, "puint") ||
+            TextContains(lowerType, "ulong*") ||
+            TextContains(lowerType, "pulong") ||
+            TextContains(lowerType, "dword*") ||
+            TextContains(lowerType, "lpdword") ||
+            TextContains(lowerType, "int*") ||
+            TextContains(lowerType, "pint") ||
+            TextContains(lowerType, "long*") ||
+            TextContains(lowerType, "plong") ||
+            TextContains(lowerType, "bool*") ||
+            TextContains(lowerType, "pbool") ||
+            TextContains(lowerType, "float*") ||
+            TextContains(lowerType, "pfloat") ||
+            TextContains(lowerType, "double*") ||
+            TextContains(lowerType, "pdouble") ||
+            TextContains(lowerType, "uerrorcode*");
+    }
+    while (false);
+
+    return scalarPointer;
+}
+
+bool TypeLooksPointerSizedScalar(const std::string& lowerType)
+{
+    return
+        lowerType == "intptr" ||
+        lowerType == "uintptr" ||
+        lowerType == "int_ptr" ||
+        lowerType == "uint_ptr" ||
+        lowerType == "long_ptr" ||
+        lowerType == "ulong_ptr" ||
+        lowerType == "dword_ptr" ||
+        lowerType == "size_t" ||
+        lowerType == "ssize_t" ||
+        lowerType == "intptr_t" ||
+        lowerType == "uintptr_t";
+}
+
+std::string TypeSmallStructDecodeClass(const std::string& lowerType)
+{
+    std::string decodeClass;
+
+    do
+    {
+        if (TextContains(lowerType, "large_integer"))
+        {
+            decodeClass = "large_integer";
+            break;
+        }
+
+        if (TextContains(lowerType, "luid") && !TextContains(lowerType, "fluid"))
+        {
+            decodeClass = "luid";
+            break;
+        }
+
+        if (TextContains(lowerType, "filetime"))
+        {
+            decodeClass = "filetime";
+            break;
+        }
+
+        if (TextContains(lowerType, "systemtime"))
+        {
+            decodeClass = "systemtime";
+            break;
+        }
+
+        if (
+            TextContains(lowerType, "point*") ||
+            TextContains(lowerType, "ppoint") ||
+            TextContains(lowerType, "lppoint"))
+        {
+            decodeClass = "point";
+            break;
+        }
+
+        if (
+            TextContains(lowerType, "rect*") ||
+            TextContains(lowerType, "prect") ||
+            TextContains(lowerType, "lprect"))
+        {
+            decodeClass = "rect";
+            break;
+        }
+    }
+    while (false);
+
+    return decodeClass;
+}
+
+bool TypeLooksPointerIndirect(const std::string& lowerType, const std::string& lowerAlias)
+{
+    return
+        TextContains(lowerAlias, "pointer_pointer") ||
+        TextContains(lowerAlias, "function_pointer_pointer") ||
+        TextContains(lowerAlias, "handle_pointer") ||
+        TextContains(lowerAlias, "rpc_string_pointer") ||
+        TextContains(lowerType, "**") ||
+        TextContains(lowerType, "* *") ||
+        TextContains(lowerType, "pvoid*") ||
+        TextContains(lowerType, "pvoid *") ||
+        TextContains(lowerType, "lpvoid*") ||
+        TextContains(lowerType, "lpvoid *") ||
+        TextContains(lowerType, "lpcvoid*") ||
+        TextContains(lowerType, "lpcvoid *") ||
+        TextContains(lowerType, "pbyte*") ||
+        TextContains(lowerType, "pbyte *") ||
+        TextContains(lowerType, "puchar*") ||
+        TextContains(lowerType, "puchar *") ||
+        TextContains(lowerType, "lpbyte*") ||
+        TextContains(lowerType, "lpbyte *") ||
+        TextContains(lowerType, "pwstr*") ||
+        TextContains(lowerType, "pwstr *") ||
+        TextContains(lowerType, "pcwstr*") ||
+        TextContains(lowerType, "pcwstr *") ||
+        TextContains(lowerType, "pstr*") ||
+        TextContains(lowerType, "pstr *") ||
+        TextContains(lowerType, "pcstr*") ||
+        TextContains(lowerType, "pcstr *") ||
+        TextContains(lowerType, "rpc_wstr*") ||
+        TextContains(lowerType, "rpc_wstr *") ||
+        TextContains(lowerType, "rpc_cstr*") ||
+        TextContains(lowerType, "rpc_cstr *") ||
+        TextContains(lowerType, "psid*") ||
+        TextContains(lowerType, "psid *") ||
+        TextContains(lowerType, "psecurity_descriptor*") ||
+        TextContains(lowerType, "psecurity_descriptor *");
+}
+
+bool DecodeAliasLooksTargetMemory(const std::string& lowerAlias, const std::string& lowerType, const std::string& lowerName)
+{
+    bool readsMemory = false;
+
+    do
+    {
+        if (lowerAlias.empty())
+        {
+            readsMemory =
+                TypeLooksStringLike(lowerType) ||
+                TypeLooksBufferLike(lowerType, lowerName) ||
+                TypeLooksGuidLike(lowerType) ||
+                TypeLooksScalarPointerLike(lowerType) ||
+                TypeLooksPointerIndirect(lowerType, lowerAlias) ||
+                !TypeSmallStructDecodeClass(lowerType).empty();
+            break;
+        }
+
+        readsMemory =
+            TypeLooksStringLike(lowerType) ||
+            TypeLooksBufferLike(lowerType, lowerName) ||
+            TypeLooksGuidLike(lowerType) ||
+            TypeLooksScalarPointerLike(lowerType) ||
+            TypeLooksPointerIndirect(lowerType, lowerAlias) ||
+            !TypeSmallStructDecodeClass(lowerType).empty() ||
+            TextContains(lowerAlias, "string") ||
+            TextContains(lowerAlias, "buffer") ||
+            TextContains(lowerAlias, "bytes") ||
+            TextContains(lowerAlias, "blob") ||
+            TextContains(lowerAlias, "object") ||
+            TextContains(lowerAlias, "struct") ||
+            TextContains(lowerAlias, "descriptor") ||
+            TextContains(lowerAlias, "guid") ||
+            AliasLooksSid(lowerAlias) ||
+            TextContains(lowerAlias, "sockaddr") ||
+            TextContains(lowerAlias, "path") ||
+            TextContains(lowerAlias, "pointer_pointer") ||
+            TextContains(lowerAlias, "function_pointer_pointer") ||
+            TextContains(lowerAlias, "handle_pointer") ||
+            TextContains(lowerAlias, "rpc_string_pointer");
+    }
+    while (false);
+
+    return readsMemory;
+}
+
+std::string ArgumentValueKind(
+    const KnMonGeneratedParameterMetadata* metadata,
+    const std::string& lowerType,
+    const std::string& lowerName,
+    const std::string& lowerAlias)
+{
+    std::string kind = "scalar";
+
+    do
+    {
+        if (metadata != nullptr && !metadata->Flags.empty())
+        {
+            kind = "flags";
+            break;
+        }
+
+        if (metadata != nullptr && !metadata->Enum.empty())
+        {
+            kind = "enum";
+            break;
+        }
+
+        if (lowerAlias == "bool" || lowerAlias == "bool_value" || GenericTypeLooksBool(lowerType))
+        {
+            kind = "bool";
+            break;
+        }
+
+        if (TypeLooksPointerSizedScalar(lowerType))
+        {
+            kind = "scalar";
+            break;
+        }
+
+        if (TextContains(lowerAlias, "string") || TypeLooksStringLike(lowerType))
+        {
+            kind = "string";
+            break;
+        }
+
+        if (TextContains(lowerAlias, "buffer") || TextContains(lowerAlias, "bytes") || TypeLooksBufferLike(lowerType, lowerName))
+        {
+            kind = "buffer";
+            break;
+        }
+
+        if (TextContains(lowerAlias, "guid") || TextContains(lowerAlias, "uuid") || TypeLooksGuidLike(lowerType))
+        {
+            kind = "object";
+            break;
+        }
+
+        if (!TypeSmallStructDecodeClass(lowerType).empty())
+        {
+            kind = "object";
+            break;
+        }
+
+        if (TypeLooksScalarPointerLike(lowerType))
+        {
+            kind = "pointer";
+            break;
+        }
+
+        if (TextContains(lowerAlias, "handle") || TypeLooksHandleValue(lowerType))
+        {
+            kind = "handle";
+            break;
+        }
+
+        if (
+            TextContains(lowerAlias, "object") ||
+            TextContains(lowerAlias, "struct") ||
+            TextContains(lowerAlias, "guid") ||
+            AliasLooksSid(lowerAlias) ||
+            TextContains(lowerAlias, "sockaddr") ||
+            TextContains(lowerAlias, "descriptor"))
+        {
+            kind = "object";
+            break;
+        }
+
+        if (GenericTypeLooksPointer(lowerType) || lowerAlias == "pointer")
+        {
+            kind = "pointer";
+            break;
+        }
+
+        if (TextContains(lowerAlias, "status") || TextContains(lowerAlias, "error"))
+        {
+            kind = "status";
+            break;
+        }
+    }
+    while (false);
+
+    return kind;
+}
+
+std::string ArgumentDecodeClass(
+    const KnMonGeneratedParameterMetadata* metadata,
+    const std::string& lowerType,
+    const std::string& lowerAlias,
+    const std::string& decodeAlias,
+    const std::string& valueKind)
+{
+    std::string decodeClass;
+
+    do
+    {
+        if (metadata != nullptr && !metadata->Flags.empty())
+        {
+            decodeClass = "flags:" + std::string(metadata->Flags);
+            break;
+        }
+
+        if (metadata != nullptr && !metadata->Enum.empty())
+        {
+            decodeClass = "enum:" + std::string(metadata->Enum);
+            break;
+        }
+
+        if (TypeLooksUtf16StringLike(lowerType))
+        {
+            decodeClass = "utf16_string";
+            break;
+        }
+
+        if (TypeLooksAnsiStringLike(lowerType))
+        {
+            decodeClass = "ansi_string";
+            break;
+        }
+
+        if (TextContains(lowerAlias, "utf16") || TextContains(lowerAlias, "wide"))
+        {
+            decodeClass = "utf16_string";
+            break;
+        }
+
+        if (TextContains(lowerAlias, "ansi"))
+        {
+            decodeClass = "ansi_string";
+            break;
+        }
+
+        if (valueKind == "buffer")
+        {
+            decodeClass = "buffer";
+            break;
+        }
+
+        if (valueKind == "object" && (TextContains(lowerAlias, "guid") || TextContains(lowerAlias, "uuid") || TypeLooksGuidLike(lowerType)))
+        {
+            decodeClass = "guid";
+            break;
+        }
+
+        const std::string smallStructClass = TypeSmallStructDecodeClass(lowerType);
+        if (!smallStructClass.empty())
+        {
+            decodeClass = smallStructClass;
+            break;
+        }
+
+        if (valueKind == "pointer" && TypeLooksScalarPointerLike(lowerType))
+        {
+            decodeClass = "scalar_pointer";
+            break;
+        }
+
+        if (!decodeAlias.empty())
+        {
+            decodeClass = decodeAlias;
+            break;
+        }
+
+        decodeClass = valueKind;
+    }
+    while (false);
+
+    return decodeClass;
+}
+
+ArgumentSemantic BuildArgumentSemantic(
+    const KnMonGeneratedParameterMetadata* metadata,
+    const std::string& type,
+    const std::string& name,
+    const std::string& decodeAlias,
+    bool genericPointerOnly,
+    bool forceTargetMemoryRead = false)
+{
+    ArgumentSemantic semantic;
+    const std::string lowerType = LowerAscii(type);
+    const std::string lowerName = LowerAscii(name);
+    const std::string lowerAlias = LowerAscii(decodeAlias);
+    const bool targetMemoryAlias = DecodeAliasLooksTargetMemory(lowerAlias, lowerType, lowerName);
+
+    semantic.ValueKind = ArgumentValueKind(metadata, lowerType, lowerName, lowerAlias);
+    semantic.DecodeClass = ArgumentDecodeClass(metadata, lowerType, lowerAlias, decodeAlias, semantic.ValueKind);
+
+    if (forceTargetMemoryRead)
+    {
+        semantic.PayloadPolicy = "target_memory";
+        semantic.HasTargetMemoryRead = true;
+        semantic.TargetMemoryRead = true;
+    }
+    else if (genericPointerOnly && (targetMemoryAlias || metadata == nullptr) && (semantic.ValueKind == "pointer" || semantic.ValueKind == "string" || semantic.ValueKind == "buffer" || semantic.ValueKind == "object"))
+    {
+        semantic.PayloadPolicy = "pointer_value_only";
+        semantic.HasTargetMemoryRead = true;
+        semantic.TargetMemoryRead = false;
+    }
+    else if (targetMemoryAlias)
+    {
+        semantic.PayloadPolicy = "target_memory";
+        semantic.HasTargetMemoryRead = true;
+        semantic.TargetMemoryRead = true;
+    }
+    else
+    {
+        semantic.PayloadPolicy = "value";
+        semantic.HasTargetMemoryRead = true;
+        semantic.TargetMemoryRead = false;
+    }
+
+    return semantic;
 }
 
 std::string EnhanceDecodedValueWithGeneratedConstants(
@@ -3566,17 +4571,21 @@ std::string ArgumentJsonFromMetadata(
     const std::string& preCallValue,
     const std::string& postCallValue,
     const std::string& decodedValue,
-    const std::string& decodeStatus = "decoded")
+    const std::string& decodeStatus = "decoded",
+    bool genericPointerOnly = false,
+    const std::string& fallbackDecodeAlias = "",
+    bool forceTargetMemoryRead = false)
 {
     const KnMonGeneratedParameterMetadata* metadata = FindGeneratedParameterMetadata(apiId, static_cast<std::uint16_t>(index));
     const std::string type = metadata == nullptr ? fallbackType : MetadataValue(metadata->Type, fallbackType);
     const std::string name = metadata == nullptr ? fallbackName : MetadataValue(metadata->Name, fallbackName);
     const std::string direction = metadata == nullptr ? fallbackDirection : MetadataValue(metadata->Direction, fallbackDirection);
-    const std::string decodeAlias = metadata == nullptr ? "" : std::string(metadata->Decode);
+    const std::string decodeAlias = metadata == nullptr ? fallbackDecodeAlias : MetadataValue(metadata->Decode, fallbackDecodeAlias);
     const std::string captureTiming = metadata == nullptr ? "" : std::string(metadata->CaptureTiming);
     const std::string enhancedDecodedValue = EnhanceDecodedValueWithGeneratedConstants(metadata, decodedValue, decodeStatus);
+    const ArgumentSemantic semantic = BuildArgumentSemantic(metadata, type, name, decodeAlias, genericPointerOnly, forceTargetMemoryRead);
 
-    return ArgumentJson(index, type, name, direction, preCallValue, postCallValue, enhancedDecodedValue, decodeStatus, decodeAlias, captureTiming);
+    return ArgumentJson(index, type, name, direction, preCallValue, postCallValue, enhancedDecodedValue, decodeStatus, decodeAlias, captureTiming, semantic);
 }
 
 std::string ApiCallPayload(
@@ -3847,6 +4856,128 @@ std::string DefaultGenericHookPolicy(const std::string& tier, const std::string&
     return policy;
 }
 
+std::string GenericPreviewKindName(std::uint32_t value)
+{
+    std::string name = "none";
+
+    switch (value)
+    {
+    case 1:
+        name = "ansi_string";
+        break;
+    case 2:
+        name = "utf16_string";
+        break;
+    case 3:
+        name = "buffer";
+        break;
+    case 4:
+        name = "guid";
+        break;
+    case 5:
+        name = "scalar_pointer";
+        break;
+    case 6:
+        name = "ansi_string_struct";
+        break;
+    case 7:
+        name = "utf16_string_struct";
+        break;
+    case 8:
+        name = "large_integer";
+        break;
+    case 9:
+        name = "filetime";
+        break;
+    case 10:
+        name = "systemtime";
+        break;
+    case 11:
+        name = "point";
+        break;
+    case 12:
+        name = "rect";
+        break;
+    case 13:
+        name = "pointer_indirect";
+        break;
+    case 14:
+        name = "bstr";
+        break;
+    case 15:
+        name = "hstring";
+        break;
+    case 0:
+    default:
+        break;
+    }
+
+    return name;
+}
+
+struct GeneratedGenericPreview
+{
+    std::uint32_t ArgumentIndex = 0;
+    std::uint32_t Kind = 0;
+    std::uint32_t DecodeStatus = 0;
+    std::uint32_t Offset = 0;
+    std::uint32_t Length = 0;
+    std::string Value;
+};
+
+std::vector<GeneratedGenericPreview> DecodeGeneratedGenericPreviews(
+    const KnMonTransportRecord& record,
+    const std::string& text)
+{
+    std::vector<GeneratedGenericPreview> previews;
+    constexpr std::uint32_t MaxPreviewCount = KnMonTransportSlotCount32 - 4;
+    const std::uint32_t previewCount = std::min<std::uint32_t>(record.Values32[3], MaxPreviewCount);
+
+    for (std::uint32_t slot = 0; slot < previewCount; ++slot)
+    {
+        const std::uint32_t descriptor = record.Values32[4 + slot];
+        GeneratedGenericPreview preview;
+        preview.ArgumentIndex = (descriptor >> 0) & 0x0fU;
+        preview.Kind = (descriptor >> 4) & 0x0fU;
+        preview.DecodeStatus = (descriptor >> 8) & 0xffU;
+        preview.Offset = (descriptor >> 16) & 0xffU;
+        preview.Length = (descriptor >> 24) & 0xffU;
+
+        if (
+            preview.Kind == 0 ||
+            preview.Length == 0 ||
+            preview.ArgumentIndex >= record.Values32[0] ||
+            preview.Offset > text.size() ||
+            preview.Length > text.size() - preview.Offset)
+        {
+            continue;
+        }
+
+        preview.Value = text.substr(preview.Offset, preview.Length);
+        previews.push_back(preview);
+    }
+
+    return previews;
+}
+
+const GeneratedGenericPreview* FindGeneratedGenericPreview(
+    const std::vector<GeneratedGenericPreview>& previews,
+    std::uint32_t argumentIndex)
+{
+    const GeneratedGenericPreview* preview = nullptr;
+
+    for (const GeneratedGenericPreview& candidate : previews)
+    {
+        if (candidate.ArgumentIndex == argumentIndex)
+        {
+            preview = &candidate;
+            break;
+        }
+    }
+
+    return preview;
+}
+
 std::string GenericTransportApiPayload(
     const KnMonCaptureResult& result,
     const KnMonTransportRecord& record,
@@ -3869,6 +5000,9 @@ std::string GenericTransportApiPayload(
     const std::string resolvedHostModule = MetadataTokenValue(text1, "host", "");
     const std::string inventoryKey = MetadataTokenValue(text1, "inventoryKey", moduleName + "!" + apiName);
     const std::string agentName = FileNameFromPath(result.AgentPath);
+    const std::vector<GeneratedGenericPreview> generatedPreviews =
+        apiMetadata == nullptr ? std::vector<GeneratedGenericPreview>() : DecodeGeneratedGenericPreviews(record, text2);
+    const bool hasGeneratedPreview = !generatedPreviews.empty();
     std::ostringstream args;
 
     if (record.Values32[0] > 0)
@@ -3885,6 +5019,11 @@ std::string GenericTransportApiPayload(
                 const std::string fallbackType = parameterMetadata == nullptr ? "ULONG_PTR" : MetadataValue(parameterMetadata->Type, "ULONG_PTR");
                 const std::string fallbackDirection = parameterMetadata == nullptr ? "in" : MetadataValue(parameterMetadata->Direction, "in");
                 const std::string argumentValue = GenericArgumentValueText(result, parameterMetadata, fallbackType, record.Values64[index]);
+                const GeneratedGenericPreview* preview = FindGeneratedGenericPreview(generatedPreviews, index);
+                const bool hasArgumentPreview = preview != nullptr;
+                const std::string argumentPostValue = hasArgumentPreview ? preview->Value : argumentValue;
+                const std::string argumentDecodedValue = hasArgumentPreview ? preview->Value : argumentValue;
+                const std::string argumentDecodeStatus = hasArgumentPreview ? DecodeStatusName(preview->DecodeStatus) : DecodeStatusName(record.Values32[1]);
                 if (index > 0)
                 {
                     args << ",";
@@ -3896,9 +5035,12 @@ std::string GenericTransportApiPayload(
                     fallbackName,
                     fallbackDirection,
                     argumentValue,
-                    argumentValue,
-                    argumentValue,
-                    DecodeStatusName(record.Values32[1]));
+                    argumentPostValue,
+                    argumentDecodedValue,
+                    argumentDecodeStatus,
+                    !hasArgumentPreview,
+                    "",
+                    hasArgumentPreview);
             }
         }
         else
@@ -3919,7 +5061,9 @@ std::string GenericTransportApiPayload(
                 argumentValue,
                 argumentValue,
                 decoded,
-                DecodeStatusName(record.Values32[1]));
+                DecodeStatusName(record.Values32[1]),
+                true,
+                schema.DecodeHint);
         }
     }
 
@@ -3945,6 +5089,31 @@ std::string GenericTransportApiPayload(
     stream << "\"hookPolicy\":" << Q(hookPolicy) << ",";
     stream << "\"coverageStatus\":" << Q(coverageStatus) << ",";
     stream << "\"inventoryKey\":" << Q(inventoryKey) << ",";
+    if (hasGeneratedPreview)
+    {
+        const GeneratedGenericPreview& firstPreview = generatedPreviews.front();
+        stream << "\"genericPreview\":{\"argumentIndex\":" << firstPreview.ArgumentIndex
+               << ",\"kind\":" << Q(GenericPreviewKindName(firstPreview.Kind))
+               << ",\"decodeStatus\":" << Q(DecodeStatusName(firstPreview.DecodeStatus))
+               << ",\"value\":" << Q(firstPreview.Value)
+               << "},";
+        stream << "\"genericPreviews\":[";
+        for (std::size_t index = 0; index < generatedPreviews.size(); ++index)
+        {
+            const GeneratedGenericPreview& preview = generatedPreviews[index];
+            if (index != 0)
+            {
+                stream << ",";
+            }
+
+            stream << "{\"argumentIndex\":" << preview.ArgumentIndex
+                   << ",\"kind\":" << Q(GenericPreviewKindName(preview.Kind))
+                   << ",\"decodeStatus\":" << Q(DecodeStatusName(preview.DecodeStatus))
+                   << ",\"value\":" << Q(preview.Value)
+                   << "}";
+        }
+        stream << "],";
+    }
     stream << "\"monitorTier\":" << Q(tier) << ",";
     stream << "\"hookProfile\":" << Q(profile) << ",";
     if (tier == "tier2")
@@ -6234,6 +7403,11 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
             break;
         }
 
+        if (!RunLaunchElevationPreflight(result, request.TargetPath))
+        {
+            break;
+        }
+
         AddAudit(result, "launch_requested", "launch_requested", "Controlled early-bird launch requested.");
 
         const std::wstring pipeName = L"\\\\.\\pipe\\knmon_agent_" + Utf8ToWide(result.OperationId);
@@ -6259,7 +7433,20 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
         const std::wstring agentPath = Utf8ToWide(request.AgentPath);
         const std::wstring workingDirectory = request.WorkingDirectory.empty() ? std::filesystem::path(targetPath).parent_path().wstring() : Utf8ToWide(request.WorkingDirectory);
         std::wstring commandLine = QuoteArgument(targetPath);
-        commandLine += L" --slow";
+        if (!request.CommandLineArguments.empty())
+        {
+            commandLine += L" ";
+            commandLine += Utf8ToWide(request.CommandLineArguments);
+        }
+        else
+        {
+            commandLine += L" --slow";
+            if (HasApiSelection(request.ApiSelection))
+            {
+                commandLine += L" --startup-delay-ms 5000";
+            }
+        }
+        AddAudit(result, "target_command_line_prepared", "capture_sample_fileio", WideToUtf8(commandLine.c_str()));
         std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
         mutableCommandLine.push_back(L'\0');
 
@@ -6278,7 +7465,7 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
             &startupInfo,
             &processInfo))
         {
-            SetResultError(result, GetLastError(), "win32", "CreateProcessW", "Failed to create controlled target process suspended.");
+            SetCreateProcessLaunchError(result, GetLastError(), "Failed to create controlled target process suspended.");
             break;
         }
 
@@ -6624,6 +7811,12 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             break;
         }
 
+        if (!RunLaunchElevationPreflight(result, request.TargetPath))
+        {
+            fatalError = true;
+            break;
+        }
+
         AddAudit(result, "launch_capture_requested", "launch_capture", "Controlled early-bird launch capture requested.");
 
         const std::wstring pipeName = L"\\\\.\\pipe\\knmon_agent_" + Utf8ToWide(result.OperationId);
@@ -6693,7 +7886,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             &startupInfo,
             &processInfo))
         {
-            SetResultError(result, GetLastError(), "win32", "CreateProcessW", "Failed to create target process suspended for launch capture.");
+            SetCreateProcessLaunchError(result, GetLastError(), "Failed to create target process suspended for launch capture.");
             fatalError = true;
             break;
         }
@@ -7208,6 +8401,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
     result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
     result.TargetPath = request.TargetPath;
     result.AgentPath = request.AgentPath;
+    result.ApiSelection = request.ApiSelection;
     result.Architecture = ArchitectureName(requestedArchitecture);
     result.InjectionMethod = "early-bird APC";
 
@@ -7220,6 +8414,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
     bool processCreated = false;
     bool processResumed = false;
     bool fatalError = false;
+    bool terminateTargetAfterCapture = false;
 
     do
     {
@@ -7231,6 +8426,12 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         }
 
         if (!RunSameBitnessPreflight(result, requestedArchitecture, request.TargetPath, request.AgentPath))
+        {
+            fatalError = true;
+            break;
+        }
+
+        if (!RunLaunchElevationPreflight(result, request.TargetPath))
         {
             fatalError = true;
             break;
@@ -7274,7 +8475,15 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         const std::wstring agentPath = Utf8ToWide(request.AgentPath);
         const std::wstring workingDirectory = request.WorkingDirectory.empty() ? std::filesystem::path(targetPath).parent_path().wstring() : Utf8ToWide(request.WorkingDirectory);
         std::wstring commandLine = QuoteArgument(targetPath);
-        commandLine += L" --slow";
+        if (!request.CommandLineArguments.empty())
+        {
+            commandLine += L" ";
+            commandLine += Utf8ToWide(request.CommandLineArguments);
+        }
+        else
+        {
+            commandLine += L" --slow";
+        }
         std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
         mutableCommandLine.push_back(L'\0');
 
@@ -7283,6 +8492,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         EnvironmentOverride modeEnv(L"KNMON_CAPTURE_MODE", L"fileio");
         EnvironmentOverride transportEnv(L"KNMON_TRANSPORT_NAME", transport.MappingName);
         EnvironmentOverride transportRequiredEnv(L"KNMON_TRANSPORT_REQUIRED", L"1");
+        EnvironmentOverride selectedApisEnv(L"KNMON_SELECTED_APIS", Utf8ToWide(request.ApiSelection));
 
         if (!CreateProcessW(
             targetPath.c_str(),
@@ -7296,7 +8506,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
             &startupInfo,
             &processInfo))
         {
-            SetResultError(result, GetLastError(), "win32", "CreateProcessW", "Failed to create controlled target process suspended.");
+            SetCreateProcessLaunchError(result, GetLastError(), "Failed to create controlled target process suspended.");
             fatalError = true;
             break;
         }
@@ -7388,11 +8598,14 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         bool captureEnded = false;
         bool hookInstallFailed = false;
         bool agentShutdownReceived = false;
+        bool agentPipeClosedWithoutShutdown = false;
+        bool targetExitObserved = false;
         std::uint64_t hookInstalledCount = 0;
         std::uint64_t shutdownInstalledHooks = 0;
         std::uint64_t shutdownRestoredHooks = 0;
         std::uint64_t shutdownFailedHooks = 0;
         std::string shutdownReason;
+        const bool hasApiSelection = HasApiSelection(request.ApiSelection);
         const bool hasGenericProfileSelection = HasGenericProfileSelection();
 
         while (!captureEnded)
@@ -7474,6 +8687,15 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
 
             if (pipeError == ERROR_BROKEN_PIPE || pipeError == ERROR_HANDLE_EOF || pipeError == ERROR_NO_DATA)
             {
+                if (processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
+                {
+                    targetExitObserved = true;
+                    AddAudit(result, "target_exit_observed", "agent_event_read", "Target process exit was observed after the agent pipe closed.");
+                }
+                else if (!agentShutdownReceived)
+                {
+                    agentPipeClosedWithoutShutdown = true;
+                }
                 AddAudit(result, agentShutdownReceived ? "pipe_closed_after_shutdown" : "pipe_closed_without_shutdown", "agent_event_read", "Agent event pipe closed.", pipeError, "win32");
                 captureEnded = true;
                 break;
@@ -7484,7 +8706,9 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                 const DWORD processWait = WaitForSingleObject(processInfo.hProcess, 0);
                 if (processWait == WAIT_OBJECT_0)
                 {
+                    targetExitObserved = true;
                     DrainSharedTransport(result, transport);
+                    AddAudit(result, "target_exit_observed", "agent_event_read", "Target process exit was observed before an agent shutdown message arrived.");
                     captureEnded = true;
                     break;
                 }
@@ -7512,13 +8736,13 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         DrainSharedTransport(result, transport);
         UpdateTransportMetrics(result, transport);
 
-        if (!hasGenericProfileSelection && hookInstalledCount >= ExpectedFileIoHookCount)
+        if (!hasGenericProfileSelection && !hasApiSelection && hookInstalledCount >= ExpectedFileIoHookCount)
         {
             AddAudit(result, "hook_install_complete", "agent_event_read", "All selected File I/O hooks reported installed.");
         }
-        else if (hasGenericProfileSelection)
+        else if (hasGenericProfileSelection || hasApiSelection)
         {
-            AddAudit(result, "api_profile_filter_applied", "hook_install_count", "API profile selection is active; fixed File I/O hook-count gate was skipped.");
+            AddAudit(result, "api_profile_filter_applied", "hook_install_count", "API profile or explicit API selection is active; fixed File I/O hook-count gate was skipped.");
         }
 
         if (agentShutdownReceived)
@@ -7546,7 +8770,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
             break;
         }
 
-        if (!hasGenericProfileSelection && hookInstalledCount < ExpectedFileIoHookCount)
+        if (!hasGenericProfileSelection && !hasApiSelection && hookInstalledCount < ExpectedFileIoHookCount)
         {
             SetResultError(result, ERROR_HOOK_NOT_INSTALLED, "knmon-core", "hook_install_count_required", "Not all selected File I/O hooks reported installed.");
             fatalError = true;
@@ -7562,12 +8786,24 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
 
         if (!agentShutdownReceived)
         {
-            SetResultError(result, ERROR_NO_DATA, "knmon-core", "agent_shutdown_required", "Agent shutdown lifecycle event was not received before capture completed.");
-            fatalError = true;
-            break;
+            if (targetExitObserved)
+            {
+                AddAudit(result, "target_exit_cleanup_evidence", "process_exit", "Launched target exited; process teardown is accepted as cleanup evidence for bounded launch capture.");
+            }
+            else if (agentPipeClosedWithoutShutdown)
+            {
+                terminateTargetAfterCapture = true;
+                AddAudit(result, "pipe_close_cleanup_evidence", "agent_event_read", "Agent pipe closed before shutdown; launched target will be terminated as bounded capture cleanup.");
+            }
+            else
+            {
+                SetResultError(result, ERROR_NO_DATA, "knmon-core", "agent_shutdown_required", "Agent shutdown lifecycle event was not received before capture completed.");
+                fatalError = true;
+                break;
+            }
         }
 
-        if (shutdownRestoredHooks < shutdownInstalledHooks || shutdownFailedHooks != 0)
+        if (agentShutdownReceived && (shutdownRestoredHooks < shutdownInstalledHooks || shutdownFailedHooks != 0))
         {
             SetResultError(result, ERROR_HOOK_NOT_INSTALLED, "knmon-core", "hook_uninstall_required", "One or more installed hooks were not restored cleanly.");
             fatalError = true;
@@ -7599,6 +8835,11 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
     {
         TerminateProcess(processInfo.hProcess, 1);
         AddAudit(result, "cleanup_completed", "TerminateProcess", "Suspended target was terminated because capture failed before resume.");
+    }
+    else if (processCreated && terminateTargetAfterCapture && processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_TIMEOUT)
+    {
+        TerminateProcess(processInfo.hProcess, 0);
+        AddAudit(result, "cleanup_completed", "TerminateProcess", "Controlled target was terminated after bounded capture pipe closure.");
     }
     else if (processCreated && fatalError && processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_TIMEOUT)
     {
@@ -7671,11 +8912,14 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
     void* remoteConfig = nullptr;
     std::uintptr_t remoteAgentBase = 0;
     std::uintptr_t remoteStopAddress = 0;
+    std::uintptr_t remoteQueryAddress = 0;
+    HANDLE remoteInitializeThread = nullptr;
     bool useLoadedAgent = false;
     bool fatalError = false;
-    bool agentInitialized = false;
+    bool remoteControlOwnedByThisAttach = false;
     bool stopRequested = false;
     bool agentShutdownReceived = false;
+    bool agentStateCleanupProven = false;
     bool cancellationLogged = false;
     std::uint64_t hookInstalledCount = 0;
     std::uint64_t shutdownInstalledHooks = 0;
@@ -7776,6 +9020,180 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         return observed;
     };
 
+    auto agentCleanupProven = [&]() -> bool
+    {
+        return agentStateCleanupProven || (agentShutdownReceived && shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0);
+    };
+
+    auto queryAgentStateCleanupEvidence = [&](const std::string& stage) -> bool
+    {
+        bool proven = false;
+
+        do
+        {
+            if (processHandle == nullptr || remoteQueryAddress == 0)
+            {
+                AddAudit(result, "agent_state_query_skipped", stage, "Remote agent state query endpoint is unavailable.");
+                break;
+            }
+
+            KnMonAgentStateV1 state;
+            DWORD controlStatus = 0;
+            DWORD queryError = 0;
+            std::string queryMessage;
+            if (!QueryRemoteAgentState(processHandle, reinterpret_cast<void*>(remoteQueryAddress), request.TimeoutMs, &state, &controlStatus, &queryError, &queryMessage))
+            {
+                result.AgentControlStatus = controlStatus;
+                AddAudit(
+                    result,
+                    "agent_state_query_failed",
+                    stage,
+                    queryMessage.empty() ? "Remote agent state query failed." : queryMessage,
+                    queryError == 0 ? controlStatus : queryError,
+                    queryError == 0 ? "knmon-agent" : "win32");
+                break;
+            }
+
+            result.AgentControlStatus = controlStatus;
+            const std::string summary = AgentStateSummary(state);
+            AddAudit(result, "agent_state_queried", "KnMonAgentQueryState", summary);
+            if (AgentStateProvesSelfDisabledCleanup(state))
+            {
+                agentStateCleanupProven = true;
+                if (result.SessionShutdownEvidence.empty())
+                {
+                    result.SessionShutdownEvidence = "agent_state_cleanup:" + summary;
+                }
+                AddAudit(result, "agent_cleanup_verified", stage, "Remote agent state proves self-disable cleanup.");
+                proven = true;
+            }
+        }
+        while (false);
+
+        return proven;
+    };
+
+    auto requestAgentStop = [&](const std::string& stage) -> bool
+    {
+        bool requested = false;
+
+        do
+        {
+            if (processHandle == nullptr || remoteStopAddress == 0)
+            {
+                AddAudit(result, "agent_stop_skipped", stage, "Remote agent stop endpoint is unavailable.");
+                break;
+            }
+
+            result.AgentCleanupAttempted = true;
+            AddAudit(result, "agent_stop_requested", "CreateRemoteThread", "Requesting attach agent self-disable during " + stage + ".");
+
+            DWORD stopExitCode = 0;
+            DWORD stopError = 0;
+            if (!WaitRemoteThread(processHandle, reinterpret_cast<void*>(remoteStopAddress), nullptr, request.TimeoutMs, &stopExitCode, &stopError))
+            {
+                AddAudit(result, "agent_stop_timeout", "CreateRemoteThread", "Remote KnMonAgentStop failed or timed out during " + stage + ".", stopError, "win32");
+                break;
+            }
+
+            result.AgentControlStatus = stopExitCode;
+            if (
+                stopExitCode != static_cast<DWORD>(KnMonAgentControlStatus::Success) &&
+                stopExitCode != static_cast<DWORD>(KnMonAgentControlStatus::NotRunning))
+            {
+                std::ostringstream stream;
+                stream << "KnMonAgentStop returned " << AgentControlStatusName(stopExitCode) << " (" << stopExitCode << ") during " << stage << ".";
+                AddAudit(result, "agent_stop_rejected", "KnMonAgentStop", stream.str(), stopExitCode, "knmon-agent");
+                break;
+            }
+
+            requested = true;
+        }
+        while (false);
+
+        return requested;
+    };
+
+    auto waitForTimedOutInitializeThread = [&](const std::string& stage) -> bool
+    {
+        bool completed = true;
+
+        if (remoteInitializeThread != nullptr)
+        {
+            completed = false;
+            const DWORD waitResult = WaitForSingleObject(remoteInitializeThread, 0);
+            if (waitResult == WAIT_OBJECT_0)
+            {
+                DWORD initializeExitCode = 0;
+                if (GetExitCodeThread(remoteInitializeThread, &initializeExitCode))
+                {
+                    std::ostringstream stream;
+                    stream << "Timed-out KnMonAgentInitialize thread completed with status " << AgentControlStatusName(initializeExitCode) << " (" << initializeExitCode << ").";
+                    AddAudit(result, "remote_initialize_thread_completed", stage, stream.str());
+                }
+                else
+                {
+                    AddAudit(result, "remote_initialize_thread_completed", stage, "Timed-out KnMonAgentInitialize thread completed; exit code query failed.", GetLastError(), "win32");
+                }
+
+                CloseHandle(remoteInitializeThread);
+                remoteInitializeThread = nullptr;
+                completed = true;
+            }
+        }
+
+        return completed;
+    };
+
+    auto pollAgentCleanupEvidence = [&](const std::string& stage, bool requireInitializeThreadCompletion) -> bool
+    {
+        bool proven = false;
+        const ULONGLONG deadline = GetTickCount64() + static_cast<ULONGLONG>(request.TimeoutMs);
+        ULONGLONG nextStopRetry = 0;
+
+        while (GetTickCount64() < deadline)
+        {
+            if (processHandle != nullptr && WaitForSingleObject(processHandle, 0) == WAIT_OBJECT_0)
+            {
+                result.AgentCleanupSucceeded = true;
+                AddAudit(result, "target_exited_before_cleanup_proof", stage, "Target exited before attach cleanup evidence could be completed.");
+                proven = true;
+                break;
+            }
+
+            const bool initializeThreadCompleted = waitForTimedOutInitializeThread(stage);
+            queryAgentStateCleanupEvidence(stage);
+            if (agentCleanupProven() && (!requireInitializeThreadCompletion || initializeThreadCompleted))
+            {
+                proven = true;
+                break;
+            }
+
+            const ULONGLONG now = GetTickCount64();
+            if (now >= nextStopRetry)
+            {
+                requestAgentStop(stage);
+                nextStopRetry = now + 500ULL;
+            }
+
+            Sleep(100);
+        }
+
+        if (!proven)
+        {
+            const bool initializeThreadCompleted = waitForTimedOutInitializeThread(stage);
+            queryAgentStateCleanupEvidence(stage);
+            proven = agentCleanupProven() && (!requireInitializeThreadCompletion || initializeThreadCompleted);
+        }
+
+        if (!proven && remoteInitializeThread != nullptr)
+        {
+            AddAudit(result, "remote_initialize_thread_unfinished", stage, "Timed-out KnMonAgentInitialize thread is still running; cleanup cannot be proven.", WAIT_TIMEOUT, "win32");
+        }
+
+        return proven;
+    };
+
     do
     {
         DWORD cancellationError = 0;
@@ -7873,6 +9291,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
                 result.AttachStrategy = "loaded_agent_reinitialize";
                 remoteAgentBase = loadedAgentModule.Base;
                 useLoadedAgent = true;
+                remoteControlOwnedByThisAttach = true;
                 AddAudit(result, "attach_strategy_selected", "loaded_agent_reinitialize", "Reusing already-loaded self-disabled agent without another LoadLibraryW call.");
             }
             else if (active)
@@ -8070,6 +9489,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
             result.AttachState = "not_loaded";
             result.AttachStrategy = "load_library_initialize";
+            remoteControlOwnedByThisAttach = true;
             AddAudit(result, "attach_strategy_selected", "load_library_initialize", "Agent was loaded with remote LoadLibraryW before initialization.");
         }
         else if (remoteAgentBase == 0)
@@ -8102,11 +9522,20 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
             break;
         }
 
+        std::uintptr_t queryStateRva = 0;
+        if (!ResolveImageExportRva(agentPath, "KnMonAgentQueryState", &queryStateRva, &remoteError))
+        {
+            SetResultError(result, remoteError == 0 ? ERROR_PROC_NOT_FOUND : remoteError, "win32", "remote_export_missing", "Failed to resolve KnMonAgentQueryState export RVA.");
+            fatalError = true;
+            break;
+        }
+
         void* remoteInitialize = reinterpret_cast<void*>(remoteAgentBase + initializeRva);
         remoteStopAddress = remoteAgentBase + stopRva;
+        remoteQueryAddress = remoteAgentBase + queryStateRva;
 
         AddAudit(result, "remote_agent_initialize_started", "CreateRemoteThread", "Remote KnMonAgentInitialize thread starting.");
-        if (!WaitRemoteThread(processHandle, remoteInitialize, remoteConfig, request.TimeoutMs, &remoteExitCode, &remoteError))
+        if (!WaitRemoteThread(processHandle, remoteInitialize, remoteConfig, request.TimeoutMs, &remoteExitCode, &remoteError, &remoteInitializeThread))
         {
             SetResultError(result, remoteError, "win32", "remote_initialize_failed", "Remote KnMonAgentInitialize thread failed or timed out.");
             fatalError = true;
@@ -8123,7 +9552,6 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
             break;
         }
 
-        agentInitialized = true;
         AddAudit(result, "remote_agent_initialize_completed", "CreateRemoteThread", "Remote KnMonAgentInitialize completed.");
         (void)observeCancellation("attach_after_initialize");
 
@@ -8220,22 +9648,10 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
             break;
         }
 
-        AddAudit(result, "agent_stop_requested", "CreateRemoteThread", "Requesting attach agent self-disable.");
         stopRequested = true;
-        if (!WaitRemoteThread(processHandle, reinterpret_cast<void*>(remoteStopAddress), nullptr, request.TimeoutMs, &remoteExitCode, &remoteError))
+        if (!requestAgentStop("normal_stop"))
         {
-            SetResultError(result, remoteError, "win32", "agent_stop_timeout", "Remote KnMonAgentStop thread failed or timed out.");
-            fatalError = true;
-            break;
-        }
-
-        if (remoteExitCode != static_cast<DWORD>(KnMonAgentControlStatus::Success))
-        {
-            std::ostringstream stream;
-            stream << "KnMonAgentStop returned status " << remoteExitCode << ".";
-            SetResultError(result, remoteExitCode, "knmon-agent", "detach_incomplete", stream.str());
-            fatalError = true;
-            break;
+            AddAudit(result, "agent_stop_pending_verification", "normal_stop", "Attach agent stop request did not complete cleanly; cleanup evidence will be verified before final state.");
         }
 
         const ULONGLONG shutdownDeadline = GetTickCount64() + static_cast<ULONGLONG>(request.TimeoutMs);
@@ -8270,6 +9686,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
         DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
         UpdateTransportMetrics(result, transport);
+        queryAgentStateCleanupEvidence("post_stop");
 
         if (fatalError)
         {
@@ -8279,7 +9696,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         if (result.CancelObserved)
         {
             result.AgentCleanupAttempted = true;
-            result.AgentCleanupSucceeded = agentShutdownReceived && shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0;
+            result.AgentCleanupSucceeded = agentCleanupProven();
             if (!result.AgentCleanupSucceeded)
             {
                 result.OperationState = "cleanup_failed";
@@ -8331,25 +9748,27 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
             break;
         }
 
-        if (!agentShutdownReceived)
-        {
-            SetResultError(result, WAIT_TIMEOUT, "knmon-core", "agent_shutdown_required", "Attach agent shutdown lifecycle event was not received.");
-            fatalError = true;
-            break;
-        }
-
-        if (shutdownRestoredHooks < shutdownInstalledHooks || shutdownFailedHooks != 0)
+        if (agentShutdownReceived && (shutdownRestoredHooks < shutdownInstalledHooks || shutdownFailedHooks != 0))
         {
             SetResultError(result, ERROR_HOOK_NOT_INSTALLED, "knmon-core", "hook_uninstall_required", "Attach self-disable did not restore all installed hooks.");
             fatalError = true;
             break;
         }
 
-        if (shutdownReason != "self_disable")
+        if (!agentCleanupProven())
+        {
+            SetResultError(result, WAIT_TIMEOUT, "knmon-core", "agent_shutdown_required", "Attach agent cleanup was not proven by agent_shutdown or agent state.");
+            fatalError = true;
+            break;
+        }
+
+        if (agentShutdownReceived && shutdownReason != "self_disable")
         {
             AddAudit(result, "detach_policy_note", "agent_shutdown", "Attach shutdown reason was " + shutdownReason + ".");
         }
 
+        result.AgentCleanupAttempted = stopRequested;
+        result.AgentCleanupSucceeded = agentCleanupProven();
         result.Success = true;
         result.Win32ErrorCode = 0;
         result.Subsystem = "knmon-core";
@@ -8361,23 +9780,31 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
     }
     while (false);
 
-    if (agentInitialized && !stopRequested && !agentShutdownReceived && processHandle != nullptr && remoteStopAddress != 0)
+    if (remoteControlOwnedByThisAttach && !agentCleanupProven() && processHandle != nullptr && remoteStopAddress != 0)
     {
-        DWORD stopExitCode = 0;
-        DWORD stopError = 0;
         result.AgentCleanupAttempted = true;
-        AddAudit(result, "agent_stop_requested", "CreateRemoteThread", "Requesting attach agent self-disable during cleanup.");
-        if (!WaitRemoteThread(processHandle, reinterpret_cast<void*>(remoteStopAddress), nullptr, request.TimeoutMs, &stopExitCode, &stopError))
+        if (!stopRequested)
         {
-            AddAudit(result, "agent_stop_timeout", "CreateRemoteThread", "Cleanup stop request failed or timed out.", stopError, "win32");
+            requestAgentStop("fallback_cleanup");
         }
-        else
+
+        const bool cleanupProven = pollAgentCleanupEvidence("fallback_cleanup", remoteInitializeThread != nullptr);
+        result.AgentCleanupSucceeded = cleanupProven;
+        if (!cleanupProven)
         {
-            if (stopExitCode == static_cast<DWORD>(KnMonAgentControlStatus::Success))
+            result.OperationState = "cleanup_failed";
+            result.SessionState = result.SessionId.empty() ? result.SessionState : "recovery_required";
+            if (result.RecoveryAction.empty())
             {
-                result.AgentCleanupSucceeded = true;
+                result.RecoveryAction = "manual_same_bitness_cleanup_required";
             }
         }
+    }
+
+    if (remoteInitializeThread != nullptr)
+    {
+        CloseHandle(remoteInitializeThread);
+        remoteInitializeThread = nullptr;
     }
 
     if (remoteConfig != nullptr && processHandle != nullptr)
@@ -8919,18 +10346,6 @@ KnMonError Controller::LaunchTarget(const std::string& imagePath) const
 {
     (void)imagePath;
     return NotImplementedError("launch");
-}
-
-KnMonError Controller::AttachToTarget(std::uint32_t processId) const
-{
-    (void)processId;
-    return NotImplementedError("attach");
-}
-
-KnMonError Controller::DetachFromTarget(std::uint32_t processId) const
-{
-    (void)processId;
-    return NotImplementedError("detach");
 }
 
 KnMonError Controller::StartCapture(std::uint32_t processId) const

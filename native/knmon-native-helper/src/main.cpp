@@ -1303,6 +1303,7 @@ std::string ToJson(const knmon::KnMonCaptureResult& result)
     stream << "\"injectionMethod\":" << Q(result.InjectionMethod) << ",";
     stream << "\"targetPath\":" << Q(result.TargetPath) << ",";
     stream << "\"agentPath\":" << Q(result.AgentPath) << ",";
+    stream << "\"apiSelection\":" << Q(result.ApiSelection) << ",";
     stream << "\"attachProcessId\":" << result.AttachProcessId << ",";
     stream << "\"detachPolicy\":" << Q(result.DetachPolicy) << ",";
     stream << "\"attachState\":" << Q(result.AttachState) << ",";
@@ -7388,7 +7389,29 @@ std::string CaptureSampleJson(const std::vector<std::string>& args)
     request.TargetPath = GetOption(args, "--target");
     request.AgentPath = GetOption(args, "--agent");
     request.WorkingDirectory = GetOption(args, "--cwd");
-    request.TimeoutMs = 9000;
+    request.CommandLineArguments = GetOption(args, "--target-args");
+    if (HasOption(args, "--generated-preview-probe"))
+    {
+        if (!request.CommandLineArguments.empty())
+        {
+            request.CommandLineArguments += " ";
+        }
+
+        request.CommandLineArguments += "--generated-preview-probe";
+    }
+    const std::string targetStartupDelay = GetOption(args, "--target-startup-delay-ms");
+    if (!targetStartupDelay.empty())
+    {
+        if (!request.CommandLineArguments.empty())
+        {
+            request.CommandLineArguments += " ";
+        }
+
+        request.CommandLineArguments += "--startup-delay-ms ";
+        request.CommandLineArguments += targetStartupDelay;
+    }
+    request.ApiSelection = GetOption(args, "--api-selection");
+    request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 9000);
     request.Architecture = NativeHelperArchitecture();
     request.InjectionMethod = knmon::KnMonInjectionMethod::EarlyBirdApc;
 
@@ -9443,6 +9466,13 @@ std::string DaemonStopSessionJson(const std::vector<std::string>& args)
         const ULONGLONG start = GetTickCount64();
         while (GetTickCount64() - start < 15000)
         {
+            DaemonSessionRecord refreshedRecord;
+            std::string refreshError;
+            if (ReadDaemonSessionRecord(runtimeDirectory, sessionId, &refreshedRecord, &refreshError))
+            {
+                record = refreshedRecord;
+            }
+
             session = NativeSessionFromDaemonRecord(record);
             if (session.SessionState == "stopped" || !IsProcessAlive(record.SessionProcessId))
             {
@@ -9452,6 +9482,14 @@ std::string DaemonStopSessionJson(const std::vector<std::string>& args)
             Sleep(100);
         }
 
+        {
+            DaemonSessionRecord refreshedRecord;
+            std::string refreshError;
+            if (ReadDaemonSessionRecord(runtimeDirectory, sessionId, &refreshedRecord, &refreshError))
+            {
+                record = refreshedRecord;
+            }
+        }
         session = NativeSessionFromDaemonRecord(record);
         if (session.SessionState == "stopped")
         {
@@ -9520,7 +9558,7 @@ void PrintUsage()
     std::cout << "{";
     std::cout << "\"schemaVersion\":\"0.1.0\",";
     std::cout << "\"success\":false,";
-    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | launch-session --target path [--cwd dir] [--session-id id] [--operation-id id] [--owner-pid pid] [--duration-ms ms optional bounded mode] [--api-selection module!api;...] [--stream-batches] [--batch-size n] | capture-sample [--target path] [--agent path] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--api-selection module!api;...] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms optional bounded mode] [--api-selection module!api;...] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] [--knapm-compression none|zstd] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-audit [--runtime-dir dir] | daemon-recovery-plan [--runtime-dir dir] | daemon-recovery-apply [--runtime-dir dir] [--dry-run|--apply-registry-prune] | daemon-prune-stale [--runtime-dir dir] [--dry-run] | daemon-start-session --pid pid --write-knapm path [--knapm-compression none|zstd] [--api-selection module!api;...] [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] [--api-selection module!api;...] | cancel-operation --operation-id id | classify-session --session-record path | catalog-sessions --root dir [--catalog path] [--rebuild] | catalog-query --catalog path [--limit n] [--state state] [--target pid-or-text] | catalog-remove-missing --catalog path [--dry-run] | catalog-index-build --root dir --database path [--rebuild] | catalog-index-query --database path [--limit n] [--state state] [--target pid-or-text] | catalog-index-remove-missing --database path [--dry-run] | trace-index-build --root dir --database path [--rebuild] | trace-index-query --database path [--text text] [--api api] [--module module] [--session id-or-path] [--pid pid] [--limit n] | trace-index-remove-missing --database path [--dry-run] | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
+    std::cout << "\"message\":\"Usage: knmon-native-helper.exe list-targets | launch-sample [--target path] [--agent path] | launch-session --target path [--cwd dir] [--session-id id] [--operation-id id] [--owner-pid pid] [--duration-ms ms optional bounded mode] [--api-selection module!api;...] [--stream-batches] [--batch-size n] | capture-sample [--target path] [--agent path] [--target-args args] [--generated-preview-probe] [--target-startup-delay-ms ms] [--api-selection module!api;...] [--timeout-ms ms] [--write-session dir] | attach-capture --pid pid [--agent path] [--duration-ms ms] [--operation-id id] [--api-selection module!api;...] [--write-session dir] | attach-session --pid pid [--session-id id] [--operation-id id] [--duration-ms ms optional bounded mode] [--api-selection module!api;...] [--stream-batches] [--batch-size n] [--batch-interval-ms n] [--write-knapm path] [--knapm-compression none|zstd] | daemon-start [--runtime-dir dir] | daemon-status [--runtime-dir dir] | daemon-audit [--runtime-dir dir] | daemon-recovery-plan [--runtime-dir dir] | daemon-recovery-apply [--runtime-dir dir] [--dry-run|--apply-registry-prune] | daemon-prune-stale [--runtime-dir dir] [--dry-run] | daemon-start-session --pid pid --write-knapm path [--knapm-compression none|zstd] [--api-selection module!api;...] [--runtime-dir dir] | daemon-list-sessions [--runtime-dir dir] | daemon-stop-session --session-id id [--runtime-dir dir] | daemon-stop [--runtime-dir dir] | supervise-tree --pid pid [--duration-ms ms] [--operation-id id] [--child-policy observe|attach-supported] [--api-selection module!api;...] | cancel-operation --operation-id id | classify-session --session-record path | catalog-sessions --root dir [--catalog path] [--rebuild] | catalog-query --catalog path [--limit n] [--state state] [--target pid-or-text] | catalog-remove-missing --catalog path [--dry-run] | catalog-index-build --root dir --database path [--rebuild] | catalog-index-query --database path [--limit n] [--state state] [--target pid-or-text] | catalog-index-remove-missing --database path [--dry-run] | trace-index-build --root dir --database path [--rebuild] | trace-index-query --database path [--text text] [--api api] [--module module] [--session id-or-path] [--pid pid] [--limit n] | trace-index-remove-missing --database path [--dry-run] | replay-session --session dir-or-knapm | validate-session --session dir-or-knapm\"";
     std::cout << "}\n";
 }
 }

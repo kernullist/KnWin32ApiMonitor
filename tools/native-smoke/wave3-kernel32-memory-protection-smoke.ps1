@@ -202,6 +202,12 @@ if ($allocSize.decodedValue -ne "12288")
 {
     throw "VirtualAlloc did not include expected allocation size: $($allocSize | ConvertTo-Json -Depth 8)"
 }
+if ($allocSize.valueKind -ne "scalar" -or
+    $allocSize.payloadPolicy -ne "value" -or
+    $allocSize.targetMemoryRead -ne $false)
+{
+    throw "VirtualAlloc SIZE_T semantic policy mismatch: $($allocSize | ConvertTo-Json -Depth 8)"
+}
 
 $allocType = Get-ArgumentByName -Event $virtualAlloc -Name "flAllocationType"
 if ($allocType.decodedValue -notmatch "MEM_COMMIT" -or $allocType.decodedValue -notmatch "MEM_RESERVE")

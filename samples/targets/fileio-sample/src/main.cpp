@@ -10,10 +10,12 @@
 #include <objbase.h>
 #include <oleauto.h>
 #include <rpc.h>
+#include <evntprov.h>
 #ifndef SECURITY_WIN32
 #define SECURITY_WIN32
 #endif
 #include <security.h>
+#include <Aclapi.h>
 #include <roapi.h>
 #include <winstring.h>
 #include <shlobj.h>
@@ -24,6 +26,7 @@
 #include <userenv.h>
 #include <iphlpapi.h>
 #include <netioapi.h>
+#include <lm.h>
 #include <winver.h>
 #include <winhttp.h>
 #include <wininet.h>
@@ -32,6 +35,7 @@
 #include <winuser.h>
 #include <wingdi.h>
 #include <shlwapi.h>
+#include <WebServices.h>
 
 #include <array>
 #include <cstring>
@@ -67,6 +71,23 @@ extern "C" NTSYSAPI NTSTATUS NTAPI LdrGetProcedureAddress(
     PANSI_STRING FunctionName,
     ULONG Ordinal,
     PVOID* FunctionAddress);
+
+extern "C" NTSYSAPI NTSTATUS NTAPI RtlGUIDFromString(
+    PCUNICODE_STRING GuidString,
+    GUID* Guid);
+
+extern "C" NTSYSAPI VOID NTAPI RtlSecondsSince1970ToTime(
+    ULONG ElapsedSeconds,
+    PLARGE_INTEGER Time);
+
+extern "C" NTSYSAPI ULONG NTAPI RtlComputeCrc32(
+    ULONG PartialCrc,
+    const void* Buffer,
+    ULONG Length);
+
+extern "C" NTSYSAPI VOID NTAPI RtlInitUTF8String(
+    PANSI_STRING DestinationString,
+    PCSZ SourceString);
 
 extern "C" NTSYSAPI ULONG_PTR NTAPI RtlGetReturnAddressHijackTarget();
 
@@ -132,9 +153,6 @@ extern "C" __declspec(dllimport) WORD WINAPI CM_Get_Version();
 extern "C" __declspec(dllimport) BOOL WINAPI UiaClientsAreListening();
 extern "C" __declspec(dllimport) HRESULT WINAPI WscQueryAntiMalwareUri();
 extern "C" __declspec(dllimport) HRESULT WINAPI RatingEnabledQuery();
-extern "C" __declspec(dllimport) BOOL WINAPI CanSendToFaxRecipient();
-extern "C" __declspec(dllimport) DWORD DhcpDsInit();
-extern "C" __declspec(dllimport) void DhcpDsCleanup();
 extern "C" __declspec(dllimport) HRESULT WINAPI RatingInit();
 extern "C" __declspec(dllimport) HRESULT WINAPI UiaDisconnectAllProviders();
 extern "C" __declspec(dllimport) HRESULT WINAPI WscRegisterForUserNotifications();
@@ -153,6 +171,7 @@ constexpr GUID SampleFolderIdWindows = { 0xf38bf404, 0x1d43, 0x42f2, { 0x93, 0x0
 constexpr GUID SampleFolderIdSystem = { 0x1ac14e77, 0x02e7, 0x4e5d, { 0xb7, 0x44, 0x2e, 0xb1, 0xae, 0x51, 0x98, 0xb7 } };
 constexpr GUID SampleFolderIdProgramFiles = { 0x905e63b6, 0xc1bf, 0x494e, { 0xb2, 0x9c, 0x65, 0xb7, 0x32, 0xd3, 0xd2, 0x1a } };
 constexpr GUID SampleFolderIdFonts = { 0xfd228cb7, 0xae11, 0x4ae3, { 0x86, 0x4c, 0x16, 0xf3, 0x91, 0x0a, 0xb8, 0xfe } };
+constexpr GUID SampleEventProviderId = { 0x8f5f52c1, 0x6f56, 0x4c0d, { 0x9c, 0x1d, 0x3b, 0xde, 0x8a, 0x7f, 0x00, 0x01 } };
 
 std::wstring BuildSamplePath()
 {
@@ -264,6 +283,122 @@ void LogLastError(const char* operation)
 void LogRegistryStatus(const char* operation, LSTATUS status)
 {
     std::cout << operation << " failed with " << status << "\n";
+}
+
+FARPROC ResolveDhcpServerProcedure(const char* name, WORD ordinal)
+{
+    static HMODULE dhcpServerModule = nullptr;
+    FARPROC procedure = nullptr;
+
+    do
+    {
+        if (dhcpServerModule == nullptr)
+        {
+            dhcpServerModule = LoadLibraryW(L"dhcpsapi.dll");
+        }
+
+        if (dhcpServerModule == nullptr)
+        {
+            break;
+        }
+
+        procedure = GetProcAddress(dhcpServerModule, name);
+        if (procedure != nullptr)
+        {
+            break;
+        }
+
+        procedure = GetProcAddress(dhcpServerModule, MAKEINTRESOURCEA(ordinal));
+    }
+    while (false);
+
+    return procedure;
+}
+
+FARPROC ResolveFaxUtilityProcedure(const char* name, WORD ordinal)
+{
+    static HMODULE faxUtilityModule = nullptr;
+    FARPROC procedure = nullptr;
+
+    do
+    {
+        if (faxUtilityModule == nullptr)
+        {
+            faxUtilityModule = LoadLibraryW(L"fxsutility.dll");
+        }
+
+        if (faxUtilityModule == nullptr)
+        {
+            break;
+        }
+
+        procedure = GetProcAddress(faxUtilityModule, name);
+        if (procedure != nullptr)
+        {
+            break;
+        }
+
+        procedure = GetProcAddress(faxUtilityModule, MAKEINTRESOURCEA(ordinal));
+    }
+    while (false);
+
+    return procedure;
+}
+
+BOOL InvokeCanSendToFaxRecipient()
+{
+    using CanSendToFaxRecipientProc = BOOL(WINAPI*)();
+
+    BOOL result = FALSE;
+
+    do
+    {
+        FARPROC procedure = ResolveFaxUtilityProcedure("CanSendToFaxRecipient", 1);
+        if (procedure == nullptr)
+        {
+            break;
+        }
+
+        const auto canSendToFaxRecipient = reinterpret_cast<CanSendToFaxRecipientProc>(procedure);
+        result = canSendToFaxRecipient();
+    }
+    while (false);
+
+    return result;
+}
+
+DWORD InvokeDhcpDsInit()
+{
+    using DhcpDsInitProc = DWORD(__cdecl*)();
+
+    DWORD result = ERROR_PROC_NOT_FOUND;
+
+    do
+    {
+        FARPROC procedure = ResolveDhcpServerProcedure("DhcpDsInit", 35);
+        if (procedure == nullptr)
+        {
+            break;
+        }
+
+        const auto dhcpDsInit = reinterpret_cast<DhcpDsInitProc>(procedure);
+        result = dhcpDsInit();
+    }
+    while (false);
+
+    return result;
+}
+
+void InvokeDhcpDsCleanup()
+{
+    using DhcpDsCleanupProc = void(__cdecl*)();
+
+    FARPROC procedure = ResolveDhcpServerProcedure("DhcpDsCleanup", 33);
+    if (procedure != nullptr)
+    {
+        const auto dhcpDsCleanup = reinterpret_cast<DhcpDsCleanupProc>(procedure);
+        dhcpDsCleanup();
+    }
 }
 
 bool RunNtCreateFileProbe(const std::wstring& path)
@@ -2145,14 +2280,507 @@ bool RunFileMetadataProbe()
 
 bool RunShlwapiPathExistsProbe()
 {
+    const DWORD attributes = GetFileAttributesW(L"C:\\Windows");
+    if (attributes == INVALID_FILE_ATTRIBUTES)
+    {
+        LogLastError("GetFileAttributesW");
+        return false;
+    }
+
     if (!PathFileExistsW(L"C:\\Windows"))
     {
         LogLastError("PathFileExistsW");
         return false;
     }
 
-    std::cout << "shlwapi path exists query completed\n";
+    if (!PathFileExistsA("C:\\Windows"))
+    {
+        LogLastError("PathFileExistsA");
+        return false;
+    }
+
+    std::array<char, MAX_PATH> combinedPath = {};
+    if (PathCombineA(combinedPath.data(), "C:\\Windows", "System32") == nullptr)
+    {
+        LogLastError("PathCombineA");
+        return false;
+    }
+
+    std::array<BYTE, 12> hashInput =
+    {{
+        'K',
+        'N',
+        'M',
+        'O',
+        'N',
+        '-',
+        'B',
+        'U',
+        'F',
+        'F',
+        'E',
+        'R'
+    }};
+    std::array<BYTE, 16> hashOutput = {};
+    const HRESULT hashStatus = HashData(
+        hashInput.data(),
+        static_cast<DWORD>(hashInput.size()),
+        hashOutput.data(),
+        static_cast<DWORD>(hashOutput.size()));
+    if (FAILED(hashStatus))
+    {
+        std::cout << "HashData failed with " << HexHResult(hashStatus) << "\n";
+        return false;
+    }
+
+    const ULONG crc32 = RtlComputeCrc32(
+        0,
+        hashInput.data(),
+        static_cast<ULONG>(hashInput.size()));
+    if (crc32 == 0)
+    {
+        std::cout << "RtlComputeCrc32 returned an unexpected zero checksum\n";
+        return false;
+    }
+
+    std::array<wchar_t, 64> setupClassName = {};
+    DWORD requiredClassNameSize = 0;
+    if (!SetupDiClassNameFromGuidW(
+        &GUID_DEVCLASS_DISKDRIVE,
+        setupClassName.data(),
+        static_cast<DWORD>(setupClassName.size()),
+        &requiredClassNameSize))
+    {
+        LogLastError("SetupDiClassNameFromGuidW");
+        return false;
+    }
+
+    REGHANDLE eventProviderHandle = 0;
+    const ULONG eventRegisterStatus = EventRegister(
+        &SampleEventProviderId,
+        nullptr,
+        nullptr,
+        &eventProviderHandle);
+    if (eventRegisterStatus != ERROR_SUCCESS)
+    {
+        std::cout << "EventRegister failed with " << eventRegisterStatus << "\n";
+        return false;
+    }
+
+    if (eventProviderHandle != 0)
+    {
+        EventUnregister(eventProviderHandle);
+    }
+
+    PSID ownerSid = nullptr;
+    PSID groupSid = nullptr;
+    PACL dacl = nullptr;
+    PSECURITY_DESCRIPTOR securityDescriptor = nullptr;
+    const DWORD namedSecurityStatus = GetNamedSecurityInfoW(
+        L"C:\\Windows",
+        SE_FILE_OBJECT,
+        OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
+        &ownerSid,
+        &groupSid,
+        &dacl,
+        nullptr,
+        &securityDescriptor);
+    if (namedSecurityStatus != ERROR_SUCCESS)
+    {
+        std::cout << "GetNamedSecurityInfoW failed with " << namedSecurityStatus << "\n";
+        return false;
+    }
+
+    if (securityDescriptor == nullptr || ownerSid == nullptr)
+    {
+        if (securityDescriptor != nullptr)
+        {
+            LocalFree(securityDescriptor);
+        }
+
+        std::cout << "GetNamedSecurityInfoW returned incomplete security data\n";
+        return false;
+    }
+
+    LocalFree(securityDescriptor);
+
+    std::array<wchar_t, 64> systemRoot = {};
+    DWORD systemRootType = 0;
+    DWORD systemRootBytes = static_cast<DWORD>(systemRoot.size() * sizeof(wchar_t));
+    const LSTATUS systemRootStatus = RegGetValueW(
+        HKEY_LOCAL_MACHINE,
+        L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+        L"SystemRoot",
+        RRF_RT_REG_SZ,
+        &systemRootType,
+        systemRoot.data(),
+        &systemRootBytes);
+    if (systemRootStatus != ERROR_SUCCESS)
+    {
+        std::cout << "RegGetValueW(SystemRoot) failed with " << systemRootStatus << "\n";
+        return false;
+    }
+
+    if (systemRoot[0] == L'\0' || systemRootBytes == 0)
+    {
+        std::cout << "RegGetValueW(SystemRoot) returned empty data\n";
+        return false;
+    }
+
+    const wchar_t guidText[] = L"{8f5f52c1-6f56-4c0d-9c1d-3bde8a7f0001}";
+    UNICODE_STRING guidString = {};
+    guidString.Buffer = const_cast<PWSTR>(guidText);
+    guidString.Length = static_cast<USHORT>(std::wcslen(guidText) * sizeof(wchar_t));
+    guidString.MaximumLength = static_cast<USHORT>(guidString.Length + sizeof(wchar_t));
+    GUID parsedGuid = {};
+    const NTSTATUS guidStatus = RtlGUIDFromString(&guidString, &parsedGuid);
+    if (!NT_SUCCESS(guidStatus))
+    {
+        std::cout << "RtlGUIDFromString failed with " << HexNtStatus(guidStatus) << "\n";
+        return false;
+    }
+
+    ANSI_STRING ansiString = {};
+    RtlInitAnsiString(&ansiString, "KNMON-ANSI-STRUCT");
+    if (ansiString.Buffer == nullptr || ansiString.Length == 0)
+    {
+        std::cout << "RtlInitAnsiString did not initialize the test string\n";
+        return false;
+    }
+
+    ANSI_STRING utf8String = {};
+    RtlInitUTF8String(&utf8String, "KNMON-UTF8-STRUCT");
+    if (utf8String.Buffer == nullptr || utf8String.Length == 0)
+    {
+        std::cout << "RtlInitUTF8String did not initialize the test string\n";
+        return false;
+    }
+
+    const wchar_t oemSourceText[] = L"KNMON-OEM-STRUCT";
+    UNICODE_STRING oemSourceString = {};
+    oemSourceString.Buffer = const_cast<PWSTR>(oemSourceText);
+    oemSourceString.Length = static_cast<USHORT>(std::wcslen(oemSourceText) * sizeof(wchar_t));
+    oemSourceString.MaximumLength = static_cast<USHORT>(oemSourceString.Length + sizeof(wchar_t));
+    std::array<char, 64> oemBuffer = {};
+    OEM_STRING oemString = {};
+    oemString.Buffer = oemBuffer.data();
+    oemString.MaximumLength = static_cast<USHORT>(oemBuffer.size());
+    const NTSTATUS oemStatus = RtlUnicodeStringToOemString(&oemString, &oemSourceString, FALSE);
+    if (!NT_SUCCESS(oemStatus))
+    {
+        std::cout << "RtlUnicodeStringToOemString failed with " << HexNtStatus(oemStatus) << "\n";
+        return false;
+    }
+
+    RECT monitorRect = {};
+    monitorRect.left = 0;
+    monitorRect.top = 0;
+    monitorRect.right = 640;
+    monitorRect.bottom = 480;
+    HMONITOR monitor = MonitorFromRect(&monitorRect, MONITOR_DEFAULTTONEAREST);
+    if (monitor == nullptr)
+    {
+        LogLastError("MonitorFromRect");
+        return false;
+    }
+
+    POINT windowPoint = {};
+    windowPoint.x = 11;
+    windowPoint.y = 22;
+    MapWindowPoints(nullptr, nullptr, &windowPoint, 1);
+
+    SYSTEMTIME sampleSystemTime = {};
+    sampleSystemTime.wYear = 2024;
+    sampleSystemTime.wMonth = 1;
+    sampleSystemTime.wDay = 2;
+    sampleSystemTime.wHour = 3;
+    sampleSystemTime.wMinute = 4;
+    sampleSystemTime.wSecond = 5;
+    sampleSystemTime.wMilliseconds = 6;
+    FILETIME sampleFileTime = {};
+    if (!SystemTimeToFileTime(&sampleSystemTime, &sampleFileTime))
+    {
+        LogLastError("SystemTimeToFileTime");
+        return false;
+    }
+
+    LARGE_INTEGER sampleLargeTime = {};
+    RtlSecondsSince1970ToTime(1700000000UL, &sampleLargeTime);
+    if (sampleLargeTime.QuadPart == 0)
+    {
+        std::cout << "RtlSecondsSince1970ToTime did not initialize the test value\n";
+        return false;
+    }
+
+    std::cout << "shlwapi path exists query completed attributes=0x"
+              << std::hex << attributes << std::dec
+              << " combined=" << combinedPath.data()
+              << " hash0=0x" << std::hex << static_cast<unsigned int>(hashOutput[0]) << std::dec
+              << " classNameLength=" << requiredClassNameSize
+              << " crc32=0x" << std::hex << crc32 << std::dec
+              << " ansiLength=" << ansiString.Length
+              << " systemRootBytes=" << systemRootBytes
+              << " point=" << windowPoint.x << "," << windowPoint.y << "\n";
     return true;
+}
+
+bool RunGeneratedRichPreviewProbe()
+{
+    bool success = false;
+    BSTR left = nullptr;
+    BSTR right = nullptr;
+    HSTRING hstring = nullptr;
+    WS_ERROR* wsError = nullptr;
+    HCRYPTPROV cryptoProvider = 0;
+    void* netApiBuffer = nullptr;
+    using VarBstrCmpFn = HRESULT(WINAPI*)(BSTR, BSTR, LCID, ULONG);
+
+    do
+    {
+        if (!RunShlwapiPathExistsProbe())
+        {
+            break;
+        }
+
+        BYTE cryptBlobBytes[] =
+        {
+            'K',
+            'N',
+            'M',
+            'O',
+            'N',
+            '-',
+            'C',
+            'R',
+            'Y',
+            'P',
+            'T',
+            '-',
+            'B',
+            'L',
+            'O',
+            'B'
+        };
+        CRYPT_INTEGER_BLOB cryptBlobLeft = {};
+        cryptBlobLeft.cbData = static_cast<DWORD>(sizeof(cryptBlobBytes));
+        cryptBlobLeft.pbData = cryptBlobBytes;
+        CRYPT_INTEGER_BLOB cryptBlobRight = cryptBlobLeft;
+        if (!CertCompareIntegerBlob(&cryptBlobLeft, &cryptBlobRight))
+        {
+            std::cout << "CertCompareIntegerBlob returned mismatch\n";
+            break;
+        }
+
+        if (!CryptAcquireContextW(&cryptoProvider, nullptr, nullptr, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT))
+        {
+            LogLastError("CryptAcquireContextW(generated-preview)");
+            break;
+        }
+
+        BYTE cryptoApiRandom[12] = {};
+        if (!CryptGenRandom(cryptoProvider, static_cast<DWORD>(sizeof(cryptoApiRandom)), cryptoApiRandom))
+        {
+            LogLastError("CryptGenRandom(generated-preview)");
+            break;
+        }
+
+        NET_API_STATUS netStatus = NetApiBufferAllocate(16, &netApiBuffer);
+        if (netStatus != NERR_Success || netApiBuffer == nullptr)
+        {
+            std::cout << "NetApiBufferAllocate(generated-preview) failed with " << netStatus << "\n";
+            break;
+        }
+
+        constexpr char netApiSample[] = "KNMON-NETAPI-BUF";
+        static_assert(sizeof(netApiSample) - 1 == 16);
+        std::memcpy(netApiBuffer, netApiSample, sizeof(netApiSample) - 1);
+
+        DWORD netApiBufferSize = 0;
+        netStatus = NetApiBufferSize(netApiBuffer, &netApiBufferSize);
+        if (netStatus != NERR_Success || netApiBufferSize < sizeof(netApiSample) - 1)
+        {
+            std::cout << "NetApiBufferSize(generated-preview) failed with " << netStatus
+                      << " size=" << netApiBufferSize << "\n";
+            break;
+        }
+
+        netStatus = NetApiBufferFree(netApiBuffer);
+        if (netStatus != NERR_Success)
+        {
+            std::cout << "NetApiBufferFree(generated-preview) failed with " << netStatus << "\n";
+            break;
+        }
+        netApiBuffer = nullptr;
+
+        const wchar_t objectAttributesText[] = L"\\Registry\\Machine\\Software\\KNMON-OA";
+        UNICODE_STRING notifyName = {};
+        notifyName.Buffer = const_cast<PWSTR>(objectAttributesText);
+        notifyName.Length = static_cast<USHORT>(std::wcslen(objectAttributesText) * sizeof(wchar_t));
+        notifyName.MaximumLength = static_cast<USHORT>(notifyName.Length + sizeof(wchar_t));
+
+        OBJECT_ATTRIBUTES notifyAttributes = {};
+        notifyAttributes.Length = sizeof(notifyAttributes);
+        notifyAttributes.ObjectName = &notifyName;
+        notifyAttributes.Attributes = OBJ_CASE_INSENSITIVE;
+
+        IO_STATUS_BLOCK notifyIoStatus = {};
+        const NTSTATUS notifyStatus = NtNotifyChangeMultipleKeys(
+            INVALID_HANDLE_VALUE,
+            1,
+            &notifyAttributes,
+            nullptr,
+            nullptr,
+            nullptr,
+            &notifyIoStatus,
+            REG_NOTIFY_CHANGE_NAME,
+            FALSE,
+            nullptr,
+            0,
+            TRUE);
+        std::cout << "NtNotifyChangeMultipleKeys probe status=" << HexNtStatus(notifyStatus) << "\n";
+
+        left = SysAllocString(L"KNMonBstrPreview");
+        right = SysAllocString(L"KNMonBstrPreview");
+        if (left == nullptr || right == nullptr)
+        {
+            std::cout << "SysAllocString(generated-preview) failed\n";
+            break;
+        }
+
+        HMODULE oleaut32 = GetModuleHandleW(L"oleaut32.dll");
+        if (oleaut32 == nullptr)
+        {
+            LogLastError("GetModuleHandleW(oleaut32)");
+            break;
+        }
+
+        FARPROC compareAddress = GetProcAddress(oleaut32, "VarBstrCmp");
+        if (compareAddress == nullptr)
+        {
+            LogLastError("GetProcAddress(VarBstrCmp)");
+            break;
+        }
+
+        const auto compareBstr = reinterpret_cast<VarBstrCmpFn>(compareAddress);
+        const HRESULT compareResult = compareBstr(left, right, LOCALE_INVARIANT, 0);
+        if (compareResult != VARCMP_EQ)
+        {
+            std::cout << "VarBstrCmp returned unexpected result " << HexHResult(compareResult) << "\n";
+            break;
+        }
+
+        const wchar_t hstringText[] = L"knmon-hstring";
+        const UINT32 hstringLength = static_cast<UINT32>(std::wcslen(hstringText));
+        const HRESULT createResult = WindowsCreateString(hstringText, hstringLength, &hstring);
+        if (FAILED(createResult))
+        {
+            std::cout << "WindowsCreateString(generated-preview) failed with " << HexHResult(createResult) << "\n";
+            break;
+        }
+
+        UINT32 rawLength = 0;
+        PCWSTR rawText = WindowsGetStringRawBuffer(hstring, &rawLength);
+        if (rawText == nullptr || rawLength != hstringLength || std::wcsncmp(rawText, hstringText, hstringLength) != 0)
+        {
+            std::cout << "WindowsGetStringRawBuffer returned unexpected preview text\n";
+            break;
+        }
+
+        const HRESULT createErrorResult = WsCreateError(nullptr, 0, &wsError);
+        if (FAILED(createErrorResult))
+        {
+            std::cout << "WsCreateError failed with " << HexHResult(createErrorResult) << "\n";
+            break;
+        }
+
+        const wchar_t wsText[] = L"KNMonWsString";
+        WS_STRING wsString = {};
+        wsString.length = static_cast<ULONG>(std::wcslen(wsText));
+        wsString.chars = const_cast<PWSTR>(wsText);
+        const HRESULT addStringResult = WsAddErrorString(wsError, &wsString);
+        if (FAILED(addStringResult))
+        {
+            std::cout << "WsAddErrorString failed with " << HexHResult(addStringResult) << "\n";
+            break;
+        }
+
+        BYTE xmlText[] =
+        {
+            'K',
+            'N',
+            'M',
+            'o',
+            'n',
+            'X',
+            'm',
+            'l',
+            'S',
+            't',
+            'r',
+            'i',
+            'n',
+            'g'
+        };
+        WS_XML_STRING xmlLeft = {};
+        xmlLeft.length = static_cast<ULONG>(sizeof(xmlText));
+        xmlLeft.bytes = xmlText;
+        WS_XML_STRING xmlRight = xmlLeft;
+        const HRESULT xmlEqualsResult = WsXmlStringEquals(&xmlLeft, &xmlRight, wsError);
+        if (FAILED(xmlEqualsResult))
+        {
+            std::cout << "WsXmlStringEquals failed with " << HexHResult(xmlEqualsResult) << "\n";
+            break;
+        }
+
+        success = true;
+    }
+    while (false);
+
+    if (wsError != nullptr)
+    {
+        WsFreeError(wsError);
+    }
+
+    if (hstring != nullptr)
+    {
+        const HRESULT deleteResult = WindowsDeleteString(hstring);
+        if (FAILED(deleteResult))
+        {
+            std::cout << "WindowsDeleteString(generated-preview) failed with " << HexHResult(deleteResult) << "\n";
+            success = false;
+        }
+    }
+
+    if (cryptoProvider != 0)
+    {
+        if (!CryptReleaseContext(cryptoProvider, 0))
+        {
+            LogLastError("CryptReleaseContext(generated-preview)");
+            success = false;
+        }
+    }
+
+    if (netApiBuffer != nullptr)
+    {
+        const NET_API_STATUS netStatus = NetApiBufferFree(netApiBuffer);
+        if (netStatus != NERR_Success)
+        {
+            std::cout << "NetApiBufferFree(cleanup) failed with " << netStatus << "\n";
+            success = false;
+        }
+    }
+
+    if (right != nullptr)
+    {
+        SysFreeString(right);
+    }
+
+    if (left != nullptr)
+    {
+        SysFreeString(left);
+    }
+
+    return success;
 }
 
 bool RunWintrustStateQueryProbe()
@@ -3201,9 +3829,9 @@ bool RunTier2InitialReturnOnlyBatchProbe()
         const BOOL uiaListening = UiaClientsAreListening();
         const HRESULT antiMalwareUri = WscQueryAntiMalwareUri();
         const HRESULT ratingEnabled = RatingEnabledQuery();
-        const BOOL faxRecipient = CanSendToFaxRecipient();
-        const DWORD dhcpDsInit = DhcpDsInit();
-        DhcpDsCleanup();
+        const BOOL faxRecipient = InvokeCanSendToFaxRecipient();
+        const DWORD dhcpDsInit = InvokeDhcpDsInit();
+        InvokeDhcpDsCleanup();
         const BOOL legacyImeDisabled = ImmDisableLegacyIME();
         const HRESULT ratingInit = RatingInit();
         const HRESULT uiaDisconnect = UiaDisconnectAllProviders();
@@ -3589,7 +4217,7 @@ bool RunTier2InitialReturnOnlyBatchProbe()
     return success;
 }
 
-int RunFileIo(bool slow)
+int RunFileIo(bool slow, int startupDelayMs)
 {
     int exitCode = 1;
     HANDLE fileHandle = INVALID_HANDLE_VALUE;
@@ -3601,7 +4229,11 @@ int RunFileIo(bool slow)
     {
         std::cout << "knmon-sample-fileio starting\n";
 
-        if (slow)
+        if (startupDelayMs > 0)
+        {
+            Sleep(static_cast<DWORD>(startupDelayMs));
+        }
+        else if (slow)
         {
             Sleep(2500);
         }
@@ -3945,5 +4577,33 @@ int wmain(int argc, wchar_t** argv)
             GetStringOption(argc, argv, L"--child-path", L""));
     }
 
-    return RunFileIo(HasOption(argc, argv, L"--slow"));
+    if (HasOption(argc, argv, L"--generated-preview-probe"))
+    {
+        const int startupDelayMs = GetIntOption(argc, argv, L"--startup-delay-ms", 0);
+        const int iterations = GetIntOption(argc, argv, L"--probe-iterations", 96);
+        const int delayMs = GetIntOption(argc, argv, L"--delay-ms", 250);
+        if (startupDelayMs > 0)
+        {
+            Sleep(static_cast<DWORD>(startupDelayMs));
+        }
+
+        bool success = true;
+        for (int index = 0; index < iterations; ++index)
+        {
+            if (!RunGeneratedRichPreviewProbe())
+            {
+                success = false;
+                break;
+            }
+
+            if (delayMs > 0)
+            {
+                Sleep(static_cast<DWORD>(delayMs));
+            }
+        }
+
+        return success ? 0 : 1;
+    }
+
+    return RunFileIo(HasOption(argc, argv, L"--slow"), GetIntOption(argc, argv, L"--startup-delay-ms", 0));
 }

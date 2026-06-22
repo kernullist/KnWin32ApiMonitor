@@ -51,9 +51,18 @@ try
         Assert-True ($argument.Count -eq 1) "$($item.Api) generic argument missing."
         Assert-True ($argument[0].type -eq $item.Type) "$($item.Api) argument type mismatch: $($argument[0].type)"
         Assert-True ($argument[0].decodeStatus -eq "definition_missing") "$($item.Api) generic decode status mismatch: $($argument[0].decodeStatus)"
+        Assert-True ($argument[0].decodeClass -ne "") "$($item.Api) generic decode class missing."
+        Assert-True ($argument[0].payloadPolicy -ne "") "$($item.Api) generic payload policy missing."
+        Assert-True ($null -ne $argument[0].targetMemoryRead) "$($item.Api) generic target memory flag missing."
         if ($item.PointerOnly)
         {
             Assert-True ($argument[0].decodedValue -match "pointer=0x") "$($item.Api) generic pointer evidence missing: $($argument[0].decodedValue)"
+            Assert-True ($argument[0].payloadPolicy -eq "pointer_value_only") "$($item.Api) generic pointer policy mismatch: $($argument[0].payloadPolicy)"
+            Assert-True ($argument[0].targetMemoryRead -eq $false) "$($item.Api) generic pointer policy must not read target memory."
+        }
+        else
+        {
+            Assert-True ($argument[0].payloadPolicy -eq "value") "$($item.Api) generic scalar policy mismatch: $($argument[0].payloadPolicy)"
         }
 
         Assert-True ($event[0].bufferPreview -eq "") "$($item.Api) generic event must not carry a buffer preview."

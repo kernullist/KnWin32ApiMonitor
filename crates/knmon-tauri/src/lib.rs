@@ -16,6 +16,7 @@ const STREAM_BATCH_QUEUE_LIMIT: usize = 128;
 const STREAM_BATCH_DRAIN_LIMIT: usize = 32;
 const INTERACTIVE_TRANSPORT_CAPACITY: &str = "16384";
 const STREAM_CONTROL_TIMEOUT_MS: u32 = 7_000;
+const SESSION_STOP_COMPLETION_WAIT_MS: u64 = 15_000;
 const APP_EXIT_LAUNCH_CLEANUP_WAIT_MS: u64 = 1_500;
 const API_SELECTION_MAX_BYTES: usize = 30_000;
 
@@ -1588,6 +1589,37 @@ pub fn native_session_states() -> Vec<NativeSession> {
     sessions
 }
 
+fn wait_for_native_session_terminal(operation_id: &str, timeout_ms: u64) -> Option<NativeSession> {
+    let start = Instant::now();
+
+    loop {
+        let terminal_session = {
+            let registry = operation_registry().lock().unwrap();
+            registry.get(operation_id).map(|record| {
+                let session = session_view(record);
+                let terminal = is_terminal_operation_state(&record.state);
+                (session, terminal)
+            })
+        };
+
+        match terminal_session {
+            Some((session, true)) => {
+                return Some(session);
+            }
+            Some((session, false)) => {
+                if start.elapsed() >= Duration::from_millis(timeout_ms) {
+                    return Some(session);
+                }
+            }
+            None => {
+                return None;
+            }
+        }
+
+        thread::sleep(Duration::from_millis(50));
+    }
+}
+
 pub fn cancel_native_operation(operation_id: String) -> Result<NativeOperation, String> {
     {
         let mut registry = operation_registry().lock().unwrap();
@@ -1631,6 +1663,12 @@ pub fn stop_native_session(session_id: String) -> Result<NativeSession, String> 
             "{} failed with {}: {}",
             signal.operation, signal.win32_error_code, signal.message
         ));
+    }
+
+    if let Some(session) =
+        wait_for_native_session_terminal(&operation_id, SESSION_STOP_COMPLETION_WAIT_MS)
+    {
+        return Ok(session);
     }
 
     let registry = operation_registry().lock().unwrap();
@@ -3026,6 +3064,24 @@ mod tests {
             STREAM_BATCH_QUEUE_LIMIT as u64 + 3
         );
         assert_eq!(batches.last().unwrap().host_dropped_batches, 3);
+    }
+
+    #[test]
+    fn wait_for_native_session_terminal_returns_updated_terminal_session() {
+        let operation_id = test_operation_id("stop-wait");
+        register_native_operation(&operation_id, "attach_capture_stream", 6789, 1000);
+
+        let updater_operation_id = operation_id.clone();
+        let updater = thread::spawn(move || {
+            thread::sleep(Duration::from_millis(50));
+            finish_native_operation(&updater_operation_id, "cancelled");
+        });
+
+        let session = wait_for_native_session_terminal(&operation_id, 1000).unwrap();
+        updater.join().unwrap();
+
+        assert_eq!(session.session_state, "stopped");
+        assert_eq!(session.operation_id, operation_id);
     }
 
     #[test]

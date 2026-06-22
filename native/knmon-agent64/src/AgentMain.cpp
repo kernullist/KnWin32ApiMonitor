@@ -1,4 +1,5 @@
 #include <knmon/common/AttachConfig.h>
+#include <knmon/common/GeneratedApiMetadata.h>
 #include <knmon/common/Protocol.h>
 
 #include <WinSock2.h>
@@ -33,6 +34,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
@@ -42,6 +44,7 @@
 #include <new>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <type_traits>
 
 #ifdef GetAddrInfo
@@ -126,6 +129,26 @@ struct KnownFolderIdentity
     bool AllowPath;
 };
 
+struct GeneratedWsString
+{
+    ULONG Length;
+    WCHAR* Chars;
+};
+
+struct GeneratedWsXmlString
+{
+    ULONG Length;
+    BYTE* Bytes;
+    void* Dictionary;
+    ULONG Id;
+};
+
+struct GeneratedCryptoBlob
+{
+    ULONG ByteCount;
+    BYTE* Bytes;
+};
+
 enum class ShellFolderPathStatus : std::uint32_t
 {
     None = 0,
@@ -171,6 +194,7 @@ using GetCursorPosFn = BOOL(WINAPI*)(LPPOINT);
 using GetIpStatisticsFn = ULONG(WINAPI*)(PMIB_IPSTATS);
 using GetStockObjectFn = HGDIOBJ(WINAPI*)(int);
 using WindowsGetStringLenFn = UINT32(WINAPI*)(HSTRING);
+using WindowsGetStringRawBufferFn = PCWSTR(WINAPI*)(HSTRING, UINT32*);
 using RevertToSelfFn = BOOL(WINAPI*)();
 using CommDlgExtendedErrorFn = DWORD(WINAPI*)();
 using DwmFlushFn = HRESULT(WINAPI*)();
@@ -2947,6 +2971,2952 @@ DWORD GeneratedGenericErrorCode(
     return errorCode;
 }
 
+enum class GeneratedGenericPreviewKind : std::uint32_t
+{
+    None = 0,
+    AnsiString = 1,
+    Utf16String = 2,
+    BufferBytes = 3,
+    Guid = 4,
+    ScalarPointer = 5,
+    AnsiStringStruct = 6,
+    Utf16StringStruct = 7,
+    LargeIntegerStruct = 8,
+    FileTimeStruct = 9,
+    SystemTimeStruct = 10,
+    PointStruct = 11,
+    RectStruct = 12,
+    PointerIndirect = 13,
+    BstrString = 14,
+    Hstring = 15,
+};
+
+constexpr std::uint32_t GeneratedGenericPreviewMaxCount = knmon::KnMonTransportSlotCount32 - 4;
+constexpr std::uint32_t GeneratedGenericPreviewMaxBytes = 64;
+constexpr std::uint32_t GeneratedGenericPreviewMaxRawBytes = 16;
+
+std::uint32_t PackGeneratedGenericPreviewDescriptor(
+    std::uint32_t argumentIndex,
+    std::uint32_t kind,
+    std::uint32_t status,
+    std::uint32_t offset,
+    std::uint32_t length)
+{
+    return
+        ((argumentIndex & 0x0fU) << 0) |
+        ((kind & 0x0fU) << 4) |
+        ((status & 0xffU) << 8) |
+        ((offset & 0xffU) << 16) |
+        ((length & 0xffU) << 24);
+}
+
+char LowerAsciiChar(char value)
+{
+    char result = value;
+
+    if (result >= 'A' && result <= 'Z')
+    {
+        result = static_cast<char>(result - 'A' + 'a');
+    }
+
+    return result;
+}
+
+bool StringViewContainsAscii(std::string_view value, std::string_view pattern)
+{
+    bool found = false;
+
+    do
+    {
+        if (pattern.empty() || value.size() < pattern.size())
+        {
+            break;
+        }
+
+        for (std::size_t offset = 0; offset + pattern.size() <= value.size(); ++offset)
+        {
+            bool matches = true;
+            for (std::size_t index = 0; index < pattern.size(); ++index)
+            {
+                if (LowerAsciiChar(value[offset + index]) != LowerAsciiChar(pattern[index]))
+                {
+                    matches = false;
+                    break;
+                }
+            }
+
+            if (matches)
+            {
+                found = true;
+                break;
+            }
+        }
+    }
+    while (false);
+
+    return found;
+}
+
+bool GeneratedParameterAllowsPreview(
+    const knmon::KnMonGeneratedParameterMetadata* metadata,
+    GeneratedGenericPreviewKind previewKind)
+{
+    bool allowed = true;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            allowed = false;
+            break;
+        }
+
+        if (
+            StringViewContainsAscii(metadata->Direction, "out") &&
+            !StringViewContainsAscii(metadata->Direction, "inout") &&
+            !StringViewContainsAscii(metadata->CaptureTiming, "post") &&
+            previewKind != GeneratedGenericPreviewKind::PointerIndirect)
+        {
+            allowed = false;
+            break;
+        }
+    }
+    while (false);
+
+    return allowed;
+}
+
+std::uint32_t GeneratedPreviewPriority(GeneratedGenericPreviewKind previewKind)
+{
+    std::uint32_t priority = 0;
+
+    switch (previewKind)
+    {
+    case GeneratedGenericPreviewKind::BufferBytes:
+        priority = 100;
+        break;
+    case GeneratedGenericPreviewKind::PointerIndirect:
+        priority = 95;
+        break;
+    case GeneratedGenericPreviewKind::Guid:
+    case GeneratedGenericPreviewKind::AnsiStringStruct:
+    case GeneratedGenericPreviewKind::Utf16StringStruct:
+    case GeneratedGenericPreviewKind::LargeIntegerStruct:
+    case GeneratedGenericPreviewKind::FileTimeStruct:
+    case GeneratedGenericPreviewKind::SystemTimeStruct:
+    case GeneratedGenericPreviewKind::PointStruct:
+    case GeneratedGenericPreviewKind::RectStruct:
+        priority = 90;
+        break;
+    case GeneratedGenericPreviewKind::AnsiString:
+    case GeneratedGenericPreviewKind::Utf16String:
+    case GeneratedGenericPreviewKind::BstrString:
+    case GeneratedGenericPreviewKind::Hstring:
+        priority = 80;
+        break;
+    case GeneratedGenericPreviewKind::ScalarPointer:
+        priority = 70;
+        break;
+    case GeneratedGenericPreviewKind::None:
+    default:
+        break;
+    }
+
+    return priority;
+}
+
+bool GeneratedParameterLooksBufferLike(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksBuffer = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = metadata->Type;
+        const std::string_view name = metadata->Name;
+        const std::string_view decode = metadata->Decode;
+        if (
+            StringViewContainsAscii(name, "callbackdata") ||
+            StringViewContainsAscii(name, "callbackcontext") ||
+            StringViewContainsAscii(name, "callerdata") ||
+            StringViewContainsAscii(name, "callercontext") ||
+            StringViewContainsAscii(name, "userdata") ||
+            StringViewContainsAscii(name, "usercontext") ||
+            StringViewContainsAscii(name, "completioncontext") ||
+            StringViewContainsAscii(name, "flsdata") ||
+            StringViewContainsAscii(name, "tlsdata") ||
+            StringViewContainsAscii(name, "contextdata"))
+        {
+            break;
+        }
+
+        const bool rawByteBufferType =
+            StringViewContainsAscii(type, "byte*") ||
+            StringViewContainsAscii(type, "uchar*") ||
+            StringViewContainsAscii(type, "u_char*") ||
+            StringViewContainsAscii(type, "pbyte") ||
+            StringViewContainsAscii(type, "puchar") ||
+            StringViewContainsAscii(type, "lpbyte") ||
+            (StringViewContainsAscii(type, "blob") && !StringViewContainsAscii(type, "id3dblob"));
+        const bool rawVoidBufferType =
+            StringViewContainsAscii(type, "void*") ||
+            StringViewContainsAscii(type, "lpvoid") ||
+            StringViewContainsAscii(type, "pvoid");
+        const bool bufferNameHint =
+            StringViewContainsAscii(name, "buffer") ||
+            StringViewContainsAscii(name, "bytes") ||
+            StringViewContainsAscii(name, "data");
+        looksBuffer =
+            StringViewContainsAscii(decode, "buffer") ||
+            StringViewContainsAscii(decode, "bytes") ||
+            rawByteBufferType ||
+            (bufferNameHint && rawVoidBufferType);
+    }
+    while (false);
+
+    return looksBuffer;
+}
+
+bool GeneratedParameterLooksGuidLike(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksGuid = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = metadata->Type;
+        const std::string_view decode = metadata->Decode;
+        if (StringViewContainsAscii(type, "**"))
+        {
+            break;
+        }
+
+        looksGuid =
+            StringViewContainsAscii(type, "guid") ||
+            StringViewContainsAscii(type, "uuid") ||
+            StringViewContainsAscii(decode, "guid") ||
+            StringViewContainsAscii(decode, "uuid");
+    }
+    while (false);
+
+    return looksGuid;
+}
+
+bool GeneratedParameterLooksUtf16StringStruct(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksString = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        looksString = StringViewContainsAscii(metadata->Type, "unicode_string");
+    }
+    while (false);
+
+    return looksString;
+}
+
+bool GeneratedParameterLooksAnsiStringStruct(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksString = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = metadata->Type;
+        looksString =
+            StringViewContainsAscii(type, "ansi_string") ||
+            StringViewContainsAscii(type, "oem_string") ||
+            StringViewContainsAscii(type, "utf8_string") ||
+            StringViewContainsAscii(type, "lsa_string");
+    }
+    while (false);
+
+    return looksString;
+}
+
+bool GeneratedParameterLooksWsStringStruct(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksString = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = metadata->Type;
+        looksString =
+            StringViewContainsAscii(type, "ws_string") &&
+            !StringViewContainsAscii(type, "ws_xml_string") &&
+            !StringViewContainsAscii(type, "**");
+    }
+    while (false);
+
+    return looksString;
+}
+
+bool GeneratedParameterLooksWsXmlStringStruct(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksString = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = metadata->Type;
+        looksString =
+            StringViewContainsAscii(type, "ws_xml_string") &&
+            !StringViewContainsAscii(type, "**");
+    }
+    while (false);
+
+    return looksString;
+}
+
+bool GeneratedParameterLooksCryptoBlobStruct(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksBlob = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = metadata->Type;
+        if (StringViewContainsAscii(type, "**") || StringViewContainsAscii(type, "ual_data_blob"))
+        {
+            break;
+        }
+
+        looksBlob =
+            StringViewContainsAscii(type, "cryptoapi_blob") ||
+            StringViewContainsAscii(type, "crypt_integer_blob") ||
+            StringViewContainsAscii(type, "crypt_uint_blob") ||
+            StringViewContainsAscii(type, "crypt_objid_blob") ||
+            StringViewContainsAscii(type, "crypt_data_blob") ||
+            StringViewContainsAscii(type, "crypt_hash_blob") ||
+            StringViewContainsAscii(type, "crypt_digest_blob") ||
+            StringViewContainsAscii(type, "crypt_der_blob") ||
+            StringViewContainsAscii(type, "cert_blob") ||
+            StringViewContainsAscii(type, "cert_name_blob") ||
+            StringViewContainsAscii(type, "cert_rdn_value_blob") ||
+            StringViewContainsAscii(type, "crl_blob") ||
+            StringViewContainsAscii(type, "ctl_blob") ||
+            StringViewContainsAscii(type, "crypt_xml_blob") ||
+            StringViewContainsAscii(type, "crypt_xml_data_blob") ||
+            type == "blob*" ||
+            type == "blob *" ||
+            StringViewContainsAscii(type, "data_blob*") ||
+            StringViewContainsAscii(type, "data_blob *");
+    }
+    while (false);
+
+    return looksBlob;
+}
+
+bool GeneratedParameterLooksObjectAttributesStruct(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksStruct = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = metadata->Type;
+        const std::string_view decode = metadata->Decode;
+        if (StringViewContainsAscii(type, "**"))
+        {
+            break;
+        }
+
+        looksStruct =
+            StringViewContainsAscii(type, "object_attributes") ||
+            StringViewContainsAscii(decode, "object_attributes");
+    }
+    while (false);
+
+    return looksStruct;
+}
+
+bool GeneratedParameterLooksSockaddrStruct(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksStruct = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = metadata->Type;
+        const std::string_view decode = metadata->Decode;
+        if (StringViewContainsAscii(type, "**"))
+        {
+            break;
+        }
+
+        looksStruct =
+            StringViewContainsAscii(type, "sockaddr") ||
+            StringViewContainsAscii(decode, "sockaddr");
+    }
+    while (false);
+
+    return looksStruct;
+}
+
+bool TryGetGeneratedFixedRawBytePreviewLength(
+    const knmon::KnMonGeneratedApiMetadata* apiMetadata,
+    const knmon::KnMonGeneratedParameterMetadata* metadata,
+    std::uint64_t* previewBytes)
+{
+    bool resolved = false;
+
+    do
+    {
+        if (metadata == nullptr || previewBytes == nullptr)
+        {
+            break;
+        }
+
+        *previewBytes = 0;
+
+        const std::string_view type = metadata->Type;
+        if (StringViewContainsAscii(type, "**"))
+        {
+            break;
+        }
+
+        const bool rawBytePointer =
+            StringViewContainsAscii(type, "byte*") ||
+            StringViewContainsAscii(type, "uchar*") ||
+            StringViewContainsAscii(type, "u_char*") ||
+            StringViewContainsAscii(type, "pbyte") ||
+            StringViewContainsAscii(type, "puchar") ||
+            StringViewContainsAscii(type, "lpbyte");
+        const bool rawVoidPointer =
+            StringViewContainsAscii(type, "void*") ||
+            StringViewContainsAscii(type, "lpvoid") ||
+            StringViewContainsAscii(type, "pvoid") ||
+            StringViewContainsAscii(type, "lpcvoid");
+        if (StringViewContainsAscii(type, "ual_data_blob"))
+        {
+            *previewBytes = GeneratedGenericPreviewMaxRawBytes;
+            resolved = true;
+            break;
+        }
+
+        if (StringViewContainsAscii(metadata->Decode, "version_info_buffer_pointer"))
+        {
+            *previewBytes = GeneratedGenericPreviewMaxRawBytes;
+            resolved = true;
+            break;
+        }
+
+        if (!rawBytePointer && !rawVoidPointer)
+        {
+            break;
+        }
+
+        if (
+            rawBytePointer &&
+            (StringViewContainsAscii(metadata->Name, "enabled") ||
+                StringViewContainsAscii(metadata->Name, "istoken") ||
+                StringViewContainsAscii(metadata->Name, "masklength") ||
+                StringViewContainsAscii(metadata->Name, "prefixlength") ||
+                StringViewContainsAscii(metadata->Name, "majorversion") ||
+                StringViewContainsAscii(metadata->Name, "minorversion") ||
+                StringViewContainsAscii(metadata->Name, "recordtype") ||
+                StringViewContainsAscii(metadata->Name, "scsistatus") ||
+                StringViewContainsAscii(metadata->Name, "packettype") ||
+                StringViewContainsAscii(metadata->Name, "optionlen")))
+        {
+            *previewBytes = 1;
+            resolved = true;
+            break;
+        }
+
+        if (
+            rawBytePointer &&
+            (StringViewContainsAscii(metadata->Name, "pformat") ||
+                StringViewContainsAscii(metadata->Name, "formatstring")))
+        {
+            *previewBytes = GeneratedGenericPreviewMaxRawBytes;
+            resolved = true;
+            break;
+        }
+
+        if (rawBytePointer && StringViewContainsAscii(metadata->Name, "lpkeystate"))
+        {
+            *previewBytes = 256;
+            resolved = true;
+            break;
+        }
+
+        if (
+            rawBytePointer &&
+            (StringViewContainsAscii(metadata->Name, "rmcontrol") ||
+                StringViewContainsAscii(metadata->Name, "nodenumber") ||
+                StringViewContainsAscii(metadata->Name, "pbalpha") ||
+                StringViewContainsAscii(metadata->Name, "seed") ||
+                StringViewContainsAscii(metadata->Name, "wireid")))
+        {
+            *previewBytes = 1;
+            resolved = true;
+            break;
+        }
+
+        if (
+            apiMetadata != nullptr &&
+            rawBytePointer &&
+            StringViewContainsAscii(metadata->Name, "param1") &&
+            (StringViewContainsAscii(apiMetadata->Name, "_usermarshal") ||
+                StringViewContainsAscii(apiMetadata->Name, "_userunmarshal")))
+        {
+            *previewBytes = GeneratedGenericPreviewMaxRawBytes;
+            resolved = true;
+            break;
+        }
+
+        if (
+            apiMetadata != nullptr &&
+            rawBytePointer &&
+            StringViewContainsAscii(metadata->Name, "pmemory") &&
+            apiMetadata->Name.size() >= 3 &&
+            LowerAsciiChar(apiMetadata->Name[0]) == 'n' &&
+            LowerAsciiChar(apiMetadata->Name[1]) == 'd' &&
+            LowerAsciiChar(apiMetadata->Name[2]) == 'r')
+        {
+            *previewBytes = GeneratedGenericPreviewMaxRawBytes;
+            resolved = true;
+            break;
+        }
+
+        if (GeneratedParameterLooksBufferLike(metadata))
+        {
+            *previewBytes = GeneratedGenericPreviewMaxRawBytes;
+            resolved = true;
+            break;
+        }
+    }
+    while (false);
+
+    return resolved;
+}
+
+bool GeneratedParameterLooksLargeIntegerStruct(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksStruct = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = metadata->Type;
+        looksStruct =
+            StringViewContainsAscii(type, "large_integer") ||
+            (StringViewContainsAscii(type, "luid") && !StringViewContainsAscii(type, "fluid"));
+    }
+    while (false);
+
+    return looksStruct;
+}
+
+bool GeneratedParameterLooksFileTimeStruct(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksStruct = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        looksStruct = StringViewContainsAscii(metadata->Type, "filetime");
+    }
+    while (false);
+
+    return looksStruct;
+}
+
+bool GeneratedParameterLooksSystemTimeStruct(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksStruct = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        looksStruct = StringViewContainsAscii(metadata->Type, "systemtime");
+    }
+    while (false);
+
+    return looksStruct;
+}
+
+bool GeneratedParameterLooksPointStruct(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksStruct = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = metadata->Type;
+        looksStruct =
+            StringViewContainsAscii(type, "point*") ||
+            StringViewContainsAscii(type, "ppoint") ||
+            StringViewContainsAscii(type, "lppoint");
+    }
+    while (false);
+
+    return looksStruct;
+}
+
+bool GeneratedParameterLooksRectStruct(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksStruct = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = metadata->Type;
+        looksStruct =
+            StringViewContainsAscii(type, "rect*") ||
+            StringViewContainsAscii(type, "prect") ||
+            StringViewContainsAscii(type, "lprect");
+    }
+    while (false);
+
+    return looksStruct;
+}
+
+bool GeneratedParameterLooksPointerIndirect(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksPointer = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = metadata->Type;
+        const std::string_view decode = metadata->Decode;
+        const std::string_view name = metadata->Name;
+        const bool nameLooksPointerPointer =
+            name.size() >= 2 &&
+            LowerAsciiChar(name[0]) == 'p' &&
+            LowerAsciiChar(name[1]) == 'p' &&
+            !StringViewContainsAscii(type, "**") &&
+            (StringViewContainsAscii(type, "*") || StringViewContainsAscii(type, "id3dblob"));
+
+        looksPointer =
+            StringViewContainsAscii(decode, "pointer_pointer") ||
+            StringViewContainsAscii(decode, "function_pointer_pointer") ||
+            StringViewContainsAscii(decode, "handle_pointer") ||
+            StringViewContainsAscii(decode, "rpc_string_pointer") ||
+            StringViewContainsAscii(type, "**") ||
+            StringViewContainsAscii(type, "* *") ||
+            StringViewContainsAscii(type, "pvoid*") ||
+            StringViewContainsAscii(type, "pvoid *") ||
+            StringViewContainsAscii(type, "lpvoid*") ||
+            StringViewContainsAscii(type, "lpvoid *") ||
+            StringViewContainsAscii(type, "lpcvoid*") ||
+            StringViewContainsAscii(type, "lpcvoid *") ||
+            StringViewContainsAscii(type, "pbyte*") ||
+            StringViewContainsAscii(type, "pbyte *") ||
+            StringViewContainsAscii(type, "puchar*") ||
+            StringViewContainsAscii(type, "puchar *") ||
+            StringViewContainsAscii(type, "lpbyte*") ||
+            StringViewContainsAscii(type, "lpbyte *") ||
+            StringViewContainsAscii(type, "pwstr*") ||
+            StringViewContainsAscii(type, "pwstr *") ||
+            StringViewContainsAscii(type, "pcwstr*") ||
+            StringViewContainsAscii(type, "pcwstr *") ||
+            StringViewContainsAscii(type, "pstr*") ||
+            StringViewContainsAscii(type, "pstr *") ||
+            StringViewContainsAscii(type, "pcstr*") ||
+            StringViewContainsAscii(type, "pcstr *") ||
+            StringViewContainsAscii(type, "rpc_wstr*") ||
+            StringViewContainsAscii(type, "rpc_wstr *") ||
+            StringViewContainsAscii(type, "rpc_cstr*") ||
+            StringViewContainsAscii(type, "rpc_cstr *") ||
+            StringViewContainsAscii(type, "bstr*") ||
+            StringViewContainsAscii(type, "bstr *") ||
+            StringViewContainsAscii(type, "hstring*") ||
+            StringViewContainsAscii(type, "hstring *") ||
+            StringViewContainsAscii(type, "psid*") ||
+            StringViewContainsAscii(type, "psid *") ||
+            StringViewContainsAscii(type, "psecurity_descriptor*") ||
+            StringViewContainsAscii(type, "psecurity_descriptor *") ||
+            nameLooksPointerPointer;
+    }
+    while (false);
+
+    return looksPointer;
+}
+
+bool GeneratedParameterLooksBstrString(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksString = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = metadata->Type;
+        looksString =
+            StringViewContainsAscii(type, "bstr") &&
+            !StringViewContainsAscii(type, "bstr*") &&
+            !StringViewContainsAscii(type, "bstr *") &&
+            !StringViewContainsAscii(type, "**");
+    }
+    while (false);
+
+    return looksString;
+}
+
+bool GeneratedParameterLooksHstring(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    bool looksString = false;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = metadata->Type;
+        looksString =
+            StringViewContainsAscii(type, "hstring") &&
+            !StringViewContainsAscii(type, "hstring*") &&
+            !StringViewContainsAscii(type, "hstring *") &&
+            !StringViewContainsAscii(type, "**");
+    }
+    while (false);
+
+    return looksString;
+}
+
+std::uint32_t GeneratedScalarPointerByteSize(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    std::uint32_t byteSize = 0;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = metadata->Type;
+        if (StringViewContainsAscii(type, "**"))
+        {
+            break;
+        }
+
+        if (
+            StringViewContainsAscii(type, "boolean*") ||
+            StringViewContainsAscii(type, "pboolean"))
+        {
+            byteSize = 1;
+            break;
+        }
+
+        if (
+            StringViewContainsAscii(type, "ushort*") ||
+            StringViewContainsAscii(type, "pushort") ||
+            StringViewContainsAscii(type, "short*") ||
+            StringViewContainsAscii(type, "pshort") ||
+            StringViewContainsAscii(type, "uint16*") ||
+            StringViewContainsAscii(type, "int16*") ||
+            StringViewContainsAscii(type, "word*") ||
+            StringViewContainsAscii(type, "lpword"))
+        {
+            byteSize = 2;
+            break;
+        }
+
+        if (
+            StringViewContainsAscii(type, "uint64*") ||
+            StringViewContainsAscii(type, "uint64_t*") ||
+            StringViewContainsAscii(type, "int64*") ||
+            StringViewContainsAscii(type, "int64_t*") ||
+            StringViewContainsAscii(type, "pint64") ||
+            StringViewContainsAscii(type, "ulong64*") ||
+            StringViewContainsAscii(type, "dword64*") ||
+            StringViewContainsAscii(type, "longlong*") ||
+            StringViewContainsAscii(type, "size_t*") ||
+            StringViewContainsAscii(type, "ssize_t*") ||
+            StringViewContainsAscii(type, "psize_t") ||
+            StringViewContainsAscii(type, "pssize_t") ||
+            StringViewContainsAscii(type, "uint_ptr*") ||
+            StringViewContainsAscii(type, "int_ptr*") ||
+            StringViewContainsAscii(type, "ulong_ptr*") ||
+            StringViewContainsAscii(type, "long_ptr*") ||
+            StringViewContainsAscii(type, "dword_ptr*") ||
+            StringViewContainsAscii(type, "puint_ptr") ||
+            StringViewContainsAscii(type, "pint_ptr") ||
+            StringViewContainsAscii(type, "pulong_ptr") ||
+            StringViewContainsAscii(type, "plong_ptr") ||
+            StringViewContainsAscii(type, "pdword_ptr") ||
+            StringViewContainsAscii(type, "reghandle*") ||
+            StringViewContainsAscii(type, "handle*") ||
+            StringViewContainsAscii(type, "phandle"))
+        {
+            byteSize = 8;
+            break;
+        }
+
+        if (
+            StringViewContainsAscii(type, "uint*") ||
+            StringViewContainsAscii(type, "puint") ||
+            StringViewContainsAscii(type, "ulong*") ||
+            StringViewContainsAscii(type, "pulong") ||
+            StringViewContainsAscii(type, "dword*") ||
+            StringViewContainsAscii(type, "lpdword") ||
+            StringViewContainsAscii(type, "uint32*") ||
+            StringViewContainsAscii(type, "int32*") ||
+            StringViewContainsAscii(type, "int*") ||
+            StringViewContainsAscii(type, "pint") ||
+            StringViewContainsAscii(type, "long*") ||
+            StringViewContainsAscii(type, "plong") ||
+            StringViewContainsAscii(type, "bool*") ||
+            StringViewContainsAscii(type, "pbool") ||
+            StringViewContainsAscii(type, "float*") ||
+            StringViewContainsAscii(type, "pfloat") ||
+            StringViewContainsAscii(type, "uerrorcode*"))
+        {
+            byteSize = 4;
+            break;
+        }
+
+        if (
+            StringViewContainsAscii(type, "double*") ||
+            StringViewContainsAscii(type, "pdouble"))
+        {
+            byteSize = 8;
+            break;
+        }
+    }
+    while (false);
+
+    return byteSize;
+}
+
+GeneratedGenericPreviewKind GeneratedParameterPreviewKind(
+    const knmon::KnMonGeneratedApiMetadata* apiMetadata,
+    const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    GeneratedGenericPreviewKind kind = GeneratedGenericPreviewKind::None;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = metadata->Type;
+        const std::string_view decode = metadata->Decode;
+        if (GeneratedParameterLooksUtf16StringStruct(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::Utf16StringStruct;
+            break;
+        }
+
+        if (GeneratedParameterLooksAnsiStringStruct(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::AnsiStringStruct;
+            break;
+        }
+
+        if (GeneratedParameterLooksWsStringStruct(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::Utf16StringStruct;
+            break;
+        }
+
+        if (GeneratedParameterLooksWsXmlStringStruct(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::AnsiStringStruct;
+            break;
+        }
+
+        if (GeneratedParameterLooksObjectAttributesStruct(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::Utf16StringStruct;
+            break;
+        }
+
+        if (GeneratedParameterLooksSockaddrStruct(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::AnsiString;
+            break;
+        }
+
+        std::uint64_t fixedRawBytePreviewLength = 0;
+        if (TryGetGeneratedFixedRawBytePreviewLength(apiMetadata, metadata, &fixedRawBytePreviewLength))
+        {
+            kind = GeneratedGenericPreviewKind::BufferBytes;
+            break;
+        }
+
+        if (GeneratedParameterLooksCryptoBlobStruct(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::BufferBytes;
+            break;
+        }
+
+        if (GeneratedParameterLooksLargeIntegerStruct(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::LargeIntegerStruct;
+            break;
+        }
+
+        if (GeneratedParameterLooksFileTimeStruct(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::FileTimeStruct;
+            break;
+        }
+
+        if (GeneratedParameterLooksSystemTimeStruct(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::SystemTimeStruct;
+            break;
+        }
+
+        if (GeneratedParameterLooksPointStruct(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::PointStruct;
+            break;
+        }
+
+        if (GeneratedParameterLooksRectStruct(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::RectStruct;
+            break;
+        }
+
+        if (GeneratedParameterLooksBstrString(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::BstrString;
+            break;
+        }
+
+        if (GeneratedParameterLooksHstring(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::Hstring;
+            break;
+        }
+
+        if (
+            StringViewContainsAscii(type, "unicode_string") ||
+            StringViewContainsAscii(type, "ansi_string"))
+        {
+            break;
+        }
+
+        if (GeneratedParameterLooksPointerIndirect(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::PointerIndirect;
+            break;
+        }
+
+        if (
+            StringViewContainsAscii(type, "wstr") ||
+            StringViewContainsAscii(type, "pwsz") ||
+            StringViewContainsAscii(type, "pcwsz") ||
+            StringViewContainsAscii(type, "pwstr") ||
+            StringViewContainsAscii(type, "pcwstr") ||
+            StringViewContainsAscii(type, "lpwstr") ||
+            StringViewContainsAscii(type, "lpcwstr") ||
+            StringViewContainsAscii(type, "wchar") ||
+            StringViewContainsAscii(decode, "utf16") ||
+            StringViewContainsAscii(decode, "wide"))
+        {
+            kind = GeneratedGenericPreviewKind::Utf16String;
+            break;
+        }
+
+        if (
+            StringViewContainsAscii(type, "pstr") ||
+            StringViewContainsAscii(type, "pcstr") ||
+            StringViewContainsAscii(type, "pcsz") ||
+            StringViewContainsAscii(type, "lpstr") ||
+            StringViewContainsAscii(type, "lpcstr") ||
+            StringViewContainsAscii(type, "char*") ||
+            StringViewContainsAscii(decode, "ansi"))
+        {
+            kind = GeneratedGenericPreviewKind::AnsiString;
+            break;
+        }
+
+        if (GeneratedParameterLooksBufferLike(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::BufferBytes;
+            break;
+        }
+
+        if (GeneratedParameterLooksGuidLike(metadata))
+        {
+            kind = GeneratedGenericPreviewKind::Guid;
+            break;
+        }
+
+        if (GeneratedScalarPointerByteSize(metadata) != 0)
+        {
+            kind = GeneratedGenericPreviewKind::ScalarPointer;
+            break;
+        }
+    }
+    while (false);
+
+    return kind;
+}
+
+std::string GeneratedParameterNameSuffix(const knmon::KnMonGeneratedParameterMetadata* metadata)
+{
+    std::string suffix;
+
+    do
+    {
+        if (metadata == nullptr)
+        {
+            break;
+        }
+
+        const std::string originalName(metadata->Name);
+        std::string name(originalName);
+        std::transform(
+            name.begin(),
+            name.end(),
+            name.begin(),
+            [](unsigned char ch)
+            {
+                return static_cast<char>(std::tolower(ch));
+            });
+
+        if (name.starts_with("lp"))
+        {
+            name.erase(0, 2);
+        }
+
+        if (name.starts_with("pb") || name.starts_with("pv") || name.starts_with("p"))
+        {
+            std::size_t prefixLength = 0;
+            if (name.starts_with("pb") || name.starts_with("pv"))
+            {
+                prefixLength = 2;
+            }
+            else if (name.starts_with("p"))
+            {
+                const bool secondIsUpper =
+                    originalName.size() > 1 &&
+                    originalName[1] >= 'A' &&
+                    originalName[1] <= 'Z';
+                const bool pointerStyle =
+                    secondIsUpper ||
+                    name.starts_with("pbuffer") ||
+                    name.starts_with("pbuf") ||
+                    name.starts_with("pdata") ||
+                    name.starts_with("pbytes") ||
+                    name.starts_with("pmemory") ||
+                    name.starts_with("pformat");
+                if (pointerStyle)
+                {
+                    prefixLength = 1;
+                }
+            }
+
+            if (prefixLength != 0)
+            {
+                name.erase(0, prefixLength);
+            }
+        }
+
+        suffix = name;
+    }
+    while (false);
+
+    return suffix;
+}
+
+std::string GeneratedParameterLowerName(const knmon::KnMonGeneratedParameterMetadata* parameter)
+{
+    std::string name;
+
+    do
+    {
+        if (parameter == nullptr)
+        {
+            break;
+        }
+
+        name = parameter->Name;
+        std::transform(
+            name.begin(),
+            name.end(),
+            name.begin(),
+            [](unsigned char ch)
+            {
+                return static_cast<char>(std::tolower(ch));
+            });
+    }
+    while (false);
+
+    return name;
+}
+
+bool GeneratedLengthParameterLooksScalar(const knmon::KnMonGeneratedParameterMetadata* parameter)
+{
+    bool scalar = false;
+
+    do
+    {
+        if (parameter == nullptr)
+        {
+            break;
+        }
+
+        const std::string_view type = parameter->Type;
+        if (
+            StringViewContainsAscii(type, "*") ||
+            StringViewContainsAscii(type, "handle") ||
+            StringViewContainsAscii(type, "str") ||
+            StringViewContainsAscii(type, "wchar") ||
+            StringViewContainsAscii(type, "char"))
+        {
+            break;
+        }
+
+        const std::string name = GeneratedParameterLowerName(parameter);
+        if (type.size() > 0 && LowerAsciiChar(type[0]) == 'p')
+        {
+            break;
+        }
+
+        scalar =
+            StringViewContainsAscii(parameter->Decode, "byte_count") ||
+            StringViewContainsAscii(parameter->Decode, "size") ||
+            StringViewContainsAscii(parameter->Decode, "length") ||
+            StringViewContainsAscii(parameter->Decode, "count") ||
+            name == "cb" ||
+            name.starts_with("cb") ||
+            StringViewContainsAscii(name, "size") ||
+            StringViewContainsAscii(name, "length") ||
+            StringViewContainsAscii(name, "len") ||
+            StringViewContainsAscii(name, "bytes") ||
+            StringViewContainsAscii(name, "numberofbytesto") ||
+            StringViewContainsAscii(name, "numberofcharsto");
+    }
+    while (false);
+
+    return scalar;
+}
+
+bool GeneratedLengthParameterLooksScalarPointer(const knmon::KnMonGeneratedParameterMetadata* parameter)
+{
+    bool scalarPointer = false;
+
+    do
+    {
+        if (parameter == nullptr || GeneratedScalarPointerByteSize(parameter) == 0)
+        {
+            break;
+        }
+
+        const std::string name = GeneratedParameterLowerName(parameter);
+        scalarPointer =
+            StringViewContainsAscii(parameter->Decode, "byte_count") ||
+            StringViewContainsAscii(parameter->Decode, "size") ||
+            StringViewContainsAscii(parameter->Decode, "length") ||
+            StringViewContainsAscii(parameter->Decode, "count") ||
+            name == "pcb" ||
+            name.starts_with("pcb") ||
+            name.starts_with("lpcb") ||
+            name.starts_with("pdw") ||
+            name.starts_with("lpdw") ||
+            StringViewContainsAscii(name, "size") ||
+            StringViewContainsAscii(name, "length") ||
+            StringViewContainsAscii(name, "len") ||
+            StringViewContainsAscii(name, "bytes");
+    }
+    while (false);
+
+    return scalarPointer;
+}
+
+bool GeneratedLengthParameterLooksUsable(const knmon::KnMonGeneratedParameterMetadata* parameter)
+{
+    return
+        GeneratedLengthParameterLooksScalar(parameter) ||
+        GeneratedLengthParameterLooksScalarPointer(parameter);
+}
+
+std::uint32_t GeneratedLengthParameterMatchScore(
+    const knmon::KnMonGeneratedParameterMetadata* bufferParameter,
+    const knmon::KnMonGeneratedParameterMetadata* lengthParameter,
+    const std::string& suffix)
+{
+    std::uint32_t score = 0;
+
+    do
+    {
+        if (bufferParameter == nullptr || lengthParameter == nullptr || suffix.empty())
+        {
+            break;
+        }
+
+        if (!GeneratedLengthParameterLooksUsable(lengthParameter))
+        {
+            break;
+        }
+
+        const std::string name = GeneratedParameterLowerName(lengthParameter);
+        const std::string bufferName = GeneratedParameterLowerName(bufferParameter);
+        if (
+            name == "cb" + suffix ||
+            name == "pcb" + suffix ||
+            name == "lpcb" + suffix ||
+            name == "pcb" + suffix + "len" ||
+            name == "lpcb" + suffix + "len" ||
+            name == "dw" + suffix + "len" ||
+            name == "dw" + suffix + "length" ||
+            name == "dw" + suffix + "size" ||
+            name == "pdw" + suffix + "len" ||
+            name == "pdw" + suffix + "length" ||
+            name == "pdw" + suffix + "size" ||
+            name == "lpdw" + suffix + "len" ||
+            name == "lpdw" + suffix + "length" ||
+            name == "lpdw" + suffix + "size" ||
+            name == "p" + suffix + "len" ||
+            name == "p" + suffix + "length" ||
+            name == "p" + suffix + "size" ||
+            name == "cch" + suffix ||
+            name == "pcch" + suffix ||
+            name == "n" + suffix + "size" ||
+            name == suffix + "len" ||
+            name == suffix + "length" ||
+            name == suffix + "bytes" ||
+            name == suffix + "size")
+        {
+            score = 100;
+            break;
+        }
+
+        if (suffix.size() > 4 && suffix.ends_with("data"))
+        {
+            const std::string base = suffix.substr(0, suffix.size() - 4);
+            if (
+                name == base + "len" ||
+                name == base + "length" ||
+                name == base + "size" ||
+                name == "dw" + base + "len" ||
+                name == "dw" + base + "length" ||
+                name == "dw" + base + "size" ||
+                name == "p" + base + "len" ||
+                name == "p" + base + "length" ||
+                name == "p" + base + "size")
+            {
+                score = 95;
+                break;
+            }
+        }
+
+        if (
+            StringViewContainsAscii(bufferName, "signature") &&
+            (name == "dwsiglen" || name == "pdwsiglen" || name == "lpdwsiglen" || name == "siglen"))
+        {
+            score = 95;
+            break;
+        }
+
+        if (
+            StringViewContainsAscii(bufferName, "inbuffer") &&
+            (name == "ninbuffersize" || name == "inbuffersize" || name == "cbinbuffer"))
+        {
+            score = 95;
+            break;
+        }
+
+        if (
+            StringViewContainsAscii(bufferName, "outbuffer") &&
+            (name == "noutbuffersize" || name == "outbuffersize" || name == "cboutbuffer"))
+        {
+            score = 95;
+            break;
+        }
+
+        if (
+            (suffix == "buffer" || StringViewContainsAscii(bufferName, "buffer")) &&
+            (name == "buffersize" || name == "bufferlength" || name == "nbuffersize" || name == "cbbuffer" || name == "cbbufsize" ||
+                name == "pcbbuffer" || name == "lpcbbuffer" || name == "pdwbufferlength" || name == "lpdwbufferlength" ||
+                name == "pdwbuffersize" || name == "lpdwbuffersize"))
+        {
+            score = 90;
+            break;
+        }
+
+        if (
+            (suffix == "data" || StringViewContainsAscii(bufferName, "data")) &&
+            (name == "datasize" || name == "datalength" || name == "cbdata" || name == "pcbdata" || name == "lpcbdata" ||
+                name == "dwdata" || name == "datalen" || name == "pdwdatalen" || name == "pdwdatalength" ||
+                name == "lpdwdatalen" || name == "lpdwdatalength"))
+        {
+            score = 90;
+            break;
+        }
+
+        if (
+            (StringViewContainsAscii(bufferName, "buffer") || StringViewContainsAscii(bufferName, "data") || StringViewContainsAscii(bufferName, "bytes")) &&
+            (StringViewContainsAscii(name, "numberofbytesto") || StringViewContainsAscii(name, "numberofcharsto")))
+        {
+            score = 90;
+            break;
+        }
+
+        if (
+            name == "nsize" ||
+            name == "dwsize" ||
+            name == "cbsize" ||
+            name == "pcbsize" ||
+            name == "lpcbsize" ||
+            name == "pdwsize" ||
+            name == "lpdwsize" ||
+            name == "size" ||
+            name == "psize" ||
+            name == "length" ||
+            name == "plength" ||
+            name == "pullength" ||
+            name == "pullen" ||
+            name == "pulsize" ||
+            name == "dwlen" ||
+            name == "nlen" ||
+            name == "pdwlength" ||
+            name == "pdwlen" ||
+            name == "lpdwlength" ||
+            name == "lpdwlen" ||
+            name == "cch" ||
+            name == "pcch" ||
+            name == "len" ||
+            name == "bytes" ||
+            name == "ubytes" ||
+            name == "lbytes")
+        {
+            const std::uint16_t bufferIndex = bufferParameter->Index;
+            const std::uint16_t lengthIndex = lengthParameter->Index;
+            const std::uint16_t distance = bufferIndex > lengthIndex ? bufferIndex - lengthIndex : lengthIndex - bufferIndex;
+            if (distance <= 2)
+            {
+                score = 70;
+                break;
+            }
+        }
+
+        if (StringViewContainsAscii(lengthParameter->Decode, "byte_count"))
+        {
+            const std::uint16_t bufferIndex = bufferParameter->Index;
+            const std::uint16_t lengthIndex = lengthParameter->Index;
+            const std::uint16_t distance = bufferIndex > lengthIndex ? bufferIndex - lengthIndex : lengthIndex - bufferIndex;
+            if (distance <= 2)
+            {
+                score = 50;
+                break;
+            }
+        }
+    }
+    while (false);
+
+    return score;
+}
+
+bool TryReadGeneratedLengthPointer(
+    const knmon::KnMonGeneratedParameterMetadata* parameter,
+    std::uint64_t pointerValue,
+    std::uint64_t* length)
+{
+    bool resolved = false;
+
+    do
+    {
+        if (parameter == nullptr || pointerValue == 0 || length == nullptr)
+        {
+            break;
+        }
+
+        const std::uint32_t byteSize = GeneratedScalarPointerByteSize(parameter);
+        if (byteSize == 0 || byteSize > sizeof(*length))
+        {
+            break;
+        }
+
+        std::uint64_t value = 0;
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(
+                GetCurrentProcess(),
+                reinterpret_cast<const void*>(static_cast<std::uintptr_t>(pointerValue)),
+                &value,
+                byteSize,
+                &bytesRead) ||
+            bytesRead != byteSize)
+        {
+            break;
+        }
+
+        *length = value;
+        resolved = true;
+    }
+    while (false);
+
+    return resolved;
+}
+
+bool TryResolveGeneratedBufferLength(
+    std::uint16_t apiId,
+    const knmon::KnMonGeneratedParameterMetadata* parameter,
+    const std::uint64_t* arguments,
+    std::size_t argumentCount,
+    std::uint64_t* length)
+{
+    bool resolved = false;
+
+    do
+    {
+        if (parameter == nullptr || arguments == nullptr || length == nullptr)
+        {
+            break;
+        }
+
+        if (parameter->LengthFromIndex >= 0 && static_cast<std::size_t>(parameter->LengthFromIndex) < argumentCount)
+        {
+            *length = arguments[parameter->LengthFromIndex];
+            resolved = true;
+            break;
+        }
+
+        const std::string suffix = GeneratedParameterNameSuffix(parameter);
+        std::uint32_t bestScore = 0;
+        std::size_t bestIndex = 0;
+        for (std::size_t index = 0; index < argumentCount; ++index)
+        {
+            if (index == parameter->Index)
+            {
+                continue;
+            }
+
+            const auto* lengthParameter = knmon::FindGeneratedParameterMetadata(apiId, static_cast<std::uint16_t>(index));
+            const std::uint32_t score = GeneratedLengthParameterMatchScore(parameter, lengthParameter, suffix);
+            if (score <= bestScore)
+            {
+                continue;
+            }
+
+            bestScore = score;
+            bestIndex = index;
+        }
+
+        if (bestScore != 0)
+        {
+            const auto* lengthParameter = knmon::FindGeneratedParameterMetadata(apiId, static_cast<std::uint16_t>(bestIndex));
+            if (GeneratedLengthParameterLooksScalarPointer(lengthParameter))
+            {
+                resolved = TryReadGeneratedLengthPointer(lengthParameter, arguments[bestIndex], length);
+            }
+            else
+            {
+                *length = arguments[bestIndex];
+                resolved = true;
+            }
+        }
+    }
+    while (false);
+
+    return resolved;
+}
+
+std::uint32_t CopyGeneratedUtf16PreviewText(char* destination, std::uint32_t* length, std::size_t capacity, const wchar_t* source)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copiedChars = 0;
+    std::uint32_t copiedBytes = 0;
+    bool terminated = false;
+    constexpr std::size_t MaxPreviewWideChars = 32;
+    std::array<wchar_t, MaxPreviewWideChars + 1> localBuffer = {};
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        while (copiedChars < MaxPreviewWideChars)
+        {
+            wchar_t ch = L'\0';
+            SIZE_T bytesRead = 0;
+            if (!ReadProcessMemory(GetCurrentProcess(), source + copiedChars, &ch, sizeof(ch), &bytesRead) || bytesRead != sizeof(ch))
+            {
+                status = copiedChars == 0 ?
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory) :
+                    static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+                break;
+            }
+
+            if (ch == L'\0')
+            {
+                terminated = true;
+                break;
+            }
+
+            localBuffer[copiedChars] = ch;
+            ++copiedChars;
+        }
+
+        if (copiedChars == 0)
+        {
+            break;
+        }
+
+        if (!terminated && status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+        }
+
+        std::size_t convertChars = copiedChars;
+        while (convertChars > 0)
+        {
+            const int converted = WideCharToMultiByte(
+                CP_UTF8,
+                0,
+                localBuffer.data(),
+                static_cast<int>(convertChars),
+                destination,
+                static_cast<int>(capacity - 1),
+                nullptr,
+                nullptr);
+
+            if (converted > 0)
+            {
+                destination[converted] = '\0';
+                copiedBytes = static_cast<std::uint32_t>(converted);
+                if (convertChars < copiedChars)
+                {
+                    status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+                }
+                break;
+            }
+
+            --convertChars;
+        }
+
+        if (copiedBytes == 0 && status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+        }
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copiedBytes;
+    }
+
+    return status;
+}
+
+std::uint32_t CopyGeneratedWideCharCountPreviewText(
+    char* destination,
+    std::uint32_t* length,
+    std::size_t capacity,
+    const wchar_t* source,
+    std::uint32_t charCount)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copiedChars = 0;
+    std::uint32_t copiedBytes = 0;
+    constexpr std::size_t MaxPreviewWideChars = 32;
+    std::array<wchar_t, MaxPreviewWideChars + 1> localBuffer = {};
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        if (charCount == 0)
+        {
+            break;
+        }
+
+        copiedChars = static_cast<std::uint32_t>(std::min<std::size_t>(charCount, MaxPreviewWideChars));
+        const SIZE_T requestedBytes = static_cast<SIZE_T>(copiedChars * sizeof(wchar_t));
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), source, localBuffer.data(), requestedBytes, &bytesRead) || bytesRead == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            copiedChars = 0;
+            break;
+        }
+
+        if (bytesRead < requestedBytes)
+        {
+            copiedChars = static_cast<std::uint32_t>(bytesRead / sizeof(wchar_t));
+            status = copiedChars == 0 ?
+                static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory) :
+                static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+        else if (charCount > copiedChars)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+        }
+
+        if (copiedChars == 0)
+        {
+            break;
+        }
+
+        std::size_t convertChars = copiedChars;
+        while (convertChars > 0)
+        {
+            const int converted = WideCharToMultiByte(
+                CP_UTF8,
+                0,
+                localBuffer.data(),
+                static_cast<int>(convertChars),
+                destination,
+                static_cast<int>(capacity - 1),
+                nullptr,
+                nullptr);
+
+            if (converted > 0)
+            {
+                destination[converted] = '\0';
+                copiedBytes = static_cast<std::uint32_t>(converted);
+                if (convertChars < copiedChars)
+                {
+                    status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+                }
+                break;
+            }
+
+            --convertChars;
+        }
+
+        if (copiedBytes == 0 && status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+        }
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copiedBytes;
+    }
+
+    return status;
+}
+
+std::uint32_t CopyGeneratedBstrPreviewText(char* destination, std::uint32_t* length, std::size_t capacity, BSTR source)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+    std::uint32_t byteLength = 0;
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        const std::uintptr_t sourceAddress = reinterpret_cast<std::uintptr_t>(source);
+        if (sourceAddress < sizeof(byteLength))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        SIZE_T bytesRead = 0;
+        const void* lengthAddress = reinterpret_cast<const void*>(sourceAddress - sizeof(byteLength));
+        if (!ReadProcessMemory(GetCurrentProcess(), lengthAddress, &byteLength, sizeof(byteLength), &bytesRead) || bytesRead != sizeof(byteLength))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        status = CopyGeneratedWideCharCountPreviewText(
+            destination,
+            &copied,
+            capacity,
+            source,
+            byteLength / static_cast<std::uint32_t>(sizeof(wchar_t)));
+
+        if ((byteLength % sizeof(wchar_t)) != 0 && status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+
+    return status;
+}
+
+WindowsGetStringRawBufferFn ResolveWindowsGetStringRawBuffer()
+{
+    static WindowsGetStringRawBufferFn function = nullptr;
+    static bool attempted = false;
+
+    do
+    {
+        if (attempted)
+        {
+            break;
+        }
+
+        attempted = true;
+        constexpr const wchar_t* ModuleNames[] =
+        {
+            L"combase.dll",
+            L"api-ms-win-core-winrt-string-l1-1-0.dll"
+        };
+
+        for (const wchar_t* moduleName : ModuleNames)
+        {
+            HMODULE module = GetModuleHandleW(moduleName);
+            if (module == nullptr)
+            {
+                continue;
+            }
+
+            FARPROC procedure = nullptr;
+            if (g_originalGetProcAddress != nullptr)
+            {
+                procedure = g_originalGetProcAddress(module, "WindowsGetStringRawBuffer");
+            }
+            else
+            {
+                procedure = GetProcAddress(module, "WindowsGetStringRawBuffer");
+            }
+
+            if (procedure != nullptr)
+            {
+                function = reinterpret_cast<WindowsGetStringRawBufferFn>(procedure);
+                break;
+            }
+        }
+    }
+    while (false);
+
+    return function;
+}
+
+std::uint32_t CopyGeneratedHstringPreviewText(char* destination, std::uint32_t* length, std::size_t capacity, HSTRING source)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        WindowsGetStringRawBufferFn rawBuffer = ResolveWindowsGetStringRawBuffer();
+        if (rawBuffer == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        UINT32 charCount = 0;
+        PCWSTR rawText = rawBuffer(source, &charCount);
+        if (rawText == nullptr && charCount != 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        status = CopyGeneratedWideCharCountPreviewText(
+            destination,
+            &copied,
+            capacity,
+            rawText,
+            charCount);
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+
+    return status;
+}
+
+std::uint32_t CopyGeneratedByteStringCountPreviewText(
+    char* destination,
+    std::uint32_t* length,
+    std::size_t capacity,
+    const BYTE* source,
+    std::uint32_t byteCount)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+    constexpr std::size_t MaxPreviewBytes = GeneratedGenericPreviewMaxBytes;
+    std::array<BYTE, MaxPreviewBytes> localBuffer = {};
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        if (byteCount == 0)
+        {
+            break;
+        }
+
+        const std::uint32_t requestedBytes = static_cast<std::uint32_t>(std::min<std::size_t>(byteCount, MaxPreviewBytes));
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), source, localBuffer.data(), requestedBytes, &bytesRead) || bytesRead == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        if (bytesRead < requestedBytes)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+        else if (byteCount > requestedBytes)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+        }
+
+        const std::uint32_t maxCopy = static_cast<std::uint32_t>(std::min<std::size_t>(bytesRead, capacity - 1));
+        for (std::uint32_t index = 0; index < maxCopy; ++index)
+        {
+            const BYTE value = localBuffer[index];
+            destination[index] = (value == 0 || value < 0x20) ? '.' : static_cast<char>(value);
+            ++copied;
+        }
+
+        destination[copied] = '\0';
+        if (copied < bytesRead && status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+        }
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+
+    return status;
+}
+
+std::uint32_t CopyGeneratedWsStringPreviewText(char* destination, std::uint32_t* length, std::size_t capacity, const void* source)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+    GeneratedWsString value = {};
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        if (bytesRead != sizeof(value))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+
+        const std::uint32_t textStatus = CopyGeneratedWideCharCountPreviewText(
+            destination,
+            &copied,
+            capacity,
+            value.Chars,
+            value.Length);
+        if (status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
+        {
+            status = textStatus;
+        }
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+
+    return status;
+}
+
+std::uint32_t CopyGeneratedWsXmlStringPreviewText(char* destination, std::uint32_t* length, std::size_t capacity, const void* source)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+    GeneratedWsXmlString value = {};
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        if (bytesRead != sizeof(value))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+
+        const std::uint32_t textStatus = CopyGeneratedByteStringCountPreviewText(
+            destination,
+            &copied,
+            capacity,
+            value.Bytes,
+            value.Length);
+        if (status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
+        {
+            status = textStatus;
+        }
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+
+    return status;
+}
+
+std::uint32_t CopyGeneratedBufferPreviewText(
+    char* destination,
+    std::uint32_t* length,
+    std::size_t capacity,
+    const void* source,
+    std::uint64_t requestedBytes)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+    std::array<unsigned char, GeneratedGenericPreviewMaxRawBytes> localBytes = {};
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        if (requestedBytes == 0)
+        {
+            break;
+        }
+
+        const std::uint32_t previewBytes = static_cast<std::uint32_t>(
+            std::min<std::uint64_t>(requestedBytes, GeneratedGenericPreviewMaxRawBytes));
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), source, localBytes.data(), previewBytes, &bytesRead) || bytesRead == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        if (bytesRead < previewBytes)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+        else if (requestedBytes > previewBytes)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+        }
+
+        std::ostringstream stream;
+        stream << "hex=";
+        for (SIZE_T index = 0; index < bytesRead; ++index)
+        {
+            stream << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(localBytes[index]);
+        }
+
+        stream << ";len=" << std::dec << requestedBytes;
+        CopyAsciiText(destination, &copied, capacity, stream.str().c_str());
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+
+    return status;
+}
+
+std::uint32_t CopyGeneratedCryptoBlobPreviewText(char* destination, std::uint32_t* length, std::size_t capacity, const void* source)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+    GeneratedCryptoBlob value = {};
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        if (bytesRead != sizeof(value))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+
+        const std::uint32_t bufferStatus = CopyGeneratedBufferPreviewText(
+            destination,
+            &copied,
+            capacity,
+            value.Bytes,
+            value.ByteCount);
+        if (status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
+        {
+            status = bufferStatus;
+        }
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+
+    return status;
+}
+
+std::uint32_t CopyGeneratedGuidPreviewText(
+    char* destination,
+    std::uint32_t* length,
+    std::size_t capacity,
+    const void* source)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+    GUID guid = {};
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), source, &guid, sizeof(guid), &bytesRead) || bytesRead == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        if (bytesRead != sizeof(guid))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+
+        char buffer[40] = {};
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "{%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}",
+            static_cast<unsigned long>(guid.Data1),
+            static_cast<unsigned int>(guid.Data2),
+            static_cast<unsigned int>(guid.Data3),
+            static_cast<unsigned int>(guid.Data4[0]),
+            static_cast<unsigned int>(guid.Data4[1]),
+            static_cast<unsigned int>(guid.Data4[2]),
+            static_cast<unsigned int>(guid.Data4[3]),
+            static_cast<unsigned int>(guid.Data4[4]),
+            static_cast<unsigned int>(guid.Data4[5]),
+            static_cast<unsigned int>(guid.Data4[6]),
+            static_cast<unsigned int>(guid.Data4[7]));
+        CopyAsciiText(destination, &copied, capacity, buffer);
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+
+    return status;
+}
+
+std::uint32_t CopyGeneratedScalarPointerPreviewText(
+    char* destination,
+    std::uint32_t* length,
+    std::size_t capacity,
+    const void* source,
+    std::uint32_t byteSize)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+    std::uint64_t value = 0;
+
+    do
+    {
+        if (destination == nullptr || capacity == 0 || byteSize == 0 || byteSize > sizeof(value))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, byteSize, &bytesRead) || bytesRead == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        if (bytesRead != byteSize)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+
+        char buffer[32] = {};
+        switch (byteSize)
+        {
+        case 1:
+            std::snprintf(buffer, sizeof(buffer), "0x%02llx", static_cast<unsigned long long>(value & 0xffULL));
+            break;
+        case 2:
+            std::snprintf(buffer, sizeof(buffer), "0x%04llx", static_cast<unsigned long long>(value & 0xffffULL));
+            break;
+        case 4:
+            std::snprintf(buffer, sizeof(buffer), "0x%08llx", static_cast<unsigned long long>(value & 0xffffffffULL));
+            break;
+        case 8:
+        default:
+            std::snprintf(buffer, sizeof(buffer), "0x%016llx", static_cast<unsigned long long>(value));
+            break;
+        }
+
+        CopyAsciiText(destination, &copied, capacity, buffer);
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+
+    return status;
+}
+
+std::uint32_t CopyGeneratedPointerIndirectPreviewText(
+    char* destination,
+    std::uint32_t* length,
+    std::size_t capacity,
+    const void* source)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+    std::uintptr_t value = 0;
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        if (bytesRead != sizeof(value))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+
+        char buffer[40] = {};
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "pointee=0x%016llx",
+            static_cast<unsigned long long>(value));
+        CopyAsciiText(destination, &copied, capacity, buffer);
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+
+    return status;
+}
+
+std::uint32_t CopyGeneratedLargeIntegerPreviewText(char* destination, std::uint32_t* length, std::size_t capacity, const void* source)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+    LARGE_INTEGER value = {};
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        if (bytesRead != sizeof(value))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+
+        char buffer[64] = {};
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "value=%lld;hex=0x%016llx",
+            static_cast<long long>(value.QuadPart),
+            static_cast<unsigned long long>(value.QuadPart));
+        CopyAsciiText(destination, &copied, capacity, buffer);
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+
+    return status;
+}
+
+std::uint32_t CopyGeneratedFileTimePreviewText(char* destination, std::uint32_t* length, std::size_t capacity, const void* source)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+    FILETIME value = {};
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        if (bytesRead != sizeof(value))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+
+        ULARGE_INTEGER ticks = {};
+        ticks.LowPart = value.dwLowDateTime;
+        ticks.HighPart = value.dwHighDateTime;
+
+        char buffer[32] = {};
+        std::snprintf(buffer, sizeof(buffer), "ticks=0x%016llx", static_cast<unsigned long long>(ticks.QuadPart));
+        CopyAsciiText(destination, &copied, capacity, buffer);
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+
+    return status;
+}
+
+std::uint32_t CopyGeneratedSystemTimePreviewText(char* destination, std::uint32_t* length, std::size_t capacity, const void* source)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+    SYSTEMTIME value = {};
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        if (bytesRead != sizeof(value))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+
+        char buffer[32] = {};
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "%04u-%02u-%02uT%02u:%02u:%02u.%03u",
+            static_cast<unsigned int>(value.wYear),
+            static_cast<unsigned int>(value.wMonth),
+            static_cast<unsigned int>(value.wDay),
+            static_cast<unsigned int>(value.wHour),
+            static_cast<unsigned int>(value.wMinute),
+            static_cast<unsigned int>(value.wSecond),
+            static_cast<unsigned int>(value.wMilliseconds));
+        CopyAsciiText(destination, &copied, capacity, buffer);
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+
+    return status;
+}
+
+std::uint32_t CopyGeneratedPointPreviewText(char* destination, std::uint32_t* length, std::size_t capacity, const void* source)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+    POINT value = {};
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        if (bytesRead != sizeof(value))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+
+        char buffer[48] = {};
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "x=%ld;y=%ld",
+            static_cast<long>(value.x),
+            static_cast<long>(value.y));
+        CopyAsciiText(destination, &copied, capacity, buffer);
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+
+    return status;
+}
+
+std::uint32_t CopyGeneratedRectPreviewText(char* destination, std::uint32_t* length, std::size_t capacity, const void* source)
+{
+    std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
+    std::uint32_t copied = 0;
+    RECT value = {};
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
+            break;
+        }
+
+        destination[0] = '\0';
+        if (source == nullptr)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
+        SIZE_T bytesRead = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
+            break;
+        }
+
+        if (bytesRead != sizeof(value))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
+        }
+
+        char buffer[80] = {};
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "left=%ld;top=%ld;right=%ld;bottom=%ld",
+            static_cast<long>(value.left),
+            static_cast<long>(value.top),
+            static_cast<long>(value.right),
+            static_cast<long>(value.bottom));
+        CopyAsciiText(destination, &copied, capacity, buffer);
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+
+    return status;
+}
+
+std::uint32_t CopyConnectEndpointText(
+    char* destination,
+    std::uint32_t* length,
+    std::size_t capacity,
+    const sockaddr* address,
+    int addressLength,
+    std::uint32_t* family,
+    std::uint32_t* port,
+    std::uint32_t* ipv4Address);
+
+void CaptureGeneratedGenericPreview(
+    knmon::KnMonTransportRecord* record,
+    std::uint16_t apiId,
+    const std::uint64_t* arguments,
+    std::size_t argumentCount)
+{
+    if (record == nullptr)
+    {
+        return;
+    }
+
+    record->Values32[3] = 0;
+    for (std::uint32_t index = 0; index < GeneratedGenericPreviewMaxCount; ++index)
+    {
+        record->Values32[4 + index] = 0;
+    }
+    CopyAsciiText(record->Text2, &record->Text2Length, sizeof(record->Text2), "");
+
+    do
+    {
+        if (arguments == nullptr)
+        {
+            break;
+        }
+
+        const std::size_t cappedArgumentCount = std::min<std::size_t>(argumentCount, knmon::KnMonTransportSlotCount64);
+        std::uint32_t previewCount = 0;
+        std::uint32_t textOffset = 0;
+        const std::uint32_t maxTextBytes = static_cast<std::uint32_t>(sizeof(record->Text2) - 1);
+        const auto* apiMetadata = knmon::FindGeneratedApiMetadata(apiId);
+        struct PreviewCandidate
+        {
+            std::size_t Index = 0;
+            const knmon::KnMonGeneratedParameterMetadata* Parameter = nullptr;
+            GeneratedGenericPreviewKind Kind = GeneratedGenericPreviewKind::None;
+            std::uint32_t Priority = 0;
+        };
+
+        std::array<PreviewCandidate, knmon::KnMonTransportSlotCount64> previewCandidates = {};
+        std::size_t previewCandidateCount = 0;
+        for (std::size_t index = 0; index < cappedArgumentCount; ++index)
+        {
+            const auto* parameter = knmon::FindGeneratedParameterMetadata(apiId, static_cast<std::uint16_t>(index));
+            const GeneratedGenericPreviewKind previewKind = GeneratedParameterPreviewKind(apiMetadata, parameter);
+            if (
+                previewKind == GeneratedGenericPreviewKind::None ||
+                !GeneratedParameterAllowsPreview(parameter, previewKind) ||
+                arguments[index] == 0)
+            {
+                continue;
+            }
+
+            previewCandidates[previewCandidateCount].Index = index;
+            previewCandidates[previewCandidateCount].Parameter = parameter;
+            previewCandidates[previewCandidateCount].Kind = previewKind;
+            previewCandidates[previewCandidateCount].Priority = GeneratedPreviewPriority(previewKind);
+            ++previewCandidateCount;
+        }
+
+        std::sort(
+            previewCandidates.begin(),
+            previewCandidates.begin() + previewCandidateCount,
+            [](const PreviewCandidate& left, const PreviewCandidate& right)
+            {
+                if (left.Priority != right.Priority)
+                {
+                    return left.Priority > right.Priority;
+                }
+
+                return left.Index < right.Index;
+            });
+
+        for (std::size_t candidateIndex = 0; candidateIndex < previewCandidateCount; ++candidateIndex)
+        {
+            if (previewCount >= GeneratedGenericPreviewMaxCount || textOffset >= maxTextBytes)
+            {
+                break;
+            }
+
+            const PreviewCandidate& candidate = previewCandidates[candidateIndex];
+            const std::size_t index = candidate.Index;
+            const auto* parameter = candidate.Parameter;
+            const GeneratedGenericPreviewKind previewKind = candidate.Kind;
+
+            std::uint32_t previewStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::DefinitionMissing);
+            std::uint32_t previewLength = 0;
+            const std::uint32_t remaining = maxTextBytes - textOffset + 1;
+            const std::uint32_t slotCapacity = std::min<std::uint32_t>(remaining, GeneratedGenericPreviewMaxBytes + 1);
+            if (previewKind == GeneratedGenericPreviewKind::BufferBytes)
+            {
+                std::uint64_t bufferLength = 0;
+                if (TryResolveGeneratedBufferLength(apiId, parameter, arguments, cappedArgumentCount, &bufferLength))
+                {
+                    previewStatus = CopyGeneratedBufferPreviewText(
+                        record->Text2 + textOffset,
+                        &previewLength,
+                        slotCapacity,
+                        reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arguments[index])),
+                        bufferLength);
+                }
+                else
+                {
+                    std::uint64_t fixedRawBytePreviewLength = 0;
+                    if (TryGetGeneratedFixedRawBytePreviewLength(apiMetadata, parameter, &fixedRawBytePreviewLength))
+                    {
+                        previewStatus = CopyGeneratedBufferPreviewText(
+                            record->Text2 + textOffset,
+                            &previewLength,
+                            slotCapacity,
+                            reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arguments[index])),
+                            fixedRawBytePreviewLength);
+                    }
+                    else if (GeneratedParameterLooksCryptoBlobStruct(parameter))
+                    {
+                        previewStatus = CopyGeneratedCryptoBlobPreviewText(
+                            record->Text2 + textOffset,
+                            &previewLength,
+                            slotCapacity,
+                            reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arguments[index])));
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
+            }
+            else if (previewKind == GeneratedGenericPreviewKind::Guid)
+            {
+                previewStatus = CopyGeneratedGuidPreviewText(
+                    record->Text2 + textOffset,
+                    &previewLength,
+                    slotCapacity,
+                    reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arguments[index])));
+            }
+            else if (previewKind == GeneratedGenericPreviewKind::ScalarPointer)
+            {
+                previewStatus = CopyGeneratedScalarPointerPreviewText(
+                    record->Text2 + textOffset,
+                    &previewLength,
+                    slotCapacity,
+                    reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arguments[index])),
+                    GeneratedScalarPointerByteSize(parameter));
+            }
+            else if (previewKind == GeneratedGenericPreviewKind::PointerIndirect)
+            {
+                previewStatus = CopyGeneratedPointerIndirectPreviewText(
+                    record->Text2 + textOffset,
+                    &previewLength,
+                    slotCapacity,
+                    reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arguments[index])));
+            }
+            else if (previewKind == GeneratedGenericPreviewKind::BstrString)
+            {
+                previewStatus = CopyGeneratedBstrPreviewText(
+                    record->Text2 + textOffset,
+                    &previewLength,
+                    slotCapacity,
+                    reinterpret_cast<BSTR>(static_cast<std::uintptr_t>(arguments[index])));
+            }
+            else if (previewKind == GeneratedGenericPreviewKind::Hstring)
+            {
+                previewStatus = CopyGeneratedHstringPreviewText(
+                    record->Text2 + textOffset,
+                    &previewLength,
+                    slotCapacity,
+                    reinterpret_cast<HSTRING>(static_cast<std::uintptr_t>(arguments[index])));
+            }
+            else if (previewKind == GeneratedGenericPreviewKind::Utf16String)
+            {
+                previewStatus = CopyGeneratedUtf16PreviewText(
+                    record->Text2 + textOffset,
+                    &previewLength,
+                    slotCapacity,
+                    reinterpret_cast<const wchar_t*>(static_cast<std::uintptr_t>(arguments[index])));
+            }
+            else if (previewKind == GeneratedGenericPreviewKind::AnsiString && GeneratedParameterLooksSockaddrStruct(parameter))
+            {
+                std::uint64_t addressLength = 0;
+                if (!TryResolveGeneratedBufferLength(apiId, parameter, arguments, cappedArgumentCount, &addressLength) ||
+                    addressLength > 0x7fffffffULL)
+                {
+                    continue;
+                }
+
+                previewStatus = CopyConnectEndpointText(
+                    record->Text2 + textOffset,
+                    &previewLength,
+                    slotCapacity,
+                    reinterpret_cast<const sockaddr*>(static_cast<std::uintptr_t>(arguments[index])),
+                    static_cast<int>(addressLength),
+                    nullptr,
+                    nullptr,
+                    nullptr);
+            }
+            else if (previewKind == GeneratedGenericPreviewKind::Utf16StringStruct)
+            {
+                if (GeneratedParameterLooksObjectAttributesStruct(parameter))
+                {
+                    previewStatus = CopyObjectAttributesName(
+                        record->Text2 + textOffset,
+                        &previewLength,
+                        slotCapacity,
+                        reinterpret_cast<const OBJECT_ATTRIBUTES*>(static_cast<std::uintptr_t>(arguments[index])));
+                }
+                else if (GeneratedParameterLooksWsStringStruct(parameter))
+                {
+                    previewStatus = CopyGeneratedWsStringPreviewText(
+                        record->Text2 + textOffset,
+                        &previewLength,
+                        slotCapacity,
+                        reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arguments[index])));
+                }
+                else
+                {
+                    previewStatus = CopyUnicodeStringText(
+                        record->Text2 + textOffset,
+                        &previewLength,
+                        slotCapacity,
+                        reinterpret_cast<const UNICODE_STRING*>(static_cast<std::uintptr_t>(arguments[index])));
+                }
+            }
+            else if (previewKind == GeneratedGenericPreviewKind::AnsiStringStruct)
+            {
+                if (GeneratedParameterLooksWsXmlStringStruct(parameter))
+                {
+                    previewStatus = CopyGeneratedWsXmlStringPreviewText(
+                        record->Text2 + textOffset,
+                        &previewLength,
+                        slotCapacity,
+                        reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arguments[index])));
+                }
+                else
+                {
+                    previewStatus = CopyAnsiStringText(
+                        record->Text2 + textOffset,
+                        &previewLength,
+                        slotCapacity,
+                        reinterpret_cast<const ANSI_STRING*>(static_cast<std::uintptr_t>(arguments[index])));
+                }
+            }
+            else if (previewKind == GeneratedGenericPreviewKind::LargeIntegerStruct)
+            {
+                previewStatus = CopyGeneratedLargeIntegerPreviewText(
+                    record->Text2 + textOffset,
+                    &previewLength,
+                    slotCapacity,
+                    reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arguments[index])));
+            }
+            else if (previewKind == GeneratedGenericPreviewKind::FileTimeStruct)
+            {
+                previewStatus = CopyGeneratedFileTimePreviewText(
+                    record->Text2 + textOffset,
+                    &previewLength,
+                    slotCapacity,
+                    reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arguments[index])));
+            }
+            else if (previewKind == GeneratedGenericPreviewKind::SystemTimeStruct)
+            {
+                previewStatus = CopyGeneratedSystemTimePreviewText(
+                    record->Text2 + textOffset,
+                    &previewLength,
+                    slotCapacity,
+                    reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arguments[index])));
+            }
+            else if (previewKind == GeneratedGenericPreviewKind::PointStruct)
+            {
+                previewStatus = CopyGeneratedPointPreviewText(
+                    record->Text2 + textOffset,
+                    &previewLength,
+                    slotCapacity,
+                    reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arguments[index])));
+            }
+            else if (previewKind == GeneratedGenericPreviewKind::RectStruct)
+            {
+                previewStatus = CopyGeneratedRectPreviewText(
+                    record->Text2 + textOffset,
+                    &previewLength,
+                    slotCapacity,
+                    reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arguments[index])));
+            }
+            else
+            {
+                previewStatus = CopyAnsiPointerText(
+                    record->Text2 + textOffset,
+                    &previewLength,
+                    slotCapacity,
+                    reinterpret_cast<const char*>(static_cast<std::uintptr_t>(arguments[index])));
+            }
+
+            if (previewLength == 0)
+            {
+                continue;
+            }
+
+            record->Values32[4 + previewCount] = PackGeneratedGenericPreviewDescriptor(
+                static_cast<std::uint32_t>(index),
+                static_cast<std::uint32_t>(previewKind),
+                previewStatus,
+                textOffset,
+                previewLength);
+            ++previewCount;
+            textOffset += previewLength;
+            record->Text2Length = textOffset;
+            record->Values32[3] = previewCount;
+        }
+    }
+    while (false);
+}
+
 void EmitGeneratedGenericEvent(
     const GeneratedGenericHookMetadata& metadata,
     const std::uint64_t* arguments,
@@ -2974,6 +5944,7 @@ void EmitGeneratedGenericEvent(
         record->Values32[0] = static_cast<std::uint32_t>(cappedArgumentCount);
         record->Values32[1] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
         record->Values32[2] = static_cast<std::uint32_t>(metadata.ReturnFormat);
+        CaptureGeneratedGenericPreview(record, metadata.ApiId, arguments, cappedArgumentCount);
 
         std::ostringstream metadataText;
         metadataText << "tier=generated"
@@ -3000,7 +5971,6 @@ void EmitGeneratedGenericEvent(
 
         CopyAsciiText(record->Text0, &record->Text0Length, sizeof(record->Text0), metadata.ApiName);
         CopyAsciiText(record->Text1, &record->Text1Length, sizeof(record->Text1), metadataText.str().c_str());
-        CopyAsciiText(record->Text2, &record->Text2Length, sizeof(record->Text2), "");
         CommitTransportRecord(record, overheadStart);
     }
 }
@@ -16652,20 +19622,22 @@ void CloseAgentPipe()
     ReleaseSRWLockExclusive(&g_pipeLock);
 }
 
-void ShutdownAgent(const char* reason, AgentLifecycleState finalState)
+HookLifecycleCounts ShutdownAgent(const char* reason, AgentLifecycleState finalState)
 {
+    HookLifecycleCounts counts = {};
     const AgentLifecycleState previousState = GetLifecycleState();
     if (previousState == AgentLifecycleState::Stopping || previousState == AgentLifecycleState::Disabled || previousState == AgentLifecycleState::Failed)
     {
-        return;
+        return counts;
     }
 
     SetLifecycleState(AgentLifecycleState::Stopping);
-    HookLifecycleCounts counts = UninstallHooks();
+    counts = UninstallHooks();
     SetLifecycleState(finalState);
     SendAgentShutdown(reason, counts);
     CloseTransport();
     CloseAgentPipe();
+    return counts;
 }
 
 bool DisabledAgentCanReinitialize(const HookLifecycleCounts& counts)
@@ -16997,7 +19969,8 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonAgentStop()
 
     if (state == AgentLifecycleState::Starting && InterlockedCompareExchange(&g_workerStarted, 0, 0) == 0)
     {
-        status = knmon::KnMonAgentControlStatus::NotRunning;
+        InterlockedExchange(&g_hooksEnabled, 0);
+        SetLifecycleState(AgentLifecycleState::Disabled);
     }
     else if (state == AgentLifecycleState::Disabled || state == AgentLifecycleState::Failed)
     {
@@ -17005,7 +19978,11 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonAgentStop()
     }
     else
     {
-        ShutdownAgent("self_disable", AgentLifecycleState::Disabled);
+        const HookLifecycleCounts counts = ShutdownAgent("self_disable", AgentLifecycleState::Disabled);
+        if (!DisabledAgentCanReinitialize(counts))
+        {
+            status = knmon::KnMonAgentControlStatus::InvalidState;
+        }
     }
 
     return static_cast<DWORD>(status);
@@ -17026,7 +20003,8 @@ BOOL APIENTRY DllMain(HMODULE moduleHandle, DWORD reason, LPVOID reserved)
     }
     else if (reason == DLL_PROCESS_DETACH)
     {
-        ShutdownAgent("process_detach", AgentLifecycleState::Disabled);
+        InterlockedExchange(&g_hooksEnabled, 0);
+        SetLifecycleState(AgentLifecycleState::Disabled);
     }
 
     return TRUE;
