@@ -1,80 +1,374 @@
-max_width = 100
-hard_tabs = false
-tab_spaces = 4
-newline_style = "Auto"
-indent_style = "Block"
-use_small_heuristics = "Default"
-fn_call_width = 60
-attr_fn_like_width = 70
-struct_lit_width = 18
-struct_variant_width = 35
-array_width = 60
-chain_width = 60
-single_line_if_else_max_width = 50
-single_line_let_else_max_width = 50
-wrap_comments = false
-format_code_in_doc_comments = false
-doc_comment_code_block_width = 100
-comment_width = 80
-normalize_comments = false
-normalize_doc_attributes = false
-format_strings = false
-format_macro_matchers = false
-format_macro_bodies = true
-skip_macro_invocations = []
-hex_literal_case = "Preserve"
-empty_item_single_line = true
-struct_lit_single_line = true
-fn_single_line = false
-where_single_line = false
-imports_indent = "Block"
-imports_layout = "Mixed"
-imports_granularity = "Preserve"
-group_imports = "Preserve"
-reorder_imports = true
-reorder_modules = true
-reorder_impl_items = false
-type_punctuation_density = "Wide"
-space_before_colon = false
-space_after_colon = true
-spaces_around_ranges = false
-binop_separator = "Front"
-remove_nested_parens = true
-combine_control_expr = true
-short_array_element_width_threshold = 10
-overflow_delimited_expr = false
-struct_field_align_threshold = 0
-enum_discrim_align_threshold = 0
-match_arm_blocks = true
-match_arm_leading_pipes = "Never"
-force_multiline_blocks = false
-fn_params_layout = "Tall"
-brace_style = "SameLineWhere"
-control_brace_style = "AlwaysSameLine"
-trailing_semicolon = true
-trailing_comma = "Vertical"
-match_block_trailing_comma = false
-blank_lines_upper_bound = 1
-blank_lines_lower_bound = 0
-edition = "2015"
-style_edition = "2015"
-version = "One"
-inline_attribute_width = 0
-format_generated_files = true
-generated_marker_line_search_limit = 5
-merge_derives = true
-use_try_shorthand = false
-use_field_init_shorthand = false
-force_explicit_abi = true
-condense_wildcard_suffixes = false
-color = "Auto"
-required_version = "1.8.0"
-unstable_features = false
-disable_all_formatting = false
-skip_children = false
-show_parse_errors = true
-error_on_line_overflow = false
-error_on_unformatted = false
-ignore = []
-emit_mode = "Files"
-make_backup = false
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+use knmon_tauri::{
+    attach_target_process_capture as attach_target_process_capture_backend,
+    apply_daemon_recovery as apply_daemon_recovery_backend,
+    backend_status,
+    build_native_session_catalog_index as build_native_session_catalog_index_backend,
+    build_native_trace_index as build_native_trace_index_backend,
+    cancel_native_operation as cancel_native_operation_backend,
+    capture_sample_fileio,
+    capture_sample_fileio_session,
+    catalog_native_sessions as catalog_native_sessions_backend,
+    cleanup_active_sessions_on_exit as cleanup_active_sessions_on_exit_backend,
+    drain_native_trace_batches as drain_native_trace_batches_backend,
+    launch_sample_early_bird,
+    native_daemon_audit as native_daemon_audit_backend,
+    native_daemon_recovery_plan as native_daemon_recovery_plan_backend,
+    native_daemon_sessions,
+    native_daemon_status as native_daemon_status_backend,
+    native_helper_architecture,
+    native_operation_states,
+    native_session_states,
+    native_target_processes,
+    prune_stale_daemon_sessions as prune_stale_daemon_sessions_backend,
+    query_binary_architecture as query_binary_architecture_backend,
+    query_native_session_catalog as query_native_session_catalog_backend,
+    query_native_session_catalog_index as query_native_session_catalog_index_backend,
+    query_native_trace_index as query_native_trace_index_backend,
+    remove_missing_native_session_catalog_entries as remove_missing_native_session_catalog_entries_backend,
+    remove_missing_native_session_catalog_index_entries as remove_missing_native_session_catalog_index_entries_backend,
+    remove_missing_native_trace_index_entries as remove_missing_native_trace_index_entries_backend,
+    replay_last_session,
+    replay_session_path as replay_session_path_backend,
+    start_daemon_if_needed as start_daemon_if_needed_backend,
+    start_daemon_supervised_session as start_daemon_supervised_session_backend,
+    start_launch_monitor_session as start_launch_monitor_session_backend,
+    start_streaming_attach_session as start_streaming_attach_session_backend,
+    stop_daemon_session as stop_daemon_session_backend,
+    stop_native_session as stop_native_session_backend,
+    supervise_process_tree as supervise_process_tree_backend,
+    CaptureResult,
+    LaunchResult,
+    NativeDaemonAudit,
+    NativeDaemonRecoveryApply,
+    NativeDaemonRecoveryPlan,
+    NativeDaemonStatus,
+    NativeOperation,
+    NativeSession,
+    NativeSessionCatalog,
+    NativeTraceBatch,
+    NativeTraceIndex,
+    ProcessTreeResult,
+    SessionReplayResult,
+    TargetProcess,
+};
+
+#[tauri::command]
+fn list_native_target_processes() -> Result<Vec<TargetProcess>, String>
+{
+    native_target_processes()
+}
+
+#[tauri::command]
+fn launch_sample_early_bird_capture() -> Result<LaunchResult, String>
+{
+    launch_sample_early_bird()
+}
+
+#[tauri::command]
+fn capture_sample_fileio_events() -> Result<CaptureResult, String>
+{
+    capture_sample_fileio()
+}
+
+#[tauri::command]
+fn capture_sample_fileio_session_events() -> Result<CaptureResult, String>
+{
+    capture_sample_fileio_session()
+}
+
+#[tauri::command]
+fn replay_last_sample_session() -> Result<SessionReplayResult, String>
+{
+    replay_last_session()
+}
+
+#[tauri::command]
+fn replay_session_path(session_path: String) -> Result<SessionReplayResult, String>
+{
+    replay_session_path_backend(session_path)
+}
+
+#[tauri::command]
+fn attach_target_process_capture(
+    pid: u32,
+    duration_ms: u32,
+    selected_apis: Vec<String>,
+) -> Result<CaptureResult, String>
+{
+    attach_target_process_capture_backend(pid, duration_ms, selected_apis)
+}
+
+#[tauri::command]
+fn supervise_process_tree(
+    root_pid: u32,
+    duration_ms: u32,
+    child_policy: String,
+    selected_apis: Vec<String>,
+) -> Result<ProcessTreeResult, String>
+{
+    supervise_process_tree_backend(root_pid, duration_ms, child_policy, selected_apis)
+}
+
+#[tauri::command]
+fn list_native_operations() -> Result<Vec<NativeOperation>, String>
+{
+    Ok(native_operation_states())
+}
+
+#[tauri::command]
+fn cancel_native_operation(operation_id: String) -> Result<NativeOperation, String>
+{
+    cancel_native_operation_backend(operation_id)
+}
+
+#[tauri::command]
+fn list_native_sessions() -> Result<Vec<NativeSession>, String>
+{
+    Ok(native_session_states())
+}
+
+#[tauri::command]
+fn stop_native_session(session_id: String) -> Result<NativeSession, String>
+{
+    stop_native_session_backend(session_id)
+}
+
+#[tauri::command]
+fn start_streaming_attach_session(
+    pid: u32,
+    selected_apis: Vec<String>,
+) -> Result<NativeSession, String>
+{
+    start_streaming_attach_session_backend(pid, selected_apis)
+}
+
+#[tauri::command]
+fn start_launch_monitor_session(
+    target_path: String,
+    working_directory: String,
+    launch_arguments: String,
+    selected_apis: Vec<String>,
+) -> Result<NativeSession, String>
+{
+    start_launch_monitor_session_backend(
+        target_path,
+        working_directory,
+        launch_arguments,
+        selected_apis,
+    )
+}
+
+#[tauri::command]
+fn start_daemon_if_needed() -> Result<NativeDaemonStatus, String>
+{
+    start_daemon_if_needed_backend()
+}
+
+#[tauri::command]
+fn native_daemon_status() -> Result<NativeDaemonStatus, String>
+{
+    native_daemon_status_backend()
+}
+
+#[tauri::command]
+fn list_daemon_sessions() -> Result<Vec<NativeSession>, String>
+{
+    native_daemon_sessions()
+}
+
+#[tauri::command]
+fn audit_daemon_sessions() -> Result<NativeDaemonAudit, String>
+{
+    native_daemon_audit_backend()
+}
+
+#[tauri::command]
+fn plan_daemon_recovery() -> Result<NativeDaemonRecoveryPlan, String>
+{
+    native_daemon_recovery_plan_backend()
+}
+
+#[tauri::command]
+fn apply_daemon_recovery(dry_run: bool) -> Result<NativeDaemonRecoveryApply, String>
+{
+    apply_daemon_recovery_backend(dry_run)
+}
+
+#[tauri::command]
+fn prune_stale_daemon_sessions(dry_run: bool) -> Result<NativeDaemonAudit, String>
+{
+    prune_stale_daemon_sessions_backend(dry_run)
+}
+
+#[tauri::command]
+fn catalog_native_sessions() -> Result<NativeSessionCatalog, String>
+{
+    catalog_native_sessions_backend()
+}
+
+#[tauri::command]
+fn query_native_session_catalog(
+    limit: u32,
+    state: String,
+    target: String,
+) -> Result<NativeSessionCatalog, String>
+{
+    query_native_session_catalog_backend(limit, state, target)
+}
+
+#[tauri::command]
+fn remove_missing_native_session_catalog_entries(
+    dry_run: bool,
+) -> Result<NativeSessionCatalog, String>
+{
+    remove_missing_native_session_catalog_entries_backend(dry_run)
+}
+
+#[tauri::command]
+fn build_native_session_catalog_index(
+    rebuild: bool,
+) -> Result<NativeSessionCatalog, String>
+{
+    build_native_session_catalog_index_backend(rebuild)
+}
+
+#[tauri::command]
+fn query_native_session_catalog_index(
+    limit: u32,
+    state: String,
+    target: String,
+) -> Result<NativeSessionCatalog, String>
+{
+    query_native_session_catalog_index_backend(limit, state, target)
+}
+
+#[tauri::command]
+fn remove_missing_native_session_catalog_index_entries(
+    dry_run: bool,
+) -> Result<NativeSessionCatalog, String>
+{
+    remove_missing_native_session_catalog_index_entries_backend(dry_run)
+}
+
+#[tauri::command]
+fn build_native_trace_index(rebuild: bool) -> Result<NativeTraceIndex, String>
+{
+    build_native_trace_index_backend(rebuild)
+}
+
+#[tauri::command]
+fn query_native_trace_index(
+    limit: u32,
+    text: String,
+    api: String,
+    module: String,
+    session: String,
+    pid: String,
+) -> Result<NativeTraceIndex, String>
+{
+    query_native_trace_index_backend(limit, text, api, module, session, pid)
+}
+
+#[tauri::command]
+fn remove_missing_native_trace_index_entries(
+    dry_run: bool,
+) -> Result<NativeTraceIndex, String>
+{
+    remove_missing_native_trace_index_entries_backend(dry_run)
+}
+
+#[tauri::command]
+fn start_daemon_supervised_session(
+    pid: u32,
+    selected_apis: Vec<String>,
+) -> Result<NativeSession, String>
+{
+    start_daemon_supervised_session_backend(pid, selected_apis)
+}
+
+#[tauri::command]
+fn stop_daemon_session(session_id: String) -> Result<NativeSession, String>
+{
+    stop_daemon_session_backend(session_id)
+}
+
+#[tauri::command]
+fn drain_native_trace_batches(
+    session_id: String,
+    after_batch_sequence: u64,
+) -> Result<Vec<NativeTraceBatch>, String>
+{
+    drain_native_trace_batches_backend(session_id, after_batch_sequence)
+}
+
+#[tauri::command]
+fn get_backend_status() -> Result<String, String>
+{
+    Ok(backend_status().to_string())
+}
+
+#[tauri::command]
+fn get_native_helper_architecture() -> Result<String, String>
+{
+    Ok(native_helper_architecture().to_string())
+}
+
+#[tauri::command]
+fn query_target_binary_architecture(path: String) -> Result<String, String>
+{
+    query_binary_architecture_backend(path)
+}
+
+fn main()
+{
+    tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .on_window_event(|_window, event| {
+            if matches!(event, tauri::WindowEvent::CloseRequested { .. })
+            {
+                let _ = cleanup_active_sessions_on_exit_backend();
+            }
+        })
+        .invoke_handler(tauri::generate_handler![
+            list_native_target_processes,
+            launch_sample_early_bird_capture,
+            capture_sample_fileio_events,
+            capture_sample_fileio_session_events,
+            replay_last_sample_session,
+            replay_session_path,
+            attach_target_process_capture,
+            supervise_process_tree,
+            list_native_operations,
+            cancel_native_operation,
+            list_native_sessions,
+            stop_native_session,
+            start_streaming_attach_session,
+            start_launch_monitor_session,
+            start_daemon_if_needed,
+            native_daemon_status,
+            list_daemon_sessions,
+            audit_daemon_sessions,
+            plan_daemon_recovery,
+            apply_daemon_recovery,
+            prune_stale_daemon_sessions,
+            catalog_native_sessions,
+            query_native_session_catalog,
+            remove_missing_native_session_catalog_entries,
+            build_native_session_catalog_index,
+            query_native_session_catalog_index,
+            remove_missing_native_session_catalog_index_entries,
+            build_native_trace_index,
+            query_native_trace_index,
+            remove_missing_native_trace_index_entries,
+            start_daemon_supervised_session,
+            stop_daemon_session,
+            drain_native_trace_batches,
+            get_backend_status,
+            get_native_helper_architecture,
+            query_target_binary_architecture
+        ])
+        .run(tauri::generate_context!())
+        .expect("failed to run KN Win32 API Monitor");
+}

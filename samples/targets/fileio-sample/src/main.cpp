@@ -38,6 +38,7 @@
 #include <WebServices.h>
 
 #include <array>
+#include <atomic>
 #include <cstring>
 #include <cwchar>
 #include <iomanip>
@@ -173,6 +174,13 @@ constexpr GUID SampleFolderIdProgramFiles = { 0x905e63b6, 0xc1bf, 0x494e, { 0xb2
 constexpr GUID SampleFolderIdFonts = { 0xfd228cb7, 0xae11, 0x4ae3, { 0x86, 0x4c, 0x16, 0xf3, 0x91, 0x0a, 0xb8, 0xfe } };
 constexpr GUID SampleEventProviderId = { 0x8f5f52c1, 0x6f56, 0x4c0d, { 0x9c, 0x1d, 0x3b, 0xde, 0x8a, 0x7f, 0x00, 0x01 } };
 
+#ifndef KNMON_SAMPLE_PROGRAM_NAME
+#define KNMON_SAMPLE_PROGRAM_NAME "knmon-sample-fileio"
+#endif
+
+constexpr const char* ProgramName = KNMON_SAMPLE_PROGRAM_NAME;
+std::atomic_bool g_stopRequested = false;
+
 std::wstring BuildSamplePath()
 {
     std::array<wchar_t, MAX_PATH> tempPath = {};
@@ -273,6 +281,103 @@ std::wstring GetStringOption(int argc, wchar_t** argv, const wchar_t* name, cons
     }
 
     return value;
+}
+
+BOOL WINAPI ConsoleCtrlHandler(DWORD ctrlType)
+{
+    BOOL handled = FALSE;
+
+    switch (ctrlType)
+    {
+    case CTRL_C_EVENT:
+    case CTRL_BREAK_EVENT:
+    case CTRL_CLOSE_EVENT:
+    case CTRL_LOGOFF_EVENT:
+    case CTRL_SHUTDOWN_EVENT:
+        g_stopRequested.store(true);
+        handled = TRUE;
+        break;
+    default:
+        break;
+    }
+
+    return handled;
+}
+
+void SleepResponsive(int delayMs)
+{
+    if (delayMs <= 0)
+    {
+        return;
+    }
+
+    int remainingMs = delayMs;
+    while (remainingMs > 0 && !g_stopRequested.load())
+    {
+        const DWORD chunkMs = static_cast<DWORD>(remainingMs > 100 ? 100 : remainingMs);
+        Sleep(chunkMs);
+        remainingMs -= static_cast<int>(chunkMs);
+    }
+}
+
+bool WriteReadyFile(const std::wstring& path, const char* mode)
+{
+    bool success = true;
+    HANDLE fileHandle = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        if (path.empty())
+        {
+            break;
+        }
+
+        fileHandle = CreateFileW(
+            path.c_str(),
+            GENERIC_WRITE,
+            FILE_SHARE_READ,
+            nullptr,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr);
+
+        if (fileHandle == INVALID_HANDLE_VALUE)
+        {
+            std::cout << "CreateFileW(ready-file) failed with " << GetLastError() << "\n";
+            success = false;
+            break;
+        }
+
+        std::ostringstream stream;
+        stream << "program=" << ProgramName << "\n";
+        stream << "mode=" << mode << "\n";
+        stream << "pid=" << GetCurrentProcessId() << "\n";
+        stream << "tid=" << GetCurrentThreadId() << "\n";
+
+        const std::string body = stream.str();
+        DWORD bytesWritten = 0;
+        if (!WriteFile(fileHandle, body.data(), static_cast<DWORD>(body.size()), &bytesWritten, nullptr))
+        {
+            std::cout << "WriteFile(ready-file) failed with " << GetLastError() << "\n";
+            success = false;
+            break;
+        }
+
+        if (bytesWritten != body.size())
+        {
+            std::cout << "WriteFile(ready-file) wrote a partial payload\n";
+            success = false;
+            break;
+        }
+    }
+    while (false);
+
+    if (fileHandle != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(fileHandle);
+    }
+
+    return success;
 }
 
 void LogLastError(const char* operation)
@@ -3424,24 +3529,24 @@ int RunAttachLoop(int iterations, int delayMs)
 
     do
     {
-        std::cout << "knmon-sample-fileio attach-loop-ready pid=" << GetCurrentProcessId() << "\n" << std::flush;
-        Sleep(static_cast<DWORD>(delayMs));
+        std::cout << ProgramName << " attach-loop-ready pid=" << GetCurrentProcessId() << "\n" << std::flush;
+        SleepResponsive(delayMs);
 
-        for (int iteration = 0; iteration < iterations; ++iteration)
+        for (int iteration = 0; iteration < iterations && !g_stopRequested.load(); ++iteration)
         {
             if (!RunAttachFileIoProbe(iteration))
             {
                 break;
             }
 
-            Sleep(static_cast<DWORD>(delayMs));
+            SleepResponsive(delayMs);
         }
 
         exitCode = 0;
     }
     while (false);
 
-    std::cout << "knmon-sample-fileio attach-loop-exiting code=" << exitCode << "\n";
+    std::cout << ProgramName << " attach-loop-exiting code=" << exitCode << "\n";
     return exitCode;
 }
 
@@ -3494,7 +3599,7 @@ int RunSpawnChildLoop(int childCount, int childIterations, int delayMs, const st
             break;
         }
 
-        std::cout << "knmon-sample-fileio tree-root-ready pid=" << GetCurrentProcessId() << "\n" << std::flush;
+        std::cout << ProgramName << " tree-root-ready pid=" << GetCurrentProcessId() << "\n" << std::flush;
         Sleep(static_cast<DWORD>(delayMs));
 
         for (int index = 0; index < childCount; ++index)
@@ -3537,7 +3642,7 @@ int RunSpawnChildLoop(int childCount, int childIterations, int delayMs, const st
             }
 
             childHandles.push_back(processInfo.hProcess);
-            std::cout << "knmon-sample-fileio child-started pid=" << processInfo.dwProcessId << "\n" << std::flush;
+            std::cout << ProgramName << " child-started pid=" << processInfo.dwProcessId << "\n" << std::flush;
             Sleep(static_cast<DWORD>(delayMs));
         }
 
@@ -3567,7 +3672,7 @@ int RunSpawnChildLoop(int childCount, int childIterations, int delayMs, const st
         }
     }
 
-    std::cout << "knmon-sample-fileio tree-root-exiting code=" << exitCode << "\n" << std::flush;
+    std::cout << ProgramName << " tree-root-exiting code=" << exitCode << "\n" << std::flush;
     return exitCode;
 }
 
@@ -4227,7 +4332,7 @@ int RunFileIo(bool slow, int startupDelayMs)
 
     do
     {
-        std::cout << "knmon-sample-fileio starting\n";
+        std::cout << ProgramName << " starting\n";
 
         if (startupDelayMs > 0)
         {
@@ -4554,13 +4659,153 @@ int RunFileIo(bool slow, int startupDelayMs)
         CloseHandle(fileHandle);
     }
 
-    std::cout << "knmon-sample-fileio exiting code=" << exitCode << "\n";
+    std::cout << ProgramName << " exiting code=" << exitCode << "\n";
     return exitCode;
+}
+
+int RunApiExerciserLoop(
+    int iterations,
+    int durationMs,
+    int delayMs,
+    int startupDelayMs,
+    const std::wstring& readyFile)
+{
+    int exitCode = 1;
+    int completedIterations = 0;
+    int failedIterations = 0;
+
+    if (iterations < 0)
+    {
+        iterations = 0;
+    }
+
+    if (durationMs < 0)
+    {
+        durationMs = 0;
+    }
+
+    if (delayMs < 0)
+    {
+        delayMs = 0;
+    }
+
+    if (startupDelayMs < 0)
+    {
+        startupDelayMs = 0;
+    }
+
+    do
+    {
+        if (startupDelayMs > 0)
+        {
+            SleepResponsive(startupDelayMs);
+        }
+
+        if (g_stopRequested.load())
+        {
+            exitCode = 0;
+            break;
+        }
+
+        if (!WriteReadyFile(readyFile, "api-exerciser"))
+        {
+            break;
+        }
+
+        std::cout
+            << ProgramName
+            << " api-exerciser-ready pid="
+            << GetCurrentProcessId()
+            << " iterations="
+            << iterations
+            << " duration_ms="
+            << durationMs
+            << " delay_ms="
+            << delayMs
+            << "\n"
+            << std::flush;
+
+        const ULONGLONG startTick = GetTickCount64();
+        while (!g_stopRequested.load())
+        {
+            if (iterations > 0 && completedIterations >= iterations)
+            {
+                break;
+            }
+
+            if (durationMs > 0 && GetTickCount64() - startTick >= static_cast<ULONGLONG>(durationMs))
+            {
+                break;
+            }
+
+            std::cout
+                << ProgramName
+                << " api-exerciser-iteration index="
+                << completedIterations
+                << "\n"
+                << std::flush;
+
+            const int runCode = RunFileIo(false, 0);
+            if (runCode != 0)
+            {
+                ++failedIterations;
+                std::cout
+                    << ProgramName
+                    << " api-exerciser-iteration-failed index="
+                    << completedIterations
+                    << " code="
+                    << runCode
+                    << "\n";
+            }
+
+            ++completedIterations;
+
+            if (delayMs > 0)
+            {
+                SleepResponsive(delayMs);
+            }
+        }
+
+        exitCode = failedIterations == 0 ? 0 : 1;
+    }
+    while (false);
+
+    std::cout
+        << ProgramName
+        << " api-exerciser-summary iterations="
+        << completedIterations
+        << " failures="
+        << failedIterations
+        << " stopped="
+        << (g_stopRequested.load() ? 1 : 0)
+        << " code="
+        << exitCode
+        << "\n";
+
+    return exitCode;
+}
+
+void PrintUsage()
+{
+    std::cout << ProgramName << " usage:\n";
+    std::cout << "  --once\n";
+    std::cout << "  --api-exerciser [--iterations N] [--duration-ms N] [--delay-ms N] [--startup-delay-ms N] [--ready-file PATH]\n";
+    std::cout << "  --attach-loop --iterations N --delay-ms N\n";
+    std::cout << "  --spawn-child-loop --children N --child-iterations N --delay-ms N [--child-path PATH]\n";
+    std::cout << "  --generated-preview-probe --probe-iterations N --delay-ms N\n";
 }
 }
 
 int wmain(int argc, wchar_t** argv)
 {
+    SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
+
+    if (HasOption(argc, argv, L"--help") || HasOption(argc, argv, L"/?"))
+    {
+        PrintUsage();
+        return 0;
+    }
+
     if (HasOption(argc, argv, L"--attach-loop"))
     {
         return RunAttachLoop(
@@ -4605,5 +4850,24 @@ int wmain(int argc, wchar_t** argv)
         return success ? 0 : 1;
     }
 
+#ifdef KNMON_API_EXERCISER_DEFAULT_LOOP
+    return RunApiExerciserLoop(
+        HasOption(argc, argv, L"--once") ? 1 : GetIntOption(argc, argv, L"--iterations", 0),
+        GetIntOption(argc, argv, L"--duration-ms", 0),
+        GetIntOption(argc, argv, L"--delay-ms", 250),
+        GetIntOption(argc, argv, L"--startup-delay-ms", 0),
+        GetStringOption(argc, argv, L"--ready-file", L""));
+#else
+    if (HasOption(argc, argv, L"--api-exerciser") || HasOption(argc, argv, L"--exercise-loop") || HasOption(argc, argv, L"--once"))
+    {
+        return RunApiExerciserLoop(
+            HasOption(argc, argv, L"--once") ? 1 : GetIntOption(argc, argv, L"--iterations", 0),
+            GetIntOption(argc, argv, L"--duration-ms", 0),
+            GetIntOption(argc, argv, L"--delay-ms", 250),
+            GetIntOption(argc, argv, L"--startup-delay-ms", 0),
+            GetStringOption(argc, argv, L"--ready-file", L""));
+    }
+
     return RunFileIo(HasOption(argc, argv, L"--slow"), GetIntOption(argc, argv, L"--startup-delay-ms", 0));
+#endif
 }

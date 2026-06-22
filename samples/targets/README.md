@@ -40,6 +40,25 @@ knmon-sample-fileio.exe --attach-loop --iterations 24 --delay-ms 150
 
 This mode starts as a normal already-running process, prints `knmon-sample-fileio attach-loop-ready pid=<pid>` with an immediate stdout flush, then performs bounded deterministic File I/O probes long enough for `attach-capture --pid` to attach and collect events.
 
+The native build also produces `knmon-api-exerciser.exe` from the same probe
+core. It is the preferred manual validation target when checking whether the UI
+can Launch or Attach to a process that calls a broad set of monitored APIs:
+
+```powershell
+knmon-api-exerciser.exe --once
+knmon-api-exerciser.exe --api-exerciser --delay-ms 250
+knmon-api-exerciser.exe --api-exerciser --duration-ms 60000 --ready-file .tmp\api-exerciser.ready.txt
+```
+
+`--once` runs one broad pass and exits. The long-running mode writes
+`knmon-api-exerciser api-exerciser-ready pid=<pid>`, then repeatedly calls the
+same file, loader/resolver, registry, token, RPC, crypto, HTTP/session,
+WinINet, Winsock, COM/OLE, PSAPI, version, shell, SetupAPI, Userenv, IP helper,
+DbgHelp, synchronization, thread, memory, file-mapping, handle, and metadata
+probe set until the user stops it or `--duration-ms` expires. This makes it
+useful for both controlled Launch monitoring and already-running Attach
+monitoring.
+
 For Phase 11B process-tree supervision smoke, the sample root supports:
 
 ```powershell

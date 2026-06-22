@@ -182,6 +182,13 @@ Launch the controlled sample target:
 build\native\Debug\knmon-native-helper.exe launch-sample
 ```
 
+Run the broad API exerciser target for UI Launch/Attach validation:
+
+```powershell
+build\native\Debug\knmon-api-exerciser.exe --once
+build\native\Debug\knmon-api-exerciser.exe --api-exerciser --delay-ms 250
+```
+
 Capture the controlled sample target:
 
 ```powershell
@@ -232,6 +239,12 @@ Run the generic profile smokes used to verify the current broad hook table:
 ```powershell
 npm run tier1-generic:smoke
 npm run tier2-generic:smoke
+```
+
+Run the broad API exerciser target smoke:
+
+```powershell
+npm run api-exerciser:smoke
 ```
 
 Run all available repository verification:

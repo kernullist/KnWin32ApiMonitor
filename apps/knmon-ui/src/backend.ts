@@ -17,6 +17,24 @@ export async function listNativeTargetProcesses(): Promise<{ targets: TargetProc
   };
 }
 
+export async function getNativeHelperArchitecture(): Promise<string> {
+  if (!isTauriRuntime()) {
+    return "unknown";
+  }
+
+  return invoke<string>("get_native_helper_architecture");
+}
+
+export async function queryTargetBinaryArchitecture(path: string): Promise<string> {
+  if (!isTauriRuntime()) {
+    return "unknown";
+  }
+
+  return invoke<string>("query_target_binary_architecture", {
+    path
+  });
+}
+
 export async function launchSampleEarlyBirdCapture(): Promise<LaunchResult> {
   if (!isTauriRuntime()) {
     throw new Error("Controlled early-bird launch requires the Tauri desktop runtime and build/native/Debug/knmon-native-helper.exe.");

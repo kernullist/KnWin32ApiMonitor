@@ -2,7 +2,7 @@
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
-use std::io::{BufRead, BufReader, Read};
+use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::{Mutex, OnceLock};
@@ -2491,6 +2491,72 @@ pub fn drain_native_trace_batches(
 
 pub fn backend_status() -> &'static str {
     "native-capture"
+}
+
+pub fn native_helper_architecture() -> &'static str {
+    if cfg!(target_pointer_width = "64") {
+        "x64"
+    } else if cfg!(target_pointer_width = "32") {
+        "x86"
+    } else {
+        "unknown"
+    }
+}
+
+pub fn query_binary_architecture(path: String) -> Result<String, String>
+{
+    let target_path = path.trim();
+    if target_path.is_empty()
+    {
+        return Err("target path is empty".to_string());
+    }
+
+    let mut file = std::fs::File::open(target_path)
+        .map_err(|error| format!("failed to open target binary: {error}"))?;
+
+    let mut dos_header = [0u8; 64];
+    file.read_exact(&mut dos_header)
+        .map_err(|error| format!("failed to read target DOS header: {error}"))?;
+
+    if dos_header[0] != b'M' || dos_header[1] != b'Z'
+    {
+        return Err("target binary is not a valid PE image: missing MZ signature".to_string());
+    }
+
+    let pe_offset = u32::from_le_bytes([
+        dos_header[0x3c],
+        dos_header[0x3d],
+        dos_header[0x3e],
+        dos_header[0x3f],
+    ]);
+    if pe_offset == 0 || pe_offset > 256 * 1024 * 1024
+    {
+        return Err("target binary has an invalid PE header offset".to_string());
+    }
+
+    file.seek(SeekFrom::Start(u64::from(pe_offset)))
+        .map_err(|error| format!("failed to seek target PE header: {error}"))?;
+
+    let mut file_header = [0u8; 6];
+    file.read_exact(&mut file_header)
+        .map_err(|error| format!("failed to read target PE header: {error}"))?;
+
+    if file_header[0] != b'P'
+        || file_header[1] != b'E'
+        || file_header[2] != 0
+        || file_header[3] != 0
+    {
+        return Err("target binary is not a valid PE image: missing PE signature".to_string());
+    }
+
+    let machine = u16::from_le_bytes([file_header[4], file_header[5]]);
+    match machine
+    {
+        0x014c => Ok("x86".to_string()),
+        0x8664 => Ok("x64".to_string()),
+        0xaa64 => Ok("arm64".to_string()),
+        _ => Ok(format!("unknown-0x{machine:04x}")),
+    }
 }
 
 pub fn native_target_processes() -> Result<Vec<TargetProcess>, String> {

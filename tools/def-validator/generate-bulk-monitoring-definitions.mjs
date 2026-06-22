@@ -12,6 +12,10 @@ import {
   stableStringify,
   writeStableJson
 } from "./definition-system.mjs";
+import {
+  isGeneratedGenericAbiSafe,
+  isRuntimeMonitorableDefinition
+} from "./runtime-monitoring-policy.mjs";
 
 const args = new Set(process.argv.slice(2));
 const write = args.has("--write");
@@ -67,11 +71,11 @@ const ntdllApis = buildNtdllDefinitions(ntdllExports, inventoryByKey, existingKe
 const newNtdllKeys = new Set(ntdllApis.map((api) => apiKey(api.module, api.name)));
 const previousBulkCount = fs.existsSync(bulkDefinitionPath) ? ((readJson(bulkDefinitionPath).apis ?? []).length) : 0;
 const previousSystemExportCount = fs.existsSync(systemExportDefinitionPath) ? ((readJson(systemExportDefinitionPath).apis ?? []).length) : 0;
-const definedCountBeforeBulk = existingRuntimeHookableCount(apiDocuments) + ntdllApis.filter(isRuntimeHookableDefinition).length;
+const definedCountBeforeBulk = existingRuntimeHookableCount(apiDocuments) + ntdllApis.filter(isRuntimeMonitorableDefinition).length;
 const bulkTarget = Math.max(previousBulkCount, targetDefinedApis - definedCountBeforeBulk);
 const bulkApis = buildBulkDefinitions(inventoryRows, existingKeys, newNtdllKeys, bulkTarget);
 const newBulkKeys = new Set(bulkApis.map((api) => apiKey(api.module, api.name)));
-const remainingAfterMetadata = targetDefinedApis - definedCountBeforeBulk - bulkApis.filter(isRuntimeHookableDefinition).length;
+const remainingAfterMetadata = targetDefinedApis - definedCountBeforeBulk - bulkApis.filter(isRuntimeMonitorableDefinition).length;
 const systemExportTarget = Math.max(previousSystemExportCount, remainingAfterMetadata);
 const systemExportApis = buildSystemExportDefinitions(systemExportTarget, existingKeys, newNtdllKeys, newBulkKeys);
 
@@ -180,7 +184,7 @@ function existingRuntimeHookableCount(documents)
 
     for (const api of item.document.apis ?? [])
     {
-      if (isRuntimeHookableDefinition(api))
+      if (isRuntimeMonitorableDefinition(api))
       {
         ++count;
       }
@@ -188,11 +192,6 @@ function existingRuntimeHookableCount(documents)
   }
 
   return count;
-}
-
-function isRuntimeHookableDefinition(api)
-{
-  return api.hookPolicy !== "unsupported" && api.hookPolicy !== "definition_only" && api.coverageStatus !== "unsupported";
 }
 
 function buildBulkDefinitions(rows, existing, ntdllKeys, needed)
@@ -725,64 +724,37 @@ function definitionFromPrototype(exported, prototype, source)
 
 function prototypeIsRuntimeSafe(prototype)
 {
-  if ((prototype.parameters ?? []).length > 16)
+  if ((prototype.parameters ?? []).some((parameter) => parameter.variadic))
   {
     return false;
   }
 
-  if (unsafeGenericAbiType(prototype.returnType))
-  {
-    return false;
-  }
-
-  for (const parameter of prototype.parameters ?? [])
-  {
-    if (parameter.variadic || unsafeGenericAbiType(parameter.type))
+  return isGeneratedGenericAbiSafe(
     {
-      return false;
-    }
-  }
-
-  return true;
+      hookPolicy: "iat",
+      coverageStatus: "defined",
+      returnType: prototype.returnType,
+      parameterCount: (prototype.parameters ?? []).length
+    },
+    prototype.parameters ?? [],
+    {
+      checkCallingConvention: false
+    });
 }
 
 function inventoryEntryIsRuntimeSafe(entry)
 {
-  if ((entry.parameters ?? []).length > 16)
-  {
-    return false;
-  }
-
-  if (unsafeGenericAbiType(entry.returnType))
-  {
-    return false;
-  }
-
-  for (const parameter of entry.parameters ?? [])
-  {
-    if (unsafeGenericAbiType(parameter.type))
+  return isGeneratedGenericAbiSafe(
     {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function unsafeGenericAbiType(type)
-{
-  const text = String(type ?? "").toLowerCase();
-  if (pointerLikeType(text))
-  {
-    return false;
-  }
-
-  return /\b(float|double|single)\b/.test(text) || (text.startsWith("struct ") && !text.includes("*"));
-}
-
-function pointerLikeType(text)
-{
-  return text.includes("*") || text.includes("&") || /\b(lp|p)[a-z0-9_]+/.test(text);
+      hookPolicy: "iat",
+      coverageStatus: "defined",
+      returnType: entry.returnType,
+      parameterCount: (entry.parameters ?? []).length
+    },
+    entry.parameters ?? [],
+    {
+      checkCallingConvention: false
+    });
 }
 
 function parameterFromPrototype(parameter, index)

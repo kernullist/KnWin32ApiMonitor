@@ -4,6 +4,9 @@ import {
   buildGeneratedDecoderTables,
   validateRepositoryDefinitions
 } from "./definition-system.mjs";
+import {
+  isRuntimeMonitorableDefinition
+} from "./runtime-monitoring-policy.mjs";
 
 const args = new Set(process.argv.slice(2));
 const maxTransportArguments = 16;
@@ -15,12 +18,6 @@ function lower(value) {
 
 function contains(value, token) {
   return value.includes(token);
-}
-
-function isRuntimeHookable(api) {
-  return api.hookPolicy !== "definition_only" &&
-    api.hookPolicy !== "unsupported" &&
-    api.coverageStatus !== "unsupported";
 }
 
 function typeLooksBool(type) {
@@ -1084,7 +1081,7 @@ if (decoder !== null) {
   const pointerValueOnlyParameters = [];
 
   for (const api of decoder.apis) {
-    if (!isRuntimeHookable(api)) {
+    if (!isRuntimeMonitorableDefinition(api)) {
       continue;
     }
 

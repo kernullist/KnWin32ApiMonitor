@@ -15,7 +15,6 @@ import {
   HardDrive,
   Layers,
   Play,
-  Plus,
   RefreshCcw,
   Rocket,
   Search,
@@ -33,10 +32,12 @@ import {
   cancelNativeOperation,
   catalogNativeSessions,
   drainNativeTraceBatches,
+  getNativeHelperArchitecture,
   listDaemonSessions,
   listNativeSessions,
   listNativeTargetProcesses,
   listNativeOperations,
+  queryTargetBinaryArchitecture,
   queryNativeSessionCatalog,
   queryNativeSessionCatalogIndex,
   queryNativeTraceIndex,
@@ -58,11 +59,8 @@ import {
   buildTraceIssueGroups,
   compileTraceQuery,
   matchesFreeTextFilter,
-  operatorNeedsValue,
-  traceQueryFieldOptions,
-  traceQueryOperatorOptions
 } from "./traceQuery";
-import type { TraceIssueGroup, TraceQueryClause, TraceQueryField, TraceQueryMatchMode, TraceQueryOperator } from "./traceQuery";
+import type { TraceIssueGroup, TraceQueryClause, TraceQueryMatchMode } from "./traceQuery";
 import { buildTraceHighlightState } from "./traceHighlights";
 import type { TraceHighlightSummary } from "./traceHighlights";
 import { traceDisplayEventLimit } from "./traceIngestConfig";
@@ -73,6 +71,7 @@ import { computeVirtualTraceWindow } from "./virtualTrace";
 type LeftTab = "targets" | "apis" | "profiles";
 type TraceMode = "flat" | "call-tree" | "errors" | "threads" | "timeline";
 type ChildPolicy = ProcessTreeResult["childPolicy"];
+type NativeArchitecture = "x64" | "x86" | "unknown";
 
 const inspectorTabs: Array<{ id: InspectorTab; label: string }> = [
   { id: "parameters", label: "Parameters" },
@@ -427,7 +426,69 @@ function resolverPointerCountSummary(result: CaptureResult | null): string {
   return `resolver=${result.resolverPointerCandidates ?? 0}/${result.resolverPointerUnsupported ?? 0}`;
 }
 
-function targetEligibilityReason(target: TargetProcess | null): string | null {
+function includesNormalized(value: string | number | undefined | null, normalizedNeedle: string): boolean {
+  if (value === undefined || value === null) {
+    return false;
+  }
+
+  return String(value).toLowerCase().includes(normalizedNeedle);
+}
+
+function argumentMatchesQuickFilter(event: TraceEvent, normalizedNeedle: string): boolean {
+  return event.arguments.some((argument) => {
+    return [
+      argument.type,
+      argument.name,
+      argument.preCallValue,
+      argument.postCallValue,
+      argument.rawValue,
+      argument.decodedValue,
+      argument.decodeStatus
+    ].some((value) => includesNormalized(value, normalizedNeedle));
+  });
+}
+
+function matchesQuickTraceFilters(event: TraceEvent, apiFilter: string, moduleFilter: string, parameterFilter: string): boolean {
+  const normalizedApi = apiFilter.trim().toLowerCase();
+  const normalizedModule = moduleFilter.trim().toLowerCase();
+  const normalizedParameter = parameterFilter.trim().toLowerCase();
+
+  if (normalizedApi && !includesNormalized(event.api, normalizedApi)) {
+    return false;
+  }
+
+  if (normalizedModule && !includesNormalized(event.module, normalizedModule)) {
+    return false;
+  }
+
+  if (normalizedParameter && !argumentMatchesQuickFilter(event, normalizedParameter)) {
+    return false;
+  }
+
+  return true;
+}
+
+function normalizeNativeArchitecture(value: string): NativeArchitecture {
+  return value === "x64" || value === "x86" ? value : "unknown";
+}
+
+function toolLabelForArchitecture(architecture: NativeArchitecture): string {
+  if (architecture === "x86") {
+    return "Win32/x86 KN Win32 API Monitor";
+  }
+
+  if (architecture === "x64") {
+    return "x64 KN Win32 API Monitor";
+  }
+
+  return "matching-bitness KN Win32 API Monitor";
+}
+
+function architectureMismatchMessage(targetArchitecture: NativeArchitecture, helperArchitecture: NativeArchitecture): string {
+  return `Target architecture ${targetArchitecture} does not match this ${helperArchitecture} build. Run the ${toolLabelForArchitecture(targetArchitecture)} tool to monitor this target.`;
+}
+
+function targetEligibilityReason(target: TargetProcess | null, helperArchitecture: NativeArchitecture): string | null {
   if (!target) {
     return "Select a target row.";
   }
@@ -438,6 +499,11 @@ function targetEligibilityReason(target: TargetProcess | null): string | null {
 
   if (target.architecture !== "x64" && target.architecture !== "x86") {
     return `Architecture ${target.architecture} is unsupported.`;
+  }
+
+  if (helperArchitecture !== "unknown" && target.architecture !== helperArchitecture) {
+    const targetArchitecture = normalizeNativeArchitecture(target.architecture);
+    return architectureMismatchMessage(targetArchitecture, helperArchitecture);
   }
 
   return null;
@@ -528,9 +594,13 @@ function App() {
   const [targets, setTargets] = useState<TargetProcess[]>([]);
   const [selectedTargetPid, setSelectedTargetPid] = useState<number | null>(null);
   const [backendMode, setBackendMode] = useState<BackendMode>("native-enum");
+  const [nativeHelperArchitecture, setNativeHelperArchitecture] = useState<NativeArchitecture>("unknown");
   const [events, setEvents] = useState<TraceEvent[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<number>(0);
   const [filter, setFilter] = useState("");
+  const [quickApiFilter, setQuickApiFilter] = useState("");
+  const [quickModuleFilter, setQuickModuleFilter] = useState("");
+  const [quickParameterFilter, setQuickParameterFilter] = useState("");
   const [traceQueryMatchMode, setTraceQueryMatchMode] = useState<TraceQueryMatchMode>("all");
   const [traceQueryClauses, setTraceQueryClauses] = useState<TraceQueryClause[]>([]);
   const [durationThresholdUs, setDurationThresholdUs] = useState(100);
@@ -592,6 +662,32 @@ function App() {
   useEffect(() => {
     traceAutoScrollRef.current = traceAutoScroll;
   }, [traceAutoScroll]);
+
+  useEffect(() => {
+    let active = true;
+
+    getNativeHelperArchitecture()
+      .then((architecture) => {
+        if (!active) {
+          return;
+        }
+
+        setNativeHelperArchitecture(normalizeNativeArchitecture(architecture));
+      })
+      .catch((error) => {
+        if (!active) {
+          return;
+        }
+
+        const message = error instanceof Error ? error.message : String(error);
+        setNativeHelperArchitecture("unknown");
+        appendOutput([makeAuditEvent("native_architecture_unknown", "get_native_helper_architecture", message)]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     selectedEventIdRef.current = selectedEventId;
@@ -797,31 +893,17 @@ function App() {
     };
   }
 
-  function handleAddTraceQueryClause() {
-    setTraceQueryClauses((current) => [...current, createTraceQueryClause()]);
+  function clearQuickTraceFilters() {
+    setQuickApiFilter("");
+    setQuickModuleFilter("");
+    setQuickParameterFilter("");
   }
 
-  function handleUpdateTraceQueryClause(id: string, patch: Partial<Omit<TraceQueryClause, "id">>) {
-    setTraceQueryClauses((current) => current.map((clause) => {
-      if (clause.id !== id) {
-        return clause;
-      }
-
-      return {
-        ...clause,
-        ...patch
-      };
-    }));
-  }
-
-  function handleRemoveTraceQueryClause(id: string) {
-    setTraceQueryClauses((current) => current.filter((clause) => clause.id !== id));
-  }
-
-  function handleClearTraceQuery() {
+  function handleClearTraceFilters() {
     setTraceQueryClauses([]);
     setFilter("");
-    appendOutput([makeAuditEvent("trace_query_cleared", "trace_query", "Trace query and display filter cleared.")]);
+    clearQuickTraceFilters();
+    appendOutput([makeAuditEvent("trace_filters_cleared", "trace_filter", "Current trace filters cleared.")]);
   }
 
   function handleApplyIssueGroup(group: TraceIssueGroup) {
@@ -829,6 +911,7 @@ function App() {
     setTraceQueryMatchMode("all");
     setTraceQueryClauses(nextClauses);
     setFilter("");
+    clearQuickTraceFilters();
     setSelectedEventId(group.eventIds[0] ?? 0);
     setInspectorTab(group.kind === "error" || group.kind === "module_api" ? "return" : "parameters");
     appendOutput([makeAuditEvent("trace_issue_filter_applied", "trace_issue_view", `${group.kind}; ${group.label}; events=${group.count}`)]);
@@ -839,6 +922,7 @@ function App() {
     setTraceQueryMatchMode("all");
     setTraceQueryClauses(nextClauses);
     setFilter("");
+    clearQuickTraceFilters();
     setSelectedEventId(group.eventIds[0] ?? 0);
     setInspectorTab(group.errorCount > 0 ? "return" : "parameters");
     appendOutput([makeAuditEvent("trace_thread_filter_applied", "trace_thread_view", `${group.threadLabel}; events=${group.eventCount}; spanMs=${group.spanMs}`)]);
@@ -849,6 +933,7 @@ function App() {
     setTraceQueryMatchMode("all");
     setTraceQueryClauses(nextClauses);
     setFilter("");
+    clearQuickTraceFilters();
     setSelectedEventId(bucket.eventIds[0] ?? 0);
     setInspectorTab(bucket.errorCount > 0 ? "return" : "parameters");
     appendOutput([makeAuditEvent("trace_timeline_filter_applied", "trace_timeline_view", `${formatElapsedMs(bucket.startRelativeTimeMs)}-${formatElapsedMs(bucket.endRelativeTimeMs)}; events=${bucket.eventCount}`)]);
@@ -864,6 +949,7 @@ function App() {
       setTraceQueryMatchMode(summary.matchMode);
       setTraceQueryClauses(nextClauses);
       setFilter("");
+      clearQuickTraceFilters();
     }
 
     setSelectedEventId(summary.eventIds[0] ?? 0);
@@ -1009,10 +1095,6 @@ function App() {
     () => compileTraceQuery(traceQueryClauses, traceQueryMatchMode),
     [traceQueryClauses, traceQueryMatchMode]
   );
-  const invalidTraceQueryClauseIds = useMemo(
-    () => new Set(compiledTraceQuery.invalidClauses.map((clause) => clause.id)),
-    [compiledTraceQuery]
-  );
   const issueGroups = useMemo(
     () => buildTraceIssueGroups(events, durationThresholdUs),
     [events, durationThresholdUs]
@@ -1047,9 +1129,11 @@ function App() {
   );
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
-      return matchesFreeTextFilter(event, filter) && compiledTraceQuery.matches(event);
+      return matchesFreeTextFilter(event, filter)
+        && matchesQuickTraceFilters(event, quickApiFilter, quickModuleFilter, quickParameterFilter)
+        && compiledTraceQuery.matches(event);
     });
-  }, [events, filter, compiledTraceQuery]);
+  }, [events, filter, quickApiFilter, quickModuleFilter, quickParameterFilter, compiledTraceQuery]);
 
   const selectedTraceIndex = useMemo(
     () => filteredEvents.findIndex((event) => event.eventId === selectedEventId),
@@ -1082,7 +1166,10 @@ function App() {
     ? "all current hooks"
     : `${selectedApiList.length}/${apiLeafKeys.length} APIs`;
   const apiSelectionBlocked = selectedApiList.length === 0;
-  const targetBlockReason = targetEligibilityReason(selectedTarget);
+  const activeCurrentLogFilterCount = [filter, quickApiFilter, quickModuleFilter, quickParameterFilter]
+    .filter((value) => value.trim().length > 0)
+    .length;
+  const targetBlockReason = targetEligibilityReason(selectedTarget, nativeHelperArchitecture);
   const activeNativeOperation = nativeOperations.find(isNativeOperationActive) ?? null;
   const activeNativeSession = nativeSessions.find(isNativeSessionActive) ?? null;
   const currentLaunchSession = launchSession
@@ -1281,7 +1368,7 @@ function App() {
     }
 
     setTraceScrollTop(0);
-  }, [filter, traceMode, compiledTraceQuery]);
+  }, [filter, quickApiFilter, quickModuleFilter, quickParameterFilter, traceMode, compiledTraceQuery]);
 
   useEffect(() => {
     const element = traceScrollRef.current;
@@ -1383,6 +1470,22 @@ function App() {
     setProcessExitNotice(null);
 
     try {
+      const targetArchitectureValue = await queryTargetBinaryArchitecture(targetPath);
+      const targetArchitecture = normalizeNativeArchitecture(targetArchitectureValue);
+      if (nativeHelperArchitecture !== "unknown" && targetArchitecture !== "unknown" && targetArchitecture !== nativeHelperArchitecture) {
+        const message = architectureMismatchMessage(targetArchitecture, nativeHelperArchitecture);
+        appendOutput([makeAuditEvent("launch_blocked", "query_target_binary_architecture", message)]);
+        setInspectorTab("output");
+        return;
+      }
+
+      if (targetArchitecture === "unknown" && targetArchitectureValue !== "unknown") {
+        const message = `Target architecture ${targetArchitectureValue} is unsupported. Run a KN Win32 API Monitor build that matches a supported x86 or x64 target.`;
+        appendOutput([makeAuditEvent("launch_blocked", "query_target_binary_architecture", message)]);
+        setInspectorTab("output");
+        return;
+      }
+
       appendOutput([makeAuditEvent("launch_requested", "start_launch_monitor_session", `Early-bird launch monitor requested for ${targetPath}; scope=${apiSelectionSummary}.`)]);
       const session = await startLaunchMonitorSession(targetPath, workingDirectory, launchArguments.trim(), apiSelectionRequest);
       terminalDrainCompleted.current.delete(session.sessionId);
@@ -2124,6 +2227,8 @@ function App() {
                   <span>{selectedTarget?.imageName ?? "select a row"}</span>
                   <label>Architecture</label>
                   <span>{selectedTarget?.architecture ?? "unknown"}</span>
+                  <label>Tool arch</label>
+                  <span>{nativeHelperArchitecture}</span>
                   <label>Status</label>
                   <span>{selectedTarget?.status ?? "not selected"}</span>
                   <label>Eligibility</label>
@@ -2708,78 +2813,60 @@ function App() {
               <span>{totalTraceEventCount} total</span>
               {trimmedTraceEventCount > 0 ? <span>last {events.length} shown</span> : null}
               <span>DOM {visibleTraceEvents.length}</span>
-              {compiledTraceQuery.activeClauseCount > 0 ? <span>{compiledTraceQuery.activeClauseCount} query</span> : null}
-              {compiledTraceQuery.invalidClauses.length > 0 ? <span>{compiledTraceQuery.invalidClauses.length} invalid</span> : null}
+              {activeCurrentLogFilterCount > 0 ? <span>{activeCurrentLogFilterCount} filters</span> : null}
+              {compiledTraceQuery.activeClauseCount > 0 ? <span>{compiledTraceQuery.activeClauseCount} view rules</span> : null}
+              {compiledTraceQuery.invalidClauses.length > 0 ? <span>{compiledTraceQuery.invalidClauses.length} invalid rules</span> : null}
               {traceHighlightState.eventHighlights.length > 0 ? <span>{traceHighlightState.eventHighlights.length} highlighted</span> : null}
               {replaySource ? <span title={replaySource.path}>Replay {replaySource.label} / {replaySource.validationStatus}</span> : null}
             </div>
           </div>
 
-          <div className="query-panel">
+          <div className="query-panel current-filter-panel">
             <div className="query-header">
               <div className="query-title">
                 <Filter size={14} />
-                <strong>Trace Query</strong>
-                <span>{traceQueryMatchMode}; {compiledTraceQuery.activeClauseCount} active; {compiledTraceQuery.invalidClauses.length} invalid</span>
+                <strong>Current Log Filters</strong>
+                <span>{activeCurrentLogFilterCount} filters; {filteredEvents.length}/{events.length} rows</span>
               </div>
               <div className="query-actions">
-                <div className="mini-segmented" aria-label="Trace query match mode">
-                  <button type="button" className={traceQueryMatchMode === "all" ? "active" : ""} onClick={() => setTraceQueryMatchMode("all")}>All</button>
-                  <button type="button" className={traceQueryMatchMode === "any" ? "active" : ""} onClick={() => setTraceQueryMatchMode("any")}>Any</button>
-                </div>
-                <button type="button" className="tool-button" onClick={handleAddTraceQueryClause}>
-                  <Plus size={13} />
-                  <span>Add</span>
-                </button>
-                <button type="button" className="tool-button" onClick={handleClearTraceQuery}>
+                <button type="button" className="tool-button" onClick={handleClearTraceFilters}>
                   <Trash2 size={13} />
                   <span>Clear</span>
                 </button>
               </div>
             </div>
-            {traceQueryClauses.length > 0 ? (
-              <div className="query-clause-list">
-                {traceQueryClauses.map((clause, index) => {
-                  const invalidReason = compiledTraceQuery.invalidClauses.find((invalidClause) => invalidClause.id === clause.id)?.reason ?? "";
-                  const needsValue = operatorNeedsValue(clause.operator);
-
-                  return (
-                    <div className={invalidTraceQueryClauseIds.has(clause.id) ? "query-clause-row invalid" : "query-clause-row"} key={clause.id}>
-                      <span>{index + 1}</span>
-                      <select
-                        value={clause.field}
-                        onChange={(event) => handleUpdateTraceQueryClause(clause.id, { field: event.target.value as TraceQueryField })}
-                      >
-                        {traceQueryFieldOptions.map((option) => (
-                          <option value={option.id} key={option.id}>{option.label}</option>
-                        ))}
-                      </select>
-                      <select
-                        value={clause.operator}
-                        onChange={(event) => handleUpdateTraceQueryClause(clause.id, { operator: event.target.value as TraceQueryOperator })}
-                      >
-                        {traceQueryOperatorOptions.map((option) => (
-                          <option value={option.id} key={option.id}>{option.label}</option>
-                        ))}
-                      </select>
-                      <input
-                        type={clause.field === "pid" || clause.field === "tid" || clause.field === "relativeTimeMs" || clause.field === "durationUs" ? "number" : "text"}
-                        value={clause.value}
-                        disabled={!needsValue}
-                        onChange={(event) => handleUpdateTraceQueryClause(clause.id, { value: event.target.value })}
-                        placeholder={needsValue ? "value" : ""}
-                      />
-                      <small>{invalidReason ? `${invalidReason}; ignored` : "active"}</small>
-                      <button type="button" className="tool-button danger" onClick={() => handleRemoveTraceQueryClause(clause.id)}>
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  );
-                })}
+            <div className="quick-filter-grid">
+              <label htmlFor="quick-api-filter">API</label>
+              <input
+                id="quick-api-filter"
+                type="search"
+                value={quickApiFilter}
+                onChange={(event) => setQuickApiFilter(event.target.value)}
+                placeholder="CreateFileW"
+              />
+              <label htmlFor="quick-module-filter">DLL</label>
+              <input
+                id="quick-module-filter"
+                type="search"
+                value={quickModuleFilter}
+                onChange={(event) => setQuickModuleFilter(event.target.value)}
+                placeholder="kernel32.dll"
+              />
+              <label htmlFor="quick-parameter-filter">Parameter</label>
+              <input
+                id="quick-parameter-filter"
+                type="search"
+                value={quickParameterFilter}
+                onChange={(event) => setQuickParameterFilter(event.target.value)}
+                placeholder="lpFileName or C:\\Temp"
+              />
+            </div>
+            {compiledTraceQuery.activeClauseCount > 0 || compiledTraceQuery.invalidClauses.length > 0 ? (
+              <div className="view-rule-strip">
+                <Filter size={13} />
+                <span>{traceQueryMatchMode}; {compiledTraceQuery.activeClauseCount} view rules; {compiledTraceQuery.invalidClauses.length} invalid</span>
               </div>
-            ) : (
-              <div className="query-empty">No structured clauses.</div>
-            )}
+            ) : null}
             <div className="highlight-panel">
               <div className="highlight-toolbar">
                 <div className="query-title">
@@ -3019,7 +3106,7 @@ function App() {
                 })}
               </div>
             </div>
-            {filteredEvents.length === 0 ? <div className="trace-empty">No trace events match the current filter or query.</div> : null}
+            {filteredEvents.length === 0 ? <div className="trace-empty">No trace events match the current filters.</div> : null}
           </div>
 
           <div
@@ -3146,7 +3233,8 @@ function App() {
                     <div className="output-log">
                       <div><Braces size={14} /> schemaVersion={selectedEvent?.schemaVersion ?? "0.1.0"}</div>
                       <div><Filter size={14} /> backend={backendMode}; filter="{filter || "*"}"; mode={traceMode}</div>
-                      <div><Filter size={14} /> queryMode={traceQueryMatchMode}; activeClauses={compiledTraceQuery.activeClauseCount}; invalidClauses={compiledTraceQuery.invalidClauses.length}; filteredRows={filteredEvents.length}</div>
+                      <div><Filter size={14} /> api="{quickApiFilter || "*"}"; dll="{quickModuleFilter || "*"}"; parameter="{quickParameterFilter || "*"}"; filteredRows={filteredEvents.length}</div>
+                      <div><Filter size={14} /> viewRules={traceQueryMatchMode}; active={compiledTraceQuery.activeClauseCount}; invalid={compiledTraceQuery.invalidClauses.length}</div>
                       <div><Activity size={14} /> totalCaptured={totalTraceEventCount}; displayedRows={events.length}; trimmedRows={trimmedTraceEventCount}; displayLimit={traceDisplayEventLimit}</div>
                       <div><CircleDot size={14} /> highlighting={highlightingEnabled ? "enabled" : "disabled"}; highlightedRows={traceHighlightState.eventHighlights.length}</div>
                       <div><Database size={14} /> sessionBytes={formatBytes(sessionBytes)}; droppedEvents={droppedCount}</div>

@@ -330,6 +330,147 @@ std::string QueryProcessImagePath(DWORD processId)
     return result;
 }
 
+void AppendUniquePath(std::vector<std::wstring>* paths, const std::wstring& path)
+{
+    if (paths == nullptr || path.empty())
+    {
+        return;
+    }
+
+    const auto existing = std::find_if(
+        paths->begin(),
+        paths->end(),
+        [&](const std::wstring& value)
+        {
+            return _wcsicmp(value.c_str(), path.c_str()) == 0;
+        });
+    if (existing == paths->end())
+    {
+        paths->push_back(path);
+    }
+}
+
+void AppendDirectoryCandidate(std::vector<std::wstring>* paths, UINT(WINAPI* query)(LPWSTR, UINT))
+{
+    if (paths == nullptr || query == nullptr)
+    {
+        return;
+    }
+
+    wchar_t directory[MAX_PATH] = {};
+    const DWORD length = query(directory, static_cast<UINT>(std::size(directory)));
+    if (length == 0 || length >= std::size(directory))
+    {
+        return;
+    }
+
+    AppendUniquePath(paths, directory);
+}
+
+UINT WINAPI GetNativeSystemDirectoryCompat(LPWSTR buffer, UINT size)
+{
+    using GetNativeSystemDirectoryWFn = UINT(WINAPI*)(LPWSTR, UINT);
+
+    HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
+    if (kernel32 != nullptr)
+    {
+        const auto query = reinterpret_cast<GetNativeSystemDirectoryWFn>(
+            GetProcAddress(kernel32, "GetNativeSystemDirectoryW"));
+        if (query != nullptr)
+        {
+            return query(buffer, size);
+        }
+    }
+
+    return GetSystemDirectoryW(buffer, size);
+}
+
+bool FileExists(const std::wstring& path)
+{
+    const DWORD attributes = GetFileAttributesW(path.c_str());
+    return attributes != INVALID_FILE_ATTRIBUTES &&
+        (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
+}
+
+bool IsWellKnownWindowsProcessImageName(const std::wstring& imageName)
+{
+    static constexpr const wchar_t* Names[] =
+    {
+        L"csrss.exe",
+        L"dwm.exe",
+        L"fontdrvhost.exe",
+        L"lsass.exe",
+        L"services.exe",
+        L"smss.exe",
+        L"spoolsv.exe",
+        L"svchost.exe",
+        L"wininit.exe",
+        L"winlogon.exe"
+    };
+
+    for (const wchar_t* name : Names)
+    {
+        if (_wcsicmp(imageName.c_str(), name) == 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+std::string QueryKnownWindowsImagePath(const wchar_t* imageName)
+{
+    std::string result;
+
+    do
+    {
+        if (imageName == nullptr || imageName[0] == L'\0')
+        {
+            break;
+        }
+
+        const std::wstring leafName(imageName);
+        if (!IsWellKnownWindowsProcessImageName(leafName))
+        {
+            break;
+        }
+
+        if (
+            leafName.find(L'\\') != std::wstring::npos ||
+            leafName.find(L'/') != std::wstring::npos ||
+            leafName.find(L':') != std::wstring::npos)
+        {
+            break;
+        }
+
+        std::vector<std::wstring> directories;
+        AppendDirectoryCandidate(&directories, GetNativeSystemDirectoryCompat);
+        AppendDirectoryCandidate(&directories, GetSystemDirectoryW);
+
+        wchar_t windowsDirectory[MAX_PATH] = {};
+        const UINT windowsLength = GetWindowsDirectoryW(windowsDirectory, static_cast<UINT>(std::size(windowsDirectory)));
+        if (windowsLength > 0 && windowsLength < std::size(windowsDirectory))
+        {
+            AppendUniquePath(&directories, windowsDirectory);
+            AppendUniquePath(&directories, std::wstring(windowsDirectory) + L"\\SysWOW64");
+        }
+
+        for (const std::wstring& directory : directories)
+        {
+            const std::wstring candidate = directory + L"\\" + leafName;
+            if (FileExists(candidate))
+            {
+                result = WideToUtf8(candidate.c_str());
+                break;
+            }
+        }
+    }
+    while (false);
+
+    return result;
+}
+
 std::string QueryProcessArchitecture(DWORD processId)
 {
     std::string result = "unknown";
@@ -398,6 +539,25 @@ std::string ArchitectureName(KnMonAgentArchitecture architecture)
     }
 
     return name;
+}
+
+std::string MatchingToolGuidance(KnMonAgentArchitecture targetArchitecture)
+{
+    std::string guidance = " Run the KN Win32 API Monitor build that matches the target bitness.";
+
+    switch (targetArchitecture)
+    {
+    case KnMonAgentArchitecture::X86:
+        guidance = " Run the Win32/x86 KN Win32 API Monitor build for x86 targets.";
+        break;
+    case KnMonAgentArchitecture::X64:
+        guidance = " Run the x64 KN Win32 API Monitor build for x64 targets.";
+        break;
+    default:
+        break;
+    }
+
+    return guidance;
 }
 
 KnMonAgentArchitecture RequestedArchitectureOrNative(KnMonAgentArchitecture requested)
@@ -1016,7 +1176,7 @@ AttachPreflightResult RunAttachPreflight(
 
         if (requestedArchitecture != helperArchitecture)
         {
-            const std::string message = "Requested architecture " + ArchitectureName(requestedArchitecture) + " does not match helper architecture " + ArchitectureName(helperArchitecture) + ". Cross-bitness attach is not supported.";
+            const std::string message = "Requested architecture " + ArchitectureName(requestedArchitecture) + " does not match helper architecture " + ArchitectureName(helperArchitecture) + ". Cross-bitness attach is not supported." + MatchingToolGuidance(requestedArchitecture);
             SetAttachPreflightError(result, ERROR_NOT_SUPPORTED, "helper_target_mismatch", message);
             break;
         }
@@ -1068,7 +1228,7 @@ AttachPreflightResult RunAttachPreflight(
 
         if (targetArchitecture.Architecture != requestedArchitecture)
         {
-            const std::string message = "Target architecture " + ArchitectureName(targetArchitecture.Architecture) + " does not match helper architecture " + ArchitectureName(requestedArchitecture) + ". Cross-bitness attach is not supported.";
+            const std::string message = "Target architecture " + ArchitectureName(targetArchitecture.Architecture) + " does not match helper architecture " + ArchitectureName(requestedArchitecture) + ". Cross-bitness attach is not supported." + MatchingToolGuidance(targetArchitecture.Architecture);
             SetAttachPreflightError(result, ERROR_NOT_SUPPORTED, "helper_target_mismatch", message);
             break;
         }
@@ -1620,7 +1780,7 @@ KnMonChildPolicyDecision EvaluateChildPolicy(
             node.EligibilityStatus = ProcessEligibilityName(KnMonProcessEligibility::HelperTargetMismatch);
             decision.EligibilityStatus = node.EligibilityStatus;
             decision.Decision = ProcessPolicyDecisionName(KnMonProcessPolicyDecision::AttachSkipped);
-            decision.Reason = "Child architecture does not match helper architecture.";
+            decision.Reason = "Child architecture " + ArchitectureName(architecture.Architecture) + " does not match helper architecture " + ArchitectureName(helperArchitecture) + "." + MatchingToolGuidance(architecture.Architecture);
             break;
         }
 
@@ -2396,7 +2556,7 @@ bool RunSameBitnessPreflight(
 
         if (requestedArchitecture != helperArchitecture)
         {
-            const std::string message = "Requested architecture " + ArchitectureName(requestedArchitecture) + " does not match helper architecture " + ArchitectureName(helperArchitecture) + ". Cross-bitness injection is not supported.";
+            const std::string message = "Requested architecture " + ArchitectureName(requestedArchitecture) + " does not match helper architecture " + ArchitectureName(helperArchitecture) + ". Cross-bitness injection is not supported." + MatchingToolGuidance(requestedArchitecture);
             SetPreflightError(result, ERROR_NOT_SUPPORTED, "unsupported_architecture", message);
             break;
         }
@@ -2417,7 +2577,7 @@ bool RunSameBitnessPreflight(
 
         if (targetArchitecture.Architecture != requestedArchitecture)
         {
-            const std::string message = "Target architecture " + ArchitectureName(targetArchitecture.Architecture) + " does not match requested same-bitness architecture " + ArchitectureName(requestedArchitecture) + ".";
+            const std::string message = "Target architecture " + ArchitectureName(targetArchitecture.Architecture) + " does not match requested same-bitness architecture " + ArchitectureName(requestedArchitecture) + "." + MatchingToolGuidance(targetArchitecture.Architecture);
             SetPreflightError(result, ERROR_NOT_SUPPORTED, "unsupported_architecture", message);
             break;
         }
@@ -7349,9 +7509,10 @@ std::vector<KnMonTargetProcess> Controller::EnumerateTargets(KnMonError* error) 
             target.ParentProcessId = entry.th32ParentProcessID;
             target.HasParentProcessId = true;
             target.ImageName = WideToUtf8(entry.szExeFile);
-            target.ImagePath = QueryProcessImagePath(entry.th32ProcessID);
+            const std::string directImagePath = QueryProcessImagePath(entry.th32ProcessID);
+            target.ImagePath = directImagePath.empty() ? QueryKnownWindowsImagePath(entry.szExeFile) : directImagePath;
             target.Architecture = QueryProcessArchitecture(entry.th32ProcessID);
-            target.Status = target.ImagePath.empty() ? "limited" : "available";
+            target.Status = directImagePath.empty() ? "limited" : "available";
 
             if (target.ProcessId == 0 || target.ProcessId == 4)
             {
@@ -10131,7 +10292,8 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
 
         if (rootArchitecture.Architecture != requestedArchitecture)
         {
-            SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "helper_target_mismatch", "Root architecture does not match helper architecture.");
+            const std::string message = "Root architecture " + ArchitectureName(rootArchitecture.Architecture) + " does not match helper architecture " + ArchitectureName(requestedArchitecture) + "." + MatchingToolGuidance(rootArchitecture.Architecture);
+            SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "helper_target_mismatch", message);
             fatalError = true;
             break;
         }

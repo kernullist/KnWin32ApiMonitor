@@ -3,6 +3,10 @@ import path from "node:path";
 import process from "node:process";
 import Ajv2020 from "ajv/dist/2020.js";
 
+import {
+  isRuntimeMonitorableDefinition
+} from "./runtime-monitoring-policy.mjs";
+
 export const repoRoot = process.cwd();
 
 export const apiDefinitionSchemaPath = path.join(repoRoot, "contracts", "api-definition.schema.json");
@@ -1398,7 +1402,7 @@ export function buildCoverageReport(documents, metadataIndex) {
       byFamily,
       byRisk,
       byHookPolicy,
-      runtimeHookableApis: apis.filter((api) => api.hookPolicy !== "definition_only" && api.hookPolicy !== "unsupported" && api.coverageStatus !== "unsupported").length,
+      runtimeHookableApis: apis.filter(isRuntimeMonitorableDefinition).length,
       byCoverageStatus: statusCounts,
       byDecodeQuality
     },

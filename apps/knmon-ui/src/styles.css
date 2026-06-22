@@ -1186,6 +1186,61 @@ button:disabled {
   gap: 5px;
 }
 
+.current-filter-panel {
+  gap: 7px;
+}
+
+.quick-filter-grid {
+  display: grid;
+  grid-template-columns: auto minmax(120px, 1fr) auto minmax(120px, 1fr) auto minmax(170px, 1.2fr);
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.quick-filter-grid label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.quick-filter-grid input {
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  color: var(--text);
+  background: var(--control);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  outline: 0;
+}
+
+.quick-filter-grid input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+.view-rule-strip {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+  padding: 5px 7px;
+  color: var(--muted);
+  background: var(--control);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.view-rule-strip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .mini-segmented {
   display: inline-grid;
   grid-template-columns: 1fr 1fr;
@@ -3208,6 +3263,10 @@ code {
 
   .filter-box input {
     min-width: 0;
+  }
+
+  .quick-filter-grid {
+    grid-template-columns: auto minmax(0, 1fr);
   }
 
   .mode-toggle,

@@ -2,6 +2,15 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
+import {
+  generatedErrorSource,
+  generatedGenericAbiSafetyReasons,
+  generatedReturnFormat,
+  isRuntimeMonitorableDefinition,
+  runtimeCoverageStatus,
+  runtimeHookPolicy
+} from "./runtime-monitoring-policy.mjs";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, "..", "..");
@@ -49,160 +58,9 @@ function manualHookKeys()
   return keys;
 }
 
-function unsafeScalarType(type)
-{
-  const text = String(type ?? "").toLowerCase();
-  if (pointerLikeType(text))
-  {
-    return false;
-  }
-
-  if (/\b(float|double|single)\b/.test(text))
-  {
-    return true;
-  }
-
-  if (text.startsWith("struct ") && !text.includes("*"))
-  {
-    return true;
-  }
-
-  return false;
-}
-
-function pointerLikeType(text)
-{
-  return text.includes("*") || text.includes("&") || /\b(lp|p)[a-z0-9_]+/.test(text);
-}
-
-function returnFormat(returnType)
-{
-  const text = String(returnType ?? "").toLowerCase();
-  if (text === "" || text === "void")
-  {
-    return "Void";
-  }
-
-  if (text === "bool" || text === "boolean" || text === "bool" || text === "winbool")
-  {
-    return "Bool";
-  }
-
-  if (
-    text.includes("*") ||
-    text.includes("handle") ||
-    text === "hmodule" ||
-    text === "hwnd" ||
-    text === "hkey" ||
-    text === "hmenu" ||
-    text === "hcursor" ||
-    text === "hicon" ||
-    text === "hdc" ||
-    text === "sc_handle" ||
-    text === "socket" ||
-    text === "bstr" ||
-    text === "hstring" ||
-    text.startsWith("p"))
-  {
-    return "Pointer";
-  }
-
-  if (
-    text.includes("64") ||
-    text.includes("ptr") ||
-    text === "size_t" ||
-    text === "ssize_t" ||
-    text === "ulong_ptr" ||
-    text === "long_ptr" ||
-    text === "dword_ptr")
-  {
-    return "UInt64";
-  }
-
-  return "UInt32";
-}
-
-function errorSource(errorSourceText)
-{
-  const text = String(errorSourceText ?? "").toLowerCase();
-  if (text === "getlasterror")
-  {
-    return "GetLastError";
-  }
-
-  if (text === "return_ntstatus")
-  {
-    return "ReturnNtStatus";
-  }
-
-  if (text === "hresult")
-  {
-    return "ReturnHResult";
-  }
-
-  if (text === "return_win32" || text === "return_rpc_status")
-  {
-    return "ReturnWin32";
-  }
-
-  return "None";
-}
-
-function runtimeHookPolicy(api)
-{
-  if (api.hookPolicy === "iat")
-  {
-    return "iat";
-  }
-
-  return "generated_iat";
-}
-
-function runtimeCoverageStatus(api)
-{
-  if (api.coverageStatus === "smoke_verified" || api.coverageStatus === "hooked")
-  {
-    return api.coverageStatus;
-  }
-
-  return "generated_generic";
-}
-
-function isGenericSafe(api, parametersByApi)
-{
-  if (!isRuntimeInstallable(api))
-  {
-    return false;
-  }
-
-  if (api.parameterCount > 16)
-  {
-    return false;
-  }
-
-  if (unsafeScalarType(api.returnType))
-  {
-    return false;
-  }
-
-  const callingConvention = String(api.callingConvention ?? "").toLowerCase();
-  if (!["stdcall", "winapi", "ntapi", "cdecl"].includes(callingConvention))
-  {
-    return false;
-  }
-
-  const parameters = parametersByApi.get(api.id) ?? [];
-  return parameters.every((parameter) => !unsafeScalarType(parameter.type));
-}
-
-function isRuntimeInstallable(api)
-{
-  return api.hookPolicy !== "unsupported" && api.hookPolicy !== "definition_only" && api.coverageStatus !== "unsupported";
-}
-
 function functionSignaturePrefix(api)
 {
-  if (returnFormat(api.returnType) === "Void")
+  if (generatedReturnFormat(api.returnType) === "Void")
   {
     return "void WINAPI";
   }
@@ -212,7 +70,7 @@ function functionSignaturePrefix(api)
 
 function functionPointerTypeName(api)
 {
-  const prefix = returnFormat(api.returnType) === "Void" ? "GeneratedAgentVoidFunction" : "GeneratedAgentValueFunction";
+  const prefix = generatedReturnFormat(api.returnType) === "Void" ? "GeneratedAgentVoidFunction" : "GeneratedAgentValueFunction";
   return `${prefix}_${api.parameterCount}`;
 }
 
@@ -317,7 +175,7 @@ function buildHookFile(hooks, coverage, modules, hookable)
   lines.push("{{");
   for (const hook of hooks)
   {
-    lines.push(`    { ${hook.id}, ${cppString(hook.module)}, ${cppString(hook.name)}, ${cppString(hook.family)}, ${cppString(hook.category)}, ${cppString(hook.risk)}, ${cppString(runtimeHookPolicy(hook))}, ${cppString(runtimeCoverageStatus(hook))}, ${cppString(`${hook.module}!${hook.name}`)}, GenericReturnFormat::${returnFormat(hook.returnType)}, ${hook.parameterCount}, GeneratedGenericErrorSource::${errorSource(hook.errorSource)} },`);
+    lines.push(`    { ${hook.id}, ${cppString(hook.module)}, ${cppString(hook.name)}, ${cppString(hook.family)}, ${cppString(hook.category)}, ${cppString(hook.risk)}, ${cppString(runtimeHookPolicy(hook))}, ${cppString(runtimeCoverageStatus(hook))}, ${cppString(`${hook.module}!${hook.name}`)}, GenericReturnFormat::${generatedReturnFormat(hook.returnType)}, ${hook.parameterCount}, GeneratedGenericErrorSource::${generatedErrorSource(hook.errorSource)} },`);
   }
   lines.push("}};");
   lines.push("");
@@ -425,7 +283,7 @@ function buildHookChunkFile(hooks, chunkStart, chunkIndex)
     const paddedNames = paddedArgumentNames(hook.parameterCount);
     lines.push(`${functionSignaturePrefix(hook)} ${name}(${args})`);
     lines.push("{");
-    if (returnFormat(hook.returnType) === "Void")
+    if (generatedReturnFormat(hook.returnType) === "Void")
     {
       lines.push(`    KnMonInvokeGeneratedVoidHookByIndex(${index}, ${paddedNames});`);
     }
@@ -505,11 +363,16 @@ function main()
 
   const manual = manualHookKeys();
   const modules = [...(tables.modules ?? [])].sort((left, right) => left.id - right.id);
-  const hookable = (tables.apis ?? []).filter(isRuntimeInstallable);
-  const unsafe = hookable.filter((api) => !isGenericSafe(api, parametersByApi) && !manual.has(lowerKey(api.module, api.name)));
+  const hookable = (tables.apis ?? []).filter(isRuntimeMonitorableDefinition);
+  const unsafe = hookable
+    .map((api) => ({
+      api,
+      reasons: generatedGenericAbiSafetyReasons(api, parametersByApi.get(api.id) ?? [])
+    }))
+    .filter((entry) => entry.reasons.length > 0 && !manual.has(lowerKey(entry.api.module, entry.api.name)));
   if (unsafe.length > 0)
   {
-    throw new Error(`Generated agent hooks cannot safely cover ${unsafe.length} API(s): ${unsafe.slice(0, 5).map((api) => `${api.module}!${api.name}`).join(", ")}`);
+    throw new Error(`Generated agent hooks cannot safely cover ${unsafe.length} API(s): ${unsafe.slice(0, 5).map((entry) => `${entry.api.module}!${entry.api.name} (${entry.reasons.join(",")})`).join(", ")}`);
   }
 
   const hooks = hookable
