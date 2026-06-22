@@ -4768,6 +4768,8 @@ std::string ApiCallPayload(
     const std::string resolvedCategoryTag = categoryTag.empty() ? apiFamily : categoryTag;
     const std::string resolvedDetailTag = detailTag.empty() ? apiCategory : detailTag;
     const std::string agentName = FileNameFromPath(result.AgentPath);
+    const std::string targetPathName = FileNameFromPath(result.TargetPath);
+    const std::string targetProcessName = targetPathName.empty() ? "unknown" : targetPathName;
     std::ostringstream stream;
     stream << "{";
     stream << "\"schemaVersion\":\"0.1.0\",";
@@ -4779,7 +4781,7 @@ std::string ApiCallPayload(
     stream << "\"sequence\":" << record.Sequence << ",";
     stream << "\"api\":" << Q(apiName) << ",";
     stream << "\"module\":" << Q(moduleName) << ",";
-    stream << "\"process\":\"knmon-sample-fileio.exe\",";
+    stream << "\"process\":" << Q(targetProcessName) << ",";
     stream << "\"apiFamily\":" << Q(apiFamily) << ",";
     stream << "\"apiCategory\":" << Q(apiCategory) << ",";
     stream << "\"apiRisk\":" << Q(apiRisk) << ",";
@@ -5160,6 +5162,8 @@ std::string GenericTransportApiPayload(
     const std::string resolvedHostModule = MetadataTokenValue(text1, "host", "");
     const std::string inventoryKey = MetadataTokenValue(text1, "inventoryKey", moduleName + "!" + apiName);
     const std::string agentName = FileNameFromPath(result.AgentPath);
+    const std::string targetPathName = FileNameFromPath(result.TargetPath);
+    const std::string targetProcessName = targetPathName.empty() ? "unknown" : targetPathName;
     const std::vector<GeneratedGenericPreview> generatedPreviews =
         apiMetadata == nullptr ? std::vector<GeneratedGenericPreview>() : DecodeGeneratedGenericPreviews(record, text2);
     const bool hasGeneratedPreview = !generatedPreviews.empty();
@@ -5242,7 +5246,7 @@ std::string GenericTransportApiPayload(
     {
         stream << "\"resolvedHostModule\":" << Q(resolvedHostModule) << ",";
     }
-    stream << "\"process\":\"knmon-sample-fileio.exe\",";
+    stream << "\"process\":" << Q(targetProcessName) << ",";
     stream << "\"apiFamily\":" << Q(apiFamily) << ",";
     stream << "\"apiCategory\":" << Q(apiCategory) << ",";
     stream << "\"apiRisk\":" << Q(apiRisk) << ",";
@@ -7620,7 +7624,7 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
             nullptr,
             nullptr,
             FALSE,
-            CREATE_SUSPENDED | CREATE_NO_WINDOW,
+            CREATE_SUSPENDED | DETACHED_PROCESS,
             nullptr,
             workingDirectory.empty() ? nullptr : workingDirectory.c_str(),
             &startupInfo,
@@ -8041,7 +8045,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             nullptr,
             nullptr,
             FALSE,
-            CREATE_SUSPENDED,
+            CREATE_SUSPENDED | DETACHED_PROCESS,
             nullptr,
             workingDirectory.empty() ? nullptr : workingDirectory.c_str(),
             &startupInfo,
@@ -8661,7 +8665,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
             nullptr,
             nullptr,
             FALSE,
-            CREATE_SUSPENDED | CREATE_NO_WINDOW,
+            CREATE_SUSPENDED | DETACHED_PROCESS,
             nullptr,
             workingDirectory.empty() ? nullptr : workingDirectory.c_str(),
             &startupInfo,

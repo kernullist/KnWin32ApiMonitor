@@ -1,5 +1,6 @@
 param(
-    [string]$ExerciserPath = "build\native\Debug\knmon-api-exerciser.exe"
+    [string]$ExerciserPath = "build\native\Debug\knmon-api-exerciser.exe",
+    [string]$HelperPath = "build\native\Debug\knmon-native-helper.exe"
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,6 +44,7 @@ function Wait-ReadyFile
 }
 
 Assert-True (Test-Path -LiteralPath $ExerciserPath) "API exerciser not found: $ExerciserPath"
+Assert-True (Test-Path -LiteralPath $HelperPath) "Native helper not found: $HelperPath"
 
 $tmpDir = Join-Path (Get-Location) ".tmp"
 New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
@@ -105,5 +107,67 @@ finally
 $loopText = Get-Content -LiteralPath $loopStdout -Raw
 Assert-True ($loopText -match "knmon-api-exerciser api-exerciser-ready") "API exerciser loop did not report ready."
 Assert-True ($loopText -match "knmon-api-exerciser api-exerciser-summary iterations=\d+ failures=0 stopped=0 code=0") "API exerciser loop summary mismatch."
+
+$launchOutput = @(
+    & $HelperPath launch-session `
+        --target (Resolve-Path -LiteralPath $ExerciserPath).Path `
+        --cwd (Split-Path -Parent (Resolve-Path -LiteralPath $ExerciserPath).Path) `
+        --args "--api-exerciser --delay-ms 250" `
+        --duration-ms 2500 `
+        --timeout-ms 30000 `
+        --stream-batches `
+        --batch-size 128
+)
+$launchExitCode = $LASTEXITCODE
+
+$launchFrames = @()
+$targetPid = 0
+try
+{
+    Assert-True ($launchExitCode -eq 0) "Launch-session helper exited with code $launchExitCode."
+
+    foreach ($line in $launchOutput)
+    {
+        Assert-True ($line -match '^\{"schemaVersion"') "Launch-session stdout was polluted by a non-JSON line: $line"
+        $frame = $line | ConvertFrom-Json
+        $launchFrames += $frame
+
+        if ($frame.frameType -eq "capture_result")
+        {
+            $targetPid = [int]$frame.captureResult.targetProcessId
+        }
+    }
+
+    $captureResult = @($launchFrames | Where-Object { $_.frameType -eq "capture_result" } | Select-Object -Last 1)
+    Assert-True ($captureResult.Count -eq 1) "Launch-session did not emit a capture_result frame."
+    Assert-True ($captureResult[0].captureResult.success -eq $true) "Launch-session capture failed: $($captureResult[0].captureResult.message)"
+    Assert-True ($captureResult[0].captureResult.sessionState -eq "stopped") "Launch-session final state mismatch: $($captureResult[0].captureResult.sessionState)"
+
+    $events = @()
+    foreach ($frame in $launchFrames)
+    {
+        if ($frame.frameType -eq "trace_batch")
+        {
+            $events += @($frame.events)
+        }
+    }
+
+    Assert-True ($events.Count -gt 100) "Launch-session captured too few exerciser events: $($events.Count)"
+    $processNames = @($events | Select-Object -ExpandProperty process -Unique)
+    Assert-True ($processNames -contains "knmon-api-exerciser.exe") "Launch-session events did not report the exerciser process name: $($processNames -join ', ')"
+
+    $modules = @($events | Select-Object -ExpandProperty module -Unique)
+    foreach ($moduleName in @("kernel32.dll", "rpcrt4.dll", "bcrypt.dll", "ws2_32.dll"))
+    {
+        Assert-True ($modules -contains $moduleName) "Launch-session did not capture expected module: $moduleName"
+    }
+}
+finally
+{
+    if ($targetPid -ne 0)
+    {
+        Stop-Process -Id $targetPid -Force -ErrorAction SilentlyContinue
+    }
+}
 
 Write-Host "API exerciser smoke passed."

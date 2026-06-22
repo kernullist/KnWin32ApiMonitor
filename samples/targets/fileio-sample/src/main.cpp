@@ -2221,7 +2221,7 @@ bool RunHandleMetadataProbe()
         fileHandle = CreateFileW(
             path.c_str(),
             GENERIC_READ | GENERIC_WRITE,
-            FILE_SHARE_READ,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
             nullptr,
             OPEN_EXISTING,
             FILE_ATTRIBUTE_NORMAL,
@@ -2297,7 +2297,7 @@ bool RunFileMetadataProbe()
         fileHandle = CreateFileW(
             path.c_str(),
             GENERIC_READ | GENERIC_WRITE,
-            FILE_SHARE_READ,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
             nullptr,
             CREATE_ALWAYS,
             FILE_ATTRIBUTE_NORMAL,
@@ -3408,7 +3408,7 @@ bool RunAttachFileIoProbe(int iteration)
         fileHandle = CreateFileW(
             path.c_str(),
             GENERIC_READ | GENERIC_WRITE,
-            FILE_SHARE_READ | FILE_SHARE_DELETE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
             nullptr,
             CREATE_ALWAYS,
             FILE_ATTRIBUTE_NORMAL,
@@ -3467,7 +3467,7 @@ bool RunAttachFileIoProbe(int iteration)
         ansiHandle = CreateFileA(
             ansiPath,
             GENERIC_READ | GENERIC_WRITE,
-            FILE_SHARE_READ | FILE_SHARE_DELETE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
             nullptr,
             CREATE_ALWAYS,
             FILE_ATTRIBUTE_NORMAL,
@@ -4386,7 +4386,7 @@ int RunFileIo(bool slow, int startupDelayMs)
         fileHandle = CreateFileW(
             path.c_str(),
             GENERIC_READ | GENERIC_WRITE,
-            FILE_SHARE_READ,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
             nullptr,
             CREATE_ALWAYS,
             FILE_ATTRIBUTE_NORMAL,
