@@ -2,6 +2,7 @@
   "name": "kn-win32apimon",
   "version": "0.1.0",
   "private": true,
+  "license": "Apache-2.0",
   "description": "Modern Win32 API monitor workstation foundation.",
   "workspaces": [
     "apps/knmon-ui"

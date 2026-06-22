@@ -172,6 +172,7 @@ if (!$NoUi)
 }
 
 Copy-Item -LiteralPath (Join-Path $repoRoot "README.md") -Destination (Join-Path $stageRoot "README.md") -Force
+Copy-Item -LiteralPath (Join-Path $repoRoot "LICENSE") -Destination (Join-Path $stageRoot "LICENSE") -Force
 Copy-Item -LiteralPath $versionPath -Destination (Join-Path $stageRoot "VERSION") -Force
 
 $buildInfo = [ordered]@{

@@ -305,6 +305,11 @@ collector binaries are copied beside the desktop executable so the app can run
 without repo-relative paths. Optional Win32/x86 binaries are copied under
 `win32\`.
 
+## License
+
+KN Win32 API Monitor is licensed under the Apache License, Version 2.0.
+See [LICENSE](LICENSE).
+
 ## Design Docs
 
 - [Product Design](docs/product-design.md)
