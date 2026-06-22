@@ -133,7 +133,14 @@ try
 
     if (!$SkipUi)
     {
-        Invoke-Checked -FilePath "npm.cmd" -Arguments @("run", "build")
+        if ($Release)
+        {
+            Invoke-Checked -FilePath "npm.cmd" -Arguments @("run", "tauri:build")
+        }
+        else
+        {
+            Invoke-Checked -FilePath "npm.cmd" -Arguments @("run", "build")
+        }
     }
 }
 finally

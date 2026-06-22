@@ -2963,68 +2963,130 @@ fn repo_root_path() -> PathBuf {
 }
 
 fn default_session_path() -> PathBuf {
-    repo_root_path()
+    runtime_root_path()
         .join("captures")
         .join("latest-sample-fileio")
 }
 
 fn default_daemon_runtime_path() -> PathBuf {
-    repo_root_path().join("captures").join("daemon-runtime")
+    runtime_root_path().join("captures").join("daemon-runtime")
 }
 
 fn default_session_catalog_path() -> PathBuf {
-    repo_root_path()
+    runtime_root_path()
         .join("captures")
         .join("session-catalog.json")
 }
 
 fn default_session_catalog_index_path() -> PathBuf {
-    repo_root_path().join("captures").join("session-catalog.db")
+    runtime_root_path().join("captures").join("session-catalog.db")
 }
 
 fn default_session_trace_index_path() -> PathBuf {
-    repo_root_path()
+    runtime_root_path()
         .join("captures")
         .join("session-trace-index.db")
 }
 
 fn default_daemon_session_path(session_id: &str) -> PathBuf {
-    repo_root_path()
+    runtime_root_path()
         .join("captures")
         .join("daemon-sessions")
         .join(format!("{}.knapm", sanitize_event_part(session_id)))
+}
+
+fn push_unique_path(paths: &mut Vec<PathBuf>, path: PathBuf) {
+    if !paths.iter().any(|existing| existing == &path) {
+        paths.push(path);
+    }
+}
+
+fn portable_root_candidates() -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            push_unique_path(&mut roots, exe_dir.to_path_buf());
+
+            if let Some(parent_dir) = exe_dir.parent() {
+                push_unique_path(&mut roots, parent_dir.to_path_buf());
+            }
+        }
+    }
+
+    if let Ok(current_dir) = std::env::current_dir() {
+        push_unique_path(&mut roots, current_dir);
+    }
+
+    roots
+}
+
+fn runtime_root_path() -> PathBuf {
+    for root in portable_root_candidates() {
+        let flat_helper = root.join("knmon-native-helper.exe");
+        let grouped_helper = root
+            .join("native")
+            .join("x64")
+            .join("knmon-native-helper.exe");
+
+        if flat_helper.is_file() || grouped_helper.is_file() {
+            return root;
+        }
+    }
+
+    repo_root_path()
 }
 
 fn find_helper_path() -> Option<PathBuf> {
     let repo_root = repo_root_path();
     let current_dir = std::env::current_dir().ok();
 
-    let mut candidates = vec![
+    let mut candidates = Vec::new();
+    for root in portable_root_candidates() {
+        push_unique_path(&mut candidates, root.join("knmon-native-helper.exe"));
+        push_unique_path(
+            &mut candidates,
+            root.join("native")
+                .join("x64")
+                .join("knmon-native-helper.exe"),
+        );
+    }
+
+    push_unique_path(
+        &mut candidates,
         repo_root
             .join("build")
             .join("native")
             .join("Debug")
             .join("knmon-native-helper.exe"),
+    );
+    push_unique_path(
+        &mut candidates,
         repo_root
             .join("build")
             .join("native")
             .join("Release")
             .join("knmon-native-helper.exe"),
+    );
+    push_unique_path(
+        &mut candidates,
         repo_root
             .join("build")
             .join("native")
             .join("RelWithDebInfo")
             .join("knmon-native-helper.exe"),
-    ];
+    );
 
     if let Some(dir) = current_dir {
-        candidates.push(
+        push_unique_path(
+            &mut candidates,
             dir.join("build")
                 .join("native")
                 .join("Debug")
                 .join("knmon-native-helper.exe"),
         );
-        candidates.push(
+        push_unique_path(
+            &mut candidates,
             dir.join("build")
                 .join("native")
                 .join("Release")

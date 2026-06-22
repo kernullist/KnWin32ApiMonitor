@@ -299,9 +299,11 @@ Include an already-built Win32/x86 native tree:
 .\Release.ps1 -IncludeWin32
 ```
 
-The ZIP is written under `dist\release\` and includes native PE outputs,
-`README.md`, `VERSION`, `BUILD-INFO.json`, the UI `dist` folder when present,
-and Tauri `target\release`/`bundle` outputs when they have been built.
+The ZIP is written under `dist\release\`. Extract it and run
+`knmon-ui.exe` from the extracted folder. The x64 native helper, agent, and
+collector binaries are copied beside the desktop executable so the app can run
+without repo-relative paths. Optional Win32/x86 binaries are copied under
+`win32\`.
 
 ## Design Docs
 

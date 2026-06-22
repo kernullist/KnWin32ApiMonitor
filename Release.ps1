@@ -131,13 +131,13 @@ if (Test-Path -LiteralPath $zipPath)
 }
 
 $x64Dir = Join-Path $repoRoot "build\native\$Configuration"
-$x64Count = Copy-FileSet -SourceDir $x64Dir -DestinationDir (Join-Path $stageRoot "native\x64") -Extensions @(".exe", ".dll")
+$x64Count = Copy-FileSet -SourceDir $x64Dir -DestinationDir $stageRoot -Extensions @(".exe", ".dll")
 
 $win32Count = 0
 if ($IncludeWin32)
 {
     $win32Dir = Join-Path $repoRoot "build\native-win32\$Configuration"
-    $win32Count = Copy-FileSet -SourceDir $win32Dir -DestinationDir (Join-Path $stageRoot "native\win32") -Extensions @(".exe", ".dll")
+    $win32Count = Copy-FileSet -SourceDir $win32Dir -DestinationDir (Join-Path $stageRoot "win32") -Extensions @(".exe", ".dll")
 }
 
 $uiCopied = $false
@@ -155,7 +155,7 @@ if (!$NoUi)
         $tauriExeFiles = @(Get-ChildItem -LiteralPath $tauriReleaseDir -File -Filter "*.exe")
         if ($tauriExeFiles.Count -gt 0)
         {
-            $tauriDestination = Join-Path $stageRoot "desktop"
+            $tauriDestination = $stageRoot
             New-Item -ItemType Directory -Path $tauriDestination -Force | Out-Null
 
             foreach ($file in $tauriExeFiles)
@@ -166,7 +166,7 @@ if (!$NoUi)
             $tauriCopied = $true
         }
 
-        $bundleCopied = Copy-DirectoryIfPresent -SourceDir (Join-Path $tauriReleaseDir "bundle") -DestinationDir (Join-Path $stageRoot "desktop\bundle")
+        $bundleCopied = Copy-DirectoryIfPresent -SourceDir (Join-Path $tauriReleaseDir "bundle") -DestinationDir (Join-Path $stageRoot "bundle")
         $tauriCopied = $tauriCopied -or $bundleCopied
     }
 }
@@ -181,6 +181,8 @@ $buildInfo = [ordered]@{
     createdAt = (Get-Date).ToUniversalTime().ToString("o")
     nativeX64Files = $x64Count
     nativeWin32Files = $win32Count
+    layout = "portable-flat"
+    entryPoint = "knmon-ui.exe"
     uiIncluded = $uiCopied
     tauriIncluded = $tauriCopied
 }
