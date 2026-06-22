@@ -27,6 +27,7 @@ namespace knmon
 namespace
 {
 constexpr std::uint64_t ExpectedFileIoHookCount = 6;
+constexpr ULONG_PTR LaunchHookReadyGraceMs = 500;
 
 bool HasApiSelection(const std::string& value)
 {
@@ -6886,6 +6887,60 @@ std::wstring QuoteArgument(const std::wstring& value)
     return result;
 }
 
+template <typename TResult>
+bool QueueEarlyBirdAgentLoad(TResult& result, HANDLE threadHandle, void* remoteDllPath)
+{
+    bool queued = false;
+
+    do
+    {
+        HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
+        if (kernel32 == nullptr)
+        {
+            SetResultError(result, GetLastError(), "win32", "loader_failed", "Failed to resolve kernel32.dll before queuing LoadLibraryW.");
+            break;
+        }
+
+        FARPROC loadLibrary = GetProcAddress(kernel32, "LoadLibraryW");
+        if (loadLibrary == nullptr)
+        {
+            SetResultError(result, GetLastError(), "win32", "loader_failed", "Failed to resolve LoadLibraryW before queuing early-bird APC.");
+            break;
+        }
+
+        if (QueueUserAPC(reinterpret_cast<PAPCFUNC>(loadLibrary), threadHandle, reinterpret_cast<ULONG_PTR>(remoteDllPath)) == 0)
+        {
+            SetResultError(result, GetLastError(), "win32", "QueueUserAPC", "Failed to queue early-bird APC.");
+            break;
+        }
+
+        AddAudit(result, "early_bird_apc_queued", "QueueUserAPC", "Early-bird LoadLibraryW APC queued on the suspended primary thread.");
+
+        FARPROC sleepFunction = GetProcAddress(kernel32, "Sleep");
+        if (sleepFunction == nullptr)
+        {
+            AddAudit(result, "early_bird_grace_apc_unavailable", "GetProcAddress", "Sleep export was not available; launch will continue without startup hook-ready grace.", GetLastError(), "win32");
+            queued = true;
+            break;
+        }
+
+        if (QueueUserAPC(reinterpret_cast<PAPCFUNC>(sleepFunction), threadHandle, LaunchHookReadyGraceMs) == 0)
+        {
+            AddAudit(result, "early_bird_grace_apc_failed", "QueueUserAPC", "Failed to queue startup hook-ready grace APC; launch will continue without the extra startup delay.", GetLastError(), "win32");
+            queued = true;
+            break;
+        }
+
+        std::ostringstream message;
+        message << "Startup hook-ready grace APC queued after LoadLibraryW; delayMs=" << LaunchHookReadyGraceMs << ".";
+        AddAudit(result, "early_bird_grace_apc_queued", "QueueUserAPC", message.str());
+        queued = true;
+    }
+    while (false);
+
+    return queued;
+}
+
 class EnvironmentOverride
 {
 public:
@@ -7687,27 +7742,10 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
 
         AddAudit(result, "agent_path_written", "WriteProcessMemory", "Agent DLL path written into target process.");
 
-        HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
-        if (kernel32 == nullptr)
+        if (!QueueEarlyBirdAgentLoad(result, processInfo.hThread, remoteDllPath))
         {
-            SetResultError(result, GetLastError(), "win32", "loader_failed", "Failed to resolve kernel32.dll before queuing LoadLibraryW.");
             break;
         }
-
-        FARPROC loadLibrary = GetProcAddress(kernel32, "LoadLibraryW");
-        if (loadLibrary == nullptr)
-        {
-            SetResultError(result, GetLastError(), "win32", "loader_failed", "Failed to resolve LoadLibraryW before queuing early-bird APC.");
-            break;
-        }
-
-        if (QueueUserAPC(reinterpret_cast<PAPCFUNC>(loadLibrary), processInfo.hThread, reinterpret_cast<ULONG_PTR>(remoteDllPath)) == 0)
-        {
-            SetResultError(result, GetLastError(), "win32", "QueueUserAPC", "Failed to queue early-bird APC.");
-            break;
-        }
-
-        AddAudit(result, "early_bird_apc_queued", "QueueUserAPC", "Early-bird LoadLibraryW APC queued on the suspended primary thread.");
 
         if (ResumeThread(processInfo.hThread) == static_cast<DWORD>(-1))
         {
@@ -8125,30 +8163,11 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
         AddAudit(result, "agent_path_written", "WriteProcessMemory", "Agent DLL path written into target process.");
 
-        HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
-        if (kernel32 == nullptr)
+        if (!QueueEarlyBirdAgentLoad(result, processInfo.hThread, remoteDllPath))
         {
-            SetResultError(result, GetLastError(), "win32", "loader_failed", "Failed to resolve kernel32.dll before queuing LoadLibraryW.");
             fatalError = true;
             break;
         }
-
-        FARPROC loadLibrary = GetProcAddress(kernel32, "LoadLibraryW");
-        if (loadLibrary == nullptr)
-        {
-            SetResultError(result, GetLastError(), "win32", "loader_failed", "Failed to resolve LoadLibraryW before queuing early-bird APC.");
-            fatalError = true;
-            break;
-        }
-
-        if (QueueUserAPC(reinterpret_cast<PAPCFUNC>(loadLibrary), processInfo.hThread, reinterpret_cast<ULONG_PTR>(remoteDllPath)) == 0)
-        {
-            SetResultError(result, GetLastError(), "win32", "QueueUserAPC", "Failed to queue early-bird APC.");
-            fatalError = true;
-            break;
-        }
-
-        AddAudit(result, "early_bird_apc_queued", "QueueUserAPC", "Early-bird LoadLibraryW APC queued on the suspended primary thread.");
 
         if (ResumeThread(processInfo.hThread) == static_cast<DWORD>(-1))
         {
@@ -8731,30 +8750,11 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
 
         AddAudit(result, "agent_path_written", "WriteProcessMemory", "Agent DLL path written into target process.");
 
-        HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
-        if (kernel32 == nullptr)
+        if (!QueueEarlyBirdAgentLoad(result, processInfo.hThread, remoteDllPath))
         {
-            SetResultError(result, GetLastError(), "win32", "loader_failed", "Failed to resolve kernel32.dll before queuing LoadLibraryW.");
             fatalError = true;
             break;
         }
-
-        FARPROC loadLibrary = GetProcAddress(kernel32, "LoadLibraryW");
-        if (loadLibrary == nullptr)
-        {
-            SetResultError(result, GetLastError(), "win32", "loader_failed", "Failed to resolve LoadLibraryW before queuing early-bird APC.");
-            fatalError = true;
-            break;
-        }
-
-        if (QueueUserAPC(reinterpret_cast<PAPCFUNC>(loadLibrary), processInfo.hThread, reinterpret_cast<ULONG_PTR>(remoteDllPath)) == 0)
-        {
-            SetResultError(result, GetLastError(), "win32", "QueueUserAPC", "Failed to queue early-bird APC.");
-            fatalError = true;
-            break;
-        }
-
-        AddAudit(result, "early_bird_apc_queued", "QueueUserAPC", "Early-bird LoadLibraryW APC queued on the suspended primary thread.");
 
         if (ResumeThread(processInfo.hThread) == static_cast<DWORD>(-1))
         {

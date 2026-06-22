@@ -29,6 +29,7 @@
     "wave4-dbghelp:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/wave4-dbghelp-symbol-session-smoke.ps1",
     "list-targets:path-fallback:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/list-targets-path-fallback-smoke.ps1",
     "api-exerciser:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/api-exerciser-smoke.ps1",
+    "launch-session-short-lived:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/launch-session-short-lived-smoke.ps1",
     "tier1-generic:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/tier1-generic-profile-smoke.ps1",
     "tier2-generic:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/tier2-generic-profile-smoke.ps1",
     "generated-generic-preview:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/generated-generic-preview-smoke.ps1",

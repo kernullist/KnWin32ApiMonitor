@@ -1,5 +1,7 @@
 # KN Win32 API Monitor
 
+![KN Win32 API Monitor screenshot](screenshot01.png)
+
 KN Win32 API Monitor is a modern Windows 10/11 API monitoring workstation for
 security engineering, reverse engineering, debugging, and anti-cheat research.
 
@@ -30,20 +32,28 @@ The current definition and hook pipeline reports:
 
 - Microsoft-source inventory candidates: `30,182`
 - Defined APIs: `30,112`
-- Runtime-monitorable APIs: `30,000`
-- Definition-only APIs awaiting payload/ABI review: `112`
+- Runtime-monitorable APIs: `30,092`
+- Definition-only APIs awaiting payload/ABI review: `20`
 - Data exports included as monitor targets: `0`
 - Parameter metadata rows: `226,754`
 - Parameters missing decode metadata: `0`
 - API families: `61`
 - API categories/groups: `475`
-- Generated hook coverage: `required=30000`, `manual=314`,
-  `generated=29686`, `covered=30000`
+- Generated hook coverage: `required=30092`, `manual=314`,
+  `generated=29778`, `covered=30092`
+- Dynamic resolver substitution coverage on x64: `30,092` name-looked-up
+  APIs through `GetProcAddress` and `LdrGetProcedureAddress`
 
 Runtime-monitorable means the API has a generated or manual hook definition
 that can be selected by API filter or enabled through the relevant runtime
 profile. Payload-sensitive APIs and APIs requiring manual decoder work remain
 definition-only until separately reviewed.
+
+Dynamic resolver substitution means a monitored `GetProcAddress` or
+`LdrGetProcedureAddress` call can return a KN monitor wrapper instead of the
+raw target function pointer when the requested API name is present in the
+runtime hook table. Ordinal resolver lookups are classified for audit, but are
+not substituted until ordinal metadata is added.
 
 ## Architecture
 
@@ -212,7 +222,7 @@ build\native\Debug\knmon-native-helper.exe replay-session --session captures\lat
 ## Validation
 
 Validate API definitions, generated decoder tables, inventory, plans, importer
-fixtures, and the 30,000 runtime-hookable API gate:
+fixtures, and the 30,092 runtime-hookable API gate:
 
 ```powershell
 npm run defs:validate
@@ -272,7 +282,7 @@ npm run agent-hooks:check
 Expected current hook check:
 
 ```text
-Generated agent hook definitions. required=30000 manual=314 generated=29686 covered=30000 chunks=58
+Generated agent hook definitions. required=30092 manual=314 generated=29778 covered=30092 chunks=59
 ```
 
 ## Release Package
