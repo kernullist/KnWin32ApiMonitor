@@ -1,5 +1,21 @@
+.gitattributes text eol=lf
+
 # Keep hashed JSONL fixture chunks stable across Windows checkouts.
 tests/fixtures/session/**/*.jsonl text eol=lf
+
+# Generated artifacts are byte-compared by validators. Keep them LF on Windows.
+generated/definition-ids.json text eol=lf
+generated/dll-batch-promotion-plan.json text eol=lf
+generated/manual-decoder-batch-plan.json text eol=lf
+generated/tier2-hook-plan.json text eol=lf
+generated/tier2-profile-batch-plan.json text eol=lf
+generated/tier2-profile-review-manifest.json text eol=lf
+generated/tier3-hook-plan.json text eol=lf
+native/knmon-agent64/src/GeneratedAgentHooks.inc text eol=lf
+native/knmon-agent64/src/GeneratedAgentHooksChunk*.cpp text eol=lf
+native/knmon-common/include/knmon/common/Generated*.h text eol=lf
+native/knmon-common/src/Generated*.cpp text eol=lf
+
 generated/tier1-hook-plan.json filter=lfs diff=lfs merge=lfs -text
 generated/definition-decoder-tables.json filter=lfs diff=lfs merge=lfs -text
 generated/api-inventory.json filter=lfs diff=lfs merge=lfs -text

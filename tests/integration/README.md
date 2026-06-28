@@ -37,6 +37,27 @@ Current verification gates include:
 31. Optional Win32/x86 capture smoke through `tools\native-smoke\x86-capture-sample-smoke.ps1`.
 32. Trace index smoke through `tools\native-smoke\trace-index-smoke.ps1`.
 33. Collector fixture and native smoke validation through `npm run collector:validate`.
+34. Broad API exerciser launch/session smoke through `npm run api-exerciser:smoke`.
+35. Tier 1 and Tier 2 generic runtime profile smokes through `npm run tier1-generic:smoke` and `npm run tier2-generic:smoke`.
+36. Generated generic preview smoke through `npm run generated-generic-preview:smoke`.
+
+Run broad API exerciser smoke:
+
+```powershell
+npm run api-exerciser:smoke
+```
+
+The API exerciser smoke first runs `knmon-api-exerciser.exe --once`, then runs a bounded loop mode, then launches it through `knmon-native-helper.exe launch-session`. It verifies deterministic readiness output, zero exerciser failures, streamed JSON frames, more than 100 captured events, expected module coverage such as `kernel32.dll`, `rpcrt4.dll`, `bcrypt.dll`, and `ws2_32.dll`, and a successful stopped capture result.
+
+Run broad generic profile smokes:
+
+```powershell
+npm run tier1-generic:smoke
+npm run tier2-generic:smoke
+npm run generated-generic-preview:smoke
+```
+
+The Tier 1 and Tier 2 smokes verify that selected generated runtime profile hooks install and emit generic events without relying on per-API Tier 0 decoder code. The generated generic preview smoke verifies target-memory preview slot handling for generated metadata under the same controlled test-app execution model.
 
 Run repeated lifecycle smoke:
 

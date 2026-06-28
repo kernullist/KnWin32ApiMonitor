@@ -247,30 +247,15 @@ Current File I/O decode metadata covers file access masks, file share masks, Cre
 3. `generated/definition-decoder-tables.json`
 4. `native/knmon-common/include/knmon/common/GeneratedApiMetadata.h`
 
-Existing transport IDs are preserved:
+Existing compact Tier 0 transport IDs are preserved for the manually reviewed
+low-payload slices:
 
 1. File I/O API IDs `1` through `6`.
 2. Loader API IDs `7` through `11`.
 3. Resolver API IDs `12` through `13`.
-4. Wave 2 API IDs `14` through `90`, with selected registry, token query/privilege lookup, bcrypt CNG provider/RNG/key-destroy, crypt32 certificate-store/message-handle, RPCRT4 binding and `UuidCreate` ID `58`, Winsock, WinHTTP session/scalar-option, and WinINet session IDs promoted from definition-only to smoke-verified IAT coverage.
-5. Phase 13B Wave 3 API IDs `91` through `97`, with selected User32 system/window metadata and GDI32 DC metadata APIs promoted directly to smoke-verified IAT coverage.
-6. Phase 13C Wave 3 API IDs `98` through `101`, with selected PSAPI module-query APIs promoted directly to smoke-verified IAT coverage.
-7. Phase 13D Wave 3 API IDs `102` through `104`, with selected Version resource metadata APIs promoted directly to smoke-verified IAT coverage.
-8. Phase 13E Wave 3 API IDs `105` through `106`, with selected Shell known-folder metadata APIs promoted directly to smoke-verified IAT coverage.
-9. Phase 13F Wave 3 API IDs `107` through `110`, with selected OLE32 COM lifecycle and GUID helper APIs promoted directly to smoke-verified IAT coverage.
-10. Phase 13G Wave 3 API IDs `111` through `112`, with selected RPCRT4 UUID helper APIs added as smoke-verified IAT coverage while preserving `UuidCreate` at ID `58`.
-11. Phase 13H Wave 3 API IDs `113` through `115`, with selected COMBASE-backed WinRT lifecycle APIs promoted directly to smoke-verified IAT coverage through the observed API-set provider.
-12. Phase 13I Wave 3 API IDs `116` through `119`, with selected current-process KERNEL32 memory allocation/protection/query APIs promoted directly to smoke-verified IAT coverage.
-13. Phase 13J Wave 3 API IDs `120` through `123`, with selected current-process KERNEL32 thread lifecycle/wait APIs promoted directly to smoke-verified IAT coverage.
-14. Phase 13K Wave 3 API IDs `124` through `128`, with selected current-process KERNEL32 event synchronization APIs promoted directly to smoke-verified IAT coverage.
-15. Phase 13L Wave 3 API IDs `129` through `135`, with selected current-process KERNEL32 mutex/semaphore synchronization APIs promoted directly to smoke-verified IAT coverage.
-16. Phase 13M Wave 3 API IDs `136` through `139`, with selected current-process KERNEL32 file-mapping APIs promoted directly to smoke-verified IAT coverage.
-17. Phase 13N Wave 3 API IDs `140` through `145`, with selected current-process KERNEL32 process/thread identity APIs promoted directly to smoke-verified IAT coverage.
-18. Phase 13O Wave 3 API IDs `146` through `149`, with selected current-process KERNEL32 handle metadata APIs promoted directly to smoke-verified IAT coverage.
-19. Phase 13P Wave 3 API IDs `150` through `153`, with selected current-process KERNEL32 module lifecycle APIs promoted directly to smoke-verified IAT coverage.
-20. Phase 13Q Wave 3 API IDs `154` through `156`, with selected current-process KERNEL32 file metadata APIs promoted directly to smoke-verified IAT coverage.
-21. Wave 4 API IDs `157` through `179`, covering OLE Automation, SSPI, user profile/environment, DNS, IP Helper, SetupAPI, Shell lightweight path helpers, WinTrust, and DbgHelp lifecycle/metadata entrypoints; `oleaut32.dll` IDs `158` through `160`, `secur32.dll` IDs `162` and `164`, `userenv.dll` ID `167`, `dnsapi.dll` ID `169`, `iphlpapi.dll` IDs `170` and `171`, `setupapi.dll` ID `173`, `shlwapi.dll` ID `174`, `wintrust.dll` ID `177`, plus `dbghelp.dll` IDs `178` and `179` are low-payload Wave 4 smoke-verified hooks.
-22. Module IDs:
+4. Wave 2/3/4 smoke-verified API IDs `14` through `179`, including selected registry, token query/privilege lookup, crypto lifecycle, RPC lifecycle/UUID, Winsock, WinHTTP/WinINet session, User32/GDI32, PSAPI, Version, Shell, OLE32/OLEAUT32, COMBASE WinRT, KERNEL32 memory/thread/synchronization/file-mapping/process/handle/module/file metadata, SECUR32, USERENV, DNSAPI, IPHLPAPI, SETUPAPI, SHLWAPI, WINTRUST, and DbgHelp hooks.
+5. Broad generated runtime monitoring uses generated hook metadata for the larger table instead of assigning every API a compact Tier 0 transport ID. Current generated hook coverage is `required=30092`, `manual=314`, `generated=29778`, `covered=30092`, `chunks=59`.
+6. Module IDs:
    - `kernel32.dll = 1`
    - `ntdll.dll = 2`
    - `kernelbase.dll = 3`
@@ -300,17 +285,17 @@ Existing transport IDs are preserved:
 
 The native agent and controller use generated compile-time enum constants through `GeneratedApiIds.h`. The controller also uses `GeneratedApiMetadata.h` for API/module names, API family/category/risk labels, argument names/types/directions, decode aliases, and capture timing. Target hook fast paths still do not parse definitions or metadata. Tier 1 and Tier 2 generic events use a separate transport record flag and carry the inventory API name plus pointer/scalar slots without changing existing Tier 0 IDs.
 
-`generated/definition-decoder-tables.json` is the deterministic JSON view for tooling. It contains module rows, API rows through ID `179`, flattened parameter rows, decode alias rows, and source file lists without wall-clock timestamps or local machine paths. The Wave 2 RPCRT4 endpoint inquiry cleanup API `RpcMgmtEpEltInqDone` keeps stable API ID `57` and is now promoted to `iat` plus `smoke_verified`.
+`generated/definition-decoder-tables.json` is the deterministic JSON view for tooling. It contains module rows, API rows, flattened parameter rows, decode alias rows, and source file lists without wall-clock timestamps or local machine paths. The current definition set has `30,112` APIs, `226,754` parameter metadata rows, zero parameters missing decode metadata, and generated preview-slot coverage for every target-memory-preview-eligible parameter.
 
-`generated/tier1-hook-plan.json` currently plans all 15,931 Tier 1 APIs. The plan marks 15,527 APIs as generic pointer/scalar fallback ready, 404 APIs as blocked by the current generic ABI slot policy, and 1,795 APIs as requiring explicit allowlist before installation because of risk policy. The default profile installs zero Tier 1 hooks; broad coverage requires an explicit profile, module/family/risk selector, or allowlist.
+`generated/tier1-hook-plan.json` currently plans all `27,907` Tier 1 APIs. The plan marks `17,371` APIs as generic pointer/scalar fallback ready, `10,536` APIs as blocked by the current generic ABI slot policy, and `4,435` APIs as requiring explicit allowlist because of risk policy. The default profile installs zero Tier 1 hooks; broad coverage requires an explicit profile, module/family/risk selector, or allowlist.
 
-`generated/tier2-hook-plan.json` currently plans all 655 Tier 2 APIs. The plan classifies 279 rows as API-set forwarders, resolves 277 of them to concrete host DLLs on the current Windows runtime, classifies 376 rows as missing-parameter return-only candidates, and enables zero Tier 2 hooks by default. Runtime smoke coverage currently proves `WindowsGetStringLen` through `api-ms-win-core-winrt-string-l1-1-0.dll` with resolved host `combase.dll`, and `RevertToSelf` as a generic return-only event.
+`generated/tier2-hook-plan.json` currently plans all `786` Tier 2 APIs. The plan classifies `279` rows as API-set forwarders, resolves `277` of them to concrete host DLLs on the current Windows runtime, classifies `507` rows as missing-parameter return-only candidates, and keeps `41` high-risk rows behind explicit allowlist. Runtime hooks remain disabled by default unless a profile/allowlist selects them.
 
-`generated/tier2-profile-batch-plan.json` currently groups all 655 Tier 2 APIs into 104 review batches with zero runtime hooks enabled by default: 16 resolved-host API-set batches covering 277 APIs, 87 missing-parameter return-only source-DLL batches covering 376 APIs, and 1 blocked unresolved API-set batch covering 2 APIs. The plan records 30 high/critical-risk APIs that still require explicit allowlist even inside an otherwise selected Tier 2 profile.
+`generated/tier2-profile-batch-plan.json` currently groups Tier 2 APIs into `104` review batches with zero runtime hooks enabled by default: `16` resolved-host API-set batches, `87` missing-parameter return-only source-DLL batches, and `2` blocked unresolved API-set rows.
 
-`generated/tier2-profile-review-manifest.json` currently ranks all 104 Tier 2 batches into 42 initial candidates covering 55 APIs, 41 broader review-ready batches covering 452 APIs, 20 allowlist-gated batches covering 146 APIs with 30 explicit-allowlist-required APIs, and 1 blocked batch covering 2 APIs. The manifest enables zero runtime hooks by default and exists to keep future Tier 2 profile work tied to reviewed batch IDs instead of raw broad selectors.
+`generated/tier2-profile-review-manifest.json` currently ranks the Tier 2 batches into `41` initial-candidate batches, `41` broader review-ready batches, `21` allowlist-gated batches, and `1` blocked batch. The manifest exists to keep future Tier 2 profile work tied to reviewed batch IDs instead of raw broad selectors.
 
-`generated/dll-batch-promotion-plan.json` currently groups 179 committed definitions across 25 DLLs. It records 130 already-live APIs, zero auto-promotable pointer/scalar APIs, zero manual-decoder-required APIs, 49 payload-policy-blocked APIs, and zero unsupported committed definitions. `generated/manual-decoder-batch-plan.json` currently has zero DLLs and zero APIs because the previous RPCRT4 endpoint inquiry cleanup candidate is now smoke-verified. The auto-promotable DLL queue is currently empty; the next runtime promotion should start from explicitly reviewed payload-sensitive families or Tier 2/Tier 3 design slices instead of unrelated single-API work.
+`generated/dll-batch-promotion-plan.json` currently groups committed definitions across `399` DLLs. It records `11,827` auto-promotable pointer/scalar APIs, `7,309` manual-decoder-required APIs, and `10,846` payload-policy-blocked APIs. `generated/manual-decoder-batch-plan.json` currently tracks `7,309` manual-decoder APIs across `243` DLLs with `8,258` payload-blocked sibling rows. These plans are promotion gates, not runtime enablement.
 
 ## File I/O, Loader, Resolver, And Wave 2/3/4 Metadata Coverage
 
@@ -516,22 +501,22 @@ Phase 13Q adds three smoke-verified Wave 3 APIs in `kernel32.dll`:
 
 These records capture only file handle values, output pointer values, decoded file size, FILETIME scalar values, file attributes, volume serial, link count, file index, return/error evidence, timing, and hook lifecycle metadata. The x64 and x86 sample IAT providers were verified with `dumpbin` as `KERNEL32.dll`. They do not copy file contents, enumerate directories, resolve paths or object-manager names, inspect PE metadata, hash files, validate signatures, duplicate handles, query security descriptors, capture command lines or environments, inspect remote memory, inspect thread context/stacks, or emit arbitrary buffer previews.
 
-The current definition coverage report totals 179 APIs:
+The current definition and generated hook coverage report totals:
 
-1. `definition_only`: 49
-2. `hooked`: 4
-3. `smoke_verified`: 126
+1. Microsoft-source inventory candidates: 30,182.
+2. Defined APIs: 30,112.
+3. Runtime-monitorable APIs: 30,092.
+4. Definition-only APIs awaiting payload or ABI review: 20.
+5. Generated hook coverage: `required=30092`, `manual=314`, `generated=29778`, `covered=30092`, `chunks=59`.
 
-The current Microsoft-source inventory report totals 18,086 monitorable catalog rows:
+The current Microsoft-source inventory report totals 30,182 catalog rows:
 
-1. `tier 0`: 130 currently emitted and decoded agent-hook APIs.
-2. `tier 1`: 15,931 DLL-export APIs with parameter metadata that need hook/decoder implementation.
-3. `tier 2`: 655 APIs deferred to API-set host resolution, missing-parameter return-only capture, dynamic resolver correlation, or export-hook strategy.
-4. `tier 3`: 1,370 callback, COM-interface, message/hook, or otherwise unsupported signatures for the current user-mode IAT hook path.
+1. `tier 0`: 130 compact transport-ID APIs kept for established low-payload runtime slices.
+2. `tier 1`: 27,907 DLL-export APIs with parameter metadata and generated generic profile eligibility.
+3. `tier 2`: 786 APIs deferred to API-set host resolution, missing-parameter return-only capture, dynamic resolver correlation, or export-hook strategy.
+4. `tier 3`: 1,359 callback, COM-interface, message/hook, WinRT/HSTRING, buffer-heavy, or otherwise unsupported signatures for the current user-mode IAT hook path.
 
-Risk buckets are also generated from existing definition risk metadata plus broad metadata-driven signature/namespace rules: 708 `critical`, 1,238 `high`, 16,088 `medium`, and 52 `low`.
-
-The unselected Wave 4 common-DLL definitions remain in the `definition_only` count. The selected RPCRT4 endpoint inquiry cleanup hook, OLEAUT32 BSTR/variant/safe-array lifecycle hooks, SECUR32 credential/context cleanup hooks, USERENV environment-block destroy hook, DNSAPI record-list free hook, IPHLPAPI adapter/interface metadata hooks, SETUPAPI device-info close hook, SHLWAPI path-exists query hook, WINTRUST state-query hook, and DbgHelp symbol-session pair are counted as `smoke_verified` and add only pointer/scalar target hook evidence.
+Risk and payload gates are generated from definition risk metadata plus metadata-driven signature, namespace, ABI, and payload-policy rules. Broad generated hooks remain gated by tier, profile, review manifest, and runtime smoke coverage; the compact Tier 0 IDs remain preserved for wire-format compatibility.
 
 `NtCreateFile` is captured as a controlled `ntdll.dll` IAT hook in the repository sample target. The native event keeps `returnValue` as the NTSTATUS hex string. For compatibility with the existing trace error model, `lastErrorCode` remains `0` on NT success and a mapped Win32 error on NT failure.
 
