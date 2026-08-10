@@ -17,7 +17,8 @@ ThreadedSharedTransportReader::ThreadedSharedTransportReader(
 ThreadedSharedTransportReader::~ThreadedSharedTransportReader()
 {
     RequestStop("destructor");
-    (void)Join(2000);
+    // Destructor must not leave a joinable std::thread; that would call std::terminate.
+    (void)Join(0);
 }
 
 bool ThreadedSharedTransportReader::Start(const SharedTransportRecordCallback& callback)
@@ -64,10 +65,24 @@ void ThreadedSharedTransportReader::RequestStop(const std::string& reason)
 bool ThreadedSharedTransportReader::Join(std::uint32_t timeoutMs)
 {
     bool joined = false;
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
 
     do
     {
+        if (!m_thread.joinable())
+        {
+            joined = !m_running.load();
+            break;
+        }
+
+        if (timeoutMs == 0)
+        {
+            // Infinite wait: required for destructor safety after RequestStop.
+            m_thread.join();
+            joined = true;
+            break;
+        }
+
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
         while (m_running.load() && std::chrono::steady_clock::now() < deadline)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -75,14 +90,12 @@ bool ThreadedSharedTransportReader::Join(std::uint32_t timeoutMs)
 
         if (m_running.load())
         {
+            // Timed out while the worker is still marked running. Leave the thread
+            // joinable so a later Join(0)/destructor can still reclaim it safely.
             break;
         }
 
-        if (m_thread.joinable())
-        {
-            m_thread.join();
-        }
-
+        m_thread.join();
         joined = true;
     }
     while (false);

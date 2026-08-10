@@ -386,24 +386,39 @@ const wchar_t* DefaultAgentFileName()
 #endif
 }
 
+std::uint64_t NextUniqueCounter()
+{
+    static volatile LONG64 counter = 0;
+    return static_cast<std::uint64_t>(InterlockedIncrement64(&counter));
+}
+
 std::string NewOperationId()
 {
+    LARGE_INTEGER qpc = {};
+    QueryPerformanceCounter(&qpc);
     std::ostringstream stream;
-    stream << "op-" << GetCurrentProcessId() << "-" << GetTickCount64();
+    stream << "op-" << GetCurrentProcessId() << "-" << GetTickCount64() << "-" << static_cast<std::uint64_t>(qpc.QuadPart)
+           << "-" << NextUniqueCounter();
     return stream.str();
 }
 
 std::string NewWriterInstanceId()
 {
+    LARGE_INTEGER qpc = {};
+    QueryPerformanceCounter(&qpc);
     std::ostringstream stream;
-    stream << "writer-" << GetCurrentProcessId() << "-" << GetTickCount64();
+    stream << "writer-" << GetCurrentProcessId() << "-" << GetTickCount64() << "-" << static_cast<std::uint64_t>(qpc.QuadPart)
+           << "-" << NextUniqueCounter();
     return stream.str();
 }
 
 std::string NewDaemonInstanceId()
 {
+    LARGE_INTEGER qpc = {};
+    QueryPerformanceCounter(&qpc);
     std::ostringstream stream;
-    stream << "daemon-" << GetCurrentProcessId() << "-" << GetTickCount64();
+    stream << "daemon-" << GetCurrentProcessId() << "-" << GetTickCount64() << "-" << static_cast<std::uint64_t>(qpc.QuadPart)
+           << "-" << NextUniqueCounter();
     return stream.str();
 }
 

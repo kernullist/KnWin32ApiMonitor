@@ -2259,6 +2259,27 @@ void UpdateTransportHighWaterMark(std::int64_t depth)
     }
 }
 
+void PublishPoisonTransportRecord(knmon::KnMonTransportRecord* record, std::int64_t sequence)
+{
+    if (record == nullptr)
+    {
+        return;
+    }
+
+    // Claimed producer sequence numbers must remain visible to the consumer as
+    // committed slots. Leaving a hole permanently stalls DrainAvailable.
+    std::memset(record, 0, sizeof(*record));
+    InterlockedExchange64(&record->Sequence, sequence);
+    record->RecordSize = sizeof(knmon::KnMonTransportRecord);
+    record->EventKind = static_cast<std::uint16_t>(knmon::KnMonTransportEventKind::Unknown);
+    record->ProcessId = GetCurrentProcessId();
+    record->ThreadId = GetCurrentThreadId();
+    MemoryBarrier();
+    InterlockedExchange(
+        reinterpret_cast<volatile LONG*>(&record->State),
+        static_cast<LONG>(knmon::KnMonTransportRecordState::Committed));
+}
+
 knmon::KnMonTransportRecord* ReserveTransportRecord()
 {
     knmon::KnMonTransportRecord* record = nullptr;
@@ -2285,24 +2306,46 @@ knmon::KnMonTransportRecord* ReserveTransportRecord()
             if (InterlockedCompareExchange64(&g_transportHeader->ProducerSequence, producer + 1, producer) == producer)
             {
                 UpdateTransportHighWaterMark(depth + 1);
-                record = &g_transportRecords[producer % g_transportCapacity];
+                knmon::KnMonTransportRecord* slot = &g_transportRecords[producer % g_transportCapacity];
                 if (InterlockedCompareExchange(
-                        reinterpret_cast<volatile LONG*>(&record->State),
+                        reinterpret_cast<volatile LONG*>(&slot->State),
                         static_cast<LONG>(knmon::KnMonTransportRecordState::Writing),
                         static_cast<LONG>(knmon::KnMonTransportRecordState::Free)) != static_cast<LONG>(knmon::KnMonTransportRecordState::Free))
                 {
-                    record = nullptr;
+                    // Sequence was claimed but the slot was not Free. Poison-commit so
+                    // the single-consumer ring can advance instead of stalling forever.
+                    PublishPoisonTransportRecord(slot, producer);
                     CountDroppedTransportEvent();
                     break;
                 }
 
-                std::memset(record, 0, sizeof(*record));
-                record->State = static_cast<LONG>(knmon::KnMonTransportRecordState::Writing);
-                record->Sequence = producer;
-                record->RecordSize = sizeof(knmon::KnMonTransportRecord);
-                record->EventKind = static_cast<std::uint16_t>(knmon::KnMonTransportEventKind::ApiCall);
-                record->ProcessId = GetCurrentProcessId();
-                record->ThreadId = GetCurrentThreadId();
+                // Clear payload fields without releasing ownership. Full memset would
+                // briefly set State back to Free and widen the reclaim race window.
+                slot->EventKind = static_cast<std::uint16_t>(knmon::KnMonTransportEventKind::ApiCall);
+                slot->ApiId = static_cast<std::uint16_t>(knmon::KnMonTransportApiId::Unknown);
+                slot->ModuleId = static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Unknown);
+                slot->Flags = 0;
+                slot->ProcessId = GetCurrentProcessId();
+                slot->ThreadId = GetCurrentThreadId();
+                slot->DurationUs = 0;
+                slot->HookOverheadUs = 0;
+                slot->StartQpc = 0;
+                slot->EndQpc = 0;
+                slot->ReturnValue = 0;
+                slot->ReturnCode = 0;
+                slot->LastErrorCode = 0;
+                std::memset(slot->Values64, 0, sizeof(slot->Values64));
+                std::memset(slot->Values32, 0, sizeof(slot->Values32));
+                slot->Text0Length = 0;
+                slot->Text1Length = 0;
+                slot->Text2Length = 0;
+                slot->Text0[0] = '\0';
+                slot->Text1[0] = '\0';
+                slot->Text2[0] = '\0';
+                slot->RecordSize = sizeof(knmon::KnMonTransportRecord);
+                InterlockedExchange64(&slot->Sequence, producer);
+                slot->State = static_cast<LONG>(knmon::KnMonTransportRecordState::Writing);
+                record = slot;
                 break;
             }
         }
@@ -2392,8 +2435,10 @@ bool OpenTransport(const std::wstring& mappingName)
         if (
             header->Magic != knmon::KnMonTransportMagic ||
             header->AbiVersion != knmon::KnMonTransportAbiVersion ||
+            header->HeaderSize != sizeof(knmon::KnMonTransportHeader) ||
             header->RecordSize != sizeof(knmon::KnMonTransportRecord) ||
-            header->Capacity < knmon::KnMonTransportMinCapacity)
+            header->Capacity < knmon::KnMonTransportMinCapacity ||
+            header->Capacity > knmon::KnMonTransportMaxCapacity)
         {
             UnmapViewOfFile(header);
             break;

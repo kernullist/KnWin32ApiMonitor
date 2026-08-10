@@ -112,9 +112,15 @@ SharedTransportDrainResult SharedTransportReader::DrainAvailable(const SharedTra
             }
 
             KnMonTransportRecord& record = m_records[consumer % m_header->Capacity];
+            // Sequence is 64-bit; use an interlocked load so x86 readers cannot tear.
+            const std::int64_t recordSequence = ReadTransportCounter(&record.Sequence);
+            const std::int32_t recordState = InterlockedCompareExchange(
+                reinterpret_cast<volatile LONG*>(&record.State),
+                0,
+                0);
             if (
-                record.Sequence != consumer ||
-                record.State != static_cast<std::int32_t>(KnMonTransportRecordState::Committed))
+                recordSequence != consumer ||
+                recordState != static_cast<std::int32_t>(KnMonTransportRecordState::Committed))
             {
                 result.StoppedOnUnavailableRecord = true;
                 break;
@@ -134,8 +140,10 @@ SharedTransportDrainResult SharedTransportReader::DrainAvailable(const SharedTra
 
             RecordHookOverhead(result, record.HookOverheadUs);
 
-            record.State = static_cast<std::int32_t>(KnMonTransportRecordState::Free);
-            record.Sequence = -1;
+            // Free the slot before advancing the consumer index. State first keeps
+            // producers from reclaiming a still-visible committed sequence number.
+            InterlockedExchange(reinterpret_cast<volatile LONG*>(&record.State), static_cast<LONG>(KnMonTransportRecordState::Free));
+            InterlockedExchange64(&record.Sequence, -1);
             MemoryBarrier();
             InterlockedExchange64(&m_header->ConsumerSequence, consumer + 1);
             ++result.RecordsDrained;

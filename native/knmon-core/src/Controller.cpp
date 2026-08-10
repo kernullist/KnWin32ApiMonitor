@@ -1986,6 +1986,18 @@ bool OpenCancellationContext(const std::string& eventName, CancellationContext* 
             break;
         }
 
+        // Named events may already exist from a prior operation with the same name.
+        // Always clear signal state so a stale set does not cancel a fresh operation.
+        if (!ResetEvent(eventHandle))
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            CloseHandle(eventHandle);
+            break;
+        }
+
         if (context != nullptr)
         {
             context->EventHandle = eventHandle;
@@ -6699,6 +6711,18 @@ bool CreateSharedTransport(
             break;
         }
 
+        // CreateFileMappingW returns an existing section when the name already exists.
+        // Reusing and zeroing that section would corrupt a live session.
+        const DWORD mappingStatus = GetLastError();
+        if (mappingStatus == ERROR_ALREADY_EXISTS)
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = ERROR_ALREADY_EXISTS;
+            }
+            break;
+        }
+
         transport.Header = static_cast<KnMonTransportHeader*>(MapViewOfFile(transport.MappingHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0));
         if (transport.Header == nullptr)
         {
@@ -6811,6 +6835,13 @@ void DrainSharedTransport(
     SharedTransportReader reader = MakeSharedTransportReader(transport, maxRecordsPerDrain);
     SharedTransportDrainResult drainResult = reader.DrainAvailable([&](const KnMonTransportRecord& record)
     {
+        // Skip poison/placeholder slots published when a producer claimed a sequence
+        // but could not safely fill an ApiCall record.
+        if (record.EventKind != static_cast<std::uint16_t>(KnMonTransportEventKind::ApiCall))
+        {
+            return true;
+        }
+
         const std::string payload = BuildTransportApiPayload(result, record);
         if (!payload.empty() && PayloadMatchesApiSelection(payload, result.ApiSelection))
         {

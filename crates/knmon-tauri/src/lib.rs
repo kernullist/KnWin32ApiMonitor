@@ -1211,8 +1211,19 @@ fn now_epoch_ms() -> u128 {
         .as_millis()
 }
 
+fn next_operation_sequence() -> u64 {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static SEQUENCE: AtomicU64 = AtomicU64::new(0);
+    SEQUENCE.fetch_add(1, Ordering::Relaxed).wrapping_add(1)
+}
+
 fn new_operation_id(prefix: &str, process_id: u32) -> String {
-    format!("{prefix}-{process_id}-{}", now_epoch_ms())
+    // Include monotonic sequence so same-millisecond concurrent starts cannot collide.
+    format!(
+        "{prefix}-{process_id}-{}-{}",
+        now_epoch_ms(),
+        next_operation_sequence()
+    )
 }
 
 fn new_session_id(operation_id: &str) -> String {
