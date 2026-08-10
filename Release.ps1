@@ -130,13 +130,35 @@ if (Test-Path -LiteralPath $zipPath)
     Remove-Item -LiteralPath $zipPath -Force
 }
 
-$x64Dir = Join-Path $repoRoot "build\native\$Configuration"
+function Resolve-NativeOutputDir
+{
+    param(
+        [string]$BaseDir,
+        [string]$ConfigurationName
+    )
+
+    $configuredDir = Join-Path $BaseDir $ConfigurationName
+    if (Test-Path -LiteralPath $configuredDir)
+    {
+        return $configuredDir
+    }
+
+    # Single-config generators (Ninja/NMake) write directly into the build root.
+    if (Test-Path -LiteralPath $BaseDir)
+    {
+        return $BaseDir
+    }
+
+    return $configuredDir
+}
+
+$x64Dir = Resolve-NativeOutputDir -BaseDir (Join-Path $repoRoot "build\native") -ConfigurationName $Configuration
 $x64Count = Copy-FileSet -SourceDir $x64Dir -DestinationDir $stageRoot -Extensions @(".exe", ".dll")
 
 $win32Count = 0
 if ($IncludeWin32)
 {
-    $win32Dir = Join-Path $repoRoot "build\native-win32\$Configuration"
+    $win32Dir = Resolve-NativeOutputDir -BaseDir (Join-Path $repoRoot "build\native-win32") -ConfigurationName $Configuration
     $win32Count = Copy-FileSet -SourceDir $win32Dir -DestinationDir (Join-Path $stageRoot "win32") -Extensions @(".exe", ".dll")
 }
 

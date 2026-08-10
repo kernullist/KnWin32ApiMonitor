@@ -1,6 +1,6 @@
 # Changelog
 
-## 2026-08-11
+## 2026-08-11 — v0.1.0.3
 
 ### Fixed
 
@@ -11,5 +11,6 @@
 - Transport producer CAS failure publishes a poison slot instead of permanently stalling the consumer.
 - Named cancellation events are reset on open so stale signals cannot cancel a new operation.
 - Transport record sequence is loaded/stored with interlocked 64-bit operations for x86 safety.
+- Release packaging supports single-config native output layouts (Ninja/NMake).
 
-See `docs/plan/2026-08-11-adversarial-bug-review.md`.
+See `docs/plan/2026-08-11-adversarial-bug-review.md` and `docs/release-notes/v0.1.0.3.md`.
