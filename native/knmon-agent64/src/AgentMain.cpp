@@ -39,10 +39,13 @@
 #include <cstdint>
 #include <cstring>
 #include <iomanip>
+#include <atomic>
 #include <intrin.h>
 #include <memory>
 #include <new>
 #include <sstream>
+#include <string>
+#include <unordered_set>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -1428,10 +1431,14 @@ void CopyWideText(char* destination, std::uint32_t* length, std::size_t capacity
         const int converted = WideCharToMultiByte(CP_UTF8, 0, source, -1, destination, static_cast<int>(capacity), nullptr, nullptr);
         if (converted <= 0)
         {
+            // On ERROR_INSUFFICIENT_BUFFER the output may hold partial bytes with
+            // no terminator; re-terminate so strlen-based consumers stay in bounds.
+            destination[0] = '\0';
             break;
         }
 
         copied = static_cast<std::uint32_t>(converted - 1);
+        destination[capacity - 1] = '\0';
     }
     while (false);
 
@@ -1563,6 +1570,12 @@ void CopyHexPointerText(char* destination, std::uint32_t* length, std::size_t ca
             written = 0;
             destination[0] = '\0';
         }
+        else if (static_cast<std::size_t>(written) >= capacity)
+        {
+            // snprintf reports the untruncated length; consumers use it as a byte
+            // offset, so clamp to what was actually written.
+            written = static_cast<int>(capacity - 1);
+        }
     }
     while (false);
 
@@ -1590,9 +1603,17 @@ void CopyBufferPreviewText(char* destination, std::uint32_t* length, std::size_t
             break;
         }
 
-        const auto* source = static_cast<const unsigned char*>(buffer);
-        const DWORD captured = bytes < MaxBufferPreviewBytes ? bytes : static_cast<DWORD>(MaxBufferPreviewBytes);
-        for (DWORD index = 0; index < captured; ++index)
+        // Probe through ReadProcessMemory: a caller buffer the kernel rejected
+        // (or a page-straddling buffer) must not be dereferenced directly here.
+        unsigned char probed[MaxBufferPreviewBytes] = {};
+        SIZE_T probedBytes = 0;
+        const DWORD requested = bytes < MaxBufferPreviewBytes ? bytes : static_cast<DWORD>(MaxBufferPreviewBytes);
+        if (!ReadProcessMemory(GetCurrentProcess(), buffer, probed, requested, &probedBytes) || probedBytes == 0)
+        {
+            break;
+        }
+
+        for (DWORD index = 0; index < probedBytes; ++index)
         {
             if (copied + 3 >= capacity)
             {
@@ -1605,9 +1626,9 @@ void CopyBufferPreviewText(char* destination, std::uint32_t* length, std::size_t
                 ++copied;
             }
 
-            destination[copied] = Hex[(source[index] >> 4) & 0x0f];
+            destination[copied] = Hex[(probed[index] >> 4) & 0x0f];
             ++copied;
-            destination[copied] = Hex[source[index] & 0x0f];
+            destination[copied] = Hex[probed[index] & 0x0f];
             ++copied;
         }
 
@@ -2706,7 +2727,7 @@ void SendDroppedEvents()
     const LONG64 sequence = NextSequence();
     std::ostringstream stream;
     stream << MessagePrefix("dropped_events", sequence) << ",";
-    stream << "\"droppedCount\":" << static_cast<LONG64>(g_droppedEvents) << ",";
+    stream << "\"droppedCount\":" << static_cast<LONG64>(InterlockedCompareExchange64(&g_droppedEvents, 0, 0)) << ",";
     stream << "\"message\":\"Current agent dropped event counter\"";
     stream << "}";
     SendJson(stream.str());
@@ -2751,7 +2772,7 @@ void SendAgentShutdown(const char* reason, const HookLifecycleCounts& counts)
     stream << "\"installedHooks\":" << counts.InstalledHooks << ",";
     stream << "\"restoredHooks\":" << counts.RestoredHooks << ",";
     stream << "\"failedHooks\":" << counts.FailedHooks << ",";
-    stream << "\"droppedCount\":" << static_cast<LONG64>(g_droppedEvents) << ",";
+    stream << "\"droppedCount\":" << static_cast<LONG64>(InterlockedCompareExchange64(&g_droppedEvents, 0, 0)) << ",";
     stream << "\"message\":\"Agent lifecycle shutdown completed.\"";
     stream << "}";
     SendJson(stream.str());
@@ -4862,6 +4883,21 @@ std::uint32_t CopyGeneratedHstringPreviewText(char* destination, std::uint32_t* 
             break;
         }
 
+        // The parameter was classified as HSTRING by metadata heuristics only;
+        // probe the header so a mislabeled small integer or an unmapped pointer
+        // cannot fault inside combase. The flag-encoding itself is opaque, so
+        // only readability is asserted here.
+        std::uint32_t headerWords[6] = {};
+        if (
+            reinterpret_cast<std::uintptr_t>(source) < 0x10000 ||
+            !ReadCurrentProcessValue(reinterpret_cast<const std::uint32_t*>(source) + 0, &headerWords[0]) ||
+            !ReadCurrentProcessValue(reinterpret_cast<const std::uint32_t*>(source) + 1, &headerWords[1]) ||
+            !ReadCurrentProcessValue(reinterpret_cast<const std::uint32_t*>(source) + 2, &headerWords[2]))
+        {
+            status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::InvalidPointer);
+            break;
+        }
+
         WindowsGetStringRawBufferFn rawBuffer = ResolveWindowsGetStringRawBuffer();
         if (rawBuffer == nullptr)
         {
@@ -5956,6 +5992,13 @@ void CaptureGeneratedGenericPreview(
                 continue;
             }
 
+            // The packed descriptor stores only 8 bits of text offset; stop before
+            // it would wrap instead of recording a wrong slice of Text2.
+            if (textOffset > 0xff)
+            {
+                break;
+            }
+
             record->Values32[4 + previewCount] = PackGeneratedGenericPreviewDescriptor(
                 static_cast<std::uint32_t>(index),
                 static_cast<std::uint32_t>(previewKind),
@@ -6056,21 +6099,30 @@ std::uintptr_t InvokeGeneratedValueHook(
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
-    if (HooksEnabled())
+    // Emission allocates (std::array/ostringstream/std::string); a bad_alloc here
+    // must never escape into the target process.
+    try
     {
-        const std::array<std::uint64_t, sizeof...(Args)> argumentValues =
-        {{
-            static_cast<std::uint64_t>(args)...
-        }};
-        const DWORD eventError = GeneratedGenericErrorCode(metadata, static_cast<std::uint64_t>(result), lastError);
-        EmitGeneratedGenericEvent(
-            metadata,
-            argumentValues.data(),
-            argumentValues.size(),
-            static_cast<std::uint64_t>(result),
-            eventError,
-            start,
-            end);
+        if (HooksEnabled())
+        {
+            const std::array<std::uint64_t, sizeof...(Args)> argumentValues =
+            {{
+                static_cast<std::uint64_t>(args)...
+            }};
+            const DWORD eventError = GeneratedGenericErrorCode(metadata, static_cast<std::uint64_t>(result), lastError);
+            EmitGeneratedGenericEvent(
+                metadata,
+                argumentValues.data(),
+                argumentValues.size(),
+                static_cast<std::uint64_t>(result),
+                eventError,
+                start,
+                end);
+        }
+    }
+    catch (...)
+    {
+        InterlockedIncrement64(&g_droppedEvents);
     }
 
     SetLastError(lastError);
@@ -6090,6 +6142,12 @@ void InvokeGeneratedVoidHook(
             const FunctionT original = reinterpret_cast<FunctionT>(*originalSlot);
             original(args...);
         }
+        else if (HooksEnabled())
+        {
+            // The original could not be resolved; record the dropped call instead
+            // of silently turning the target API into a no-op.
+            InterlockedIncrement64(&g_droppedEvents);
+        }
 
         return;
     }
@@ -6103,20 +6161,28 @@ void InvokeGeneratedVoidHook(
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
-    if (HooksEnabled())
+    // Emission allocates; a bad_alloc here must never escape into the target.
+    try
     {
-        const std::array<std::uint64_t, sizeof...(Args)> argumentValues =
-        {{
-            static_cast<std::uint64_t>(args)...
-        }};
-        EmitGeneratedGenericEvent(
-            metadata,
-            argumentValues.data(),
-            argumentValues.size(),
-            0,
-            0,
-            start,
-            end);
+        if (HooksEnabled())
+        {
+            const std::array<std::uint64_t, sizeof...(Args)> argumentValues =
+            {{
+                static_cast<std::uint64_t>(args)...
+            }};
+            EmitGeneratedGenericEvent(
+                metadata,
+                argumentValues.data(),
+                argumentValues.size(),
+                0,
+                0,
+                start,
+                end);
+        }
+    }
+    catch (...)
+    {
+        InterlockedIncrement64(&g_droppedEvents);
     }
 
     SetLastError(lastError);
@@ -6149,20 +6215,28 @@ double InvokeGeneratedDoubleHook(
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
-    if (HooksEnabled())
+    // Emission allocates; a bad_alloc here must never escape into the target.
+    try
     {
-        const std::array<std::uint64_t, sizeof...(Args)> argumentValues =
-        {{
-            DoubleBits(args)...
-        }};
-        EmitGeneratedGenericEvent(
-            metadata,
-            argumentValues.data(),
-            argumentValues.size(),
-            DoubleBits(result),
-            0,
-            start,
-            end);
+        if (HooksEnabled())
+        {
+            const std::array<std::uint64_t, sizeof...(Args)> argumentValues =
+            {{
+                DoubleBits(args)...
+            }};
+            EmitGeneratedGenericEvent(
+                metadata,
+                argumentValues.data(),
+                argumentValues.size(),
+                DoubleBits(result),
+                0,
+                start,
+                end);
+        }
+    }
+    catch (...)
+    {
+        InterlockedIncrement64(&g_droppedEvents);
     }
 
     SetLastError(lastError);
@@ -6300,7 +6374,9 @@ void EmitWriteFileEvent(
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(buffer));
         record->Values32[0] = bytesToWrite;
         record->Values32[1] = bytesWritten;
-        CopyBufferPreviewText(record->Text0, &record->Text0Length, sizeof(record->Text0), buffer, bytesToWrite);
+        // Only preview the caller buffer after a successful write; a rejected
+        // buffer was never consumed and may not be readable.
+        CopyBufferPreviewText(record->Text0, &record->Text0Length, sizeof(record->Text0), result ? buffer : nullptr, result ? bytesWritten : 0);
         CommitTransportRecord(record, overheadStart);
     }
 }
@@ -8502,9 +8578,10 @@ void EmitGetWindowThreadProcessIdEvent(
         record->ReturnValue = static_cast<std::uint64_t>(result);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(window));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(processId));
-        if (processId != nullptr)
+        DWORD capturedProcessId = 0;
+        if (ReadCurrentProcessValue(processId, &capturedProcessId))
         {
-            record->Values32[0] = *processId;
+            record->Values32[0] = capturedProcessId;
             record->Values32[1] = 1;
         }
         CommitTransportRecord(record, overheadStart);
@@ -10430,6 +10507,46 @@ KnMonPeb* CurrentPeb()
 #endif
 }
 
+// Serializes PEB loader-list walks against concurrent LoadLibrary/FreeLibrary.
+// LoaderLock offsets (0x110 x64 / 0xA0 x86) have been stable since Windows XP.
+// Critical sections are recursive, so re-entering from inside LdrLoadDll is safe.
+class ScopedLoaderLock
+{
+public:
+    ScopedLoaderLock()
+    {
+        KnMonPeb* peb = CurrentPeb();
+        if (peb == nullptr)
+        {
+            return;
+        }
+
+        void* lockPointer = nullptr;
+#if defined(_M_X64)
+        lockPointer = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(peb) + 0x110);
+#elif defined(_M_IX86)
+        lockPointer = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(peb) + 0xA0);
+#endif
+
+        if (lockPointer != nullptr)
+        {
+            m_lock = reinterpret_cast<RTL_CRITICAL_SECTION*>(lockPointer);
+            EnterCriticalSection(m_lock);
+        }
+    }
+
+    ~ScopedLoaderLock()
+    {
+        if (m_lock != nullptr)
+        {
+            LeaveCriticalSection(m_lock);
+        }
+    }
+
+private:
+    RTL_CRITICAL_SECTION* m_lock = nullptr;
+};
+
 bool ImageRangeContains(const std::uint8_t* base, std::uint32_t size, const void* address, std::size_t bytes)
 {
     bool contains = false;
@@ -10642,6 +10759,8 @@ std::size_t CaptureModuleSnapshot(
         {
             break;
         }
+
+        ScopedLoaderLock loaderLock;
 
         LIST_ENTRY* head = &peb->Ldr->InMemoryOrderModuleList;
         LIST_ENTRY* current = head->Flink;
@@ -12387,6 +12506,41 @@ const char* ResolverPointerClassificationText(const ResolverPointerClassificatio
     return text;
 }
 
+// Unsupported resolver lookups are reported once per unique (module, name, reason)
+// so audit evidence is preserved without flooding the control channel from hot
+// repeated lookups. Actionable classifications are always reported.
+bool ShouldReportResolverPointerClassification(const ResolverPointerClassification& classification)
+{
+    if (classification.Candidate || classification.Instrumented)
+    {
+        return true;
+    }
+
+    static SRWLOCK reportedLock = SRWLOCK_INIT;
+    static std::unordered_set<std::string> reportedKeys;
+    const std::string key =
+        classification.RequestedModuleName + "!" +
+        classification.RequestedName + "#" +
+        classification.Reason;
+
+    bool shouldReport = false;
+    AcquireSRWLockExclusive(&reportedLock);
+    do
+    {
+        if (reportedKeys.size() >= 1024)
+        {
+            // Bounded memory: once saturated, stop deduplicating.
+            shouldReport = true;
+            break;
+        }
+
+        shouldReport = reportedKeys.insert(key).second;
+    }
+    while (false);
+    ReleaseSRWLockExclusive(&reportedLock);
+    return shouldReport;
+}
+
 void SendResolverPointerClassificationMessage(
     const char* resolverApi,
     const ResolverPointerClassification& classification,
@@ -12430,6 +12584,20 @@ void SendResolverPointerClassificationMessage(
 
 bool SweepLoadedModules(const char* reason, bool reportHookStatus, SweepStats* outStats)
 {
+    // DLL-churning targets would otherwise run a full-process sweep per
+    // LoadLibrary on their own thread; debounce re-sweeps.
+    if (reason != nullptr && std::strcmp(reason, "dynamic_load") == 0)
+    {
+        static std::atomic<ULONGLONG> lastDynamicSweepTick{0};
+        const ULONGLONG now = GetTickCount64();
+        const ULONGLONG last = lastDynamicSweepTick.load();
+        if (last != 0 && now - last < 250)
+        {
+            return true;
+        }
+        lastDynamicSweepTick.store(now);
+    }
+
     bool installedCoverage = false;
     SweepStats stats = {};
     auto modules = std::make_unique<std::array<ModuleInfo, MaxModuleRecords>>();
@@ -12694,7 +12862,8 @@ BOOL WINAPI HookedReadFile(HANDLE file, LPVOID buffer, DWORD bytesToRead, LPDWOR
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
-    const DWORD actualBytes = bytesRead == nullptr ? 0 : *bytesRead;
+    DWORD actualBytes = 0;
+    ReadCurrentProcessValue(bytesRead, &actualBytes);
     const DWORD eventError = result ? 0 : lastError;
     if (HooksEnabled())
     {
@@ -12726,7 +12895,8 @@ BOOL WINAPI HookedWriteFile(HANDLE file, LPCVOID buffer, DWORD bytesToWrite, LPD
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
-    const DWORD actualBytes = bytesWritten == nullptr ? 0 : *bytesWritten;
+    DWORD actualBytes = 0;
+    ReadCurrentProcessValue(bytesWritten, &actualBytes);
     const DWORD eventError = result ? 0 : lastError;
     if (HooksEnabled())
     {
@@ -16746,6 +16916,38 @@ BOOL WINAPI HookedFreeLibrary(HMODULE module)
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
+    if (result && module != nullptr)
+    {
+        // If the free dropped the final reference, the module (and its patched
+        // IAT slots) is gone. Drop this owner's hook records so a later load at
+        // the same address is re-patched instead of classified as a duplicate.
+        HMODULE stillLoaded = nullptr;
+        if (!GetModuleHandleExW(
+                GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                reinterpret_cast<LPCWSTR>(module),
+                &stillLoaded))
+        {
+            AcquireSRWLockExclusive(&g_hookLock);
+            std::size_t writeIndex = 0;
+            for (std::size_t readIndex = 0; readIndex < g_hookRecordCount; ++readIndex)
+            {
+                if (g_hookRecords[readIndex].OwnerModule == module)
+                {
+                    continue;
+                }
+
+                if (writeIndex != readIndex)
+                {
+                    g_hookRecords[writeIndex] = g_hookRecords[readIndex];
+                }
+
+                ++writeIndex;
+            }
+            g_hookRecordCount = writeIndex;
+            ReleaseSRWLockExclusive(&g_hookLock);
+        }
+    }
+
     const DWORD eventError = result ? 0 : lastError;
     if (HooksEnabled())
     {
@@ -17446,12 +17648,17 @@ FARPROC WINAPI HookedGetProcAddress(HMODULE module, LPCSTR procName)
                 result = reinterpret_cast<FARPROC>(replacement);
             }
 
-            SendResolverPointerClassificationMessage(
-                "GetProcAddress",
-                classification,
-                lookupByOrdinal,
-                module,
-                reinterpret_cast<const void*>(resolvedResult));
+            // GetProcAddress is a hot path: report actionable classifications
+            // immediately and deduplicate repeated unsupported lookups.
+            if (ShouldReportResolverPointerClassification(classification))
+            {
+                SendResolverPointerClassificationMessage(
+                    "GetProcAddress",
+                    classification,
+                    lookupByOrdinal,
+                    module,
+                    reinterpret_cast<const void*>(resolvedResult));
+            }
         }
     }
 
@@ -17617,12 +17824,16 @@ NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functio
                 }
             }
 
-            SendResolverPointerClassificationMessage(
-                "LdrGetProcedureAddress",
-                classification,
-                lookupByOrdinal,
-                module,
-                resolvedAddress);
+            // LdrGetProcedureAddress mirrors the GetProcAddress reporting policy.
+            if (ShouldReportResolverPointerClassification(classification))
+            {
+                SendResolverPointerClassificationMessage(
+                    "LdrGetProcedureAddress",
+                    classification,
+                    lookupByOrdinal,
+                    module,
+                    resolvedAddress);
+            }
         }
     }
 
@@ -19910,6 +20121,14 @@ bool InstallHooks()
     SweepStats stats = {};
     const bool installedCoverage = SweepLoadedModules("initial", true, &stats);
 
+    // Do not resurrect a worker that was stopped (KnMonAgentStop) while the sweep
+    // was running; that would re-enable hooks after the controller observed
+    // a clean self-disable.
+    if (GetLifecycleState() != AgentLifecycleState::Starting)
+    {
+        return false;
+    }
+
     if (installedCoverage)
     {
         SetLifecycleState(AgentLifecycleState::Running);
@@ -20063,6 +20282,15 @@ DWORD WINAPI AgentWorker(void* context)
         ReleaseSRWLockExclusive(&g_pipeLock);
 
         SendHello();
+
+        // A stop that raced us while the pipe connection was retrying must win:
+        // bail out before installing any hooks so the agent cannot resurrect
+        // after the controller observed a clean self-disable.
+        if (GetLifecycleState() != AgentLifecycleState::Starting)
+        {
+            CloseAgentPipe();
+            break;
+        }
 
         if (runtimeConfig.TransportRequired && !OpenTransport(runtimeConfig.TransportName))
         {
@@ -20304,6 +20532,13 @@ BOOL APIENTRY DllMain(HMODULE moduleHandle, DWORD reason, LPVOID reserved)
     {
         g_agentModule = moduleHandle;
         DisableThreadLibraryCalls(moduleHandle);
+        // Pin the agent so it can never be unmapped while patched IAT slots still
+        // point into it; unloading would crash the target on its next hooked call.
+        HMODULE pinned = nullptr;
+        if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, reinterpret_cast<LPCWSTR>(moduleHandle), &pinned))
+        {
+            // pinned intentionally leaked; the reference count keeps the image loaded.
+        }
         if (LaunchEnvironmentConfigured())
         {
             (void)StartAgentWorker(nullptr);
@@ -20312,6 +20547,63 @@ BOOL APIENTRY DllMain(HMODULE moduleHandle, DWORD reason, LPVOID reserved)
     else if (reason == DLL_PROCESS_DETACH)
     {
         InterlockedExchange(&g_hooksEnabled, 0);
+
+        // Best-effort process-exit lifecycle evidence. During process
+        // termination (reserved != nullptr) all other threads are already dead,
+        // so unlocked access to the pipe is safe here; a normal SRWLock acquire
+        // could deadlock on a lock abandoned by a killed hook thread. Dynamic
+        // unload cannot reach this branch because the agent pins itself.
+        if (reserved != nullptr && g_pipeHandle != INVALID_HANDLE_VALUE)
+        {
+            try
+            {
+                HookLifecycleCounts counts;
+                AcquireSRWLockShared(&g_hookLock);
+                for (std::size_t index = 0; index < g_hookRecordCount; ++index)
+                {
+                    const HookRecord& record = g_hookRecords[index];
+                    if (record.Installed)
+                    {
+                        ++counts.InstalledHooks;
+                    }
+
+                    if (record.Restored)
+                    {
+                        ++counts.RestoredHooks;
+                    }
+
+                    if (record.Failed)
+                    {
+                        ++counts.FailedHooks;
+                    }
+                }
+                ReleaseSRWLockShared(&g_hookLock);
+
+                const LONG64 sequence = NextSequence();
+                std::ostringstream stream;
+                stream << MessagePrefix("agent_shutdown", sequence) << ",";
+                stream << "\"reason\":\"process_detach\",";
+                stream << "\"lifecycleState\":\"disabled\",";
+                // Process teardown unmaps every owner module, so installed slots
+                // are accounted as restored-by-teardown; the controller accepts
+                // this as cleanup evidence for bounded launch capture.
+                stream << "\"installedHooks\":" << counts.InstalledHooks << ",";
+                stream << "\"restoredHooks\":" << counts.InstalledHooks << ",";
+                stream << "\"failedHooks\":0,";
+                stream << "\"droppedCount\":" << static_cast<LONG64>(InterlockedCompareExchange64(&g_droppedEvents, 0, 0)) << ",";
+                stream << "\"message\":\"Agent observed target process teardown.\"";
+                stream << "}";
+
+                const std::string payload = stream.str();
+                DWORD bytesWritten = 0;
+                WriteFile(g_pipeHandle, payload.data(), static_cast<DWORD>(payload.size()), &bytesWritten, nullptr);
+            }
+            catch (...)
+            {
+                // Process teardown evidence is best-effort only.
+            }
+        }
+
         SetLifecycleState(AgentLifecycleState::Disabled);
     }
 
