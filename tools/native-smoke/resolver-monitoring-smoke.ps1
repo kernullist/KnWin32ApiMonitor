@@ -40,10 +40,13 @@ foreach ($api in $resolverApis)
     }
 }
 
-$getProc = @($result.capturedEvents | Where-Object { $_.api -eq "GetProcAddress" } | Select-Object -First 1)
+$getProc = @($result.capturedEvents | Where-Object {
+        $_.api -eq "GetProcAddress" -and
+        (($_.arguments | ConvertTo-Json -Depth 8) -match "KnMonDynamicProbe")
+    } | Select-Object -First 1)
 if ($getProc.Count -ne 1)
 {
-    throw "Resolver monitoring did not capture exactly one GetProcAddress sample event."
+    throw "Resolver monitoring did not capture the KnMonDynamicProbe GetProcAddress sample event."
 }
 
 if ($getProc[0].module -ne "kernel32.dll")

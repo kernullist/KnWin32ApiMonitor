@@ -78,7 +78,6 @@ mod process_liveness {
 
     const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
     const PROCESS_TERMINATE: u32 = 0x0001;
-    const STILL_ACTIVE: u32 = 259;
     const TH32CS_SNAPPROCESS: u32 = 0x00000002;
     const ERROR_INVALID_PARAMETER: u32 = 87;
 
@@ -116,12 +115,14 @@ mod process_liveness {
         fn Process32FirstW(hSnapshot: *mut c_void, lppe: *mut ProcessEntry32W) -> i32;
         fn Process32NextW(hSnapshot: *mut c_void, lppe: *mut ProcessEntry32W) -> i32;
         fn OpenProcess(dwDesiredAccess: u32, bInheritHandle: i32, dwProcessId: u32) -> *mut c_void;
-        fn GetExitCodeProcess(hProcess: *mut c_void, lpExitCode: *mut u32) -> i32;
         fn TerminateProcess(hProcess: *mut c_void, uExitCode: u32) -> i32;
         fn CloseHandle(hObject: *mut c_void) -> i32;
         fn GetLastError() -> u32;
         fn GetCurrentProcessId() -> u32;
+        fn WaitForSingleObject(hHandle: *mut c_void, dwMilliseconds: u32) -> u32;
     }
+
+    const WAIT_TIMEOUT: u32 = 258;
 
     fn invalid_handle_value() -> *mut c_void {
         (-1isize) as *mut c_void
@@ -287,17 +288,18 @@ mod process_liveness {
                     break;
                 }
 
-                process_handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, process_id);
+                process_handle = OpenProcess(
+                    PROCESS_QUERY_LIMITED_INFORMATION | windows_sync_access(),
+                    0,
+                    process_id,
+                );
                 if process_handle.is_null() {
                     break;
                 }
 
-                let mut exit_code = 0;
-                if GetExitCodeProcess(process_handle, &mut exit_code) == 0 {
-                    break;
-                }
-
-                alive = exit_code == STILL_ACTIVE;
+                // Wait-based probe: GetExitCodeProcess == STILL_ACTIVE (259) also
+                // matches a process that legitimately exited with code 259.
+                alive = WaitForSingleObject(process_handle, 0) == WAIT_TIMEOUT;
                 break;
             }
 
@@ -307,6 +309,10 @@ mod process_liveness {
         }
 
         alive
+    }
+
+    fn windows_sync_access() -> u32 {
+        0x00100000 // SYNCHRONIZE
     }
 
     pub fn terminate_process(process_id: u32, exit_code: u32) -> Result<(), u32> {
@@ -1696,8 +1702,10 @@ pub fn cleanup_active_sessions_on_exit() -> Vec<String> {
             .values_mut()
             .filter(|record| {
                 if record.operation_kind == "launch_capture_stream" {
-                    return !is_terminal_operation_state(&record.state)
-                        || record.target_process_id != 0;
+                    // Only live launch operations get tree cleanup. Terminal ones
+                    // had their cleanup at completion, and by now the target PID
+                    // may have been reused by an unrelated process.
+                    return !is_terminal_operation_state(&record.state);
                 }
 
                 record.operation_kind == "attach_capture_stream"
@@ -2483,11 +2491,39 @@ pub fn drain_native_trace_batches(
     session_id: String,
     after_batch_sequence: u64,
 ) -> Result<Vec<NativeTraceBatch>, String> {
-    let registry = operation_registry().lock().unwrap();
+    let mut registry = operation_registry().lock().unwrap();
     let record = registry
-        .values()
+        .values_mut()
         .find(|record| record.session_id == session_id)
         .ok_or_else(|| format!("session not found: {session_id}"))?;
+
+    // The consumer confirmed every batch at or before the cursor; drop them so
+    // queue-capacity eviction only ever counts genuinely undelivered batches.
+    while record
+        .trace_batches
+        .front()
+        .is_some_and(|batch| batch.batch_sequence <= after_batch_sequence)
+    {
+        record.trace_batches.pop_front();
+    }
+
+    // If more than one drain-limit of batches is pending, the truncation below
+    // would silently skip the oldest pending batches; drop them here and count
+    // them as host-dropped instead.
+    let overflow = record
+        .trace_batches
+        .len()
+        .saturating_sub(STREAM_BATCH_DRAIN_LIMIT);
+    for _ in 0..overflow {
+        if record.trace_batches.pop_front().is_none() {
+            break;
+        }
+    }
+    if overflow > 0 {
+        record.host_dropped_batches = record
+            .host_dropped_batches
+            .saturating_add(overflow as u64);
+    }
 
     let batches: Vec<NativeTraceBatch> = record
         .trace_batches
@@ -2495,9 +2531,8 @@ pub fn drain_native_trace_batches(
         .filter(|batch| batch.batch_sequence > after_batch_sequence)
         .cloned()
         .collect();
-    let overflow = batches.len().saturating_sub(STREAM_BATCH_DRAIN_LIMIT);
 
-    Ok(batches.into_iter().skip(overflow).collect())
+    Ok(batches)
 }
 
 pub fn backend_status() -> &'static str {
@@ -2796,15 +2831,49 @@ fn signal_cancel_operation(operation_id: &str) -> Result<CancellationSignalResul
         "knmon-native-helper.exe was not found. Run `npm run native:build` first.".to_string()
     })?;
 
-    let output = Command::new(&helper_path)
+    let mut child = Command::new(&helper_path)
         .args(["cancel-operation", "--operation-id", operation_id])
-        .output()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
         .map_err(|error| {
             format!(
                 "failed to run {} cancel-operation: {error}",
                 helper_path.display()
             )
         })?;
+
+    // Bounded wait: this runs from cancellation, timeout, and app-exit paths that
+    // must never block indefinitely on a wedged helper.
+    let deadline = Instant::now() + Duration::from_millis(5_000);
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => break,
+            Ok(None) if Instant::now() < deadline => {
+                thread::sleep(Duration::from_millis(25));
+            }
+            Ok(None) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(format!(
+                    "{} cancel-operation timed out after 5000 ms",
+                    helper_path.display()
+                ));
+            }
+            Err(error) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(format!(
+                    "failed to poll {} cancel-operation: {error}",
+                    helper_path.display()
+                ));
+            }
+        }
+    }
+
+    let output = child
+        .wait_with_output()
+        .map_err(|error| format!("failed to collect {} cancel-operation: {error}", helper_path.display()))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
@@ -2842,20 +2911,45 @@ fn run_helper_args_with_timeout(
         mark_native_operation_helper_pid(id, child.id());
     }
 
+    // Drain both pipes on reader threads: the helper can emit more than the pipe
+    // buffer holds (full CaptureResult JSON), and nothing else reads it until
+    // after exit — the child would block in WriteFile and hit the process
+    // timeout even though the capture succeeded.
+    let stdout_pipe = child.stdout.take();
+    let stderr_pipe = child.stderr.take();
+    let stdout_reader = thread::spawn(move || {
+        let mut text = String::new();
+        if let Some(mut pipe) = stdout_pipe {
+            let _ = pipe.read_to_string(&mut text);
+        }
+        text
+    });
+    let stderr_reader = thread::spawn(move || {
+        let mut text = String::new();
+        if let Some(mut pipe) = stderr_pipe {
+            let _ = pipe.read_to_string(&mut text);
+        }
+        text
+    });
+
     let timeout = Duration::from_millis(timeout_ms as u64);
     let start = Instant::now();
+    let mut timed_out = false;
+    let mut cancel_note = String::new();
 
     loop {
-        if child
-            .try_wait()
-            .map_err(|error| format!("failed to poll {}: {error}", helper_path.display()))?
-            .is_some()
-        {
-            break;
+        match child.try_wait() {
+            Ok(Some(_)) => break,
+            Ok(None) => {}
+            Err(error) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(format!("failed to poll {}: {error}", helper_path.display()));
+            }
         }
 
         if start.elapsed() >= timeout {
-            let mut cancel_note = String::new();
+            timed_out = true;
             if let Some(id) = operation_id {
                 match signal_cancel_operation(id) {
                     Ok(signal) => {
@@ -2872,17 +2966,17 @@ fn run_helper_args_with_timeout(
                 let grace_start = Instant::now();
                 let grace_timeout = Duration::from_millis(12_000);
                 while grace_start.elapsed() < grace_timeout {
-                    if child
-                        .try_wait()
-                        .map_err(|error| {
-                            format!(
+                    match child.try_wait() {
+                        Ok(Some(_)) => break,
+                        Ok(None) => {}
+                        Err(error) => {
+                            let _ = child.kill();
+                            let _ = child.wait();
+                            return Err(format!(
                                 "failed to poll {} after cancel: {error}",
                                 helper_path.display()
-                            )
-                        })?
-                        .is_some()
-                    {
-                        break;
+                            ));
+                        }
                     }
 
                     thread::sleep(Duration::from_millis(25));
@@ -2890,56 +2984,46 @@ fn run_helper_args_with_timeout(
 
                 if child
                     .try_wait()
-                    .map_err(|error| {
-                        format!(
-                            "failed to poll {} after cancel grace: {error}",
-                            helper_path.display()
-                        )
-                    })?
-                    .is_some()
+                    .map(|state| state.is_some())
+                    .unwrap_or(false)
                 {
                     break;
                 }
             }
 
             let _ = child.kill();
-            let output = child.wait_with_output().map_err(|error| {
-                format!(
-                    "failed to collect timed out {}: {error}",
-                    helper_path.display()
-                )
-            })?;
-            let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-
-            return Err(format!(
-                "{} timed out after {} ms; stderr={}; stdout={};{}",
-                helper_path.display(),
-                timeout_ms,
-                stderr,
-                stdout,
-                cancel_note
-            ));
+            break;
         }
 
         thread::sleep(Duration::from_millis(25));
     }
 
-    let output = child.wait_with_output().map_err(|error| {
+    let exit_status = child.wait().map_err(|error| {
         format!(
-            "failed to collect {} output: {error}",
+            "failed to collect {} exit status: {error}",
             helper_path.display()
         )
     })?;
 
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    let stdout = stdout_reader.join().unwrap_or_default().trim().to_string();
+    let stderr = stderr_reader.join().unwrap_or_default().trim().to_string();
 
-    if !output.status.success() {
+    if timed_out {
+        return Err(format!(
+            "{} timed out after {} ms; stderr={}; stdout={};{}",
+            helper_path.display(),
+            timeout_ms,
+            stderr,
+            stdout,
+            cancel_note
+        ));
+    }
+
+    if !exit_status.success() {
         return Err(format!(
             "{} exited with {:?}; stderr={}; stdout={}",
             helper_path.display(),
-            output.status.code(),
+            exit_status.code(),
             stderr,
             stdout
         ));
@@ -2961,11 +3045,16 @@ fn normalize_duration_ms(duration_ms: u32) -> u32 {
 }
 
 fn helper_inner_timeout_ms(duration_ms: u32) -> u32 {
-    duration_ms.saturating_add(7_000).clamp(7_000, 45_000)
+    // Keep the tight historical cap for short captures but let long captures
+    // actually finish: a 45 s inner ceiling would guarantee a kill for any
+    // duration above ~38 s.
+    duration_ms
+        .saturating_add(7_000)
+        .clamp(7_000, 607_000)
 }
 
 fn helper_process_timeout_ms(duration_ms: u32) -> u32 {
-    duration_ms.saturating_add(10_000).clamp(10_000, 60_000)
+    duration_ms.saturating_add(10_000).clamp(10_000, 610_000)
 }
 
 fn repo_root_path() -> PathBuf {

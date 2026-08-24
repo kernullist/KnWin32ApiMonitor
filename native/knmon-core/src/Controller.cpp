@@ -2163,9 +2163,10 @@ bool WaitRemoteThread(
         const DWORD waitResult = WaitForSingleObject(threadHandle, timeoutMs);
         if (waitResult != WAIT_OBJECT_0)
         {
+            const DWORD waitError = waitResult == WAIT_FAILED ? GetLastError() : 0;
             if (errorCode != nullptr)
             {
-                *errorCode = waitResult == WAIT_TIMEOUT ? WAIT_TIMEOUT : GetLastError();
+                *errorCode = waitResult == WAIT_TIMEOUT ? WAIT_TIMEOUT : (waitError != 0 ? waitError : waitResult);
             }
 
             if (waitResult == WAIT_TIMEOUT && timedOutThreadHandle != nullptr)
@@ -2329,12 +2330,27 @@ bool QueryRemoteAgentState(
 
         DWORD remoteExitCode = 0;
         DWORD remoteError = 0;
-        if (!WaitRemoteThread(processHandle, remoteQueryAddress, remoteState, timeoutMs, &remoteExitCode, &remoteError))
+        HANDLE timedOutQueryThread = nullptr;
+        if (!WaitRemoteThread(processHandle, remoteQueryAddress, remoteState, timeoutMs, &remoteExitCode, &remoteError, &timedOutQueryThread))
         {
             if (errorCode != nullptr)
             {
                 *errorCode = remoteError == 0 ? ERROR_TIMEOUT : remoteError;
             }
+
+            if (timedOutQueryThread != nullptr)
+            {
+                CloseHandle(timedOutQueryThread);
+                // The remote query thread may still write into remoteState.
+                // Freeing the buffer now would crash the target, so the small
+                // buffer is deliberately leaked and reclaimed at process exit.
+                remoteState = nullptr;
+                if (message != nullptr)
+                {
+                    *message = "KnMonAgentQueryState timed out; the remote state buffer was intentionally leaked because the query thread may still be running.";
+                }
+            }
+
             break;
         }
 
@@ -6816,6 +6832,21 @@ void RecordHookOverhead(KnMonCaptureResult& result, std::uint64_t overheadUs)
 std::string ExtractJsonString(const std::string& payload, const std::string& key);
 bool PayloadMatchesApiSelection(const std::string& payload, const std::string& selection);
 
+// Per-event api_call audit entries duplicate the full payload that is already
+// retained in CapturedEvents; cap the duplication so busy targets cannot grow
+// the result object without bound.
+constexpr std::size_t MaxPerEventAuditPayloads = 64;
+
+std::string ApiCallAuditMessage(const KnMonCaptureResult& result, const std::string& rawPayload)
+{
+    if (result.CapturedEvents.size() <= MaxPerEventAuditPayloads)
+    {
+        return rawPayload;
+    }
+
+    return "api_call recorded; per-event audit payloads are capped to keep large captures bounded.";
+}
+
 void DrainSharedTransport(
     KnMonCaptureResult& result,
     SharedTransportSession& transport,
@@ -6849,7 +6880,7 @@ void DrainSharedTransport(
             KnMonAgentMessage message = BuildAgentMessage(result, payload);
             result.AgentMessages.push_back(message);
             result.CapturedEvents.push_back(message);
-            AddAudit(result, "api_call_received", "shared_memory_transport_read", message.RawPayload);
+            AddAudit(result, "api_call_received", "shared_memory_transport_read", ApiCallAuditMessage(result, message.RawPayload));
 
             if (batchEvents.empty())
             {
@@ -6912,8 +6943,16 @@ void EmitCaptureStreamSessionFrame(
 
 std::wstring QuoteArgument(const std::wstring& value)
 {
+    // Windows command-line rules: wrap in quotes and double embedded quotes.
     std::wstring result = L"\"";
-    result += value;
+    for (const wchar_t ch : value)
+    {
+        result += ch;
+        if (ch == L'"')
+        {
+            result += L'"';
+        }
+    }
     result += L"\"";
     return result;
 }
@@ -7049,7 +7088,11 @@ bool WaitForPipeConnection(HANDLE pipeHandle, DWORD timeoutMs, DWORD* errorCode)
         const DWORD waitResult = WaitForSingleObject(overlapped.hEvent, timeoutMs);
         if (waitResult != WAIT_OBJECT_0)
         {
+            // Wait until the cancellation actually completes before the stack
+            // OVERLAPPED and its event go out of scope.
+            DWORD cancelledBytes = 0;
             CancelIo(pipeHandle);
+            GetOverlappedResult(pipeHandle, &overlapped, &cancelledBytes, TRUE);
             if (errorCode != nullptr)
             {
                 *errorCode = waitResult == WAIT_TIMEOUT ? WAIT_TIMEOUT : GetLastError();
@@ -7085,6 +7128,9 @@ bool ReadPipeMessage(HANDLE pipeHandle, DWORD timeoutMs, std::string* payload, D
     OVERLAPPED overlapped = {};
     overlapped.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
     std::array<char, 16384> buffer = {};
+    std::string assembled;
+    bool failed = false;
+    constexpr std::size_t MaxAssembledMessageBytes = 1024 * 1024;
 
     do
     {
@@ -7102,44 +7148,112 @@ bool ReadPipeMessage(HANDLE pipeHandle, DWORD timeoutMs, std::string* payload, D
             break;
         }
 
-        DWORD bytesRead = 0;
-        if (!ReadFile(pipeHandle, buffer.data(), static_cast<DWORD>(buffer.size() - 1), &bytesRead, &overlapped))
+        // The pipe is in message read mode: ReadFile returns TRUE only when a
+        // complete message was read; ERROR_MORE_DATA means the message continues.
+        for (;;)
         {
-            const DWORD readError = GetLastError();
-            if (readError != ERROR_IO_PENDING)
+            DWORD bytesRead = 0;
+            if (!ReadFile(pipeHandle, buffer.data(), static_cast<DWORD>(buffer.size() - 1), &bytesRead, &overlapped))
             {
-                if (errorCode != nullptr)
+                const DWORD readError = GetLastError();
+                if (readError == ERROR_IO_PENDING)
                 {
-                    *errorCode = readError;
+                    const DWORD waitResult = WaitForSingleObject(overlapped.hEvent, timeoutMs);
+                    if (waitResult != WAIT_OBJECT_0)
+                    {
+                        // Wait until the cancellation actually completes before the
+                        // stack OVERLAPPED and its event go out of scope.
+                        DWORD cancelledBytes = 0;
+                        CancelIo(pipeHandle);
+                        GetOverlappedResult(pipeHandle, &overlapped, &cancelledBytes, TRUE);
+                        if (errorCode != nullptr)
+                        {
+                            *errorCode = waitResult == WAIT_TIMEOUT ? WAIT_TIMEOUT : GetLastError();
+                        }
+                        failed = true;
+                        break;
+                    }
+
+                    if (!GetOverlappedResult(pipeHandle, &overlapped, &bytesRead, FALSE))
+                    {
+                        const DWORD completionError = GetLastError();
+                        if (completionError != ERROR_MORE_DATA)
+                        {
+                            if (errorCode != nullptr)
+                            {
+                                *errorCode = completionError;
+                            }
+                            failed = true;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        if (assembled.size() + bytesRead > MaxAssembledMessageBytes)
+                        {
+                            if (errorCode != nullptr)
+                            {
+                                *errorCode = ERROR_NOT_ENOUGH_MEMORY;
+                            }
+                            failed = true;
+                            break;
+                        }
+
+                        assembled.append(buffer.data(), bytesRead);
+                        break;
+                    }
                 }
+                else if (readError == ERROR_MORE_DATA)
+                {
+                    // Partial message delivered synchronously; fall through to append.
+                }
+                else
+                {
+                    if (errorCode != nullptr)
+                    {
+                        *errorCode = readError;
+                    }
+                    failed = true;
+                    break;
+                }
+            }
+            else
+            {
+                if (assembled.size() + bytesRead > MaxAssembledMessageBytes)
+                {
+                    if (errorCode != nullptr)
+                    {
+                        *errorCode = ERROR_NOT_ENOUGH_MEMORY;
+                    }
+                    failed = true;
+                    break;
+                }
+
+                assembled.append(buffer.data(), bytesRead);
                 break;
             }
 
-            const DWORD waitResult = WaitForSingleObject(overlapped.hEvent, timeoutMs);
-            if (waitResult != WAIT_OBJECT_0)
+            if (assembled.size() + bytesRead > MaxAssembledMessageBytes)
             {
-                CancelIo(pipeHandle);
                 if (errorCode != nullptr)
                 {
-                    *errorCode = waitResult == WAIT_TIMEOUT ? WAIT_TIMEOUT : GetLastError();
+                    *errorCode = ERROR_NOT_ENOUGH_MEMORY;
                 }
+                failed = true;
                 break;
             }
 
-            if (!GetOverlappedResult(pipeHandle, &overlapped, &bytesRead, FALSE))
-            {
-                if (errorCode != nullptr)
-                {
-                    *errorCode = GetLastError();
-                }
-                break;
-            }
+            assembled.append(buffer.data(), bytesRead);
         }
 
-        buffer[bytesRead] = '\0';
+        if (failed)
+        {
+            break;
+        }
+
         if (payload != nullptr)
         {
-            payload->assign(buffer.data(), bytesRead);
+            *payload = std::move(assembled);
         }
         received = true;
     }
@@ -7833,7 +7947,13 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
 
     if (remoteDllPath != nullptr && processInfo.hProcess != nullptr)
     {
-        if (VirtualFreeEx(processInfo.hProcess, remoteDllPath, 0, MEM_RELEASE))
+        if (processResumed && !result.Success && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_TIMEOUT)
+        {
+            // The queued early-bird APC may not have run LoadLibraryW yet; freeing
+            // the path buffer would crash the target when the APC later fires.
+            AddAudit(result, "remote_buffer_leaked_unfinished_thread", "VirtualFreeEx", "Remote agent path buffer was intentionally leaked because agent load completion was not proven.");
+        }
+        else if (VirtualFreeEx(processInfo.hProcess, remoteDllPath, 0, MEM_RELEASE))
         {
             AddAudit(result, "remote_buffer_released", "VirtualFreeEx", "Remote agent path buffer released.");
         }
@@ -7955,7 +8075,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             if (PayloadMatchesApiSelection(payload, result.ApiSelection))
             {
                 result.CapturedEvents.push_back(message);
-                AddAudit(result, "api_call_received", "agent_event_read", message.RawPayload);
+                AddAudit(result, "api_call_received", "agent_event_read", ApiCallAuditMessage(result, message.RawPayload));
             }
         }
         else if (IsResolverPointerMessageType(message.MessageType))
@@ -8556,7 +8676,13 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
     if (remoteDllPath != nullptr && processInfo.hProcess != nullptr)
     {
-        if (VirtualFreeEx(processInfo.hProcess, remoteDllPath, 0, MEM_RELEASE))
+        if (processResumed && !result.Success && !targetExited && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_TIMEOUT)
+        {
+            // The queued early-bird APC may not have run LoadLibraryW yet; freeing
+            // the path buffer would crash the target when the APC later fires.
+            AddAudit(result, "remote_buffer_leaked_unfinished_thread", "VirtualFreeEx", "Remote agent path buffer was intentionally leaked because agent load completion was not proven.");
+        }
+        else if (VirtualFreeEx(processInfo.hProcess, remoteDllPath, 0, MEM_RELEASE))
         {
             AddAudit(result, "remote_buffer_released", "VirtualFreeEx", "Remote agent path buffer released.");
         }
@@ -8870,7 +8996,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                     if (PayloadMatchesApiSelection(payload, result.ApiSelection))
                     {
                         result.CapturedEvents.push_back(message);
-                        AddAudit(result, "api_call_received", "agent_event_read", message.RawPayload);
+                        AddAudit(result, "api_call_received", "agent_event_read", ApiCallAuditMessage(result, message.RawPayload));
                     }
                 }
                 else if (IsResolverPointerMessageType(message.MessageType))
@@ -9048,7 +9174,13 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
 
     if (remoteDllPath != nullptr && processInfo.hProcess != nullptr)
     {
-        if (VirtualFreeEx(processInfo.hProcess, remoteDllPath, 0, MEM_RELEASE))
+        if (processResumed && !result.Success && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_TIMEOUT)
+        {
+            // The queued early-bird APC may not have run LoadLibraryW yet; freeing
+            // the path buffer would crash the target when the APC later fires.
+            AddAudit(result, "remote_buffer_leaked_unfinished_thread", "VirtualFreeEx", "Remote agent path buffer was intentionally leaked because agent load completion was not proven.");
+        }
+        else if (VirtualFreeEx(processInfo.hProcess, remoteDllPath, 0, MEM_RELEASE))
         {
             AddAudit(result, "remote_buffer_released", "VirtualFreeEx", "Remote agent path buffer released.");
         }
@@ -9184,7 +9316,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
             if (PayloadMatchesApiSelection(payload, result.ApiSelection))
             {
                 result.CapturedEvents.push_back(message);
-                AddAudit(result, "api_call_received", "agent_event_read", message.RawPayload);
+                AddAudit(result, "api_call_received", "agent_event_read", ApiCallAuditMessage(result, message.RawPayload));
             }
         }
         else if (IsResolverPointerMessageType(message.MessageType))
@@ -9688,8 +9820,19 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
             void* remoteLoadLibrary = reinterpret_cast<void*>(remoteKernel32Base + loadLibraryRva);
             AddAudit(result, "remote_loadlibrary_started", "CreateRemoteThread", "Remote LoadLibraryW thread starting.");
-            if (!WaitRemoteThread(processHandle, remoteLoadLibrary, remoteDllPath, request.TimeoutMs, &remoteExitCode, &remoteError))
+            HANDLE remoteLoadLibraryThread = nullptr;
+            if (!WaitRemoteThread(processHandle, remoteLoadLibrary, remoteDllPath, request.TimeoutMs, &remoteExitCode, &remoteError, &remoteLoadLibraryThread))
             {
+                if (remoteLoadLibraryThread != nullptr)
+                {
+                    CloseHandle(remoteLoadLibraryThread);
+                    // The remote LoadLibraryW thread may still read remoteDllPath.
+                    // Freeing the buffer now would crash the target, so the small
+                    // path buffer is deliberately leaked and reclaimed at process exit.
+                    remoteDllPath = nullptr;
+                    AddAudit(result, "remote_buffer_leaked_unfinished_thread", "VirtualFreeEx", "Remote agent path buffer was intentionally leaked because the LoadLibraryW thread did not complete.");
+                }
+
                 SetResultError(result, remoteError, "win32", "remote_loadlibrary_failed", "Remote LoadLibraryW thread failed or timed out.");
                 fatalError = true;
                 break;
@@ -10032,6 +10175,14 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
     {
         CloseHandle(remoteInitializeThread);
         remoteInitializeThread = nullptr;
+        // The timed-out KnMonAgentInitialize thread may still read remoteConfig.
+        // Freeing the buffer now would crash the target, so the small config
+        // buffer is deliberately leaked and reclaimed at process exit.
+        if (remoteConfig != nullptr)
+        {
+            remoteConfig = nullptr;
+            AddAudit(result, "remote_buffer_leaked_unfinished_thread", "VirtualFreeEx", "Remote attach config buffer was intentionally leaked because the initialize thread did not complete.");
+        }
     }
 
     if (remoteConfig != nullptr && processHandle != nullptr)
@@ -10232,7 +10383,9 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
                 attachRequest.ProcessId = node.ProcessId;
                 attachRequest.AgentPath = request.AgentPath;
                 attachRequest.TimeoutMs = request.TimeoutMs;
-                attachRequest.DurationMs = request.DurationMs < 1500 ? request.DurationMs : 1500;
+                // DurationMs == 0 means "use the default" for tree supervision but
+                // "continuous, unbounded attach" inside AttachCapture; never forward 0.
+                attachRequest.DurationMs = request.DurationMs < 1500 ? (request.DurationMs == 0 ? 1500 : request.DurationMs) : 1500;
                 attachRequest.Architecture = request.Architecture;
                 attachRequest.InjectionMethod = KnMonInjectionMethod::RemoteLoadLibrary;
                 attachRequest.CancellationEventName = request.CancellationEventName;

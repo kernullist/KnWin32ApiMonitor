@@ -61,54 +61,75 @@ fn list_native_target_processes() -> Result<Vec<TargetProcess>, String>
 }
 
 #[tauri::command]
-fn launch_sample_early_bird_capture() -> Result<LaunchResult, String>
+async fn launch_sample_early_bird_capture() -> Result<LaunchResult, String>
 {
-    launch_sample_early_bird()
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || launch_sample_early_bird())
+        .await
+        .map_err(|error| format!("launch_sample_early_bird_capture task failed: {error}"))?
 }
 
 #[tauri::command]
-fn capture_sample_fileio_events() -> Result<CaptureResult, String>
+async fn capture_sample_fileio_events() -> Result<CaptureResult, String>
 {
-    capture_sample_fileio()
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || capture_sample_fileio())
+        .await
+        .map_err(|error| format!("capture_sample_fileio_events task failed: {error}"))?
 }
 
 #[tauri::command]
-fn capture_sample_fileio_session_events() -> Result<CaptureResult, String>
+async fn capture_sample_fileio_session_events() -> Result<CaptureResult, String>
 {
-    capture_sample_fileio_session()
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || capture_sample_fileio_session())
+        .await
+        .map_err(|error| format!("capture_sample_fileio_session_events task failed: {error}"))?
 }
 
 #[tauri::command]
-fn replay_last_sample_session() -> Result<SessionReplayResult, String>
+async fn replay_last_sample_session() -> Result<SessionReplayResult, String>
 {
-    replay_last_session()
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || replay_last_session())
+        .await
+        .map_err(|error| format!("replay_last_sample_session task failed: {error}"))?
 }
 
 #[tauri::command]
-fn replay_session_path(session_path: String) -> Result<SessionReplayResult, String>
+async fn replay_session_path(session_path: String) -> Result<SessionReplayResult, String>
 {
-    replay_session_path_backend(session_path)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || replay_session_path_backend(session_path))
+        .await
+        .map_err(|error| format!("replay_session_path task failed: {error}"))?
 }
 
 #[tauri::command]
-fn attach_target_process_capture(
+async fn attach_target_process_capture(
     pid: u32,
     duration_ms: u32,
     selected_apis: Vec<String>,
 ) -> Result<CaptureResult, String>
 {
-    attach_target_process_capture_backend(pid, duration_ms, selected_apis)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || attach_target_process_capture_backend(pid, duration_ms, selected_apis))
+        .await
+        .map_err(|error| format!("attach_target_process_capture task failed: {error}"))?
 }
 
 #[tauri::command]
-fn supervise_process_tree(
+async fn supervise_process_tree(
     root_pid: u32,
     duration_ms: u32,
     child_policy: String,
     selected_apis: Vec<String>,
 ) -> Result<ProcessTreeResult, String>
 {
-    supervise_process_tree_backend(root_pid, duration_ms, child_policy, selected_apis)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || supervise_process_tree_backend(root_pid, duration_ms, child_policy, selected_apis))
+        .await
+        .map_err(|error| format!("supervise_process_tree task failed: {error}"))?
 }
 
 #[tauri::command]
@@ -118,9 +139,12 @@ fn list_native_operations() -> Result<Vec<NativeOperation>, String>
 }
 
 #[tauri::command]
-fn cancel_native_operation(operation_id: String) -> Result<NativeOperation, String>
+async fn cancel_native_operation(operation_id: String) -> Result<NativeOperation, String>
 {
-    cancel_native_operation_backend(operation_id)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || cancel_native_operation_backend(operation_id))
+        .await
+        .map_err(|error| format!("cancel_native_operation task failed: {error}"))?
 }
 
 #[tauri::command]
@@ -130,9 +154,12 @@ fn list_native_sessions() -> Result<Vec<NativeSession>, String>
 }
 
 #[tauri::command]
-fn stop_native_session(session_id: String) -> Result<NativeSession, String>
+async fn stop_native_session(session_id: String) -> Result<NativeSession, String>
 {
-    stop_native_session_backend(session_id)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || stop_native_session_backend(session_id))
+        .await
+        .map_err(|error| format!("stop_native_session task failed: {error}"))?
 }
 
 #[tauri::command]
@@ -161,9 +188,12 @@ fn start_launch_monitor_session(
 }
 
 #[tauri::command]
-fn start_daemon_if_needed() -> Result<NativeDaemonStatus, String>
+async fn start_daemon_if_needed() -> Result<NativeDaemonStatus, String>
 {
-    start_daemon_if_needed_backend()
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || start_daemon_if_needed_backend())
+        .await
+        .map_err(|error| format!("start_daemon_if_needed task failed: {error}"))?
 }
 
 #[tauri::command]
@@ -179,87 +209,120 @@ fn list_daemon_sessions() -> Result<Vec<NativeSession>, String>
 }
 
 #[tauri::command]
-fn audit_daemon_sessions() -> Result<NativeDaemonAudit, String>
+async fn audit_daemon_sessions() -> Result<NativeDaemonAudit, String>
 {
-    native_daemon_audit_backend()
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || native_daemon_audit_backend())
+        .await
+        .map_err(|error| format!("audit_daemon_sessions task failed: {error}"))?
 }
 
 #[tauri::command]
-fn plan_daemon_recovery() -> Result<NativeDaemonRecoveryPlan, String>
+async fn plan_daemon_recovery() -> Result<NativeDaemonRecoveryPlan, String>
 {
-    native_daemon_recovery_plan_backend()
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || native_daemon_recovery_plan_backend())
+        .await
+        .map_err(|error| format!("plan_daemon_recovery task failed: {error}"))?
 }
 
 #[tauri::command]
-fn apply_daemon_recovery(dry_run: bool) -> Result<NativeDaemonRecoveryApply, String>
+async fn apply_daemon_recovery(dry_run: bool) -> Result<NativeDaemonRecoveryApply, String>
 {
-    apply_daemon_recovery_backend(dry_run)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || apply_daemon_recovery_backend(dry_run))
+        .await
+        .map_err(|error| format!("apply_daemon_recovery task failed: {error}"))?
 }
 
 #[tauri::command]
-fn prune_stale_daemon_sessions(dry_run: bool) -> Result<NativeDaemonAudit, String>
+async fn prune_stale_daemon_sessions(dry_run: bool) -> Result<NativeDaemonAudit, String>
 {
-    prune_stale_daemon_sessions_backend(dry_run)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || prune_stale_daemon_sessions_backend(dry_run))
+        .await
+        .map_err(|error| format!("prune_stale_daemon_sessions task failed: {error}"))?
 }
 
 #[tauri::command]
-fn catalog_native_sessions() -> Result<NativeSessionCatalog, String>
+async fn catalog_native_sessions() -> Result<NativeSessionCatalog, String>
 {
-    catalog_native_sessions_backend()
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || catalog_native_sessions_backend())
+        .await
+        .map_err(|error| format!("catalog_native_sessions task failed: {error}"))?
 }
 
 #[tauri::command]
-fn query_native_session_catalog(
+async fn query_native_session_catalog(
     limit: u32,
     state: String,
     target: String,
 ) -> Result<NativeSessionCatalog, String>
 {
-    query_native_session_catalog_backend(limit, state, target)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || query_native_session_catalog_backend(limit, state, target))
+        .await
+        .map_err(|error| format!("query_native_session_catalog task failed: {error}"))?
 }
 
 #[tauri::command]
-fn remove_missing_native_session_catalog_entries(
+async fn remove_missing_native_session_catalog_entries(
     dry_run: bool,
 ) -> Result<NativeSessionCatalog, String>
 {
-    remove_missing_native_session_catalog_entries_backend(dry_run)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || remove_missing_native_session_catalog_entries_backend(dry_run))
+        .await
+        .map_err(|error| format!("remove_missing_native_session_catalog_entries task failed: {error}"))?
 }
 
 #[tauri::command]
-fn build_native_session_catalog_index(
+async fn build_native_session_catalog_index(
     rebuild: bool,
 ) -> Result<NativeSessionCatalog, String>
 {
-    build_native_session_catalog_index_backend(rebuild)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || build_native_session_catalog_index_backend(rebuild))
+        .await
+        .map_err(|error| format!("build_native_session_catalog_index task failed: {error}"))?
 }
 
 #[tauri::command]
-fn query_native_session_catalog_index(
+async fn query_native_session_catalog_index(
     limit: u32,
     state: String,
     target: String,
 ) -> Result<NativeSessionCatalog, String>
 {
-    query_native_session_catalog_index_backend(limit, state, target)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || query_native_session_catalog_index_backend(limit, state, target))
+        .await
+        .map_err(|error| format!("query_native_session_catalog_index task failed: {error}"))?
 }
 
 #[tauri::command]
-fn remove_missing_native_session_catalog_index_entries(
+async fn remove_missing_native_session_catalog_index_entries(
     dry_run: bool,
 ) -> Result<NativeSessionCatalog, String>
 {
-    remove_missing_native_session_catalog_index_entries_backend(dry_run)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || remove_missing_native_session_catalog_index_entries_backend(dry_run))
+        .await
+        .map_err(|error| format!("remove_missing_native_session_catalog_index_entries task failed: {error}"))?
 }
 
 #[tauri::command]
-fn build_native_trace_index(rebuild: bool) -> Result<NativeTraceIndex, String>
+async fn build_native_trace_index(rebuild: bool) -> Result<NativeTraceIndex, String>
 {
-    build_native_trace_index_backend(rebuild)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || build_native_trace_index_backend(rebuild))
+        .await
+        .map_err(|error| format!("build_native_trace_index task failed: {error}"))?
 }
 
 #[tauri::command]
-fn query_native_trace_index(
+async fn query_native_trace_index(
     limit: u32,
     text: String,
     api: String,
@@ -268,30 +331,42 @@ fn query_native_trace_index(
     pid: String,
 ) -> Result<NativeTraceIndex, String>
 {
-    query_native_trace_index_backend(limit, text, api, module, session, pid)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || query_native_trace_index_backend(limit, text, api, module, session, pid))
+        .await
+        .map_err(|error| format!("query_native_trace_index task failed: {error}"))?
 }
 
 #[tauri::command]
-fn remove_missing_native_trace_index_entries(
+async fn remove_missing_native_trace_index_entries(
     dry_run: bool,
 ) -> Result<NativeTraceIndex, String>
 {
-    remove_missing_native_trace_index_entries_backend(dry_run)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || remove_missing_native_trace_index_entries_backend(dry_run))
+        .await
+        .map_err(|error| format!("remove_missing_native_trace_index_entries task failed: {error}"))?
 }
 
 #[tauri::command]
-fn start_daemon_supervised_session(
+async fn start_daemon_supervised_session(
     pid: u32,
     selected_apis: Vec<String>,
 ) -> Result<NativeSession, String>
 {
-    start_daemon_supervised_session_backend(pid, selected_apis)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || start_daemon_supervised_session_backend(pid, selected_apis))
+        .await
+        .map_err(|error| format!("start_daemon_supervised_session task failed: {error}"))?
 }
 
 #[tauri::command]
-fn stop_daemon_session(session_id: String) -> Result<NativeSession, String>
+async fn stop_daemon_session(session_id: String) -> Result<NativeSession, String>
 {
-    stop_daemon_session_backend(session_id)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || stop_daemon_session_backend(session_id))
+        .await
+        .map_err(|error| format!("stop_daemon_session task failed: {error}"))?
 }
 
 #[tauri::command]
@@ -316,9 +391,12 @@ fn get_native_helper_architecture() -> Result<String, String>
 }
 
 #[tauri::command]
-fn query_target_binary_architecture(path: String) -> Result<String, String>
+async fn query_target_binary_architecture(path: String) -> Result<String, String>
 {
-    query_binary_architecture_backend(path)
+    // Blocking helper work runs on the async runtime so the UI thread stays responsive.
+    tauri::async_runtime::spawn_blocking(move || query_binary_architecture_backend(path))
+        .await
+        .map_err(|error| format!("query_target_binary_architecture task failed: {error}"))?
 }
 
 fn main()

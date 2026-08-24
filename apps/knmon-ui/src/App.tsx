@@ -53,7 +53,7 @@ import {
   superviseProcessTree
 } from "./backend";
 import { apiCatalogEntries, apiTree, captureProfiles } from "./catalogData";
-import { downloadJsonl, estimateSessionBytes } from "./session";
+import { downloadJsonl } from "./session";
 import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, NativeOperation, NativeSession, NativeSessionCatalog, NativeSessionCatalogRow, NativeTraceBatch, NativeTraceIndex, NativeTraceIndexEvent, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
 import {
   buildTraceIssueGroups,
@@ -137,6 +137,7 @@ type TraceIngestSnapshot = {
   totalCapturedEvents: number;
   selectedEventId: number;
   processedEvents: number;
+  estimatedSessionBytes: number;
 };
 
 type ProcessExitNotice = {
@@ -169,6 +170,10 @@ type ApiTreeCheckboxProps = {
   disabled?: boolean;
 };
 
+// The generated catalog has ~30k leaves; collecting a node's leaves allocates a
+// large array, so cache collections per (static) node identity.
+const apiLeafKeysCache = new WeakMap<ApiNode, string[]>();
+
 function collectApiLeafKeys(nodes: ApiNode[]): string[] {
   const keys: string[] = [];
 
@@ -184,13 +189,28 @@ function collectApiLeafKeys(nodes: ApiNode[]): string[] {
   return keys;
 }
 
+function cachedApiLeafKeys(node: ApiNode): string[] {
+  let keys = apiLeafKeysCache.get(node);
+  if (!keys) {
+    keys = collectApiLeafKeys([node]);
+    apiLeafKeysCache.set(node, keys);
+  }
+  return keys;
+}
+
 function getApiNodeCheckState(node: ApiNode, selectedKeys: Set<string>): ApiNodeCheckState {
-  const leafKeys = collectApiLeafKeys([node]);
+  const leafKeys = cachedApiLeafKeys(node);
   if (leafKeys.length === 0) {
     return "unchecked";
   }
 
-  const selectedCount = leafKeys.filter((key) => selectedKeys.has(key)).length;
+  let selectedCount = 0;
+  for (const key of leafKeys) {
+    if (selectedKeys.has(key)) {
+      selectedCount += 1;
+    }
+  }
+
   if (selectedCount === 0) {
     return "unchecked";
   }
@@ -236,10 +256,13 @@ function renderApiTree(
   return (
     <div className="tree-group">
       {nodes.map((node) => {
+        const nodeLeafKeys = node.children ? cachedApiLeafKeys(node) : null;
         const checkState = getApiNodeCheckState(node, selectedKeys);
         const expanded = expandedNodes.has(node.id);
-        const selectedCount = node.children ? countSelectedApiLeafKeys([node], selectedKeys) : checkState === "checked" ? 1 : 0;
-        const totalCount = node.children ? collectApiLeafKeys([node]).length : 1;
+        const selectedCount = nodeLeafKeys
+          ? countSelectedApiLeafKeys([node], selectedKeys)
+          : checkState === "checked" ? 1 : 0;
+        const totalCount = nodeLeafKeys ? nodeLeafKeys.length : 1;
 
         return (
           <div key={node.id}>
@@ -607,6 +630,7 @@ function App() {
   const [highlightingEnabled, setHighlightingEnabled] = useState(true);
   const [droppedCount, setDroppedCount] = useState(0);
   const [totalCapturedEvents, setTotalCapturedEvents] = useState(0);
+  const [estimatedSessionBytes, setEstimatedSessionBytes] = useState(0);
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("parameters");
   const [traceMode, setTraceMode] = useState<TraceMode>("flat");
   const [nativeBusy, setNativeBusy] = useState(false);
@@ -654,6 +678,7 @@ function App() {
   const lastSessionTargetAlive = useRef<Record<string, boolean>>({});
   const notifiedExitedSessions = useRef<Set<string>>(new Set());
   const traceScrollRef = useRef<HTMLDivElement | null>(null);
+  const traceScrollRafRef = useRef<number | null>(null);
   const traceIngestWorker = useRef<Worker | null>(null);
   const pendingTraceIngestCommands = useRef<TraceIngestCommand[]>([]);
   const traceAutoScrollRef = useRef(traceAutoScroll);
@@ -703,6 +728,7 @@ function App() {
 
       setEvents(event.data.events);
       setTotalCapturedEvents(event.data.totalCapturedEvents);
+      setEstimatedSessionBytes(event.data.estimatedSessionBytes);
       if (traceAutoScrollRef.current || selectedEventIdRef.current === 0) {
         selectedEventIdRef.current = event.data.selectedEventId;
         setSelectedEventId(event.data.selectedEventId);
@@ -783,6 +809,10 @@ function App() {
 
     return () => {
       observer.disconnect();
+      if (traceScrollRafRef.current !== null) {
+        window.cancelAnimationFrame(traceScrollRafRef.current);
+        traceScrollRafRef.current = null;
+      }
     };
   }, []);
 
@@ -808,16 +838,14 @@ function App() {
       }
 
       const previousAlive = lastSessionTargetAlive.current[session.sessionId];
-      const exitReason = [session.staleReason, session.recoveryReason, session.lastError]
-        .some((value) => value.toLowerCase().includes("target_exited"));
-      const observedExit = session.targetExitObserved || exitReason;
-      const firstTerminalExit = previousAlive === undefined && !session.targetAlive && observedExit;
       const transitionedToExited = previousAlive === true && !session.targetAlive;
-      const rememberedExit = session.targetExitObserved && !session.targetAlive;
 
       lastSessionTargetAlive.current[session.sessionId] = session.targetAlive;
 
-      if (!transitionedToExited && !firstTerminalExit && !rememberedExit) {
+      // Only announce exits observed as an alive->exited transition during this
+      // UI run; the first observation only seeds state, so remembered exits from
+      // a previous app run never raise the banner.
+      if (!transitionedToExited) {
         return;
       }
 
@@ -1203,7 +1231,9 @@ function App() {
       ? currentLaunchSession
       : null;
   const processTreeSummary = summarizeProcessTree(processTreeResult);
-  const sessionBytes = useMemo(() => estimateSessionBytes(events), [events]);
+  // Byte estimate comes incrementally from the ingest worker; re-serializing the
+  // whole window here would run multi-MB JSON.stringify on every snapshot.
+  const sessionBytes = estimatedSessionBytes;
   const totalTraceEventCount = Math.max(totalCapturedEvents, displayNativeSession?.recordsStreamed ?? 0);
   const trimmedTraceEventCount = Math.max(0, totalTraceEventCount - events.length);
   const selectedCatalogRow = sessionCatalog?.sessions.find((row) => row.path === selectedCatalogPath) ?? null;
@@ -1266,13 +1296,20 @@ function App() {
       setWidths((current) => current.map((width, currentIndex) => currentIndex === index ? nextWidth : width));
     };
 
-    const handlePointerUp = () => {
+    // pointercancel/blur must clean up too, otherwise the pointermove handler
+    // stays attached forever and the resize cursor never clears.
+    const stopColumnResize = () => {
       document.body.classList.remove("column-resizing");
       window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", stopColumnResize);
+      window.removeEventListener("pointercancel", stopColumnResize);
+      window.removeEventListener("blur", stopColumnResize);
     };
 
     window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp, { once: true });
+    window.addEventListener("pointerup", stopColumnResize);
+    window.addEventListener("pointercancel", stopColumnResize);
+    window.addEventListener("blur", stopColumnResize);
   }
 
   function resetColumnWidth(
@@ -1295,13 +1332,20 @@ function App() {
       setInspectorHeight(nextHeight);
     };
 
-    const handlePointerUp = () => {
+    // pointercancel/blur must clean up too, otherwise the pointermove handler
+    // stays attached forever and the resize cursor never clears.
+    const stopPanelResize = () => {
       document.body.classList.remove("panel-resizing");
       window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", stopPanelResize);
+      window.removeEventListener("pointercancel", stopPanelResize);
+      window.removeEventListener("blur", stopPanelResize);
     };
 
     window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp, { once: true });
+    window.addEventListener("pointerup", stopPanelResize);
+    window.addEventListener("pointercancel", stopPanelResize);
+    window.addEventListener("blur", stopPanelResize);
   }
 
   function handleToggleApiNode(node: ApiNode) {
@@ -1401,8 +1445,10 @@ function App() {
     let active = true;
     let timer: number | undefined;
     let pollInFlight = false;
+    let consecutiveFailures = 0;
     const sessionSnapshot = drainNativeSession;
     const sessionId = sessionSnapshot.sessionId;
+    const maxConsecutivePollFailures = 10;
 
     const refreshTraceBatches = async () => {
       if (pollInFlight) {
@@ -1413,22 +1459,43 @@ function App() {
       const cursor = streamBatchCursors.current[sessionId] ?? 0;
       try {
         const batches = await drainNativeTraceBatches(sessionId, cursor);
-        if (active && batches.length > 0) {
+        if (!active) {
+          return;
+        }
+
+        consecutiveFailures = 0;
+        if (batches.length > 0) {
           appendTraceBatches(batches);
         }
 
-        if (active && isNativeSessionTerminal(sessionSnapshot)) {
-          terminalDrainCompleted.current.add(sessionId);
-          active = false;
+        if (isNativeSessionTerminal(sessionSnapshot)) {
+          // Drain until an empty response so the tail is never dropped, then
+          // mark the session fully drained.
+          if (batches.length === 0) {
+            terminalDrainCompleted.current.add(sessionId);
+            active = false;
 
-          if (timer !== undefined) {
-            window.clearInterval(timer);
+            if (timer !== undefined) {
+              window.clearInterval(timer);
+            }
           }
         }
       } catch (error) {
-        if (active) {
-          const message = error instanceof Error ? error.message : String(error);
-          appendOutput([makeAuditEvent("stream_batch_poll_failed", "drain_native_trace_batches", message)]);
+        if (!active) {
+          return;
+        }
+
+        consecutiveFailures += 1;
+        const message = error instanceof Error ? error.message : String(error);
+        appendOutput([makeAuditEvent("stream_batch_poll_failed", "drain_native_trace_batches", message)]);
+
+        // A persistently failing drain must not flood the output log and poll
+        // forever; stop after a bounded number of consecutive failures.
+        if (consecutiveFailures >= maxConsecutivePollFailures) {
+          active = false;
+          if (timer !== undefined) {
+            window.clearInterval(timer);
+          }
         }
       }
       finally {
@@ -1437,11 +1504,11 @@ function App() {
     };
 
     void refreshTraceBatches();
-    if (!isNativeSessionTerminal(sessionSnapshot)) {
-      timer = window.setInterval(() => {
-        void refreshTraceBatches();
-      }, 350);
-    }
+    // Poll until the terminal session returns an empty drain (tail fully read)
+    // or the failure cap trips; the loop clears its own interval.
+    timer = window.setInterval(() => {
+      void refreshTraceBatches();
+    }, 350);
 
     return () => {
       active = false;
@@ -1848,13 +1915,8 @@ function App() {
       setInspectorTab("output");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      postTraceIngest({ type: "reset" });
-      setReplaySource({
-        kind: "catalog",
-        label: catalogRowLabel(row),
-        path: row.path,
-        validationStatus: row.validationStatus
-      });
+      // Keep the current trace on failure: resetting here would wipe a live
+      // session exactly when something already went wrong.
       appendOutput([makeAuditEvent("session_catalog_replay_blocked", "replay_session_path", message)]);
       setInspectorTab("output");
     } finally {
@@ -3036,7 +3098,19 @@ function App() {
           <div
             className="trace-table-wrap"
             ref={traceScrollRef}
-            onScroll={(event) => setTraceScrollTop(event.currentTarget.scrollTop)}
+            onScroll={(event) => {
+              // Batch scroll updates to animation frames so every scroll event
+              // does not re-render the whole (tree-heavy) app component.
+              const nextScrollTop = event.currentTarget.scrollTop;
+              if (traceScrollRafRef.current !== null) {
+                return;
+              }
+
+              traceScrollRafRef.current = window.requestAnimationFrame(() => {
+                traceScrollRafRef.current = null;
+                setTraceScrollTop(nextScrollTop);
+              });
+            }}
           >
             <table className="trace-table trace-table-head" style={{ minWidth: traceTableWidth, width: traceTableWidth }}>
               <colgroup>
@@ -3208,7 +3282,8 @@ function App() {
                   {selectedEvent && inspectorTab === "stack" ? (
                     <div className="stack-list">
                       {selectedEvent.stack.map((frame, index) => (
-                        <div className="stack-row" key={frame}>
+                        // Recursive calls repeat identical frames; include the index.
+                        <div className="stack-row" key={`${index}-${frame}`}>
                           <span>{index}</span>
                           <code>{frame}</code>
                         </div>
@@ -3239,8 +3314,9 @@ function App() {
                       <div><CircleDot size={14} /> highlighting={highlightingEnabled ? "enabled" : "disabled"}; highlightedRows={traceHighlightState.eventHighlights.length}</div>
                       <div><Database size={14} /> sessionBytes={formatBytes(sessionBytes)}; droppedEvents={droppedCount}</div>
                       {replaySource ? <div><FolderOpen size={14} /> replay={replaySource.kind}; status={replaySource.validationStatus}; path={replaySource.path}</div> : null}
-                      {outputEvents.map((event) => (
-                        <div key={`${event.timestampUtc}-${event.eventType}-${event.message}`}>
+                      {outputEvents.map((event, index) => (
+                        // Backend timestamps can collide for identical events; index keys stay unique.
+                        <div key={`${outputEvents.length - index}-${event.timestampUtc}-${event.eventType}`}>
                           <Activity size={14} />
                           {event.eventType}: {event.operation}; win32={event.win32ErrorCode}; {event.message}
                         </div>

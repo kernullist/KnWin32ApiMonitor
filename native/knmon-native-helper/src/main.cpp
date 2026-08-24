@@ -5,6 +5,7 @@
 #include <winsqlite/winsqlite3.h>
 
 #include <algorithm>
+#include <cerrno>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -337,7 +338,12 @@ std::filesystem::path HelperDirectory()
         const DWORD length = GetModuleFileNameW(nullptr, modulePath, static_cast<DWORD>(std::size(modulePath)));
         if (length == 0 || length >= std::size(modulePath))
         {
-            result = std::filesystem::current_path();
+            std::error_code currentError;
+            const std::filesystem::path current = std::filesystem::current_path(currentError);
+            if (!currentError)
+            {
+                result = current;
+            }
             break;
         }
 
@@ -515,14 +521,14 @@ bool WriteTextFile(const std::filesystem::path& path, const std::string& text, s
             break;
         }
 
-        const std::filesystem::path tempPath = path.wstring() + L".tmp";
+        const std::wstring tempPath = path.wstring() + L".tmp." + std::to_wstring(GetCurrentProcessId()) + L"." + std::to_wstring(GetTickCount64());
         {
             std::ofstream file(tempPath, std::ios::binary | std::ios::trunc);
             if (!file)
             {
                 if (error != nullptr)
                 {
-                    *error = "open failed for " + PathToUtf8(tempPath);
+                    *error = "open failed for " + PathToUtf8(std::filesystem::path(tempPath));
                 }
                 break;
             }
@@ -532,23 +538,23 @@ bool WriteTextFile(const std::filesystem::path& path, const std::string& text, s
             {
                 if (error != nullptr)
                 {
-                    *error = "write failed for " + PathToUtf8(tempPath);
+                    *error = "write failed for " + PathToUtf8(std::filesystem::path(tempPath));
                 }
                 break;
             }
         }
 
-        std::error_code removeError;
-        std::filesystem::remove(path, removeError);
-
-        std::error_code renameError;
-        std::filesystem::rename(tempPath, path, renameError);
-        if (renameError)
+        // Replace atomically so concurrent readers never observe the file missing
+        // and concurrent writers cannot interleave into one shared temp file.
+        if (!MoveFileExW(tempPath.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING))
         {
             if (error != nullptr)
             {
-                *error = "rename failed for " + PathToUtf8(path) + ": " + renameError.message();
+                *error = "replace failed for " + PathToUtf8(path) + ": move failed with " + std::to_string(GetLastError());
             }
+
+            std::error_code cleanupError;
+            std::filesystem::remove(tempPath, cleanupError);
             break;
         }
 
@@ -728,6 +734,79 @@ std::string Sha256Hex(const std::string& text)
     return result;
 }
 
+bool ReadJsonUnicodeEscape(const std::string& payload, std::size_t& position, unsigned int* codePoint)
+{
+    // payload[position] points at 'u'; read exactly four hex digits after it and
+    // advance position to the last consumed digit.
+    bool decoded = false;
+
+    do
+    {
+        if (codePoint == nullptr || position + 4 >= payload.size())
+        {
+            break;
+        }
+
+        unsigned int value = 0;
+        for (std::size_t index = 1; index <= 4; ++index)
+        {
+            const char ch = payload[position + index];
+            unsigned int digit = 0;
+            if (ch >= '0' && ch <= '9')
+            {
+                digit = static_cast<unsigned int>(ch - '0');
+            }
+            else if (ch >= 'a' && ch <= 'f')
+            {
+                digit = static_cast<unsigned int>(ch - 'a') + 10;
+            }
+            else if (ch >= 'A' && ch <= 'F')
+            {
+                digit = static_cast<unsigned int>(ch - 'A') + 10;
+            }
+            else
+            {
+                return false;
+            }
+
+            value = (value << 4) | digit;
+        }
+
+        *codePoint = value;
+        position += 4;
+        decoded = true;
+    }
+    while (false);
+
+    return decoded;
+}
+
+void AppendUtf8(std::ostringstream& stream, unsigned int codePoint)
+{
+    if (codePoint <= 0x7F)
+    {
+        stream << static_cast<char>(codePoint);
+    }
+    else if (codePoint <= 0x7FF)
+    {
+        stream << static_cast<char>(0xC0 | (codePoint >> 6));
+        stream << static_cast<char>(0x80 | (codePoint & 0x3F));
+    }
+    else if (codePoint <= 0xFFFF)
+    {
+        stream << static_cast<char>(0xE0 | (codePoint >> 12));
+        stream << static_cast<char>(0x80 | ((codePoint >> 6) & 0x3F));
+        stream << static_cast<char>(0x80 | (codePoint & 0x3F));
+    }
+    else if (codePoint <= 0x10FFFF)
+    {
+        stream << static_cast<char>(0xF0 | (codePoint >> 18));
+        stream << static_cast<char>(0x80 | ((codePoint >> 12) & 0x3F));
+        stream << static_cast<char>(0x80 | ((codePoint >> 6) & 0x3F));
+        stream << static_cast<char>(0x80 | (codePoint & 0x3F));
+    }
+}
+
 std::string ExtractJsonString(const std::string& payload, const std::string& key)
 {
     std::string result;
@@ -769,6 +848,15 @@ std::string ExtractJsonString(const std::string& payload, const std::string& key
                 case '\\':
                     stream << '\\';
                     break;
+                case '/':
+                    stream << '/';
+                    break;
+                case 'b':
+                    stream << '\b';
+                    break;
+                case 'f':
+                    stream << '\f';
+                    break;
                 case 'n':
                     stream << '\n';
                     break;
@@ -778,6 +866,35 @@ std::string ExtractJsonString(const std::string& payload, const std::string& key
                 case 't':
                     stream << '\t';
                     break;
+                case 'u':
+                {
+                    // Decode \uXXXX (with surrogate pairs) so extracted values keep
+                    // their real text instead of a mangled literal "uXXXX".
+                    unsigned int codePoint = 0;
+                    if (!ReadJsonUnicodeEscape(payload, position, &codePoint))
+                    {
+                        stream << 'u';
+                        break;
+                    }
+
+                    if (codePoint >= 0xD800 && codePoint <= 0xDBFF && position + 6 < payload.size() && payload[position + 1] == '\\' && payload[position + 2] == 'u')
+                    {
+                        const std::size_t savedPosition = position;
+                        position += 2;
+                        unsigned int lowSurrogate = 0;
+                        if (ReadJsonUnicodeEscape(payload, position, &lowSurrogate) && lowSurrogate >= 0xDC00 && lowSurrogate <= 0xDFFF)
+                        {
+                            codePoint = 0x10000 + ((codePoint - 0xD800) << 10) + (lowSurrogate - 0xDC00);
+                        }
+                        else
+                        {
+                            position = savedPosition;
+                        }
+                    }
+
+                    AppendUtf8(stream, codePoint);
+                    break;
+                }
                 default:
                     stream << ch;
                     break;
@@ -2042,7 +2159,10 @@ bool IsSafeKnapmChunkPath(const std::string& relativePath)
             break;
         }
 
-        if (normalized.size() != prefix.size() + 6 + suffix.size())
+        // setw(6) pads but never truncates, so accept 6..20 digits: a session that
+        // reaches chunk 1,000,000 must not self-invalidate as malformed.
+        const std::size_t digitCount = normalized.size() - prefix.size() - suffix.size();
+        if (digitCount < 6 || digitCount > 20)
         {
             break;
         }
@@ -2053,7 +2173,7 @@ bool IsSafeKnapmChunkPath(const std::string& relativePath)
         }
 
         bool digitsOnly = true;
-        for (std::size_t index = prefix.size(); index < prefix.size() + 6; ++index)
+        for (std::size_t index = prefix.size(); index < prefix.size() + digitCount; ++index)
         {
             const char ch = normalized[index];
             if (ch < '0' || ch > '9')
@@ -3720,6 +3840,14 @@ std::vector<std::string> ReadKnapmTraceLines(const std::filesystem::path& sessio
         for (const auto& chunkJson : chunkObjects)
         {
             const KnapmChunkInfo chunk = KnapmChunkFromJson(chunkJson);
+            // The index was re-read after validation; re-check chunk paths so a
+            // swapped index cannot steer reads outside the session directory.
+            if (!IsSafeKnapmChunkPath(chunk.File))
+            {
+                traceLines.clear();
+                break;
+            }
+
             std::string chunkText;
             if (!ReadKnapmChunkDecoded(sessionPath, chunk, &chunkText, &readError))
             {
@@ -4151,8 +4279,9 @@ std::uint32_t GetUInt32Option(const std::vector<std::string>& args, const std::s
         }
 
         char* end = nullptr;
+        errno = 0;
         const unsigned long parsed = std::strtoul(text.c_str(), &end, 10);
-        if (end == text.c_str() || (end != nullptr && *end != '\0') || parsed > 0xffffffffUL)
+        if (errno == ERANGE || end == text.c_str() || (end != nullptr && *end != '\0') || parsed > 0xffffffffUL)
         {
             break;
         }
@@ -5024,8 +5153,9 @@ bool TryParseCatalogTargetPid(const std::string& target, std::uint32_t* pid)
         }
 
         char* end = nullptr;
+        errno = 0;
         const unsigned long value = std::strtoul(target.c_str(), &end, 10);
-        if (end == target.c_str() || end == nullptr || *end != '\0' || value > 0xffffffffUL)
+        if (errno == ERANGE || end == target.c_str() || end == nullptr || *end != '\0' || value > 0xffffffffUL)
         {
             break;
         }
@@ -5793,6 +5923,17 @@ bool ReadKnapmTraceIndexEvents(
         for (const auto& chunkJson : chunkObjects)
         {
             const KnapmChunkInfo chunk = KnapmChunkFromJson(chunkJson);
+            // Re-check chunk paths on this fresh index read so a swapped index
+            // cannot steer reads outside the session directory.
+            if (!IsSafeKnapmChunkPath(chunk.File))
+            {
+                if (error != nullptr)
+                {
+                    *error = "chunk file path is not a safe KNAPM chunk path.";
+                }
+                break;
+            }
+
             std::string chunkText;
             if (!ReadKnapmChunkDecoded(sessionPath, chunk, &chunkText, &readError))
             {
@@ -8004,7 +8145,11 @@ std::filesystem::path DaemonRuntimeDirectoryFromArgs(const std::vector<std::stri
     }
     else
     {
-        directory = std::filesystem::current_path() / L".tmp" / L"daemon";
+        // current_path() throws when the working directory was deleted; fall back
+        // to the helper executable directory instead of crashing the CLI.
+        std::error_code currentError;
+        const std::filesystem::path current = std::filesystem::current_path(currentError);
+        directory = currentError ? HelperDirectory() / L".tmp" / L"daemon" : current / L".tmp" / L"daemon";
     }
 
     std::error_code pathError;
@@ -8058,14 +8203,13 @@ std::uint64_t CountDaemonSessionRecords(const std::filesystem::path& runtimeDire
         return count;
     }
 
-    for (const auto& entry : std::filesystem::directory_iterator(sessionsDirectory, iterateError))
+    // Manual increment(error) loop: the throwing range-for increment and
+    // is_regular_file() would terminate the helper when files disappear mid-scan.
+    std::filesystem::directory_iterator iterator(sessionsDirectory, iterateError);
+    for (; !iterateError && iterator != std::filesystem::directory_iterator(); iterator.increment(iterateError))
     {
-        if (iterateError)
-        {
-            break;
-        }
-
-        if (entry.is_regular_file() && entry.path().extension() == L".json")
+        std::error_code entryError;
+        if (iterator->is_regular_file(entryError) && !entryError && iterator->path().extension() == L".json")
         {
             ++count;
         }
@@ -8595,27 +8739,27 @@ std::vector<DaemonSessionRecord> ReadAllDaemonSessionRecords(const std::filesyst
         return records;
     }
 
-    for (const auto& entry : std::filesystem::directory_iterator(sessionsDirectory, iterateError))
+    // Manual increment(error) loop: the throwing range-for increment and
+    // is_regular_file() would terminate the helper when files disappear mid-scan.
+    std::filesystem::directory_iterator iterator(sessionsDirectory, iterateError);
+    for (; !iterateError && iterator != std::filesystem::directory_iterator(); iterator.increment(iterateError))
     {
-        if (iterateError)
-        {
-            break;
-        }
-
-        if (!entry.is_regular_file() || entry.path().extension() != L".json")
+        std::error_code entryError;
+        if (!iterator->is_regular_file(entryError) || entryError || iterator->path().extension() != L".json")
         {
             continue;
         }
 
+        const std::filesystem::path entryPath = iterator->path();
         std::string text;
         std::string readError;
-        if (ReadTextFile(entry.path(), &text, &readError))
+        if (ReadTextFile(entryPath, &text, &readError))
         {
             DaemonSessionRecord record = DaemonSessionRecordFromJson(text);
-            record.RegistryPath = entry.path();
+            record.RegistryPath = entryPath;
             if (record.SessionId.empty())
             {
-                record.SessionId = PathToUtf8(entry.path().stem());
+                record.SessionId = PathToUtf8(entryPath.stem());
                 record.RegistryMalformed = true;
                 record.RegistryError = "session_id_missing";
             }
@@ -8634,8 +8778,8 @@ std::vector<DaemonSessionRecord> ReadAllDaemonSessionRecords(const std::filesyst
         else
         {
             DaemonSessionRecord record;
-            record.SessionId = PathToUtf8(entry.path().stem());
-            record.RegistryPath = entry.path();
+            record.SessionId = PathToUtf8(entryPath.stem());
+            record.RegistryPath = entryPath;
             record.RegistryMalformed = true;
             record.RegistryError = readError.empty() ? "registry_read_failed" : readError;
             records.push_back(record);
@@ -8710,8 +8854,16 @@ int DaemonRunCommand(const std::vector<std::string>& args)
     std::filesystem::create_directories(DaemonLogsDirectory(runtimeDirectory), createError);
     std::filesystem::create_directories(DaemonSessionsDirectory(runtimeDirectory), createError);
 
-    while (!std::filesystem::exists(DaemonStopFlagPath(runtimeDirectory)))
+    for (;;)
     {
+        // exists() without error_code throws when the runtime directory is removed
+        // from under the daemon; treat status errors as "stop requested" instead.
+        std::error_code stopFlagError;
+        const bool stopFlagPresent = std::filesystem::exists(DaemonStopFlagPath(runtimeDirectory), stopFlagError);
+        if (stopFlagPresent || stopFlagError)
+        {
+            break;
+        }
         DaemonStatusInfo status;
         status.Success = true;
         status.Operation = "daemon_run";
@@ -9360,6 +9512,15 @@ std::string DaemonStartSessionJson(const std::vector<std::string>& args)
             childArgs.push_back(apiSelection);
         }
 
+        if (durationMs != 0)
+        {
+            // Forward the requested bounded duration; otherwise the attach child
+            // defaults to a continuous (duration 0) session while the registry
+            // record claims a bounded one.
+            childArgs.push_back("--duration-ms");
+            childArgs.push_back(std::to_string(durationMs));
+        }
+
         const bool launched = LaunchBackgroundHelper(
             childArgs,
             DaemonLogsDirectory(runtimeDirectory) / PathFromUtf8(SanitizeFileName(sessionId) + ".stdout.log"),
@@ -9578,6 +9739,8 @@ void PrintUsage()
 }
 }
 
+int DispatchCommand(const std::vector<std::string>& args);
+
 int wmain(int argc, wchar_t** argv)
 {
     std::vector<std::string> args;
@@ -9586,6 +9749,43 @@ int wmain(int argc, wchar_t** argv)
         args.push_back(WideToUtf8(argv[index]));
     }
 
+    // Exception barrier: this helper's contract is one well-formed JSON object (or
+    // JSONL frame stream) on stdout; an escaping exception would truncate the
+    // stream mid-frame and terminate the CLI silently.
+    try
+    {
+        return DispatchCommand(args);
+    }
+    catch (const std::exception& error)
+    {
+        std::ostringstream stream;
+        stream << "{";
+        stream << "\"schemaVersion\":\"0.1.0\",";
+        stream << "\"success\":false,";
+        stream << "\"operation\":\"unhandled_exception\",";
+        stream << "\"win32ErrorCode\":" << ERROR_UNIDENTIFIED_ERROR << ",";
+        stream << "\"message\":" << Q(error.what());
+        stream << "}";
+        std::cout << stream.str() << "\n";
+        return 1;
+    }
+    catch (...)
+    {
+        std::ostringstream stream;
+        stream << "{";
+        stream << "\"schemaVersion\":\"0.1.0\",";
+        stream << "\"success\":false,";
+        stream << "\"operation\":\"unhandled_exception\",";
+        stream << "\"win32ErrorCode\":" << ERROR_UNIDENTIFIED_ERROR << ",";
+        stream << "\"message\":\"unknown exception\"";
+        stream << "}";
+        std::cout << stream.str() << "\n";
+        return 1;
+    }
+}
+
+int DispatchCommand(const std::vector<std::string>& args)
+{
     if (args.empty())
     {
         PrintUsage();

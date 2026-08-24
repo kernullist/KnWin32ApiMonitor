@@ -18,21 +18,55 @@ type TraceIngestSnapshot = {
   totalCapturedEvents: number;
   selectedEventId: number;
   processedEvents: number;
+  estimatedSessionBytes: number;
 };
 
 let displayEvents: TraceEvent[] = [];
+let displayEventBytes: number[] = [];
+let displayBytesEstimate = 0;
 let totalCapturedEvents = 0;
 let nextEventId = 1;
+let sessionStartUtcMs: number | null = null;
+
+// Batching multiple enqueues into one publish keeps the main thread from paying
+// a full-array structured clone per small chunk during streaming.
+const publishIntervalMs = 250;
+let publishTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingSelectedEventId = 0;
+let pendingProcessedEvents = 0;
+let snapshotSeq = 0;
+
+function estimateEventBytes(event: TraceEvent): number {
+  return JSON.stringify(event).length;
+}
 
 function nextTraceEventId(events: TraceEvent[]): number {
   return events.reduce((maximum, event) => Math.max(maximum, event.eventId), 0) + 1;
 }
 
 function createTraceEventFromAgentApiCall(event: AgentApiCallEvent, eventId: number, contextTags: string[]): TraceEvent {
+  // Prefer the real capture timestamp over a fabricated sequence-based time so
+  // duration, thread-span, and timeline views reflect actual wall-clock spacing.
+  let relativeTimeMs = event.sequence * 10;
+  const eventUtcMs = Date.parse(event.timestampUtc);
+  if (Number.isFinite(eventUtcMs)) {
+    if (sessionStartUtcMs === null) {
+      sessionStartUtcMs = eventUtcMs;
+    }
+    else if (eventUtcMs < sessionStartUtcMs) {
+      // Keep the window monotonically anchored when an earlier record arrives.
+      displayEvents.forEach((existing) => {
+        existing.relativeTimeMs += sessionStartUtcMs! - eventUtcMs;
+      });
+      sessionStartUtcMs = eventUtcMs;
+    }
+    relativeTimeMs = Math.max(0, eventUtcMs - sessionStartUtcMs);
+  }
+
   return {
     schemaVersion: event.schemaVersion,
     eventId,
-    relativeTimeMs: event.sequence * 10,
+    relativeTimeMs,
     pid: event.pid,
     tid: event.tid,
     process: event.process,
@@ -60,10 +94,26 @@ function publishSnapshot(selectedEventId: number, processedEvents: number) {
     events: displayEvents,
     totalCapturedEvents,
     selectedEventId,
-    processedEvents
+    processedEvents,
+    estimatedSessionBytes: displayBytesEstimate
   };
 
   self.postMessage(snapshot);
+}
+
+function scheduleSnapshotPublish(selectedEventId: number, processedEvents: number) {
+  pendingSelectedEventId = selectedEventId;
+  pendingProcessedEvents += processedEvents;
+  if (publishTimer !== null) {
+    return;
+  }
+
+  publishTimer = setTimeout(() => {
+    publishTimer = null;
+    publishSnapshot(pendingSelectedEventId, pendingProcessedEvents);
+    pendingSelectedEventId = 0;
+    pendingProcessedEvents = 0;
+  }, publishIntervalMs);
 }
 
 function resolveSelectedEventId(candidate?: number): number {
@@ -74,10 +124,17 @@ function resolveSelectedEventId(candidate?: number): number {
   return displayEvents[displayEvents.length - 1]?.eventId ?? 0;
 }
 
+function recomputeDisplayBytes() {
+  displayBytesEstimate = displayEvents.reduce((total, event) => total + estimateEventBytes(event), 0);
+}
+
 function replaceEvents(events: TraceEvent[], selectedEventId?: number) {
   displayEvents = events.slice(-traceDisplayEventLimit);
+  displayEventBytes = displayEvents.map(estimateEventBytes);
+  recomputeDisplayBytes();
   totalCapturedEvents = events.length;
   nextEventId = nextTraceEventId(events);
+  sessionStartUtcMs = null;
   publishSnapshot(resolveSelectedEventId(selectedEventId), events.length);
 }
 
@@ -108,11 +165,23 @@ function enqueueChunks(chunks: CapturedEventChunk[]) {
   totalCapturedEvents += incomingCount;
 
   if (traceEvents.length > 0) {
-    displayEvents = [...displayEvents, ...traceEvents].slice(-traceDisplayEventLimit);
-    publishSnapshot(traceEvents[traceEvents.length - 1].eventId, incomingCount);
+    const appended = [...displayEvents, ...traceEvents];
+    const evictedCount = Math.max(0, appended.length - traceDisplayEventLimit);
+    const kept = appended.slice(-traceDisplayEventLimit);
+
+    let evictedBytes = 0;
+    for (let index = 0; index < evictedCount; index += 1) {
+      evictedBytes += estimateEventBytes(appended[index]);
+    }
+    const appendedBytes = traceEvents.reduce((total, event) => total + estimateEventBytes(event), 0);
+
+    displayEvents = kept;
+    displayEventBytes = kept.map(estimateEventBytes);
+    displayBytesEstimate = Math.max(0, displayBytesEstimate - evictedBytes) + appendedBytes;
+    scheduleSnapshotPublish(traceEvents[traceEvents.length - 1].eventId, incomingCount);
   }
   else {
-    publishSnapshot(displayEvents[displayEvents.length - 1]?.eventId ?? 0, incomingCount);
+    scheduleSnapshotPublish(displayEvents[displayEvents.length - 1]?.eventId ?? 0, incomingCount);
   }
 }
 
@@ -128,8 +197,17 @@ self.onmessage = (event: MessageEvent<TraceIngestCommand>) => {
     case "reset":
     {
       displayEvents = [];
+      displayEventBytes = [];
+      displayBytesEstimate = 0;
       totalCapturedEvents = 0;
       nextEventId = 1;
+      sessionStartUtcMs = null;
+      if (publishTimer !== null) {
+        clearTimeout(publishTimer);
+        publishTimer = null;
+        pendingSelectedEventId = 0;
+        pendingProcessedEvents = 0;
+      }
       publishSnapshot(0, 0);
       break;
     }
