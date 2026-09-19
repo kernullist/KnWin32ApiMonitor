@@ -155,6 +155,12 @@ bool SharedTransportReader::ValidateRecord(const KnMonTransportRecord& record, S
     do
     {
         if (record.RecordSize != sizeof(KnMonTransportRecord) ||
+            record.HasWinsockError > 1 ||
+            (record.RawReturnBits != 0 && record.RawReturnBits != 8 && record.RawReturnBits != 16 &&
+                record.RawReturnBits != 32 && record.RawReturnBits != 64) ||
+            (record.RawReturnBits == 0 && record.RawReturnValue != 0) ||
+            (record.RawReturnBits != 0 && record.RawReturnBits < 64 && (record.RawReturnValue >> record.RawReturnBits) != 0) ||
+            record.EndQpc < record.StartQpc ||
             record.Text0Length > sizeof(record.Text0) || record.Text1Length > sizeof(record.Text1) ||
             record.Text2Length > sizeof(record.Text2) ||
             (record.Flags & ~KnMonTransportRecordFlagGenericInventory) != 0)

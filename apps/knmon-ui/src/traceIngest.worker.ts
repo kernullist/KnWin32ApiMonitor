@@ -1,4 +1,5 @@
 import type { AgentApiCallEvent, NativeTraceBatch, TraceEvent } from "./types";
+import { createTraceEventFromAgentApiCall } from "./traceConversion";
 import { traceDisplayEventLimit } from "./traceIngestConfig";
 
 type CapturedEventChunk = {
@@ -26,7 +27,6 @@ let displayEventBytes: number[] = [];
 let displayBytesEstimate = 0;
 let totalCapturedEvents = 0;
 let nextEventId = 1;
-let sessionStartUtcMs: number | null = null;
 
 // Batching multiple enqueues into one publish keeps the main thread from paying
 // a full-array structured clone per small chunk during streaming.
@@ -42,50 +42,6 @@ function estimateEventBytes(event: TraceEvent): number {
 
 function nextTraceEventId(events: TraceEvent[]): number {
   return events.reduce((maximum, event) => Math.max(maximum, event.eventId), 0) + 1;
-}
-
-function createTraceEventFromAgentApiCall(event: AgentApiCallEvent, eventId: number, contextTags: string[]): TraceEvent {
-  // Prefer the real capture timestamp over a fabricated sequence-based time so
-  // duration, thread-span, and timeline views reflect actual wall-clock spacing.
-  let relativeTimeMs = event.sequence * 10;
-  const eventUtcMs = Date.parse(event.timestampUtc);
-  if (Number.isFinite(eventUtcMs)) {
-    if (sessionStartUtcMs === null) {
-      sessionStartUtcMs = eventUtcMs;
-    }
-    else if (eventUtcMs < sessionStartUtcMs) {
-      // Keep the window monotonically anchored when an earlier record arrives.
-      displayEvents.forEach((existing) => {
-        existing.relativeTimeMs += sessionStartUtcMs! - eventUtcMs;
-      });
-      sessionStartUtcMs = eventUtcMs;
-    }
-    relativeTimeMs = Math.max(0, eventUtcMs - sessionStartUtcMs);
-  }
-
-  return {
-    schemaVersion: event.schemaVersion,
-    eventId,
-    relativeTimeMs,
-    pid: event.pid,
-    tid: event.tid,
-    process: event.process,
-    module: event.module,
-    api: event.api,
-    arguments: event.arguments,
-    returnValue: event.returnValue,
-    error: event.lastErrorCode === 0
-      ? null
-      : {
-          kind: "win32",
-          code: `0x${event.lastErrorCode.toString(16).padStart(8, "0")}`,
-          message: event.lastErrorMessage
-        },
-    durationUs: event.durationUs,
-    tags: Array.from(new Set([...event.tags, ...contextTags])),
-    stack: event.stack,
-    bufferPreview: event.bufferPreview || undefined
-  };
 }
 
 function publishSnapshot(selectedEventId: number, processedEvents: number) {
@@ -134,7 +90,6 @@ function replaceEvents(events: TraceEvent[], selectedEventId?: number) {
   recomputeDisplayBytes();
   totalCapturedEvents = events.length;
   nextEventId = nextTraceEventId(events);
-  sessionStartUtcMs = null;
   publishSnapshot(resolveSelectedEventId(selectedEventId), events.length);
 }
 
@@ -201,7 +156,6 @@ self.onmessage = (event: MessageEvent<TraceIngestCommand>) => {
       displayBytesEstimate = 0;
       totalCapturedEvents = 0;
       nextEventId = 1;
-      sessionStartUtcMs = null;
       if (publishTimer !== null) {
         clearTimeout(publishTimer);
         publishTimer = null;

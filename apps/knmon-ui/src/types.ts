@@ -319,7 +319,31 @@ export interface AgentApiArgument {
   captureTiming?: "pre" | "post" | "pre_post";
 }
 
+export interface CaptureTiming {
+  durationScope?: string;
+  qpcFrequency: string;
+  qpcBase: string;
+  utcBaseFileTime: string;
+  anchorSpanQpc: string;
+  startQpc: string;
+  endQpc: string;
+}
+
 export interface AgentApiCallEvent {
+  rawReturnValue?: string;
+  rawReturnBits?: number;
+  rawLastErrorCode?: number;
+  rawWinsockErrorCode?: number;
+  winsockErrorSampled?: boolean;
+  errorDomain?: "win32" | "winsock" | "ntstatus" | "hresult" | "none";
+  outcome?: "success" | "failure" | "pending" | "unknown";
+  errorValidity?: string;
+  successPredicate?: string;
+  hasError?: boolean;
+  timing?: CaptureTiming;
+  relativeTimeMs?: number;
+  timeSource?: "qpc" | "unavailable";
+  collectedAtUtc?: string;
   schemaVersion: string;
   messageType: "api_call";
   operationId: string;
@@ -541,12 +565,25 @@ export interface KnMonArgument {
 }
 
 export interface TraceError {
-  kind: "win32" | "ntstatus" | "hresult";
+  kind: "win32" | "winsock" | "ntstatus" | "hresult";
   code: string;
   message: string;
 }
 
 export interface TraceEvent {
+  rawReturnValue?: string;
+  rawReturnBits?: number;
+  rawLastErrorCode?: number;
+  rawWinsockErrorCode?: number;
+  winsockErrorSampled?: boolean;
+  errorDomain?: "win32" | "winsock" | "ntstatus" | "hresult" | "none";
+  outcome?: "success" | "failure" | "pending" | "unknown";
+  errorValidity?: string;
+  successPredicate?: string;
+  timing?: CaptureTiming;
+  timeSource?: "qpc" | "legacy" | "unavailable";
+  timestampUtc?: string;
+  collectedAtUtc?: string;
   schemaVersion: string;
   eventId: number;
   relativeTimeMs: number;

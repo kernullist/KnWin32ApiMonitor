@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <knmon/common/GeneratedApiIds.h>
+#include <knmon/common/CaptureClock.h>
 
 namespace knmon
 {
@@ -84,7 +85,7 @@ enum class KnMonTransportEventKind : std::uint16_t
 };
 
 inline constexpr std::uint32_t KnMonTransportMagic = 0x4d54534b;
-inline constexpr std::uint16_t KnMonTransportAbiVersion = 5;
+inline constexpr std::uint16_t KnMonTransportAbiVersion = 6;
 inline constexpr std::uint32_t KnMonTransportDefaultCapacity = 1024;
 inline constexpr std::uint32_t KnMonTransportMinCapacity = 2;
 inline constexpr std::uint32_t KnMonTransportMaxCapacity = 65536;
@@ -137,6 +138,11 @@ struct KnMonTransportRecord
     std::uint64_t ReturnValue = 0;
     std::uint32_t ReturnCode = 0;
     std::uint32_t LastErrorCode = 0;
+    std::uint32_t RawLastErrorCode = 0;
+    std::uint32_t RawWinsockErrorCode = 0;
+    std::uint32_t HasWinsockError = 0;
+    std::uint64_t RawReturnValue = 0;
+    std::uint32_t RawReturnBits = 0;
     std::uint64_t Values64[KnMonTransportSlotCount64] = {};
     std::uint32_t Values32[KnMonTransportSlotCount32] = {};
     std::uint32_t Text0Length = 0;
@@ -277,6 +283,7 @@ struct KnMonLaunchRequest
 
 struct KnMonAttachRequest
 {
+    CaptureClock ClockOverride;
     std::string OperationId;
     std::string SessionId;
     std::string SessionKind;
@@ -347,6 +354,7 @@ struct KnMonAgentMessage
 
 struct KnMonCaptureResult
 {
+    CaptureClock Clock;
     std::string SchemaVersion = "0.1.0";
     std::string OperationId;
     std::string SessionId;

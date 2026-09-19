@@ -1,3 +1,4 @@
+#include <knmon/common/ApiResult.h>
 #include <knmon/common/BoundedJson.h>
 #include <knmon/core/Controller.h>
 
@@ -23,6 +24,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <unordered_map>
 
 namespace knmon
 {
@@ -282,6 +284,76 @@ std::string JsonEscape(const std::string& value)
 std::string Q(const std::string& value)
 {
     return "\"" + JsonEscape(value) + "\"";
+}
+
+CaptureClock SampleCaptureClock()
+{
+    CaptureClock clock;
+    LARGE_INTEGER frequency = {};
+    if (QueryPerformanceFrequency(&frequency) && frequency.QuadPart > 0)
+    {
+        clock.Frequency = static_cast<std::uint64_t>(frequency.QuadPart);
+        for (int sample = 0; sample < 8; ++sample)
+        {
+            LARGE_INTEGER before = {}, after = {};
+            FILETIME utc = {};
+            QueryPerformanceCounter(&before);
+            GetSystemTimePreciseAsFileTime(&utc);
+            QueryPerformanceCounter(&after);
+            if (before.QuadPart > 0 && after.QuadPart >= before.QuadPart)
+            {
+                const auto span = static_cast<std::uint64_t>(after.QuadPart - before.QuadPart);
+                if (clock.UtcBaseFileTime == 0 || span < clock.AnchorSpanQpc)
+                {
+                    clock.AnchorSpanQpc = span;
+                    clock.QpcBase = static_cast<std::uint64_t>(before.QuadPart) + span / 2;
+                    clock.UtcBaseFileTime = (static_cast<std::uint64_t>(utc.dwHighDateTime) << 32) | utc.dwLowDateTime;
+                }
+            }
+        }
+    }
+    return clock;
+}
+
+std::string CaptureUtc(std::uint64_t ticks)
+{
+    const FILETIME fileTime{static_cast<DWORD>(ticks), static_cast<DWORD>(ticks >> 32)};
+    SYSTEMTIME utc = {};
+    std::ostringstream stream;
+    if (FileTimeToSystemTime(&fileTime, &utc))
+    {
+        stream << std::setfill('0') << std::setw(4) << utc.wYear << "-" << std::setw(2) << utc.wMonth
+            << "-" << std::setw(2) << utc.wDay << "T" << std::setw(2) << utc.wHour << ":"
+            << std::setw(2) << utc.wMinute << ":" << std::setw(2) << utc.wSecond << "."
+            << std::setw(7) << ticks % 10000000 << "Z";
+    }
+    return stream.str();
+}
+
+std::string CaptureTimingJson(const KnMonCaptureResult& result, const KnMonTransportRecord& record)
+{
+    CaptureTime time;
+    if (!ConvertCaptureTime(result.Clock, record.StartQpc, record.EndQpc, time))
+    {
+        throw JsonInputError("Invalid captured QPC interval or clock anchor.");
+    }
+    std::ostringstream stream;
+    stream << "\"timestampUtc\":" << Q(CaptureUtc(time.UtcFileTime)) << ","
+        << "\"collectedAtUtc\":" << Q(CaptureUtc([]()
+        {
+            FILETIME now = {};
+            GetSystemTimePreciseAsFileTime(&now);
+            return (static_cast<std::uint64_t>(now.dwHighDateTime) << 32) | now.dwLowDateTime;
+        }())) << ","
+        << "\"timeSource\":\"qpc\",\"relativeTimeMs\":" << std::setprecision(17)
+        << static_cast<double>(time.RelativeUs) / 1000.0 << ","
+        << "\"timing\":{\"durationScope\":\"original_call_with_error_state_preservation\",\"qpcFrequency\":" << Q(std::to_string(result.Clock.Frequency))
+        << ",\"qpcBase\":" << Q(std::to_string(result.Clock.QpcBase))
+        << ",\"utcBaseFileTime\":" << Q(std::to_string(result.Clock.UtcBaseFileTime))
+        << ",\"anchorSpanQpc\":" << Q(std::to_string(result.Clock.AnchorSpanQpc))
+        << ",\"startQpc\":" << Q(std::to_string(record.StartQpc))
+        << ",\"endQpc\":" << Q(std::to_string(record.EndQpc)) << "},";
+    return stream.str();
 }
 
 std::string NowUtc()
@@ -4784,6 +4856,55 @@ std::string ArgumentJsonFromMetadata(
     return ArgumentJson(index, type, name, direction, preCallValue, postCallValue, enhancedDecodedValue, decodeStatus, decodeAlias, captureTiming, semantic);
 }
 
+const KnMonGeneratedApiMetadata* FindRuntimeApiMetadata(const std::string& module, const std::string& api)
+{
+    static const auto entries = []()
+    {
+        std::unordered_map<std::string, const KnMonGeneratedApiMetadata*> result;
+        for (const auto& item : KnMonGeneratedApis)
+        {
+            if (RuntimeApiSupported(item.ModuleName, item.Name))
+            {
+                result.emplace(NormalizeRuntimeApiKey(item.ModuleName) + "!" + NormalizeRuntimeApiKey(item.Name), &item);
+            }
+        }
+        return result;
+    }();
+    const auto found = entries.find(NormalizeRuntimeApiKey(module) + "!" + NormalizeRuntimeApiKey(api));
+    return found == entries.end() ? nullptr : found->second;
+}
+
+std::string ApiResultJson(const KnMonTransportRecord& record, const KnMonGeneratedApiMetadata* metadata)
+{
+    const auto classified = ClassifyApiResult(metadata, record);
+    std::string message(classified.Outcome);
+    if (classified.HasError)
+    {
+        message = classified.Code == 0 ? "API reported failure without an extended error code" : FormatWindowsError(classified.Code);
+        if (classified.Domain == "ntstatus")
+        {
+            wchar_t text[2048] = {};
+            const DWORD length = FormatMessageW(FORMAT_MESSAGE_FROM_HMODULE | FORMAT_MESSAGE_IGNORE_INSERTS,
+                GetModuleHandleW(L"ntdll.dll"), classified.Code, 0, text, static_cast<DWORD>(std::size(text)), nullptr);
+            message = length != 0 ? WideToUtf8(text) : "NTSTATUS message unavailable";
+        }
+    }
+    std::ostringstream stream;
+    stream << "\"rawReturnValue\":" << Q(std::to_string(record.RawReturnValue)) << ","
+        << "\"rawReturnBits\":" << record.RawReturnBits << ","
+        << "\"rawLastErrorCode\":" << record.RawLastErrorCode << ","
+        << "\"rawWinsockErrorCode\":" << record.RawWinsockErrorCode << ","
+        << "\"winsockErrorSampled\":" << (record.HasWinsockError != 0 ? "true" : "false") << ","
+        << "\"errorDomain\":" << Q(std::string(classified.Domain)) << ","
+        << "\"outcome\":" << Q(std::string(classified.Outcome)) << ","
+        << "\"errorValidity\":" << Q(std::string(classified.ErrorValidity)) << ","
+        << "\"successPredicate\":" << Q(std::string(classified.Predicate)) << ","
+        << "\"hasError\":" << (classified.HasError ? "true" : "false") << ","
+        << "\"lastErrorCode\":" << (classified.HasError ? classified.Code : 0) << ","
+        << "\"lastErrorMessage\":" << Q(message) << ",";
+    return stream.str();
+}
+
 std::string ApiCallPayload(
     const KnMonCaptureResult& result,
     const KnMonTransportRecord& record,
@@ -4813,7 +4934,7 @@ std::string ApiCallPayload(
     stream << "\"operationId\":" << Q(result.OperationId) << ",";
     stream << "\"pid\":" << record.ProcessId << ",";
     stream << "\"tid\":" << record.ThreadId << ",";
-    stream << "\"timestampUtc\":" << Q(NowUtc()) << ",";
+    stream << CaptureTimingJson(result, record);
     stream << "\"sequence\":" << record.Sequence << ",";
     stream << "\"api\":" << Q(apiName) << ",";
     stream << "\"module\":" << Q(moduleName) << ",";
@@ -4824,8 +4945,7 @@ std::string ApiCallPayload(
     stream << "\"hookPolicy\":" << Q(hookPolicy) << ",";
     stream << "\"coverageStatus\":" << Q(coverageStatus) << ",";
     stream << "\"returnValue\":" << Q(returnValue) << ",";
-    stream << "\"lastErrorCode\":" << record.LastErrorCode << ",";
-    stream << "\"lastErrorMessage\":" << Q(record.LastErrorCode == 0 ? "success" : FormatWindowsError(record.LastErrorCode)) << ",";
+    stream << ApiResultJson(record, metadata);
     stream << "\"durationUs\":" << record.DurationUs << ",";
     stream << "\"arguments\":[" << argumentsJson << "],";
     stream << "\"tags\":[\"native-capture\"," << Q(resolvedCategoryTag);
@@ -5305,7 +5425,7 @@ std::string GenericTransportApiPayload(
     stream << "\"operationId\":" << Q(result.OperationId) << ",";
     stream << "\"pid\":" << record.ProcessId << ",";
     stream << "\"tid\":" << record.ThreadId << ",";
-    stream << "\"timestampUtc\":" << Q(NowUtc()) << ",";
+    stream << CaptureTimingJson(result, record);
     stream << "\"sequence\":" << record.Sequence << ",";
     stream << "\"api\":" << Q(apiName) << ",";
     stream << "\"module\":" << Q(moduleName) << ",";
@@ -5356,8 +5476,7 @@ std::string GenericTransportApiPayload(
         stream << "\"tier1Profile\":" << Q(profile) << ",";
     }
     stream << "\"returnValue\":" << Q(GenericReturnValueText(result, record)) << ",";
-    stream << "\"lastErrorCode\":" << record.LastErrorCode << ",";
-    stream << "\"lastErrorMessage\":" << Q(record.LastErrorCode == 0 ? "success" : FormatWindowsError(record.LastErrorCode)) << ",";
+    stream << ApiResultJson(record, FindRuntimeApiMetadata(moduleName, apiName));
     stream << "\"durationUs\":" << record.DurationUs << ",";
     stream << "\"arguments\":[" << args.str() << "],";
     stream << "\"tags\":[\"native-capture\"," << Q(tier) << ",\"generic\"," << Q(profile) << "," << Q(apiFamily) << ",\"hook\",\"shared-memory\"],";
@@ -6670,6 +6789,7 @@ std::wstring TransportMappingName(const std::string& operationId)
 
 struct SharedTransportSession
 {
+    CaptureClock Clock;
     HANDLE MappingHandle = nullptr;
     KnMonTransportHeader* Header = nullptr;
     KnMonTransportRecord* Records = nullptr;
@@ -6708,6 +6828,7 @@ bool CreateSharedTransport(
     SharedTransportSession& transport,
     const std::string& operationId,
     KnMonAgentArchitecture architecture,
+    const CaptureClock& clock,
     DWORD* errorCode)
 {
     bool created = false;
@@ -6717,6 +6838,7 @@ bool CreateSharedTransport(
         CloseSharedTransport(transport);
         transport.Capacity = TransportCapacityFromEnvironment();
         transport.OperationId = operationId;
+        transport.Clock = clock;
         transport.Architecture = architecture;
         transport.MappingName = TransportMappingName(operationId);
         transport.MappingSize = sizeof(KnMonTransportHeader) + (static_cast<std::uint64_t>(transport.Capacity) * sizeof(KnMonTransportRecord));
@@ -6799,10 +6921,15 @@ SharedTransportReader MakeSharedTransportReader(const SharedTransportSession& tr
     config.TrustedRecordBytes = transport.MappingSize >= sizeof(KnMonTransportHeader)
         ? transport.MappingSize - sizeof(KnMonTransportHeader) : 0;
     config.State = &transport.ReaderState;
-    config.ValidateRecordIdentity = [](const KnMonTransportRecord& record)
+    config.ValidateRecordIdentity = [clock = transport.Clock](const KnMonTransportRecord& record)
     {
         const KnMonGeneratedApiMetadata* api = FindGeneratedApiMetadata(record.ApiId);
-        return FindGeneratedModuleMetadata(record.ModuleId) != nullptr &&
+        CaptureTime time;
+        LARGE_INTEGER observed = {};
+        QueryPerformanceCounter(&observed);
+        const bool validTime = observed.QuadPart > 0 && record.EndQpc <= static_cast<std::uint64_t>(observed.QuadPart) + 1 &&
+            ConvertCaptureTime(clock, record.StartQpc, record.EndQpc, time) && time.DurationUs == record.DurationUs;
+        return validTime && FindGeneratedModuleMetadata(record.ModuleId) != nullptr &&
             ((record.ApiId == 0 && (record.Flags & KnMonTransportRecordFlagGenericInventory) != 0) ||
                 (api != nullptr && api->ModuleId == record.ModuleId));
     };
@@ -7840,6 +7967,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request) 
 KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, const KnMonCaptureStreamCallbacks* streamCallbacks) const
 {
     KnMonCaptureResult result;
+    result.Clock = SampleCaptureClock();
     std::string rejectedApi;
     if (!ValidateRuntimeApiSelection(request.ApiSelection, rejectedApi))
     {
@@ -8073,7 +8201,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         AddAudit(result, "event_pipe_created", "CreateNamedPipeW", WideToUtf8(pipeName.c_str()));
 
         DWORD transportError = 0;
-        if (!CreateSharedTransport(transport, result.OperationId, requestedArchitecture, &transportError))
+        if (!CreateSharedTransport(transport, result.OperationId, requestedArchitecture, result.Clock, &transportError))
         {
             SetResultError(result, transportError, "win32", "shared_memory_transport_create", "Failed to create launch shared-memory event transport.");
             AddAudit(result, "transport_setup_failed", "shared_memory_transport_create", "Launch shared-memory event transport setup failed.", transportError, "win32");
@@ -8623,6 +8751,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& request) const
 {
     KnMonCaptureResult result;
+    result.Clock = SampleCaptureClock();
     std::string rejectedApi;
     if (!ValidateRuntimeApiSelection(request.ApiSelection, rejectedApi))
     {
@@ -8692,7 +8821,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         AddAudit(result, "event_pipe_created", "CreateNamedPipeW", WideToUtf8(pipeName.c_str()));
 
         DWORD transportError = 0;
-        if (!CreateSharedTransport(transport, result.OperationId, requestedArchitecture, &transportError))
+        if (!CreateSharedTransport(transport, result.OperationId, requestedArchitecture, result.Clock, &transportError))
         {
             SetResultError(result, transportError, "win32", "shared_memory_transport_create", "Failed to create shared-memory event transport.");
             AddAudit(result, "transport_setup_failed", "shared_memory_transport_create", "Shared-memory event transport setup failed.", transportError, "win32");
@@ -9138,6 +9267,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
 KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, const KnMonCaptureStreamCallbacks* streamCallbacks) const
 {
     KnMonCaptureResult result;
+    result.Clock = request.ClockOverride.Frequency == 0 ? SampleCaptureClock() : request.ClockOverride;
     std::string rejectedApi;
     if (!ValidateRuntimeApiSelection(request.ApiSelection, rejectedApi))
     {
@@ -9666,7 +9796,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         AddAudit(result, "event_pipe_created", "CreateNamedPipeW", WideToUtf8(pipeName.c_str()));
 
         DWORD transportError = 0;
-        if (!CreateSharedTransport(transport, result.OperationId, requestedArchitecture, &transportError))
+        if (!CreateSharedTransport(transport, result.OperationId, requestedArchitecture, result.Clock, &transportError))
         {
             SetResultError(result, transportError, "win32", "shared_memory_transport_create", "Failed to create attach shared-memory event transport.");
             AddAudit(result, "transport_setup_failed", "shared_memory_transport_create", "Attach shared-memory event transport setup failed.", transportError, "win32");
@@ -10230,6 +10360,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
 KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRequest& request) const
 {
+    const CaptureClock treeClock = SampleCaptureClock();
     KnMonProcessTreeResult result;
     result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
     result.SessionId = request.SessionId;
@@ -10329,7 +10460,7 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
         return &result.ProcessNodes.back();
     };
 
-    auto evaluateAndMaybeAttach = [this, &result, &request, &evaluatedChildren, &observeCancellation](KnMonProcessTreeNode& node)
+    auto evaluateAndMaybeAttach = [this, &result, &request, &evaluatedChildren, &observeCancellation, &treeClock](KnMonProcessTreeNode& node)
     {
         KnMonChildPolicyDecision decision = EvaluateChildPolicy(result, node, request);
 
@@ -10348,6 +10479,7 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
                 AddAudit(result, "child_attach_started", "attach_capture", "Starting Phase 11A attach for child pid " + std::to_string(node.ProcessId) + ".");
 
                 KnMonAttachRequest attachRequest;
+                attachRequest.ClockOverride = treeClock;
                 attachRequest.OperationId = result.OperationId + "-child-" + std::to_string(node.ProcessId);
                 attachRequest.ProcessId = node.ProcessId;
                 attachRequest.AgentPath = request.AgentPath;

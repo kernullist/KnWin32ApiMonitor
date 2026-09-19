@@ -42,6 +42,19 @@ function mutation(name, mutate, accepted = false)
         const replay = command(["replay-session", "--session", target]);
         assert.equal(replay.success, true, JSON.stringify(replay));
         assert.equal(replay.traceEvents[0].api, "CreateFileW");
+        if (name === "trace-qpc-valid")
+        {
+            assert.equal(replay.traceEvents[0].relativeTimeMs, 0.1);
+            const database = path.join(root, "qpc-index.db");
+            const indexed = command(["trace-index-build", "--root", target, "--database", database, "--rebuild"]);
+            assert.equal(indexed.success, true, JSON.stringify(indexed));
+            const queried = command(["trace-index-query", "--database", database, "--limit", "10"]);
+            assert.equal(queried.success, true, JSON.stringify(queried));
+            assert.equal(queried.events.length, 1);
+            assert.equal(queried.events[0].relativeTimeMs, 0.1);
+            assert.deepEqual(JSON.parse(queried.events[0].eventJson).timing, replay.traceEvents[0].timing);
+            checked += 2;
+        }
     }
     ++checked;
 }
@@ -107,6 +120,36 @@ function editTrace(directory, transform)
     editManifest(directory, (value) => ({ ...value, storedBytes: bytes, uncompressedBytes: bytes }));
 }
 mutation("trace-null-error", (directory) => editTrace(directory, (text) => text), true);
+const clockTrace = (text) => ({ ...JSON.parse(text), timeSource: "qpc", relativeTimeMs: 0.1, durationUs: 100000,
+    timestampUtc: "2022-06-18T04:26:40.0001000Z", collectedAtUtc: "2026-09-20T00:00:00.0000000Z",
+    timing: { qpcFrequency: "10000000", qpcBase: "9007199254740993", utcBaseFileTime: "133000000000000000",
+        anchorSpanQpc: "7", startQpc: "9007199254741993", endQpc: "9007199255741993" } });
+mutation("trace-qpc-valid", (directory) => editTrace(directory, (text) => JSON.stringify(clockTrace(text)) + "\n"), true);
+for (const [name, change] of [
+    ["zero-frequency", (value) => { value.timing.qpcFrequency = "0"; }],
+    ["numeric-clock", (value) => { value.timing.qpcBase = 9007199254740993; }],
+    ["clock-overflow", (value) => { value.timing.startQpc = "18446744073709551616"; }],
+    ["clock-leading-zero", (value) => { value.timing.startQpc = "09007199254741993"; }],
+    ["reversed-clock", (value) => { value.timing.endQpc = value.timing.qpcBase; }],
+    ["relative-mismatch", (value) => { value.relativeTimeMs = 0.2; }],
+    ["duration-mismatch", (value) => { value.durationUs = 99999; }],
+    ["negative-time", (value) => { value.relativeTimeMs = -1; }],
+    ["missing-clock", (value) => { delete value.timing; }],
+    ["return-width", (value) => { value.rawReturnValue = "4294967296"; value.rawReturnBits = 32; }],
+    ["raw-error-type", (value) => { value.rawLastErrorCode = "5"; }],
+    ["domain-type", (value) => { value.errorDomain = "fake"; }],
+    ["outcome-invalid", (value) => { value.outcome = "fake"; }],
+    ["validity-invalid", (value) => { value.errorValidity = "fake"; }],
+    ["contradictory-failure", (value) => { value.hasError = true; value.outcome = "success"; }]
+])
+{
+    mutation(`trace-${name}`, (directory) => editTrace(directory, (text) =>
+    {
+        const value = clockTrace(text);
+        change(value);
+        return JSON.stringify(value) + "\n";
+    }));
+}
 mutation("trace-string-error-code", (directory) => editTrace(directory, (text) => JSON.stringify({ ...JSON.parse(text),
     error: { kind: "win32", code: "0x00000005", message: "Access is denied." } }) + "\n"), true);
 mutation("trace-numeric-error-code", (directory) => editTrace(directory, (text) => JSON.stringify({ ...JSON.parse(text),

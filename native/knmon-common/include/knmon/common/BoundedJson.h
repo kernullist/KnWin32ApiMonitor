@@ -42,6 +42,8 @@ public:
     bool Bool(std::string_view key, bool required = false) const;
     std::uint64_t UInt64(std::string_view key, bool required = false) const;
     std::uint32_t UInt32(std::string_view key, bool required = false) const;
+    double NonnegativeNumber(std::string_view key, bool required = false) const;
+    std::uint64_t DecimalUInt64(std::string_view key) const;
     JsonDocument Object(std::string_view key, bool required = false) const;
     JsonDocument ObjectOrNull(std::string_view key, bool required = false) const;
     JsonDocument Array(std::string_view key, bool required = false) const;

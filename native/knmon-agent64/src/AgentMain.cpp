@@ -8,6 +8,7 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
+#include <knmon/common/ThreadErrorState.h>
 #ifndef PSAPI_VERSION
 #define PSAPI_VERSION 1
 #endif
@@ -1084,28 +1085,44 @@ std::uint32_t PublicLifecycleState(AgentLifecycleState state)
     return value;
 }
 
+std::atomic<knmon::ThreadErrorState::WinsockGet> g_errorWinsockGet{nullptr};
+std::atomic<knmon::ThreadErrorState::WinsockSet> g_errorWinsockSet{nullptr};
+thread_local const knmon::ThreadErrorState* g_callErrorState = nullptr;
+
 class HookReentryGuard
 {
 public:
-    HookReentryGuard() : m_previous(g_inHook), m_previousEpoch(g_hookEpoch), m_lease(g_sessionGate)
+    explicit HookReentryGuard(bool winsock = false) :
+        m_errors(winsock ? g_errorWinsockGet.load() : nullptr, winsock ? g_errorWinsockSet.load() : nullptr),
+        m_previous(g_inHook), m_previousEpoch(g_hookEpoch), m_lease(g_sessionGate), m_previousErrors(g_callErrorState)
     {
         g_inHook = true;
         g_hookEpoch = m_lease.Epoch();
+        g_callErrorState = &m_errors;
     }
 
     ~HookReentryGuard()
     {
         g_hookEpoch = m_previousEpoch;
         g_inHook = m_previous;
+        g_callErrorState = m_previousErrors;
+    }
+
+    template <typename Function>
+    decltype(auto) Call(Function&& function)
+    {
+        return m_errors.Call(std::forward<Function>(function));
     }
 
     HookReentryGuard(const HookReentryGuard&) = delete;
     HookReentryGuard& operator=(const HookReentryGuard&) = delete;
 
 private:
+    knmon::ThreadErrorState m_errors;
     bool m_previous;
     std::uint32_t m_previousEpoch;
     knmon::SessionLease m_lease;
+    const knmon::ThreadErrorState* m_previousErrors;
 };
 
 std::string WideToUtf8(const wchar_t* value)
@@ -2590,14 +2607,18 @@ DWORD NtStatusToDosError(NTSTATUS status)
 
 std::uint64_t DurationUs(const LARGE_INTEGER& start, const LARGE_INTEGER& end)
 {
-    LARGE_INTEGER frequency = {};
-    QueryPerformanceFrequency(&frequency);
-    if (frequency.QuadPart == 0)
+    static const std::uint64_t frequency = []()
     {
-        return 0;
+        LARGE_INTEGER value = {};
+        QueryPerformanceFrequency(&value);
+        return value.QuadPart > 0 ? static_cast<std::uint64_t>(value.QuadPart) : 0;
+    }();
+    std::uint64_t value = 0;
+    if (start.QuadPart >= 0 && end.QuadPart >= start.QuadPart)
+    {
+        knmon::ScaleQpcTicks(static_cast<std::uint64_t>(end.QuadPart - start.QuadPart), frequency, 1000000, value);
     }
-
-    return static_cast<std::uint64_t>(((end.QuadPart - start.QuadPart) * 1000000LL) / frequency.QuadPart);
+    return value;
 }
 
 LONG64 NextSequence()
@@ -2795,6 +2816,14 @@ void FillTransportCommon(
         record->EndQpc = static_cast<std::uint64_t>(end.QuadPart);
         record->DurationUs = DurationUs(start, end);
         record->LastErrorCode = errorCode;
+        if (g_callErrorState != nullptr)
+        {
+            record->RawLastErrorCode = g_callErrorState->Win32();
+            record->RawWinsockErrorCode = static_cast<std::uint32_t>(g_callErrorState->Winsock());
+            record->HasWinsockError = g_callErrorState->HasWinsock() ? 1 : 0;
+            record->RawReturnValue = g_callErrorState->ReturnValue();
+            record->RawReturnBits = g_callErrorState->ReturnBits();
+        }
     }
 }
 
@@ -6087,7 +6116,10 @@ std::uintptr_t InvokeGeneratedValueHook(
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const std::uintptr_t result = original(args...);
+    const std::uintptr_t result = guard.Call([&]()
+    {
+        return original(args...);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -6148,7 +6180,10 @@ void InvokeGeneratedVoidHook(
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    original(args...);
+    guard.Call([&]()
+    {
+        return original(args...);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -6202,7 +6237,10 @@ double InvokeGeneratedDoubleHook(
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const double result = original(args...);
+    const double result = guard.Call([&]()
+    {
+        return original(args...);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -11608,6 +11646,11 @@ void PatchImportInModule(ModuleInfo& module, HookDefinition& definition, SweepSt
 
 void ResolveHookDefinitions(std::array<HookDefinition, HookDefinitionCount>& definitions)
 {
+    if (g_errorWinsockGet == nullptr || g_errorWinsockSet == nullptr)
+    {
+        g_errorWinsockGet = reinterpret_cast<knmon::ThreadErrorState::WinsockGet>(ResolveExport("ws2_32.dll", "WSAGetLastError"));
+        g_errorWinsockSet = reinterpret_cast<knmon::ThreadErrorState::WinsockSet>(ResolveExport("ws2_32.dll", "WSASetLastError"));
+    }
     for (HookDefinition& definition : definitions)
     {
         if (!HookDefinitionEnabled(definition))
@@ -12501,7 +12544,10 @@ HANDLE WINAPI HookedCreateFileW(
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HANDLE result = g_originalCreateFileW(fileName, desiredAccess, shareMode, securityAttributes, creationDisposition, flagsAndAttributes, templateFile);
+    HANDLE result = guard.Call([&]()
+    {
+        return g_originalCreateFileW(fileName, desiredAccess, shareMode, securityAttributes, creationDisposition, flagsAndAttributes, templateFile);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -12551,7 +12597,10 @@ HANDLE WINAPI HookedCreateFileA(
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HANDLE result = g_originalCreateFileA(fileName, desiredAccess, shareMode, securityAttributes, creationDisposition, flagsAndAttributes, templateFile);
+    HANDLE result = guard.Call([&]()
+    {
+        return g_originalCreateFileA(fileName, desiredAccess, shareMode, securityAttributes, creationDisposition, flagsAndAttributes, templateFile);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -12594,7 +12643,10 @@ BOOL WINAPI HookedReadFile(HANDLE file, LPVOID buffer, DWORD bytesToRead, LPDWOR
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalReadFile(file, buffer, bytesToRead, bytesRead, overlapped);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalReadFile(file, buffer, bytesToRead, bytesRead, overlapped);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -12627,7 +12679,10 @@ BOOL WINAPI HookedWriteFile(HANDLE file, LPCVOID buffer, DWORD bytesToWrite, LPD
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalWriteFile(file, buffer, bytesToWrite, bytesWritten, overlapped);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalWriteFile(file, buffer, bytesToWrite, bytesWritten, overlapped);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -12660,7 +12715,10 @@ BOOL WINAPI HookedCloseHandle(HANDLE handle)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalCloseHandle(handle);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalCloseHandle(handle);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -12691,7 +12749,10 @@ LPVOID WINAPI HookedVirtualAlloc(LPVOID address, SIZE_T size, DWORD allocationTy
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    LPVOID result = g_originalVirtualAlloc(address, size, allocationType, protect);
+    LPVOID result = guard.Call([&]()
+    {
+        return g_originalVirtualAlloc(address, size, allocationType, protect);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -12722,7 +12783,10 @@ BOOL WINAPI HookedVirtualFree(LPVOID address, SIZE_T size, DWORD freeType)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalVirtualFree(address, size, freeType);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalVirtualFree(address, size, freeType);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -12753,7 +12817,10 @@ BOOL WINAPI HookedVirtualProtect(LPVOID address, SIZE_T size, DWORD newProtect, 
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalVirtualProtect(address, size, newProtect, oldProtect);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalVirtualProtect(address, size, newProtect, oldProtect);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -12784,7 +12851,10 @@ SIZE_T WINAPI HookedVirtualQuery(LPCVOID address, PMEMORY_BASIC_INFORMATION buff
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    SIZE_T result = g_originalVirtualQuery(address, buffer, length);
+    SIZE_T result = guard.Call([&]()
+    {
+        return g_originalVirtualQuery(address, buffer, length);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -12821,7 +12891,10 @@ HANDLE WINAPI HookedCreateFileMappingW(
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HANDLE result = g_originalCreateFileMappingW(file, mappingAttributes, protect, maximumSizeHigh, maximumSizeLow, name);
+    HANDLE result = guard.Call([&]()
+    {
+        return g_originalCreateFileMappingW(file, mappingAttributes, protect, maximumSizeHigh, maximumSizeLow, name);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -12852,7 +12925,10 @@ HANDLE WINAPI HookedOpenFileMappingW(DWORD desiredAccess, BOOL inheritHandle, LP
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HANDLE result = g_originalOpenFileMappingW(desiredAccess, inheritHandle, name);
+    HANDLE result = guard.Call([&]()
+    {
+        return g_originalOpenFileMappingW(desiredAccess, inheritHandle, name);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -12883,7 +12959,10 @@ LPVOID WINAPI HookedMapViewOfFile(HANDLE mapping, DWORD desiredAccess, DWORD fil
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    LPVOID result = g_originalMapViewOfFile(mapping, desiredAccess, fileOffsetHigh, fileOffsetLow, bytesToMap);
+    LPVOID result = guard.Call([&]()
+    {
+        return g_originalMapViewOfFile(mapping, desiredAccess, fileOffsetHigh, fileOffsetLow, bytesToMap);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -12914,7 +12993,10 @@ BOOL WINAPI HookedUnmapViewOfFile(LPCVOID baseAddress)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalUnmapViewOfFile(baseAddress);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalUnmapViewOfFile(baseAddress);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -12945,7 +13027,10 @@ HANDLE WINAPI HookedGetCurrentProcess()
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HANDLE result = g_originalGetCurrentProcess();
+    HANDLE result = guard.Call([&]()
+    {
+        return g_originalGetCurrentProcess();
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -12976,7 +13061,10 @@ DWORD WINAPI HookedGetCurrentProcessId()
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    DWORD result = g_originalGetCurrentProcessId();
+    DWORD result = guard.Call([&]()
+    {
+        return g_originalGetCurrentProcessId();
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13007,7 +13095,10 @@ HANDLE WINAPI HookedGetCurrentThread()
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HANDLE result = g_originalGetCurrentThread();
+    HANDLE result = guard.Call([&]()
+    {
+        return g_originalGetCurrentThread();
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13038,7 +13129,10 @@ DWORD WINAPI HookedGetCurrentThreadId()
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    DWORD result = g_originalGetCurrentThreadId();
+    DWORD result = guard.Call([&]()
+    {
+        return g_originalGetCurrentThreadId();
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13069,7 +13163,10 @@ DWORD WINAPI HookedGetProcessId(HANDLE process)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    DWORD result = g_originalGetProcessId(process);
+    DWORD result = guard.Call([&]()
+    {
+        return g_originalGetProcessId(process);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13100,7 +13197,10 @@ DWORD WINAPI HookedGetThreadId(HANDLE thread)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    DWORD result = g_originalGetThreadId(thread);
+    DWORD result = guard.Call([&]()
+    {
+        return g_originalGetThreadId(thread);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13131,7 +13231,10 @@ HANDLE WINAPI HookedGetStdHandle(DWORD stdHandle)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HANDLE result = g_originalGetStdHandle(stdHandle);
+    HANDLE result = guard.Call([&]()
+    {
+        return g_originalGetStdHandle(stdHandle);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13162,7 +13265,10 @@ DWORD WINAPI HookedGetFileType(HANDLE file)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    DWORD result = g_originalGetFileType(file);
+    DWORD result = guard.Call([&]()
+    {
+        return g_originalGetFileType(file);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13193,7 +13299,10 @@ BOOL WINAPI HookedGetHandleInformation(HANDLE object, LPDWORD flags)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalGetHandleInformation(object, flags);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalGetHandleInformation(object, flags);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13224,7 +13333,10 @@ BOOL WINAPI HookedSetHandleInformation(HANDLE object, DWORD mask, DWORD flags)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalSetHandleInformation(object, mask, flags);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalSetHandleInformation(object, mask, flags);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13255,7 +13367,10 @@ BOOL WINAPI HookedGetFileSizeEx(HANDLE file, PLARGE_INTEGER fileSize)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalGetFileSizeEx(file, fileSize);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalGetFileSizeEx(file, fileSize);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13286,7 +13401,10 @@ BOOL WINAPI HookedGetFileTime(HANDLE file, LPFILETIME creationTime, LPFILETIME l
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalGetFileTime(file, creationTime, lastAccessTime, lastWriteTime);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalGetFileTime(file, creationTime, lastAccessTime, lastWriteTime);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13317,7 +13435,10 @@ BOOL WINAPI HookedGetFileInformationByHandle(HANDLE file, LPBY_HANDLE_FILE_INFOR
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalGetFileInformationByHandle(file, fileInformation);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalGetFileInformationByHandle(file, fileInformation);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13347,7 +13468,10 @@ void WINAPI HookedGetSystemTime(LPSYSTEMTIME systemTime)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    g_originalGetSystemTime(systemTime);
+    guard.Call([&]()
+    {
+        return g_originalGetSystemTime(systemTime);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13376,7 +13500,10 @@ BOOL WINAPI HookedSetupDiClassNameFromGuidW(const GUID* classGuid, PWSTR classNa
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalSetupDiClassNameFromGuidW(classGuid, className, classNameSize, requiredSize);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalSetupDiClassNameFromGuidW(classGuid, className, classNameSize, requiredSize);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13420,7 +13547,10 @@ BOOL WINAPI HookedGetCursorPos(LPPOINT point)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalGetCursorPos(point);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalGetCursorPos(point);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13463,7 +13593,10 @@ ULONG WINAPI HookedGetIpStatistics(PMIB_IPSTATS statistics)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const ULONG result = g_originalGetIpStatistics(statistics);
+    const ULONG result = guard.Call([&]()
+    {
+        return g_originalGetIpStatistics(statistics);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -13503,7 +13636,10 @@ HGDIOBJ WINAPI HookedGetStockObject(int object)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HGDIOBJ result = g_originalGetStockObject(object);
+    HGDIOBJ result = guard.Call([&]()
+    {
+        return g_originalGetStockObject(object);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13546,7 +13682,10 @@ UINT32 WINAPI HookedWindowsGetStringLen(HSTRING string)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const UINT32 result = g_originalWindowsGetStringLen(string);
+    const UINT32 result = guard.Call([&]()
+    {
+        return g_originalWindowsGetStringLen(string);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13594,7 +13733,10 @@ BOOL WINAPI HookedRevertToSelf()
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalRevertToSelf();
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalRevertToSelf();
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13686,11 +13828,14 @@ ReturnT InvokeTier2ReturnOnlyHook(ReturnT(WINAPI* original)(), ReturnT missingVa
         return original();
     }
 
-    HookReentryGuard guard;
+    HookReentryGuard guard(std::string_view(metadata.ApiName) == "WSARevertImpersonation");
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const ReturnT result = original();
+    const ReturnT result = guard.Call([&]()
+    {
+        return original();
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13736,7 +13881,10 @@ HRESULT InvokeTier2ReturnOnlyHResultHook(HRESULT(WINAPI* original)(), const Tier
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const HRESULT result = original();
+    const HRESULT result = guard.Call([&]()
+    {
+        return original();
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13780,7 +13928,10 @@ void InvokeTier2ReturnOnlyVoidHook(void(WINAPI* original)(), const Tier2ReturnOn
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    original();
+    guard.Call([&]()
+    {
+        return original();
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13823,7 +13974,10 @@ void InvokeTier2ReturnOnlyCdeclVoidHook(void(__cdecl* original)(), const Tier2Re
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    original();
+    guard.Call([&]()
+    {
+        return original();
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -13868,7 +14022,10 @@ ReturnT InvokeTier2ReturnOnlyCdeclHook(ReturnT(__cdecl* original)(), ReturnT mis
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const ReturnT result = original();
+    const ReturnT result = guard.Call([&]()
+    {
+        return original();
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -16555,7 +16712,10 @@ HMODULE WINAPI HookedGetModuleHandleW(LPCWSTR moduleName)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HMODULE result = g_originalGetModuleHandleW(moduleName);
+    HMODULE result = guard.Call([&]()
+    {
+        return g_originalGetModuleHandleW(moduleName);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -16586,7 +16746,10 @@ BOOL WINAPI HookedGetModuleHandleExW(DWORD flags, LPCWSTR moduleName, HMODULE* m
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalGetModuleHandleExW(flags, moduleName, module);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalGetModuleHandleExW(flags, moduleName, module);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -16617,7 +16780,10 @@ DWORD WINAPI HookedGetModuleFileNameW(HMODULE module, LPWSTR fileName, DWORD siz
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    DWORD result = g_originalGetModuleFileNameW(module, fileName, sizeChars);
+    DWORD result = guard.Call([&]()
+    {
+        return g_originalGetModuleFileNameW(module, fileName, sizeChars);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -16648,7 +16814,10 @@ BOOL WINAPI HookedFreeLibrary(HMODULE module)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalFreeLibrary(module);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalFreeLibrary(module);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -16717,7 +16886,10 @@ HANDLE WINAPI HookedCreateThread(
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HANDLE result = g_originalCreateThread(threadAttributes, stackSize, startAddress, parameter, creationFlags, threadId);
+    HANDLE result = guard.Call([&]()
+    {
+        return g_originalCreateThread(threadAttributes, stackSize, startAddress, parameter, creationFlags, threadId);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -16748,7 +16920,10 @@ HANDLE WINAPI HookedOpenThread(DWORD desiredAccess, BOOL inheritHandle, DWORD th
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HANDLE result = g_originalOpenThread(desiredAccess, inheritHandle, threadId);
+    HANDLE result = guard.Call([&]()
+    {
+        return g_originalOpenThread(desiredAccess, inheritHandle, threadId);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -16779,7 +16954,10 @@ DWORD WINAPI HookedWaitForSingleObject(HANDLE handle, DWORD milliseconds)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    DWORD result = g_originalWaitForSingleObject(handle, milliseconds);
+    DWORD result = guard.Call([&]()
+    {
+        return g_originalWaitForSingleObject(handle, milliseconds);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -16810,7 +16988,10 @@ BOOL WINAPI HookedGetExitCodeThread(HANDLE thread, LPDWORD exitCode)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalGetExitCodeThread(thread, exitCode);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalGetExitCodeThread(thread, exitCode);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -16841,7 +17022,10 @@ HANDLE WINAPI HookedCreateEventW(LPSECURITY_ATTRIBUTES eventAttributes, BOOL man
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HANDLE result = g_originalCreateEventW(eventAttributes, manualReset, initialState, name);
+    HANDLE result = guard.Call([&]()
+    {
+        return g_originalCreateEventW(eventAttributes, manualReset, initialState, name);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -16872,7 +17056,10 @@ HANDLE WINAPI HookedOpenEventW(DWORD desiredAccess, BOOL inheritHandle, LPCWSTR 
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HANDLE result = g_originalOpenEventW(desiredAccess, inheritHandle, name);
+    HANDLE result = guard.Call([&]()
+    {
+        return g_originalOpenEventW(desiredAccess, inheritHandle, name);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -16903,7 +17090,10 @@ BOOL WINAPI HookedSetEvent(HANDLE eventHandle)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalSetEvent(eventHandle);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalSetEvent(eventHandle);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -16934,7 +17124,10 @@ BOOL WINAPI HookedResetEvent(HANDLE eventHandle)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalResetEvent(eventHandle);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalResetEvent(eventHandle);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -16965,7 +17158,10 @@ DWORD WINAPI HookedWaitForSingleObjectEx(HANDLE handle, DWORD milliseconds, BOOL
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    DWORD result = g_originalWaitForSingleObjectEx(handle, milliseconds, alertable);
+    DWORD result = guard.Call([&]()
+    {
+        return g_originalWaitForSingleObjectEx(handle, milliseconds, alertable);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -16996,7 +17192,10 @@ HANDLE WINAPI HookedCreateMutexW(LPSECURITY_ATTRIBUTES mutexAttributes, BOOL ini
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HANDLE result = g_originalCreateMutexW(mutexAttributes, initialOwner, name);
+    HANDLE result = guard.Call([&]()
+    {
+        return g_originalCreateMutexW(mutexAttributes, initialOwner, name);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -17027,7 +17226,10 @@ HANDLE WINAPI HookedOpenMutexW(DWORD desiredAccess, BOOL inheritHandle, LPCWSTR 
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HANDLE result = g_originalOpenMutexW(desiredAccess, inheritHandle, name);
+    HANDLE result = guard.Call([&]()
+    {
+        return g_originalOpenMutexW(desiredAccess, inheritHandle, name);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -17058,7 +17260,10 @@ BOOL WINAPI HookedReleaseMutex(HANDLE mutexHandle)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalReleaseMutex(mutexHandle);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalReleaseMutex(mutexHandle);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -17089,7 +17294,10 @@ HANDLE WINAPI HookedCreateSemaphoreW(LPSECURITY_ATTRIBUTES semaphoreAttributes, 
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HANDLE result = g_originalCreateSemaphoreW(semaphoreAttributes, initialCount, maximumCount, name);
+    HANDLE result = guard.Call([&]()
+    {
+        return g_originalCreateSemaphoreW(semaphoreAttributes, initialCount, maximumCount, name);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -17120,7 +17328,10 @@ HANDLE WINAPI HookedOpenSemaphoreW(DWORD desiredAccess, BOOL inheritHandle, LPCW
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HANDLE result = g_originalOpenSemaphoreW(desiredAccess, inheritHandle, name);
+    HANDLE result = guard.Call([&]()
+    {
+        return g_originalOpenSemaphoreW(desiredAccess, inheritHandle, name);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -17151,7 +17362,10 @@ BOOL WINAPI HookedReleaseSemaphore(HANDLE semaphoreHandle, LONG releaseCount, LP
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    BOOL result = g_originalReleaseSemaphore(semaphoreHandle, releaseCount, previousCount);
+    BOOL result = guard.Call([&]()
+    {
+        return g_originalReleaseSemaphore(semaphoreHandle, releaseCount, previousCount);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -17182,7 +17396,10 @@ DWORD WINAPI HookedWaitForMultipleObjectsEx(DWORD count, const HANDLE* handles, 
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    DWORD result = g_originalWaitForMultipleObjectsEx(count, handles, waitAll, milliseconds, alertable);
+    DWORD result = guard.Call([&]()
+    {
+        return g_originalWaitForMultipleObjectsEx(count, handles, waitAll, milliseconds, alertable);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -17213,7 +17430,10 @@ HMODULE WINAPI HookedLoadLibraryW(LPCWSTR fileName)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HMODULE result = g_originalLoadLibraryW(fileName);
+    HMODULE result = guard.Call([&]()
+    {
+        return g_originalLoadLibraryW(fileName);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -17248,7 +17468,10 @@ HMODULE WINAPI HookedLoadLibraryA(LPCSTR fileName)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HMODULE result = g_originalLoadLibraryA(fileName);
+    HMODULE result = guard.Call([&]()
+    {
+        return g_originalLoadLibraryA(fileName);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -17283,7 +17506,10 @@ HMODULE WINAPI HookedLoadLibraryExW(LPCWSTR fileName, HANDLE file, DWORD flags)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HMODULE result = g_originalLoadLibraryExW(fileName, file, flags);
+    HMODULE result = guard.Call([&]()
+    {
+        return g_originalLoadLibraryExW(fileName, file, flags);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -17318,7 +17544,10 @@ HMODULE WINAPI HookedLoadLibraryExA(LPCSTR fileName, HANDLE file, DWORD flags)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HMODULE result = g_originalLoadLibraryExA(fileName, file, flags);
+    HMODULE result = guard.Call([&]()
+    {
+        return g_originalLoadLibraryExA(fileName, file, flags);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -17353,7 +17582,10 @@ FARPROC WINAPI HookedGetProcAddress(HMODULE module, LPCSTR procName)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    FARPROC result = g_originalGetProcAddress(module, procName);
+    FARPROC result = guard.Call([&]()
+    {
+        return g_originalGetProcAddress(module, procName);
+    });
     FARPROC resolvedResult = result;
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
@@ -17440,7 +17672,9 @@ NTSTATUS NTAPI HookedNtCreateFile(
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    NTSTATUS status = g_originalNtCreateFile(
+    NTSTATUS status = guard.Call([&]()
+    {
+        return g_originalNtCreateFile(
         fileHandle,
         desiredAccess,
         objectAttributes,
@@ -17452,6 +17686,7 @@ NTSTATUS NTAPI HookedNtCreateFile(
         createOptions,
         eaBuffer,
         eaLength);
+    });
     QueryPerformanceCounter(&end);
 
     const DWORD eventError = NtStatusToDosError(status);
@@ -17494,7 +17729,10 @@ NTSTATUS NTAPI HookedLdrLoadDll(PWSTR pathToFile, ULONG flags, PUNICODE_STRING m
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    NTSTATUS status = g_originalLdrLoadDll(pathToFile, flags, moduleFileName, moduleHandle);
+    NTSTATUS status = guard.Call([&]()
+    {
+        return g_originalLdrLoadDll(pathToFile, flags, moduleFileName, moduleHandle);
+    });
     QueryPerformanceCounter(&end);
 
     const DWORD eventError = NtStatusToDosError(status);
@@ -17526,7 +17764,10 @@ NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functio
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    NTSTATUS status = g_originalLdrGetProcedureAddress(module, functionName, ordinal, functionAddress);
+    NTSTATUS status = guard.Call([&]()
+    {
+        return g_originalLdrGetProcedureAddress(module, functionName, ordinal, functionAddress);
+    });
     QueryPerformanceCounter(&end);
 
     const DWORD eventError = NtStatusToDosError(status);
@@ -17592,7 +17833,10 @@ LSTATUS WINAPI HookedRegOpenKeyExW(HKEY key, LPCWSTR subKey, DWORD options, REGS
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const LSTATUS result = g_originalRegOpenKeyExW(key, subKey, options, desiredAccess, resultKey);
+    const LSTATUS result = guard.Call([&]()
+    {
+        return g_originalRegOpenKeyExW(key, subKey, options, desiredAccess, resultKey);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -17628,7 +17872,10 @@ LSTATUS WINAPI HookedRegCreateKeyExW(
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const LSTATUS result = g_originalRegCreateKeyExW(key, subKey, reserved, keyClass, options, desiredAccess, securityAttributes, resultKey, disposition);
+    const LSTATUS result = guard.Call([&]()
+    {
+        return g_originalRegCreateKeyExW(key, subKey, reserved, keyClass, options, desiredAccess, securityAttributes, resultKey, disposition);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -17655,7 +17902,10 @@ LSTATUS WINAPI HookedRegQueryValueExW(HKEY key, LPCWSTR valueName, LPDWORD reser
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const LSTATUS result = g_originalRegQueryValueExW(key, valueName, reserved, valueType, data, dataBytes);
+    const LSTATUS result = guard.Call([&]()
+    {
+        return g_originalRegQueryValueExW(key, valueName, reserved, valueType, data, dataBytes);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -17682,7 +17932,10 @@ LSTATUS WINAPI HookedRegSetValueExW(HKEY key, LPCWSTR valueName, DWORD reserved,
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const LSTATUS result = g_originalRegSetValueExW(key, valueName, reserved, valueType, data, dataBytes);
+    const LSTATUS result = guard.Call([&]()
+    {
+        return g_originalRegSetValueExW(key, valueName, reserved, valueType, data, dataBytes);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -17709,7 +17962,10 @@ LSTATUS WINAPI HookedRegDeleteValueW(HKEY key, LPCWSTR valueName)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const LSTATUS result = g_originalRegDeleteValueW(key, valueName);
+    const LSTATUS result = guard.Call([&]()
+    {
+        return g_originalRegDeleteValueW(key, valueName);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -17736,7 +17992,10 @@ LSTATUS WINAPI HookedRegCloseKey(HKEY key)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const LSTATUS result = g_originalRegCloseKey(key);
+    const LSTATUS result = guard.Call([&]()
+    {
+        return g_originalRegCloseKey(key);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -17764,7 +18023,10 @@ BOOL WINAPI HookedOpenProcessToken(HANDLE process, DWORD desiredAccess, PHANDLE 
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalOpenProcessToken(process, desiredAccess, token);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalOpenProcessToken(process, desiredAccess, token);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -17795,7 +18057,10 @@ BOOL WINAPI HookedLookupPrivilegeValueW(LPCWSTR systemName, LPCWSTR name, PLUID 
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalLookupPrivilegeValueW(systemName, name, luid);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalLookupPrivilegeValueW(systemName, name, luid);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -17825,7 +18090,10 @@ NTSTATUS WINAPI HookedBCryptOpenAlgorithmProvider(BCRYPT_ALG_HANDLE* algorithm, 
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const NTSTATUS status = g_originalBCryptOpenAlgorithmProvider(algorithm, algorithmId, implementation, flags);
+    const NTSTATUS status = guard.Call([&]()
+    {
+        return g_originalBCryptOpenAlgorithmProvider(algorithm, algorithmId, implementation, flags);
+    });
     QueryPerformanceCounter(&end);
 
     const DWORD eventError = NtStatusToDosError(status);
@@ -17853,7 +18121,10 @@ NTSTATUS WINAPI HookedBCryptCloseAlgorithmProvider(BCRYPT_ALG_HANDLE algorithm, 
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const NTSTATUS status = g_originalBCryptCloseAlgorithmProvider(algorithm, flags);
+    const NTSTATUS status = guard.Call([&]()
+    {
+        return g_originalBCryptCloseAlgorithmProvider(algorithm, flags);
+    });
     QueryPerformanceCounter(&end);
 
     const DWORD eventError = NtStatusToDosError(status);
@@ -17881,7 +18152,10 @@ NTSTATUS WINAPI HookedBCryptGetProperty(BCRYPT_HANDLE object, LPCWSTR property, 
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const NTSTATUS status = g_originalBCryptGetProperty(object, property, output, outputBytes, resultBytes, flags);
+    const NTSTATUS status = guard.Call([&]()
+    {
+        return g_originalBCryptGetProperty(object, property, output, outputBytes, resultBytes, flags);
+    });
     QueryPerformanceCounter(&end);
 
     const DWORD eventError = NtStatusToDosError(status);
@@ -17909,7 +18183,10 @@ NTSTATUS WINAPI HookedBCryptGenRandom(BCRYPT_ALG_HANDLE algorithm, PUCHAR buffer
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const NTSTATUS status = g_originalBCryptGenRandom(algorithm, buffer, bufferBytes, flags);
+    const NTSTATUS status = guard.Call([&]()
+    {
+        return g_originalBCryptGenRandom(algorithm, buffer, bufferBytes, flags);
+    });
     QueryPerformanceCounter(&end);
 
     const DWORD eventError = NtStatusToDosError(status);
@@ -17937,7 +18214,10 @@ NTSTATUS WINAPI HookedBCryptDestroyKey(BCRYPT_KEY_HANDLE key)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const NTSTATUS status = g_originalBCryptDestroyKey(key);
+    const NTSTATUS status = guard.Call([&]()
+    {
+        return g_originalBCryptDestroyKey(key);
+    });
     QueryPerformanceCounter(&end);
 
     const DWORD eventError = NtStatusToDosError(status);
@@ -17966,7 +18246,10 @@ HCERTSTORE WINAPI HookedCertOpenStore(LPCSTR provider, DWORD encodingType, HCRYP
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HCERTSTORE result = g_originalCertOpenStore(provider, encodingType, cryptProvider, flags, parameters);
+    HCERTSTORE result = guard.Call([&]()
+    {
+        return g_originalCertOpenStore(provider, encodingType, cryptProvider, flags, parameters);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -17997,7 +18280,10 @@ BOOL WINAPI HookedCertCloseStore(HCERTSTORE store, DWORD flags)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalCertCloseStore(store, flags);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalCertCloseStore(store, flags);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18034,7 +18320,10 @@ HCRYPTMSG WINAPI HookedCryptMsgOpenToDecode(
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HCRYPTMSG result = g_originalCryptMsgOpenToDecode(encodingType, flags, messageType, cryptProvider, recipientInfo, streamInfo);
+    HCRYPTMSG result = guard.Call([&]()
+    {
+        return g_originalCryptMsgOpenToDecode(encodingType, flags, messageType, cryptProvider, recipientInfo, streamInfo);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18065,7 +18354,10 @@ BOOL WINAPI HookedCryptMsgClose(HCRYPTMSG message)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalCryptMsgClose(message);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalCryptMsgClose(message);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18096,7 +18388,10 @@ HINTERNET WINAPI HookedInternetOpenW(LPCWSTR agent, DWORD accessType, LPCWSTR pr
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HINTERNET result = g_originalInternetOpenW(agent, accessType, proxy, proxyBypass, flags);
+    HINTERNET result = guard.Call([&]()
+    {
+        return g_originalInternetOpenW(agent, accessType, proxy, proxyBypass, flags);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18127,7 +18422,10 @@ BOOL WINAPI HookedInternetCloseHandle(HINTERNET internet)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalInternetCloseHandle(internet);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalInternetCloseHandle(internet);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18158,7 +18456,10 @@ HINTERNET WINAPI HookedWinHttpOpen(LPCWSTR agent, DWORD accessType, LPCWSTR prox
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HINTERNET result = g_originalWinHttpOpen(agent, accessType, proxy, proxyBypass, flags);
+    HINTERNET result = guard.Call([&]()
+    {
+        return g_originalWinHttpOpen(agent, accessType, proxy, proxyBypass, flags);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18189,7 +18490,10 @@ BOOL WINAPI HookedWinHttpCloseHandle(HINTERNET internet)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalWinHttpCloseHandle(internet);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalWinHttpCloseHandle(internet);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18220,7 +18524,10 @@ BOOL WINAPI HookedWinHttpSetOption(HINTERNET internet, DWORD option, LPVOID buff
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalWinHttpSetOption(internet, option, buffer, bufferLength);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalWinHttpSetOption(internet, option, buffer, bufferLength);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18251,7 +18558,10 @@ int WINAPI HookedGetSystemMetrics(int index)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const int result = g_originalGetSystemMetrics(index);
+    const int result = guard.Call([&]()
+    {
+        return g_originalGetSystemMetrics(index);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18281,7 +18591,10 @@ HWND WINAPI HookedGetDesktopWindow()
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HWND result = g_originalGetDesktopWindow();
+    HWND result = guard.Call([&]()
+    {
+        return g_originalGetDesktopWindow();
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18311,7 +18624,10 @@ HWND WINAPI HookedGetForegroundWindow()
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HWND result = g_originalGetForegroundWindow();
+    HWND result = guard.Call([&]()
+    {
+        return g_originalGetForegroundWindow();
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18341,7 +18657,10 @@ DWORD WINAPI HookedGetWindowThreadProcessId(HWND window, LPDWORD processId)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const DWORD result = g_originalGetWindowThreadProcessId(window, processId);
+    const DWORD result = guard.Call([&]()
+    {
+        return g_originalGetWindowThreadProcessId(window, processId);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18371,7 +18690,10 @@ HDC WINAPI HookedCreateCompatibleDC(HDC dc)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    HDC result = g_originalCreateCompatibleDC(dc);
+    HDC result = guard.Call([&]()
+    {
+        return g_originalCreateCompatibleDC(dc);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18402,7 +18724,10 @@ int WINAPI HookedGetDeviceCaps(HDC dc, int index)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const int result = g_originalGetDeviceCaps(dc, index);
+    const int result = guard.Call([&]()
+    {
+        return g_originalGetDeviceCaps(dc, index);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18432,7 +18757,10 @@ BOOL WINAPI HookedDeleteDC(HDC dc)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalDeleteDC(dc);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalDeleteDC(dc);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18463,7 +18791,10 @@ BOOL WINAPI HookedEnumProcessModules(HANDLE process, HMODULE* modules, DWORD req
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalEnumProcessModules(process, modules, requestedBytes, neededBytes);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalEnumProcessModules(process, modules, requestedBytes, neededBytes);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18494,7 +18825,10 @@ BOOL WINAPI HookedGetModuleInformation(HANDLE process, HMODULE module, LPMODULEI
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalGetModuleInformation(process, module, moduleInfo, requestedBytes);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalGetModuleInformation(process, module, moduleInfo, requestedBytes);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18525,7 +18859,10 @@ DWORD WINAPI HookedGetModuleBaseNameW(HANDLE process, HMODULE module, LPWSTR bas
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const DWORD result = g_originalGetModuleBaseNameW(process, module, baseName, sizeChars);
+    const DWORD result = guard.Call([&]()
+    {
+        return g_originalGetModuleBaseNameW(process, module, baseName, sizeChars);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18556,7 +18893,10 @@ DWORD WINAPI HookedGetModuleFileNameExW(HANDLE process, HMODULE module, LPWSTR f
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const DWORD result = g_originalGetModuleFileNameExW(process, module, fileName, sizeChars);
+    const DWORD result = guard.Call([&]()
+    {
+        return g_originalGetModuleFileNameExW(process, module, fileName, sizeChars);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18587,7 +18927,10 @@ DWORD WINAPI HookedGetFileVersionInfoSizeW(LPCWSTR fileName, LPDWORD handle)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const DWORD result = g_originalGetFileVersionInfoSizeW(fileName, handle);
+    const DWORD result = guard.Call([&]()
+    {
+        return g_originalGetFileVersionInfoSizeW(fileName, handle);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18618,7 +18961,10 @@ BOOL WINAPI HookedGetFileVersionInfoW(LPCWSTR fileName, DWORD handle, DWORD leng
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalGetFileVersionInfoW(fileName, handle, length, data);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalGetFileVersionInfoW(fileName, handle, length, data);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18649,7 +18995,10 @@ BOOL WINAPI HookedVerQueryValueW(LPCVOID block, LPCWSTR subBlock, LPVOID* value,
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalVerQueryValueW(block, subBlock, value, length);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalVerQueryValueW(block, subBlock, value, length);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18679,7 +19028,10 @@ HRESULT WINAPI HookedSHGetKnownFolderPath(REFKNOWNFOLDERID knownFolderId, DWORD 
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const HRESULT result = g_originalSHGetKnownFolderPath(knownFolderId, flags, token, path);
+    const HRESULT result = guard.Call([&]()
+    {
+        return g_originalSHGetKnownFolderPath(knownFolderId, flags, token, path);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18710,7 +19062,10 @@ BOOL WINAPI HookedSHGetSpecialFolderPathW(HWND window, LPWSTR path, int csidl, B
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalSHGetSpecialFolderPathW(window, path, csidl, create);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalSHGetSpecialFolderPathW(window, path, csidl, create);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18740,7 +19095,10 @@ HRESULT WINAPI HookedCoInitializeEx(LPVOID reserved, DWORD coInit)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const HRESULT result = g_originalCoInitializeEx(reserved, coInit);
+    const HRESULT result = guard.Call([&]()
+    {
+        return g_originalCoInitializeEx(reserved, coInit);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18772,7 +19130,10 @@ void WINAPI HookedCoUninitialize()
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    g_originalCoUninitialize();
+    guard.Call([&]()
+    {
+        return g_originalCoUninitialize();
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18800,7 +19161,10 @@ HRESULT WINAPI HookedCoCreateGuid(GUID* guid)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const HRESULT result = g_originalCoCreateGuid(guid);
+    const HRESULT result = guard.Call([&]()
+    {
+        return g_originalCoCreateGuid(guid);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18831,7 +19195,10 @@ int WINAPI HookedStringFromGUID2(REFGUID guid, LPOLESTR string, int cchMax)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const int result = g_originalStringFromGUID2(guid, string, cchMax);
+    const int result = guard.Call([&]()
+    {
+        return g_originalStringFromGUID2(guid, string, cchMax);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18860,7 +19227,10 @@ HRESULT WINAPI HookedRoInitialize(RO_INIT_TYPE initType)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const HRESULT result = g_originalRoInitialize(initType);
+    const HRESULT result = guard.Call([&]()
+    {
+        return g_originalRoInitialize(initType);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18892,7 +19262,10 @@ void WINAPI HookedRoUninitialize()
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    g_originalRoUninitialize();
+    guard.Call([&]()
+    {
+        return g_originalRoUninitialize();
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18920,7 +19293,10 @@ HRESULT WINAPI HookedRoGetApartmentIdentifier(UINT64* apartmentIdentifier)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const HRESULT result = g_originalRoGetApartmentIdentifier(apartmentIdentifier);
+    const HRESULT result = guard.Call([&]()
+    {
+        return g_originalRoGetApartmentIdentifier(apartmentIdentifier);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18950,7 +19326,10 @@ void WINAPI HookedSysFreeString(BSTR value)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    g_originalSysFreeString(value);
+    guard.Call([&]()
+    {
+        return g_originalSysFreeString(value);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -18978,7 +19357,10 @@ HRESULT WINAPI HookedVariantClear(VARIANTARG* variant)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const HRESULT result = g_originalVariantClear(variant);
+    const HRESULT result = guard.Call([&]()
+    {
+        return g_originalVariantClear(variant);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -19008,7 +19390,10 @@ HRESULT WINAPI HookedSafeArrayDestroy(SAFEARRAY* safeArray)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const HRESULT result = g_originalSafeArrayDestroy(safeArray);
+    const HRESULT result = guard.Call([&]()
+    {
+        return g_originalSafeArrayDestroy(safeArray);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -19038,7 +19423,10 @@ SECURITY_STATUS WINAPI HookedFreeCredentialsHandle(PCredHandle credential)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const SECURITY_STATUS status = g_originalFreeCredentialsHandle(credential);
+    const SECURITY_STATUS status = guard.Call([&]()
+    {
+        return g_originalFreeCredentialsHandle(credential);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19065,7 +19453,10 @@ SECURITY_STATUS WINAPI HookedDeleteSecurityContext(PCtxtHandle context)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const SECURITY_STATUS status = g_originalDeleteSecurityContext(context);
+    const SECURITY_STATUS status = guard.Call([&]()
+    {
+        return g_originalDeleteSecurityContext(context);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19092,7 +19483,10 @@ void WINAPI HookedDnsFree(PVOID data, DNS_FREE_TYPE freeType)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    g_originalDnsFree(data, freeType);
+    guard.Call([&]()
+    {
+        return g_originalDnsFree(data, freeType);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -19121,7 +19515,10 @@ BOOL WINAPI HookedSetupDiDestroyDeviceInfoList(HDEVINFO deviceInfoSet)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalSetupDiDestroyDeviceInfoList(deviceInfoSet);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalSetupDiDestroyDeviceInfoList(deviceInfoSet);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -19152,7 +19549,10 @@ BOOL WINAPI HookedDestroyEnvironmentBlock(LPVOID environment)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalDestroyEnvironmentBlock(environment);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalDestroyEnvironmentBlock(environment);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -19197,7 +19597,10 @@ ULONG WINAPI HookedGetAdaptersAddresses(
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const ULONG result = g_originalGetAdaptersAddresses(family, flags, reserved, adapterAddresses, sizePointer);
+    const ULONG result = guard.Call([&]()
+    {
+        return g_originalGetAdaptersAddresses(family, flags, reserved, adapterAddresses, sizePointer);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19224,7 +19627,10 @@ NETIO_STATUS WINAPI HookedGetIfEntry2(PMIB_IF_ROW2 row)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const NETIO_STATUS status = g_originalGetIfEntry2(row);
+    const NETIO_STATUS status = guard.Call([&]()
+    {
+        return g_originalGetIfEntry2(row);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19252,7 +19658,10 @@ BOOL WINAPI HookedPathFileExistsW(LPCWSTR path)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalPathFileExistsW(path);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalPathFileExistsW(path);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -19282,7 +19691,10 @@ CRYPT_PROVIDER_DATA* WINAPI HookedWTHelperProvDataFromStateData(HANDLE stateData
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    CRYPT_PROVIDER_DATA* providerData = g_originalWTHelperProvDataFromStateData(stateData);
+    CRYPT_PROVIDER_DATA* providerData = guard.Call([&]()
+    {
+        return g_originalWTHelperProvDataFromStateData(stateData);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19310,7 +19722,10 @@ BOOL WINAPI HookedSymInitializeW(HANDLE process, PCWSTR userSearchPath, BOOL inv
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalSymInitializeW(process, userSearchPath, invadeProcess);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalSymInitializeW(process, userSearchPath, invadeProcess);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -19341,7 +19756,10 @@ BOOL WINAPI HookedSymCleanup(HANDLE process)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const BOOL result = g_originalSymCleanup(process);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalSymCleanup(process);
+    });
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
@@ -19371,7 +19789,10 @@ RPC_STATUS RPC_ENTRY HookedRpcStringBindingComposeW(RPC_WSTR objUuid, RPC_WSTR p
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const RPC_STATUS result = g_originalRpcStringBindingComposeW(objUuid, protSeq, networkAddr, endpoint, options, stringBinding);
+    const RPC_STATUS result = guard.Call([&]()
+    {
+        return g_originalRpcStringBindingComposeW(objUuid, protSeq, networkAddr, endpoint, options, stringBinding);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19398,7 +19819,10 @@ RPC_STATUS RPC_ENTRY HookedRpcBindingFromStringBindingW(RPC_WSTR stringBinding, 
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const RPC_STATUS result = g_originalRpcBindingFromStringBindingW(stringBinding, binding);
+    const RPC_STATUS result = guard.Call([&]()
+    {
+        return g_originalRpcBindingFromStringBindingW(stringBinding, binding);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19440,7 +19864,10 @@ RPC_STATUS RPC_ENTRY HookedRpcStringFreeW(RPC_WSTR* string)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const RPC_STATUS result = g_originalRpcStringFreeW(string);
+    const RPC_STATUS result = guard.Call([&]()
+    {
+        return g_originalRpcStringFreeW(string);
+    });
     QueryPerformanceCounter(&end);
 
     RPC_WSTR postString = nullptr;
@@ -19473,7 +19900,10 @@ RPC_STATUS RPC_ENTRY HookedRpcBindingFree(RPC_BINDING_HANDLE* binding)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const RPC_STATUS result = g_originalRpcBindingFree(binding);
+    const RPC_STATUS result = guard.Call([&]()
+    {
+        return g_originalRpcBindingFree(binding);
+    });
     QueryPerformanceCounter(&end);
 
     RPC_BINDING_HANDLE postBinding = nullptr;
@@ -19503,7 +19933,10 @@ RPC_STATUS RPC_ENTRY HookedRpcBindingSetOption(RPC_BINDING_HANDLE binding, unsig
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const RPC_STATUS result = g_originalRpcBindingSetOption(binding, option, optionValue);
+    const RPC_STATUS result = guard.Call([&]()
+    {
+        return g_originalRpcBindingSetOption(binding, option, optionValue);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19536,7 +19969,10 @@ RPC_STATUS RPC_ENTRY HookedRpcMgmtEpEltInqDone(RPC_EP_INQ_HANDLE* inquiryContext
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const RPC_STATUS result = g_originalRpcMgmtEpEltInqDone(inquiryContext);
+    const RPC_STATUS result = guard.Call([&]()
+    {
+        return g_originalRpcMgmtEpEltInqDone(inquiryContext);
+    });
     QueryPerformanceCounter(&end);
 
     RPC_EP_INQ_HANDLE postInquiryContext = nullptr;
@@ -19569,7 +20005,10 @@ RPC_STATUS RPC_ENTRY HookedUuidCreate(UUID* uuid)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const RPC_STATUS result = g_originalUuidCreate(uuid);
+    const RPC_STATUS result = guard.Call([&]()
+    {
+        return g_originalUuidCreate(uuid);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19596,7 +20035,10 @@ RPC_STATUS RPC_ENTRY HookedUuidToStringW(UUID* uuid, RPC_WSTR* stringUuid)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const RPC_STATUS result = g_originalUuidToStringW(uuid, stringUuid);
+    const RPC_STATUS result = guard.Call([&]()
+    {
+        return g_originalUuidToStringW(uuid, stringUuid);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19623,7 +20065,10 @@ RPC_STATUS RPC_ENTRY HookedUuidFromStringW(RPC_WSTR stringUuid, UUID* uuid)
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const RPC_STATUS result = g_originalUuidFromStringW(stringUuid, uuid);
+    const RPC_STATUS result = guard.Call([&]()
+    {
+        return g_originalUuidFromStringW(stringUuid, uuid);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19646,11 +20091,14 @@ int WINAPI HookedWSAStartup(WORD versionRequested, LPWSADATA data)
         return g_originalWSAStartup(versionRequested, data);
     }
 
-    HookReentryGuard guard;
+    HookReentryGuard guard(true);
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const int result = g_originalWSAStartup(versionRequested, data);
+    const int result = guard.Call([&]()
+    {
+        return g_originalWSAStartup(versionRequested, data);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19673,12 +20121,15 @@ int WINAPI HookedWSACleanup()
         return g_originalWSACleanup();
     }
 
-    HookReentryGuard guard;
+    HookReentryGuard guard(true);
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const int result = g_originalWSACleanup();
-    const DWORD errorCode = result == SOCKET_ERROR && g_originalWSAGetLastError != nullptr ? static_cast<DWORD>(g_originalWSAGetLastError()) : 0;
+    const int result = guard.Call([&]()
+    {
+        return g_originalWSACleanup();
+    });
+    const DWORD errorCode = result == SOCKET_ERROR && g_callErrorState != nullptr ? static_cast<DWORD>(g_callErrorState->Winsock()) : 0;
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19701,12 +20152,15 @@ SOCKET WINAPI HookedSocket(int af, int type, int protocol)
         return g_originalSocket(af, type, protocol);
     }
 
-    HookReentryGuard guard;
+    HookReentryGuard guard(true);
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const SOCKET result = g_originalSocket(af, type, protocol);
-    const DWORD errorCode = result == INVALID_SOCKET && g_originalWSAGetLastError != nullptr ? static_cast<DWORD>(g_originalWSAGetLastError()) : 0;
+    const SOCKET result = guard.Call([&]()
+    {
+        return g_originalSocket(af, type, protocol);
+    });
+    const DWORD errorCode = result == INVALID_SOCKET && g_callErrorState != nullptr ? static_cast<DWORD>(g_callErrorState->Winsock()) : 0;
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19729,12 +20183,15 @@ int WINAPI HookedClosesocket(SOCKET socketValue)
         return g_originalClosesocket(socketValue);
     }
 
-    HookReentryGuard guard;
+    HookReentryGuard guard(true);
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const int result = g_originalClosesocket(socketValue);
-    const DWORD errorCode = result == SOCKET_ERROR && g_originalWSAGetLastError != nullptr ? static_cast<DWORD>(g_originalWSAGetLastError()) : 0;
+    const int result = guard.Call([&]()
+    {
+        return g_originalClosesocket(socketValue);
+    });
+    const DWORD errorCode = result == SOCKET_ERROR && g_callErrorState != nullptr ? static_cast<DWORD>(g_callErrorState->Winsock()) : 0;
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19757,12 +20214,15 @@ int WINAPI HookedConnect(SOCKET socketValue, const sockaddr* address, int addres
         return g_originalConnect(socketValue, address, addressLength);
     }
 
-    HookReentryGuard guard;
+    HookReentryGuard guard(true);
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const int result = g_originalConnect(socketValue, address, addressLength);
-    const DWORD errorCode = result == SOCKET_ERROR && g_originalWSAGetLastError != nullptr ? static_cast<DWORD>(g_originalWSAGetLastError()) : 0;
+    const int result = guard.Call([&]()
+    {
+        return g_originalConnect(socketValue, address, addressLength);
+    });
+    const DWORD errorCode = result == SOCKET_ERROR && g_callErrorState != nullptr ? static_cast<DWORD>(g_callErrorState->Winsock()) : 0;
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19785,11 +20245,14 @@ int WINAPI HookedGetAddrInfo(PCSTR nodeName, PCSTR serviceName, const ADDRINFOA*
         return g_originalGetAddrInfo(nodeName, serviceName, hints, resultValue);
     }
 
-    HookReentryGuard guard;
+    HookReentryGuard guard(true);
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const int result = g_originalGetAddrInfo(nodeName, serviceName, hints, resultValue);
+    const int result = guard.Call([&]()
+    {
+        return g_originalGetAddrInfo(nodeName, serviceName, hints, resultValue);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19812,11 +20275,14 @@ void WINAPI HookedFreeAddrInfo(PADDRINFOA addrInfo)
         return;
     }
 
-    HookReentryGuard guard;
+    HookReentryGuard guard(true);
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    g_originalFreeAddrInfo(addrInfo);
+    guard.Call([&]()
+    {
+        return g_originalFreeAddrInfo(addrInfo);
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -19837,11 +20303,14 @@ int WINAPI HookedWSAGetLastError()
         return g_originalWSAGetLastError();
     }
 
-    HookReentryGuard guard;
+    HookReentryGuard guard(true);
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
-    const int result = g_originalWSAGetLastError();
+    const int result = guard.Call([&]()
+    {
+        return g_originalWSAGetLastError();
+    });
     QueryPerformanceCounter(&end);
 
     if (HooksEnabled())
@@ -20551,6 +21020,136 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestStopRace(void* stage)
     return result;
 }
 
+BOOL WINAPI TestNoncanonicalBool(HANDLE)
+{
+    SetLastError(7654);
+    return 2;
+}
+
+HRESULT WINAPI TestHResult(LPVOID, DWORD mode)
+{
+    SetLastError(4321);
+    return mode == 0 ? S_FALSE : E_FAIL;
+}
+
+LSTATUS WINAPI TestRegistryStatus(HKEY)
+{
+    SetLastError(8765);
+    return ERROR_INVALID_HANDLE;
+}
+
+NTSTATUS WINAPI TestPendingStatus(BCRYPT_ALG_HANDLE, PUCHAR, ULONG, ULONG)
+{
+    SetLastError(5678);
+    return static_cast<NTSTATUS>(0x103);
+}
+
+DWORD WINAPI TestOriginalCppException()
+{
+    SetLastError(6789);
+    throw std::bad_alloc();
+}
+
+extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestErrorParity(void*)
+{
+    DWORD failure = 1;
+    AgentControlGuard control;
+    do
+    {
+        if (!control.Acquired() || !CreateTestTransport() || !g_sessionGate.Open())
+        {
+            break;
+        }
+        SetLifecycleState(AgentLifecycleState::Running);
+        InterlockedExchange(&g_hooksEnabled, 1);
+        g_originalCloseHandle = TestNoncanonicalBool;
+        SetLastError(1234);
+        const BOOL unusual = HookedCloseHandle(nullptr);
+        failure = 2;
+        if (unusual != 2 || GetLastError() != 7654 || g_transportRecords[0].RawReturnValue != 2 ||
+            g_transportRecords[0].RawLastErrorCode != 7654 || g_hookEpoch != 0 || g_callErrorState != nullptr)
+        {
+            break;
+        }
+        g_originalCoInitializeEx = TestHResult;
+        failure = 3;
+        if (HookedCoInitializeEx(nullptr, 0) != S_FALSE || GetLastError() != 4321 ||
+            g_transportRecords[1].RawReturnValue != static_cast<std::uint32_t>(S_FALSE))
+        {
+            break;
+        }
+        // A full transport must preserve the same target semantics.
+        failure = 4;
+        if (HookedCoInitializeEx(nullptr, 1) != E_FAIL || GetLastError() != 4321)
+        {
+            break;
+        }
+        g_originalRegCloseKey = TestRegistryStatus;
+        failure = 5;
+        if (HookedRegCloseKey(nullptr) != ERROR_INVALID_HANDLE || GetLastError() != 8765)
+        {
+            break;
+        }
+        g_originalBCryptGenRandom = TestPendingStatus;
+        failure = 10;
+        if (HookedBCryptGenRandom(nullptr, nullptr, 0, 0) != static_cast<NTSTATUS>(0x103) || GetLastError() != 5678)
+        {
+            break;
+        }
+        g_originalGetCurrentProcessId = TestOriginalCppException;
+        bool propagated = false;
+        try
+        {
+            HookedGetCurrentProcessId();
+        }
+        catch (const std::bad_alloc&)
+        {
+            propagated = GetLastError() == 6789;
+        }
+        failure = 6;
+        if (!propagated || g_inHook || g_hookEpoch != 0 || g_callErrorState != nullptr)
+        {
+            break;
+        }
+        g_errorWinsockGet = reinterpret_cast<knmon::ThreadErrorState::WinsockGet>(ResolveExport("ws2_32.dll", "WSAGetLastError"));
+        g_errorWinsockSet = reinterpret_cast<knmon::ThreadErrorState::WinsockSet>(ResolveExport("ws2_32.dll", "WSASetLastError"));
+        g_originalWSAGetLastError = g_errorWinsockGet;
+        g_originalClosesocket = reinterpret_cast<ClosesocketFn>(ResolveExport("ws2_32.dll", "closesocket"));
+        failure = 7;
+        if (g_errorWinsockGet == nullptr || g_errorWinsockSet == nullptr || g_originalClosesocket == nullptr)
+        {
+            break;
+        }
+        g_errorWinsockSet.load()(WSAECONNREFUSED);
+        failure = 8;
+        if (HookedWSAGetLastError() != WSAECONNREFUSED || HookedWSAGetLastError() != WSAECONNREFUSED ||
+            g_errorWinsockGet.load()() != WSAECONNREFUSED)
+        {
+            break;
+        }
+        g_errorWinsockSet.load()(1234);
+        const int baseline = g_originalClosesocket(INVALID_SOCKET);
+        const int baselineError = g_errorWinsockGet.load()();
+        g_errorWinsockSet.load()(1234);
+        failure = 9;
+        if (HookedClosesocket(INVALID_SOCKET) != baseline || g_errorWinsockGet.load()() != baselineError)
+        {
+            break;
+        }
+        failure = 0;
+    }
+    while (false);
+    InterlockedExchange(&g_hooksEnabled, 0);
+    g_sessionGate.Close();
+    if (!g_sessionGate.Quiescent())
+    {
+        failure = 11;
+    }
+    CloseTransport();
+    SetLifecycleState(AgentLifecycleState::Disabled);
+    return failure;
+}
+
 extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestHoldTeardownLocks(void* readyEvent)
 {
     g_pipeHandle = CreateFileW(L"NUL", GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
@@ -20564,5 +21163,6 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestHoldTeardownLocks(void* r
 #if defined(_M_IX86)
 #pragma comment(linker, "/EXPORT:KnMonTestHoldTeardownLocks=_KnMonTestHoldTeardownLocks@4")
 #pragma comment(linker, "/EXPORT:KnMonTestStopRace=_KnMonTestStopRace@4")
+#pragma comment(linker, "/EXPORT:KnMonTestErrorParity=_KnMonTestErrorParity@4")
 #endif
 #endif

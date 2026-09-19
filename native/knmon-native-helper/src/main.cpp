@@ -810,14 +810,20 @@ std::string BuildTraceEventJson(const knmon::KnMonAgentMessage& message, std::ui
 {
     const JsonDocument payload(message.RawPayload);
     const std::uint64_t lastErrorCode = ExtractJsonUInt64(payload, "lastErrorCode");
-    const std::uint64_t sequence = ExtractJsonUInt64(payload, "sequence");
     const std::string lastErrorMessage = ExtractJsonString(payload, "lastErrorMessage");
 
     std::ostringstream stream;
     stream << "{";
     stream << "\"schemaVersion\":\"0.1.0\",";
     stream << "\"eventId\":" << eventId << ",";
-    stream << "\"relativeTimeMs\":" << sequence * 10 << ",";
+    stream << "\"relativeTimeMs\":" << std::setprecision(17) << payload.NonnegativeNumber("relativeTimeMs") << ",";
+    stream << "\"timeSource\":" << Q(payload.Has("timing") ? "qpc" : "unavailable") << ",";
+    if (payload.Has("timing"))
+    {
+        stream << "\"timing\":" << payload.Object("timing") << ",";
+        stream << "\"timestampUtc\":" << Q(payload.String("timestampUtc")) << ",";
+        stream << "\"collectedAtUtc\":" << Q(payload.String("collectedAtUtc")) << ",";
+    }
     stream << "\"pid\":" << ExtractJsonUInt64(payload, "pid") << ",";
     stream << "\"tid\":" << ExtractJsonUInt64(payload, "tid") << ",";
     stream << "\"process\":" << Q(ExtractJsonString(payload, "process")) << ",";
@@ -826,7 +832,7 @@ std::string BuildTraceEventJson(const knmon::KnMonAgentMessage& message, std::ui
     stream << "\"arguments\":" << ExtractJsonArray(payload, "arguments") << ",";
     stream << "\"returnValue\":" << Q(ExtractJsonString(payload, "returnValue")) << ",";
     stream << "\"error\":";
-    if (lastErrorCode == 0)
+    if (payload.Has("hasError") ? !payload.Bool("hasError") : lastErrorCode == 0)
     {
         stream << "null";
     }
@@ -835,12 +841,30 @@ std::string BuildTraceEventJson(const knmon::KnMonAgentMessage& message, std::ui
         std::ostringstream code;
         code << "0x" << std::hex << std::setfill('0') << std::setw(8) << lastErrorCode;
         stream << "{";
-        stream << "\"kind\":\"win32\",";
+        stream << "\"kind\":" << Q(payload.Has("errorDomain") ? payload.String("errorDomain") : "win32") << ",";
         stream << "\"code\":" << Q(code.str()) << ",";
         stream << "\"message\":" << Q(lastErrorMessage);
         stream << "}";
     }
     stream << ",";
+    for (const auto* key : {"rawReturnValue", "errorDomain", "outcome", "errorValidity", "successPredicate"})
+    {
+        if (payload.Has(key))
+        {
+            stream << Q(key) << ":" << Q(payload.String(key)) << ",";
+        }
+    }
+    for (const auto* key : {"rawReturnBits", "rawLastErrorCode", "rawWinsockErrorCode"})
+    {
+        if (payload.Has(key))
+        {
+            stream << Q(key) << ":" << payload.UInt32(key) << ",";
+        }
+    }
+    if (payload.Has("winsockErrorSampled"))
+    {
+        stream << "\"winsockErrorSampled\":" << (payload.Bool("winsockErrorSampled") ? "true" : "false") << ",";
+    }
     stream << "\"durationUs\":" << ExtractJsonUInt64(payload, "durationUs") << ",";
     stream << "\"tags\":" << ExtractJsonArray(payload, "tags") << ",";
     stream << "\"stack\":" << ExtractJsonArray(payload, "stack") << ",";
@@ -4431,6 +4455,16 @@ bool BindUInt64(sqlite3_stmt* statement, int index, std::uint64_t value, std::st
     return rc == SQLITE_OK;
 }
 
+bool BindDouble(sqlite3_stmt* statement, int index, double value, std::string* error)
+{
+    const int rc = sqlite3_bind_double(statement, index, value);
+    if (rc != SQLITE_OK && error != nullptr)
+    {
+        *error = "sqlite bind real failed.";
+    }
+    return rc == SQLITE_OK;
+}
+
 std::string ColumnText(sqlite3_stmt* statement, int index)
 {
     const unsigned char* text = sqlite3_column_text(statement, index);
@@ -5354,7 +5388,7 @@ struct KnapmTraceIndexEvent
     std::string ReturnValue;
     std::string ErrorText;
     std::uint64_t DurationUs = 0;
-    std::uint64_t RelativeTimeMs = 0;
+    double RelativeTimeMs = 0;
     std::string TagsText;
     std::string ArgumentsText;
     std::string BufferPreview;
@@ -5489,7 +5523,7 @@ std::string ToJson(const KnapmTraceIndexEvent& event)
     stream << "\"returnValue\":" << Q(event.ReturnValue) << ",";
     stream << "\"errorText\":" << Q(event.ErrorText) << ",";
     stream << "\"durationUs\":" << event.DurationUs << ",";
-    stream << "\"relativeTimeMs\":" << event.RelativeTimeMs << ",";
+    stream << "\"relativeTimeMs\":" << std::setprecision(17) << event.RelativeTimeMs << ",";
     stream << "\"tagsText\":" << Q(event.TagsText) << ",";
     stream << "\"argumentsText\":" << Q(event.ArgumentsText) << ",";
     stream << "\"bufferPreview\":" << Q(event.BufferPreview) << ",";
@@ -5581,7 +5615,7 @@ KnapmTraceIndexEvent TraceIndexEventFromJson(
     event.ReturnValue = ExtractJsonString(line, "returnValue");
     event.ErrorText = line.ObjectOrNull("error").Text();
     event.DurationUs = ExtractJsonUInt64(line, "durationUs");
-    event.RelativeTimeMs = ExtractJsonUInt64(line, "relativeTimeMs");
+    event.RelativeTimeMs = line.NonnegativeNumber("relativeTimeMs", true);
     event.TagsText = ExtractJsonArray(line, "tags").Text();
     event.ArgumentsText = ExtractJsonArray(line, "arguments").Text();
     event.BufferPreview = ExtractJsonString(line, "bufferPreview");
@@ -5768,7 +5802,7 @@ bool EnsureTraceIndexSchema(sqlite3* database, std::string* error)
             "return_value TEXT NOT NULL,"
             "error_text TEXT NOT NULL,"
             "duration_us INTEGER NOT NULL,"
-            "relative_time_ms INTEGER NOT NULL,"
+            "relative_time_ms REAL NOT NULL,"
             "tags_text TEXT NOT NULL,"
             "arguments_text TEXT NOT NULL,"
             "buffer_preview TEXT NOT NULL,"
@@ -6033,7 +6067,7 @@ bool InsertTraceIndexEventRow(sqlite3* database, const KnapmTraceIndexEvent& eve
             !BindText(statement.Statement, index++, event.ReturnValue, error) ||
             !BindText(statement.Statement, index++, event.ErrorText, error) ||
             !BindUInt64(statement.Statement, index++, event.DurationUs, error) ||
-            !BindUInt64(statement.Statement, index++, event.RelativeTimeMs, error) ||
+            !BindDouble(statement.Statement, index++, event.RelativeTimeMs, error) ||
             !BindText(statement.Statement, index++, event.TagsText, error) ||
             !BindText(statement.Statement, index++, event.ArgumentsText, error) ||
             !BindText(statement.Statement, index++, event.BufferPreview, error) ||
@@ -6124,7 +6158,7 @@ KnapmTraceIndexEvent TraceIndexEventFromStatement(sqlite3_stmt* statement)
     event.ReturnValue = ColumnText(statement, index++);
     event.ErrorText = ColumnText(statement, index++);
     event.DurationUs = ColumnUInt64(statement, index++);
-    event.RelativeTimeMs = ColumnUInt64(statement, index++);
+    event.RelativeTimeMs = sqlite3_column_double(statement, index++);
     event.TagsText = ColumnText(statement, index++);
     event.ArgumentsText = ColumnText(statement, index++);
     event.BufferPreview = ColumnText(statement, index++);

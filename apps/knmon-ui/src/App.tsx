@@ -3296,11 +3296,27 @@ function App() {
                       <label>Return Value</label>
                       <code>{selectedEvent.returnValue}</code>
                       <label>Error Source</label>
-                      <code>{selectedEvent.error?.kind ?? "none"}</code>
+                      <code>{selectedEvent.errorDomain ?? selectedEvent.error?.kind ?? "unspecified"}</code>
                       <label>Error Code</label>
                       <code>{selectedEvent.error?.code ?? "0"}</code>
                       <label>Message</label>
-                      <code>{selectedEvent.error?.message ?? "success"}</code>
+                      <code>{selectedEvent.error?.message ?? selectedEvent.outcome ?? "unspecified"}</code>
+                      <label>Outcome / Error Validity</label>
+                      <code>{selectedEvent.outcome ?? "legacy"} / {selectedEvent.errorValidity ?? "unspecified"}</code>
+                      <label>Success Predicate</label>
+                      <code>{selectedEvent.successPredicate ?? "unspecified"}</code>
+                      <label>Raw Return / Bits</label>
+                      <code>{selectedEvent.rawReturnValue ?? "unavailable"} / {selectedEvent.rawReturnBits ?? "unavailable"}</code>
+                      <label>Raw Win32 / Winsock Error</label>
+                      <code>{selectedEvent.rawLastErrorCode ?? "unavailable"} / {selectedEvent.winsockErrorSampled ? selectedEvent.rawWinsockErrorCode : "not sampled"}</code>
+                      <label>Time Source / Relative ms</label>
+                      <code>{selectedEvent.timeSource ?? "legacy"} / {selectedEvent.relativeTimeMs}</code>
+                      <label>Call Start UTC / Collected UTC</label>
+                      <code>{selectedEvent.timestampUtc ?? "unavailable"} / {selectedEvent.collectedAtUtc ?? "unavailable"}</code>
+                      <label>Start QPC / End QPC</label>
+                      <code>{selectedEvent.timing?.startQpc ?? "unavailable"} / {selectedEvent.timing?.endQpc ?? "unavailable"}</code>
+                      <label>Duration Scope</label>
+                      <code>{selectedEvent.timing?.durationScope ?? "legacy / unspecified"}</code>
                     </div>
                   ) : null}
 

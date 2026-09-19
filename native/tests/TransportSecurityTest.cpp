@@ -121,6 +121,24 @@ int main()
 {
     try
     {
+        ExpectCorruption("reversed QPC interval", [](auto& f)
+        {
+            f.Records[0].StartQpc = 2;
+            f.Records[0].EndQpc = 1;
+        });
+        ExpectCorruption("invalid raw return width", [](auto& f)
+        {
+            f.Records[0].RawReturnBits = 33;
+        });
+        ExpectCorruption("raw return overflows declared width", [](auto& f)
+        {
+            f.Records[0].RawReturnBits = 8;
+            f.Records[0].RawReturnValue = 256;
+        });
+        ExpectCorruption("invalid Winsock sample flag", [](auto& f)
+        {
+            f.Records[0].HasWinsockError = 2;
+        });
         ExpectCorruption("capacity exceeds actual mapping", [](auto& f)
         {
             f.Header.Capacity = knmon::KnMonTransportMaxCapacity;

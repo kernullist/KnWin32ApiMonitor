@@ -1,4 +1,7 @@
 #include <knmon/common/BoundedJson.h>
+#include <knmon/common/CaptureClock.h>
+#include <charconv>
+#include <cmath>
 #include <nlohmann/json.hpp>
 
 #include <limits>
@@ -199,6 +202,30 @@ std::uint32_t JsonDocument::UInt32(std::string_view key, bool required) const
     return static_cast<std::uint32_t>(value);
 }
 
+double JsonDocument::NonnegativeNumber(std::string_view key, bool required) const
+{
+    const auto* value = static_cast<const Json*>(Find(key, required));
+    if (value != nullptr && (!value->is_number() || value->get<double>() < 0 ||
+        !std::isfinite(value->get<double>())))
+    {
+        throw JsonInputError("Finite nonnegative JSON number required: " + std::string(key));
+    }
+    return value == nullptr ? 0 : value->get<double>();
+}
+
+std::uint64_t JsonDocument::DecimalUInt64(std::string_view key) const
+{
+    const auto text = String(key, true);
+    std::uint64_t result = 0;
+    const auto parsed = std::from_chars(text.data(), text.data() + text.size(), result);
+    if (text.empty() || (text.size() > 1 && text[0] == '0') ||
+        parsed.ec != std::errc() || parsed.ptr != text.data() + text.size())
+    {
+        throw JsonInputError("Canonical decimal uint64 string required: " + std::string(key));
+    }
+    return result;
+}
+
 JsonDocument JsonDocument::Object(std::string_view key, bool required) const
 {
     const auto* value = static_cast<const Json*>(Find(key, required));
@@ -313,6 +340,88 @@ JsonDocument ParseAgentJson(std::string_view text)
     return value;
 }
 
+void ValidateCapturedResult(const JsonDocument& value)
+{
+    if (value.Has("rawReturnValue"))
+    {
+        const auto raw = value.DecimalUInt64("rawReturnValue");
+        const auto bits = value.UInt32("rawReturnBits", true);
+        if ((bits != 0 && bits != 8 && bits != 16 && bits != 32 && bits != 64) ||
+            (bits == 0 && raw != 0) || (bits != 0 && bits < 64 && (raw >> bits) != 0))
+        {
+            throw JsonInputError("Raw API return does not fit its declared width.");
+        }
+    }
+    value.UInt32("rawLastErrorCode");
+    value.UInt32("rawWinsockErrorCode");
+    value.UInt32("rawReturnBits");
+    value.Bool("hasError");
+    value.Bool("winsockErrorSampled");
+    value.String("successPredicate");
+    for (const auto* key : {"errorDomain", "outcome", "errorValidity"})
+    {
+        value.String(key);
+    }
+    if (value.Has("errorDomain"))
+    {
+        const auto domain = value.String("errorDomain");
+        if (domain != "none" && domain != "win32" && domain != "winsock" && domain != "ntstatus" && domain != "hresult")
+        {
+            throw JsonInputError("Unknown API error domain.");
+        }
+    }
+    if (value.Has("outcome"))
+    {
+        const auto outcome = value.String("outcome");
+        if (outcome != "success" && outcome != "failure" && outcome != "pending" && outcome != "unknown")
+        {
+            throw JsonInputError("Unknown API outcome.");
+        }
+    }
+    if (value.Has("errorValidity"))
+    {
+        const auto validity = value.String("errorValidity");
+        if (validity != "valid" && validity != "not_applicable" && validity != "unspecified" && validity != "unavailable")
+        {
+            throw JsonInputError("Unknown API error validity.");
+        }
+    }
+    if (value.Bool("hasError") && (value.String("outcome", true) != "failure" ||
+        value.String("errorDomain", true) == "none" || value.String("errorValidity", true) != "valid"))
+    {
+        throw JsonInputError("Inconsistent API failure semantics.");
+    }
+}
+
+void ValidateCaptureTiming(const JsonDocument& value)
+{
+    ValidateCapturedResult(value);
+    if (value.Has("timing"))
+    {
+        const auto timing = value.Object("timing", true);
+        if (timing.Has("durationScope") && timing.String("durationScope") != "original_call_with_error_state_preservation")
+        {
+            throw JsonInputError("Unknown capture duration scope.");
+        }
+        const CaptureClock clock{timing.DecimalUInt64("qpcFrequency"), timing.DecimalUInt64("qpcBase"),
+            timing.DecimalUInt64("utcBaseFileTime"), timing.DecimalUInt64("anchorSpanQpc")};
+        CaptureTime time;
+        if (value.String("timeSource", true) != "qpc" ||
+            !ConvertCaptureTime(clock, timing.DecimalUInt64("startQpc"), timing.DecimalUInt64("endQpc"), time) ||
+            value.NonnegativeNumber("relativeTimeMs", true) != static_cast<double>(time.RelativeUs) / 1000.0 ||
+            value.UInt64("durationUs", true) != time.DurationUs)
+        {
+            throw JsonInputError("Inconsistent captured QPC timing.");
+        }
+        value.String("timestampUtc", true);
+        value.String("collectedAtUtc", true);
+    }
+    else if (value.Has("timeSource") && value.String("timeSource") != "unavailable" && value.String("timeSource") != "legacy")
+    {
+        throw JsonInputError("Timing source requires a valid QPC anchor.");
+    }
+}
+
 void ValidateAgentJson(const JsonDocument& value)
 {
     value.RequireObject();
@@ -347,6 +456,7 @@ void ValidateAgentJson(const JsonDocument& value)
     }
     else if (type == "api_call")
     {
+        ValidateCaptureTiming(value);
         value.String("module", true);
         value.String("api", true);
         value.String("process", true);
@@ -383,11 +493,13 @@ void ValidateAgentJson(const JsonDocument& value)
 
 void ValidateTraceJson(const JsonDocument& value)
 {
+    ValidateCaptureTiming(value);
     if (value.String("schemaVersion", true) != "0.1.0" || value.String("api", true).empty())
     {
         throw JsonInputError("Invalid trace event schema or API name.");
     }
     value.UInt64("eventId", true);
+    value.NonnegativeNumber("relativeTimeMs", true);
     value.UInt32("pid", true);
     value.UInt32("tid", true);
     value.String("process", true);

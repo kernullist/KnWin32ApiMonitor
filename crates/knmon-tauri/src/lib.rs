@@ -715,7 +715,7 @@ pub struct NativeTraceIndexEvent {
     pub return_value: String,
     pub error_text: String,
     pub duration_us: u64,
-    pub relative_time_ms: u64,
+    pub relative_time_ms: f64,
     pub tags_text: String,
     pub arguments_text: String,
     pub buffer_preview: String,
@@ -884,7 +884,57 @@ pub struct AgentApiArgument {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CaptureTiming
+{
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration_scope: Option<String>,
+    pub qpc_frequency: String,
+    pub qpc_base: String,
+    pub utc_base_file_time: String,
+    pub anchor_span_qpc: String,
+    pub start_qpc: String,
+    pub end_qpc: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CapturedSemantics
+{
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_return_value: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_return_bits: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_last_error_code: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_winsock_error_code: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub winsock_error_sampled: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error_domain: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub outcome: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error_validity: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub success_predicate: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub has_error: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub time_source: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub collected_at_utc: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timing: Option<CaptureTiming>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AgentApiCallEvent {
+    #[serde(flatten)]
+    pub semantics: CapturedSemantics,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub relative_time_ms: Option<f64>,
     pub schema_version: String,
     pub message_type: String,
     pub operation_id: String,
@@ -1174,6 +1224,10 @@ pub struct TraceError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TraceEvent {
+    #[serde(flatten)]
+    pub semantics: CapturedSemantics,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timestamp_utc: Option<String>,
     pub schema_version: String,
     pub event_id: u64,
     pub relative_time_ms: f64,
@@ -3207,6 +3261,8 @@ mod tests {
 
     fn test_event(operation_id: &str, sequence: u64) -> AgentApiCallEvent {
         AgentApiCallEvent {
+            semantics: CapturedSemantics::default(),
+            relative_time_ms: None,
             schema_version: "0.1.0".to_string(),
             message_type: "api_call".to_string(),
             operation_id: operation_id.to_string(),
@@ -3422,4 +3478,30 @@ mod tests {
         assert!(session.agent_cleanup_succeeded);
         assert_eq!(session.records_streamed, 7);
     }
+    #[test]
+    fn captured_semantics_preserve_exact_clock_and_error_fields()
+    {
+        let mut source = serde_json::to_value(test_event("qpc-test", 1)).unwrap();
+        source["relativeTimeMs"] = serde_json::json!(0.125);
+        source["timeSource"] = serde_json::json!("qpc");
+        source["collectedAtUtc"] = serde_json::json!("2026-09-20T00:00:00Z");
+        source["rawReturnValue"] = serde_json::json!("18446744073709551615");
+        source["rawReturnBits"] = serde_json::json!(64);
+        source["rawLastErrorCode"] = serde_json::json!(10038);
+        source["rawWinsockErrorCode"] = serde_json::json!(10038);
+        source["errorDomain"] = serde_json::json!("winsock");
+        source["outcome"] = serde_json::json!("failure");
+        source["errorValidity"] = serde_json::json!("valid");
+        source["successPredicate"] = serde_json::json!("return != INVALID_SOCKET");
+        source["winsockErrorSampled"] = serde_json::json!(true);
+        source["hasError"] = serde_json::json!(true);
+        source["timing"] = serde_json::json!({
+            "qpcFrequency": "10000000", "qpcBase": "9007199254740993",
+            "utcBaseFileTime": "133000000000000000", "anchorSpanQpc": "4",
+            "startQpc": "9007199254742243", "endQpc": "9007199255742243"
+        });
+        let parsed: AgentApiCallEvent = serde_json::from_value(source.clone()).unwrap();
+        assert_eq!(serde_json::to_value(parsed).unwrap(), source);
+    }
+
 }
