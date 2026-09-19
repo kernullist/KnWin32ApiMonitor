@@ -19,7 +19,7 @@ function command(args)
     assert.notEqual(result.status, null, result.stderr);
     return JSON.parse(result.stdout);
 }
-const valid = new Set(["valid-sample", "valid-knapm.knapm", "valid-knapm-legacy.knapm", "knapm-partial-unfinalized.knapm",
+const valid = new Set(["knapm-process-exit.knapm", "valid-sample", "valid-knapm.knapm", "valid-knapm-legacy.knapm", "knapm-partial-unfinalized.knapm",
     "knapm-owned-unfinalized.knapm", "knapm-stale-target-exited.knapm", "knapm-recovery-required-owner-dead.knapm",
     "knapm-lease-expired.knapm", "knapm-daemon-finalized.knapm", "knapm-daemon-running.knapm", "knapm-zstd-valid.knapm"]);
 for (const name of fs.readdirSync(fixtures))
@@ -107,6 +107,10 @@ function editTrace(directory, transform)
     editManifest(directory, (value) => ({ ...value, storedBytes: bytes, uncompressedBytes: bytes }));
 }
 mutation("trace-null-error", (directory) => editTrace(directory, (text) => text), true);
+mutation("trace-string-error-code", (directory) => editTrace(directory, (text) => JSON.stringify({ ...JSON.parse(text),
+    error: { kind: "win32", code: "0x00000005", message: "Access is denied." } }) + "\n"), true);
+mutation("trace-numeric-error-code", (directory) => editTrace(directory, (text) => JSON.stringify({ ...JSON.parse(text),
+    error: { kind: "win32", code: 5, message: "Access is denied." } }) + "\n"));
 mutation("trace-type", (directory) => editTrace(directory, (text) => JSON.stringify({ ...JSON.parse(text), arguments: false }) + "\n"));
 mutation("trace-pid-overflow", (directory) => editTrace(directory, (text) => JSON.stringify({ ...JSON.parse(text), pid: 4294967296 }) + "\n"));
 mutation("trace-error-type", (directory) => editTrace(directory, (text) => JSON.stringify({ ...JSON.parse(text), error: 42 }) + "\n"));

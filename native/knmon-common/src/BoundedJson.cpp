@@ -401,7 +401,8 @@ void ValidateTraceJson(const JsonDocument& value)
     const auto error = value.ObjectOrNull("error", true);
     if (error.Text() != "null")
     {
-        error.UInt32("code", true);
+        error.String("kind", true);
+        error.String("code", true);
         error.String("message", true);
     }
 }

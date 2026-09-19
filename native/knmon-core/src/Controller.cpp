@@ -8903,7 +8903,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
 
             if (pipeError == ERROR_BROKEN_PIPE || pipeError == ERROR_HANDLE_EOF || pipeError == ERROR_NO_DATA)
             {
-                if (processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
+                if (processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 250) == WAIT_OBJECT_0)
                 {
                     targetExitObserved = true;
                     result.HookCleanupOutcome = "released_by_process_exit";
@@ -9041,7 +9041,11 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
 
     if (remoteDllPath != nullptr && processInfo.hProcess != nullptr)
     {
-        if (processResumed && !result.Success && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_TIMEOUT)
+        if (WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
+        {
+            AddAudit(result, "remote_buffers_released_by_process_exit", "process_handle", "Target address space already released remote buffers.");
+        }
+        else if (processResumed && !result.Success && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_TIMEOUT)
         {
             // The queued early-bird APC may not have run LoadLibraryW yet; freeing
             // the path buffer would crash the target when the APC later fires.
@@ -9064,8 +9068,16 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
     }
     else if (processCreated && terminateTargetAfterCapture && processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_TIMEOUT)
     {
-        TerminateProcess(processInfo.hProcess, 0);
-        AddAudit(result, "cleanup_completed", "TerminateProcess", "Controlled target was terminated after bounded capture pipe closure.");
+        const bool terminated = TerminateProcess(processInfo.hProcess, 0) != FALSE;
+        const DWORD terminateError = terminated ? 0 : GetLastError();
+        if (!terminated || WaitForSingleObject(processInfo.hProcess, 2000) != WAIT_OBJECT_0)
+        {
+            SetResultError(result, terminated ? WAIT_TIMEOUT : terminateError, "win32", "cleanup_failed", "Controlled target termination was not confirmed.");
+        }
+        else
+        {
+            AddAudit(result, "cleanup_completed", "TerminateProcess", "Controlled target termination was confirmed after bounded capture pipe closure.");
+        }
     }
     else if (processCreated && fatalError && processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_TIMEOUT)
     {
@@ -9081,6 +9093,24 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
     {
         DisconnectNamedPipe(pipeHandle);
         CloseHandle(pipeHandle);
+    }
+
+    if (processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
+    {
+        DWORD exitCode = 0;
+        if (GetExitCodeProcess(processInfo.hProcess, &exitCode))
+        {
+            result.TargetExitCode = exitCode;
+            if (result.SessionShutdownEvidence.empty())
+            {
+                result.HookCleanupOutcome = "released_by_process_exit";
+                result.SessionShutdownEvidence = "released_by_process_exit";
+            }
+            if (result.Success && exitCode != 0)
+            {
+                SetResultError(result, exitCode, "win32", "target_exited_abnormally", "Controlled target exited with a nonzero status.");
+            }
+        }
     }
 
     DrainSharedTransport(result, transport);

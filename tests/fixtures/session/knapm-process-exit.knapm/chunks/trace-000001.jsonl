@@ -1,0 +1,1 @@
+{"schemaVersion":"0.1.0","eventId":1,"relativeTimeMs":10,"pid":1234,"tid":1235,"process":"fixture.exe","module":"kernel32.dll","api":"CreateFileW","arguments":[],"returnValue":"0x0000000000000044","error":null,"durationUs":5,"tags":["fixture"],"stack":[],"bufferPreview":""}

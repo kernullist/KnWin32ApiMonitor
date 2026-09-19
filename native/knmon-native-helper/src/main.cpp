@@ -1459,6 +1459,7 @@ std::string BuildManifestJson(
     stream << "\"schemaVersion\":\"0.1.0\",";
     stream << "\"sessionId\":" << Q(session.SessionId) << ",";
     stream << "\"createdUtc\":" << Q(session.CreatedUtc) << ",";
+    stream << "\"shutdownEvidence\":" << Q(result.SessionShutdownEvidence) << ",";
     stream << "\"source\":" << Q(source) << ",";
     stream << "\"backendMode\":" << Q(result.BackendMode) << ",";
     stream << "\"captureMode\":" << Q(result.CaptureMode) << ",";
@@ -2772,7 +2773,7 @@ void SetKnapmMalformedRecovery(SessionInfo& session, const std::string& reason)
 void ValidateManifestTypes(const JsonDocument& manifest, bool knapm)
 {
     for (const auto* key : {"schemaVersion", "sessionId", "operationId", "createdUtc", "updatedUtc", "finalizedUtc",
-        "format", "formatVersion", "source", "backendMode", "captureMode", "injectionMethod", "writerState", "compression"})
+        "format", "formatVersion", "source", "backendMode", "captureMode", "injectionMethod", "writerState", "compression", "shutdownEvidence"})
     {
         manifest.String(key);
     }
@@ -2833,6 +2834,12 @@ void ValidateManifestTypes(const JsonDocument& manifest, bool knapm)
     {
         KnapmRecoveryFromJson(manifest.Object("recovery"));
     }
+}
+
+bool HasProcessExitEvidence(const JsonDocument& manifest)
+{
+    return manifest.String("shutdownEvidence") == "released_by_process_exit" ||
+        manifest.Object("session").String("shutdownEvidence") == "released_by_process_exit";
 }
 
 void ClassifyKnapmSession(SessionInfo& session, const JsonDocument& manifest)
@@ -3226,12 +3233,12 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
                         session.ValidationErrors.push_back("finalized agent-events.jsonl does not contain agent_hello.");
                     }
 
-                    if (!hasDropped)
+                    if (!hasDropped && !HasProcessExitEvidence(manifest))
                     {
                         session.ValidationErrors.push_back("finalized agent-events.jsonl does not contain dropped_events.");
                     }
 
-                    if (!hasShutdown)
+                    if (!hasShutdown && !HasProcessExitEvidence(manifest))
                     {
                         session.ValidationErrors.push_back("finalized agent-events.jsonl does not contain agent_shutdown.");
                     }
@@ -3758,12 +3765,12 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
                     session.ValidationErrors.push_back("agent-events.jsonl contains more than one agent_hello.");
                 }
 
-                if (!hasDropped)
+                if (!hasDropped && !HasProcessExitEvidence(manifest))
                 {
                     session.ValidationErrors.push_back("agent-events.jsonl does not contain dropped_events.");
                 }
 
-                if (!hasShutdown)
+                if (!hasShutdown && !HasProcessExitEvidence(manifest))
                 {
                     session.ValidationErrors.push_back("agent-events.jsonl does not contain agent_shutdown.");
                 }

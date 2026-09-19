@@ -1,0 +1,1 @@
+{"schemaVersion":"0.1.0","messageType":"agent_hello","operationId":"fixture-knapm-op","pid":1234,"tid":1235,"timestampUtc":"2026-06-10T00:00:00.000Z","sequence":1,"architecture":"x64","agentVersion":"fixture-agent","message":"hello"}

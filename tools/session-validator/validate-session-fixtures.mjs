@@ -145,6 +145,12 @@ function validateManifest(sessionPath, errors) {
   return manifest;
 }
 
+function hasProcessExitEvidence(manifest)
+{
+  return manifest?.shutdownEvidence === "released_by_process_exit" ||
+    manifest?.session?.shutdownEvidence === "released_by_process_exit";
+}
+
 function validateAgentEvents(sessionPath, errors, manifest) {
   const rows = readJsonl(path.join(sessionPath, expectedFiles.agentEvents), errors);
   let helloCount = 0;
@@ -208,11 +214,11 @@ function validateAgentEvents(sessionPath, errors, manifest) {
     errors.push(`${expectedFiles.agentEvents}: exactly one agent_hello is expected`);
   }
 
-  if (!hasDropped) {
+  if (!hasDropped && !hasProcessExitEvidence(manifest)) {
     errors.push(`${expectedFiles.agentEvents}: dropped_events is missing`);
   }
 
-  if (!hasShutdown) {
+  if (!hasShutdown && !hasProcessExitEvidence(manifest)) {
     errors.push(`${expectedFiles.agentEvents}: agent_shutdown is missing`);
   }
 
@@ -617,11 +623,11 @@ function validateKnapmFixture(name, expectedSuccess) {
         errors.push(`${manifestLabel}: finalized agent events must contain agent_hello`);
       }
 
-      if (!hasDropped) {
+      if (!hasDropped && !hasProcessExitEvidence(manifest)) {
         errors.push(`${manifestLabel}: finalized agent events must contain dropped_events`);
       }
 
-      if (!hasShutdown) {
+      if (!hasShutdown && !hasProcessExitEvidence(manifest)) {
         errors.push(`${manifestLabel}: finalized agent events must contain agent_shutdown`);
       }
     }
@@ -911,6 +917,7 @@ const results = [
   validateSessionFixture("valid-sample", true),
   validateSessionFixture("malformed-missing-session-id", false),
   validateKnapmFixture("valid-knapm.knapm", true),
+  validateKnapmFixture("knapm-process-exit.knapm", true),
   validateKnapmFixture("valid-knapm-legacy.knapm", true),
   validateKnapmFixture("knapm-partial-unfinalized.knapm", true),
   validateKnapmFixture("knapm-owned-unfinalized.knapm", true),
