@@ -33,6 +33,8 @@ enum class KnMonAgentControlStatus : std::uint32_t
     WorkerStartFailed = 4,
     NotRunning = 5,
     InvalidState = 6,
+    Busy = 7,
+    StopIncomplete = 8,
 };
 
 enum class KnMonAgentLifecycleState : std::uint32_t

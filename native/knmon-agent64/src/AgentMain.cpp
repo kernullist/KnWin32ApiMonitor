@@ -3,6 +3,7 @@
 #include <knmon/common/Protocol.h>
 #include <knmon/common/RuntimeSupport.h>
 #include <knmon/common/TransportWriter.h>
+#include <knmon/common/SessionLease.h>
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -82,8 +83,8 @@
 
 namespace
 {
-constexpr const wchar_t* AgentVersion = L"0.2.0";
-constexpr DWORD AgentVersionPacked = 0x00020000;
+constexpr const wchar_t* AgentVersion = L"0.3.0";
+constexpr DWORD AgentVersionPacked = 0x00030000;
 constexpr std::size_t MaxBufferPreviewBytes = 16;
 constexpr std::size_t MaxNtObjectNameBytes = 512;
 constexpr std::size_t MaxRegistryStringChars = 256;
@@ -847,6 +848,7 @@ struct HookRecord
 
 struct HookLifecycleCounts
 {
+    bool Available = true;
     int InstalledHooks = 0;
     int RestoredHooks = 0;
     int FailedHooks = 0;
@@ -935,6 +937,76 @@ SRWLOCK g_hookLock = SRWLOCK_INIT;
 volatile LONG g_lifecycleState = static_cast<LONG>(AgentLifecycleState::Starting);
 volatile LONG g_hooksEnabled = 0;
 volatile LONG g_failedHooks = 0;
+SRWLOCK g_controlLock = SRWLOCK_INIT;
+knmon::SessionLeaseGate g_sessionGate;
+thread_local std::uint32_t g_hookEpoch = 0;
+
+class AgentControlGuard
+{
+public:
+    AgentControlGuard()
+    {
+        const ULONGLONG deadline = GetTickCount64() + 1500;
+        do
+        {
+            m_acquired = TryAcquireSRWLockExclusive(&g_controlLock) != FALSE;
+            if (m_acquired)
+            {
+                break;
+            }
+            Sleep(1);
+        }
+        while (GetTickCount64() < deadline);
+    }
+
+    ~AgentControlGuard()
+    {
+        if (m_acquired)
+        {
+            ReleaseSRWLockExclusive(&g_controlLock);
+        }
+    }
+
+    bool Acquired() const
+    {
+        return m_acquired;
+    }
+
+    AgentControlGuard(const AgentControlGuard&) = delete;
+    AgentControlGuard& operator=(const AgentControlGuard&) = delete;
+
+private:
+    bool m_acquired = false;
+};
+
+class HookLockGuard
+{
+public:
+    HookLockGuard()
+    {
+        AcquireSRWLockExclusive(&g_hookLock);
+    }
+
+    ~HookLockGuard()
+    {
+        Release();
+    }
+
+    void Release() noexcept
+    {
+        if (m_held)
+        {
+            ReleaseSRWLockExclusive(&g_hookLock);
+            m_held = false;
+        }
+    }
+
+    HookLockGuard(const HookLockGuard&) = delete;
+    HookLockGuard& operator=(const HookLockGuard&) = delete;
+
+private:
+    bool m_held = true;
+};
 
 void SetLifecycleState(AgentLifecycleState state)
 {
@@ -948,6 +1020,11 @@ AgentLifecycleState GetLifecycleState()
 
 bool HooksEnabled()
 {
+    if (g_inHook)
+    {
+        // An admitted call may finish recording while stop drains this epoch.
+        return g_hookEpoch != 0 && g_hookEpoch == g_sessionGate.Epoch();
+    }
     return InterlockedCompareExchange(&g_hooksEnabled, 0, 0) != 0 && GetLifecycleState() == AgentLifecycleState::Running;
 }
 
@@ -1010,15 +1087,25 @@ std::uint32_t PublicLifecycleState(AgentLifecycleState state)
 class HookReentryGuard
 {
 public:
-    HookReentryGuard()
+    HookReentryGuard() : m_previous(g_inHook), m_previousEpoch(g_hookEpoch), m_lease(g_sessionGate)
     {
         g_inHook = true;
+        g_hookEpoch = m_lease.Epoch();
     }
 
     ~HookReentryGuard()
     {
-        g_inHook = false;
+        g_hookEpoch = m_previousEpoch;
+        g_inHook = m_previous;
     }
+
+    HookReentryGuard(const HookReentryGuard&) = delete;
+    HookReentryGuard& operator=(const HookReentryGuard&) = delete;
+
+private:
+    bool m_previous;
+    std::uint32_t m_previousEpoch;
+    knmon::SessionLease m_lease;
 };
 
 std::string WideToUtf8(const wchar_t* value)
@@ -2647,7 +2734,11 @@ HookLifecycleCounts SnapshotHookCounts()
 {
     HookLifecycleCounts counts;
 
-    AcquireSRWLockShared(&g_hookLock);
+    if (!TryAcquireSRWLockShared(&g_hookLock))
+    {
+        counts.Available = false;
+        return counts;
+    }
     for (std::size_t index = 0; index < g_hookRecordCount; ++index)
     {
         const HookRecord& record = g_hookRecords[index];
@@ -12228,6 +12319,10 @@ bool SweepLoadedModules(const char* reason, bool reportHookStatus, SweepStats* o
     // LoadLibrary on their own thread; debounce re-sweeps.
     if (reason != nullptr && std::strcmp(reason, "dynamic_load") == 0)
     {
+        if (GetLifecycleState() != AgentLifecycleState::Running)
+        {
+            return false;
+        }
         static std::atomic<ULONGLONG> lastDynamicSweepTick{0};
         const ULONGLONG now = GetTickCount64();
         const ULONGLONG last = lastDynamicSweepTick.load();
@@ -12246,7 +12341,7 @@ bool SweepLoadedModules(const char* reason, bool reportHookStatus, SweepStats* o
     ResolveHookDefinitions(*definitions);
     const std::size_t moduleCount = CaptureModuleSnapshot(*modules, &stats);
 
-    AcquireSRWLockExclusive(&g_hookLock);
+    HookLockGuard hookLock;
     for (std::size_t moduleIndex = 0; moduleIndex < moduleCount; ++moduleIndex)
     {
         ModuleInfo& module = (*modules)[moduleIndex];
@@ -12262,7 +12357,7 @@ bool SweepLoadedModules(const char* reason, bool reportHookStatus, SweepStats* o
             ++stats.ModulesWithPatches;
         }
     }
-    ReleaseSRWLockExclusive(&g_hookLock);
+    hookLock.Release();
 
     if (reportHookStatus)
     {
@@ -12302,7 +12397,7 @@ HookLifecycleCounts UninstallHooks()
     HookLifecycleCounts counts;
 
     InterlockedExchange(&g_hooksEnabled, 0);
-    AcquireSRWLockExclusive(&g_hookLock);
+    HookLockGuard hookLock;
     for (std::size_t index = 0; index < g_hookRecordCount; ++index)
     {
         HookRecord& record = g_hookRecords[index];
@@ -12353,17 +12448,18 @@ HookLifecycleCounts UninstallHooks()
             continue;
         }
 
-        if (*record.ThunkAddress == reinterpret_cast<ULONG_PTR>(record.ReplacementFunction))
+        void* previous = InterlockedCompareExchangePointer(reinterpret_cast<void* volatile*>(record.ThunkAddress),
+            record.OriginalFunction, record.ReplacementFunction);
+        if (previous == record.ReplacementFunction || previous == record.OriginalFunction)
         {
-            *record.ThunkAddress = reinterpret_cast<ULONG_PTR>(record.OriginalFunction);
             FlushInstructionCache(GetCurrentProcess(), record.ThunkAddress, sizeof(void*));
             record.Restored = true;
             ++counts.RestoredHooks;
         }
         else
         {
-            record.Restored = true;
-            ++counts.RestoredHooks;
+            record.Failed = true;
+            ++counts.FailedHooks;
         }
 
         DWORD ignored = 0;
@@ -12375,7 +12471,7 @@ HookLifecycleCounts UninstallHooks()
 
         ReleaseAcquiredModule(ownerModule);
     }
-    ReleaseSRWLockExclusive(&g_hookLock);
+    hookLock.Release();
 
     counts.FailedHooks += static_cast<int>(InterlockedCompareExchange(&g_failedHooks, 0, 0));
     return counts;
@@ -16556,7 +16652,7 @@ BOOL WINAPI HookedFreeLibrary(HMODULE module)
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
-    if (result && module != nullptr)
+    if (HooksEnabled() && result && module != nullptr)
     {
         // If the free dropped the final reference, the module (and its patched
         // IAT slots) is gone. Drop this owner's hook records so a later load at
@@ -16567,7 +16663,7 @@ BOOL WINAPI HookedFreeLibrary(HMODULE module)
                 reinterpret_cast<LPCWSTR>(module),
                 &stillLoaded))
         {
-            AcquireSRWLockExclusive(&g_hookLock);
+            HookLockGuard hookLock;
             std::size_t writeIndex = 0;
             for (std::size_t readIndex = 0; readIndex < g_hookRecordCount; ++readIndex)
             {
@@ -16584,7 +16680,7 @@ BOOL WINAPI HookedFreeLibrary(HMODULE module)
                 ++writeIndex;
             }
             g_hookRecordCount = writeIndex;
-            ReleaseSRWLockExclusive(&g_hookLock);
+            hookLock.Release();
         }
     }
 
@@ -19769,10 +19865,14 @@ bool InstallHooks()
         return false;
     }
 
-    if (installedCoverage)
+    if (installedCoverage && g_sessionGate.Open())
     {
         SetLifecycleState(AgentLifecycleState::Running);
         InterlockedExchange(&g_hooksEnabled, 1);
+    }
+    else
+    {
+        return false;
     }
 
     return installedCoverage;
@@ -19793,23 +19893,49 @@ HookLifecycleCounts ShutdownAgent(const char* reason, AgentLifecycleState finalS
 {
     HookLifecycleCounts counts = {};
     const AgentLifecycleState previousState = GetLifecycleState();
-    if (previousState == AgentLifecycleState::Stopping || previousState == AgentLifecycleState::Disabled || previousState == AgentLifecycleState::Failed)
+    if (previousState == AgentLifecycleState::Disabled || previousState == AgentLifecycleState::Failed)
     {
         return counts;
     }
 
     SetLifecycleState(AgentLifecycleState::Stopping);
+    InterlockedExchange(&g_hooksEnabled, 0);
+    g_sessionGate.Close();
+    const ULONGLONG deadline = GetTickCount64() + 2000;
+    while (!g_sessionGate.Quiescent() && GetTickCount64() < deadline)
+    {
+        Sleep(1);
+    }
+    if (!g_sessionGate.Quiescent())
+    {
+        // Keep the mapping, pipe, and session strings alive for admitted calls.
+        counts.FailedHooks = 1;
+        return counts;
+    }
     counts = UninstallHooks();
-    SetLifecycleState(finalState);
-    SendAgentShutdown(reason, counts);
     CloseTransport();
+    SetLifecycleState(finalState);
+    // Shutdown notification is best-effort and must never wait on the reader.
+    DWORD mode = PIPE_NOWAIT;
+    if (g_pipeHandle != INVALID_HANDLE_VALUE && SetNamedPipeHandleState(g_pipeHandle, &mode, nullptr, nullptr))
+    {
+        try
+        {
+            SendAgentShutdown(reason, counts);
+        }
+        catch (...)
+        {
+            InterlockedIncrement64(&g_droppedEvents);
+        }
+    }
     CloseAgentPipe();
     return counts;
 }
 
 bool DisabledAgentCanReinitialize(const HookLifecycleCounts& counts)
 {
-    return counts.FailedHooks == 0 && counts.InstalledHooks == counts.RestoredHooks;
+    return counts.Available && InterlockedCompareExchange(&g_workerStarted, 0, 0) == 0 && g_sessionGate.Quiescent() &&
+        counts.FailedHooks == 0 && counts.InstalledHooks == counts.RestoredHooks;
 }
 
 bool ResetDisabledAgentForReinitialize()
@@ -19832,13 +19958,13 @@ bool ResetDisabledAgentForReinitialize()
         CloseTransport();
         CloseAgentPipe();
 
-        AcquireSRWLockExclusive(&g_hookLock);
+        HookLockGuard hookLock;
         for (HookRecord& record : g_hookRecords)
         {
             record = {};
         }
         g_hookRecordCount = 0;
-        ReleaseSRWLockExclusive(&g_hookLock);
+        hookLock.Release();
 
         InterlockedExchange(&g_failedHooks, 0);
         InterlockedExchange(&g_hooksEnabled, 0);
@@ -19857,100 +19983,121 @@ bool ResetDisabledAgentForReinitialize()
 
 DWORD WINAPI AgentWorker(void* context)
 {
-    auto* suppliedConfig = reinterpret_cast<AgentWorkerConfig*>(context);
-    AgentWorkerConfig runtimeConfig;
-
-    if (suppliedConfig != nullptr)
+    std::unique_ptr<AgentWorkerConfig> suppliedConfig(static_cast<AgentWorkerConfig*>(context));
+    AgentControlGuard control;
+    if (!control.Acquired())
     {
-        runtimeConfig = *suppliedConfig;
-        delete suppliedConfig;
-        suppliedConfig = nullptr;
+        InterlockedExchange(&g_workerStarted, 0);
+        return static_cast<DWORD>(knmon::KnMonAgentControlStatus::Busy);
     }
-    else
+    if (GetLifecycleState() != AgentLifecycleState::Starting)
     {
-        runtimeConfig.PipeName = ReadEnv(L"KNMON_AGENT_PIPE");
-        runtimeConfig.TransportName = ReadEnv(L"KNMON_TRANSPORT_NAME");
-        runtimeConfig.OperationId = ReadEnv(L"KNMON_OPERATION_ID");
-        runtimeConfig.SelectedApis = ReadEnv(L"KNMON_SELECTED_APIS");
-        runtimeConfig.TransportRequired = EnvEnabled(L"KNMON_TRANSPORT_REQUIRED");
+        InterlockedExchange(&g_workerStarted, 0);
+        return static_cast<DWORD>(knmon::KnMonAgentControlStatus::InvalidState);
     }
-
-    g_operationId = runtimeConfig.OperationId;
-    g_selectedApiSelection = LowerAscii(WideToUtf8(runtimeConfig.SelectedApis.c_str()));
-
-    do
+    try
     {
-        if (runtimeConfig.PipeName.empty())
+        AgentWorkerConfig runtimeConfig;
+
+        if (suppliedConfig != nullptr)
         {
-            break;
+            runtimeConfig = *suppliedConfig;
+        }
+        else
+        {
+            runtimeConfig.PipeName = ReadEnv(L"KNMON_AGENT_PIPE");
+            runtimeConfig.TransportName = ReadEnv(L"KNMON_TRANSPORT_NAME");
+            runtimeConfig.OperationId = ReadEnv(L"KNMON_OPERATION_ID");
+            runtimeConfig.SelectedApis = ReadEnv(L"KNMON_SELECTED_APIS");
+            runtimeConfig.TransportRequired = EnvEnabled(L"KNMON_TRANSPORT_REQUIRED");
         }
 
-        HANDLE pipeHandle = INVALID_HANDLE_VALUE;
-        for (int attempt = 0; attempt < 50; ++attempt)
-        {
-            pipeHandle = CreateFileW(
-                runtimeConfig.PipeName.c_str(),
-                GENERIC_WRITE,
-                0,
-                nullptr,
-                OPEN_EXISTING,
-                FILE_ATTRIBUTE_NORMAL,
-                nullptr);
+        g_operationId = runtimeConfig.OperationId;
+        g_selectedApiSelection = LowerAscii(WideToUtf8(runtimeConfig.SelectedApis.c_str()));
 
-            if (pipeHandle != INVALID_HANDLE_VALUE)
+        do
+        {
+            if (runtimeConfig.PipeName.empty())
             {
                 break;
             }
 
-            if (GetLastError() != ERROR_PIPE_BUSY)
+            HANDLE pipeHandle = INVALID_HANDLE_VALUE;
+            for (int attempt = 0; attempt < 50; ++attempt)
             {
-                Sleep(50);
+                pipeHandle = CreateFileW(
+                    runtimeConfig.PipeName.c_str(),
+                    GENERIC_WRITE,
+                    0,
+                    nullptr,
+                    OPEN_EXISTING,
+                    FILE_ATTRIBUTE_NORMAL,
+                    nullptr);
+
+                if (pipeHandle != INVALID_HANDLE_VALUE)
+                {
+                    break;
+                }
+
+                if (GetLastError() != ERROR_PIPE_BUSY)
+                {
+                    Sleep(50);
+                }
+                else
+                {
+                    WaitNamedPipeW(runtimeConfig.PipeName.c_str(), 100);
+                }
             }
-            else
+
+            if (pipeHandle == INVALID_HANDLE_VALUE)
             {
-                WaitNamedPipeW(runtimeConfig.PipeName.c_str(), 100);
+                break;
             }
-        }
 
-        if (pipeHandle == INVALID_HANDLE_VALUE)
-        {
-            break;
-        }
+            AcquireSRWLockExclusive(&g_pipeLock);
+            g_pipeHandle = pipeHandle;
+            ReleaseSRWLockExclusive(&g_pipeLock);
 
-        AcquireSRWLockExclusive(&g_pipeLock);
-        g_pipeHandle = pipeHandle;
-        ReleaseSRWLockExclusive(&g_pipeLock);
+            SendHello();
 
-        SendHello();
+            // A stop that raced us while the pipe connection was retrying must win:
+            // bail out before installing any hooks so the agent cannot resurrect
+            // after the controller observed a clean self-disable.
+            if (GetLifecycleState() != AgentLifecycleState::Starting)
+            {
+                CloseAgentPipe();
+                break;
+            }
 
-        // A stop that raced us while the pipe connection was retrying must win:
-        // bail out before installing any hooks so the agent cannot resurrect
-        // after the controller observed a clean self-disable.
-        if (GetLifecycleState() != AgentLifecycleState::Starting)
-        {
-            CloseAgentPipe();
-            break;
-        }
+            if (runtimeConfig.TransportRequired && !OpenTransport(runtimeConfig.TransportName))
+            {
+                SendHookStatus("knmon-transport", "shared_memory", false, "Required shared-memory transport could not be opened by the agent.");
+                SendDroppedEvents();
+                ShutdownAgent("transport_open_failed", AgentLifecycleState::Failed);
+                break;
+            }
 
-        if (runtimeConfig.TransportRequired && !OpenTransport(runtimeConfig.TransportName))
-        {
-            SendHookStatus("knmon-transport", "shared_memory", false, "Required shared-memory transport could not be opened by the agent.");
+            if (!InstallHooks())
+            {
+                SendDroppedEvents();
+                ShutdownAgent("hook_install_failed", AgentLifecycleState::Failed);
+                break;
+            }
+
             SendDroppedEvents();
-            ShutdownAgent("transport_open_failed", AgentLifecycleState::Failed);
-            break;
         }
-
-        if (!InstallHooks())
-        {
-            SendDroppedEvents();
-            ShutdownAgent("hook_install_failed", AgentLifecycleState::Failed);
-            break;
-        }
-
-        SendDroppedEvents();
+        while (false);
     }
-    while (false);
-
+    catch (...)
+    {
+        // Worker failures cannot leave a newly installed session enabled.
+        ShutdownAgent("worker_failed", AgentLifecycleState::Failed);
+    }
+    if (GetLifecycleState() == AgentLifecycleState::Starting)
+    {
+        SetLifecycleState(AgentLifecycleState::Failed);
+    }
+    InterlockedExchange(&g_workerStarted, 0);
     return 0;
 }
 
@@ -20015,6 +20162,16 @@ bool LaunchEnvironmentConfigured()
     return length > 0;
 }
 
+DWORD WINAPI BootstrapAgent(void*)
+{
+    AgentControlGuard control;
+    if (control.Acquired() && LaunchEnvironmentConfigured() && GetLifecycleState() == AgentLifecycleState::Starting)
+    {
+        StartAgentWorker(nullptr);
+    }
+    return 0;
+}
+
 void CopyCurrentOperationId(wchar_t* destination, std::size_t capacity)
 {
     if (destination == nullptr || capacity == 0)
@@ -20030,15 +20187,19 @@ void CopyCurrentOperationId(wchar_t* destination, std::size_t capacity)
     destination[count] = L'\0';
 }
 
-void FillAgentState(knmon::KnMonAgentStateV1* state)
+bool FillAgentState(knmon::KnMonAgentStateV1* state)
 {
     if (state == nullptr)
     {
-        return;
+        return false;
     }
 
     const AgentLifecycleState lifecycle = GetLifecycleState();
     const HookLifecycleCounts counts = SnapshotHookCounts();
+    if (!counts.Available)
+    {
+        return false;
+    }
     const LONG workerStarted = InterlockedCompareExchange(&g_workerStarted, 0, 0);
     const LONG hooksEnabled = InterlockedCompareExchange(&g_hooksEnabled, 0, 0);
 
@@ -20073,6 +20234,7 @@ void FillAgentState(knmon::KnMonAgentStateV1* state)
 
     CopyCurrentOperationId(output.OperationId, std::size(output.OperationId));
     *state = output;
+    return true;
 }
 }
 
@@ -20088,7 +20250,13 @@ extern "C" __declspec(dllexport) DWORD KnMonAgentVersion()
 #endif
 
 extern "C" __declspec(dllexport) DWORD WINAPI KnMonAgentQueryState(knmon::KnMonAgentStateV1* state)
+try
 {
+    AgentControlGuard control;
+    if (!control.Acquired())
+    {
+        return static_cast<DWORD>(knmon::KnMonAgentControlStatus::Busy);
+    }
     knmon::KnMonAgentControlStatus status = knmon::KnMonAgentControlStatus::InvalidConfig;
 
     do
@@ -20109,7 +20277,11 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonAgentQueryState(knmon::KnMonA
             break;
         }
 
-        FillAgentState(state);
+        if (!FillAgentState(state))
+        {
+            status = knmon::KnMonAgentControlStatus::Busy;
+            break;
+        }
         status = knmon::KnMonAgentControlStatus::Success;
     }
     while (false);
@@ -20117,8 +20289,19 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonAgentQueryState(knmon::KnMonA
     return static_cast<DWORD>(status);
 }
 
-extern "C" __declspec(dllexport) DWORD WINAPI KnMonAgentInitialize(const knmon::KnMonAttachConfigV1* config)
+catch (...)
 {
+    return static_cast<DWORD>(knmon::KnMonAgentControlStatus::InvalidConfig);
+}
+
+extern "C" __declspec(dllexport) DWORD WINAPI KnMonAgentInitialize(const knmon::KnMonAttachConfigV1* config)
+try
+{
+    AgentControlGuard control;
+    if (!control.Acquired())
+    {
+        return static_cast<DWORD>(knmon::KnMonAgentControlStatus::Busy);
+    }
     AgentWorkerConfig workerConfig;
     knmon::KnMonAgentControlStatus status = CopyAttachConfig(config, &workerConfig);
 
@@ -20138,8 +20321,19 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonAgentInitialize(const knmon::
     return static_cast<DWORD>(status);
 }
 
-extern "C" __declspec(dllexport) DWORD WINAPI KnMonAgentStop()
+catch (...)
 {
+    return static_cast<DWORD>(knmon::KnMonAgentControlStatus::WorkerStartFailed);
+}
+
+extern "C" __declspec(dllexport) DWORD WINAPI KnMonAgentStop()
+try
+{
+    AgentControlGuard control;
+    if (!control.Acquired())
+    {
+        return static_cast<DWORD>(knmon::KnMonAgentControlStatus::Busy);
+    }
     knmon::KnMonAgentControlStatus status = knmon::KnMonAgentControlStatus::Success;
     const AgentLifecycleState state = GetLifecycleState();
 
@@ -20155,7 +20349,11 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonAgentStop()
     else
     {
         const HookLifecycleCounts counts = ShutdownAgent("self_disable", AgentLifecycleState::Disabled);
-        if (!DisabledAgentCanReinitialize(counts))
+        if (!g_sessionGate.Quiescent() || GetLifecycleState() == AgentLifecycleState::Stopping)
+        {
+            status = knmon::KnMonAgentControlStatus::StopIncomplete;
+        }
+        else if (!DisabledAgentCanReinitialize(counts))
         {
             status = knmon::KnMonAgentControlStatus::InvalidState;
         }
@@ -20164,88 +20362,207 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonAgentStop()
     return static_cast<DWORD>(status);
 }
 
+catch (...)
+{
+    return static_cast<DWORD>(knmon::KnMonAgentControlStatus::StopIncomplete);
+}
+
 BOOL APIENTRY DllMain(HMODULE moduleHandle, DWORD reason, LPVOID reserved)
 {
     (void)reserved;
-
     if (reason == DLL_PROCESS_ATTACH)
     {
         g_agentModule = moduleHandle;
         DisableThreadLibraryCalls(moduleHandle);
-        // Pin the agent so it can never be unmapped while patched IAT slots still
-        // point into it; unloading would crash the target on its next hooked call.
         HMODULE pinned = nullptr;
-        if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, reinterpret_cast<LPCWSTR>(moduleHandle), &pinned))
+        if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+            reinterpret_cast<LPCWSTR>(moduleHandle), &pinned))
         {
-            // pinned intentionally leaked; the reference count keeps the image loaded.
+            return FALSE;
         }
-        if (LaunchEnvironmentConfigured())
+        // Never wait for this thread while the loader lock is held.
+        HANDLE bootstrap = CreateThread(nullptr, 0, BootstrapAgent, nullptr, 0, nullptr);
+        if (bootstrap != nullptr)
         {
-            (void)StartAgentWorker(nullptr);
+            CloseHandle(bootstrap);
         }
     }
     else if (reason == DLL_PROCESS_DETACH)
     {
+        // Process exit owns address-space cleanup. No locks, heap work, or I/O.
         InterlockedExchange(&g_hooksEnabled, 0);
-
-        // Best-effort process-exit lifecycle evidence. During process
-        // termination (reserved != nullptr) all other threads are already dead,
-        // so unlocked access to the pipe is safe here; a normal SRWLock acquire
-        // could deadlock on a lock abandoned by a killed hook thread. Dynamic
-        // unload cannot reach this branch because the agent pins itself.
-        if (reserved != nullptr && g_pipeHandle != INVALID_HANDLE_VALUE)
-        {
-            try
-            {
-                HookLifecycleCounts counts;
-                AcquireSRWLockShared(&g_hookLock);
-                for (std::size_t index = 0; index < g_hookRecordCount; ++index)
-                {
-                    const HookRecord& record = g_hookRecords[index];
-                    if (record.Installed)
-                    {
-                        ++counts.InstalledHooks;
-                    }
-
-                    if (record.Restored)
-                    {
-                        ++counts.RestoredHooks;
-                    }
-
-                    if (record.Failed)
-                    {
-                        ++counts.FailedHooks;
-                    }
-                }
-                ReleaseSRWLockShared(&g_hookLock);
-
-                const LONG64 sequence = NextSequence();
-                std::ostringstream stream;
-                stream << MessagePrefix("agent_shutdown", sequence) << ",";
-                stream << "\"reason\":\"process_detach\",";
-                stream << "\"lifecycleState\":\"disabled\",";
-                // Process teardown unmaps every owner module, so installed slots
-                // are accounted as restored-by-teardown; the controller accepts
-                // this as cleanup evidence for bounded launch capture.
-                stream << "\"installedHooks\":" << counts.InstalledHooks << ",";
-                stream << "\"restoredHooks\":" << counts.InstalledHooks << ",";
-                stream << "\"failedHooks\":0,";
-                stream << "\"droppedCount\":" << static_cast<LONG64>(InterlockedCompareExchange64(&g_droppedEvents, 0, 0)) << ",";
-                stream << "\"message\":\"Agent observed target process teardown.\"";
-                stream << "}";
-
-                const std::string payload = stream.str();
-                DWORD bytesWritten = 0;
-                WriteFile(g_pipeHandle, payload.data(), static_cast<DWORD>(payload.size()), &bytesWritten, nullptr);
-            }
-            catch (...)
-            {
-                // Process teardown evidence is best-effort only.
-            }
-        }
-
+        g_sessionGate.Close();
         SetLifecycleState(AgentLifecycleState::Disabled);
     }
-
     return TRUE;
 }
+
+#if defined(KNMON_LIFECYCLE_TESTING)
+struct TestPausedEmitter
+{
+    HANDLE Ready = nullptr;
+    HANDLE Resume = nullptr;
+    bool BeforeCommit = false;
+};
+
+DWORD WINAPI RunTestPausedEmitter(void* context)
+{
+    auto& test = *static_cast<TestPausedEmitter*>(context);
+    HookReentryGuard lease;
+    LARGE_INTEGER start = {};
+    QueryPerformanceCounter(&start);
+    EmitTransportRecord(start, [&](knmon::KnMonTransportRecord* record)
+    {
+        if (test.BeforeCommit)
+        {
+            FillTransportCommon(record, knmon::KnMonTransportApiId::CreateFileW, "kernel32.dll", start, start, 0);
+        }
+        SetEvent(test.Ready);
+        WaitForSingleObject(test.Resume, 10000);
+        FillTransportCommon(record, knmon::KnMonTransportApiId::CreateFileW, "kernel32.dll", start, start, 0);
+    });
+    return 0;
+}
+
+bool CreateTestTransport()
+{
+    const DWORD bytes = sizeof(knmon::KnMonTransportHeader) + 2 * sizeof(knmon::KnMonTransportRecord);
+    g_transportMapping = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, bytes, nullptr);
+    if (g_transportMapping != nullptr)
+    {
+        g_transportHeader = static_cast<knmon::KnMonTransportHeader*>(MapViewOfFile(g_transportMapping, FILE_MAP_ALL_ACCESS, 0, 0, bytes));
+    }
+    if (g_transportHeader != nullptr)
+    {
+        new (g_transportHeader) knmon::KnMonTransportHeader();
+        g_transportHeader->Capacity = 2;
+        g_transportRecords = reinterpret_cast<knmon::KnMonTransportRecord*>(g_transportHeader + 1);
+        g_transportCapacity = 2;
+        for (int index = 0; index < 2; ++index)
+        {
+            new (&g_transportRecords[index]) knmon::KnMonTransportRecord();
+        }
+    }
+    return g_transportHeader != nullptr;
+}
+
+extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestStopRace(void* stage)
+{
+    DWORD result = 1;
+    TestPausedEmitter test;
+    test.BeforeCommit = stage != nullptr;
+    test.Ready = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    test.Resume = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    HANDLE thread = nullptr;
+    do
+    {
+        {
+            AgentControlGuard control;
+            if (!control.Acquired() || test.Ready == nullptr || test.Resume == nullptr || !CreateTestTransport() || !g_sessionGate.Open())
+            {
+                break;
+            }
+            g_operationId = L"lease-old";
+            SetLifecycleState(AgentLifecycleState::Running);
+            InterlockedExchange(&g_hooksEnabled, 1);
+        }
+        auto* oldMapping = g_transportHeader;
+        const auto epoch = g_sessionGate.Epoch();
+        thread = CreateThread(nullptr, 0, RunTestPausedEmitter, &test, 0, nullptr);
+        result = 2;
+        if (thread == nullptr || WaitForSingleObject(test.Ready, 5000) != WAIT_OBJECT_0)
+        {
+            break;
+        }
+        result = 3;
+        if (KnMonAgentStop() != static_cast<DWORD>(knmon::KnMonAgentControlStatus::StopIncomplete) ||
+            g_transportHeader != oldMapping || g_sessionGate.Quiescent())
+        {
+            break;
+        }
+        knmon::KnMonAgentStateV1 state;
+        state.StructSize = sizeof(state);
+        result = 4;
+        if (KnMonAgentQueryState(&state) != 0 ||
+            (state.Flags & knmon::KnMonAgentStateFlagResettable) != 0 ||
+            state.LifecycleState != static_cast<std::uint32_t>(knmon::KnMonAgentLifecycleState::Stopping))
+        {
+            break;
+        }
+        knmon::KnMonAttachConfigV1 config;
+        config.StructSize = sizeof(config);
+        wcscpy_s(config.OperationId, L"lease-new");
+        wcscpy_s(config.PipeName, L"unused-test-pipe");
+        wcscpy_s(config.TransportName, L"unused-test-mapping");
+        result = 5;
+        if (KnMonAgentInitialize(&config) != static_cast<DWORD>(knmon::KnMonAgentControlStatus::AlreadyRunning))
+        {
+            break;
+        }
+        SetEvent(test.Resume);
+        result = 6;
+        if (WaitForSingleObject(thread, 5000) != WAIT_OBJECT_0 || !g_sessionGate.Quiescent() ||
+            g_transportHeader != oldMapping || g_transportRecords[0].State != static_cast<LONG>(knmon::KnMonTransportRecordState::Committed) ||
+            g_operationId != L"lease-old")
+        {
+            break;
+        }
+        result = 7;
+        if (KnMonAgentStop() != 0 || g_transportHeader != nullptr)
+        {
+            break;
+        }
+        {
+            AgentControlGuard control;
+            result = 8;
+            if (!control.Acquired() || !ResetDisabledAgentForReinitialize() || !CreateTestTransport() || !g_sessionGate.Open() ||
+                g_sessionGate.Epoch() == epoch || g_transportHeader->ProducerSequence != 0)
+            {
+                break;
+            }
+            g_operationId = L"lease-new";
+            SetLifecycleState(AgentLifecycleState::Running);
+            InterlockedExchange(&g_hooksEnabled, 1);
+        }
+        result = KnMonAgentStop() == 0 ? 0 : 9;
+    }
+    while (false);
+    if (test.Resume != nullptr)
+    {
+        SetEvent(test.Resume);
+    }
+    if (thread != nullptr)
+    {
+        WaitForSingleObject(thread, 10000);
+        CloseHandle(thread);
+    }
+    if (g_sessionGate.Quiescent())
+    {
+        CloseTransport();
+    }
+    if (test.Ready != nullptr)
+    {
+        CloseHandle(test.Ready);
+    }
+    if (test.Resume != nullptr)
+    {
+        CloseHandle(test.Resume);
+    }
+    return result;
+}
+
+extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestHoldTeardownLocks(void* readyEvent)
+{
+    g_pipeHandle = CreateFileW(L"NUL", GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    AcquireSRWLockExclusive(&g_hookLock);
+    AcquireSRWLockExclusive(&g_pipeLock);
+    SetEvent(static_cast<HANDLE>(readyEvent));
+    Sleep(INFINITE);
+    return 0;
+}
+#if defined(_M_IX86)
+#pragma comment(linker, "/EXPORT:KnMonTestHoldTeardownLocks=_KnMonTestHoldTeardownLocks@4")
+#pragma comment(linker, "/EXPORT:KnMonTestStopRace=_KnMonTestStopRace@4")
+#endif
+#endif

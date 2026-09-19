@@ -2233,6 +2233,12 @@ std::string AgentControlStatusName(std::uint32_t status)
     case KnMonAgentControlStatus::InvalidState:
         name = "invalid_state";
         break;
+    case KnMonAgentControlStatus::Busy:
+        name = "busy";
+        break;
+    case KnMonAgentControlStatus::StopIncomplete:
+        name = "stop_incomplete";
+        break;
     default:
         break;
     }
@@ -8145,6 +8151,8 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             shutdownFailedHooks = ExtractJsonUInt64(payload, "failedHooks");
             result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
             result.SessionShutdownEvidence = payload;
+            result.HookCleanupOutcome = shutdownReason == "process_detach" ? "not_observed" :
+                shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0 ? "restored_by_agent" : "restore_failed";
             AddAudit(result, "agent_shutdown", "agent_event_read", payload);
             if (shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0)
             {
@@ -8480,6 +8488,8 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             if (WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
             {
                 targetExited = true;
+                result.HookCleanupOutcome = "released_by_process_exit";
+                result.SessionShutdownEvidence = "released_by_process_exit";
                 AddAudit(result, "target_exited", "launch_capture", continuousCapture ? "Target exited while launch monitor was active." : "Target exited before launch capture duration elapsed.");
                 break;
             }
@@ -8512,6 +8522,8 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
                 if (WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
                 {
                     targetExited = true;
+                    result.HookCleanupOutcome = "released_by_process_exit";
+                    result.SessionShutdownEvidence = "released_by_process_exit";
                     AddAudit(result, "target_exited", "launch_window_reveal", "Target exited before a launch window could be revealed.");
                     break;
                 }
@@ -8543,6 +8555,8 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         if (!targetExited && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
         {
             targetExited = true;
+            result.HookCleanupOutcome = "released_by_process_exit";
+            result.SessionShutdownEvidence = "released_by_process_exit";
             AddAudit(result, "target_exited", "launch_cleanup", "Target exited before explicit launch cleanup was requested.");
         }
 
@@ -9071,10 +9085,13 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                     shutdownRestoredHooks = ExtractJsonUInt64(payload, "restoredHooks");
                     shutdownFailedHooks = ExtractJsonUInt64(payload, "failedHooks");
                     result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
+                    result.SessionShutdownEvidence = payload;
+                    result.HookCleanupOutcome = shutdownReason == "process_detach" ? "not_observed" :
+                        shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0 ? "restored_by_agent" : "restore_failed";
                     AddAudit(result, "agent_shutdown", "agent_event_read", payload);
                     if (shutdownReason == "process_detach" && shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0)
                     {
-                        AddAudit(result, "hook_uninstall_complete", "agent_shutdown", "Installed hooks were restored during process detach.");
+                        AddAudit(result, "legacy_detach_unverified", "agent_shutdown", "Legacy process-detach message does not prove IAT restoration.");
                     }
                     else
                     {
@@ -9098,6 +9115,8 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                 if (processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
                 {
                     targetExitObserved = true;
+                    result.HookCleanupOutcome = "released_by_process_exit";
+                    result.SessionShutdownEvidence = "released_by_process_exit";
                     AddAudit(result, "target_exit_observed", "agent_event_read", "Target process exit was observed after the agent pipe closed.");
                 }
                 else if (!agentShutdownReceived)
@@ -9115,6 +9134,8 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                 if (processWait == WAIT_OBJECT_0)
                 {
                     targetExitObserved = true;
+                    result.HookCleanupOutcome = "released_by_process_exit";
+                    result.SessionShutdownEvidence = "released_by_process_exit";
                     DrainSharedTransport(result, transport);
                     AddAudit(result, "target_exit_observed", "agent_event_read", "Target process exit was observed before an agent shutdown message arrived.");
                     captureEnded = true;
@@ -9196,7 +9217,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         {
             if (targetExitObserved)
             {
-                AddAudit(result, "target_exit_cleanup_evidence", "process_exit", "Launched target exited; process teardown is accepted as cleanup evidence for bounded launch capture.");
+                AddAudit(result, "target_exit_cleanup_evidence", "process_exit", "Host process handle confirms address-space release; agent IAT restoration was not observed.");
             }
             else if (agentPipeClosedWithoutShutdown)
             {
@@ -9349,6 +9370,41 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
     CancellationContext cancellationContext;
     std::uint64_t streamBatchSequence = 0;
 
+    auto finalizeTargetExit = [&]() -> bool
+    {
+        if (processHandle == nullptr || WaitForSingleObject(processHandle, 0) != WAIT_OBJECT_0)
+        {
+            return false;
+        }
+        DWORD exitCode = 0;
+        const bool exitKnown = GetExitCodeProcess(processHandle, &exitCode) != FALSE;
+        result.TargetExitCode = exitKnown ? exitCode : ERROR_PROCESS_ABORTED;
+        result.HookCleanupOutcome = "released_by_process_exit";
+        result.SessionShutdownEvidence = "released_by_process_exit";
+        result.AgentCleanupAttempted = false;
+        result.AgentCleanupSucceeded = false;
+        result.Success = exitKnown && exitCode == 0 && result.Handshake.Received &&
+            ValidateHandshakeEvidence(result, requestedArchitecture) && !transport.ReaderState.Corrupted;
+        result.Operation = "target_exited";
+        result.OperationState = result.Success ? "completed" : "failed";
+        result.SessionState = result.Success ? "stopped" : "failed";
+        result.StoppedUtc = NowUtc();
+        result.Win32ErrorCode = result.Success ? 0 : (exitCode == 0 ? ERROR_PROCESS_ABORTED : exitCode);
+        result.Subsystem = "knmon-core";
+        result.Message = "Target exited; process address space was released without agent IAT restoration proof.";
+        if (result.CancelObserved)
+        {
+            result.Success = false;
+            result.Operation = "operation_cancelled";
+            result.OperationState = "cancelled";
+            result.SessionState = "stopped";
+            result.Win32ErrorCode = ERROR_CANCELLED;
+            result.Message = "Capture was cancelled while target exit released the process address space.";
+        }
+        AddAudit(result, "target_exit_observed", "process_handle", result.Message, result.TargetExitCode);
+        return true;
+    };
+
     auto consumePayload = [&](const std::string& payload)
     {
         KnMonAgentMessage message = BuildAgentMessage(result, payload);
@@ -9398,6 +9454,8 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
             shutdownFailedHooks = ExtractJsonUInt64(payload, "failedHooks");
             result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
             result.SessionShutdownEvidence = payload;
+            result.HookCleanupOutcome = shutdownReason == "process_detach" ? "not_observed" :
+                shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0 ? "restored_by_agent" : "restore_failed";
             AddAudit(result, "agent_shutdown", "agent_event_read", payload);
             if (shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0)
             {
@@ -9480,6 +9538,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
             if (AgentStateProvesSelfDisabledCleanup(state))
             {
                 agentStateCleanupProven = true;
+                result.HookCleanupOutcome = "restored_by_agent";
                 if (result.SessionShutdownEvidence.empty())
                 {
                     result.SessionShutdownEvidence = "agent_state_cleanup:" + summary;
@@ -9685,6 +9744,11 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
                 result.AgentControlStatus = controlStatus;
                 result.AttachState = controlStatus == static_cast<DWORD>(KnMonAgentControlStatus::UnsupportedAbi) ? "loaded_incompatible" : "loaded_unknown";
                 result.AttachStrategy = controlStatus == static_cast<DWORD>(KnMonAgentControlStatus::UnsupportedAbi) ? "reject_incompatible" : "reject_unknown";
+                if (controlStatus == static_cast<DWORD>(KnMonAgentControlStatus::Busy))
+                {
+                    result.AttachState = "loaded_busy";
+                    result.AttachStrategy = "reject_already_active";
+                }
                 SetResultError(result, queryError == 0 ? controlStatus : queryError, "knmon-agent", "loaded_agent_state_query", queryMessage.empty() ? "Loaded agent state query failed." : queryMessage);
                 fatalError = true;
                 break;
@@ -10032,6 +10096,8 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
             DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
             if (pipeError == ERROR_BROKEN_PIPE || pipeError == ERROR_HANDLE_EOF || pipeError == ERROR_NO_DATA)
             {
+                // Pipe teardown may precede the process handle becoming signaled.
+                WaitForSingleObject(processHandle, 250);
                 AddAudit(result, "pipe_closed_without_shutdown", "agent_event_read", "Attach agent event pipe closed before explicit stop.", pipeError, "win32");
                 break;
             }
@@ -10057,6 +10123,10 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
         DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
         UpdateTransportMetrics(result, transport);
+        if (finalizeTargetExit())
+        {
+            break;
+        }
         if (result.CancelObserved)
         {
             AddAudit(result, "attach_capture_cancelled", "attach_capture", "Attach monitor cancellation observed; requesting self-disable cleanup.");
@@ -10118,6 +10188,10 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
         UpdateTransportMetrics(result, transport);
         queryAgentStateCleanupEvidence("post_stop");
+        if (finalizeTargetExit())
+        {
+            break;
+        }
 
         if (fatalError)
         {
@@ -10211,7 +10285,20 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
     }
     while (false);
 
-    if (remoteControlOwnedByThisAttach && !agentCleanupProven() && processHandle != nullptr && remoteStopAddress != 0)
+    const bool targetAddressSpaceReleased = processHandle != nullptr && WaitForSingleObject(processHandle, 0) == WAIT_OBJECT_0;
+    if (targetAddressSpaceReleased)
+    {
+        if (result.Operation == "agent_shutdown_required")
+        {
+            finalizeTargetExit();
+        }
+        remoteConfig = nullptr;
+        remoteDllPath = nullptr;
+        result.HookCleanupOutcome = "released_by_process_exit";
+        result.SessionShutdownEvidence = "released_by_process_exit";
+        AddAudit(result, "remote_buffers_released_by_process_exit", "process_handle", "Target exit released remote allocations.");
+    }
+    if (remoteControlOwnedByThisAttach && !targetAddressSpaceReleased && !agentCleanupProven() && processHandle != nullptr && remoteStopAddress != 0)
     {
         result.AgentCleanupAttempted = true;
         if (!stopRequested)

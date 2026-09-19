@@ -393,6 +393,8 @@ struct KnMonCaptureResult
     std::string OperationState;
     bool AgentCleanupAttempted = false;
     bool AgentCleanupSucceeded = false;
+    std::string HookCleanupOutcome = "not_observed";
+    std::uint32_t TargetExitCode = 0;
     std::string StaleAgentOperationId;
     std::string StaleAgentState;
     std::uint64_t DroppedEvents = 0;

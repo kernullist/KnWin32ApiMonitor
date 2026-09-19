@@ -1469,6 +1469,8 @@ std::string ToJson(const knmon::KnMonCaptureResult& result)
     stream << "\"transportCapacity\":" << result.TransportCapacity << ",";
     stream << "\"transportRecordsProduced\":" << result.TransportRecordsProduced << ",";
     stream << "\"transportRecordsConsumed\":" << result.TransportRecordsConsumed << ",";
+    stream << "\"hookCleanupOutcome\":" << Q(result.HookCleanupOutcome) << ",";
+    stream << "\"targetExitCode\":" << result.TargetExitCode << ",";
     stream << "\"transportAbortedRecords\":" << result.TransportAbortedRecords << ",";
     stream << "\"transportDroppedEvents\":" << result.TransportDroppedEvents << ",";
     stream << "\"transportHighWaterMark\":" << result.TransportHighWaterMark << ",";
