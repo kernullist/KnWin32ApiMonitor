@@ -1,6 +1,7 @@
 #include <knmon/common/AttachConfig.h>
 #include <knmon/common/GeneratedApiMetadata.h>
 #include <knmon/common/Protocol.h>
+#include <knmon/common/RuntimeSupport.h>
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -1201,6 +1202,11 @@ bool Tier2ProfileEnabled(const char* profile)
 
 bool HookDefinitionEnabled(const HookDefinition& definition)
 {
+    if (definition.ImportModuleName == nullptr || definition.ApiName == nullptr ||
+        !knmon::RuntimeApiSupported(definition.ImportModuleName, definition.ApiName))
+    {
+        return false;
+    }
     const bool explicitApiSelection = !g_selectedApiSelection.empty();
 
     if (!DefinitionSelectedByApiFilter(definition))
@@ -11364,8 +11370,8 @@ extern "C" __declspec(dllexport) double KnMonInvokeGeneratedDoubleHookByIndex(
 
 constexpr std::size_t HookDefinitionCount = ManualHookDefinitionCount + GeneratedAgentHookDefinitionCount;
 #if defined(_WIN64)
-static_assert(GeneratedAgentHookRequiredApiCount >= 30000, "generated hook target must satisfy the 30000 API coverage goal");
-static_assert(GeneratedAgentHookCoveredApiCount >= GeneratedAgentHookRequiredApiCount, "generated hooks must cover every hookable API definition");
+static_assert(GeneratedAgentHookCoveredApiCount == GeneratedAgentHookRequiredApiCount, "runtime support must match compiled hooks");
+static_assert(GeneratedAgentHookDefinitionCount == 0, "unverified generic wrappers must not be installed");
 #endif
 
 std::array<HookDefinition, ManualHookDefinitionCount> BuildManualHookDefinitions()

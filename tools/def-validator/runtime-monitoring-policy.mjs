@@ -37,7 +37,7 @@ export function runtimeCoverageStatus(api)
 export function pointerLikeType(type)
 {
   const text = String(type ?? "").toLowerCase();
-  return text.includes("*") || text.includes("&") || /\b(lp|p)[a-z0-9_]+/.test(text);
+  return text.includes("*") || text.includes("&");
 }
 
 export function unsafeGeneratedGenericAbiType(type)
@@ -48,26 +48,46 @@ export function unsafeGeneratedGenericAbiType(type)
     return false;
   }
 
-  return /\b(float|double|single)\b/.test(text) ||
-    (text.startsWith("struct ") && !text.includes("*"));
+  // Unknown typedefs must not be inferred from spelling or pointer-like prefixes.
+  return !/^(void|bool|boolean|winbool|byte|char|short|int|long|word|dword|qword|uint|ulong|ushort|uint32_t|int32_t|uint64_t|int64_t|uintptr_t|intptr_t|size_t|ssize_t|ulong_ptr|long_ptr|dword_ptr|hresult|ntstatus)$/.test(text.trim());
 }
 
 export function generatedGenericAbiSafetyReasons(api, parameters = [], options = {})
 {
-  const reasons = [];
+  // A metadata declaration is not a compiler-checked wrapper contract. The old
+  // integer dispatcher cannot prove variadic, typedef, or aggregate semantics.
+  // Keep it unavailable until a typed generator and differential evidence exist.
+  const reasons = ["unverified_generated_abi"];
   const maxArguments = options.maxArguments ?? maxGeneratedGenericArguments;
   const checkRuntimePolicy = options.checkRuntimePolicy ?? true;
   const checkCallingConvention = options.checkCallingConvention ?? true;
-  const parameterCount = Number.isInteger(api?.parameterCount) ? api.parameterCount : parameters.length;
+  const parameterCount = api?.parameterCount ?? parameters.length;
 
   if (checkRuntimePolicy && !isRuntimeMonitorableDefinition(api))
   {
     reasons.push("not_runtime_monitorable");
   }
 
+  if (!Number.isInteger(parameterCount) || parameterCount < 0 || parameterCount !== parameters.length)
+  {
+    reasons.push("invalid_parameter_count");
+  }
+
   if (parameterCount > maxArguments)
   {
     reasons.push("too_many_arguments");
+  }
+
+  if (api?.isVariadic === true || api?.variadic === true ||
+    parameters.some((parameter) => parameter.type === "..." || parameter.name === "...") ||
+    /^(wsprintf[aw]|dbgprint|dbgprintex|sprintf|swprintf|printf)$/i.test(String(api?.name ?? "")))
+  {
+    reasons.push("variadic_prototype");
+  }
+
+  if (/opaque\s+16-slot/i.test(String(api?.minWindowsVersion ?? "")))
+  {
+    reasons.push("unresolved_prototype");
   }
 
   if (unsafeGeneratedGenericAbiType(api?.returnType))

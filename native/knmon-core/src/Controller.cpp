@@ -2,6 +2,7 @@
 
 #include <knmon/common/AttachConfig.h>
 #include <knmon/common/GeneratedApiMetadata.h>
+#include <knmon/common/RuntimeSupport.h>
 #include <knmon/collector/SharedTransportReader.h>
 
 #include <WinSock2.h>
@@ -7771,6 +7772,12 @@ std::vector<KnMonTargetProcess> Controller::EnumerateTargets(KnMonError* error) 
 KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& request) const
 {
     KnMonLaunchResult result;
+    std::string rejectedApi;
+    if (!ValidateRuntimeApiSelection(request.ApiSelection, rejectedApi))
+    {
+        SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "unsupported_api_selection", rejectedApi);
+        return result;
+    }
     const KnMonAgentArchitecture requestedArchitecture = RequestedArchitectureOrNative(request.Architecture);
     result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
     result.TargetPath = request.TargetPath;
@@ -8000,6 +8007,12 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request) 
 KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, const KnMonCaptureStreamCallbacks* streamCallbacks) const
 {
     KnMonCaptureResult result;
+    std::string rejectedApi;
+    if (!ValidateRuntimeApiSelection(request.ApiSelection, rejectedApi))
+    {
+        SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "unsupported_api_selection", rejectedApi);
+        return result;
+    }
     const KnMonAgentArchitecture requestedArchitecture = RequestedArchitectureOrNative(request.Architecture);
     result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
     result.SessionId = request.SessionId;
@@ -8769,6 +8782,12 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& request) const
 {
     KnMonCaptureResult result;
+    std::string rejectedApi;
+    if (!ValidateRuntimeApiSelection(request.ApiSelection, rejectedApi))
+    {
+        SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "unsupported_api_selection", rejectedApi);
+        return result;
+    }
     const KnMonAgentArchitecture requestedArchitecture = RequestedArchitectureOrNative(request.Architecture);
     result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
     result.TargetPath = request.TargetPath;
@@ -9241,6 +9260,12 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
 KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, const KnMonCaptureStreamCallbacks* streamCallbacks) const
 {
     KnMonCaptureResult result;
+    std::string rejectedApi;
+    if (!ValidateRuntimeApiSelection(request.ApiSelection, rejectedApi))
+    {
+        SetResultError(result, ERROR_NOT_SUPPORTED, "knmon-core", "unsupported_api_selection", rejectedApi);
+        return result;
+    }
     const KnMonAgentArchitecture requestedArchitecture = RequestedArchitectureOrNative(request.Architecture);
     result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
     result.SessionId = request.SessionId;

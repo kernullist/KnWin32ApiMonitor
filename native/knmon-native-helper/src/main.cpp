@@ -1,4 +1,5 @@
 #include <knmon/core/Controller.h>
+#include <knmon/common/RuntimeSupport.h>
 
 #include <Windows.h>
 #include <bcrypt.h>
@@ -9786,6 +9787,14 @@ int wmain(int argc, wchar_t** argv)
 
 int DispatchCommand(const std::vector<std::string>& args)
 {
+    std::string rejectedApi;
+    if (!knmon::ValidateRuntimeApiSelection(GetOption(args, "--api-selection"), rejectedApi))
+    {
+        std::cout << "{\"schemaVersion\":\"0.1.0\",\"success\":false,"
+            << "\"operation\":\"validate_api_selection\",\"win32ErrorCode\":" << ERROR_NOT_SUPPORTED
+            << ",\"message\":\"unsupported_api_selection\",\"rejectedApi\":" << Q(rejectedApi) << "}\n";
+        return 1;
+    }
     if (args.empty())
     {
         PrintUsage();
@@ -9795,6 +9804,24 @@ int DispatchCommand(const std::vector<std::string>& args)
     if (args[0] == "list-targets")
     {
         std::cout << ListTargetsJson() << "\n";
+        return 0;
+    }
+
+    if (args[0] == "runtime-support")
+    {
+        std::cout << "{\"schemaVersion\":1,\"success\":true,\"policy\":\"manual-typed-only\","
+            << "\"differentialVerifiedCount\":0,\"supportedKeys\":[";
+        bool first = true;
+        for (const std::string_view key : knmon::RuntimeSupportedApiKeys)
+        {
+            if (!first)
+            {
+                std::cout << ",";
+            }
+            std::cout << Q(std::string(key));
+            first = false;
+        }
+        std::cout << "]}\n";
         return 0;
     }
 

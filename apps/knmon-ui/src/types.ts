@@ -575,6 +575,8 @@ export interface SessionReplayResult {
 }
 
 export interface ApiNode {
+  runtimeSupported?: boolean;
+  runtimeBlockedReason?: string;
   id: string;
   label: string;
   checked: boolean;
@@ -591,6 +593,8 @@ export interface ApiNode {
 }
 
 export interface ApiCatalogEntry {
+  runtimeSupported: boolean;
+  runtimeBlockedReason: string;
   selectionKey: string;
   module: string;
   api: string;

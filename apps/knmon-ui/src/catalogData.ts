@@ -1,4 +1,5 @@
 import decoderTables from "../../../generated/definition-decoder-tables.json";
+import runtimeSupport from "../../../generated/runtime-support.json";
 import type { ApiCatalogEntry, ApiNode, CaptureProfile } from "./types";
 
 type DecoderApiRow = {
@@ -14,6 +15,8 @@ type DecoderApiRow = {
 type DecoderTables = {
   apis?: DecoderApiRow[];
 };
+
+const supportedApiKeys = new Set(runtimeSupport.supportedKeys);
 
 function normalizeText(value: string | undefined, fallback: string): string {
   const text = (value ?? "").trim();
@@ -55,7 +58,10 @@ function createApiCatalogEntries(): ApiCatalogEntry[] {
         category: normalizeText(row.category, "uncategorized"),
         risk: normalizeText(row.risk, "unknown"),
         hookPolicy: normalizeText(row.hookPolicy, "iat"),
-        coverageStatus: normalizeText(row.coverageStatus, "available")
+        coverageStatus: normalizeText(row.coverageStatus, "available"),
+        runtimeSupported: supportedApiKeys.has(createSelectionKey(module, api).toLowerCase()),
+        runtimeBlockedReason: supportedApiKeys.has(createSelectionKey(module, api).toLowerCase())
+          ? "" : runtimeSupport.defaultBlockedReason
       };
     })
     .filter((entry): entry is ApiCatalogEntry => entry !== null);
@@ -109,6 +115,8 @@ function buildApiTree(entries: ApiCatalogEntry[]): ApiNode[] {
               risk: entry.risk,
               hookPolicy: entry.hookPolicy,
               coverageStatus: entry.coverageStatus,
+              runtimeSupported: entry.runtimeSupported,
+              runtimeBlockedReason: entry.runtimeBlockedReason,
               count: 1
             }));
 
@@ -135,19 +143,45 @@ function buildApiTree(entries: ApiCatalogEntry[]): ApiNode[] {
 }
 
 export const apiTree: ApiNode[] = buildApiTree(apiCatalogEntries);
+const runtimeApiEntries = apiCatalogEntries.filter((entry) => entry.runtimeSupported);
+
+export function compactRuntimeApiSelection(selectedKeys: ReadonlySet<string>): string[]
+{
+  const modules = new Map<string, ApiCatalogEntry[]>();
+  for (const entry of runtimeApiEntries)
+  {
+    const entries = modules.get(entry.module) ?? [];
+    entries.push(entry);
+    modules.set(entry.module, entries);
+  }
+  const tokens: string[] = [];
+  for (const [module, entries] of modules)
+  {
+    const selected = entries.filter((entry) => selectedKeys.has(entry.selectionKey));
+    if (selected.length === entries.length)
+    {
+      tokens.push(`${module}!*`);
+    }
+    else
+    {
+      tokens.push(...selected.map((entry) => entry.selectionKey));
+    }
+  }
+  return tokens.sort();
+}
 
 export const captureProfiles: CaptureProfile[] = [
   {
     id: "all-current",
     name: "All current hooks",
-    description: "Enable every API currently represented in the generated decoder catalog.",
-    enabledApis: apiCatalogEntries.map((entry) => entry.selectionKey)
+    description: "Enable the compiled manual hook subset. Differential verification is tracked separately.",
+    enabledApis: runtimeApiEntries.map((entry) => entry.selectionKey)
   },
   {
     id: "file-io",
     name: "File I/O",
     description: "Create/open/read/write/close and native file open coverage.",
-    enabledApis: apiCatalogEntries
+    enabledApis: runtimeApiEntries
       .filter((entry) => entry.family === "file-io")
       .map((entry) => entry.selectionKey)
   },
@@ -155,7 +189,7 @@ export const captureProfiles: CaptureProfile[] = [
     id: "process-memory",
     name: "Process and memory",
     description: "Process, thread, module, memory, and handle inspection boundaries.",
-    enabledApis: apiCatalogEntries
+    enabledApis: runtimeApiEntries
       .filter((entry) => /process|thread|memory|module|handle/i.test(`${entry.family}/${entry.category}`))
       .map((entry) => entry.selectionKey)
   },
@@ -163,7 +197,7 @@ export const captureProfiles: CaptureProfile[] = [
     id: "network-security",
     name: "Network and security",
     description: "Winsock, WinHTTP, WinINet, RPC, crypto, certificate, token, and registry APIs.",
-    enabledApis: apiCatalogEntries
+    enabledApis: runtimeApiEntries
       .filter((entry) => /network|rpc|crypto|certificate|security|registry|service/i.test(`${entry.family}/${entry.category}`))
       .map((entry) => entry.selectionKey)
   }

@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import {
   apiInventoryReportToMarkdown,
   loadApiInventory
@@ -46,6 +47,7 @@ if (result.errors.length > 0) {
 }
 
 const report = buildCoverageReport(result.apiDocuments, result.metadataIndex);
+const runtimeSupport = JSON.parse(fs.readFileSync(new URL("../../generated/runtime-support.json", import.meta.url), "utf8"));
 const inventory = loadApiInventory();
 const tier1HookPlan = loadTier1HookPlan();
 const tier2HookPlan = loadTier2HookPlan();
@@ -54,9 +56,9 @@ const dllBatchPromotionPlan = loadDllBatchPromotionPlan();
 const manualDecoderBatchPlan = loadManualDecoderBatchPlan();
 
 if (args.has("--check")) {
-  const requiredRuntimeHookableApis = 30000;
-  if ((report.summary.runtimeHookableApis ?? 0) < requiredRuntimeHookableApis) {
-    console.error(`Definition coverage report has only ${report.summary.runtimeHookableApis ?? 0} runtime-hookable APIs; expected at least ${requiredRuntimeHookableApis}.`);
+  if (runtimeSupport.catalogCount !== report.summary.totalApis ||
+      runtimeSupport.supportedKeys.length === 0 || runtimeSupport.generatedWrappers !== 0) {
+    console.error("Runtime support policy and definition catalog disagree.");
     process.exit(1);
   }
 
@@ -144,6 +146,7 @@ if (args.has("--check")) {
 } else if (args.has("--json")) {
   process.stdout.write(stableStringify({
     definitions: report,
+    runtimeSupport,
     microsoftSourceInventory: inventory,
     tier1HookPlan,
     tier2HookPlan,
@@ -152,6 +155,7 @@ if (args.has("--check")) {
     manualDecoderBatchPlan
   }));
 } else {
+  process.stdout.write(`Runtime compiled subset: x86=${runtimeSupport.architectures.x86.length}, x64=${runtimeSupport.architectures.x64.length}; differential_verified=${runtimeSupport.differentialVerifiedCount}\n\n`);
   process.stdout.write(coverageReportToMarkdown(report));
   if (inventory === null) {
     process.stdout.write("\n# Microsoft Source API Inventory\n\nNot generated. Run `npm run defs:inventory`.\n");

@@ -1415,7 +1415,7 @@ export function coverageReportToMarkdown(report) {
     "# Definition Coverage Report",
     "",
     `Total APIs: ${report.summary.totalApis}`,
-    `Runtime hookable APIs: ${report.summary.runtimeHookableApis}`,
+    `Declared hook candidates (not runtime support): ${report.summary.runtimeHookableApis}`,
     "",
     "## Hook Policy",
     ""

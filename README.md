@@ -32,22 +32,24 @@ The current definition and hook pipeline reports:
 
 - Microsoft-source inventory candidates: `30,182`
 - Defined APIs: `30,112`
-- Runtime-monitorable APIs: `30,092`
-- Definition-only APIs awaiting payload/ABI review: `20`
+- Compiled manual hooks available on x86/x64: `314`
+- Generic generated wrappers enabled: `0` (unverified ABI contracts are blocked)
+- Differential-verified APIs: `0`; existing smoke labels are separate evidence
 - Data exports included as monitor targets: `0`
 - Parameter metadata rows: `226,754`
 - Parameters missing decode metadata: `0`
 - API families: `61`
 - API categories/groups: `475`
-- Generated hook coverage: `required=30092`, `manual=314`,
-  `generated=29778`, `covered=30092`
-- Dynamic resolver substitution coverage on x64: `30,092` name-looked-up
-  APIs through `GetProcAddress` and `LdrGetProcedureAddress`
+- Runtime support source: `generated/runtime-support.json`, shared by the
+  generator, native selection policy, Agent, and UI
+- Dynamic resolver substitution is restricted to the same compiled subset
 
-Runtime-monitorable means the API has a generated or manual hook definition
-that can be selected by API filter or enabled through the relevant runtime
-profile. Payload-sensitive APIs and APIs requiring manual decoder work remain
-definition-only until separately reviewed.
+Catalog definitions do not imply safe runtime support. Opaque prototypes,
+variadic calls, aggregates, and unresolved typedefs cannot use the old integer
+dispatcher. Explicit unsupported selections fail before injection; module
+selectors select only the compiled subset. ARM64 and ARM64EC are unsupported.
+Manual hook availability does not certify semantic equivalence. Promotion needs
+compiler-checked typed contracts and uninstrumented/instrumented comparisons.
 
 Dynamic resolver substitution means a monitored `GetProcAddress` or
 `LdrGetProcedureAddress` call can return a KN monitor wrapper instead of the
@@ -222,7 +224,7 @@ build\native\Debug\knmon-native-helper.exe replay-session --session captures\lat
 ## Validation
 
 Validate API definitions, generated decoder tables, inventory, plans, importer
-fixtures, and the 30,092 runtime-hookable API gate:
+fixtures, and the runtime support policy gate:
 
 ```powershell
 npm run defs:validate
@@ -282,7 +284,7 @@ npm run agent-hooks:check
 Expected current hook check:
 
 ```text
-Generated agent hook definitions. required=30092 manual=314 generated=29778 covered=30092 chunks=59
+Generated agent hook definitions. required=314 manual=314 generated=0 covered=314 chunks=0
 ```
 
 ## Release Package

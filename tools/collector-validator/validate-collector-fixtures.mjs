@@ -5,7 +5,10 @@ import { execFileSync } from "node:child_process";
 
 const repoRoot = process.cwd();
 const fixturePath = path.join(repoRoot, "tests", "fixtures", "collector", "drop-newest-capacity4-events10.json");
-const helperPath = path.join(repoRoot, "build", "native", "Debug", "knmon-collector.exe");
+const helperArgument = process.argv.indexOf("--helper");
+const helperPath = helperArgument >= 0
+  ? path.resolve(process.argv[helperArgument + 1])
+  : path.join(repoRoot, "build", "native", "Debug", "knmon-collector.exe");
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));

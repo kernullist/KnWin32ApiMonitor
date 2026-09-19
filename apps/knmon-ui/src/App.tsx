@@ -52,7 +52,7 @@ import {
   stopNativeSession,
   superviseProcessTree
 } from "./backend";
-import { apiCatalogEntries, apiTree, captureProfiles } from "./catalogData";
+import { apiCatalogEntries, apiTree, captureProfiles, compactRuntimeApiSelection } from "./catalogData";
 import { downloadJsonl } from "./session";
 import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, NativeOperation, NativeSession, NativeSessionCatalog, NativeSessionCatalogRow, NativeTraceBatch, NativeTraceIndex, NativeTraceIndexEvent, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
 import {
@@ -181,7 +181,7 @@ function collectApiLeafKeys(nodes: ApiNode[]): string[] {
     if (node.children && node.children.length > 0) {
       keys.push(...collectApiLeafKeys(node.children));
     }
-    else if (node.selectionKey) {
+    else if (node.selectionKey && node.runtimeSupported === true) {
       keys.push(node.selectionKey);
     }
   }
@@ -282,11 +282,11 @@ function renderApiTree(
               <ApiTreeCheckbox
                 state={checkState}
                 label={`Monitor ${node.label}`}
-                disabled={disabled}
+                disabled={disabled || cachedApiLeafKeys(node).length === 0}
                 onChange={() => onToggleNode(node)}
               />
               <FileText size={14} className={checkState !== "unchecked" ? "tree-icon enabled" : "tree-icon"} />
-              <span title={node.selectionKey ?? node.label}>{node.label}</span>
+              <span title={node.runtimeBlockedReason || node.selectionKey || node.label}>{node.label}</span>
               <small>{node.children ? `${selectedCount}/${totalCount}` : node.module}</small>
             </div>
             {node.children && expanded ? renderApiTree(
@@ -1189,7 +1189,7 @@ function App() {
 
     return modules.size;
   }, [selectedApiKeys]);
-  const apiSelectionRequest = selectedApiList.length === apiLeafKeys.length ? [] : selectedApiList;
+  const apiSelectionRequest = useMemo(() => compactRuntimeApiSelection(selectedApiKeys), [selectedApiKeys]);
   const apiSelectionSummary = selectedApiList.length === apiLeafKeys.length
     ? "all current hooks"
     : `${selectedApiList.length}/${apiLeafKeys.length} APIs`;

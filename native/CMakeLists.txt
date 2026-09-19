@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.24)
 
 project(knmon_native LANGUAGES CXX)
 
+include(CTest)
+
 if(WIN32)
     enable_language(RC)
 endif()
@@ -51,6 +53,12 @@ add_library(knmon-common INTERFACE)
 target_include_directories(knmon-common INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/knmon-common/include
 )
+
+if(BUILD_TESTING)
+    add_executable(knmon-runtime-support-test tests/RuntimeSupportTest.cpp)
+    target_link_libraries(knmon-runtime-support-test PRIVATE knmon-common knmon-core)
+    add_test(NAME runtime-support COMMAND knmon-runtime-support-test)
+endif()
 
 add_library(knmon-collector-core STATIC
     knmon-collector/src/Collector.cpp
