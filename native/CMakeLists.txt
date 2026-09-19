@@ -61,7 +61,24 @@ if(MSVC)
     target_compile_options(knmon-transport-support PRIVATE /EHsc)
 endif()
 
+file(SHA256 "${CMAKE_CURRENT_SOURCE_DIR}/third-party/nlohmann/json.hpp" KNMON_JSON_SHA256)
+if(NOT KNMON_JSON_SHA256 STREQUAL "aaf127c04cb31c406e5b04a63f1ae89369fccde6d8fa7cdda1ed4f32dfc5de63")
+    message(FATAL_ERROR "Pinned JSON dependency hash mismatch.")
+endif()
+file(SHA256 "${CMAKE_CURRENT_SOURCE_DIR}/third-party/nlohmann/LICENSE.MIT" KNMON_JSON_LICENSE_SHA256)
+if(NOT KNMON_JSON_LICENSE_SHA256 STREQUAL "46a65cffd1ea955132d95a8dd921640714a8d6b537d2e4e482d31145ae95b603")
+    message(FATAL_ERROR "Pinned JSON license hash mismatch.")
+endif()
+add_library(knmon-json STATIC knmon-common/src/BoundedJson.cpp)
+target_link_libraries(knmon-json PUBLIC knmon-common)
+target_include_directories(knmon-json SYSTEM PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third-party")
+
 if(BUILD_TESTING)
+    add_executable(knmon-bounded-json-test tests/BoundedJsonTest.cpp)
+    target_link_libraries(knmon-bounded-json-test PRIVATE knmon-json)
+    target_include_directories(knmon-bounded-json-test SYSTEM PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third-party")
+    add_test(NAME bounded-json COMMAND knmon-bounded-json-test)
+    set_tests_properties(bounded-json PROPERTIES TIMEOUT 15)
     add_executable(knmon-runtime-support-test tests/RuntimeSupportTest.cpp)
     target_link_libraries(knmon-runtime-support-test PRIVATE knmon-common knmon-core)
     add_test(NAME runtime-support COMMAND knmon-runtime-support-test)
@@ -114,7 +131,7 @@ target_include_directories(knmon-core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/knmon-core/include
 )
 target_link_libraries(knmon-core
-    PUBLIC knmon-common
+    PUBLIC knmon-common knmon-json
     PRIVATE knmon-collector-core
 )
 target_compile_definitions(knmon-core PRIVATE

@@ -1,3 +1,4 @@
+#include <knmon/common/BoundedJson.h>
 #include <knmon/core/Controller.h>
 
 #include <knmon/common/AttachConfig.h>
@@ -3010,8 +3011,7 @@ bool ValidateHandshakeEvidence(
     return valid;
 }
 
-std::uint64_t ExtractJsonUInt64(const std::string& payload, const std::string& key);
-KnMonAgentMessage BuildAgentMessage(const KnMonCaptureResult& result, const std::string& rawPayload);
+KnMonAgentMessage BuildAgentMessage(const KnMonCaptureResult& result, const JsonDocument& rawPayload);
 
 std::string FileNameFromPath(const std::string& path)
 {
@@ -6876,8 +6876,7 @@ void RecordHookOverhead(KnMonCaptureResult& result, std::uint64_t overheadUs)
     }
 }
 
-std::string ExtractJsonString(const std::string& payload, const std::string& key);
-bool PayloadMatchesApiSelection(const std::string& payload, const std::string& selection);
+bool PayloadMatchesApiSelection(const JsonDocument& payload, const std::string& selection);
 
 // Per-event api_call audit entries duplicate the full payload that is already
 // retained in CapturedEvents; cap the duplication so busy targets cannot grow
@@ -6920,7 +6919,12 @@ void DrainSharedTransport(
             return true;
         }
 
-        const std::string payload = BuildTransportApiPayload(result, record);
+        const std::string rawPayload = BuildTransportApiPayload(result, record);
+        if (rawPayload.empty())
+        {
+            return true;
+        }
+        const JsonDocument payload(rawPayload);
         if (!payload.empty() && PayloadMatchesApiSelection(payload, result.ApiSelection))
         {
             RecordHookOverhead(result, record.HookOverheadUs);
@@ -7165,7 +7169,7 @@ bool WaitForPipeConnection(HANDLE pipeHandle, DWORD timeoutMs, DWORD* errorCode)
     return connected;
 }
 
-bool ReadPipeMessage(HANDLE pipeHandle, DWORD timeoutMs, std::string* payload, DWORD* errorCode)
+bool ReadPipeMessage(HANDLE pipeHandle, DWORD timeoutMs, JsonDocument* payload, DWORD* errorCode)
 {
     bool received = false;
     OVERLAPPED overlapped = {};
@@ -7179,7 +7183,7 @@ bool ReadPipeMessage(HANDLE pipeHandle, DWORD timeoutMs, std::string* payload, D
     {
         if (payload != nullptr)
         {
-            payload->clear();
+            *payload = JsonDocument();
         }
 
         if (overlapped.hEvent == nullptr)
@@ -7296,7 +7300,18 @@ bool ReadPipeMessage(HANDLE pipeHandle, DWORD timeoutMs, std::string* payload, D
 
         if (payload != nullptr)
         {
-            *payload = std::move(assembled);
+            try
+            {
+                *payload = ParseAgentJson(assembled);
+            }
+            catch (const std::exception&)
+            {
+                if (errorCode != nullptr)
+                {
+                    *errorCode = ERROR_INVALID_DATA;
+                }
+                break;
+            }
         }
         received = true;
     }
@@ -7310,185 +7325,52 @@ bool ReadPipeMessage(HANDLE pipeHandle, DWORD timeoutMs, std::string* payload, D
     return received;
 }
 
-std::string ExtractJsonString(const std::string& payload, const std::string& key);
-bool ExtractJsonBool(const std::string& payload, const std::string& key);
-std::uint64_t ExtractJsonUInt64(const std::string& payload, const std::string& key);
 
-KnMonAgentHandshake BuildHandshake(const KnMonLaunchResult& result, const std::string& rawPayload)
+KnMonAgentHandshake BuildHandshake(const KnMonLaunchResult& result, const JsonDocument& rawPayload)
 {
     KnMonAgentHandshake handshake;
     handshake.Received = true;
     handshake.SchemaVersion = ExtractJsonString(rawPayload, "schemaVersion");
-    if (handshake.SchemaVersion.empty())
-    {
-        handshake.SchemaVersion = "0.1.0";
-    }
 
     handshake.OperationId = ExtractJsonString(rawPayload, "operationId");
-    if (handshake.OperationId.empty())
-    {
-        handshake.OperationId = result.OperationId;
-    }
 
-    handshake.ProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(rawPayload, "pid"));
-    if (handshake.ProcessId == 0)
-    {
-        handshake.ProcessId = result.TargetProcessId;
-    }
+    handshake.ProcessId = ExtractJsonUInt32(rawPayload, "pid");
 
-    handshake.ThreadId = static_cast<std::uint32_t>(ExtractJsonUInt64(rawPayload, "tid"));
-    if (handshake.ThreadId == 0)
-    {
-        handshake.ThreadId = result.TargetThreadId;
-    }
+    handshake.ThreadId = ExtractJsonUInt32(rawPayload, "tid");
 
     handshake.Architecture = ExtractJsonString(rawPayload, "architecture");
-    if (handshake.Architecture.empty())
-    {
-        handshake.Architecture = result.Architecture;
-    }
 
     handshake.AgentVersion = ExtractJsonString(rawPayload, "agentVersion");
-    if (handshake.AgentVersion.empty())
-    {
-        handshake.AgentVersion = "0.1.0";
-    }
 
     handshake.Message = "Agent HELLO received.";
-    handshake.RawPayload = rawPayload;
+    handshake.RawPayload = rawPayload.Text();
     return handshake;
 }
 
-KnMonAgentHandshake BuildHandshake(const KnMonCaptureResult& result, const std::string& rawPayload)
+KnMonAgentHandshake BuildHandshake(const KnMonCaptureResult& result, const JsonDocument& rawPayload)
 {
     KnMonAgentHandshake handshake;
     handshake.Received = true;
     handshake.SchemaVersion = ExtractJsonString(rawPayload, "schemaVersion");
-    if (handshake.SchemaVersion.empty())
-    {
-        handshake.SchemaVersion = "0.1.0";
-    }
 
     handshake.OperationId = ExtractJsonString(rawPayload, "operationId");
-    if (handshake.OperationId.empty())
-    {
-        handshake.OperationId = result.OperationId;
-    }
 
-    handshake.ProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(rawPayload, "pid"));
-    if (handshake.ProcessId == 0)
-    {
-        handshake.ProcessId = result.TargetProcessId;
-    }
+    handshake.ProcessId = ExtractJsonUInt32(rawPayload, "pid");
 
-    handshake.ThreadId = static_cast<std::uint32_t>(ExtractJsonUInt64(rawPayload, "tid"));
-    if (handshake.ThreadId == 0)
-    {
-        handshake.ThreadId = result.TargetThreadId;
-    }
+    handshake.ThreadId = ExtractJsonUInt32(rawPayload, "tid");
 
     handshake.Architecture = ExtractJsonString(rawPayload, "architecture");
-    if (handshake.Architecture.empty())
-    {
-        handshake.Architecture = result.Architecture;
-    }
 
     handshake.AgentVersion = ExtractJsonString(rawPayload, "agentVersion");
-    if (handshake.AgentVersion.empty())
-    {
-        handshake.AgentVersion = "0.1.0";
-    }
 
     handshake.Message = "Agent HELLO received.";
-    handshake.RawPayload = rawPayload;
+    handshake.RawPayload = rawPayload.Text();
     return handshake;
 }
 
-bool PayloadContains(const std::string& payload, const std::string& marker)
-{
-    return payload.find(marker) != std::string::npos;
-}
 
-std::string ExtractJsonString(const std::string& payload, const std::string& key)
-{
-    std::string result;
 
-    do
-    {
-        const std::string quotedKey = "\"" + key + "\"";
-        std::size_t position = payload.find(quotedKey);
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        position = payload.find(':', position + quotedKey.size());
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        position = payload.find('"', position + 1);
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        ++position;
-        std::ostringstream stream;
-        bool escaped = false;
-        for (; position < payload.size(); ++position)
-        {
-            const char ch = payload[position];
-            if (escaped)
-            {
-                switch (ch)
-                {
-                case '"':
-                    stream << '"';
-                    break;
-                case '\\':
-                    stream << '\\';
-                    break;
-                case 'n':
-                    stream << '\n';
-                    break;
-                case 'r':
-                    stream << '\r';
-                    break;
-                case 't':
-                    stream << '\t';
-                    break;
-                default:
-                    stream << ch;
-                    break;
-                }
-                escaped = false;
-                continue;
-            }
-
-            if (ch == '\\')
-            {
-                escaped = true;
-                continue;
-            }
-
-            if (ch == '"')
-            {
-                break;
-            }
-
-            stream << ch;
-        }
-
-        result = stream.str();
-    }
-    while (false);
-
-    return result;
-}
-
-bool PayloadMatchesApiSelection(const std::string& payload, const std::string& selection)
+bool PayloadMatchesApiSelection(const JsonDocument& payload, const std::string& selection)
 {
     bool matches = true;
 
@@ -7508,105 +7390,9 @@ bool PayloadMatchesApiSelection(const std::string& payload, const std::string& s
     return matches;
 }
 
-bool ExtractJsonBool(const std::string& payload, const std::string& key)
-{
-    bool result = false;
 
-    do
-    {
-        const std::string quotedKey = "\"" + key + "\"";
-        std::size_t position = payload.find(quotedKey);
-        if (position == std::string::npos)
-        {
-            break;
-        }
 
-        std::size_t delimiter = std::string::npos;
-        while (position != std::string::npos)
-        {
-            std::size_t scan = position + quotedKey.size();
-            while (scan < payload.size() && payload[scan] == ' ')
-            {
-                ++scan;
-            }
-
-            if (scan < payload.size() && payload[scan] == ':')
-            {
-                delimiter = scan;
-                break;
-            }
-
-            position = payload.find(quotedKey, position + quotedKey.size());
-        }
-
-        if (delimiter == std::string::npos)
-        {
-            break;
-        }
-
-        position = delimiter + 1;
-        while (position < payload.size() && payload[position] == ' ')
-        {
-            ++position;
-        }
-
-        result = payload.compare(position, 4, "true") == 0;
-    }
-    while (false);
-
-    return result;
-}
-
-std::uint64_t ExtractJsonUInt64(const std::string& payload, const std::string& key)
-{
-    std::uint64_t result = 0;
-
-    do
-    {
-        const std::string quotedKey = "\"" + key + "\"";
-        std::size_t position = payload.find(quotedKey);
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        position = payload.find(':', position + quotedKey.size());
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        ++position;
-        while (position < payload.size() && payload[position] == ' ')
-        {
-            ++position;
-        }
-
-        std::uint64_t value = 0;
-        bool sawDigit = false;
-        for (; position < payload.size(); ++position)
-        {
-            const char ch = payload[position];
-            if (ch < '0' || ch > '9')
-            {
-                break;
-            }
-
-            sawDigit = true;
-            value = (value * 10) + static_cast<std::uint64_t>(ch - '0');
-        }
-
-        if (sawDigit)
-        {
-            result = value;
-        }
-    }
-    while (false);
-
-    return result;
-}
-
-KnMonAgentMessage BuildAgentMessage(const KnMonCaptureResult& result, const std::string& rawPayload)
+KnMonAgentMessage BuildAgentMessage(const KnMonCaptureResult& result, const JsonDocument& rawPayload)
 {
     KnMonAgentMessage message;
     message.SchemaVersion = ExtractJsonString(rawPayload, "schemaVersion");
@@ -7622,11 +7408,11 @@ KnMonAgentMessage BuildAgentMessage(const KnMonCaptureResult& result, const std:
         message.OperationId = result.OperationId;
     }
 
-    message.ProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(rawPayload, "pid"));
-    message.ThreadId = static_cast<std::uint32_t>(ExtractJsonUInt64(rawPayload, "tid"));
+    message.ProcessId = ExtractJsonUInt32(rawPayload, "pid");
+    message.ThreadId = ExtractJsonUInt32(rawPayload, "tid");
     message.TimestampUtc = ExtractJsonString(rawPayload, "timestampUtc");
     message.Sequence = ExtractJsonUInt64(rawPayload, "sequence");
-    message.RawPayload = rawPayload;
+    message.RawPayload = rawPayload.Text();
     return message;
 }
 
@@ -7640,7 +7426,7 @@ bool IsResolverPointerMessageType(const std::string& messageType)
 
 std::string ResolverPointerAuditMessage(const KnMonAgentMessage& message)
 {
-    const std::string& payload = message.RawPayload;
+    const JsonDocument payload(message.RawPayload);
     const std::string resolverApi = ExtractJsonString(payload, "resolverApi");
     const std::string classification = ExtractJsonString(payload, "classification");
     const std::string reason = ExtractJsonString(payload, "reason");
@@ -7971,14 +7757,19 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
             break;
         }
 
-        std::string payload;
+        JsonDocument payload;
         if (!ReadPipeMessage(pipeHandle, request.TimeoutMs, &payload, &pipeError))
         {
-            SetResultError(result, pipeError, "win32", "handshake_timeout", "Agent handshake payload timed out or failed.");
+            SetResultError(result, pipeError, "win32", pipeError == ERROR_INVALID_DATA ? "agent_protocol_invalid" : "handshake_timeout", "Agent handshake payload timed out or failed.");
             AddAudit(result, "handshake_timeout", "agent_handshake_read", "No agent HELLO payload was received before timeout.", pipeError, "win32");
             break;
         }
 
+        if (payload.String("messageType") != "agent_hello")
+        {
+            SetResultError(result, ERROR_INVALID_DATA, "knmon-core", "agent_protocol_invalid", "The first message must be agent_hello.");
+            break;
+        }
         result.Handshake = BuildHandshake(result, payload);
         if (!ValidateHandshakeEvidence(result, requestedArchitecture))
         {
@@ -7990,7 +7781,7 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
         result.Subsystem = "knmon-core";
         result.Operation = "launch_sample_early_bird";
         result.Message = "Controlled early-bird agent load completed and HELLO was received.";
-        AddAudit(result, "agent_hello_received", "agent_handshake_read", payload);
+        AddAudit(result, "agent_hello_received", "agent_handshake_read", payload.Text());
     }
     while (false);
 
@@ -8101,29 +7892,29 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
     CancellationContext cancellationContext;
     std::uint64_t streamBatchSequence = 0;
 
-    auto consumePayload = [&](const std::string& payload)
+    auto consumePayload = [&](const JsonDocument& payload)
     {
         KnMonAgentMessage message = BuildAgentMessage(result, payload);
         result.AgentMessages.push_back(message);
 
-        if (message.MessageType == "agent_hello" || PayloadContains(payload, "\"eventType\":\"agent_hello_received\""))
+        if (message.MessageType == "agent_hello")
         {
             result.Handshake = BuildHandshake(result, payload);
-            AddAudit(result, "agent_hello_received", "agent_event_read", payload);
+            AddAudit(result, "agent_hello_received", "agent_event_read", payload.Text());
         }
         else if (message.MessageType == "hook_installed")
         {
             ++hookInstalledCount;
-            AddAudit(result, "hook_installed", "agent_event_read", payload);
+            AddAudit(result, "hook_installed", "agent_event_read", payload.Text());
         }
         else if (message.MessageType == "hook_install_failed")
         {
             hookInstallFailed = true;
-            AddAudit(result, "hook_install_failed", "agent_event_read", payload, ERROR_HOOK_NOT_INSTALLED);
+            AddAudit(result, "hook_install_failed", "agent_event_read", payload.Text(), ERROR_HOOK_NOT_INSTALLED);
         }
         else if (message.MessageType == "hook_deferred")
         {
-            AddAudit(result, "hook_deferred", "agent_event_read", payload);
+            AddAudit(result, "hook_deferred", "agent_event_read", payload.Text());
         }
         else if (message.MessageType == "api_call")
         {
@@ -8140,7 +7931,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         else if (message.MessageType == "dropped_events")
         {
             result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
-            AddAudit(result, "dropped_events_reported", "agent_event_read", payload);
+            AddAudit(result, "dropped_events_reported", "agent_event_read", payload.Text());
         }
         else if (message.MessageType == "agent_shutdown")
         {
@@ -8150,22 +7941,22 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             shutdownRestoredHooks = ExtractJsonUInt64(payload, "restoredHooks");
             shutdownFailedHooks = ExtractJsonUInt64(payload, "failedHooks");
             result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
-            result.SessionShutdownEvidence = payload;
+            result.SessionShutdownEvidence = payload.Text();
             result.HookCleanupOutcome = shutdownReason == "process_detach" ? "not_observed" :
                 shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0 ? "restored_by_agent" : "restore_failed";
-            AddAudit(result, "agent_shutdown", "agent_event_read", payload);
+            AddAudit(result, "agent_shutdown", "agent_event_read", payload.Text());
             if (shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0)
             {
-                AddAudit(result, "agent_self_disabled", "agent_shutdown", payload);
+                AddAudit(result, "agent_self_disabled", "agent_shutdown", payload.Text());
             }
             else
             {
-                AddAudit(result, "launch_cleanup_incomplete", "agent_shutdown", payload, ERROR_HOOK_NOT_INSTALLED);
+                AddAudit(result, "launch_cleanup_incomplete", "agent_shutdown", payload.Text(), ERROR_HOOK_NOT_INSTALLED);
             }
         }
         else
         {
-            AddAudit(result, "agent_message_received", "agent_event_read", payload);
+            AddAudit(result, "agent_message_received", "agent_event_read", payload.Text());
         }
     };
 
@@ -8462,7 +8253,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
                 }
             }
 
-            std::string payload;
+            JsonDocument payload;
             pipeError = 0;
             if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError))
             {
@@ -8480,7 +8271,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
             if (pipeError != WAIT_TIMEOUT)
             {
-                SetResultError(result, pipeError, "win32", "agent_event_read", "Launch agent event stream read failed.");
+                SetResultError(result, pipeError, "win32", pipeError == ERROR_INVALID_DATA ? "agent_protocol_invalid" : "agent_event_read", "Launch agent event stream read failed.");
                 fatalError = true;
                 break;
             }
@@ -8617,7 +8408,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             {
                 DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
 
-                std::string payload;
+                JsonDocument payload;
                 pipeError = 0;
                 if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError))
                 {
@@ -8635,7 +8426,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
                 if (pipeError != WAIT_TIMEOUT)
                 {
-                    SetResultError(result, pipeError, "win32", "agent_event_read", "Launch agent shutdown read failed.");
+                    SetResultError(result, pipeError, "win32", pipeError == ERROR_INVALID_DATA ? "agent_protocol_invalid" : "agent_event_read", "Launch agent shutdown read failed.");
                     fatalError = true;
                     break;
                 }
@@ -9032,7 +8823,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
 
         while (!transport.ReaderState.Corrupted && !captureEnded)
         {
-            std::string payload;
+            JsonDocument payload;
             pipeError = 0;
             DrainSharedTransport(result, transport);
 
@@ -9041,24 +8832,24 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                 KnMonAgentMessage message = BuildAgentMessage(result, payload);
                 result.AgentMessages.push_back(message);
 
-                if (message.MessageType == "agent_hello" || PayloadContains(payload, "\"eventType\":\"agent_hello_received\""))
+                if (message.MessageType == "agent_hello")
                 {
                     result.Handshake = BuildHandshake(result, payload);
-                    AddAudit(result, "agent_hello_received", "agent_event_read", payload);
+                    AddAudit(result, "agent_hello_received", "agent_event_read", payload.Text());
                 }
                 else if (message.MessageType == "hook_installed")
                 {
                     ++hookInstalledCount;
-                    AddAudit(result, "hook_installed", "agent_event_read", payload);
+                    AddAudit(result, "hook_installed", "agent_event_read", payload.Text());
                 }
                 else if (message.MessageType == "hook_install_failed")
                 {
                     hookInstallFailed = true;
-                    AddAudit(result, "hook_install_failed", "agent_event_read", payload, ERROR_HOOK_NOT_INSTALLED);
+                    AddAudit(result, "hook_install_failed", "agent_event_read", payload.Text(), ERROR_HOOK_NOT_INSTALLED);
                 }
                 else if (message.MessageType == "hook_deferred")
                 {
-                    AddAudit(result, "hook_deferred", "agent_event_read", payload);
+                    AddAudit(result, "hook_deferred", "agent_event_read", payload.Text());
                 }
                 else if (message.MessageType == "api_call")
                 {
@@ -9075,7 +8866,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                 else if (message.MessageType == "dropped_events")
                 {
                     result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
-                    AddAudit(result, "dropped_events_reported", "agent_event_read", payload);
+                    AddAudit(result, "dropped_events_reported", "agent_event_read", payload.Text());
                 }
                 else if (message.MessageType == "agent_shutdown")
                 {
@@ -9085,23 +8876,23 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                     shutdownRestoredHooks = ExtractJsonUInt64(payload, "restoredHooks");
                     shutdownFailedHooks = ExtractJsonUInt64(payload, "failedHooks");
                     result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
-                    result.SessionShutdownEvidence = payload;
+                    result.SessionShutdownEvidence = payload.Text();
                     result.HookCleanupOutcome = shutdownReason == "process_detach" ? "not_observed" :
                         shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0 ? "restored_by_agent" : "restore_failed";
-                    AddAudit(result, "agent_shutdown", "agent_event_read", payload);
+                    AddAudit(result, "agent_shutdown", "agent_event_read", payload.Text());
                     if (shutdownReason == "process_detach" && shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0)
                     {
                         AddAudit(result, "legacy_detach_unverified", "agent_shutdown", "Legacy process-detach message does not prove IAT restoration.");
                     }
                     else
                     {
-                        AddAudit(result, "agent_self_disabled", "agent_shutdown", payload, shutdownFailedHooks == 0 ? 0 : ERROR_HOOK_NOT_INSTALLED);
+                        AddAudit(result, "agent_self_disabled", "agent_shutdown", payload.Text(), shutdownFailedHooks == 0 ? 0 : ERROR_HOOK_NOT_INSTALLED);
                     }
                     captureEnded = true;
                 }
                 else
                 {
-                    AddAudit(result, "agent_message_received", "agent_event_read", payload);
+                    AddAudit(result, "agent_message_received", "agent_event_read", payload.Text());
                 }
 
                 DrainSharedTransport(result, transport);
@@ -9152,7 +8943,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                 continue;
             }
 
-            SetResultError(result, pipeError, "win32", "agent_event_read", "Agent event stream read failed.");
+            SetResultError(result, pipeError, "win32", pipeError == ERROR_INVALID_DATA ? "agent_protocol_invalid" : "agent_event_read", "Agent event stream read failed.");
             fatalError = true;
             break;
         }
@@ -9372,7 +9163,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
     auto finalizeTargetExit = [&]() -> bool
     {
-        if (processHandle == nullptr || WaitForSingleObject(processHandle, 0) != WAIT_OBJECT_0)
+        if (result.Operation == "agent_protocol_invalid" || processHandle == nullptr || WaitForSingleObject(processHandle, 0) != WAIT_OBJECT_0)
         {
             return false;
         }
@@ -9405,28 +9196,28 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         return true;
     };
 
-    auto consumePayload = [&](const std::string& payload)
+    auto consumePayload = [&](const JsonDocument& payload)
     {
         KnMonAgentMessage message = BuildAgentMessage(result, payload);
         result.AgentMessages.push_back(message);
 
-        if (message.MessageType == "agent_hello" || PayloadContains(payload, "\"eventType\":\"agent_hello_received\""))
+        if (message.MessageType == "agent_hello")
         {
             result.Handshake = BuildHandshake(result, payload);
-            AddAudit(result, "agent_hello_received", "agent_event_read", payload);
+            AddAudit(result, "agent_hello_received", "agent_event_read", payload.Text());
         }
         else if (message.MessageType == "hook_installed")
         {
             ++hookInstalledCount;
-            AddAudit(result, "hook_installed", "agent_event_read", payload);
+            AddAudit(result, "hook_installed", "agent_event_read", payload.Text());
         }
         else if (message.MessageType == "hook_install_failed")
         {
-            AddAudit(result, "hook_install_failed", "agent_event_read", payload, ERROR_HOOK_NOT_INSTALLED);
+            AddAudit(result, "hook_install_failed", "agent_event_read", payload.Text(), ERROR_HOOK_NOT_INSTALLED);
         }
         else if (message.MessageType == "hook_deferred")
         {
-            AddAudit(result, "hook_deferred", "agent_event_read", payload);
+            AddAudit(result, "hook_deferred", "agent_event_read", payload.Text());
         }
         else if (message.MessageType == "api_call")
         {
@@ -9443,7 +9234,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         else if (message.MessageType == "dropped_events")
         {
             result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
-            AddAudit(result, "dropped_events_reported", "agent_event_read", payload);
+            AddAudit(result, "dropped_events_reported", "agent_event_read", payload.Text());
         }
         else if (message.MessageType == "agent_shutdown")
         {
@@ -9453,22 +9244,22 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
             shutdownRestoredHooks = ExtractJsonUInt64(payload, "restoredHooks");
             shutdownFailedHooks = ExtractJsonUInt64(payload, "failedHooks");
             result.DroppedEvents = ExtractJsonUInt64(payload, "droppedCount");
-            result.SessionShutdownEvidence = payload;
+            result.SessionShutdownEvidence = payload.Text();
             result.HookCleanupOutcome = shutdownReason == "process_detach" ? "not_observed" :
                 shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0 ? "restored_by_agent" : "restore_failed";
-            AddAudit(result, "agent_shutdown", "agent_event_read", payload);
+            AddAudit(result, "agent_shutdown", "agent_event_read", payload.Text());
             if (shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0)
             {
-                AddAudit(result, "agent_self_disabled", "agent_shutdown", payload);
+                AddAudit(result, "agent_self_disabled", "agent_shutdown", payload.Text());
             }
             else
             {
-                AddAudit(result, "detach_incomplete", "agent_shutdown", payload, ERROR_HOOK_NOT_INSTALLED);
+                AddAudit(result, "detach_incomplete", "agent_shutdown", payload.Text(), ERROR_HOOK_NOT_INSTALLED);
             }
         }
         else
         {
-            AddAudit(result, "agent_message_received", "agent_event_read", payload);
+            AddAudit(result, "agent_message_received", "agent_event_read", payload.Text());
         }
     };
 
@@ -10084,7 +9875,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
             DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
 
-            std::string payload;
+            JsonDocument payload;
             pipeError = 0;
             if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError))
             {
@@ -10104,7 +9895,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
             if (pipeError != WAIT_TIMEOUT)
             {
-                SetResultError(result, pipeError, "win32", "agent_event_read", "Attach agent event stream read failed.");
+                SetResultError(result, pipeError, "win32", pipeError == ERROR_INVALID_DATA ? "agent_protocol_invalid" : "agent_event_read", "Attach agent event stream read failed.");
                 fatalError = true;
                 break;
             }
@@ -10161,7 +9952,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         {
             DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
 
-            std::string payload;
+            JsonDocument payload;
             pipeError = 0;
             if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError))
             {
@@ -10179,7 +9970,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
             if (pipeError != WAIT_TIMEOUT)
             {
-                SetResultError(result, pipeError, "win32", "agent_event_read", "Attach agent shutdown read failed.");
+                SetResultError(result, pipeError, "win32", pipeError == ERROR_INVALID_DATA ? "agent_protocol_invalid" : "agent_event_read", "Attach agent shutdown read failed.");
                 fatalError = true;
                 break;
             }

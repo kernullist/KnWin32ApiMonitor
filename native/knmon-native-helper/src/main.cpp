@@ -1,4 +1,5 @@
 #include <knmon/core/Controller.h>
+#include <knmon/common/BoundedJson.h>
 #include <knmon/common/RuntimeSupport.h>
 
 #include <Windows.h>
@@ -19,6 +20,9 @@
 
 namespace
 {
+using knmon::JsonDocument;
+using knmon::JsonInputError;
+
 std::string WideToUtf8(const wchar_t* value)
 {
     std::string result;
@@ -566,7 +570,8 @@ bool WriteTextFile(const std::filesystem::path& path, const std::string& text, s
     return written;
 }
 
-bool ReadTextFile(const std::filesystem::path& path, std::string* text, std::string* error)
+bool ReadTextFile(const std::filesystem::path& path, std::string* text, std::string* error,
+    std::size_t maxFileBytes = 64 * 1024 * 1024)
 {
     bool read = false;
 
@@ -587,20 +592,32 @@ bool ReadTextFile(const std::filesystem::path& path, std::string* text, std::str
             break;
         }
 
-        std::ostringstream stream;
-        stream << file.rdbuf();
-        if (!file.good() && !file.eof())
+        std::string content;
+        char block[8192];
+        bool tooLarge = false;
+        while (file)
+        {
+            file.read(block, sizeof(block));
+            const auto bytes = static_cast<std::size_t>(file.gcount());
+            if (bytes > maxFileBytes - content.size())
+            {
+                tooLarge = true;
+                break;
+            }
+            content.append(block, bytes);
+        }
+        if (tooLarge || file.bad() || (!file.good() && !file.eof()))
         {
             if (error != nullptr)
             {
-                *error = "read failed for " + PathToUtf8(path);
+                *error = "read failed or file byte limit exceeded: " + PathToUtf8(path);
             }
             break;
         }
 
         if (text != nullptr)
         {
-            *text = stream.str();
+            *text = std::move(content);
         }
         read = true;
     }
@@ -609,9 +626,34 @@ bool ReadTextFile(const std::filesystem::path& path, std::string* text, std::str
     return read;
 }
 
-std::vector<std::string> SplitJsonl(const std::string& value)
+bool ReadTextFile(const std::filesystem::path& path, JsonDocument* document, std::string* error)
 {
-    std::vector<std::string> lines;
+    bool read = false;
+    std::string text;
+    if (ReadTextFile(path, &text, error, knmon::JsonLimits{}.DocumentBytes))
+    {
+        try
+        {
+            JsonDocument parsed(text);
+            parsed.RequireObject();
+            *document = std::move(parsed);
+            read = true;
+        }
+        catch (const std::exception& exception)
+        {
+            if (error != nullptr)
+            {
+                *error = exception.what();
+            }
+        }
+    }
+    return read;
+}
+
+std::vector<JsonDocument> ParseJsonl(const std::string& value)
+{
+    std::vector<JsonDocument> lines;
+    std::size_t totalValues = 0;
     std::istringstream stream(value);
     std::string line;
 
@@ -622,18 +664,39 @@ std::vector<std::string> SplitJsonl(const std::string& value)
             line.pop_back();
         }
 
-        if (!line.empty())
+        if (line.find_first_not_of(" \t\r") != std::string::npos)
         {
-            lines.push_back(line);
+            lines.emplace_back(line, knmon::JsonLimits{1024 * 1024, 256 * 1024, 32, 65536, 250000});
+            lines.back().RequireObject();
+            totalValues += lines.back().ValueCount();
+            if (lines.size() > 250000 || totalValues > 1000000)
+            {
+                throw JsonInputError("JSONL record or aggregate value limit exceeded.");
+            }
         }
     }
 
     return lines;
 }
 
-bool PayloadContains(const std::string& payload, const std::string& marker)
+std::vector<JsonDocument> ParseTraceJsonl(const std::string& value)
 {
-    return payload.find(marker) != std::string::npos;
+    auto lines = ParseJsonl(value);
+    for (const auto& line : lines)
+    {
+        knmon::ValidateTraceJson(line);
+    }
+    return lines;
+}
+
+std::vector<JsonDocument> ParseAgentJsonl(const std::string& value)
+{
+    auto lines = ParseJsonl(value);
+    for (const auto& line : lines)
+    {
+        knmon::ValidateAgentJson(line);
+    }
+    return lines;
 }
 
 bool IsSupportedArchitecture(const std::string& value)
@@ -735,509 +798,17 @@ std::string Sha256Hex(const std::string& text)
     return result;
 }
 
-bool ReadJsonUnicodeEscape(const std::string& payload, std::size_t& position, unsigned int* codePoint)
-{
-    // payload[position] points at 'u'; read exactly four hex digits after it and
-    // advance position to the last consumed digit.
-    bool decoded = false;
 
-    do
-    {
-        if (codePoint == nullptr || position + 4 >= payload.size())
-        {
-            break;
-        }
 
-        unsigned int value = 0;
-        for (std::size_t index = 1; index <= 4; ++index)
-        {
-            const char ch = payload[position + index];
-            unsigned int digit = 0;
-            if (ch >= '0' && ch <= '9')
-            {
-                digit = static_cast<unsigned int>(ch - '0');
-            }
-            else if (ch >= 'a' && ch <= 'f')
-            {
-                digit = static_cast<unsigned int>(ch - 'a') + 10;
-            }
-            else if (ch >= 'A' && ch <= 'F')
-            {
-                digit = static_cast<unsigned int>(ch - 'A') + 10;
-            }
-            else
-            {
-                return false;
-            }
 
-            value = (value << 4) | digit;
-        }
 
-        *codePoint = value;
-        position += 4;
-        decoded = true;
-    }
-    while (false);
 
-    return decoded;
-}
 
-void AppendUtf8(std::ostringstream& stream, unsigned int codePoint)
-{
-    if (codePoint <= 0x7F)
-    {
-        stream << static_cast<char>(codePoint);
-    }
-    else if (codePoint <= 0x7FF)
-    {
-        stream << static_cast<char>(0xC0 | (codePoint >> 6));
-        stream << static_cast<char>(0x80 | (codePoint & 0x3F));
-    }
-    else if (codePoint <= 0xFFFF)
-    {
-        stream << static_cast<char>(0xE0 | (codePoint >> 12));
-        stream << static_cast<char>(0x80 | ((codePoint >> 6) & 0x3F));
-        stream << static_cast<char>(0x80 | (codePoint & 0x3F));
-    }
-    else if (codePoint <= 0x10FFFF)
-    {
-        stream << static_cast<char>(0xF0 | (codePoint >> 18));
-        stream << static_cast<char>(0x80 | ((codePoint >> 12) & 0x3F));
-        stream << static_cast<char>(0x80 | ((codePoint >> 6) & 0x3F));
-        stream << static_cast<char>(0x80 | (codePoint & 0x3F));
-    }
-}
 
-std::string ExtractJsonString(const std::string& payload, const std::string& key)
-{
-    std::string result;
-
-    do
-    {
-        const std::string quotedKey = "\"" + key + "\"";
-        std::size_t position = payload.find(quotedKey);
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        position = payload.find(':', position + quotedKey.size());
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        position = payload.find('"', position + 1);
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        ++position;
-        std::ostringstream stream;
-        bool escaped = false;
-        for (; position < payload.size(); ++position)
-        {
-            const char ch = payload[position];
-            if (escaped)
-            {
-                switch (ch)
-                {
-                case '"':
-                    stream << '"';
-                    break;
-                case '\\':
-                    stream << '\\';
-                    break;
-                case '/':
-                    stream << '/';
-                    break;
-                case 'b':
-                    stream << '\b';
-                    break;
-                case 'f':
-                    stream << '\f';
-                    break;
-                case 'n':
-                    stream << '\n';
-                    break;
-                case 'r':
-                    stream << '\r';
-                    break;
-                case 't':
-                    stream << '\t';
-                    break;
-                case 'u':
-                {
-                    // Decode \uXXXX (with surrogate pairs) so extracted values keep
-                    // their real text instead of a mangled literal "uXXXX".
-                    unsigned int codePoint = 0;
-                    if (!ReadJsonUnicodeEscape(payload, position, &codePoint))
-                    {
-                        stream << 'u';
-                        break;
-                    }
-
-                    if (codePoint >= 0xD800 && codePoint <= 0xDBFF && position + 6 < payload.size() && payload[position + 1] == '\\' && payload[position + 2] == 'u')
-                    {
-                        const std::size_t savedPosition = position;
-                        position += 2;
-                        unsigned int lowSurrogate = 0;
-                        if (ReadJsonUnicodeEscape(payload, position, &lowSurrogate) && lowSurrogate >= 0xDC00 && lowSurrogate <= 0xDFFF)
-                        {
-                            codePoint = 0x10000 + ((codePoint - 0xD800) << 10) + (lowSurrogate - 0xDC00);
-                        }
-                        else
-                        {
-                            position = savedPosition;
-                        }
-                    }
-
-                    AppendUtf8(stream, codePoint);
-                    break;
-                }
-                default:
-                    stream << ch;
-                    break;
-                }
-                escaped = false;
-                continue;
-            }
-
-            if (ch == '\\')
-            {
-                escaped = true;
-                continue;
-            }
-
-            if (ch == '"')
-            {
-                break;
-            }
-
-            stream << ch;
-        }
-
-        result = stream.str();
-    }
-    while (false);
-
-    return result;
-}
-
-bool ExtractJsonBool(const std::string& payload, const std::string& key)
-{
-    bool result = false;
-
-    do
-    {
-        const std::string quotedKey = "\"" + key + "\"";
-        std::size_t position = payload.find(quotedKey);
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        position = payload.find(':', position + quotedKey.size());
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        ++position;
-        while (position < payload.size() && payload[position] == ' ')
-        {
-            ++position;
-        }
-
-        result = payload.compare(position, 4, "true") == 0;
-    }
-    while (false);
-
-    return result;
-}
-
-std::uint64_t ExtractJsonUInt64(const std::string& payload, const std::string& key)
-{
-    std::uint64_t result = 0;
-
-    do
-    {
-        const std::string quotedKey = "\"" + key + "\"";
-        std::size_t position = payload.find(quotedKey);
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        position = payload.find(':', position + quotedKey.size());
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        ++position;
-        while (position < payload.size() && payload[position] == ' ')
-        {
-            ++position;
-        }
-
-        std::uint64_t value = 0;
-        bool sawDigit = false;
-        for (; position < payload.size(); ++position)
-        {
-            const char ch = payload[position];
-            if (ch < '0' || ch > '9')
-            {
-                break;
-            }
-
-            sawDigit = true;
-            value = (value * 10) + static_cast<std::uint64_t>(ch - '0');
-        }
-
-        if (sawDigit)
-        {
-            result = value;
-        }
-    }
-    while (false);
-
-    return result;
-}
-
-std::vector<std::string> SplitJsonObjectArray(const std::string& arrayText)
-{
-    std::vector<std::string> objects;
-    std::size_t position = 0;
-
-    while (position < arrayText.size())
-    {
-        while (position < arrayText.size() && arrayText[position] != '{')
-        {
-            ++position;
-        }
-
-        if (position >= arrayText.size())
-        {
-            break;
-        }
-
-        const std::size_t start = position;
-        int depth = 0;
-        bool inString = false;
-        bool escaped = false;
-        for (; position < arrayText.size(); ++position)
-        {
-            const char ch = arrayText[position];
-            if (inString)
-            {
-                if (escaped)
-                {
-                    escaped = false;
-                    continue;
-                }
-
-                if (ch == '\\')
-                {
-                    escaped = true;
-                    continue;
-                }
-
-                if (ch == '"')
-                {
-                    inString = false;
-                }
-                continue;
-            }
-
-            if (ch == '"')
-            {
-                inString = true;
-                continue;
-            }
-
-            if (ch == '{')
-            {
-                ++depth;
-            }
-            else if (ch == '}')
-            {
-                --depth;
-                if (depth == 0)
-                {
-                    objects.push_back(arrayText.substr(start, position - start + 1));
-                    ++position;
-                    break;
-                }
-            }
-        }
-    }
-
-    return objects;
-}
-
-std::string ExtractJsonObject(const std::string& payload, const std::string& key)
-{
-    std::string result;
-
-    do
-    {
-        const std::string quotedKey = "\"" + key + "\"";
-        std::size_t position = payload.find(quotedKey);
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        position = payload.find(':', position + quotedKey.size());
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        position = payload.find('{', position + 1);
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        const std::size_t start = position;
-        int depth = 0;
-        bool inString = false;
-        bool escaped = false;
-        for (; position < payload.size(); ++position)
-        {
-            const char ch = payload[position];
-            if (inString)
-            {
-                if (escaped)
-                {
-                    escaped = false;
-                    continue;
-                }
-
-                if (ch == '\\')
-                {
-                    escaped = true;
-                    continue;
-                }
-
-                if (ch == '"')
-                {
-                    inString = false;
-                }
-                continue;
-            }
-
-            if (ch == '"')
-            {
-                inString = true;
-                continue;
-            }
-
-            if (ch == '{')
-            {
-                ++depth;
-            }
-            else if (ch == '}')
-            {
-                --depth;
-                if (depth == 0)
-                {
-                    result = payload.substr(start, position - start + 1);
-                    break;
-                }
-            }
-        }
-    }
-    while (false);
-
-    return result;
-}
-
-std::string ExtractJsonArray(const std::string& payload, const std::string& key)
-{
-    std::string result = "[]";
-
-    do
-    {
-        const std::string quotedKey = "\"" + key + "\"";
-        std::size_t position = payload.find(quotedKey);
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        position = payload.find(':', position + quotedKey.size());
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        position = payload.find('[', position + 1);
-        if (position == std::string::npos)
-        {
-            break;
-        }
-
-        const std::size_t start = position;
-        int depth = 0;
-        bool inString = false;
-        bool escaped = false;
-        for (; position < payload.size(); ++position)
-        {
-            const char ch = payload[position];
-            if (inString)
-            {
-                if (escaped)
-                {
-                    escaped = false;
-                    continue;
-                }
-
-                if (ch == '\\')
-                {
-                    escaped = true;
-                    continue;
-                }
-
-                if (ch == '"')
-                {
-                    inString = false;
-                }
-                continue;
-            }
-
-            if (ch == '"')
-            {
-                inString = true;
-                continue;
-            }
-
-            if (ch == '[')
-            {
-                ++depth;
-            }
-            else if (ch == ']')
-            {
-                --depth;
-                if (depth == 0)
-                {
-                    result = payload.substr(start, position - start + 1);
-                    break;
-                }
-            }
-        }
-    }
-    while (false);
-
-    return result;
-}
 
 std::string BuildTraceEventJson(const knmon::KnMonAgentMessage& message, std::uint64_t eventId)
 {
-    const std::string& payload = message.RawPayload;
+    const JsonDocument payload(message.RawPayload);
     const std::uint64_t lastErrorCode = ExtractJsonUInt64(payload, "lastErrorCode");
     const std::uint64_t sequence = ExtractJsonUInt64(payload, "sequence");
     const std::string lastErrorMessage = ExtractJsonString(payload, "lastErrorMessage");
@@ -2976,32 +2547,38 @@ struct KnapmSessionWriter
 
 bool IsProcessAlive(std::uint32_t processId);
 
-KnapmChunkInfo KnapmChunkFromJson(const std::string& json)
+KnapmChunkInfo KnapmChunkFromJson(const JsonDocument& json)
 {
     KnapmChunkInfo chunk;
-    chunk.ChunkSequence = ExtractJsonUInt64(json, "chunkSequence");
-    chunk.BatchSequence = ExtractJsonUInt64(json, "batchSequence");
-    chunk.File = ExtractJsonString(json, "file");
+    chunk.ChunkSequence = json.UInt64("chunkSequence", true);
+    chunk.BatchSequence = json.UInt64("batchSequence", true);
+    chunk.File = json.String("file", true);
     chunk.Compression = ExtractJsonString(json, "compression");
-    chunk.EventCount = ExtractJsonUInt64(json, "eventCount");
-    chunk.FirstRecordSequence = ExtractJsonUInt64(json, "firstRecordSequence");
-    chunk.LastRecordSequence = ExtractJsonUInt64(json, "lastRecordSequence");
-    chunk.FirstEventId = ExtractJsonUInt64(json, "firstEventId");
-    chunk.LastEventId = ExtractJsonUInt64(json, "lastEventId");
-    chunk.ByteLength = ExtractJsonUInt64(json, "byteLength");
-    chunk.Sha256 = ExtractJsonString(json, "sha256");
+    chunk.EventCount = json.UInt64("eventCount", true);
+    chunk.FirstRecordSequence = json.UInt64("firstRecordSequence", true);
+    chunk.LastRecordSequence = json.UInt64("lastRecordSequence", true);
+    chunk.FirstEventId = json.UInt64("firstEventId", true);
+    chunk.LastEventId = json.UInt64("lastEventId", true);
+    chunk.ByteLength = json.UInt64("byteLength", true);
+    chunk.Sha256 = json.String("sha256", true);
     chunk.UncompressedByteLength = ExtractJsonUInt64(json, "uncompressedByteLength");
     chunk.UncompressedSha256 = ExtractJsonString(json, "uncompressedSha256");
+    if (chunk.LastRecordSequence < chunk.FirstRecordSequence || chunk.LastEventId < chunk.FirstEventId ||
+        (chunk.EventCount != 0 && (chunk.EventCount - 1 > chunk.LastRecordSequence - chunk.FirstRecordSequence ||
+            chunk.EventCount - 1 > chunk.LastEventId - chunk.FirstEventId)))
+    {
+        throw JsonInputError("Chunk sequence range cannot contain its declared events.");
+    }
     return chunk;
 }
 
-KnapmOwnerInfo KnapmOwnerFromJson(const std::string& json)
+KnapmOwnerInfo KnapmOwnerFromJson(const JsonDocument& json)
 {
     KnapmOwnerInfo owner;
     owner.OwnerKind = ExtractJsonString(json, "ownerKind");
-    owner.HostProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "hostProcessId"));
-    owner.HelperProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "helperProcessId"));
-    owner.WriterProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "writerProcessId"));
+    owner.HostProcessId = ExtractJsonUInt32(json, "hostProcessId");
+    owner.HelperProcessId = ExtractJsonUInt32(json, "helperProcessId");
+    owner.WriterProcessId = ExtractJsonUInt32(json, "writerProcessId");
     owner.WriterInstanceId = ExtractJsonString(json, "writerInstanceId");
     owner.WriterGeneration = ExtractJsonUInt64(json, "writerGeneration");
     owner.StartedUtc = ExtractJsonString(json, "startedUtc");
@@ -3009,7 +2586,7 @@ KnapmOwnerInfo KnapmOwnerFromJson(const std::string& json)
     owner.HeartbeatUtc = ExtractJsonString(json, "heartbeatUtc");
     owner.LeaseTimeoutMs = ExtractJsonUInt64(json, "leaseTimeoutMs");
     owner.LeaseExpiresUtc = ExtractJsonString(json, "leaseExpiresUtc");
-    owner.DaemonProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "daemonProcessId"));
+    owner.DaemonProcessId = ExtractJsonUInt32(json, "daemonProcessId");
     owner.DaemonInstanceId = ExtractJsonString(json, "daemonInstanceId");
     owner.DaemonStartedUtc = ExtractJsonString(json, "daemonStartedUtc");
     owner.DaemonHeartbeatUtc = ExtractJsonString(json, "daemonHeartbeatUtc");
@@ -3017,7 +2594,7 @@ KnapmOwnerInfo KnapmOwnerFromJson(const std::string& json)
     return owner;
 }
 
-KnapmCheckpointInfo KnapmCheckpointFromJson(const std::string& json)
+KnapmCheckpointInfo KnapmCheckpointFromJson(const JsonDocument& json)
 {
     KnapmCheckpointInfo checkpoint;
     checkpoint.LastCommittedChunkSequence = ExtractJsonUInt64(json, "lastCommittedChunkSequence");
@@ -3030,7 +2607,7 @@ KnapmCheckpointInfo KnapmCheckpointFromJson(const std::string& json)
     return checkpoint;
 }
 
-KnapmRecoveryInfo KnapmRecoveryFromJson(const std::string& json)
+KnapmRecoveryInfo KnapmRecoveryFromJson(const JsonDocument& json)
 {
     KnapmRecoveryInfo recovery;
     recovery.State = ExtractJsonString(json, "state");
@@ -3192,24 +2769,90 @@ void SetKnapmMalformedRecovery(SessionInfo& session, const std::string& reason)
     SetKnapmSessionRecovery(session, "malformed", reason, "manual_inspection", false, false, false, false, false, false);
 }
 
-void ClassifyKnapmSession(SessionInfo& session, const std::string& manifest)
+void ValidateManifestTypes(const JsonDocument& manifest, bool knapm)
 {
-    const std::string sessionObject = ExtractJsonObject(manifest, "session");
-    const std::string targetObject = ExtractJsonObject(manifest, "target");
-    const std::string ownerObject = ExtractJsonObject(manifest, "owner");
-    const std::string checkpointObject = ExtractJsonObject(manifest, "checkpoint");
-    const std::string recoveryObject = ExtractJsonObject(manifest, "recovery");
-    const std::uint32_t ownerProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(sessionObject, "ownerProcessId"));
-    const std::uint32_t helperProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(sessionObject, "helperProcessId"));
-    std::uint32_t targetProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(sessionObject, "targetProcessId"));
+    for (const auto* key : {"schemaVersion", "sessionId", "operationId", "createdUtc", "updatedUtc", "finalizedUtc",
+        "format", "formatVersion", "source", "backendMode", "captureMode", "injectionMethod", "writerState", "compression"})
+    {
+        manifest.String(key);
+    }
+    manifest.Bool("finalized", knapm);
+    for (const auto* key : {"droppedEvents", "transportDroppedEvents", "transportAbortedRecords", "hostDroppedBatches",
+        "chunkCount", "lastBatchSequence", "lastRecordSequence", "storedBytes", "uncompressedBytes"})
+    {
+        manifest.UInt64(key);
+    }
+    const auto target = manifest.Object("target", true);
+    target.UInt32("pid", true);
+    target.UInt32("tid");
+    target.String("path");
+    target.String("architecture", true);
+    const auto agent = manifest.Object("agent", true);
+    agent.String("path");
+    agent.String("architecture", true);
+    agent.String("version");
+    const auto counts = manifest.Object("eventCounts", true);
+    for (const auto* key : {"audit", "agentEvents", "traceEvents", "capturedEvents", "resolverPointerCandidates", "resolverPointerUnsupported"})
+    {
+        counts.UInt64(key);
+    }
+    const auto files = manifest.Object("files", true);
+    for (const auto* key : {"audit", "agentEvents", "traceEvents", "index", "chunkDirectory"})
+    {
+        files.String(key);
+    }
+    const auto session = manifest.Object("session");
+    for (const auto* key : {"schemaVersion", "sessionId", "operationId", "sessionKind", "sessionState", "startedUtc",
+        "updatedUtc", "stoppedUtc", "cancellationEventName", "staleReason", "recoveryAction", "shutdownEvidence", "lastError",
+        "daemonInstanceId", "daemonStartedUtc", "daemonHeartbeatUtc", "daemonControlEndpoint", "knapmPath", "recoveryState", "recoveryReason", "pruneReason"})
+    {
+        session.String(key);
+    }
+    for (const auto* key : {"ownerProcessId", "helperProcessId", "targetProcessId", "daemonProcessId", "durationMs"})
+    {
+        session.UInt32(key);
+    }
+    for (const auto* key : {"lastTransportSequence", "recordsStreamed", "transportDroppedEvents", "transportAbortedRecords", "hostDroppedBatches", "elapsedMs"})
+    {
+        session.UInt64(key);
+    }
+    for (const auto* key : {"stopRequested", "agentCleanupAttempted", "agentCleanupSucceeded", "daemonAlive", "sessionProcessAlive",
+        "targetAlive", "targetExitObserved", "knapmExists", "knapmValid", "pruneEligible"})
+    {
+        session.Bool(key);
+    }
+    if (manifest.Has("owner"))
+    {
+        KnapmOwnerFromJson(manifest.Object("owner"));
+    }
+    if (manifest.Has("checkpoint"))
+    {
+        KnapmCheckpointFromJson(manifest.Object("checkpoint"));
+    }
+    if (manifest.Has("recovery"))
+    {
+        KnapmRecoveryFromJson(manifest.Object("recovery"));
+    }
+}
+
+void ClassifyKnapmSession(SessionInfo& session, const JsonDocument& manifest)
+{
+    const JsonDocument sessionObject = ExtractJsonObject(manifest, "session");
+    const JsonDocument targetObject = ExtractJsonObject(manifest, "target");
+    const JsonDocument ownerObject = ExtractJsonObject(manifest, "owner");
+    const JsonDocument checkpointObject = ExtractJsonObject(manifest, "checkpoint");
+    const JsonDocument recoveryObject = ExtractJsonObject(manifest, "recovery");
+    const std::uint32_t ownerProcessId = ExtractJsonUInt32(sessionObject, "ownerProcessId");
+    const std::uint32_t helperProcessId = ExtractJsonUInt32(sessionObject, "helperProcessId");
+    std::uint32_t targetProcessId = ExtractJsonUInt32(sessionObject, "targetProcessId");
     if (targetProcessId == 0)
     {
-        targetProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(targetObject, "pid"));
+        targetProcessId = ExtractJsonUInt32(targetObject, "pid");
     }
 
     const std::string state = ExtractJsonString(sessionObject, "sessionState");
 
-    if (ownerObject.empty())
+    if (!manifest.Has("owner"))
     {
         if (session.Finalized)
         {
@@ -3353,462 +2996,463 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
     session.Format = "knapm";
     session.SessionPath = PathToUtf8(sessionPath);
 
-    do
+    try
     {
-        const std::filesystem::path manifestPath = KnapmChildPath(sessionPath, "manifest.json");
-        const std::filesystem::path indexPath = KnapmChildPath(sessionPath, "index.json");
-        const std::filesystem::path auditPath = KnapmChildPath(sessionPath, "audit.jsonl");
-        const std::filesystem::path agentPath = KnapmChildPath(sessionPath, "agent-events.jsonl");
-
-        std::string manifest;
-        std::string readError;
-        if (!ReadTextFile(manifestPath, &manifest, &readError))
+        do
         {
-            session.ValidationErrors.push_back(readError);
-            break;
-        }
+            const std::filesystem::path manifestPath = KnapmChildPath(sessionPath, "manifest.json");
+            const std::filesystem::path indexPath = KnapmChildPath(sessionPath, "index.json");
+            const std::filesystem::path auditPath = KnapmChildPath(sessionPath, "audit.jsonl");
+            const std::filesystem::path agentPath = KnapmChildPath(sessionPath, "agent-events.jsonl");
 
-        session.SessionId = ExtractJsonString(manifest, "sessionId");
-        session.CreatedUtc = ExtractJsonString(manifest, "createdUtc");
-        session.Finalized = ExtractJsonBool(manifest, "finalized");
-        session.DroppedEvents = ExtractJsonUInt64(manifest, "droppedEvents");
-        session.TransportDroppedEvents = ExtractJsonUInt64(manifest, "transportDroppedEvents");
-        session.TransportAbortedRecords = ExtractJsonUInt64(manifest, "transportAbortedRecords");
-        session.HostDroppedBatches = ExtractJsonUInt64(manifest, "hostDroppedBatches");
-        session.ChunkCount = ExtractJsonUInt64(manifest, "chunkCount");
-        session.LastBatchSequence = ExtractJsonUInt64(manifest, "lastBatchSequence");
-        session.LastRecordSequence = ExtractJsonUInt64(manifest, "lastRecordSequence");
-        session.WriterState = ExtractJsonString(manifest, "writerState");
-        session.CompressionSummary = ExtractJsonString(manifest, "compression");
-        session.StoredBytes = ExtractJsonUInt64(manifest, "storedBytes");
-        session.UncompressedBytes = ExtractJsonUInt64(manifest, "uncompressedBytes");
-        const std::uint64_t manifestLastBatchSequence = session.LastBatchSequence;
-        const std::uint64_t manifestLastRecordSequence = session.LastRecordSequence;
-
-        const std::string operationId = ExtractJsonString(manifest, "operationId");
-        const std::string finalizedUtc = ExtractJsonString(manifest, "finalizedUtc");
-        const std::string targetManifest = ExtractJsonObject(manifest, "target");
-        const std::string agentManifest = ExtractJsonObject(manifest, "agent");
-        const std::string eventCounts = ExtractJsonObject(manifest, "eventCounts");
-        const std::string sessionObject = ExtractJsonObject(manifest, "session");
-
-        if (ExtractJsonString(manifest, "schemaVersion") != "0.1.0")
-        {
-            session.ValidationErrors.push_back("manifest schemaVersion is missing or unsupported.");
-        }
-
-        if (ExtractJsonString(manifest, "format") != "knapm")
-        {
-            session.ValidationErrors.push_back("manifest format must be knapm.");
-        }
-
-        if (ExtractJsonString(manifest, "formatVersion").empty())
-        {
-            session.ValidationErrors.push_back("manifest formatVersion is missing.");
-        }
-
-        if (session.SessionId.empty())
-        {
-            session.ValidationErrors.push_back("manifest sessionId is missing.");
-        }
-
-        if (operationId.empty())
-        {
-            session.ValidationErrors.push_back("manifest operationId is missing.");
-        }
-
-        if (session.CreatedUtc.empty() || ExtractJsonString(manifest, "updatedUtc").empty())
-        {
-            session.ValidationErrors.push_back("manifest timestamps are missing.");
-        }
-
-        if (session.Finalized && finalizedUtc.empty())
-        {
-            session.ValidationErrors.push_back("finalized manifest must include finalizedUtc.");
-        }
-
-        if (ExtractJsonString(manifest, "source") != "knmon-native-helper attach-session")
-        {
-            session.ValidationErrors.push_back("manifest source must be knmon-native-helper attach-session.");
-        }
-
-        if (ExtractJsonString(manifest, "backendMode") != "native-capture")
-        {
-            session.ValidationErrors.push_back("manifest backendMode must be native-capture.");
-        }
-
-        if (ExtractJsonString(manifest, "captureMode") != "bounded-native-attach")
-        {
-            session.ValidationErrors.push_back("manifest captureMode must be bounded-native-attach.");
-        }
-
-        if (ExtractJsonString(manifest, "injectionMethod") != "remote LoadLibraryW")
-        {
-            session.ValidationErrors.push_back("manifest injectionMethod must be remote LoadLibraryW.");
-        }
-
-        const std::string targetArchitecture = ExtractJsonString(targetManifest, "architecture");
-        const std::string agentArchitecture = ExtractJsonString(agentManifest, "architecture");
-        if (!IsSupportedArchitecture(targetArchitecture))
-        {
-            session.ValidationErrors.push_back("manifest target architecture is missing or unsupported.");
-        }
-
-        if (!IsSupportedArchitecture(agentArchitecture))
-        {
-            session.ValidationErrors.push_back("manifest agent architecture is missing or unsupported.");
-        }
-
-        if (IsSupportedArchitecture(targetArchitecture) && IsSupportedArchitecture(agentArchitecture) && targetArchitecture != agentArchitecture)
-        {
-            session.ValidationErrors.push_back("manifest target and agent architecture must match.");
-        }
-
-        if (session.Finalized && ExtractJsonString(agentManifest, "version").empty())
-        {
-            session.ValidationErrors.push_back("finalized manifest agent version is missing.");
-        }
-
-        session.AuditEventCount = ExtractJsonUInt64(eventCounts, "audit");
-        session.AgentEventCount = ExtractJsonUInt64(eventCounts, "agentEvents");
-        session.TraceEventCount = ExtractJsonUInt64(eventCounts, "traceEvents");
-        session.ResolverPointerCandidates = ExtractJsonUInt64(eventCounts, "resolverPointerCandidates");
-        session.ResolverPointerUnsupported = ExtractJsonUInt64(eventCounts, "resolverPointerUnsupported");
-        const std::uint64_t capturedEventCount = ExtractJsonUInt64(eventCounts, "capturedEvents");
-        const std::uint64_t sessionRecordsStreamed = ExtractJsonUInt64(sessionObject, "recordsStreamed");
-        const std::uint64_t sessionLastTransport = ExtractJsonUInt64(sessionObject, "lastTransportSequence");
-        const std::uint64_t sessionTransportDrops = ExtractJsonUInt64(sessionObject, "transportDroppedEvents");
-        const std::uint64_t sessionHostDrops = ExtractJsonUInt64(sessionObject, "hostDroppedBatches");
-
-        std::string auditText;
-        if (!ReadTextFile(auditPath, &auditText, &readError))
-        {
-            session.ValidationErrors.push_back(readError);
-        }
-        else if (SplitJsonl(auditText).size() != session.AuditEventCount)
-        {
-            session.ValidationErrors.push_back("audit.jsonl count does not match manifest eventCounts.audit.");
-        }
-
-        std::string agentText;
-        if (!ReadTextFile(agentPath, &agentText, &readError))
-        {
-            session.ValidationErrors.push_back(readError);
-        }
-        else
-        {
-            const auto agentLines = SplitJsonl(agentText);
-            std::uint64_t resolverPointerCandidates = 0;
-            std::uint64_t resolverPointerUnsupported = 0;
-            if (agentLines.size() != session.AgentEventCount)
-            {
-                session.ValidationErrors.push_back("agent-events.jsonl count does not match manifest eventCounts.agentEvents.");
-            }
-
-            for (const auto& line : agentLines)
-            {
-                if (
-                    PayloadContains(line, "\"messageType\":\"resolver_pointer_candidate\"") ||
-                    PayloadContains(line, "\"messageType\":\"resolver_pointer_instrumented\""))
-                {
-                    ++resolverPointerCandidates;
-                }
-                else if (PayloadContains(line, "\"messageType\":\"resolver_pointer_unsupported\""))
-                {
-                    ++resolverPointerUnsupported;
-                }
-            }
-
-            if (PayloadContains(eventCounts, "\"resolverPointerCandidates\""))
-            {
-                if (session.ResolverPointerCandidates != resolverPointerCandidates)
-                {
-                    session.ValidationErrors.push_back("agent-events.jsonl resolver_pointer_candidate count does not match manifest eventCounts.resolverPointerCandidates.");
-                }
-            }
-            else
-            {
-                session.ResolverPointerCandidates = resolverPointerCandidates;
-            }
-
-            if (PayloadContains(eventCounts, "\"resolverPointerUnsupported\""))
-            {
-                if (session.ResolverPointerUnsupported != resolverPointerUnsupported)
-                {
-                    session.ValidationErrors.push_back("agent-events.jsonl resolver_pointer_unsupported count does not match manifest eventCounts.resolverPointerUnsupported.");
-                }
-            }
-            else
-            {
-                session.ResolverPointerUnsupported = resolverPointerUnsupported;
-            }
-
-            if (session.Finalized)
-            {
-                bool hasHello = false;
-                bool hasDropped = false;
-                bool hasShutdown = false;
-                for (const auto& line : agentLines)
-                {
-                    hasHello = hasHello || PayloadContains(line, "\"messageType\":\"agent_hello\"");
-                    hasDropped = hasDropped || PayloadContains(line, "\"messageType\":\"dropped_events\"");
-                    if (PayloadContains(line, "\"messageType\":\"agent_shutdown\""))
-                    {
-                        hasShutdown = true;
-                        if (ExtractJsonString(line, "reason").empty())
-                        {
-                            session.ValidationErrors.push_back("finalized agent_shutdown reason is missing.");
-                        }
-
-                        if (!PayloadContains(line, "\"installedHooks\"") || !PayloadContains(line, "\"restoredHooks\"") || !PayloadContains(line, "\"failedHooks\""))
-                        {
-                            session.ValidationErrors.push_back("finalized agent_shutdown hook lifecycle counts are missing.");
-                        }
-
-                        const std::uint64_t installedHooks = ExtractJsonUInt64(line, "installedHooks");
-                        const std::uint64_t restoredHooks = ExtractJsonUInt64(line, "restoredHooks");
-                        const std::uint64_t failedHooks = ExtractJsonUInt64(line, "failedHooks");
-                        if (restoredHooks < installedHooks || failedHooks != 0)
-                        {
-                            session.ValidationErrors.push_back("finalized agent_shutdown reports unrestored or failed hooks.");
-                        }
-                    }
-                }
-
-                if (!hasHello)
-                {
-                    session.ValidationErrors.push_back("finalized agent-events.jsonl does not contain agent_hello.");
-                }
-
-                if (!hasDropped)
-                {
-                    session.ValidationErrors.push_back("finalized agent-events.jsonl does not contain dropped_events.");
-                }
-
-                if (!hasShutdown)
-                {
-                    session.ValidationErrors.push_back("finalized agent-events.jsonl does not contain agent_shutdown.");
-                }
-            }
-        }
-
-        std::string indexText;
-        if (!ReadTextFile(indexPath, &indexText, &readError))
-        {
-            session.ValidationErrors.push_back(readError);
-            break;
-        }
-
-        if (ExtractJsonString(indexText, "format") != "knapm-index")
-        {
-            session.ValidationErrors.push_back("index format must be knapm-index.");
-        }
-
-        if (ExtractJsonString(indexText, "sessionId") != session.SessionId)
-        {
-            session.ValidationErrors.push_back("index sessionId must match manifest sessionId.");
-        }
-
-        if (ExtractJsonString(indexText, "operationId") != operationId)
-        {
-            session.ValidationErrors.push_back("index operationId must match manifest operationId.");
-        }
-
-        const auto chunkObjects = SplitJsonObjectArray(ExtractJsonArray(indexText, "chunks"));
-        const std::uint64_t indexChunkCount = static_cast<std::uint64_t>(chunkObjects.size());
-        if (indexChunkCount != session.ChunkCount)
-        {
-            session.ValidationErrors.push_back("index chunk count does not match manifest chunkCount.");
-        }
-
-        std::uint64_t totalTraceEvents = 0;
-        std::uint64_t previousBatchSequence = 0;
-        std::uint64_t previousRecordSequence = 0;
-        bool hasPreviousRecordSequence = false;
-        std::uint64_t expectedChunkSequence = 1;
-        std::uint64_t indexedLastBatchSequence = 0;
-        std::uint64_t indexedLastRecordSequence = 0;
-        std::uint64_t indexedStoredBytes = 0;
-        std::uint64_t indexedUncompressedBytes = 0;
-        std::string indexedCompression;
-        for (const auto& chunkJson : chunkObjects)
-        {
-            const std::size_t chunkErrorStart = session.ValidationErrors.size();
-            const KnapmChunkInfo chunk = KnapmChunkFromJson(chunkJson);
-            const std::string chunkCompression = NormalizeKnapmCompression(chunk.Compression);
-            if (chunk.ChunkSequence != expectedChunkSequence)
-            {
-                session.ValidationErrors.push_back("index chunkSequence is not contiguous.");
-                break;
-            }
-
-            if (chunk.BatchSequence == 0)
-            {
-                session.ValidationErrors.push_back("index batchSequence is missing.");
-                break;
-            }
-
-            if (previousBatchSequence != 0 && chunk.BatchSequence != previousBatchSequence + 1)
-            {
-                session.ValidationErrors.push_back("index batchSequence is not contiguous.");
-                break;
-            }
-
-            if (chunk.EventCount == 0)
-            {
-                session.ValidationErrors.push_back("chunk eventCount must be non-zero.");
-                break;
-            }
-
-            if (chunk.LastRecordSequence < chunk.FirstRecordSequence)
-            {
-                session.ValidationErrors.push_back("chunk record sequence range is invalid.");
-                break;
-            }
-
-            if (hasPreviousRecordSequence && chunk.FirstRecordSequence <= previousRecordSequence)
-            {
-                session.ValidationErrors.push_back("chunk record sequence ranges are not monotonic.");
-                break;
-            }
-
-            if (!IsSupportedKnapmCompression(chunkCompression))
-            {
-                session.ValidationErrors.push_back("unsupported_compression");
-                break;
-            }
-
-            if (!IsSafeKnapmChunkPath(chunk.File))
-            {
-                session.ValidationErrors.push_back("chunk file path is not a safe KNAPM chunk path.");
-                break;
-            }
-
-            std::string chunkText;
-            if (!ReadKnapmChunkDecoded(sessionPath, chunk, &chunkText, &readError))
+            JsonDocument manifest;
+            std::string readError;
+            if (!ReadTextFile(manifestPath, &manifest, &readError))
             {
                 session.ValidationErrors.push_back(readError);
                 break;
             }
 
-            const auto traceLines = SplitJsonl(chunkText);
-            if (traceLines.size() != chunk.EventCount)
+            ValidateManifestTypes(manifest, true);
+            session.SessionId = ExtractJsonString(manifest, "sessionId");
+            session.CreatedUtc = ExtractJsonString(manifest, "createdUtc");
+            session.Finalized = manifest.Bool("finalized", true);
+            session.DroppedEvents = ExtractJsonUInt64(manifest, "droppedEvents");
+            session.TransportDroppedEvents = ExtractJsonUInt64(manifest, "transportDroppedEvents");
+            session.TransportAbortedRecords = ExtractJsonUInt64(manifest, "transportAbortedRecords");
+            session.HostDroppedBatches = ExtractJsonUInt64(manifest, "hostDroppedBatches");
+            session.ChunkCount = ExtractJsonUInt64(manifest, "chunkCount");
+            session.LastBatchSequence = ExtractJsonUInt64(manifest, "lastBatchSequence");
+            session.LastRecordSequence = ExtractJsonUInt64(manifest, "lastRecordSequence");
+            session.WriterState = ExtractJsonString(manifest, "writerState");
+            session.CompressionSummary = ExtractJsonString(manifest, "compression");
+            session.StoredBytes = ExtractJsonUInt64(manifest, "storedBytes");
+            session.UncompressedBytes = ExtractJsonUInt64(manifest, "uncompressedBytes");
+            const std::uint64_t manifestLastBatchSequence = session.LastBatchSequence;
+            const std::uint64_t manifestLastRecordSequence = session.LastRecordSequence;
+
+            const std::string operationId = ExtractJsonString(manifest, "operationId");
+            const std::string finalizedUtc = ExtractJsonString(manifest, "finalizedUtc");
+            const JsonDocument targetManifest = ExtractJsonObject(manifest, "target");
+            const JsonDocument agentManifest = ExtractJsonObject(manifest, "agent");
+            const JsonDocument eventCounts = ExtractJsonObject(manifest, "eventCounts");
+            const JsonDocument sessionObject = ExtractJsonObject(manifest, "session");
+
+            if (ExtractJsonString(manifest, "schemaVersion") != "0.1.0")
             {
-                session.ValidationErrors.push_back("chunk eventCount does not match trace row count.");
-                break;
+                session.ValidationErrors.push_back("manifest schemaVersion is missing or unsupported.");
             }
 
-            if (traceLines.empty())
+            if (ExtractJsonString(manifest, "format") != "knapm")
             {
-                session.ValidationErrors.push_back("chunk is empty.");
-                break;
+                session.ValidationErrors.push_back("manifest format must be knapm.");
             }
 
-            const std::uint64_t firstEventId = ExtractJsonUInt64(traceLines.front(), "eventId");
-            const std::uint64_t lastEventId = ExtractJsonUInt64(traceLines.back(), "eventId");
-            if (firstEventId != chunk.FirstEventId || lastEventId != chunk.LastEventId)
+            if (ExtractJsonString(manifest, "formatVersion").empty())
             {
-                session.ValidationErrors.push_back("chunk eventId range does not match index.");
-                break;
+                session.ValidationErrors.push_back("manifest formatVersion is missing.");
             }
 
-            for (const auto& line : traceLines)
+            if (session.SessionId.empty())
             {
-                if (ExtractJsonString(line, "schemaVersion") != "0.1.0" || ExtractJsonString(line, "api").empty())
+                session.ValidationErrors.push_back("manifest sessionId is missing.");
+            }
+
+            if (operationId.empty())
+            {
+                session.ValidationErrors.push_back("manifest operationId is missing.");
+            }
+
+            if (session.CreatedUtc.empty() || ExtractJsonString(manifest, "updatedUtc").empty())
+            {
+                session.ValidationErrors.push_back("manifest timestamps are missing.");
+            }
+
+            if (session.Finalized && finalizedUtc.empty())
+            {
+                session.ValidationErrors.push_back("finalized manifest must include finalizedUtc.");
+            }
+
+            if (ExtractJsonString(manifest, "source") != "knmon-native-helper attach-session")
+            {
+                session.ValidationErrors.push_back("manifest source must be knmon-native-helper attach-session.");
+            }
+
+            if (ExtractJsonString(manifest, "backendMode") != "native-capture")
+            {
+                session.ValidationErrors.push_back("manifest backendMode must be native-capture.");
+            }
+
+            if (ExtractJsonString(manifest, "captureMode") != "bounded-native-attach")
+            {
+                session.ValidationErrors.push_back("manifest captureMode must be bounded-native-attach.");
+            }
+
+            if (ExtractJsonString(manifest, "injectionMethod") != "remote LoadLibraryW")
+            {
+                session.ValidationErrors.push_back("manifest injectionMethod must be remote LoadLibraryW.");
+            }
+
+            const std::string targetArchitecture = ExtractJsonString(targetManifest, "architecture");
+            const std::string agentArchitecture = ExtractJsonString(agentManifest, "architecture");
+            if (!IsSupportedArchitecture(targetArchitecture))
+            {
+                session.ValidationErrors.push_back("manifest target architecture is missing or unsupported.");
+            }
+
+            if (!IsSupportedArchitecture(agentArchitecture))
+            {
+                session.ValidationErrors.push_back("manifest agent architecture is missing or unsupported.");
+            }
+
+            if (IsSupportedArchitecture(targetArchitecture) && IsSupportedArchitecture(agentArchitecture) && targetArchitecture != agentArchitecture)
+            {
+                session.ValidationErrors.push_back("manifest target and agent architecture must match.");
+            }
+
+            if (session.Finalized && ExtractJsonString(agentManifest, "version").empty())
+            {
+                session.ValidationErrors.push_back("finalized manifest agent version is missing.");
+            }
+
+            session.AuditEventCount = ExtractJsonUInt64(eventCounts, "audit");
+            session.AgentEventCount = ExtractJsonUInt64(eventCounts, "agentEvents");
+            session.TraceEventCount = ExtractJsonUInt64(eventCounts, "traceEvents");
+            session.ResolverPointerCandidates = ExtractJsonUInt64(eventCounts, "resolverPointerCandidates");
+            session.ResolverPointerUnsupported = ExtractJsonUInt64(eventCounts, "resolverPointerUnsupported");
+            const std::uint64_t capturedEventCount = ExtractJsonUInt64(eventCounts, "capturedEvents");
+            const std::uint64_t sessionRecordsStreamed = ExtractJsonUInt64(sessionObject, "recordsStreamed");
+            const std::uint64_t sessionLastTransport = ExtractJsonUInt64(sessionObject, "lastTransportSequence");
+            const std::uint64_t sessionTransportDrops = ExtractJsonUInt64(sessionObject, "transportDroppedEvents");
+            const std::uint64_t sessionHostDrops = ExtractJsonUInt64(sessionObject, "hostDroppedBatches");
+
+            std::string auditText;
+            if (!ReadTextFile(auditPath, &auditText, &readError))
+            {
+                session.ValidationErrors.push_back(readError);
+            }
+            else if (ParseJsonl(auditText).size() != session.AuditEventCount)
+            {
+                session.ValidationErrors.push_back("audit.jsonl count does not match manifest eventCounts.audit.");
+            }
+
+            std::string agentText;
+            if (!ReadTextFile(agentPath, &agentText, &readError))
+            {
+                session.ValidationErrors.push_back(readError);
+            }
+            else
+            {
+                const auto agentLines = ParseAgentJsonl(agentText);
+                std::uint64_t resolverPointerCandidates = 0;
+                std::uint64_t resolverPointerUnsupported = 0;
+                if (agentLines.size() != session.AgentEventCount)
                 {
-                    session.ValidationErrors.push_back("chunk contains a malformed trace event.");
-                    break;
+                    session.ValidationErrors.push_back("agent-events.jsonl count does not match manifest eventCounts.agentEvents.");
+                }
+
+                for (const auto& line : agentLines)
+                {
+                    if (
+                        (ExtractJsonString(line, "messageType") == "resolver_pointer_candidate") ||
+                        (ExtractJsonString(line, "messageType") == "resolver_pointer_instrumented"))
+                    {
+                        ++resolverPointerCandidates;
+                    }
+                    else if ((ExtractJsonString(line, "messageType") == "resolver_pointer_unsupported"))
+                    {
+                        ++resolverPointerUnsupported;
+                    }
+                }
+
+                if (eventCounts.Has("resolverPointerCandidates"))
+                {
+                    if (session.ResolverPointerCandidates != resolverPointerCandidates)
+                    {
+                        session.ValidationErrors.push_back("agent-events.jsonl resolver_pointer_candidate count does not match manifest eventCounts.resolverPointerCandidates.");
+                    }
+                }
+                else
+                {
+                    session.ResolverPointerCandidates = resolverPointerCandidates;
+                }
+
+                if (eventCounts.Has("resolverPointerUnsupported"))
+                {
+                    if (session.ResolverPointerUnsupported != resolverPointerUnsupported)
+                    {
+                        session.ValidationErrors.push_back("agent-events.jsonl resolver_pointer_unsupported count does not match manifest eventCounts.resolverPointerUnsupported.");
+                    }
+                }
+                else
+                {
+                    session.ResolverPointerUnsupported = resolverPointerUnsupported;
+                }
+
+                if (session.Finalized)
+                {
+                    bool hasHello = false;
+                    bool hasDropped = false;
+                    bool hasShutdown = false;
+                    for (const auto& line : agentLines)
+                    {
+                        hasHello = hasHello || (ExtractJsonString(line, "messageType") == "agent_hello");
+                        hasDropped = hasDropped || (ExtractJsonString(line, "messageType") == "dropped_events");
+                        if ((ExtractJsonString(line, "messageType") == "agent_shutdown"))
+                        {
+                            hasShutdown = true;
+                            if (ExtractJsonString(line, "reason").empty())
+                            {
+                                session.ValidationErrors.push_back("finalized agent_shutdown reason is missing.");
+                            }
+
+                            if (!line.Has("installedHooks") || !line.Has("restoredHooks") || !line.Has("failedHooks"))
+                            {
+                                session.ValidationErrors.push_back("finalized agent_shutdown hook lifecycle counts are missing.");
+                            }
+
+                            const std::uint64_t installedHooks = ExtractJsonUInt64(line, "installedHooks");
+                            const std::uint64_t restoredHooks = ExtractJsonUInt64(line, "restoredHooks");
+                            const std::uint64_t failedHooks = ExtractJsonUInt64(line, "failedHooks");
+                            if (restoredHooks < installedHooks || failedHooks != 0)
+                            {
+                                session.ValidationErrors.push_back("finalized agent_shutdown reports unrestored or failed hooks.");
+                            }
+                        }
+                    }
+
+                    if (!hasHello)
+                    {
+                        session.ValidationErrors.push_back("finalized agent-events.jsonl does not contain agent_hello.");
+                    }
+
+                    if (!hasDropped)
+                    {
+                        session.ValidationErrors.push_back("finalized agent-events.jsonl does not contain dropped_events.");
+                    }
+
+                    if (!hasShutdown)
+                    {
+                        session.ValidationErrors.push_back("finalized agent-events.jsonl does not contain agent_shutdown.");
+                    }
                 }
             }
 
-            if (session.ValidationErrors.size() != chunkErrorStart)
+            JsonDocument indexText;
+            if (!ReadTextFile(indexPath, &indexText, &readError))
             {
+                session.ValidationErrors.push_back(readError);
                 break;
             }
 
-            totalTraceEvents += chunk.EventCount;
-            indexedStoredBytes += chunk.ByteLength;
-            indexedUncompressedBytes += static_cast<std::uint64_t>(chunkText.size());
-            if (indexedCompression.empty())
+            if (ExtractJsonString(indexText, "format") != "knapm-index")
             {
-                indexedCompression = chunkCompression;
+                session.ValidationErrors.push_back("index format must be knapm-index.");
             }
-            else if (indexedCompression != chunkCompression)
+
+            if (ExtractJsonString(indexText, "sessionId") != session.SessionId)
             {
-                indexedCompression = "mixed";
+                session.ValidationErrors.push_back("index sessionId must match manifest sessionId.");
             }
-            previousBatchSequence = chunk.BatchSequence;
-            previousRecordSequence = chunk.LastRecordSequence;
-            hasPreviousRecordSequence = true;
-            indexedLastBatchSequence = chunk.BatchSequence;
-            indexedLastRecordSequence = chunk.LastRecordSequence;
-            ++expectedChunkSequence;
-        }
 
-        if (!chunkObjects.empty())
-        {
-            session.LastBatchSequence = indexedLastBatchSequence;
-            session.LastRecordSequence = indexedLastRecordSequence;
-            session.StoredBytes = indexedStoredBytes;
-            session.UncompressedBytes = indexedUncompressedBytes;
-            session.CompressionSummary = indexedCompression.empty() ? "none" : indexedCompression;
-        }
+            if (ExtractJsonString(indexText, "operationId") != operationId)
+            {
+                session.ValidationErrors.push_back("index operationId must match manifest operationId.");
+            }
 
-        if (!chunkObjects.empty() && manifestLastBatchSequence != indexedLastBatchSequence)
-        {
-            session.ValidationErrors.push_back("manifest lastBatchSequence does not match indexed chunks.");
-        }
+            const auto chunkObjects = SplitJsonObjectArray(indexText.Array("chunks", true));
+            const std::uint64_t indexChunkCount = static_cast<std::uint64_t>(chunkObjects.size());
+            if (indexChunkCount != session.ChunkCount)
+            {
+                session.ValidationErrors.push_back("index chunk count does not match manifest chunkCount.");
+            }
 
-        if (!chunkObjects.empty() && manifestLastRecordSequence != indexedLastRecordSequence)
-        {
-            session.ValidationErrors.push_back("manifest lastRecordSequence does not match indexed chunks.");
-        }
+            std::uint64_t totalTraceEvents = 0;
+            std::uint64_t previousBatchSequence = 0;
+            std::uint64_t previousRecordSequence = 0;
+            bool hasPreviousRecordSequence = false;
+            std::uint64_t expectedChunkSequence = 1;
+            std::uint64_t indexedLastBatchSequence = 0;
+            std::uint64_t indexedLastRecordSequence = 0;
+            std::uint64_t indexedStoredBytes = 0;
+            std::uint64_t indexedUncompressedBytes = 0;
+            std::string indexedCompression;
+            for (const auto& chunkJson : chunkObjects)
+            {
+                const std::size_t chunkErrorStart = session.ValidationErrors.size();
+                const KnapmChunkInfo chunk = KnapmChunkFromJson(chunkJson);
+                const std::string chunkCompression = NormalizeKnapmCompression(chunk.Compression);
+                if (chunk.ChunkSequence != expectedChunkSequence)
+                {
+                    session.ValidationErrors.push_back("index chunkSequence is not contiguous.");
+                    break;
+                }
 
-        if (chunkObjects.empty() && manifestLastBatchSequence != 0)
-        {
-            session.ValidationErrors.push_back("empty index must have manifest lastBatchSequence set to zero.");
-        }
+                if (chunk.BatchSequence == 0)
+                {
+                    session.ValidationErrors.push_back("index batchSequence is missing.");
+                    break;
+                }
 
-        if (totalTraceEvents != session.TraceEventCount)
-        {
-            session.ValidationErrors.push_back("manifest trace event count does not match indexed chunks.");
-        }
+                if (previousBatchSequence != 0 && chunk.BatchSequence != previousBatchSequence + 1)
+                {
+                    session.ValidationErrors.push_back("index batchSequence is not contiguous.");
+                    break;
+                }
 
-        if (session.Finalized && capturedEventCount != session.TraceEventCount)
-        {
-            session.ValidationErrors.push_back("finalized capturedEvents count does not match indexed trace count.");
-        }
+                if (chunk.EventCount == 0)
+                {
+                    session.ValidationErrors.push_back("chunk eventCount must be non-zero.");
+                    break;
+                }
 
-        if (session.Finalized && sessionRecordsStreamed != session.TraceEventCount)
-        {
-            session.ValidationErrors.push_back("finalized session recordsStreamed does not match indexed trace count.");
-        }
+                if (chunk.LastRecordSequence < chunk.FirstRecordSequence)
+                {
+                    session.ValidationErrors.push_back("chunk record sequence range is invalid.");
+                    break;
+                }
 
-        if (session.Finalized && sessionLastTransport != 0 && sessionLastTransport < session.LastRecordSequence)
-        {
-            session.ValidationErrors.push_back("finalized session lastTransportSequence is behind the last indexed record.");
-        }
+                if (hasPreviousRecordSequence && chunk.FirstRecordSequence <= previousRecordSequence)
+                {
+                    session.ValidationErrors.push_back("chunk record sequence ranges are not monotonic.");
+                    break;
+                }
 
-        if (session.Finalized && sessionTransportDrops != session.TransportDroppedEvents)
-        {
-            session.ValidationErrors.push_back("finalized transport drop counters disagree.");
-        }
+                if (!IsSupportedKnapmCompression(chunkCompression))
+                {
+                    session.ValidationErrors.push_back("unsupported_compression");
+                    break;
+                }
 
-        if (session.Finalized && sessionHostDrops != session.HostDroppedBatches)
-        {
-            session.ValidationErrors.push_back("finalized host drop counters disagree.");
-        }
+                if (!IsSafeKnapmChunkPath(chunk.File))
+                {
+                    session.ValidationErrors.push_back("chunk file path is not a safe KNAPM chunk path.");
+                    break;
+                }
 
-        if (session.ValidationErrors.empty())
-        {
-            ClassifyKnapmSession(session, manifest);
+                std::string chunkText;
+                if (!ReadKnapmChunkDecoded(sessionPath, chunk, &chunkText, &readError))
+                {
+                    session.ValidationErrors.push_back(readError);
+                    break;
+                }
+
+                const auto traceLines = ParseTraceJsonl(chunkText);
+                if (traceLines.size() != chunk.EventCount)
+                {
+                    session.ValidationErrors.push_back("chunk eventCount does not match trace row count.");
+                    break;
+                }
+
+                if (traceLines.empty())
+                {
+                    session.ValidationErrors.push_back("chunk is empty.");
+                    break;
+                }
+
+                const std::uint64_t firstEventId = ExtractJsonUInt64(traceLines.front(), "eventId");
+                const std::uint64_t lastEventId = ExtractJsonUInt64(traceLines.back(), "eventId");
+                if (firstEventId != chunk.FirstEventId || lastEventId != chunk.LastEventId)
+                {
+                    session.ValidationErrors.push_back("chunk eventId range does not match index.");
+                    break;
+                }
+
+
+                if (session.ValidationErrors.size() != chunkErrorStart)
+                {
+                    break;
+                }
+
+                totalTraceEvents += chunk.EventCount;
+                indexedStoredBytes += chunk.ByteLength;
+                indexedUncompressedBytes += static_cast<std::uint64_t>(chunkText.size());
+                if (indexedCompression.empty())
+                {
+                    indexedCompression = chunkCompression;
+                }
+                else if (indexedCompression != chunkCompression)
+                {
+                    indexedCompression = "mixed";
+                }
+                previousBatchSequence = chunk.BatchSequence;
+                previousRecordSequence = chunk.LastRecordSequence;
+                hasPreviousRecordSequence = true;
+                indexedLastBatchSequence = chunk.BatchSequence;
+                indexedLastRecordSequence = chunk.LastRecordSequence;
+                ++expectedChunkSequence;
+            }
+
+            if (!chunkObjects.empty())
+            {
+                session.LastBatchSequence = indexedLastBatchSequence;
+                session.LastRecordSequence = indexedLastRecordSequence;
+                session.StoredBytes = indexedStoredBytes;
+                session.UncompressedBytes = indexedUncompressedBytes;
+                session.CompressionSummary = indexedCompression.empty() ? "none" : indexedCompression;
+            }
+
+            if (!chunkObjects.empty() && manifestLastBatchSequence != indexedLastBatchSequence)
+            {
+                session.ValidationErrors.push_back("manifest lastBatchSequence does not match indexed chunks.");
+            }
+
+            if (!chunkObjects.empty() && manifestLastRecordSequence != indexedLastRecordSequence)
+            {
+                session.ValidationErrors.push_back("manifest lastRecordSequence does not match indexed chunks.");
+            }
+
+            if (chunkObjects.empty() && manifestLastBatchSequence != 0)
+            {
+                session.ValidationErrors.push_back("empty index must have manifest lastBatchSequence set to zero.");
+            }
+
+            if (totalTraceEvents != session.TraceEventCount)
+            {
+                session.ValidationErrors.push_back("manifest trace event count does not match indexed chunks.");
+            }
+
+            if (session.Finalized && capturedEventCount != session.TraceEventCount)
+            {
+                session.ValidationErrors.push_back("finalized capturedEvents count does not match indexed trace count.");
+            }
+
+            if (session.Finalized && sessionRecordsStreamed != session.TraceEventCount)
+            {
+                session.ValidationErrors.push_back("finalized session recordsStreamed does not match indexed trace count.");
+            }
+
+            if (session.Finalized && sessionLastTransport != 0 && sessionLastTransport < session.LastRecordSequence)
+            {
+                session.ValidationErrors.push_back("finalized session lastTransportSequence is behind the last indexed record.");
+            }
+
+            if (session.Finalized && sessionTransportDrops != session.TransportDroppedEvents)
+            {
+                session.ValidationErrors.push_back("finalized transport drop counters disagree.");
+            }
+
+            if (session.Finalized && sessionHostDrops != session.HostDroppedBatches)
+            {
+                session.ValidationErrors.push_back("finalized host drop counters disagree.");
+            }
+
+            if (session.ValidationErrors.empty())
+            {
+                ClassifyKnapmSession(session, manifest);
+            }
+            else
+            {
+                SetKnapmMalformedRecovery(session, "index_corrupt");
+            }
         }
-        else
-        {
-            SetKnapmMalformedRecovery(session, "index_corrupt");
-        }
+        while (false);
     }
-    while (false);
+    catch (const std::exception& exception)
+    {
+        session.Success = false;
+        session.ValidationErrors.push_back(exception.what());
+    }
 
     if (!session.ValidationErrors.empty() && session.RecoveryState.empty())
     {
@@ -3833,9 +3477,11 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
     return session;
 }
 
-std::vector<std::string> ReadKnapmTraceLines(const std::filesystem::path& sessionPath, const SessionInfo& validation)
+std::vector<JsonDocument> ReadKnapmTraceLines(const std::filesystem::path& sessionPath, const SessionInfo& validation)
 {
-    std::vector<std::string> traceLines;
+    std::vector<JsonDocument> traceLines;
+    std::size_t totalBytes = 0;
+    std::size_t totalValues = 0;
 
     do
     {
@@ -3844,14 +3490,19 @@ std::vector<std::string> ReadKnapmTraceLines(const std::filesystem::path& sessio
             break;
         }
 
-        std::string indexText;
+        JsonDocument indexText;
         std::string readError;
         if (!ReadTextFile(KnapmChildPath(sessionPath, "index.json"), &indexText, &readError))
         {
-            break;
+            throw JsonInputError(readError);
         }
 
-        const auto chunkObjects = SplitJsonObjectArray(ExtractJsonArray(indexText, "chunks"));
+        const auto chunkObjects = SplitJsonObjectArray(indexText.Array("chunks", true));
+        if (indexText.String("format", true) != "knapm-index" ||
+            indexText.String("sessionId", true) != validation.SessionId || chunkObjects.size() != validation.ChunkCount)
+        {
+            throw JsonInputError("Replay index identity or chunk count changed after validation.");
+        }
         for (const auto& chunkJson : chunkObjects)
         {
             const KnapmChunkInfo chunk = KnapmChunkFromJson(chunkJson);
@@ -3859,19 +3510,38 @@ std::vector<std::string> ReadKnapmTraceLines(const std::filesystem::path& sessio
             // swapped index cannot steer reads outside the session directory.
             if (!IsSafeKnapmChunkPath(chunk.File))
             {
-                traceLines.clear();
-                break;
+                throw JsonInputError("Unsafe chunk path on replay.");
             }
 
             std::string chunkText;
             if (!ReadKnapmChunkDecoded(sessionPath, chunk, &chunkText, &readError))
             {
-                traceLines.clear();
-                break;
+                throw JsonInputError(readError);
             }
 
-            const auto lines = SplitJsonl(chunkText);
+            if (chunkText.size() > 64 * 1024 * 1024 - totalBytes)
+            {
+                throw JsonInputError("Replay byte limit exceeded.");
+            }
+            totalBytes += chunkText.size();
+            const auto lines = ParseTraceJsonl(chunkText);
+            if (lines.size() != chunk.EventCount)
+            {
+                throw JsonInputError("Replay chunk event count changed after validation.");
+            }
+            for (const auto& line : lines)
+            {
+                totalValues += line.ValueCount();
+            }
+            if (lines.size() > 250000 - traceLines.size() || totalValues > 1000000)
+            {
+                throw JsonInputError("Replay record or value limit exceeded.");
+            }
             traceLines.insert(traceLines.end(), lines.begin(), lines.end());
+        }
+        if (traceLines.size() != validation.TraceEventCount)
+        {
+            throw JsonInputError("Replay event count changed after validation.");
         }
     }
     while (false);
@@ -3909,245 +3579,246 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
     session.Format = "legacy-jsonl";
     session.SessionPath = PathToUtf8(sessionDirectory);
 
-    do
+    try
     {
-        const std::filesystem::path manifestPath = sessionDirectory / L"manifest.json";
-        const std::filesystem::path auditPath = sessionDirectory / L"audit.jsonl";
-        const std::filesystem::path agentPath = sessionDirectory / L"agent-events.jsonl";
-        const std::filesystem::path tracePath = sessionDirectory / L"trace-events.jsonl";
+        do
+        {
+            const std::filesystem::path manifestPath = sessionDirectory / L"manifest.json";
+            const std::filesystem::path auditPath = sessionDirectory / L"audit.jsonl";
+            const std::filesystem::path agentPath = sessionDirectory / L"agent-events.jsonl";
+            const std::filesystem::path tracePath = sessionDirectory / L"trace-events.jsonl";
 
-        std::string manifest;
-        std::string readError;
-        if (!ReadTextFile(manifestPath, &manifest, &readError))
-        {
-            session.ValidationErrors.push_back(readError);
-            break;
-        }
-
-        session.SessionId = ExtractJsonString(manifest, "sessionId");
-        session.CreatedUtc = ExtractJsonString(manifest, "createdUtc");
-        session.DroppedEvents = ExtractJsonUInt64(manifest, "droppedEvents");
-        const std::string manifestOperationId = ExtractJsonString(manifest, "operationId");
-        const std::string targetManifest = ExtractJsonObject(manifest, "target");
-        const std::string agentManifest = ExtractJsonObject(manifest, "agent");
-        const std::string eventCounts = ExtractJsonObject(manifest, "eventCounts");
-        const std::string manifestTargetArchitecture = ExtractJsonString(targetManifest, "architecture");
-        const std::string manifestAgentArchitecture = ExtractJsonString(agentManifest, "architecture");
-        const std::string manifestAgentVersion = ExtractJsonString(agentManifest, "version");
-        session.ResolverPointerCandidates = ExtractJsonUInt64(eventCounts, "resolverPointerCandidates");
-        session.ResolverPointerUnsupported = ExtractJsonUInt64(eventCounts, "resolverPointerUnsupported");
-
-        if (!PayloadContains(manifest, "\"schemaVersion\":\"0.1.0\""))
-        {
-            session.ValidationErrors.push_back("manifest schemaVersion is missing or unsupported.");
-        }
-
-        if (session.SessionId.empty())
-        {
-            session.ValidationErrors.push_back("manifest sessionId is missing.");
-        }
-
-        if (!PayloadContains(manifest, "\"files\""))
-        {
-            session.ValidationErrors.push_back("manifest files block is missing.");
-        }
-
-        if (!IsSupportedArchitecture(manifestTargetArchitecture))
-        {
-            session.ValidationErrors.push_back("manifest target architecture is missing or unsupported.");
-        }
-
-        if (!IsSupportedArchitecture(manifestAgentArchitecture))
-        {
-            session.ValidationErrors.push_back("manifest agent architecture is missing or unsupported.");
-        }
-
-        if (
-            IsSupportedArchitecture(manifestTargetArchitecture) &&
-            IsSupportedArchitecture(manifestAgentArchitecture) &&
-            manifestTargetArchitecture != manifestAgentArchitecture)
-        {
-            session.ValidationErrors.push_back("manifest target and agent architecture must match.");
-        }
-
-        if (manifestAgentVersion.empty())
-        {
-            session.ValidationErrors.push_back("manifest agent version is missing.");
-        }
-
-        std::string auditText;
-        if (!ReadTextFile(auditPath, &auditText, &readError))
-        {
-            session.ValidationErrors.push_back(readError);
-        }
-        else
-        {
-            session.AuditEventCount = SplitJsonl(auditText).size();
-        }
-
-        std::string agentText;
-        if (!ReadTextFile(agentPath, &agentText, &readError))
-        {
-            session.ValidationErrors.push_back(readError);
-        }
-        else
-        {
-            const auto lines = SplitJsonl(agentText);
-            session.AgentEventCount = lines.size();
-            std::uint64_t helloCount = 0;
-            std::uint64_t resolverPointerCandidates = 0;
-            std::uint64_t resolverPointerUnsupported = 0;
-            bool hasDropped = false;
-            bool hasShutdown = false;
-            for (const auto& line : lines)
+            JsonDocument manifest;
+            std::string readError;
+            if (!ReadTextFile(manifestPath, &manifest, &readError))
             {
-                if (!PayloadContains(line, "\"schemaVersion\":\"0.1.0\""))
-                {
-                    session.ValidationErrors.push_back("agent-events.jsonl contains an event without schemaVersion 0.1.0.");
-                    break;
-                }
-
-                if (!manifestOperationId.empty() && ExtractJsonString(line, "operationId") != manifestOperationId)
-                {
-                    session.ValidationErrors.push_back("agent-events.jsonl contains an event with mismatched operationId.");
-                    break;
-                }
-
-                if (PayloadContains(line, "\"messageType\":\"agent_hello\""))
-                {
-                    ++helloCount;
-                    const std::string helloArchitecture = ExtractJsonString(line, "architecture");
-                    const std::string helloVersion = ExtractJsonString(line, "agentVersion");
-
-                    if (!IsSupportedArchitecture(helloArchitecture))
-                    {
-                        session.ValidationErrors.push_back("agent_hello architecture is missing or unsupported.");
-                    }
-
-                    if (helloVersion.empty())
-                    {
-                        session.ValidationErrors.push_back("agent_hello agentVersion is missing.");
-                    }
-
-                    if (IsSupportedArchitecture(manifestAgentArchitecture) && helloArchitecture != manifestAgentArchitecture)
-                    {
-                        session.ValidationErrors.push_back("agent_hello architecture does not match manifest agent architecture.");
-                    }
-
-                    if (!manifestAgentVersion.empty() && helloVersion != manifestAgentVersion)
-                    {
-                        session.ValidationErrors.push_back("agent_hello agentVersion does not match manifest agent version.");
-                    }
-                }
-
-                hasDropped = hasDropped || PayloadContains(line, "\"messageType\":\"dropped_events\"");
-                if (
-                    PayloadContains(line, "\"messageType\":\"resolver_pointer_candidate\"") ||
-                    PayloadContains(line, "\"messageType\":\"resolver_pointer_instrumented\""))
-                {
-                    ++resolverPointerCandidates;
-                }
-                else if (PayloadContains(line, "\"messageType\":\"resolver_pointer_unsupported\""))
-                {
-                    ++resolverPointerUnsupported;
-                }
-
-                if (PayloadContains(line, "\"messageType\":\"agent_shutdown\""))
-                {
-                    hasShutdown = true;
-                    if (ExtractJsonString(line, "reason").empty())
-                    {
-                        session.ValidationErrors.push_back("agent_shutdown reason is missing.");
-                    }
-
-                    if (!PayloadContains(line, "\"installedHooks\"") || !PayloadContains(line, "\"restoredHooks\"") || !PayloadContains(line, "\"failedHooks\""))
-                    {
-                        session.ValidationErrors.push_back("agent_shutdown hook lifecycle counts are missing.");
-                    }
-
-                    const std::uint64_t installedHooks = ExtractJsonUInt64(line, "installedHooks");
-                    const std::uint64_t restoredHooks = ExtractJsonUInt64(line, "restoredHooks");
-                    const std::uint64_t failedHooks = ExtractJsonUInt64(line, "failedHooks");
-                    if (restoredHooks < installedHooks || failedHooks != 0)
-                    {
-                        session.ValidationErrors.push_back("agent_shutdown reports unrestored or failed hooks.");
-                    }
-                }
+                session.ValidationErrors.push_back(readError);
+                break;
             }
 
-            if (helloCount == 0)
+            ValidateManifestTypes(manifest, false);
+            session.SessionId = ExtractJsonString(manifest, "sessionId");
+            session.CreatedUtc = ExtractJsonString(manifest, "createdUtc");
+            session.DroppedEvents = ExtractJsonUInt64(manifest, "droppedEvents");
+            const std::string manifestOperationId = ExtractJsonString(manifest, "operationId");
+            const JsonDocument targetManifest = ExtractJsonObject(manifest, "target");
+            const JsonDocument agentManifest = ExtractJsonObject(manifest, "agent");
+            const JsonDocument eventCounts = ExtractJsonObject(manifest, "eventCounts");
+            const std::string manifestTargetArchitecture = ExtractJsonString(targetManifest, "architecture");
+            const std::string manifestAgentArchitecture = ExtractJsonString(agentManifest, "architecture");
+            const std::string manifestAgentVersion = ExtractJsonString(agentManifest, "version");
+            session.ResolverPointerCandidates = ExtractJsonUInt64(eventCounts, "resolverPointerCandidates");
+            session.ResolverPointerUnsupported = ExtractJsonUInt64(eventCounts, "resolverPointerUnsupported");
+
+            if (!(ExtractJsonString(manifest, "schemaVersion") == "0.1.0"))
             {
-                session.ValidationErrors.push_back("agent-events.jsonl does not contain agent_hello.");
+                session.ValidationErrors.push_back("manifest schemaVersion is missing or unsupported.");
             }
 
-            if (helloCount > 1)
+            if (session.SessionId.empty())
             {
-                session.ValidationErrors.push_back("agent-events.jsonl contains more than one agent_hello.");
+                session.ValidationErrors.push_back("manifest sessionId is missing.");
             }
 
-            if (!hasDropped)
+            if (!manifest.Has("files"))
             {
-                session.ValidationErrors.push_back("agent-events.jsonl does not contain dropped_events.");
+                session.ValidationErrors.push_back("manifest files block is missing.");
             }
 
-            if (!hasShutdown)
+            if (!IsSupportedArchitecture(manifestTargetArchitecture))
             {
-                session.ValidationErrors.push_back("agent-events.jsonl does not contain agent_shutdown.");
+                session.ValidationErrors.push_back("manifest target architecture is missing or unsupported.");
             }
 
-            if (PayloadContains(eventCounts, "\"resolverPointerCandidates\""))
+            if (!IsSupportedArchitecture(manifestAgentArchitecture))
             {
-                if (session.ResolverPointerCandidates != resolverPointerCandidates)
-                {
-                    session.ValidationErrors.push_back("agent-events.jsonl resolver_pointer_candidate count does not match manifest eventCounts.resolverPointerCandidates.");
-                }
+                session.ValidationErrors.push_back("manifest agent architecture is missing or unsupported.");
+            }
+
+            if (
+                IsSupportedArchitecture(manifestTargetArchitecture) &&
+                IsSupportedArchitecture(manifestAgentArchitecture) &&
+                manifestTargetArchitecture != manifestAgentArchitecture)
+            {
+                session.ValidationErrors.push_back("manifest target and agent architecture must match.");
+            }
+
+            if (manifestAgentVersion.empty())
+            {
+                session.ValidationErrors.push_back("manifest agent version is missing.");
+            }
+
+            std::string auditText;
+            if (!ReadTextFile(auditPath, &auditText, &readError))
+            {
+                session.ValidationErrors.push_back(readError);
             }
             else
             {
-                session.ResolverPointerCandidates = resolverPointerCandidates;
+                session.AuditEventCount = ParseJsonl(auditText).size();
             }
 
-            if (PayloadContains(eventCounts, "\"resolverPointerUnsupported\""))
+            std::string agentText;
+            if (!ReadTextFile(agentPath, &agentText, &readError))
             {
-                if (session.ResolverPointerUnsupported != resolverPointerUnsupported)
-                {
-                    session.ValidationErrors.push_back("agent-events.jsonl resolver_pointer_unsupported count does not match manifest eventCounts.resolverPointerUnsupported.");
-                }
+                session.ValidationErrors.push_back(readError);
             }
             else
             {
-                session.ResolverPointerUnsupported = resolverPointerUnsupported;
-            }
-        }
-
-        std::string traceText;
-        if (!ReadTextFile(tracePath, &traceText, &readError))
-        {
-            session.ValidationErrors.push_back(readError);
-        }
-        else
-        {
-            const auto lines = SplitJsonl(traceText);
-            session.TraceEventCount = lines.size();
-            session.CompressionSummary = "none";
-            session.StoredBytes = static_cast<std::uint64_t>(traceText.size());
-            session.UncompressedBytes = static_cast<std::uint64_t>(traceText.size());
-            if (lines.empty())
-            {
-                session.ValidationErrors.push_back("trace-events.jsonl is empty.");
-            }
-
-            for (const auto& line : lines)
-            {
-                if (!PayloadContains(line, "\"schemaVersion\":\"0.1.0\"") || !PayloadContains(line, "\"api\""))
+                const auto lines = ParseAgentJsonl(agentText);
+                session.AgentEventCount = lines.size();
+                std::uint64_t helloCount = 0;
+                std::uint64_t resolverPointerCandidates = 0;
+                std::uint64_t resolverPointerUnsupported = 0;
+                bool hasDropped = false;
+                bool hasShutdown = false;
+                for (const auto& line : lines)
                 {
-                    session.ValidationErrors.push_back("trace-events.jsonl contains a malformed trace event.");
-                    break;
+                    if (!(ExtractJsonString(line, "schemaVersion") == "0.1.0"))
+                    {
+                        session.ValidationErrors.push_back("agent-events.jsonl contains an event without schemaVersion 0.1.0.");
+                        break;
+                    }
+
+                    if (!manifestOperationId.empty() && ExtractJsonString(line, "operationId") != manifestOperationId)
+                    {
+                        session.ValidationErrors.push_back("agent-events.jsonl contains an event with mismatched operationId.");
+                        break;
+                    }
+
+                    if ((ExtractJsonString(line, "messageType") == "agent_hello"))
+                    {
+                        ++helloCount;
+                        const std::string helloArchitecture = ExtractJsonString(line, "architecture");
+                        const std::string helloVersion = ExtractJsonString(line, "agentVersion");
+
+                        if (!IsSupportedArchitecture(helloArchitecture))
+                        {
+                            session.ValidationErrors.push_back("agent_hello architecture is missing or unsupported.");
+                        }
+
+                        if (helloVersion.empty())
+                        {
+                            session.ValidationErrors.push_back("agent_hello agentVersion is missing.");
+                        }
+
+                        if (IsSupportedArchitecture(manifestAgentArchitecture) && helloArchitecture != manifestAgentArchitecture)
+                        {
+                            session.ValidationErrors.push_back("agent_hello architecture does not match manifest agent architecture.");
+                        }
+
+                        if (!manifestAgentVersion.empty() && helloVersion != manifestAgentVersion)
+                        {
+                            session.ValidationErrors.push_back("agent_hello agentVersion does not match manifest agent version.");
+                        }
+                    }
+
+                    hasDropped = hasDropped || (ExtractJsonString(line, "messageType") == "dropped_events");
+                    if (
+                        (ExtractJsonString(line, "messageType") == "resolver_pointer_candidate") ||
+                        (ExtractJsonString(line, "messageType") == "resolver_pointer_instrumented"))
+                    {
+                        ++resolverPointerCandidates;
+                    }
+                    else if ((ExtractJsonString(line, "messageType") == "resolver_pointer_unsupported"))
+                    {
+                        ++resolverPointerUnsupported;
+                    }
+
+                    if ((ExtractJsonString(line, "messageType") == "agent_shutdown"))
+                    {
+                        hasShutdown = true;
+                        if (ExtractJsonString(line, "reason").empty())
+                        {
+                            session.ValidationErrors.push_back("agent_shutdown reason is missing.");
+                        }
+
+                        if (!line.Has("installedHooks") || !line.Has("restoredHooks") || !line.Has("failedHooks"))
+                        {
+                            session.ValidationErrors.push_back("agent_shutdown hook lifecycle counts are missing.");
+                        }
+
+                        const std::uint64_t installedHooks = ExtractJsonUInt64(line, "installedHooks");
+                        const std::uint64_t restoredHooks = ExtractJsonUInt64(line, "restoredHooks");
+                        const std::uint64_t failedHooks = ExtractJsonUInt64(line, "failedHooks");
+                        if (restoredHooks < installedHooks || failedHooks != 0)
+                        {
+                            session.ValidationErrors.push_back("agent_shutdown reports unrestored or failed hooks.");
+                        }
+                    }
+                }
+
+                if (helloCount == 0)
+                {
+                    session.ValidationErrors.push_back("agent-events.jsonl does not contain agent_hello.");
+                }
+
+                if (helloCount > 1)
+                {
+                    session.ValidationErrors.push_back("agent-events.jsonl contains more than one agent_hello.");
+                }
+
+                if (!hasDropped)
+                {
+                    session.ValidationErrors.push_back("agent-events.jsonl does not contain dropped_events.");
+                }
+
+                if (!hasShutdown)
+                {
+                    session.ValidationErrors.push_back("agent-events.jsonl does not contain agent_shutdown.");
+                }
+
+                if (eventCounts.Has("resolverPointerCandidates"))
+                {
+                    if (session.ResolverPointerCandidates != resolverPointerCandidates)
+                    {
+                        session.ValidationErrors.push_back("agent-events.jsonl resolver_pointer_candidate count does not match manifest eventCounts.resolverPointerCandidates.");
+                    }
+                }
+                else
+                {
+                    session.ResolverPointerCandidates = resolverPointerCandidates;
+                }
+
+                if (eventCounts.Has("resolverPointerUnsupported"))
+                {
+                    if (session.ResolverPointerUnsupported != resolverPointerUnsupported)
+                    {
+                        session.ValidationErrors.push_back("agent-events.jsonl resolver_pointer_unsupported count does not match manifest eventCounts.resolverPointerUnsupported.");
+                    }
+                }
+                else
+                {
+                    session.ResolverPointerUnsupported = resolverPointerUnsupported;
                 }
             }
+
+            std::string traceText;
+            if (!ReadTextFile(tracePath, &traceText, &readError))
+            {
+                session.ValidationErrors.push_back(readError);
+            }
+            else
+            {
+                const auto lines = ParseTraceJsonl(traceText);
+                session.TraceEventCount = lines.size();
+                session.CompressionSummary = "none";
+                session.StoredBytes = static_cast<std::uint64_t>(traceText.size());
+                session.UncompressedBytes = static_cast<std::uint64_t>(traceText.size());
+                if (lines.empty())
+                {
+                    session.ValidationErrors.push_back("trace-events.jsonl is empty.");
+                }
+
+            }
         }
+        while (false);
     }
-    while (false);
+    catch (const std::exception& exception)
+    {
+        session.Success = false;
+        session.ValidationErrors.push_back(exception.what());
+    }
 
     session.Success = session.ValidationErrors.empty();
     session.Finalized = session.Success;
@@ -4172,7 +3843,7 @@ std::string ReplaySessionJson(const std::filesystem::path& sessionDirectory)
     const SessionInfo validation = ValidateSessionPath(sessionDirectory);
     std::string traceText;
     std::string readError;
-    std::vector<std::string> traceLines;
+    std::vector<JsonDocument> traceLines;
 
     if (validation.Success)
     {
@@ -4182,7 +3853,15 @@ std::string ReplaySessionJson(const std::filesystem::path& sessionDirectory)
         }
         else if (ReadTextFile(sessionDirectory / L"trace-events.jsonl", &traceText, &readError))
         {
-            traceLines = SplitJsonl(traceText);
+            traceLines = ParseTraceJsonl(traceText);
+        }
+        else
+        {
+            throw JsonInputError(readError);
+        }
+        if (traceLines.size() != validation.TraceEventCount)
+        {
+            throw JsonInputError("Replay event count changed after validation.");
         }
     }
 
@@ -4403,14 +4082,14 @@ std::string ToJson(const KnapmCatalogRow& row)
     return stream.str();
 }
 
-KnapmCatalogRow KnapmCatalogRowFromJson(const std::string& json)
+KnapmCatalogRow KnapmCatalogRowFromJson(const JsonDocument& json)
 {
     KnapmCatalogRow row;
     row.SessionPath = ExtractJsonString(json, "path");
     row.Format = ExtractJsonString(json, "format");
     row.SessionId = ExtractJsonString(json, "sessionId");
     row.OperationId = ExtractJsonString(json, "operationId");
-    row.TargetProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "targetProcessId"));
+    row.TargetProcessId = ExtractJsonUInt32(json, "targetProcessId");
     row.TargetImage = ExtractJsonString(json, "targetImage");
     row.TargetPath = ExtractJsonString(json, "targetPath");
     row.TargetArchitecture = ExtractJsonString(json, "targetArchitecture");
@@ -4551,19 +4230,19 @@ KnapmCatalogRow BuildKnapmCatalogRow(const std::filesystem::path& sessionPath)
     row.ValidationErrorCount = static_cast<std::uint64_t>(validation.ValidationErrors.size());
     row.ValidationStatus = validation.Success ? "valid" : "invalid";
 
-    std::string manifest;
+    JsonDocument manifest;
     std::string readError;
     if (ReadTextFile(KnapmChildPath(sessionPath, "manifest.json"), &manifest, &readError))
     {
         row.OperationId = ExtractJsonString(manifest, "operationId");
 
-        const std::string targetObject = ExtractJsonObject(manifest, "target");
-        row.TargetProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(targetObject, "pid"));
+        const JsonDocument targetObject = ExtractJsonObject(manifest, "target");
+        row.TargetProcessId = ExtractJsonUInt32(targetObject, "pid");
         row.TargetPath = ExtractJsonString(targetObject, "path");
         row.TargetImage = FileNameFromUtf8Path(row.TargetPath);
         row.TargetArchitecture = ExtractJsonString(targetObject, "architecture");
 
-        const std::string ownerObject = ExtractJsonObject(manifest, "owner");
+        const JsonDocument ownerObject = ExtractJsonObject(manifest, "owner");
         row.OwnerKind = ExtractJsonString(ownerObject, "ownerKind");
         row.DaemonInstanceId = ExtractJsonString(ownerObject, "daemonInstanceId");
     }
@@ -4619,11 +4298,11 @@ std::vector<std::filesystem::path> DiscoverKnapmSessionPaths(const std::filesyst
     return sessions;
 }
 
-std::vector<KnapmCatalogRow> KnapmCatalogRowsFromJson(const std::string& json)
+std::vector<KnapmCatalogRow> KnapmCatalogRowsFromJson(const JsonDocument& json)
 {
     std::vector<KnapmCatalogRow> rows;
-    const auto rowObjects = SplitJsonObjectArray(ExtractJsonArray(json, "sessions"));
-    for (const std::string& rowObject : rowObjects)
+    const auto rowObjects = SplitJsonObjectArray(json.Array("sessions", true));
+    for (const JsonDocument& rowObject : rowObjects)
     {
         rows.push_back(KnapmCatalogRowFromJson(rowObject));
     }
@@ -5876,7 +5555,7 @@ KnapmTraceIndexEvent TraceIndexEventFromJson(
     const KnapmCatalogRow& session,
     const KnapmChunkInfo& chunk,
     std::uint64_t lineIndex,
-    const std::string& line)
+    const JsonDocument& line)
 {
     KnapmTraceIndexEvent event;
     event.SessionPath = session.SessionPath;
@@ -5887,20 +5566,20 @@ KnapmTraceIndexEvent TraceIndexEventFromJson(
     event.ChunkSequence = chunk.ChunkSequence;
     event.BatchSequence = chunk.BatchSequence;
     event.TargetProcessId = session.TargetProcessId;
-    event.Pid = static_cast<std::uint32_t>(ExtractJsonUInt64(line, "pid"));
-    event.Tid = static_cast<std::uint32_t>(ExtractJsonUInt64(line, "tid"));
+    event.Pid = ExtractJsonUInt32(line, "pid");
+    event.Tid = ExtractJsonUInt32(line, "tid");
     event.Process = ExtractJsonString(line, "process");
     event.Module = ExtractJsonString(line, "module");
     event.Api = ExtractJsonString(line, "api");
     event.ReturnValue = ExtractJsonString(line, "returnValue");
-    event.ErrorText = ExtractJsonObject(line, "error");
+    event.ErrorText = line.ObjectOrNull("error").Text();
     event.DurationUs = ExtractJsonUInt64(line, "durationUs");
     event.RelativeTimeMs = ExtractJsonUInt64(line, "relativeTimeMs");
-    event.TagsText = ExtractJsonArray(line, "tags");
-    event.ArgumentsText = ExtractJsonArray(line, "arguments");
+    event.TagsText = ExtractJsonArray(line, "tags").Text();
+    event.ArgumentsText = ExtractJsonArray(line, "arguments").Text();
     event.BufferPreview = ExtractJsonString(line, "bufferPreview");
-    event.EventJson = line;
-    event.Excerpt = TraceIndexExcerpt(line);
+    event.EventJson = line.Text();
+    event.Excerpt = TraceIndexExcerpt(line.Text());
     return event;
 }
 
@@ -5912,45 +5591,22 @@ bool ReadKnapmTraceIndexEvents(
 {
     bool success = false;
 
-    do
+    try
     {
-        if (events == nullptr)
+        do
         {
-            if (error != nullptr)
-            {
-                *error = "trace index event output is null.";
-            }
-            break;
-        }
-
-        std::string indexText;
-        std::string readError;
-        if (!ReadTextFile(KnapmChildPath(sessionPath, "index.json"), &indexText, &readError))
-        {
-            if (error != nullptr)
-            {
-                *error = readError;
-            }
-            break;
-        }
-
-        const auto chunkObjects = SplitJsonObjectArray(ExtractJsonArray(indexText, "chunks"));
-        for (const auto& chunkJson : chunkObjects)
-        {
-            const KnapmChunkInfo chunk = KnapmChunkFromJson(chunkJson);
-            // Re-check chunk paths on this fresh index read so a swapped index
-            // cannot steer reads outside the session directory.
-            if (!IsSafeKnapmChunkPath(chunk.File))
+            if (events == nullptr)
             {
                 if (error != nullptr)
                 {
-                    *error = "chunk file path is not a safe KNAPM chunk path.";
+                    *error = "trace index event output is null.";
                 }
                 break;
             }
 
-            std::string chunkText;
-            if (!ReadKnapmChunkDecoded(sessionPath, chunk, &chunkText, &readError))
+            JsonDocument indexText;
+            std::string readError;
+            if (!ReadTextFile(KnapmChildPath(sessionPath, "index.json"), &indexText, &readError))
             {
                 if (error != nullptr)
                 {
@@ -5959,34 +5615,63 @@ bool ReadKnapmTraceIndexEvents(
                 break;
             }
 
-            const auto lines = SplitJsonl(chunkText);
-            for (std::size_t lineIndex = 0; lineIndex < lines.size(); ++lineIndex)
+            const auto chunkObjects = SplitJsonObjectArray(indexText.Array("chunks", true));
+            for (const auto& chunkJson : chunkObjects)
             {
-                const std::string& line = lines[lineIndex];
-                if (ExtractJsonString(line, "schemaVersion") != "0.1.0" || ExtractJsonString(line, "api").empty())
+                const KnapmChunkInfo chunk = KnapmChunkFromJson(chunkJson);
+                // Re-check chunk paths on this fresh index read so a swapped index
+                // cannot steer reads outside the session directory.
+                if (!IsSafeKnapmChunkPath(chunk.File))
                 {
                     if (error != nullptr)
                     {
-                        *error = "trace index received a malformed trace event.";
+                        *error = "chunk file path is not a safe KNAPM chunk path.";
                     }
                     break;
                 }
 
-                events->push_back(TraceIndexEventFromJson(session, chunk, static_cast<std::uint64_t>(lineIndex), line));
+                std::string chunkText;
+                if (!ReadKnapmChunkDecoded(sessionPath, chunk, &chunkText, &readError))
+                {
+                    if (error != nullptr)
+                    {
+                        *error = readError;
+                    }
+                    break;
+                }
+
+                const auto lines = ParseTraceJsonl(chunkText);
+                for (std::size_t lineIndex = 0; lineIndex < lines.size(); ++lineIndex)
+                {
+                    const JsonDocument& line = lines[lineIndex];
+                    events->push_back(TraceIndexEventFromJson(session, chunk, static_cast<std::uint64_t>(lineIndex), line));
+                }
+
+                if (error != nullptr && !error->empty())
+                {
+                    break;
+                }
             }
 
-            if (error != nullptr && !error->empty())
+            if (error == nullptr || error->empty())
             {
-                break;
+                success = true;
             }
         }
-
-        if (error == nullptr || error->empty())
+        while (false);
+    }
+    catch (const std::exception& exception)
+    {
+        success = false;
+        if (events != nullptr)
         {
-            success = true;
+            events->clear();
+        }
+        if (error != nullptr)
+        {
+            *error = exception.what();
         }
     }
-    while (false);
 
     return success;
 }
@@ -7146,7 +6831,7 @@ std::string CatalogQueryJson(const std::vector<std::string>& args)
             return KnapmCatalogJson("catalog-query", "", "", rows, false, "missing --catalog.", false, false, {});
         }
 
-        std::string catalogText;
+        JsonDocument catalogText;
         std::string readError;
         if (!ReadTextFile(PathFromUtf8(catalogOption), &catalogText, &readError))
         {
@@ -7201,7 +6886,7 @@ std::string CatalogRemoveMissingJson(const std::vector<std::string>& args)
             return KnapmCatalogJson("catalog-remove-missing", "", "", rows, false, "missing --catalog.", dryRun, false, {});
         }
 
-        std::string catalogText;
+        JsonDocument catalogText;
         std::string readError;
         if (!ReadTextFile(PathFromUtf8(catalogOption), &catalogText, &readError))
         {
@@ -7848,7 +7533,7 @@ std::string SuperviseTreeJson(const std::vector<std::string>& args)
 std::string ClassifySessionRecordJson(const std::vector<std::string>& args)
 {
     const std::string sessionRecordPath = GetOption(args, "--session-record");
-    std::string record;
+    JsonDocument record;
     std::string readError;
     NativeSessionInfo session;
     bool success = false;
@@ -7875,9 +7560,9 @@ std::string ClassifySessionRecordJson(const std::vector<std::string>& args)
         session.OperationId = ExtractJsonString(record, "operationId");
         session.SessionKind = ExtractJsonString(record, "sessionKind");
         session.SessionState = ExtractJsonString(record, "sessionState");
-        session.OwnerProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(record, "ownerProcessId"));
-        session.HelperProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(record, "helperProcessId"));
-        session.TargetProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(record, "targetProcessId"));
+        session.OwnerProcessId = ExtractJsonUInt32(record, "ownerProcessId");
+        session.HelperProcessId = ExtractJsonUInt32(record, "helperProcessId");
+        session.TargetProcessId = ExtractJsonUInt32(record, "targetProcessId");
         session.StartedUtc = ExtractJsonString(record, "startedUtc");
         session.UpdatedUtc = NowUtc();
         session.CancellationEventName = ExtractJsonString(record, "cancellationEventName");
@@ -8237,40 +7922,40 @@ std::uint64_t CountDaemonSessionRecords(const std::filesystem::path& runtimeDire
     return count;
 }
 
-DaemonStatusInfo DaemonStatusFromJson(const std::string& json)
+DaemonStatusInfo DaemonStatusFromJson(const JsonDocument& json)
 {
     DaemonStatusInfo status;
     status.Success = ExtractJsonBool(json, "success");
     status.BackendMode = ExtractJsonString(json, "backendMode");
     status.Operation = ExtractJsonString(json, "operation");
     status.DaemonState = ExtractJsonString(json, "daemonState");
-    status.DaemonProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "daemonProcessId"));
+    status.DaemonProcessId = ExtractJsonUInt32(json, "daemonProcessId");
     status.DaemonInstanceId = ExtractJsonString(json, "daemonInstanceId");
     status.DaemonStartedUtc = ExtractJsonString(json, "daemonStartedUtc");
     status.DaemonHeartbeatUtc = ExtractJsonString(json, "daemonHeartbeatUtc");
     status.ControlEndpoint = ExtractJsonString(json, "controlEndpoint");
     status.RuntimeDirectory = ExtractJsonString(json, "runtimeDirectory");
     status.SessionCount = ExtractJsonUInt64(json, "sessionCount");
-    status.Win32ErrorCode = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "win32ErrorCode"));
+    status.Win32ErrorCode = ExtractJsonUInt32(json, "win32ErrorCode");
     status.Message = ExtractJsonString(json, "message");
     return status;
 }
 
-DaemonSessionRecord DaemonSessionRecordFromJson(const std::string& json)
+DaemonSessionRecord DaemonSessionRecordFromJson(const JsonDocument& json)
 {
     DaemonSessionRecord record;
     record.SessionId = ExtractJsonString(json, "sessionId");
     record.OperationId = ExtractJsonString(json, "operationId");
-    record.TargetProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "targetProcessId"));
-    record.DaemonProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "daemonProcessId"));
+    record.TargetProcessId = ExtractJsonUInt32(json, "targetProcessId");
+    record.DaemonProcessId = ExtractJsonUInt32(json, "daemonProcessId");
     record.DaemonInstanceId = ExtractJsonString(json, "daemonInstanceId");
     record.DaemonStartedUtc = ExtractJsonString(json, "daemonStartedUtc");
     record.DaemonControlEndpoint = ExtractJsonString(json, "daemonControlEndpoint");
-    record.SessionProcessId = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "sessionProcessId"));
+    record.SessionProcessId = ExtractJsonUInt32(json, "sessionProcessId");
     record.KnapmPath = ExtractJsonString(json, "knapmPath");
     record.CancellationEventName = ExtractJsonString(json, "cancellationEventName");
     record.StartedUtc = ExtractJsonString(json, "startedUtc");
-    record.DurationMs = static_cast<std::uint32_t>(ExtractJsonUInt64(json, "durationMs"));
+    record.DurationMs = ExtractJsonUInt32(json, "durationMs");
     return record;
 }
 
@@ -8281,32 +7966,41 @@ DaemonStatusInfo ReadDaemonStatus(const std::filesystem::path& runtimeDirectory)
     status.ControlEndpoint = DaemonControlEndpoint(runtimeDirectory);
     status.SessionCount = CountDaemonSessionRecords(runtimeDirectory);
 
-    do
+    try
     {
-        std::string text;
-        std::string readError;
-        if (!ReadTextFile(DaemonStatePath(runtimeDirectory), &text, &readError))
+        do
         {
-            status.Success = false;
-            status.Win32ErrorCode = ERROR_FILE_NOT_FOUND;
-            status.Message = "Daemon state is not available.";
-            break;
-        }
+            JsonDocument text;
+            std::string readError;
+            if (!ReadTextFile(DaemonStatePath(runtimeDirectory), &text, &readError))
+            {
+                status.Success = false;
+                status.Win32ErrorCode = ERROR_FILE_NOT_FOUND;
+                status.Message = "Daemon state is not available.";
+                break;
+            }
 
-        status = DaemonStatusFromJson(text);
-        status.RuntimeDirectory = PathToUtf8(runtimeDirectory);
-        status.ControlEndpoint = DaemonControlEndpoint(runtimeDirectory);
-        status.SessionCount = CountDaemonSessionRecords(runtimeDirectory);
-        const bool alive = IsProcessAlive(status.DaemonProcessId);
-        status.Success = alive && status.DaemonState == "running";
-        if (status.DaemonState == "running" && !alive)
-        {
-            status.DaemonState = "stale";
-            status.Win32ErrorCode = ERROR_PROCESS_ABORTED;
-            status.Message = "Daemon state is stale; daemon process is not alive.";
+            status = DaemonStatusFromJson(text);
+            status.RuntimeDirectory = PathToUtf8(runtimeDirectory);
+            status.ControlEndpoint = DaemonControlEndpoint(runtimeDirectory);
+            status.SessionCount = CountDaemonSessionRecords(runtimeDirectory);
+            const bool alive = IsProcessAlive(status.DaemonProcessId);
+            status.Success = alive && status.DaemonState == "running";
+            if (status.DaemonState == "running" && !alive)
+            {
+                status.DaemonState = "stale";
+                status.Win32ErrorCode = ERROR_PROCESS_ABORTED;
+                status.Message = "Daemon state is stale; daemon process is not alive.";
+            }
         }
+        while (false);
     }
-    while (false);
+    catch (const std::exception& exception)
+    {
+        status.Success = false;
+        status.Win32ErrorCode = ERROR_INVALID_DATA;
+        status.Message = exception.what();
+    }
 
     return status;
 }
@@ -8325,32 +8019,43 @@ bool ReadDaemonSessionRecord(const std::filesystem::path& runtimeDirectory, cons
 {
     bool read = false;
 
-    do
+    try
     {
-        if (record == nullptr)
+        do
         {
-            if (error != nullptr)
+            if (record == nullptr)
             {
-                *error = "record output is null.";
+                if (error != nullptr)
+                {
+                    *error = "record output is null.";
+                }
+                break;
             }
-            break;
-        }
 
-        std::string text;
-        if (!ReadTextFile(DaemonSessionRecordPath(runtimeDirectory, sessionId), &text, error))
-        {
-            break;
-        }
+            JsonDocument text;
+            if (!ReadTextFile(DaemonSessionRecordPath(runtimeDirectory, sessionId), &text, error))
+            {
+                break;
+            }
 
-        *record = DaemonSessionRecordFromJson(text);
-        record->RegistryPath = DaemonSessionRecordPath(runtimeDirectory, sessionId);
-        read = !record->SessionId.empty();
-        if (!read && error != nullptr)
+            *record = DaemonSessionRecordFromJson(text);
+            record->RegistryPath = DaemonSessionRecordPath(runtimeDirectory, sessionId);
+            read = !record->SessionId.empty();
+            if (!read && error != nullptr)
+            {
+                *error = "session record is malformed.";
+            }
+        }
+        while (false);
+    }
+    catch (const std::exception& exception)
+    {
+        read = false;
+        if (error != nullptr)
         {
-            *error = "session record is malformed.";
+            *error = exception.what();
         }
     }
-    while (false);
 
     return read;
 }
@@ -8532,11 +8237,11 @@ bool WaitForKnapmOwnerKind(const std::filesystem::path& knapmPath, const std::st
 
     do
     {
-        std::string manifest;
+        JsonDocument manifest;
         std::string readError;
         if (ReadTextFile(KnapmChildPath(knapmPath, "manifest.json"), &manifest, &readError))
         {
-            const std::string ownerObject = ExtractJsonObject(manifest, "owner");
+            const JsonDocument ownerObject = ExtractJsonObject(manifest, "owner");
             if (ExtractJsonString(ownerObject, "ownerKind") == ownerKind)
             {
                 matched = true;
@@ -8638,14 +8343,14 @@ NativeSessionInfo NativeSessionFromDaemonRecord(const DaemonSessionRecord& recor
             session.HostDroppedBatches = validation.HostDroppedBatches;
         }
 
-        std::string manifest;
+        JsonDocument manifest;
         std::string readError;
         if (!ReadTextFile(KnapmChildPath(knapmPath, "manifest.json"), &manifest, &readError))
         {
             break;
         }
 
-        const std::string sessionObject = ExtractJsonObject(manifest, "session");
+        const JsonDocument sessionObject = ExtractJsonObject(manifest, "session");
         if (sessionObject.empty())
         {
             break;
@@ -8772,11 +8477,21 @@ std::vector<DaemonSessionRecord> ReadAllDaemonSessionRecords(const std::filesyst
         }
 
         const std::filesystem::path entryPath = iterator->path();
-        std::string text;
+        JsonDocument text;
         std::string readError;
         if (ReadTextFile(entryPath, &text, &readError))
         {
-            DaemonSessionRecord record = DaemonSessionRecordFromJson(text);
+            DaemonSessionRecord record;
+            try
+            {
+                record = DaemonSessionRecordFromJson(text);
+            }
+            catch (const JsonInputError& exception)
+            {
+                record.SessionId = PathToUtf8(entryPath.stem());
+                record.RegistryMalformed = true;
+                record.RegistryError = exception.what();
+            }
             record.RegistryPath = entryPath;
             if (record.SessionId.empty())
             {
@@ -9776,6 +9491,12 @@ int wmain(int argc, wchar_t** argv)
     try
     {
         return DispatchCommand(args);
+    }
+    catch (const JsonInputError& error)
+    {
+        std::cout << "{\"schemaVersion\":\"0.1.0\",\"success\":false,\"operation\":\"invalid_json\",\"win32ErrorCode\":13,\"message\":"
+                  << Q(error.what()) << "}\n";
+        return 1;
     }
     catch (const std::exception& error)
     {

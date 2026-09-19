@@ -3,6 +3,10 @@
 # Keep hashed JSONL fixture chunks stable across Windows checkouts.
 tests/fixtures/session/**/*.jsonl text eol=lf
 
+# Preserve upstream checksums of pinned native dependencies on Windows.
+native/third-party/nlohmann/json.hpp text eol=lf
+native/third-party/nlohmann/LICENSE.MIT text eol=lf whitespace=-blank-at-eol
+
 # Generated artifacts are byte-compared by validators. Keep them LF on Windows.
 generated/definition-ids.json text eol=lf
 generated/dll-batch-promotion-plan.json text eol=lf

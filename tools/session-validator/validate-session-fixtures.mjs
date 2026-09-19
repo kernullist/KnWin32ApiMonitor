@@ -1,3 +1,4 @@
+import { parseStrictJson } from "./strict-json.mjs";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import path from "node:path";
@@ -19,7 +20,7 @@ const supportedCaptureModes = new Set(["bounded-native-capture", "bounded-native
 
 function readJson(filePath, errors) {
   try {
-    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+    return parseStrictJson(fs.readFileSync(filePath));
   } catch (error) {
     errors.push(`${path.relative(repoRoot, filePath)}: failed to parse JSON: ${error.message}`);
     return null;
@@ -30,7 +31,7 @@ function readJsonl(filePath, errors) {
   let text = "";
 
   try {
-    text = fs.readFileSync(filePath, "utf8");
+    text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(fs.readFileSync(filePath));
   } catch (error) {
     errors.push(`${path.relative(repoRoot, filePath)}: failed to read: ${error.message}`);
     return [];
@@ -38,10 +39,10 @@ function readJsonl(filePath, errors) {
 
   return text
     .split(/\r?\n/u)
-    .filter((line) => line.trim().length > 0)
+    .filter((line) => !/^[ \t\r]*$/u.test(line))
     .map((line, index) => {
       try {
-        return JSON.parse(line);
+        return parseStrictJson(line, { documentBytes: 1024 * 1024 });
       } catch (error) {
         errors.push(`${path.relative(repoRoot, filePath)}:${index + 1}: failed to parse JSONL row: ${error.message}`);
         return null;
@@ -744,10 +745,10 @@ function validateKnapmFixture(name, expectedSuccess) {
         const chunkText = decodedBytes.toString("utf8");
         const rows = chunkText
           .split(/\r?\n/u)
-          .filter((line) => line.trim().length > 0)
+          .filter((line) => !/^[ \t\r]*$/u.test(line))
           .map((line, index) => {
             try {
-              return JSON.parse(line);
+              return parseStrictJson(line, { documentBytes: 1024 * 1024 });
             } catch (error) {
               errors.push(`${path.relative(repoRoot, chunkPath)}:${index + 1}: failed to parse JSONL row: ${error.message}`);
               return null;
