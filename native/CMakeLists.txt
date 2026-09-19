@@ -58,6 +58,13 @@ if(BUILD_TESTING)
     add_executable(knmon-runtime-support-test tests/RuntimeSupportTest.cpp)
     target_link_libraries(knmon-runtime-support-test PRIVATE knmon-common knmon-core)
     add_test(NAME runtime-support COMMAND knmon-runtime-support-test)
+    add_executable(knmon-transport-security-test tests/TransportSecurityTest.cpp)
+    target_link_libraries(knmon-transport-security-test PRIVATE knmon-collector-core)
+    target_compile_definitions(knmon-transport-security-test PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+    add_test(NAME transport-security COMMAND knmon-transport-security-test)
+    add_executable(knmon-transport-tamper-target tests/TransportTamperTarget.cpp)
+    target_link_libraries(knmon-transport-tamper-target PRIVATE knmon-common)
+    target_compile_definitions(knmon-transport-tamper-target PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
 endif()
 
 add_library(knmon-collector-core STATIC

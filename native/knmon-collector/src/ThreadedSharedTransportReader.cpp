@@ -28,12 +28,12 @@ bool ThreadedSharedTransportReader::Start(const SharedTransportRecordCallback& c
     do
     {
         bool expected = false;
-        if (!m_running.compare_exchange_strong(expected, true))
+        if (!m_started.compare_exchange_strong(expected, true))
         {
             break;
         }
 
-        m_stopRequested.store(false);
+        m_running.store(true);
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             m_metrics = {};
@@ -42,7 +42,19 @@ bool ThreadedSharedTransportReader::Start(const SharedTransportRecordCallback& c
             m_metrics.ShutdownReason = "running";
         }
 
-        m_thread = std::thread(&ThreadedSharedTransportReader::Run, this, callback);
+        try
+        {
+            m_thread = std::thread(&ThreadedSharedTransportReader::Run, this, callback);
+        }
+        catch (const std::exception& error)
+        {
+            m_running.store(false);
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_metrics.Running = false;
+            m_metrics.ShutdownReason = "thread_start_failed";
+            m_metrics.LastErrorMessage = error.what();
+            break;
+        }
         started = true;
     }
     while (false);
@@ -119,7 +131,21 @@ void ThreadedSharedTransportReader::Run(const SharedTransportRecordCallback& cal
 
     while (!m_stopRequested.load())
     {
-        const SharedTransportDrainResult drain = reader.DrainAvailable(callback);
+        SharedTransportDrainResult drain;
+        try
+        {
+            drain = reader.DrainAvailable(callback);
+        }
+        catch (const std::exception& error)
+        {
+            drain = reader.SnapshotMetrics();
+            drain.ErrorMessage = error.what();
+        }
+        catch (...)
+        {
+            drain = reader.SnapshotMetrics();
+            drain.ErrorMessage = "Shared transport callback raised an unknown exception.";
+        }
         ApplyDrainResult(drain);
 
         if (!drain.HeaderValid)

@@ -6672,6 +6672,7 @@ struct SharedTransportSession
     KnMonAgentArchitecture Architecture = KnMonAgentArchitecture::Unknown;
     std::uint32_t Capacity = 0;
     std::uint64_t MappingSize = 0;
+    mutable SharedTransportReaderState ReaderState;
 };
 
 void CloseSharedTransport(SharedTransportSession& transport)
@@ -6694,6 +6695,7 @@ void CloseSharedTransport(SharedTransportSession& transport)
     transport.MappingName.clear();
     transport.OperationId.clear();
     transport.Architecture = KnMonAgentArchitecture::Unknown;
+    transport.ReaderState = {};
 }
 
 bool CreateSharedTransport(
@@ -6787,6 +6789,17 @@ bool CreateSharedTransport(
 SharedTransportReader MakeSharedTransportReader(const SharedTransportSession& transport, std::uint32_t maxRecordsPerDrain = 0)
 {
     SharedTransportReaderConfig config;
+    config.TrustedCapacity = transport.Capacity;
+    config.TrustedRecordBytes = transport.MappingSize >= sizeof(KnMonTransportHeader)
+        ? transport.MappingSize - sizeof(KnMonTransportHeader) : 0;
+    config.State = &transport.ReaderState;
+    config.ValidateRecordIdentity = [](const KnMonTransportRecord& record)
+    {
+        const KnMonGeneratedApiMetadata* api = FindGeneratedApiMetadata(record.ApiId);
+        return FindGeneratedModuleMetadata(record.ModuleId) != nullptr &&
+            ((record.ApiId == 0 && (record.Flags & KnMonTransportRecordFlagGenericInventory) != 0) ||
+                (api != nullptr && api->ModuleId == record.ModuleId));
+    };
     config.ExpectedArchitecture = static_cast<std::uint32_t>(transport.Architecture);
     config.ExpectedOperationId = transport.OperationId;
     config.MaxRecordsPerDrain = maxRecordsPerDrain;
@@ -6796,6 +6809,22 @@ SharedTransportReader MakeSharedTransportReader(const SharedTransportSession& tr
 
 void ApplyTransportMetrics(KnMonCaptureResult& result, const SharedTransportDrainResult& drainResult)
 {
+    if (drainResult.TransportCorrupted)
+    {
+        const bool firstFailure = result.StaleReason != "transport_corrupted";
+        result.Success = false;
+        result.OperationState = "failed";
+        result.SessionState = "failed";
+        result.StaleReason = "transport_corrupted";
+        result.Operation = "transport_corrupted";
+        result.Win32ErrorCode = ERROR_INVALID_DATA;
+        result.Subsystem = "knmon-collector";
+        result.Message = drainResult.ErrorMessage;
+        if (firstFailure)
+        {
+            AddAudit(result, "transport_corrupted", "shared_memory_transport_read", drainResult.ErrorMessage, ERROR_INVALID_DATA, "knmon-collector");
+        }
+    }
     result.TransportMode = "shared-memory";
     result.TransportCapacity = drainResult.Capacity;
     result.TransportRecordsProduced = drainResult.RecordsProduced;
@@ -6809,8 +6838,11 @@ void ApplyTransportMetrics(KnMonCaptureResult& result, const SharedTransportDrai
 
 void UpdateTransportMetrics(KnMonCaptureResult& result, const SharedTransportSession& transport)
 {
-    SharedTransportReader reader = MakeSharedTransportReader(transport);
-    ApplyTransportMetrics(result, reader.SnapshotMetrics());
+    if (transport.Header != nullptr && transport.Records != nullptr)
+    {
+        SharedTransportReader reader = MakeSharedTransportReader(transport);
+        ApplyTransportMetrics(result, reader.SnapshotMetrics());
+    }
 }
 
 void RecordHookOverhead(KnMonCaptureResult& result, std::uint64_t overheadUs)
@@ -6827,7 +6859,14 @@ void RecordHookOverhead(KnMonCaptureResult& result, std::uint64_t overheadUs)
 
     result.HookOverheadMinUs = std::min(result.HookOverheadMinUs, overheadUs);
     result.HookOverheadMaxUs = std::max(result.HookOverheadMaxUs, overheadUs);
-    result.HookOverheadAvgUs = ((result.HookOverheadAvgUs * (nextCount - 1)) + overheadUs) / nextCount;
+    if (overheadUs >= result.HookOverheadAvgUs)
+    {
+        result.HookOverheadAvgUs += (overheadUs - result.HookOverheadAvgUs) / nextCount;
+    }
+    else
+    {
+        result.HookOverheadAvgUs -= (result.HookOverheadAvgUs - overheadUs) / nextCount;
+    }
 }
 
 std::string ExtractJsonString(const std::string& payload, const std::string& key);
@@ -6894,11 +6933,6 @@ void DrainSharedTransport(
 
         return true;
     });
-
-    if (!drainResult.HeaderValid)
-    {
-        AddAudit(result, "transport_reader_invalid", "shared_memory_transport_read", drainResult.ErrorMessage, ERROR_INVALID_DATA, "knmon-collector");
-    }
 
     ApplyTransportMetrics(result, drainResult);
 
@@ -8396,7 +8430,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
         const bool continuousCapture = request.DurationMs == 0;
         const ULONGLONG captureDeadline = continuousCapture ? 0 : GetTickCount64() + static_cast<ULONGLONG>(request.DurationMs);
-        while (continuousCapture || GetTickCount64() < captureDeadline)
+        while (!transport.ReaderState.Corrupted && (continuousCapture || GetTickCount64() < captureDeadline))
         {
             if (observeOwnerExit())
             {
@@ -8459,7 +8493,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         if (!launchWindowRevealCompleted && !targetExited && !result.CancelObserved)
         {
             const ULONGLONG revealDeadline = GetTickCount64() + 3000ULL;
-            while (GetTickCount64() < revealDeadline)
+            while (!transport.ReaderState.Corrupted && GetTickCount64() < revealDeadline)
             {
                 DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
                 launchWindowRevealCompleted = revealLaunchWindows();
@@ -8980,7 +9014,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         const bool hasApiSelection = HasApiSelection(request.ApiSelection);
         const bool hasGenericProfileSelection = HasGenericProfileSelection();
 
-        while (!captureEnded)
+        while (!transport.ReaderState.Corrupted && !captureEnded)
         {
             std::string payload;
             pipeError = 0;
@@ -9975,7 +10009,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
         const bool continuousCapture = request.DurationMs == 0;
         const ULONGLONG captureDeadline = continuousCapture ? 0 : GetTickCount64() + static_cast<ULONGLONG>(request.DurationMs);
-        while (continuousCapture || GetTickCount64() < captureDeadline)
+        while (!transport.ReaderState.Corrupted && (continuousCapture || GetTickCount64() < captureDeadline))
         {
             if (observeCancellation("attach_capture"))
             {

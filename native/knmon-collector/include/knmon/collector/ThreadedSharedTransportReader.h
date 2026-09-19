@@ -48,6 +48,7 @@ public:
     ThreadedSharedTransportReader(const ThreadedSharedTransportReader&) = delete;
     ThreadedSharedTransportReader& operator=(const ThreadedSharedTransportReader&) = delete;
 
+    // One reader owns one session. Construct a new reader for another session.
     bool Start(const SharedTransportRecordCallback& callback);
     void RequestStop(const std::string& reason);
     bool Join(std::uint32_t timeoutMs);
@@ -62,6 +63,7 @@ private:
     ThreadedSharedTransportReaderConfig m_config;
     mutable std::mutex m_mutex;
     std::thread m_thread;
+    std::atomic<bool> m_started = false;
     std::atomic<bool> m_stopRequested = false;
     std::atomic<bool> m_running = false;
     ThreadedSharedTransportReaderMetrics m_metrics;

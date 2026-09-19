@@ -273,6 +273,13 @@ int RunSharedTransportReaderSmoke(int argc, char** argv)
     }
 
     knmon::SharedTransportReaderConfig config;
+    config.TrustedCapacity = static_cast<std::uint32_t>(records.size());
+    config.TrustedRecordBytes = records.size() * sizeof(knmon::KnMonTransportRecord);
+    config.ValidateRecordIdentity = [](const knmon::KnMonTransportRecord& record)
+    {
+        return record.ApiId == static_cast<std::uint16_t>(knmon::KnMonTransportApiId::CreateFileW) &&
+            record.ModuleId == static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Kernel32);
+    };
     config.ExpectedArchitecture = static_cast<std::uint32_t>(knmon::KnMonAgentArchitecture::X64);
     config.ExpectedOperationId = "collector-reader-smoke";
     config.MaxRecordsPerDrain = static_cast<std::uint32_t>(maxDrain);
@@ -363,6 +370,13 @@ int RunThreadedSessionReaderSmoke(int argc, char** argv)
     std::vector<std::string> stateFrames;
 
     knmon::ThreadedSharedTransportReaderConfig threadedConfig;
+    threadedConfig.ReaderConfig.TrustedCapacity = static_cast<std::uint32_t>(records.size());
+    threadedConfig.ReaderConfig.TrustedRecordBytes = records.size() * sizeof(knmon::KnMonTransportRecord);
+    threadedConfig.ReaderConfig.ValidateRecordIdentity = [](const knmon::KnMonTransportRecord& record)
+    {
+        return record.ApiId == static_cast<std::uint16_t>(knmon::KnMonTransportApiId::CreateFileW) &&
+            record.ModuleId == static_cast<std::uint16_t>(knmon::KnMonTransportModuleId::Kernel32);
+    };
     threadedConfig.ReaderConfig.ExpectedArchitecture = static_cast<std::uint32_t>(knmon::KnMonAgentArchitecture::X64);
     threadedConfig.ReaderConfig.ExpectedOperationId = "threaded-session-smoke";
     threadedConfig.ReaderConfig.MaxRecordsPerDrain = 2;
@@ -384,7 +398,7 @@ int RunThreadedSessionReaderSmoke(int argc, char** argv)
     }
 
     const DWORD deadline = GetTickCount() + 5000;
-    while (consumedSequences.size() < recordCount && GetTickCount() < deadline)
+    while (reader.SnapshotMetrics().RecordsConsumed < recordCount && GetTickCount() < deadline)
     {
         Sleep(20);
     }
@@ -392,6 +406,10 @@ int RunThreadedSessionReaderSmoke(int argc, char** argv)
     reader.RequestStop("stop_requested");
     stateFrames.push_back("stop_requested");
     const bool joined = reader.Join(5000);
+    if (!joined)
+    {
+        reader.Join(0);
+    }
     stateFrames.push_back(joined ? "stopped" : "failed");
     const knmon::ThreadedSharedTransportReaderMetrics metrics = reader.SnapshotMetrics();
 
