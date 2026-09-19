@@ -18,6 +18,7 @@ struct KnMonTraceBatch
     std::uint64_t LastRecordSequence = 0;
     std::uint64_t EventCount = 0;
     std::uint64_t DroppedEvents = 0;
+    std::uint64_t AbortedRecords = 0;
     std::uint64_t RecordsStreamed = 0;
     std::uint64_t HostDroppedBatches = 0;
     std::vector<KnMonAgentMessage> Events;

@@ -15,6 +15,7 @@ struct SharedTransportReaderState
     std::int64_t LastProducer = 0;
     std::int64_t LastDropped = 0;
     std::int64_t LastHighWaterMark = 0;
+    std::uint64_t AbortedRecords = 0;
     bool Corrupted = false;
     std::string ErrorMessage;
 };
@@ -40,9 +41,11 @@ struct SharedTransportDrainResult
     std::uint64_t RecordsProduced = 0;
     std::uint64_t RecordsConsumed = 0;
     std::uint64_t RecordsDropped = 0;
+    std::uint64_t AbortedRecords = 0;
     std::uint64_t HighWaterMark = 0;
     std::uint64_t Capacity = 0;
     std::uint64_t HookOverheadMinUs = 0;
+    std::uint64_t HookOverheadSamples = 0;
     std::uint64_t HookOverheadAvgUs = 0;
     std::uint64_t HookOverheadMaxUs = 0;
 };

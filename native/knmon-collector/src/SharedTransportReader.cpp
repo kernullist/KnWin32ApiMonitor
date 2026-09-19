@@ -65,6 +65,7 @@ bool SharedTransportReader::Fail(SharedTransportDrainResult& result, const char*
     result.RecordsConsumed = static_cast<std::uint64_t>(m_state->NextConsumer);
     result.RecordsDropped = static_cast<std::uint64_t>(m_state->LastDropped);
     result.HighWaterMark = static_cast<std::uint64_t>(m_state->LastHighWaterMark);
+    result.AbortedRecords = m_state->AbortedRecords;
     return false;
 }
 
@@ -141,6 +142,7 @@ bool SharedTransportReader::SnapshotCounters(SharedTransportDrainResult& result)
         result.RecordsConsumed = static_cast<std::uint64_t>(consumer);
         result.RecordsDropped = static_cast<std::uint64_t>(dropped);
         result.HighWaterMark = static_cast<std::uint64_t>(highWater);
+        result.AbortedRecords = m_state->AbortedRecords;
         valid = true;
     }
     while (false);
@@ -252,7 +254,14 @@ SharedTransportDrainResult SharedTransportReader::DrainAvailable(const SharedTra
                 Fail(result, "Shared transport commit token changed during consumption.");
                 break;
             }
-            RecordHookOverhead(result, record.HookOverheadUs);
+            if (record.EventKind == static_cast<std::uint16_t>(KnMonTransportEventKind::Unknown))
+            {
+                ++m_state->AbortedRecords;
+            }
+            else
+            {
+                RecordHookOverhead(result, record.HookOverheadUs);
+            }
             InterlockedExchange(reinterpret_cast<volatile LONG*>(&shared.State), static_cast<LONG>(KnMonTransportRecordState::Free));
             InterlockedExchange64(&shared.Sequence, -1);
             MemoryBarrier();
@@ -271,7 +280,7 @@ SharedTransportDrainResult SharedTransportReader::DrainAvailable(const SharedTra
 
 void SharedTransportReader::RecordHookOverhead(SharedTransportDrainResult& result, std::uint64_t overheadUs) const
 {
-    const std::uint64_t count = result.RecordsDrained + 1;
+    const std::uint64_t count = ++result.HookOverheadSamples;
     if (count == 1)
     {
         result.HookOverheadMinUs = overheadUs;

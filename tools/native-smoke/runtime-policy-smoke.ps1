@@ -35,7 +35,7 @@ if ($LASTEXITCODE -ne 0)
 }
 $capture = $captureText | ConvertFrom-Json
 $fileEvents = @($capture.capturedEvents | Where-Object { $_.api -eq 'CreateFileW' -and $_.module -eq 'kernel32.dll' })
-if (!$capture.success -or $fileEvents.Count -eq 0 -or $capture.transportDroppedEvents -ne 0)
+if (!$capture.success -or $fileEvents.Count -eq 0 -or $capture.transportDroppedEvents -ne 0 -or $capture.transportAbortedRecords -ne 0)
 {
     throw "Capture metadata or loss regression: $($capture.operation)"
 }

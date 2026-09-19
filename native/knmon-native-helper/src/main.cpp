@@ -1469,6 +1469,7 @@ std::string ToJson(const knmon::KnMonCaptureResult& result)
     stream << "\"transportCapacity\":" << result.TransportCapacity << ",";
     stream << "\"transportRecordsProduced\":" << result.TransportRecordsProduced << ",";
     stream << "\"transportRecordsConsumed\":" << result.TransportRecordsConsumed << ",";
+    stream << "\"transportAbortedRecords\":" << result.TransportAbortedRecords << ",";
     stream << "\"transportDroppedEvents\":" << result.TransportDroppedEvents << ",";
     stream << "\"transportHighWaterMark\":" << result.TransportHighWaterMark << ",";
     stream << "\"hookOverheadMinUs\":" << result.HookOverheadMinUs << ",";
@@ -1640,6 +1641,7 @@ struct SessionInfo
     std::uint64_t ResolverPointerUnsupported = 0;
     std::uint64_t DroppedEvents = 0;
     std::uint64_t TransportDroppedEvents = 0;
+    std::uint64_t TransportAbortedRecords = 0;
     std::uint64_t HostDroppedBatches = 0;
     std::uint64_t ChunkCount = 0;
     std::uint64_t LastBatchSequence = 0;
@@ -1679,6 +1681,7 @@ struct NativeSessionInfo
     std::uint64_t LastTransportSequence = 0;
     std::uint64_t RecordsStreamed = 0;
     std::uint64_t TransportDroppedEvents = 0;
+    std::uint64_t TransportAbortedRecords = 0;
     std::uint64_t HostDroppedBatches = 0;
     std::string StaleReason;
     std::string RecoveryAction;
@@ -1725,6 +1728,7 @@ std::string ToJson(const SessionInfo& session)
     stream << "\"resolverPointerUnsupported\":" << session.ResolverPointerUnsupported << ",";
     stream << "\"droppedEvents\":" << session.DroppedEvents << ",";
     stream << "\"transportDroppedEvents\":" << session.TransportDroppedEvents << ",";
+    stream << "\"transportAbortedRecords\":" << session.TransportAbortedRecords << ",";
     stream << "\"hostDroppedBatches\":" << session.HostDroppedBatches << ",";
     stream << "\"chunkCount\":" << session.ChunkCount << ",";
     stream << "\"lastBatchSequence\":" << session.LastBatchSequence << ",";
@@ -1777,6 +1781,7 @@ std::string ToJson(const NativeSessionInfo& session)
     stream << "\"lastTransportSequence\":" << session.LastTransportSequence << ",";
     stream << "\"recordsStreamed\":" << session.RecordsStreamed << ",";
     stream << "\"transportDroppedEvents\":" << session.TransportDroppedEvents << ",";
+    stream << "\"transportAbortedRecords\":" << session.TransportAbortedRecords << ",";
     stream << "\"hostDroppedBatches\":" << session.HostDroppedBatches << ",";
     stream << "\"staleReason\":" << Q(session.StaleReason) << ",";
     stream << "\"recoveryAction\":" << Q(session.RecoveryAction) << ",";
@@ -1831,6 +1836,7 @@ std::string TraceBatchFrameJson(const knmon::KnMonTraceBatch& batch)
     stream << "\"lastRecordSequence\":" << batch.LastRecordSequence << ",";
     stream << "\"eventCount\":" << batch.EventCount << ",";
     stream << "\"droppedEvents\":" << batch.DroppedEvents << ",";
+    stream << "\"transportAbortedRecords\":" << batch.AbortedRecords << ",";
     stream << "\"recordsStreamed\":" << batch.RecordsStreamed << ",";
     stream << "\"hostDroppedBatches\":" << batch.HostDroppedBatches << ",";
     stream << "\"events\":[";
@@ -2504,6 +2510,7 @@ struct KnapmSessionWriter
     std::string AgentVersion;
     std::uint64_t DroppedEvents = 0;
     std::uint64_t TransportDroppedEvents = 0;
+    std::uint64_t TransportAbortedRecords = 0;
     std::uint64_t HostDroppedBatches = 0;
     std::uint64_t TraceEventCount = 0;
     std::uint64_t AgentEventCount = 0;
@@ -2658,6 +2665,7 @@ struct KnapmSessionWriter
             Owner.UpdatedUtc = session.UpdatedUtc;
         }
         TransportDroppedEvents = session.TransportDroppedEvents;
+        TransportAbortedRecords = session.TransportAbortedRecords;
         HostDroppedBatches = session.HostDroppedBatches;
         if (Chunks.empty())
         {
@@ -2755,6 +2763,7 @@ struct KnapmSessionWriter
             LastRecordSequence = batch.LastRecordSequence;
             DroppedEvents = batch.DroppedEvents;
             TransportDroppedEvents = batch.DroppedEvents;
+            TransportAbortedRecords = batch.AbortedRecords;
             HostDroppedBatches = batch.HostDroppedBatches;
             TouchOwnership();
             RefreshCheckpoint();
@@ -2794,6 +2803,7 @@ struct KnapmSessionWriter
         AgentVersion = result.Handshake.AgentVersion;
         DroppedEvents = result.DroppedEvents;
         TransportDroppedEvents = result.TransportDroppedEvents;
+        TransportAbortedRecords = result.TransportAbortedRecords;
         HostDroppedBatches = session.HostDroppedBatches;
         ResolverPointerCandidates = result.ResolverPointerCandidates;
         ResolverPointerUnsupported = result.ResolverPointerUnsupported;
@@ -2933,6 +2943,7 @@ struct KnapmSessionWriter
         stream << "},";
         stream << "\"droppedEvents\":" << DroppedEvents << ",";
         stream << "\"transportDroppedEvents\":" << TransportDroppedEvents << ",";
+        stream << "\"transportAbortedRecords\":" << TransportAbortedRecords << ",";
         stream << "\"hostDroppedBatches\":" << HostDroppedBatches << ",";
         stream << "\"chunkCount\":" << Chunks.size() << ",";
         stream << "\"lastBatchSequence\":" << LastBatchSequence << ",";
@@ -3360,6 +3371,7 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
         session.Finalized = ExtractJsonBool(manifest, "finalized");
         session.DroppedEvents = ExtractJsonUInt64(manifest, "droppedEvents");
         session.TransportDroppedEvents = ExtractJsonUInt64(manifest, "transportDroppedEvents");
+        session.TransportAbortedRecords = ExtractJsonUInt64(manifest, "transportAbortedRecords");
         session.HostDroppedBatches = ExtractJsonUInt64(manifest, "hostDroppedBatches");
         session.ChunkCount = ExtractJsonUInt64(manifest, "chunkCount");
         session.LastBatchSequence = ExtractJsonUInt64(manifest, "lastBatchSequence");
@@ -7367,6 +7379,7 @@ NativeSessionInfo BuildSessionInfoFromCapture(const knmon::KnMonCaptureResult& r
     session.LastTransportSequence = result.LastTransportSequence;
     session.RecordsStreamed = result.RecordsStreamed;
     session.TransportDroppedEvents = result.TransportDroppedEvents;
+    session.TransportAbortedRecords = result.TransportAbortedRecords;
     session.ShutdownEvidence = result.SessionShutdownEvidence;
     session.StopRequested = result.CancelRequested || result.CancelObserved;
     session.AgentCleanupAttempted = result.AgentCleanupAttempted;
@@ -7463,6 +7476,7 @@ int LaunchSessionCommand(const std::vector<std::string>& args)
         session.LastTransportSequence = batch.LastRecordSequence;
         session.RecordsStreamed = batch.RecordsStreamed;
         session.TransportDroppedEvents = batch.DroppedEvents;
+        session.TransportAbortedRecords = batch.AbortedRecords;
         session.HostDroppedBatches = batch.HostDroppedBatches;
         session.UpdatedUtc = NowUtc();
         std::cout << TraceBatchFrameJson(batch) << "\n" << std::flush;
@@ -7752,6 +7766,7 @@ int AttachSessionCommand(const std::vector<std::string>& args)
         session.LastTransportSequence = batch.LastRecordSequence;
         session.RecordsStreamed = batch.RecordsStreamed;
         session.TransportDroppedEvents = batch.DroppedEvents;
+        session.TransportAbortedRecords = batch.AbortedRecords;
         session.HostDroppedBatches = batch.HostDroppedBatches;
         session.UpdatedUtc = NowUtc();
         std::cout << TraceBatchFrameJson(batch) << "\n" << std::flush;
@@ -7768,6 +7783,7 @@ int AttachSessionCommand(const std::vector<std::string>& args)
         session.LastTransportSequence = partialResult.LastTransportSequence;
         session.RecordsStreamed = partialResult.RecordsStreamed;
         session.TransportDroppedEvents = partialResult.TransportDroppedEvents;
+        session.TransportAbortedRecords = partialResult.TransportAbortedRecords;
         session.StopRequested = partialResult.CancelRequested || partialResult.CancelObserved;
         session.AgentCleanupAttempted = partialResult.AgentCleanupAttempted;
         session.AgentCleanupSucceeded = partialResult.AgentCleanupSucceeded;
@@ -8616,6 +8632,7 @@ NativeSessionInfo NativeSessionFromDaemonRecord(const DaemonSessionRecord& recor
             session.LastTransportSequence = validation.LastRecordSequence;
             session.RecordsStreamed = validation.TraceEventCount;
             session.TransportDroppedEvents = validation.TransportDroppedEvents;
+        session.TransportAbortedRecords = validation.TransportAbortedRecords;
             session.HostDroppedBatches = validation.HostDroppedBatches;
         }
 
@@ -8642,6 +8659,7 @@ NativeSessionInfo NativeSessionFromDaemonRecord(const DaemonSessionRecord& recor
         session.LastTransportSequence = ExtractJsonUInt64(sessionObject, "lastTransportSequence");
         session.RecordsStreamed = ExtractJsonUInt64(sessionObject, "recordsStreamed");
         session.TransportDroppedEvents = ExtractJsonUInt64(sessionObject, "transportDroppedEvents");
+        session.TransportAbortedRecords = ExtractJsonUInt64(sessionObject, "transportAbortedRecords");
         session.HostDroppedBatches = ExtractJsonUInt64(sessionObject, "hostDroppedBatches");
         session.StopRequested = ExtractJsonBool(sessionObject, "stopRequested");
         session.AgentCleanupAttempted = ExtractJsonBool(sessionObject, "agentCleanupAttempted");

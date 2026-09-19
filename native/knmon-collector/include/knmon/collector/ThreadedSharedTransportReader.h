@@ -29,6 +29,7 @@ struct ThreadedSharedTransportReaderMetrics
     std::uint64_t RecordsProduced = 0;
     std::uint64_t RecordsConsumed = 0;
     std::uint64_t RecordsDropped = 0;
+    std::uint64_t AbortedRecords = 0;
     std::uint64_t HighWaterMark = 0;
     std::uint64_t ValidationFailures = 0;
     std::uint64_t LastTransportSequence = 0;

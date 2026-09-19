@@ -403,6 +403,7 @@ struct KnMonCaptureResult
     std::uint64_t TransportRecordsProduced = 0;
     std::uint64_t TransportRecordsConsumed = 0;
     std::uint64_t TransportDroppedEvents = 0;
+    std::uint64_t TransportAbortedRecords = 0;
     std::uint64_t TransportHighWaterMark = 0;
     std::uint64_t HookOverheadMinUs = 0;
     std::uint64_t HookOverheadAvgUs = 0;

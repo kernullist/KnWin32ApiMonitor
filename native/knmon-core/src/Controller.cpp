@@ -6830,6 +6830,7 @@ void ApplyTransportMetrics(KnMonCaptureResult& result, const SharedTransportDrai
     result.TransportRecordsProduced = drainResult.RecordsProduced;
     result.TransportRecordsConsumed = drainResult.RecordsConsumed;
     result.TransportDroppedEvents = drainResult.RecordsDropped;
+    result.TransportAbortedRecords = drainResult.AbortedRecords;
     result.TransportHighWaterMark = drainResult.HighWaterMark;
     result.LastTransportSequence = drainResult.RecordsConsumed;
     result.RecordsStreamed = drainResult.RecordsConsumed;
@@ -6952,6 +6953,7 @@ void DrainSharedTransport(
         batch.LastRecordSequence = lastRecordSequence;
         batch.EventCount = static_cast<std::uint64_t>(batchEvents.size());
         batch.DroppedEvents = result.TransportDroppedEvents;
+        batch.AbortedRecords = result.TransportAbortedRecords;
         batch.RecordsStreamed = result.RecordsStreamed;
         batch.HostDroppedBatches = 0;
         batch.Events = batchEvents;

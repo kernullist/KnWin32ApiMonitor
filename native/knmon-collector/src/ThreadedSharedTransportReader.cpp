@@ -186,6 +186,7 @@ void ThreadedSharedTransportReader::ApplyDrainResult(const SharedTransportDrainR
     m_metrics.RecordsProduced = drain.RecordsProduced;
     m_metrics.RecordsConsumed = drain.RecordsConsumed;
     m_metrics.RecordsDropped = drain.RecordsDropped;
+    m_metrics.AbortedRecords = drain.AbortedRecords;
     m_metrics.HighWaterMark = drain.HighWaterMark;
     m_metrics.LastTransportSequence = drain.RecordsConsumed;
     m_metrics.LastErrorMessage = drain.ErrorMessage;
