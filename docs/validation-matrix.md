@@ -10,6 +10,7 @@ Windows 10/11 release or every API input.
 | Native CTest | 23/23 passed | 23/23 passed | 22/22 passed before sustained test addition | 17 passed, 5 not started before sustained test addition |
 | Desktop compile/link | test executable passed | test executable passed | application passed | application passed |
 | Desktop security tests | 3/3 passed | 3/3 passed | 3/3 passed | 3/3 passed |
+| Desktop attach/filter/stop/export and Job resources | native tools used | native tools used | passed with Debug native tools | passed with Debug native tools |
 | Desktop PE hardening | passed | passed | passed | passed |
 | Rust backend with real helper | 17/17 passed | 17/17 passed | not separately run | not separately run |
 | All-supported sample live/replay | 376 events, 16 errors | 376 events, 16 errors | 376 events, 16 errors | blocked before launch |
@@ -49,10 +50,16 @@ transport drops. See `sustained-capture.md` for its bounds and reproduction
 commands. This does not measure the complete desktop WebView process tree.
 
 Other Windows builds, cross-user/elevated IPC, hardware CET enforcement,
-whole desktop resource measurements and complete desktop Release binary
+complete desktop Release binary
 distribution reconstruction still need their own evidence. Kernel ETW session creation on this
 medium-integrity host returns access denied (5). User evaluation is excluded
 from the technical acceptance criteria.
+
+The [desktop probe](desktop-evidence.md) separately exercises the bundled UI with
+matching Debug helpers. Both architectures receive actual native events, filter
+and export them, detach while the target survives, and exit normally. Raw Job
+samples include WebView children and separate target resources. The hidden-window
+scope and sampled working-set sums are not a foreground performance score.
 
 The clean source archive from `50bf0e7` was extracted without Git metadata and
 rebuilt with the pinned Node/CMake/MSVC/SDK configuration. npm installation,

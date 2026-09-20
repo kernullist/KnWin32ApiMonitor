@@ -19,7 +19,7 @@ PENDING = {
     "windows_build_matrix": "Only Windows 10.0.26200 has executed evidence; other supported Windows builds need their own runs.",
     "elevated_cross_user_ipc": "Elevated and cross-user IPC contexts lack executed evidence.",
     "hardware_cet_enforcement": "PE compatibility metadata does not establish hardware CET enforcement.",
-    "whole_desktop_resources": "Complete WebView process-tree resources and end-to-end desktop interaction remain unmeasured.",
+    "whole_desktop_resources": "Owned x64/x86 desktop interaction and complete sampled WebView Job membership require executed evidence.",
     "capture_profile_costs": "Separate metadata, arguments, preview and stack capture costs are not established.",
     "dependency_maintenance": "Windows-reachable dependency warnings require verified current graph and advisory evidence.",
     "binary_distribution_reconstruction": "Native Debug/frontend source reconstruction does not establish a complete desktop binary distribution rebuild.",
@@ -29,7 +29,8 @@ VALIDATED = ("source_reconstruction", "dependency_inventory", "typed_abi_source_
 PRODUCERS = ("tools/readiness/source_evidence.py", "tools/readiness/technical_gate.py", "tools/readiness/replay_evidence.py", "tools/source/source_archive.py",
              "tools/source/rebuild_source.py", "tools/source/owned_command.py", "tools/security/dependency_inventory.py",
              "tools/security/validate-sbom-schema.mjs", "tools/abi-proof/proof.mjs", "tools/abi-proof/check-proof.mjs",
-             "tools/comparison/check_proof.py", "tools/comparison/replay_comparison.py", "tools/comparison/run_comparison.py", "tools/readiness/advisory_audit.py")
+             "tools/comparison/check_proof.py", "tools/comparison/replay_comparison.py", "tools/comparison/run_comparison.py", "tools/readiness/advisory_audit.py",
+             "tools/readiness/desktop_evidence.py", "tools/readiness/desktop_processes.py", "tools/readiness/desktop_driver.mjs", "tools/readiness/desktop_check.py")
 
 
 def outcome(rows):
@@ -71,6 +72,7 @@ def main():
     parser.add_argument("--comparison", type=Path)
     parser.add_argument("--comparison-python", type=Path, default=ROOT / "build/deps/frida-venv/Scripts/python.exe")
     parser.add_argument("--advisory", type=Path)
+    parser.add_argument("--desktop", type=Path)
     parser.add_argument("--rustsec-db", type=Path, default=ROOT / "build/deps/rustsec-advisory-db")
     parser.add_argument("--node", type=Path, default=ROOT / "build/deps/node-v24.21.0-win-x64/node.exe")
     args = parser.parse_args()
@@ -155,6 +157,12 @@ def main():
                                                "scope": "Warnings remain visible; absence from a Windows graph is not an upstream fix."}
         return {**result, "scope": "Known advisory scan, unchanged lockfiles, at most 24 hours old and current RustSec contents; not an absence-of-unknown-defects claim."}
 
+    def desktop():
+        from desktop_evidence import verify
+        directory = args.desktop.resolve()
+        bind("desktop", directory / "evidence.json")
+        return verify(directory)
+
     try:
         report["checkoutRevision"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, timeout=10).strip()
         report["trackedDirty"] = bool(subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT, timeout=30))
@@ -167,6 +175,8 @@ def main():
             checked("competitive_semantics", comparison)
         if args.advisory is not None:
             checked("current_advisory_scan", advisory)
+        if args.desktop is not None:
+            checked("whole_desktop_resources", desktop)
         if rows["source_reconstruction"]["status"] == "passed":
             verify_current_sources(retained["sourceManifest"])
         verify_bound_inputs(report["inputs"])

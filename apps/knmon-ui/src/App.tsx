@@ -68,11 +68,12 @@ import { traceDisplayEventLimit } from "./traceIngestConfig";
 import { buildTraceThreadGroups, buildTraceTimeline } from "./traceViews";
 import type { TraceThreadGroup, TraceTimelineBucket } from "./traceViews";
 import { computeVirtualTraceWindow } from "./virtualTrace";
+import { architectureMismatchMessage, normalizeNativeArchitecture, targetEligibilityReason } from "./targetArchitecture";
+import type { NativeArchitecture } from "./targetArchitecture";
 
 type LeftTab = "targets" | "apis" | "profiles";
 type TraceMode = "flat" | "call-tree" | "errors" | "threads" | "timeline";
 type ChildPolicy = ProcessTreeResult["childPolicy"];
-type NativeArchitecture = "x64" | "x86" | "unknown";
 
 const inspectorTabs: Array<{ id: InspectorTab; label: string }> = [
   { id: "parameters", label: "Parameters" },
@@ -470,47 +471,6 @@ function matchesQuickTraceFilters(event: TraceEvent, apiFilter: string, moduleFi
   }
 
   return true;
-}
-
-function normalizeNativeArchitecture(value: string): NativeArchitecture {
-  return value === "x64" || value === "x86" ? value : "unknown";
-}
-
-function toolLabelForArchitecture(architecture: NativeArchitecture): string {
-  if (architecture === "x86") {
-    return "Win32/x86 KN Win32 API Monitor";
-  }
-
-  if (architecture === "x64") {
-    return "x64 KN Win32 API Monitor";
-  }
-
-  return "matching-bitness KN Win32 API Monitor";
-}
-
-function architectureMismatchMessage(targetArchitecture: NativeArchitecture, helperArchitecture: NativeArchitecture): string {
-  return `Target architecture ${targetArchitecture} does not match this ${helperArchitecture} build. Run the ${toolLabelForArchitecture(targetArchitecture)} tool to monitor this target.`;
-}
-
-function targetEligibilityReason(target: TargetProcess | null, helperArchitecture: NativeArchitecture): string | null {
-  if (!target) {
-    return "Select a target row.";
-  }
-
-  if (target.status !== "available") {
-    return `Target status is ${target.status}.`;
-  }
-
-  if (target.architecture !== "x64" && target.architecture !== "x86") {
-    return `Architecture ${target.architecture} is unsupported.`;
-  }
-
-  if (helperArchitecture !== "unknown" && target.architecture !== helperArchitecture) {
-    const targetArchitecture = normalizeNativeArchitecture(target.architecture);
-    return architectureMismatchMessage(targetArchitecture, helperArchitecture);
-  }
-
-  return null;
 }
 
 function summarizeProcessTree(result: ProcessTreeResult | null) {

@@ -7,7 +7,7 @@ dependency and comparison commands:
 python tools/readiness/technical_gate.py `
   --source-build build/source-rebuild-ID --archive build/knmon-source.zip `
   --dependencies build/dependency-evidence-ID --comparison build/comparison-ID `
-  --advisory build/advisory-evidence-ID
+  --advisory build/advisory-evidence-ID --desktop build/desktop-evidence-ID
 ```
 
 The report lives in `build/technical-readiness-ID/report.json`. Exit code 0
@@ -52,9 +52,15 @@ unfiltered npm/Cargo scans, tool identities, a bounded report age and the curren
 official RustSec database contents. Windows-reachable warning packages remain a
 separate maintenance gate; advisories outside those graphs are still retained.
 
+The [desktop consumer](desktop-evidence.md) verifies both architectures of the
+actual attach/filter/stop/export path and recomputes process-tree resource
+summaries from raw Job samples. The configuration is a hidden Release desktop
+with Debug native tools; this does not clear the native Release or complete
+binary-distribution gates.
+
 Required scopes without an implemented evidence consumer remain `not_verified`:
 the current full native Release matrix, Release backend runtime, other Windows
-builds, elevated/cross-user IPC, hardware CET, complete desktop resources,
+builds, elevated/cross-user IPC, hardware CET,
 separate capture profiles, complete binary
 distribution reconstruction and broader competitive coverage. Kernel ETW session
 availability is evaluated separately from private application ETW. User
