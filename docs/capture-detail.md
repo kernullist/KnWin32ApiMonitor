@@ -72,3 +72,5 @@ These controls enable separate cost measurements. They do not establish lower
 overhead, competitive superiority or the full capture-profile-cost gate. That
 gate also needs comparable latency, resource, delivery and UI measurements for
 the same workload and explicit treatment of dropped events.
+The [independent native profile matrix](native-profile-costs.md) measures the
+caller portion and checks policy-specific payloads against its raw oracle.

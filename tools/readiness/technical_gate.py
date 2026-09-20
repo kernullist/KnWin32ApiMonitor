@@ -20,7 +20,7 @@ PENDING = {
     "elevated_cross_user_ipc": "Elevated and cross-user IPC contexts lack executed evidence.",
     "hardware_cet_enforcement": "PE compatibility metadata does not establish hardware CET enforcement.",
     "whole_desktop_resources": "Owned x64/x86 desktop interaction and complete sampled WebView Job membership require executed evidence.",
-    "capture_profile_costs": "Separate metadata, arguments, preview and stack capture costs are not established.",
+    "capture_profile_costs": "Comparable caller, collector, desktop, disk and UI costs for each capture policy are not fully established.",
     "dependency_maintenance": "Windows-reachable dependency warnings require verified current graph and advisory evidence.",
     "binary_distribution_reconstruction": "Native Debug/frontend source reconstruction does not establish a complete desktop binary distribution rebuild.",
     "competitive_generality": "The six-API Debug corpus does not establish a universal performance or coverage ranking.",
@@ -31,7 +31,8 @@ PRODUCERS = ("tools/readiness/source_evidence.py", "tools/readiness/technical_ga
              "tools/security/validate-sbom-schema.mjs", "tools/abi-proof/proof.mjs", "tools/abi-proof/check-proof.mjs",
              "tools/comparison/check_proof.py", "tools/comparison/replay_comparison.py", "tools/comparison/run_comparison.py", "tools/readiness/advisory_audit.py",
              "tools/readiness/desktop_evidence.py", "tools/readiness/desktop_processes.py", "tools/readiness/desktop_driver.mjs", "tools/readiness/desktop_check.py",
-             "tools/readiness/backend_release.py", "tools/security/tauri_backport.py")
+             "tools/readiness/backend_release.py", "tools/security/tauri_backport.py",
+             "tools/readiness/native_profile_costs.py", "tools/readiness/verify_native_profile_costs.py")
 
 
 def outcome(rows):
@@ -75,6 +76,7 @@ def main():
     parser.add_argument("--advisory", type=Path)
     parser.add_argument("--desktop", type=Path)
     parser.add_argument("--backend-release", type=Path)
+    parser.add_argument("--native-profiles", type=Path)
     parser.add_argument("--rustsec-db", type=Path, default=ROOT / "build/deps/rustsec-advisory-db")
     parser.add_argument("--node", type=Path, default=ROOT / "build/deps/node-v24.21.0-win-x64/node.exe")
     args = parser.parse_args()
@@ -171,6 +173,16 @@ def main():
         bind("backendRelease", directory / "evidence.json")
         return verify(directory)
 
+    def native_profiles():
+        directory = args.native_profiles.resolve()
+        bind("nativeProfiles", directory / "evidence.json")
+        command = [sys.executable, "-B", "-X", "utf8", ROOT / "tools/readiness/native_profile_costs.py", "--check", directory]
+        execution = run(command, ROOT, output / "native-profiles.log", dict(os.environ), timeout=180)
+        evidence = read_json(directory / "evidence.json")
+        return {"status": "not_verified", "nativeStatus": "passed", "scope": evidence["scope"],
+                "nativeRuns": len(evidence["runs"]), "measurements": evidence["summary"], "command": execution,
+                "reason": "Native Debug caller costs passed; comparable collector, desktop, disk, serialization and UI costs remain required."}
+
     try:
         report["checkoutRevision"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, timeout=10).strip()
         report["trackedDirty"] = bool(subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT, timeout=30))
@@ -187,6 +199,8 @@ def main():
             checked("whole_desktop_resources", desktop)
         if args.backend_release is not None:
             checked("release_backend_runtime", backend_release)
+        if args.native_profiles is not None:
+            checked("capture_profile_costs", native_profiles)
         if rows["source_reconstruction"]["status"] == "passed":
             verify_current_sources(retained["sourceManifest"])
         verify_bound_inputs(report["inputs"])

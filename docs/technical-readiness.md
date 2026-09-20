@@ -8,7 +8,7 @@ python tools/readiness/technical_gate.py `
   --source-build build/source-rebuild-ID --archive build/knmon-source.zip `
   --dependencies build/dependency-evidence-ID --comparison build/comparison-ID `
   --advisory build/advisory-evidence-ID --desktop build/desktop-evidence-ID `
-  --backend-release build/backend-release-ID
+  --backend-release build/backend-release-ID --native-profiles build/native-profile-ID
 ```
 
 The report lives in `build/technical-readiness-ID/report.json`. Exit code 0
@@ -68,6 +68,15 @@ with optional stack capture enabled verifies that mode's observation path; it
 does not establish the separate capture-profile cost gate.
 The requested metadata, arguments or preview detail also remains bound to the
 actual UI controls, parameter inspector and exported events.
+
+The separate [native profile-cost matrix](native-profile-costs.md) measures
+original, metadata, arguments, preview and two stack-enabled configurations on
+the same independent caller corpus. Its native Debug scope does not clear
+`capture_profile_costs`; collector, desktop and comparable UI costs remain
+required. `--native-profiles` executes its replay consumer in an owned command
+and retains the native measurements under that still-unverified row. An invalid
+supplied native evidence pack fails the row. The matrix also has separate
+adversarial controls.
 
 The [Release backend consumer](backend-release-evidence.md) checks Cargo's
 optimized test artifacts, both actual PE architectures and all 20 named backend

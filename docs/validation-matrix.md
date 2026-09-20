@@ -16,6 +16,7 @@ Windows 10/11 release or every API input.
 | All-supported sample live/replay | 376 events, 16 errors; five detail/stack configurations | 376 events, 16 errors; five detail/stack configurations | prior 376 events, 16 errors | blocked before launch |
 | Standalone native stack component | passed | passed | passed | passed |
 | Comparative six-API corpus | 50 runs passed | 50 runs passed | not run | not run |
+| Native capture-detail/stack costs | 60 runs passed | 60 runs passed | not run | not run |
 | Sustained overload, original/observed | 5 s and 15 s passed | 5 s and 15 s passed | default 5 s CTest passed | blocked before launch |
 | Clean source ZIP native reconstruction | prior 24/24 passed | prior 24/24 passed | not run | not run |
 
@@ -24,6 +25,13 @@ Each run has 450 expected calls, with zero missing, unexpected or reordered
 events and matching outputs/errors. Frida CModule has lower median call latency
 and target RSS than KNMon on this corpus. This evidence does not support a World
 No.1 or lowest-overhead claim.
+
+The separate [native capture-profile matrix](native-profile-costs.md) executes
+ten repetitions of original, metadata, arguments, preview, metadata+32 frames
+and preview+32 frames on each architecture. All 120 runs preserve the 450-call
+oracle, and all 45,000 monitored records pass capture, saved-stream and replay
+checks with zero loss. This establishes the native caller portion only;
+`capture_profile_costs` remains unverified for collector, desktop and UI costs.
 
 The [desktop polling change](desktop-control-polling.md) passes 14 deterministic
 polling, terminal-tail and WOW64 regressions, the full UI validator suite, both

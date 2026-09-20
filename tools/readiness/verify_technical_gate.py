@@ -105,6 +105,9 @@ def main():
     require(outcome(rows) == "passed", "Complete synthetic policy accounting failed.")
     rows["whole_desktop_resources"]["status"] = "not_verified"
     require(outcome(rows) == "incomplete", "Missing scope was counted as passed.")
+    partial_profiles = {name: {"status": "passed"} for name in (*VALIDATED, *PENDING)}
+    partial_profiles["capture_profile_costs"] = {"status": "not_verified", "nativeStatus": "passed"}
+    require(outcome(partial_profiles) == "incomplete", "Native profile evidence incorrectly cleared the complete cost gate.")
     rows["source_reconstruction"]["status"] = "failed"
     require(outcome(rows) == "failed", "Failed evidence was counted as incomplete or passed.")
     missing = copy.deepcopy(rows)
@@ -124,6 +127,14 @@ def main():
     cli = subprocess.run([sys.executable, "-X", "utf8", ROOT / "tools/readiness/technical_gate.py"], cwd=ROOT, capture_output=True, timeout=120)
     (output / "missing-inputs-cli.log").write_bytes(cli.stdout + cli.stderr)
     require(cli.returncode == 2 and b"Technical readiness incomplete:" in cli.stdout, "Missing evidence did not produce an incomplete nonzero CLI result.")
+    invalid_profile = output / "invalid-native-profile"
+    invalid_profile.mkdir()
+    (invalid_profile / "evidence.json").write_text('{"schemaVersion":1,"status":"passed"}', encoding="utf-8")
+    profile_cli = subprocess.run([sys.executable, "-B", "-X", "utf8", ROOT / "tools/readiness/technical_gate.py",
+                                  "--native-profiles", invalid_profile], cwd=ROOT, capture_output=True, timeout=120)
+    (output / "invalid-native-profile-cli.log").write_bytes(profile_cli.stdout + profile_cli.stderr)
+    require(profile_cli.returncode == 1 and b"capture_profile_costs: failed" in profile_cli.stdout,
+            "Incomplete supplied native profile evidence did not fail the technical gate.")
     optimized = subprocess.run([sys.executable, "-O", ROOT / "tools/readiness/technical_gate.py"], cwd=ROOT, capture_output=True, timeout=20)
     (output / "optimized-cli.log").write_bytes(optimized.stdout + optimized.stderr)
     require(optimized.returncode != 0 and b"assertions to remain enabled" in optimized.stderr, "Optimized Python disabled evidence checks.")
