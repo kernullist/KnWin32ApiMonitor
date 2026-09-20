@@ -60,7 +60,7 @@ Use `--node` and `--npm-cli` to select side-by-side installations. The producer
 extracts into a fresh directory, validates exact manifest membership and every
 payload hash, and proves that Git cannot resolve a worktree from that directory.
 It runs npm installation, the frontend build/validators, and both native Debug
-builds through `Build.ps1`, followed by all 23 CTests per architecture. Failed,
+builds through `Build.ps1`, followed by all 24 CTests per architecture. Failed,
 skipped or unexecuted test cases cannot pass the evidence check. Final source
 hashes must still match the archive. Unexpected source files and directory
 reparse points outside the declared build output locations are rejected. ZIP

@@ -17,7 +17,7 @@ Windows 10/11 release or every API input.
 | Standalone native stack component | passed | passed | passed | passed |
 | Comparative six-API corpus | 50 runs passed | 50 runs passed | not run | not run |
 | Sustained overload, original/observed | 5 s and 15 s passed | 5 s and 15 s passed | default 5 s CTest passed | blocked before launch |
-| Clean source ZIP native reconstruction | prior 23/23 passed | prior 23/23 passed | not run | not run |
+| Clean source ZIP native reconstruction | 24/24 passed | 24/24 passed | not run | not run |
 
 The Debug comparison uses ten fresh-process repetitions of each of five modes.
 Each run has 450 expected calls, with zero missing, unexpected or reordered
@@ -122,20 +122,19 @@ and export them, detach while the target survives, and exit normally. Raw Job
 samples include WebView children and separate target resources. The hidden-window
 scope and sampled working-set sums are not a foreground performance score.
 
-The preceding clean source archive from `2e7d85b` was extracted without Git metadata and
+The current clean source archive from `ae26920` was extracted without Git metadata and
 rebuilt with the pinned Node/CMake/MSVC/SDK configuration. npm installation,
 frontend build/validation and both complete native Debug suites passed. The
 frozen reconstruction producer retained source, command, compiler and binary
-hashes. The archive contains 810 source files plus its manifest (811 ZIP entries)
+hashes. The archive contains 816 source files plus its manifest (817 ZIP entries)
 and has SHA-256
-`2109be756ea8e820c3e30c84921aca9f03677c2a80049dd435fce2b2d5f7cbba`.
-Both architectures executed all 23 CTests, including the new failed-launch
-regression; the extracted-source UI suite executes all 16 polling, terminal-tail,
-WOW64 and stack-observation regressions, plus the 200,000-row worker/count check.
-The archive includes both observation/count modules and the shared stack corpus.
-All cases actually ran; none were skipped or disabled. This archive predates the
-optional native stack path and its 24th CTest. It is historical evidence until a
-fresh clean archive is reconstructed after the new implementation ships.
+`414d08f34436aaf086ee314421520a0b52e356a5f06818978b6263924dc479f9`.
+Both architectures executed all 24 CTests, including the native stack component
+and failed-launch regression. The extracted-source UI suite executes all 18
+polling, terminal-tail, WOW64, stack, command and schema regressions, plus the
+200,000-row worker/count check. The archive includes the optional native stack
+implementation, shared observation schema, 92-case corpus and CLI validator.
+All cases actually ran; none were skipped or disabled.
 Revalidation rejects 31 malformed or altered readiness/source-evidence cases,
 including command, compiler, binary, test and frontend records.
 
@@ -162,11 +161,10 @@ The dependency graph and advisory evidence now remove the five reachable UNIC
 warnings while
 retaining two warnings outside the Windows graphs. Native Release, broader
 platform and performance claims remain subject to the separate limits above.
-The current integrated report has seven passed scopes, zero failed scopes and
-ten unverified scopes. Dependency maintenance, Release backend and actual
-desktop paths pass together with the current advisory, inventory, typed-ABI
-and competitive-semantics evidence. Source reconstruction is historical until
-the stack implementation is included in a new clean archive. All failed
+The current integrated report has eight passed scopes, zero failed scopes and
+nine unverified scopes. Source reconstruction, dependency maintenance, Release
+backend and actual desktop paths pass together with the current advisory,
+inventory, typed-ABI and competitive-semantics evidence. All failed
 attempts and their raw logs remain distinct from the successful evidence sets.
 See `source-build-contract.md` for reproduction and
 `technical-readiness.md` for the fail-closed artifact verification policy.
