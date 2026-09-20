@@ -44,6 +44,9 @@ for (const spec of typedAbiSpecs)
   const events = capture.capturedEvents.filter((event) => event.api === spec.name);
   assert.equal(events.length, 1, `${spec.name}: expected exactly one root call; callback nested calls must be suppressed.`);
   const event = events[0];
+  assert.equal(event.stackSource, "not_captured");
+  assert.deepEqual(event.stack, []);
+  assert.match(event.hookContext.agent, /^knmon-agent(32|64)\.dll$/u);
   assert.match(event.callId, /^[1-9][0-9]*$/u);
   assert.equal(callIds.has(event.callId), false);
   callIds.add(event.callId);
@@ -62,7 +65,7 @@ for (const spec of typedAbiSpecs)
   assert.ok(saved);
   const live = JSON.parse(JSON.stringify(sandbox.exports.createTraceEventFromAgentApiCall(event, saved.eventId, [])));
   for (const key of ["callId", "parentCallId", "callDepth", "arguments", "observation", "rawReturnValue", "rawReturnBits",
-    "rawReturnBytes", "rawReturnEncoding", "rawLastErrorCode", "errorDomain", "outcome", "timing", "returnValue"])
+    "rawReturnBytes", "rawReturnEncoding", "rawLastErrorCode", "errorDomain", "outcome", "timing", "returnValue", "stack", "stackSource", "hookContext"])
   {
     assert.deepEqual(live[key], saved[key], `${spec.name}: ${key} changed during replay/UI conversion.`);
   }

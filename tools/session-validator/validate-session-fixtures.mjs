@@ -1,4 +1,4 @@
-import { parseStrictJson } from "./strict-json.mjs";
+import { parseStrictJson, validateStackObservation } from "./strict-json.mjs";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import path from "node:path";
@@ -262,8 +262,13 @@ function validateTraceEvents(sessionPath, errors) {
       errors.push(`${label}: tags must be an array`);
     }
 
-    if (!Array.isArray(row.stack)) {
-      errors.push(`${label}: stack must be an array`);
+    try
+    {
+      validateStackObservation(row);
+    }
+    catch (error)
+    {
+      errors.push(`${label}: ${error.message}`);
     }
   }
 

@@ -497,6 +497,30 @@ void ValidateArgumentCapture(const JsonDocument& value)
     }
 }
 
+void ValidateStackObservation(const JsonDocument& value)
+{
+    const auto stack = value.Array("stack", true);
+    stack.RequireStringArray();
+    if (value.Has("stackSource"))
+    {
+        const auto source = value.String("stackSource", true);
+        if ((source != "not_captured" && source != "legacy_unverified") ||
+            (source == "not_captured" && !stack.empty()))
+        {
+            throw JsonInputError("Invalid stack observation provenance.");
+        }
+    }
+    if (value.Has("hookContext"))
+    {
+        const auto context = value.Object("hookContext", true);
+        if (context.String("agent", true).empty() ||
+            (context.Has("resolvedHostModule") && context.String("resolvedHostModule", true).empty()))
+        {
+            throw JsonInputError("Invalid hook context.");
+        }
+    }
+}
+
 void ValidateAgentJson(const JsonDocument& value)
 {
     value.RequireObject();
@@ -550,7 +574,7 @@ void ValidateAgentJson(const JsonDocument& value)
             }
         }
         value.Array("tags", true).RequireStringArray();
-        value.Array("stack", true).RequireStringArray();
+        ValidateStackObservation(value);
         value.String("bufferPreview", true);
     }
     else if (type == "resolver_pointer_instrumented" || type == "resolver_pointer_candidate" ||
@@ -588,7 +612,7 @@ void ValidateTraceJson(const JsonDocument& value)
         ValidateArgumentCapture(argument);
     }
     value.Array("tags", true).RequireStringArray();
-    value.Array("stack", true).RequireStringArray();
+    ValidateStackObservation(value);
     const auto error = value.ObjectOrNull("error", true);
     if (error.Text() != "null")
     {

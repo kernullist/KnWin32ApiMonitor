@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { inspectStrictJson, typedJsonValue, validateAgentJson } from "./strict-json.mjs";
+import stackCases from "../../tests/fixtures/stack-observation.json" with { type: "json" };
 
 const argument = process.argv.indexOf("--probe");
 assert(argument >= 0, "Pass --probe <knmon-bounded-json-test.exe>.");
@@ -110,6 +111,27 @@ for (const key of ["name", "type", "direction", "rawValue", "preCallValue", "pos
 for (const key of ["tags", "stack"])
 {
     add(`agent string array ${key}`, JSON.stringify({ ...apiMessage, [key]: [null] }), "agent");
+}
+
+for (const [name, fields, accepted] of stackCases)
+{
+    const message = { ...apiMessage, ...fields };
+    if (!Object.hasOwn(fields, "stack"))
+    {
+        delete message.stack;
+    }
+    const wire = JSON.stringify(message);
+    let nodeAccepted = true;
+    try
+    {
+        validateAgentJson(inspectStrictJson(Buffer.from(wire)));
+    }
+    catch
+    {
+        nodeAccepted = false;
+    }
+    assert.equal(nodeAccepted, accepted, name);
+    add(`stack ${name}`, wire, "agent");
 }
 
 const expected = cases.map((entry) =>

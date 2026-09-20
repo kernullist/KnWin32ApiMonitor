@@ -28,11 +28,20 @@ const decimal = (value) =>
 };
 let fractional = 0;
 let errors = 0;
+let resolvedHosts = 0;
 for (let index = 0; index < capture.capturedEvents.length; ++index)
 {
     const event = capture.capturedEvents[index];
     const saved = replay.traceEvents[index];
     const timing = event.timing;
+    assert.equal(event.stackSource, "not_captured");
+    assert.deepEqual(event.stack, []);
+    assert.match(event.hookContext.agent, /^knmon-agent(32|64)\.dll$/u);
+    if (event.resolvedHostModule)
+    {
+        assert.equal(event.hookContext.resolvedHostModule, event.resolvedHostModule);
+        ++resolvedHosts;
+    }
     assert.equal(event.timeSource, "qpc");
     const frequency = decimal(timing.qpcFrequency);
     const base = decimal(timing.qpcBase);
@@ -50,7 +59,7 @@ for (let index = 0; index < capture.capturedEvents.length; ++index)
     for (const key of ["recordSequence", "observation", "arguments", "callId", "parentCallId", "callDepth", "rawReturnBytes", "rawReturnEncoding",
         "relativeTimeMs", "durationUs", "timeSource", "timing", "timestampUtc", "collectedAtUtc",
         "rawReturnValue", "rawReturnBits", "rawLastErrorCode", "rawWinsockErrorCode", "errorDomain", "outcome",
-        "errorValidity", "successPredicate", "winsockErrorSampled", "error"])
+        "errorValidity", "successPredicate", "winsockErrorSampled", "error", "stack", "stackSource", "hookContext"])
     {
         assert.deepEqual(live[key], saved[key], `${event.api}: live/replay ${key}`);
     }
@@ -87,10 +96,11 @@ const legacy = plain(convert({ ...first, timing: undefined, timeSource: undefine
 assert.equal(legacy.relativeTimeMs, 0);
 assert.equal(legacy.timeSource, "unavailable");
 assert.ok(fractional > 0 && errors > 0);
+assert.ok(resolvedHosts > 0, "Resolved API-set host context was not exercised.");
 for (const api of ["PSRefreshPropertySchema", "WscQueryAntiMalwareUri", "RatingEnabledQuery"])
 {
     const event = capture.capturedEvents.find((entry) => entry.api === api);
     assert.equal(event?.errorDomain, "hresult", api);
 }
 assert.equal(capture.capturedEvents.find((entry) => entry.api === "BCryptDestroyKey")?.errorDomain, "ntstatus");
-console.log(`Capture semantics passed: ${capture.capturedEvents.length} events; ${fractional} fractional timestamps; ${errors} errors.`);
+console.log(`Capture semantics passed: ${capture.capturedEvents.length} events; ${fractional} fractional timestamps; ${errors} errors; ${resolvedHosts} resolved hosts.`);

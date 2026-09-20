@@ -108,11 +108,15 @@ async function observe(name)
   const value = await evaluate(`(() =>
   {
     const text = selector => document.querySelector(selector)?.innerText ?? "";
+    const stack = document.querySelector(".stack-list");
     return { url: location.href, readyState: document.readyState,
       status: text(".statusbar"), stats: text(".trace-stats"), session: text(".session-strip"),
       selectedTarget: text(".process-row.selected"), output: text(".output-log"),
       eligibility: text(".eligibility-badge"), helperArchitecture: text(".target-action-grid"),
       refreshEnabled: document.querySelector('button[title="Refresh process list"]')?.disabled === false,
+      stack: stack ? { source: stack.dataset.stackSource, eventId: stack.dataset.stackEventId,
+        message: text(".stack-status"), context: [...stack.querySelectorAll(".stack-hook-context code")].map(element => element.textContent),
+        entries: stack.querySelectorAll(".stack-row").length } : null,
       rows: [...document.querySelectorAll(".trace-virtual-row")].map(element =>
         [...element.querySelectorAll(":scope > span")].map(cell => cell.innerText)),
       filter: document.querySelector("#quick-api-filter")?.value ?? "" };
@@ -122,6 +126,13 @@ async function observe(name)
 }
 
 const button = (selector) => `document.querySelector(${JSON.stringify(selector)})`;
+
+async function openStackInspector()
+{
+  await click(`[...document.querySelectorAll(".inspector-tabs button")].find(element => element.textContent === "Call Stack")`);
+  await waitFor('document.querySelector(".stack-list")', "stack observation inspector");
+}
+
 try
 {
   await Promise.race([
@@ -154,6 +165,7 @@ try
   phase("capture");
   await waitFor('document.querySelectorAll(".trace-virtual-row").length > 0', "native trace rows");
   await delay(6000);
+  await openStackInspector();
   await observe("capture");
   await click(button("#quick-api-filter"));
   await call("Input.insertText", { text: "WriteFile" });
@@ -165,6 +177,8 @@ try
   await click(button('.primary-toolbar button[title="Stop native session"]'));
   await waitFor(`!document.querySelector(".session-strip") && ${button('.primary-toolbar button[title="Stop native session"]')}?.disabled === true &&
     ${button('button[title="Export JSONL"]')}?.disabled === false && document.querySelector(".statusbar")?.innerText.startsWith("State: idle\\n")`, "native stop and terminal trace drain completed", 20000);
+  report.stopOutput = await evaluate('document.querySelector(".output-log")?.innerText ?? ""');
+  await openStackInspector();
   await observe("stopped");
   phase("settled");
   await delay(2000);

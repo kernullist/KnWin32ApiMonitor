@@ -65,7 +65,7 @@ with Debug native tools; this does not clear the native Release or complete
 binary-distribution gates.
 
 The [Release backend consumer](backend-release-evidence.md) checks Cargo's
-optimized test artifacts, both actual PE architectures and all 18 named backend
+optimized test artifacts, both actual PE architectures and all 19 named backend
 tests, including the real-helper success and failed-target paths. It retains
 matching Debug native binaries and does not clear the native Release gate.
 

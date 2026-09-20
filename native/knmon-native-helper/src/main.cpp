@@ -937,6 +937,11 @@ std::string BuildTraceEventJson(const knmon::KnMonAgentMessage& message, std::ui
     stream << "\"durationUs\":" << ExtractJsonUInt64(payload, "durationUs") << ",";
     stream << "\"tags\":" << ExtractJsonArray(payload, "tags") << ",";
     stream << "\"stack\":" << ExtractJsonArray(payload, "stack") << ",";
+    stream << "\"stackSource\":" << Q(payload.Has("stackSource") ? payload.String("stackSource") : "legacy_unverified") << ",";
+    if (payload.Has("hookContext"))
+    {
+        stream << "\"hookContext\":" << payload.Object("hookContext") << ",";
+    }
     stream << "\"bufferPreview\":" << Q(ExtractJsonString(payload, "bufferPreview"));
     stream << "}";
     return stream.str();

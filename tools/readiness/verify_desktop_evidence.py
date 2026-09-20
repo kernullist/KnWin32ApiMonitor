@@ -5,6 +5,7 @@ import ctypes as c
 from ctypes import wintypes as w
 import json
 import os
+import re
 from pathlib import Path
 import sys
 import socket
@@ -94,6 +95,24 @@ def evidence_controls(directory):
     execution, driver = read_json(directory / "execution.json"), read_json(directory / "driver.json")
     events, samples = json_lines(directory / driver["exportFile"]), json_lines(directory / "resources.jsonl")
     verify_interaction(execution, driver, events)
+    pending = copy.deepcopy(driver)
+    row = pending["observations"][2]
+    match = re.search(r"Events: (\d+)/(\d+)", row["status"])
+    retained = int(match[1])
+    row["status"] = re.sub(r"Events: \d+/\d+", f"Events: {retained}/{retained + 1}", row["status"])
+    row["status"] = re.sub(r"\nNot ingested: \d+", "", row["status"])
+    row["status"] = row["status"].replace("\nDropped:", "\nNot ingested: 1\nDropped:")
+    verify_interaction(execution, pending, events)
+    print("Passed: transient native/UI ingestion gap with exact terminal reconciliation", flush=True)
+    for label, index, text in (("unreported live gap", 2, ""), ("wrong live gap count", 2, "\nNot ingested: 2")):
+        changed = copy.deepcopy(pending)
+        changed["observations"][index]["status"] = changed["observations"][index]["status"].replace("\nNot ingested: 1", text)
+        rejected(lambda: verify_interaction(execution, changed, events), label, "ingestion gap")
+    changed = copy.deepcopy(driver)
+    row = changed["observations"][4]
+    row["status"] = re.sub(r"Events: \d+/\d+", f"Events: {len(events)}/{len(events) + 1}", row["status"])
+    row["status"] = row["status"].replace("\nDropped:", "\nNot ingested: 1\nDropped:")
+    rejected(lambda: verify_interaction(execution, changed, events), "terminal ingestion gap", "ingestion gap")
     resource_summary(samples, execution)
     validate_endpoint(execution["cdp"])
     for endpoint in ("ws://example.invalid:1234/devtools/page/12345678", "ws://127.0.0.1:1234@evil.invalid/devtools/page/12345678"):
@@ -109,9 +128,17 @@ def evidence_controls(directory):
         ("nonempty initial trace", lambda value: value["observations"][0]["rows"].append(["1"]), "preexisting"),
         ("wrong target selection", lambda value: value["observations"][1].update(selectedTarget="wrong"), "owned target"),
         ("dropped native events", lambda value: value["observations"][2].update(status=value["observations"][2]["status"].replace("Dropped: 0", "Dropped: 1")), "event loss"),
+        ("false UI trimming", lambda value: value["observations"][2].update(status=value["observations"][2]["status"] + "\nTrimmed: 1"), "trimmed"),
         ("wrong filtered row", lambda value: value["observations"][3]["rows"][0].__setitem__(5, "ReadFile"), "filtering"),
         ("failed UI stop", lambda value: value["observations"][4].update(session="running"), "stop"),
+        ("missing stop audit", lambda value: value.update(stopOutput=""), "stop audit"),
+        ("retained ownership poll failure", lambda value: value.update(stopOutput=value["stopOutput"] + "\nnative_ownership_poll_failed: failure"), "polling failure"),
+        ("retained trace poll failure", lambda value: value.update(stopOutput=value["stopOutput"] + "\nstream_batch_poll_failed: failure"), "polling failure"),
         ("wrong rendered TID", lambda value: value["observations"][2]["rows"][0].__setitem__(3, "0"), "differs from the exported"),
+        ("false UI stack capture", lambda value: value["observations"][2]["stack"].update(source="native_backtrace"), "Stack inspector"),
+        ("fabricated UI frames", lambda value: value["observations"][3]["stack"].update(entries=2), "Stack inspector"),
+        ("missing stack selection", lambda value: value["observations"][2]["stack"].update(eventId="0"), "Stack inspector"),
+        ("wrong UI hook agent", lambda value: value["observations"][2]["stack"].update(context=["wrong.dll"]), "hook context"),
     ):
         changed = copy.deepcopy(driver)
         edit(changed)
@@ -123,6 +150,9 @@ def evidence_controls(directory):
         ("fake capture origin", lambda value: value[0].update(tags=[]), "event identity"),
         ("reversed native timing", lambda value: value[0]["timing"].update(endQpc="0"), "timing"),
         ("failed target call", lambda value: value[0].update(outcome="failure"), "operation failed"),
+        ("fabricated exported frames", lambda value: value[0].update(stack=["agent!IatHook"]), "stack provenance"),
+        ("missing stack provenance", lambda value: value[0].pop("stackSource"), "stack provenance"),
+        ("wrong hook agent", lambda value: value[0]["hookContext"].update(agent="wrong.dll"), "hook context"),
         ("wrong memory preview", lambda value: next(row for row in value if row["api"] == "WriteFile").update(bufferPreview="00"), "buffer payload"),
     ):
         changed = copy.deepcopy(events)

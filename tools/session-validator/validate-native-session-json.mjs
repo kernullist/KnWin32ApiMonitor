@@ -3,6 +3,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import stackCases from "../../tests/fixtures/stack-observation.json" with { type: "json" };
+import { validateStackObservation } from "./strict-json.mjs";
 
 const argument = process.argv.indexOf("--helper");
 assert(argument >= 0, "Pass --helper <knmon-native-helper.exe>.");
@@ -42,6 +44,11 @@ function mutation(name, mutate, accepted = false)
         const replay = command(["replay-session", "--session", target]);
         assert.equal(replay.success, true, JSON.stringify(replay));
         assert.equal(replay.traceEvents[0].api, "CreateFileW");
+        const stored = JSON.parse(fs.readFileSync(path.join(target, "chunks/trace-000001.jsonl"), "utf8"));
+        for (const key of ["stack", "stackSource", "hookContext"])
+        {
+            assert.deepEqual(replay.traceEvents[0][key], stored[key], `Replay changed ${key}.`);
+        }
         if (name === "trace-qpc-valid")
         {
             assert.equal(replay.traceEvents[0].relativeTimeMs, 0.1);
@@ -120,6 +127,30 @@ function editTrace(directory, transform)
     editManifest(directory, (value) => ({ ...value, storedBytes: bytes, uncompressedBytes: bytes }));
 }
 mutation("trace-null-error", (directory) => editTrace(directory, (text) => text), true);
+for (const [name, fields, accepted] of stackCases)
+{
+    assert.equal((() =>
+    {
+        try
+        {
+            validateStackObservation(fields);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    })(), accepted, name);
+    mutation(`stack-${name.replaceAll(" ", "-")}`, (directory) => editTrace(directory, (text) =>
+    {
+        const value = { ...JSON.parse(text), ...fields };
+        if (!Object.hasOwn(fields, "stack"))
+        {
+            delete value.stack;
+        }
+        return JSON.stringify(value) + "\n";
+    }), accepted);
+}
 const typedTrace = (text) => ({ ...JSON.parse(text), callId: "9007199254740993", parentCallId: "0", callDepth: 0,
     rawReturnBits: 128, rawReturnEncoding: "little_endian_object_bytes", rawReturnBytes: "0000003e0000003f0000603f0000403f" });
 mutation("typed-aggregate-valid", (directory) => editTrace(directory, (text) => JSON.stringify(typedTrace(text)) + "\n"), true);

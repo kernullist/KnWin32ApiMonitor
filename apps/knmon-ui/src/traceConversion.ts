@@ -47,6 +47,8 @@ export function createTraceEventFromAgentApiCall(event: AgentApiCallEvent, event
     durationUs: event.durationUs,
     tags: Array.from(new Set([...event.tags, ...contextTags])),
     stack: event.stack,
+    stackSource: event.stackSource === undefined ? "legacy_unverified" : event.stackSource,
+    hookContext: event.hookContext,
     bufferPreview: event.bufferPreview || undefined
   };
 }

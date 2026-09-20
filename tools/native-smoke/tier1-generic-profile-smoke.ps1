@@ -66,6 +66,8 @@ try
         }
 
         Assert-True ($event[0].bufferPreview -eq "") "$($item.Api) generic event must not carry a buffer preview."
+        Assert-True ($event[0].stackSource -eq "not_captured" -and $event[0].stack.Count -eq 0) "$($item.Api) fabricated stack frames."
+        Assert-True ($event[0].hookContext.agent -match '^knmon-agent(32|64)\.dll$') "$($item.Api) hook agent identity missing."
     }
 
     $payloadText = ($result.capturedEvents | ConvertTo-Json -Depth 10)

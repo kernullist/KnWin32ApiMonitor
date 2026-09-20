@@ -38,11 +38,15 @@ def machine(path):
     return struct.unpack_from("<H", data, 4)[0]
 
 
-def event_count(observation):
+def event_count(observation, allow_inflight=False):
     result = re.search(r"(?:^|\n)Events: (\d+)/(\d+)(?:\n|$)", observation["status"])
-    require(result is not None and result[1] == result[2], "Desktop trace counters are missing or trimmed.")
+    require(result is not None and "\nTrimmed:" not in observation["status"], "Desktop trace counters are missing or trimmed.")
+    retained, total = int(result[1]), int(result[2])
+    gaps = re.findall(r"(?:^|\n)Not ingested: (\d+)(?=\n|$)", observation["status"])
+    require(retained <= total and gaps == ([str(total - retained)] if total > retained else []) and
+            (allow_inflight or retained == total), "Desktop ingestion gap is inconsistent or remains after drain.")
     require("\nDropped: 0\n" in observation["status"], "Desktop reported event loss.")
-    return int(result[1])
+    return total
 
 
 def verify_interaction(execution, driver, events):
@@ -53,20 +57,22 @@ def verify_interaction(execution, driver, events):
     names = ("idle", "selected", "capture", "filtered", "stopped", "settled")
     require([item["phase"] for item in observations] == list(names), "Desktop interaction phases are incomplete or reordered.")
     require(all(item["url"] == "http://tauri.localhost/" and item["readyState"] == "complete" for item in observations), "Desktop page identity differs.")
-    require(all("native_ownership_poll_failed:" not in item["output"] and "stream_batch_poll_failed:" not in item["output"]
-                for item in observations), "Healthy desktop probe contains a polling failure.")
+    outputs = [item["output"] for item in observations] + [driver.get("stopOutput", "")]
+    require(all("native_ownership_poll_failed:" not in output and "stream_batch_poll_failed:" not in output
+                for output in outputs), "Healthy desktop probe contains a polling failure.")
     by_name = dict(zip(names, observations))
     require(event_count(by_name["idle"]) == 0 and not by_name["idle"]["rows"], "Desktop started with preexisting events.")
     require(execution["binaries"]["knmon-sample-fileio.exe"]["path"].lower() in by_name["selected"]["selectedTarget"].lower() and
             str(pid) in by_name["selected"]["selectedTarget"].splitlines(), "The UI did not select the owned target.")
     for name in ("capture", "filtered"):
         row = by_name[name]
-        require(event_count(row) > 40 and row["rows"] and f"target {pid} alive" in row["session"] and
+        require(40 < event_count(row, allow_inflight=True) <= len(events) and row["rows"] and f"target {pid} alive" in row["session"] and
                 "\nrunning\n" in row["session"] and "\n0 drop\n0 ui-drop\n" in row["session"], "The UI did not observe a lossless active native capture.")
+    require("session_stop_requested: stop_native_session; win32=0;" in driver.get("stopOutput", ""),
+            "Native stop audit was not observed in the Output tab.")
     for name in ("stopped", "settled"):
         row = by_name[name]
-        require(row["status"].startswith("State: idle\n") and row["session"] == "" and
-                "session_stop_requested: stop_native_session; win32=0;" in row["output"], "Native stop was not observed in the UI.")
+        require(row["status"].startswith("State: idle\n") and row["session"] == "", "Native stop was not observed in the UI.")
     require(event_count(by_name["stopped"]) == event_count(by_name["settled"]) == len(events) and 40 < len(events) <= 5000,
             "UI counters and settled JSONL export differ.")
     require(all(row["filter"] == "WriteFile" and row["rows"] and all(cells[5] == "WriteFile" for cells in row["rows"])
@@ -76,12 +82,18 @@ def verify_interaction(execution, driver, events):
     required = {"CreateFileW", "WriteFile", "ReadFile", "CloseHandle", "NtCreateFile", "CreateFileA"}
     require(required <= {event["api"] for event in events}, "Native file workload coverage is incomplete.")
     session_tags = set()
+    agent = next(name for name in execution["binaries"] if name.startswith("knmon-agent") and name.endswith(".dll"))
     for event in events:
         require(event["schemaVersion"] == "0.1.0" and event["pid"] == pid and event["process"] == "knmon-sample-fileio.exe" and
                 event["tid"] > 0 and {"native-capture", "shared-memory", "ui-stream"} <= set(event["tags"]), "Exported native event identity differs.")
         require(event["timeSource"] == "qpc" and int(event["timing"]["qpcFrequency"]) > 0 and
                 int(event["timing"]["endQpc"]) >= int(event["timing"]["startQpc"]) > 0, "Exported native timing is invalid.")
         require(event["outcome"] == "success" and event["error"] is None, "Native target operation failed.")
+        context = event.get("hookContext")
+        require(event.get("stackSource") == "not_captured" and event.get("stack") == [] and
+                type(context) is dict and context.get("agent") == agent and
+                ("resolvedHostModule" not in context or (type(context["resolvedHostModule"]) is str and context["resolvedHostModule"])),
+                "Exported stack provenance or hook context differs.")
         tags = [tag for tag in event["tags"] if tag.startswith("session:")]
         require(len(tags) == 1, "Native event session identity is missing or ambiguous.")
         session_tags.update(tags)
@@ -92,6 +104,13 @@ def verify_interaction(execution, driver, events):
     require(len(session_tags) == 1, "Desktop export mixes native sessions.")
     lookup = {str(event["eventId"]): event for event in events}
     for row in observations[2:]:
+        stack = row.get("stack")
+        require(type(stack) is dict and stack.get("eventId") in lookup and stack.get("source") == "not_captured" and
+                stack.get("message") == "Call stack was not captured." and type(stack.get("entries")) is int and stack["entries"] == 0,
+                "Stack inspector does not report the uncaptured state.")
+        context = lookup[stack["eventId"]]["hookContext"]
+        require(stack.get("context") == [context["agent"]] + ([context["resolvedHostModule"]] if "resolvedHostModule" in context else []),
+                "Stack inspector hook context differs from the export.")
         require(re.search(r"(?:^|\n)DOM (\d+)(?:\n|$)", row["stats"])[1] == str(len(row["rows"])), "Rendered row accounting differs.")
         for cells in row["rows"]:
             require(len(cells) == 11 and cells[0] in lookup, "Rendered trace row is absent from the export.")

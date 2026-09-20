@@ -151,6 +151,27 @@ export function typedJsonValue(parsed, key, kind, required = false)
     throw new Error("JSON field type or integer range mismatch.");
 }
 
+export function validateStackObservation(value)
+{
+    if (!Array.isArray(value.stack) || value.stack.some((entry) => typeof entry !== "string") ||
+        (Object.hasOwn(value, "stackSource") && !["not_captured", "legacy_unverified"].includes(value.stackSource)) ||
+        (value.stackSource === "not_captured" && value.stack.length !== 0))
+    {
+        throw new Error("Invalid stack observation provenance.");
+    }
+    if (Object.hasOwn(value, "hookContext"))
+    {
+        const context = value.hookContext;
+        if (context === null || typeof context !== "object" || Array.isArray(context) ||
+            typeof context.agent !== "string" || context.agent.length === 0 ||
+            (Object.hasOwn(context, "resolvedHostModule") &&
+                (typeof context.resolvedHostModule !== "string" || context.resolvedHostModule.length === 0)))
+        {
+            throw new Error("Invalid hook context.");
+        }
+    }
+}
+
 export function validateAgentJson(parsed)
 {
     function field(key, kind, required = true)
@@ -187,6 +208,7 @@ export function validateAgentJson(parsed)
     }
     else if (type === "api_call")
     {
+        validateStackObservation(parsed.document);
         for (const key of ["module", "api", "process", "returnValue", "lastErrorMessage", "bufferPreview"])
         {
             field(key, "string");

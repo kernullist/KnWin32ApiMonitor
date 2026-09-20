@@ -5029,7 +5029,8 @@ std::string ApiCallPayload(
         stream << "," << Q("file");
     }
     stream << ",\"hook\",\"shared-memory\"],";
-    stream << "\"stack\":[" << Q(agentName + "!IatHook") << "," << Q(moduleName + "!" + apiName) << "],";
+    stream << "\"stack\":[],\"stackSource\":\"not_captured\",";
+    stream << "\"hookContext\":{\"agent\":" << Q(agentName) << "},";
     stream << "\"bufferPreview\":" << Q(bufferPreview);
     stream << "}";
     return stream.str();
@@ -5553,12 +5554,13 @@ std::string GenericTransportApiPayload(
     stream << "\"durationUs\":" << record.DurationUs << ",";
     stream << "\"arguments\":[" << args.str() << "],";
     stream << "\"tags\":[\"native-capture\"," << Q(tier) << ",\"generic\"," << Q(profile) << "," << Q(apiFamily) << ",\"hook\",\"shared-memory\"],";
-    stream << "\"stack\":[" << Q(agentName + "!IatHook") << "," << Q(moduleName + "!" + apiName);
+    stream << "\"stack\":[],\"stackSource\":\"not_captured\",";
+    stream << "\"hookContext\":{\"agent\":" << Q(agentName);
     if (!resolvedHostModule.empty())
     {
-        stream << "," << Q(resolvedHostModule + "!" + apiName);
+        stream << ",\"resolvedHostModule\":" << Q(resolvedHostModule);
     }
-    stream << "],";
+    stream << "},";
     stream << "\"bufferPreview\":\"\"";
     stream << "}";
     return stream.str();

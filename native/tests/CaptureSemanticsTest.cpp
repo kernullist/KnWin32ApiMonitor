@@ -93,6 +93,10 @@ void CheckDelayedCollector(const wchar_t* agentTestPath)
         for (const auto& event : batch.Events)
         {
             const auto payload = knmon::ParseAgentJson(event.RawPayload);
+            Check(payload.String("stackSource", true) == "not_captured" && payload.Array("stack", true).empty(),
+                "Hook metadata was presented as captured stack frames.");
+            Check(payload.Object("hookContext", true).String("agent", true) ==
+                (sizeof(void*) == 8 ? "knmon-agent64.dll" : "knmon-agent32.dll"), "Hook agent identity was lost.");
             const auto timing = payload.Object("timing");
             if (base.empty())
             {

@@ -614,6 +614,94 @@ pub struct CapturedSemantics
     pub timing: Option<CaptureTiming>,
 }
 
+fn deserialize_present<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    T::deserialize(deserializer).map(Some)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case", try_from = "String")]
+pub enum StackSource
+{
+    NotCaptured,
+    LegacyUnverified,
+}
+
+impl TryFrom<String> for StackSource
+{
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error>
+    {
+        match value.as_str()
+        {
+            "not_captured" => Ok(Self::NotCaptured),
+            "legacy_unverified" => Ok(Self::LegacyUnverified),
+            _ => Err("Unknown stack observation provenance.".to_string()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HookContext
+{
+    pub agent: String,
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "deserialize_present")]
+    pub resolved_host_module: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", try_from = "StackObservationWire")]
+pub struct StackObservation
+{
+    pub stack: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stack_source: Option<StackSource>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hook_context: Option<HookContext>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StackObservationWire
+{
+    stack: Vec<String>,
+    #[serde(default, deserialize_with = "deserialize_present")]
+    stack_source: Option<StackSource>,
+    #[serde(default, deserialize_with = "deserialize_present")]
+    hook_context: Option<HookContext>,
+}
+
+impl TryFrom<StackObservationWire> for StackObservation
+{
+    type Error = String;
+
+    fn try_from(value: StackObservationWire) -> Result<Self, Self::Error>
+    {
+        if value.stack_source == Some(StackSource::NotCaptured) && !value.stack.is_empty()
+        {
+            return Err("Uncaptured stack contains frames.".to_string());
+        }
+        if let Some(context) = &value.hook_context
+        {
+            if context.agent.is_empty() || context.resolved_host_module.as_ref().is_some_and(String::is_empty)
+            {
+                return Err("Invalid hook context.".to_string());
+            }
+        }
+        Ok(Self
+        {
+            stack: value.stack,
+            stack_source: value.stack_source,
+            hook_context: value.hook_context,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentApiCallEvent {
@@ -649,7 +737,8 @@ pub struct AgentApiCallEvent {
     pub duration_us: u64,
     pub arguments: Vec<AgentApiArgument>,
     pub tags: Vec<String>,
-    pub stack: Vec<String>,
+    #[serde(flatten)]
+    pub stack_observation: StackObservation,
     #[serde(default)]
     pub buffer_preview: String,
 }
@@ -944,7 +1033,8 @@ pub struct TraceEvent {
     pub error: Option<TraceError>,
     pub duration_us: u64,
     pub tags: Vec<String>,
-    pub stack: Vec<String>,
+    #[serde(flatten)]
+    pub stack_observation: StackObservation,
     #[serde(default)]
     pub buffer_preview: Option<String>,
 }
@@ -3145,6 +3235,45 @@ mod tests {
         format!("{name}-{}", now_epoch_ms())
     }
 
+    #[test]
+    fn stack_observation_preserves_legacy_and_rejects_false_capture()
+    {
+        let cases: Vec<(String, serde_json::Value, bool)> =
+            serde_json::from_str(include_str!("../../../tests/fixtures/stack-observation.json")).unwrap();
+        for (name, fields, accepted) in cases
+        {
+            let mut agent = serde_json::to_value(test_event("stack-contract", 1)).unwrap();
+            let mut trace = serde_json::json!(
+            {
+                "schemaVersion": "0.1.0", "eventId": 1, "relativeTimeMs": 0,
+                "pid": 100, "tid": 200, "process": "sample.exe", "module": "kernel32.dll",
+                "api": "CreateFileW", "arguments": [], "returnValue": "1", "error": null,
+                "durationUs": 1, "tags": [], "bufferPreview": ""
+            });
+            agent.as_object_mut().unwrap().remove("stack");
+            for (key, value) in fields.as_object().unwrap()
+            {
+                agent[key] = value.clone();
+                trace[key] = value.clone();
+            }
+            let agent_result = serde_json::from_value::<AgentApiCallEvent>(agent);
+            let trace_result = serde_json::from_value::<TraceEvent>(trace);
+            assert_eq!(agent_result.is_ok(), accepted, "agent: {name}");
+            assert_eq!(trace_result.is_ok(), accepted, "trace: {name}");
+            if accepted
+            {
+                for encoded in [serde_json::to_value(agent_result.unwrap()).unwrap(),
+                    serde_json::to_value(trace_result.unwrap()).unwrap()]
+                {
+                    for key in ["stack", "stackSource", "hookContext"]
+                    {
+                        assert_eq!(encoded.get(key), fields.get(key), "roundtrip: {name}/{key}");
+                    }
+                }
+            }
+        }
+    }
+
     fn test_event(operation_id: &str, sequence: u64) -> AgentApiCallEvent {
         AgentApiCallEvent {
             semantics: CapturedSemantics::default(),
@@ -3171,7 +3300,7 @@ mod tests {
             duration_us: 10,
             arguments: Vec::new(),
             tags: vec!["fileio".to_string()],
-            stack: Vec::new(),
+            stack_observation: StackObservation::default(),
             buffer_preview: String::new(),
         }
     }

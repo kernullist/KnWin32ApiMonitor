@@ -55,6 +55,8 @@ import {
 } from "./backend";
 import { apiCatalogEntries, apiTree, captureProfiles, compactRuntimeApiSelection } from "./catalogData";
 import { downloadJsonl } from "./session";
+import { describeStackObservation } from "./stackObservation";
+import { summarizeTraceCounts } from "./traceCounters";
 import type { AgentApiCallEvent, ApiNode, AuditEvent, BackendMode, CaptureResult, InspectorTab, NativeOperation, NativeSession, NativeSessionCatalog, NativeSessionCatalogRow, NativeTraceBatch, NativeTraceIndex, NativeTraceIndexEvent, ProcessTreeResult, SessionInfo, TargetProcess, TraceEvent } from "./types";
 import {
   buildTraceIssueGroups,
@@ -1113,6 +1115,7 @@ function App() {
   const selectedEvent = selectedTraceIndex >= 0
     ? filteredEvents[selectedTraceIndex]
     : filteredEvents[0] ?? events.find((event) => event.eventId === selectedEventId) ?? events[0];
+  const stackObservation = selectedEvent ? describeStackObservation(selectedEvent) : null;
   const selectedEventHighlight = selectedEvent
     ? traceHighlightState.eventHighlightsById.get(selectedEvent.eventId) ?? null
     : null;
@@ -1178,9 +1181,10 @@ function App() {
   // Byte estimate comes incrementally from the ingest worker; re-serializing the
   // whole window here would run multi-MB JSON.stringify on every snapshot.
   const sessionBytes = estimatedSessionBytes;
-  const totalTraceEventCount = Math.max(totalCapturedEvents,
+  const traceCounts = summarizeTraceCounts(events.length, totalCapturedEvents,
     traceViewMode.current === "live" ? traceNativeSession?.recordsStreamed ?? 0 : 0);
-  const trimmedTraceEventCount = Math.max(0, totalTraceEventCount - events.length);
+  const totalTraceEventCount = traceCounts.total;
+  const trimmedTraceEventCount = traceCounts.trimmed;
   const selectedCatalogRow = sessionCatalog?.sessions.find((row) => row.path === selectedCatalogPath) ?? null;
   const selectedTraceIndexEvent = traceIndex?.events.find((event) => traceIndexEventKey(event) === selectedTraceIndexEventKey) ?? null;
   const virtualTraceWindow = useMemo(() => {
@@ -2878,6 +2882,7 @@ function App() {
               <span>{filteredEvents.length}/{events.length} rows</span>
               <span>{totalTraceEventCount} total</span>
               {trimmedTraceEventCount > 0 ? <span>last {events.length} shown</span> : null}
+              {traceCounts.notIngested > 0 ? <span>{traceCounts.notIngested} not ingested</span> : null}
               <span>DOM {visibleTraceEvents.length}</span>
               {activeCurrentLogFilterCount > 0 ? <span>{activeCurrentLogFilterCount} filters</span> : null}
               {compiledTraceQuery.activeClauseCount > 0 ? <span>{compiledTraceQuery.activeClauseCount} view rules</span> : null}
@@ -3293,12 +3298,21 @@ function App() {
                     </div>
                   ) : null}
 
-                  {selectedEvent && inspectorTab === "stack" ? (
-                    <div className="stack-list">
-                      {selectedEvent.stack.map((frame, index) => (
-                        // Recursive calls repeat identical frames; include the index.
+                  {selectedEvent && stackObservation && inspectorTab === "stack" ? (
+                    <div className="stack-list" data-stack-source={stackObservation.source} data-stack-event-id={selectedEvent.eventId}>
+                      <p className="stack-status">{stackObservation.message}</p>
+                      {stackObservation.hookContext ? (
+                        <div className="stack-hook-context">
+                          <strong>Hook context</strong>
+                          <span>Agent: <code>{stackObservation.hookContext.agent}</code></span>
+                          {stackObservation.hookContext.resolvedHostModule ? (
+                            <span>Resolved host: <code>{stackObservation.hookContext.resolvedHostModule}</code></span>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      {stackObservation.entries.map((frame, index) => (
                         <div className="stack-row" key={`${index}-${frame}`}>
-                          <span>{index}</span>
+                          <span>Unverified {index + 1}</span>
                           <code>{frame}</code>
                         </div>
                       ))}
@@ -3340,7 +3354,7 @@ function App() {
                       <div><Filter size={14} /> backend={backendMode}; filter="{filter || "*"}"; mode={traceMode}</div>
                       <div><Filter size={14} /> api="{quickApiFilter || "*"}"; dll="{quickModuleFilter || "*"}"; parameter="{quickParameterFilter || "*"}"; filteredRows={filteredEvents.length}</div>
                       <div><Filter size={14} /> viewRules={traceQueryMatchMode}; active={compiledTraceQuery.activeClauseCount}; invalid={compiledTraceQuery.invalidClauses.length}</div>
-                      <div><Activity size={14} /> totalCaptured={totalTraceEventCount}; displayedRows={events.length}; trimmedRows={trimmedTraceEventCount}; displayLimit={traceDisplayEventLimit}</div>
+                      <div><Activity size={14} /> totalCaptured={totalTraceEventCount}; displayedRows={events.length}; trimmedRows={trimmedTraceEventCount}; notIngested={traceCounts.notIngested}; displayLimit={traceDisplayEventLimit}</div>
                       <div><CircleDot size={14} /> highlighting={highlightingEnabled ? "enabled" : "disabled"}; highlightedRows={traceHighlightState.eventHighlights.length}</div>
                       <div><Database size={14} /> sessionBytes={formatBytes(sessionBytes)}; droppedEvents={droppedCount}</div>
                       {replaySource ? <div><FolderOpen size={14} /> replay={replaySource.kind}; status={replaySource.validationStatus}; path={replaySource.path}</div> : null}
@@ -3367,6 +3381,7 @@ function App() {
         {processExitNotice ? <span>Target exited: {processExitNotice.targetProcessId}</span> : null}
         <span>Events: {events.length}/{totalTraceEventCount}</span>
         {trimmedTraceEventCount > 0 ? <span>Trimmed: {trimmedTraceEventCount}</span> : null}
+        {traceCounts.notIngested > 0 ? <span title="Native streamed records not yet represented by UI ingestion. They may be pending or unavailable.">Not ingested: {traceCounts.notIngested}</span> : null}
         <span>Dropped: {droppedCount}</span>
         <span>Session: {formatBytes(sessionBytes)}</span>
         <span>Backend: {backendMode}</span>

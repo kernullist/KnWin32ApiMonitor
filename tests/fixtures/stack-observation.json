@@ -1,0 +1,182 @@
+[
+  ["object unit source", {"stack": [], "stackSource": {"not_captured": null}}, false],
+  ["object legacy source", {"stack": ["module!Api"], "stackSource": {"legacy_unverified": null}}, false],
+  ["empty source", {"stack": [], "stackSource": ""}, false],
+  ["boolean source", {"stack": [], "stackSource": false}, false],
+  ["string context", {"stack": [], "hookContext": "agent.dll"}, false],
+  ["numeric host", {"stack": [], "hookContext": {"agent": "agent.dll", "resolvedHostModule": 1}}, false],
+  ["repeated legacy strings", {"stack": ["module!Api", "module!Api"]}, true],
+  [
+    "missing provenance",
+    {
+      "stack": [
+        "old-agent!IatHook",
+        "module!Api"
+      ]
+    },
+    true
+  ],
+  [
+    "empty legacy",
+    {
+      "stack": []
+    },
+    true
+  ],
+  [
+    "explicit legacy",
+    {
+      "stack": [
+        "module!Api"
+      ],
+      "stackSource": "legacy_unverified"
+    },
+    true
+  ],
+  [
+    "not captured",
+    {
+      "stack": [],
+      "stackSource": "not_captured",
+      "hookContext": {
+        "agent": "knmon-agent64.dll"
+      }
+    },
+    true
+  ],
+  [
+    "resolved host",
+    {
+      "stack": [],
+      "stackSource": "not_captured",
+      "hookContext": {
+        "agent": "knmon-agent32.dll",
+        "resolvedHostModule": "kernelbase.dll"
+      }
+    },
+    true
+  ],
+  [
+    "contradictory frames",
+    {
+      "stack": [
+        "fabricated"
+      ],
+      "stackSource": "not_captured"
+    },
+    false
+  ],
+  [
+    "unsupported source",
+    {
+      "stack": [],
+      "stackSource": "native_backtrace"
+    },
+    false
+  ],
+  [
+    "null source",
+    {
+      "stack": [],
+      "stackSource": null
+    },
+    false
+  ],
+  [
+    "numeric source",
+    {
+      "stack": [],
+      "stackSource": 1
+    },
+    false
+  ],
+  [
+    "missing stack",
+    {
+      "stackSource": "not_captured"
+    },
+    false
+  ],
+  [
+    "null stack",
+    {
+      "stack": null
+    },
+    false
+  ],
+  [
+    "nonstring frame",
+    {
+      "stack": [
+        null
+      ]
+    },
+    false
+  ],
+  [
+    "null context",
+    {
+      "stack": [],
+      "hookContext": null
+    },
+    false
+  ],
+  [
+    "array context",
+    {
+      "stack": [],
+      "hookContext": []
+    },
+    false
+  ],
+  [
+    "missing agent",
+    {
+      "stack": [],
+      "hookContext": {}
+    },
+    false
+  ],
+  [
+    "empty agent",
+    {
+      "stack": [],
+      "hookContext": {
+        "agent": ""
+      }
+    },
+    false
+  ],
+  [
+    "null agent",
+    {
+      "stack": [],
+      "hookContext": {
+        "agent": null
+      }
+    },
+    false
+  ],
+  [
+    "empty host",
+    {
+      "stack": [],
+      "hookContext": {
+        "agent": "agent.dll",
+        "resolvedHostModule": ""
+      }
+    },
+    false
+  ],
+  [
+    "null host",
+    {
+      "stack": [],
+      "hookContext": {
+        "agent": "agent.dll",
+        "resolvedHostModule": null
+      }
+    },
+    false
+  ]
+]

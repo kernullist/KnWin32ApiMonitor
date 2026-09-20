@@ -22,6 +22,7 @@ function load(name)
 }
 const { TraceIngestState, TraceIngestClient, traceDisplayByteLimit } = load("traceIngestProtocol");
 const { createTraceEventFromAgentApiCall } = load("traceConversion");
+const { summarizeTraceCounts } = load("traceCounters");
 function source(sequence)
 {
     return { schemaVersion: "0.1.0", operationId: "ingest", messageType: "api_call", sequence,
@@ -29,6 +30,13 @@ function source(sequence)
         arguments: [], returnValue: "10", lastErrorCode: 0, lastErrorMessage: "", stack: [], durationUs: 1, tags: [] };
 }
 let window = [];
+const counters = (retained, ingested, nativeStreamed) => JSON.parse(JSON.stringify(summarizeTraceCounts(retained, ingested, nativeStreamed)));
+// A real live observation previously mislabeled these ten pending rows as trimmed.
+assert.deepEqual(counters(220, 220, 230), { total: 230, trimmed: 0, notIngested: 10 });
+assert.deepEqual(counters(250, 250, 250), { total: 250, trimmed: 0, notIngested: 0 });
+assert.deepEqual(counters(250, 250, 230), { total: 250, trimmed: 0, notIngested: 0 });
+assert.deepEqual(counters(5000, 6000, 6200), { total: 6200, trimmed: 1000, notIngested: 200 });
+assert.deepEqual(counters(100, 9000000, 0), { total: 9000000, trimmed: 8999900, notIngested: 0 });
 const state = new TraceIngestState();
 function apply(request)
 {
@@ -48,6 +56,9 @@ for (let batch = 0; batch < 200; ++batch)
     clonedEvents += delta.events.length;
     assert.equal(window.at(-1).eventId, (batch + 1) * 1000);
     assert.equal(delta.totalCapturedEvents, (batch + 1) * 1000);
+    const counts = counters(window.length, delta.totalCapturedEvents, delta.totalCapturedEvents + 1000);
+    assert.equal(counts.trimmed, Math.max(0, (batch + 1) * 1000 - window.length));
+    assert.equal(counts.notIngested, 1000);
 }
 assert.equal(clonedEvents, 200000);
 assert.equal(window[0].eventId, 195001);
@@ -55,6 +66,18 @@ assert.equal(state.apply({ epoch: 1, sequence: 201, command: { type: "reset" } }
 apply({ epoch: 2, sequence: 1, command: { type: "reset" } });
 assert.equal(state.apply({ epoch: 1, sequence: 202, command: { type: "enqueue-events", chunks: [] } }), null);
 const selected = createTraceEventFromAgentApiCall(source(0), 900, []);
+const stackState = new TraceIngestState();
+stackState.apply({ epoch: 1, sequence: 1, command: { type: "reset" } });
+const uncaptured = { ...source(1), stackSource: "not_captured", hookContext: { agent: "knmon-agent64.dll", resolvedHostModule: "kernelbase.dll" } };
+const oldStack = { ...source(2), stack: ["old-agent!IatHook", "module!Api"] };
+const stackDelta = stackState.apply({ epoch: 1, sequence: 2, command: { type: "enqueue-events", chunks: [{ events: [uncaptured, oldStack], contextTags: [] }] } });
+for (const [index, original] of [uncaptured, oldStack].entries())
+{
+    const exported = JSON.parse(JSON.stringify(stackDelta.events[index]));
+    assert.deepEqual(exported.stack, original.stack);
+    assert.equal(exported.stackSource, original.stackSource ?? "legacy_unverified");
+    assert.deepEqual(exported.hookContext, original.hookContext);
+}
 let delta = apply({ epoch: 3, sequence: 1, command: { type: "replace", events: [selected], selectedEventId: 900, totalCapturedEvents: 9000000 } });
 assert.equal(delta.selectedEventId, 900);
 assert.equal(delta.totalCapturedEvents, 9000000);

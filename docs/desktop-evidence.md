@@ -52,6 +52,15 @@ The evidence retains:
 - UI observations, the downloaded JSONL and a rendered screenshot. Revalidation
   reconciles event counts, sequences, target identity, native file-buffer bytes,
   filtered rows and the terminal UI state.
+  The driver also opens the Call Stack tab with an actual mouse action. Its
+  selected event ID, explicit uncaptured state, zero frame rows and hook context
+  must agree with the exported event and the staged agent architecture. Hook
+  metadata is never accepted as captured frames; see the
+  [stack observation contract](stack-observation.md).
+- Live native totals can lead UI ingestion. `Not ingested` reports that gap;
+  `Trimmed` counts only ingested rows removed from the retained window. The
+  verifier accepts a consistently reported live gap with no loss, but requires
+  zero gap and exact native/UI/export reconciliation after terminal draining.
 - Exact exit/cleanup outcomes. Failed attempts remain in their original folders.
 
 The process list includes nested WebView Jobs. Opening a PID is followed by an

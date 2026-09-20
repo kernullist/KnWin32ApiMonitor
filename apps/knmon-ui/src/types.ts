@@ -347,7 +347,20 @@ export interface CaptureTiming {
   endQpc: string;
 }
 
-export interface AgentApiCallEvent {
+export interface HookContext
+{
+  agent: string;
+  resolvedHostModule?: string;
+}
+
+export interface StackObservation
+{
+  stack: string[];
+  stackSource?: "not_captured" | "legacy_unverified";
+  hookContext?: HookContext;
+}
+
+export interface AgentApiCallEvent extends StackObservation {
   rawReturnBytes?: string;
   rawReturnEncoding?: string;
   callId?: string;
@@ -390,7 +403,6 @@ export interface AgentApiCallEvent {
   durationUs: number;
   arguments: AgentApiArgument[];
   tags: string[];
-  stack: string[];
   bufferPreview: string;
 }
 
@@ -599,7 +611,7 @@ export interface TraceError {
   message: string;
 }
 
-export interface TraceEvent {
+export interface TraceEvent extends StackObservation {
   rawReturnBytes?: string;
   rawReturnEncoding?: string;
   callId?: string;
@@ -633,7 +645,6 @@ export interface TraceEvent {
   error: TraceError | null;
   durationUs: number;
   tags: string[];
-  stack: string[];
   bufferPreview?: string;
 }
 

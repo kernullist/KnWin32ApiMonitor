@@ -6,17 +6,17 @@ Windows 10/11 release or every API input.
 
 | Component | x64 Debug | x86 Debug | x64 Release | x86 Release |
 |---|---|---|---|---|
-| Native compile/link | passed | passed | passed | passed |
-| Native CTest | 23/23 passed | 23/23 passed | 23/23 passed | 17 passed, 6 not started |
-| Desktop compile/link | test executable passed | test executable passed | application passed | application passed |
+| Native compile/link | passed | passed | prior build passed | prior build passed |
+| Native CTest | 23/23 passed | 23/23 passed | prior 23/23 passed | prior 17 passed, 6 not started |
+| Desktop compile/link | prior test executable passed | prior test executable passed | application passed | application passed |
 | Desktop security tests | prior 3/3 passed | prior 3/3 passed | 6/6 passed | 6/6 passed |
 | Desktop attach/filter/stop/export and Job resources | native tools used | native tools used | passed with Debug native tools | passed with Debug native tools |
 | Desktop PE hardening | passed | passed | passed | passed |
-| Rust backend with real helper | 18/18 passed | 18/18 passed | 18/18 with Debug and Release helpers | 18/18 with Debug helper; Release helper blocked before tests |
-| All-supported sample live/replay | 376 events, 16 errors | 376 events, 16 errors | 376 events, 16 errors | blocked before launch |
+| Rust backend with real helper | prior 18/18 passed | prior 18/18 passed | 19/19 with Debug helper | 19/19 with Debug helper; Release helper remains blocked |
+| All-supported sample live/replay | 376 events, 16 errors | 376 events, 16 errors | prior 376 events, 16 errors | blocked before launch |
 | Comparative six-API corpus | 50 runs passed | 50 runs passed | not run | not run |
 | Sustained overload, original/observed | 5 s and 15 s passed | 5 s and 15 s passed | default 5 s CTest passed | blocked before launch |
-| Clean source ZIP native reconstruction | 23/23 passed | 23/23 passed | not run | not run |
+| Clean source ZIP native reconstruction | prior 23/23 passed; refresh required | prior 23/23 passed; refresh required | not run | not run |
 
 The Debug comparison uses ten fresh-process repetitions of each of five modes.
 Each run has 450 expected calls, with zero missing, unexpected or reordered
@@ -29,6 +29,22 @@ polling, terminal-tail and WOW64 regressions, the full UI validator suite, both
 Release desktop builds/security suites, and real attach/filter/stop/export on
 both architectures. Those UI runs exported 250/230 events, retained native
 record totals through terminal draining and left both targets alive after stop.
+
+The latest [observation correction](stack-observation.md) separates hook metadata
+from stack frames and UI ingestion gaps from actual trimming. Both native Debug
+suites pass 23/23, with 2,329 native/Node JSON cases and 130 session cases per
+architecture. Each actual sample preserves all 376 events, including one
+resolved API-set host, through capture, UI conversion and saved replay. The
+six-API typed proof is freshly executed on both architectures. Frontend checks
+include two stack regressions and the 200,000-row worker/count regression.
+
+Adversarial review reproduced and fixed Rust accepting object-encoded provenance
+enums and the UI falsely labeling native/UI snapshot lag as trimming. Real
+desktop testing also corrected tab-selection assumptions and stop-audit capture
+in the driver. The final consumer rejects 59 adversarial cases and passes three
+positive groups; the backend consumer rejects 45. Earlier failed attempts remain
+failed. Native Release results in the table predate this correction and do not
+validate its native code.
 
 After the failure-state correction in `4e5a9df`, both native Release builds
 completed again. x64 executed all 23 CTests. x86 passed 17; six cases could not
@@ -64,17 +80,19 @@ After the URLPattern backport, both Release suites execute six tests, adding
 Unicode identifier, URL component and remote-fixture authority regressions.
 The Debug desktop entries describe the earlier three-test dependency baseline;
 they are not a validation of the new backport.
-The post-backport desktop runs each export 250 native events, retain exact
+The latest desktop runs export 240/250 native events, retain exact
 terminal totals with no recorded loss, leave the targets alive after stop,
-and close normally with all owned Jobs drained. The latest runs retain 201/202
-process-tree samples; the largest observed gaps are 359 ms (x64) and 344 ms (x86).
+and close normally with all owned Jobs drained. Both retain 199 process-tree
+samples; the largest observed gaps are 313 ms (x64) and 297 ms (x86). Actual
+Call Stack observations match the exported uncaptured state and agent identity.
 
 The [Release backend suite](backend-release-evidence.md) now includes the actual
 failed-target path. Missing the target's dynamic probe DLL previously left a
 failed capture in `stopping_agent`, causing the backend to wait until its test
 deadline. Native launch/attach finalization and backend result validation now
 preserve a terminal failure and its error message. Both Release architectures
-execute all 18 tests, including the two normally ignored real-helper cases.
+execute all 19 tests, including the two normally ignored real-helper cases and
+the new stack-observation roundtrip/rejection test. None are ignored or filtered.
 
 The sustained fixture measures native controller and target CPU/memory/handles,
 and reconciles every attempted call against delivered records and explicit
@@ -93,7 +111,7 @@ and export them, detach while the target survives, and exit normally. Raw Job
 samples include WebView children and separate target resources. The hidden-window
 scope and sampled working-set sums are not a foreground performance score.
 
-The current clean source archive from `7e290fc` was extracted without Git metadata and
+The previous clean source archive from `7e290fc` was extracted without Git metadata and
 rebuilt with the pinned Node/CMake/MSVC/SDK configuration. npm installation,
 frontend build/validation and both complete native Debug suites passed. The
 frozen reconstruction producer retained source, command, compiler and binary
@@ -123,10 +141,11 @@ The dependency graph and advisory evidence now remove the five reachable UNIC
 warnings while
 retaining two warnings outside the Windows graphs. Native Release, broader
 platform and performance claims remain subject to the separate limits above.
-The current integrated report has eight passed scopes, zero failed scopes and
-nine unverified scopes. Current source reconstruction, dependency maintenance,
-Release backend and actual desktop paths pass together with the existing
-advisory, inventory, typed-ABI and competitive-semantics evidence. All failed
+The current integrated report has seven passed scopes, zero failed scopes and
+ten unverified scopes. The source archive above predates the observation
+correction and must be refreshed. Dependency maintenance, Release backend and
+actual desktop paths pass together with the current advisory, inventory,
+typed-ABI and competitive-semantics evidence. All failed
 attempts and their raw logs remain distinct from the successful evidence sets.
 See `source-build-contract.md` for reproduction and
 `technical-readiness.md` for the fail-closed artifact verification policy.
