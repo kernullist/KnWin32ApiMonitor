@@ -5,7 +5,7 @@
 namespace knmon
 {
 inline constexpr std::uint32_t KnMonAttachConfigMagic = 0x31434e4b;
-inline constexpr std::uint16_t KnMonAttachConfigAbiVersion = 2;
+inline constexpr std::uint16_t KnMonAttachConfigAbiVersion = 3;
 inline constexpr std::uint32_t KnMonAttachConfigOperationIdChars = 64;
 inline constexpr std::uint32_t KnMonAttachConfigPipeNameChars = 260;
 inline constexpr std::uint32_t KnMonAttachConfigTransportNameChars = 128;
@@ -59,7 +59,11 @@ struct KnMonAttachConfigV1
     wchar_t TransportName[KnMonAttachConfigTransportNameChars] = {};
     wchar_t ControlEventName[KnMonAttachConfigControlNameChars] = {};
     wchar_t SelectedApis[KnMonAttachConfigSelectedApisChars] = {};
-    std::uint64_t Reserved[8] = {};
+    std::uint32_t ControllerProcessId = 0;
+    std::uint32_t ReservedFlags = 0;
+    std::uint64_t ControllerCreationTime = 0;
+    std::uint64_t TransportSize = 0;
+    std::uint64_t Reserved[5] = {};
 };
 
 struct KnMonAgentStateV1

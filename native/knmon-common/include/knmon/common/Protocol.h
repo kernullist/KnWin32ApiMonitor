@@ -273,6 +273,8 @@ struct KnMonLaunchRequest
     std::string CommandLineArguments;
     std::string ApiSelection;
     std::uint32_t OwnerProcessId = 0;
+    std::uint64_t OwnerProcessCreationTime = 0;
+    bool OwnLaunchJob = false;
     std::uint32_t HelperProcessId = 0;
     std::string CancellationEventName;
     std::uint32_t TimeoutMs = 5000;
@@ -388,6 +390,7 @@ struct KnMonCaptureResult
     std::uint32_t AgentControlStatus = 0;
     std::uint32_t AgentAbiVersion = 0;
     std::uint32_t TargetProcessId = 0;
+    std::uint64_t TargetProcessCreationTime = 0;
     std::uint32_t TargetThreadId = 0;
     std::string Architecture;
     std::uint32_t Win32ErrorCode = 0;

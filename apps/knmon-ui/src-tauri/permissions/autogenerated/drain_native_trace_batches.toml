@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-drain-native-trace-batches"
+description = "Enables the drain_native_trace_batches command without any pre-configured scope."
+commands.allow = ["drain_native_trace_batches"]
+
+[[permission]]
+identifier = "deny-drain-native-trace-batches"
+description = "Denies the drain_native_trace_batches command without any pre-configured scope."
+commands.deny = ["drain_native_trace_batches"]

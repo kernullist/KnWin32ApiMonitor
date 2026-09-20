@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-plan-daemon-recovery"
+description = "Enables the plan_daemon_recovery command without any pre-configured scope."
+commands.allow = ["plan_daemon_recovery"]
+
+[[permission]]
+identifier = "deny-plan-daemon-recovery"
+description = "Denies the plan_daemon_recovery command without any pre-configured scope."
+commands.deny = ["plan_daemon_recovery"]

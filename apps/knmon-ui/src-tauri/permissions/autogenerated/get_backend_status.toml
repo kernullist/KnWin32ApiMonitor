@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-backend-status"
+description = "Enables the get_backend_status command without any pre-configured scope."
+commands.allow = ["get_backend_status"]
+
+[[permission]]
+identifier = "deny-get-backend-status"
+description = "Denies the get_backend_status command without any pre-configured scope."
+commands.deny = ["get_backend_status"]

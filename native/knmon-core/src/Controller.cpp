@@ -3,6 +3,10 @@
 #include <knmon/core/Controller.h>
 
 #include <knmon/common/AttachConfig.h>
+#include <knmon/common/IpcSecurity.h>
+#include <knmon/common/AgentChannel.h>
+#include <map>
+#include <mutex>
 #include <knmon/common/GeneratedApiMetadata.h>
 #include <knmon/common/RuntimeSupport.h>
 #include <knmon/collector/SharedTransportReader.h>
@@ -32,6 +36,12 @@ namespace
 {
 constexpr std::uint64_t ExpectedFileIoHookCount = 6;
 constexpr ULONG_PTR LaunchHookReadyGraceMs = 500;
+
+bool ValidOperationId(const std::string& value)
+{
+    return !value.empty() && value.size() < KnMonTransportOperationIdChars &&
+        value.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_") == std::string::npos;
+}
 
 bool HasApiSelection(const std::string& value)
 {
@@ -2017,83 +2027,111 @@ struct CancellationContext
     std::string EventName;
 };
 
+struct CancellationEntry
+{
+    HANDLE Anchor = nullptr;
+    std::size_t References = 0;
+};
+std::mutex g_cancellationMutex;
+std::unordered_map<std::string, CancellationEntry> g_cancellationEvents;
+
 bool OpenCancellationContext(const std::string& eventName, CancellationContext* context, DWORD* errorCode)
 {
     bool opened = false;
-
+    DWORD error = ERROR_INVALID_PARAMETER;
+    std::lock_guard lock(g_cancellationMutex);
     do
     {
-        if (context != nullptr)
+        if (context == nullptr)
         {
-            context->EventHandle = nullptr;
-            context->EventName = eventName;
+            break;
         }
-
-        if (errorCode != nullptr)
-        {
-            *errorCode = 0;
-        }
-
+        context->EventHandle = nullptr;
+        context->EventName = eventName;
         if (eventName.empty())
         {
             opened = true;
             break;
         }
-
         const std::wstring wideName = Utf8ToWide(eventName);
-        if (wideName.empty())
+        if (wideName.empty() || wideName.size() >= 128 || wideName.find(L'\0') != std::wstring::npos ||
+            wideName.compare(0, 6, L"Local\\") != 0)
         {
-            if (errorCode != nullptr)
-            {
-                *errorCode = ERROR_INVALID_PARAMETER;
-            }
             break;
         }
-
-        HANDLE eventHandle = CreateEventW(nullptr, TRUE, FALSE, wideName.c_str());
+        auto found = g_cancellationEvents.find(eventName);
+        if (found != g_cancellationEvents.end())
+        {
+            // Nested tree capture shares this process-owned event without resetting it.
+            if (!DuplicateHandle(GetCurrentProcess(), found->second.Anchor, GetCurrentProcess(), &context->EventHandle,
+                0, FALSE, DUPLICATE_SAME_ACCESS))
+            {
+                error = GetLastError();
+                break;
+            }
+            ++found->second.References;
+            opened = true;
+            break;
+        }
+        LocalIpcSecurity security;
+        if (!security.Initialize(EVENT_MODIFY_STATE | SYNCHRONIZE | READ_CONTROL))
+        {
+            error = GetLastError();
+            break;
+        }
+        HANDLE eventHandle = CreateEventW(security.Attributes(), TRUE, FALSE, wideName.c_str());
+        error = GetLastError();
         if (eventHandle == nullptr)
         {
-            if (errorCode != nullptr)
-            {
-                *errorCode = GetLastError();
-            }
             break;
         }
-
-        // Named events may already exist from a prior operation with the same name.
-        // Always clear signal state so a stale set does not cancel a fresh operation.
-        if (!ResetEvent(eventHandle))
+        if (error == ERROR_ALREADY_EXISTS)
         {
-            if (errorCode != nullptr)
-            {
-                *errorCode = GetLastError();
-            }
             CloseHandle(eventHandle);
             break;
         }
-
-        if (context != nullptr)
+        if (!DuplicateHandle(GetCurrentProcess(), eventHandle, GetCurrentProcess(), &context->EventHandle,
+            0, FALSE, DUPLICATE_SAME_ACCESS))
         {
-            context->EventHandle = eventHandle;
+            error = GetLastError();
+            CloseHandle(eventHandle);
+            break;
         }
-        else
+        try
+        {
+            g_cancellationEvents.emplace(eventName, CancellationEntry { eventHandle, 1 });
+        }
+        catch (...)
         {
             CloseHandle(eventHandle);
+            CloseHandle(context->EventHandle);
+            context->EventHandle = nullptr;
+            error = ERROR_NOT_ENOUGH_MEMORY;
+            break;
         }
-
         opened = true;
     }
     while (false);
-
+    if (errorCode != nullptr)
+    {
+        *errorCode = opened ? ERROR_SUCCESS : error;
+    }
     return opened;
 }
 
 void CloseCancellationContext(CancellationContext& context)
 {
+    std::lock_guard lock(g_cancellationMutex);
     if (context.EventHandle != nullptr)
     {
         CloseHandle(context.EventHandle);
         context.EventHandle = nullptr;
+        const auto found = g_cancellationEvents.find(context.EventName);
+        if (found != g_cancellationEvents.end() && --found->second.References == 0)
+        {
+            CloseHandle(found->second.Anchor);
+            g_cancellationEvents.erase(found);
+        }
     }
 }
 
@@ -6769,24 +6807,6 @@ std::uint32_t TransportCapacityFromEnvironment()
     return capacity;
 }
 
-std::wstring TransportMappingName(const std::string& operationId)
-{
-    std::wstring result = L"Local\\KNMonTransport_";
-    for (const char ch : operationId)
-    {
-        if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '_')
-        {
-            result.push_back(static_cast<wchar_t>(ch));
-        }
-        else
-        {
-            result.push_back(L'_');
-        }
-    }
-
-    return result;
-}
-
 struct SharedTransportSession
 {
     CaptureClock Clock;
@@ -6840,11 +6860,19 @@ bool CreateSharedTransport(
         transport.OperationId = operationId;
         transport.Clock = clock;
         transport.Architecture = architecture;
-        transport.MappingName = TransportMappingName(operationId);
+        LocalIpcSecurity security;
+        if (!security.Initialize(TransportAclAccess) || !RandomIpcName(L"Local\\KNMonTransport_", transport.MappingName))
+        {
+            if (errorCode != nullptr)
+            {
+                *errorCode = GetLastError();
+            }
+            break;
+        }
         transport.MappingSize = sizeof(KnMonTransportHeader) + (static_cast<std::uint64_t>(transport.Capacity) * sizeof(KnMonTransportRecord));
         transport.MappingHandle = CreateFileMappingW(
             INVALID_HANDLE_VALUE,
-            nullptr,
+            security.Attributes(),
             PAGE_READWRITE,
             static_cast<DWORD>((transport.MappingSize >> 32) & 0xffffffffULL),
             static_cast<DWORD>(transport.MappingSize & 0xffffffffULL),
@@ -7185,42 +7213,62 @@ bool QueueEarlyBirdAgentLoad(TResult& result, HANDLE threadHandle, void* remoteD
     return queued;
 }
 
-class EnvironmentOverride
+struct EnvironmentKeyLess
 {
-public:
-    EnvironmentOverride(const wchar_t* name, const std::wstring& value) :
-        m_name(name)
+    bool operator()(const std::wstring& left, const std::wstring& right) const
     {
-        wchar_t buffer[32768] = {};
-        const DWORD length = GetEnvironmentVariableW(m_name.c_str(), buffer, static_cast<DWORD>(std::size(buffer)));
-        if (length > 0 && length < std::size(buffer))
-        {
-            m_hadOriginal = true;
-            m_original.assign(buffer, length);
-        }
-
-        SetEnvironmentVariableW(m_name.c_str(), value.c_str());
+        return _wcsicmp(left.c_str(), right.c_str()) < 0;
     }
-
-    ~EnvironmentOverride()
-    {
-        if (m_hadOriginal)
-        {
-            SetEnvironmentVariableW(m_name.c_str(), m_original.c_str());
-        }
-        else
-        {
-            SetEnvironmentVariableW(m_name.c_str(), nullptr);
-        }
-    }
-
-private:
-    std::wstring m_name;
-    std::wstring m_original;
-    bool m_hadOriginal = false;
 };
 
-bool WaitForPipeConnection(HANDLE pipeHandle, DWORD timeoutMs, DWORD* errorCode)
+std::vector<wchar_t> AgentEnvironment(const std::wstring& pipeName, const std::string& operationId,
+    const std::wstring& mappingName, std::uint64_t mappingSize, const std::string& selectedApis, const wchar_t* mode)
+{
+    std::map<std::wstring, std::wstring, EnvironmentKeyLess> entries;
+    LPWCH inherited = GetEnvironmentStringsW();
+    if (inherited == nullptr)
+    {
+        throw std::runtime_error("Could not read the child process environment.");
+    }
+    try
+    {
+        for (const wchar_t* entry = inherited; *entry != L'\0'; entry += wcslen(entry) + 1)
+        {
+            const std::wstring value(entry);
+            const auto separator = value.find(L'=', value.front() == L'=' ? 1 : 0);
+            if (separator != std::wstring::npos)
+            {
+                entries[value.substr(0, separator)] = value.substr(separator + 1);
+            }
+        }
+    }
+    catch (...)
+    {
+        FreeEnvironmentStringsW(inherited);
+        throw;
+    }
+    FreeEnvironmentStringsW(inherited);
+    entries[L"KNMON_AGENT_PIPE"] = pipeName;
+    entries[L"KNMON_OPERATION_ID"] = Utf8ToWide(operationId);
+    entries[L"KNMON_TRANSPORT_NAME"] = mappingName;
+    entries[L"KNMON_TRANSPORT_SIZE"] = std::to_wstring(mappingSize);
+    entries[L"KNMON_TRANSPORT_REQUIRED"] = mappingName.empty() ? L"0" : L"1";
+    entries[L"KNMON_CONTROLLER_PID"] = std::to_wstring(GetCurrentProcessId());
+    entries[L"KNMON_CONTROLLER_CREATION_TIME"] = std::to_wstring(ProcessCreationTime(GetCurrentProcess()));
+    entries[L"KNMON_SELECTED_APIS"] = Utf8ToWide(selectedApis);
+    entries[L"KNMON_CAPTURE_MODE"] = mode;
+    std::vector<wchar_t> block;
+    for (const auto& [name, value] : entries)
+    {
+        const std::wstring entry = name + L"=" + value;
+        block.insert(block.end(), entry.begin(), entry.end());
+        block.push_back(L'\0');
+    }
+    block.push_back(L'\0');
+    return block;
+}
+
+bool WaitForPipeConnection(HANDLE pipeHandle, HANDLE expectedProcess, DWORD timeoutMs, DWORD* errorCode)
 {
     bool connected = false;
     OVERLAPPED overlapped = {};
@@ -7293,10 +7341,19 @@ bool WaitForPipeConnection(HANDLE pipeHandle, DWORD timeoutMs, DWORD* errorCode)
         CloseHandle(overlapped.hEvent);
     }
 
+    if (connected && !AuthenticatePipeClient(pipeHandle, expectedProcess))
+    {
+        connected = false;
+        if (errorCode != nullptr)
+        {
+            *errorCode = ERROR_ACCESS_DENIED;
+        }
+        DisconnectNamedPipe(pipeHandle);
+    }
     return connected;
 }
 
-bool ReadPipeMessage(HANDLE pipeHandle, DWORD timeoutMs, JsonDocument* payload, DWORD* errorCode)
+bool ReadPipeMessage(HANDLE pipeHandle, DWORD timeoutMs, JsonDocument* payload, DWORD* errorCode, AgentChannel& channel)
 {
     bool received = false;
     OVERLAPPED overlapped = {};
@@ -7430,6 +7487,7 @@ bool ReadPipeMessage(HANDLE pipeHandle, DWORD timeoutMs, JsonDocument* payload, 
             try
             {
                 *payload = ParseAgentJson(assembled);
+                channel.Accept(*payload);
             }
             catch (const std::exception&)
             {
@@ -7735,6 +7793,11 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
     }
     const KnMonAgentArchitecture requestedArchitecture = RequestedArchitectureOrNative(request.Architecture);
     result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
+    if (!ValidOperationId(result.OperationId))
+    {
+        SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "invalid_operation_id", "Operation id must contain 1 to 63 ASCII letters, digits, hyphens, or underscores.");
+        return result;
+    }
     result.TargetPath = request.TargetPath;
     result.AgentPath = request.AgentPath;
     result.Architecture = ArchitectureName(requestedArchitecture);
@@ -7768,16 +7831,9 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
 
         AddAudit(result, "launch_requested", "launch_requested", "Controlled early-bird launch requested.");
 
-        const std::wstring pipeName = L"\\\\.\\pipe\\knmon_agent_" + Utf8ToWide(result.OperationId);
-        pipeHandle = CreateNamedPipeW(
-            pipeName.c_str(),
-            PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
-            PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
-            1,
-            4096,
-            4096,
-            request.TimeoutMs,
-            nullptr);
+        std::wstring pipeName;
+        pipeHandle = CreateLocalAgentPipe(pipeName, request.TimeoutMs);
+        const std::string channelNonce = WideToUtf8(ChannelNonce(pipeName).c_str());
 
         if (pipeHandle == INVALID_HANDLE_VALUE)
         {
@@ -7808,8 +7864,7 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
         std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
         mutableCommandLine.push_back(L'\0');
 
-        EnvironmentOverride pipeEnv(L"KNMON_AGENT_PIPE", pipeName);
-        EnvironmentOverride operationEnv(L"KNMON_OPERATION_ID", Utf8ToWide(result.OperationId));
+        auto environment = AgentEnvironment(pipeName, result.OperationId, L"", 0, request.ApiSelection, L"hello");
 
         if (!CreateProcessW(
             targetPath.c_str(),
@@ -7817,8 +7872,8 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
             nullptr,
             nullptr,
             FALSE,
-            CREATE_SUSPENDED | DETACHED_PROCESS,
-            nullptr,
+            CREATE_SUSPENDED | DETACHED_PROCESS | CREATE_UNICODE_ENVIRONMENT,
+            environment.data(),
             workingDirectory.empty() ? nullptr : workingDirectory.c_str(),
             &startupInfo,
             &processInfo))
@@ -7863,8 +7918,9 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
         processResumed = true;
         AddAudit(result, "primary_thread_resumed", "ResumeThread", "Target primary thread resumed.");
 
+        AgentChannel channel(result.OperationId, result.TargetProcessId, channelNonce);
         DWORD pipeError = 0;
-        if (!WaitForPipeConnection(pipeHandle, request.TimeoutMs, &pipeError))
+        if (!WaitForPipeConnection(pipeHandle, processInfo.hProcess, request.TimeoutMs, &pipeError))
         {
             if (processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
             {
@@ -7885,7 +7941,7 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
         }
 
         JsonDocument payload;
-        if (!ReadPipeMessage(pipeHandle, request.TimeoutMs, &payload, &pipeError))
+        if (!ReadPipeMessage(pipeHandle, request.TimeoutMs, &payload, &pipeError, channel))
         {
             SetResultError(result, pipeError, "win32", pipeError == ERROR_INVALID_DATA ? "agent_protocol_invalid" : "handshake_timeout", "Agent handshake payload timed out or failed.");
             AddAudit(result, "handshake_timeout", "agent_handshake_read", "No agent HELLO payload was received before timeout.", pipeError, "win32");
@@ -7976,6 +8032,11 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
     }
     const KnMonAgentArchitecture requestedArchitecture = RequestedArchitectureOrNative(request.Architecture);
     result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
+    if (!ValidOperationId(result.OperationId))
+    {
+        SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "invalid_operation_id", "Operation id must contain 1 to 63 ASCII letters, digits, hyphens, or underscores.");
+        return result;
+    }
     result.SessionId = request.SessionId;
     result.SessionState = request.SessionId.empty() ? "" : "running";
     result.SessionKind = request.SessionKind.empty() ? "launch_capture" : request.SessionKind;
@@ -7999,6 +8060,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
     startupInfo.cb = sizeof(startupInfo);
     HANDLE pipeHandle = INVALID_HANDLE_VALUE;
     HANDLE ownerProcessHandle = nullptr;
+    HANDLE ownedJob = nullptr;
     SharedTransportSession transport;
     void* remoteDllPath = nullptr;
     std::uintptr_t remoteStopAddress = 0;
@@ -8180,16 +8242,9 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
         AddAudit(result, "launch_capture_requested", "launch_capture", "Controlled early-bird launch capture requested.");
 
-        const std::wstring pipeName = L"\\\\.\\pipe\\knmon_agent_" + Utf8ToWide(result.OperationId);
-        pipeHandle = CreateNamedPipeW(
-            pipeName.c_str(),
-            PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
-            PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
-            1,
-            65536,
-            65536,
-            request.TimeoutMs,
-            nullptr);
+        std::wstring pipeName;
+        pipeHandle = CreateLocalAgentPipe(pipeName, request.TimeoutMs);
+        const std::string channelNonce = WideToUtf8(ChannelNonce(pipeName).c_str());
 
         if (pipeHandle == INVALID_HANDLE_VALUE)
         {
@@ -8225,12 +8280,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
         mutableCommandLine.push_back(L'\0');
 
-        EnvironmentOverride pipeEnv(L"KNMON_AGENT_PIPE", pipeName);
-        EnvironmentOverride operationEnv(L"KNMON_OPERATION_ID", Utf8ToWide(result.OperationId));
-        EnvironmentOverride modeEnv(L"KNMON_CAPTURE_MODE", L"launch");
-        EnvironmentOverride transportEnv(L"KNMON_TRANSPORT_NAME", transport.MappingName);
-        EnvironmentOverride transportRequiredEnv(L"KNMON_TRANSPORT_REQUIRED", L"1");
-        EnvironmentOverride selectedApisEnv(L"KNMON_SELECTED_APIS", Utf8ToWide(request.ApiSelection));
+        auto environment = AgentEnvironment(pipeName, result.OperationId, transport.MappingName, transport.MappingSize, request.ApiSelection, L"launch");
 
         startupInfo.dwFlags |= STARTF_USESHOWWINDOW;
         startupInfo.wShowWindow = SW_SHOWNORMAL;
@@ -8241,8 +8291,8 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             nullptr,
             nullptr,
             FALSE,
-            CREATE_SUSPENDED | DETACHED_PROCESS,
-            nullptr,
+            CREATE_SUSPENDED | DETACHED_PROCESS | CREATE_UNICODE_ENVIRONMENT,
+            environment.data(),
             workingDirectory.empty() ? nullptr : workingDirectory.c_str(),
             &startupInfo,
             &processInfo))
@@ -8254,6 +8304,21 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
         processCreated = true;
         result.TargetProcessId = processInfo.dwProcessId;
+        result.TargetProcessCreationTime = ProcessCreationTime(processInfo.hProcess);
+        if (request.OwnLaunchJob)
+        {
+            ownedJob = CreateJobObjectW(nullptr, nullptr);
+            JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = {};
+            limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+            if (ownedJob == nullptr || !SetInformationJobObject(ownedJob, JobObjectExtendedLimitInformation, &limits, sizeof(limits)) ||
+                !AssignProcessToJobObject(ownedJob, processInfo.hProcess))
+            {
+                SetResultError(result, GetLastError(), "win32", "launch_job_assignment_failed", "Owned launch job could not be assigned before process resume.");
+                fatalError = true;
+                break;
+            }
+            AddAudit(result, "launch_job_assigned", "AssignProcessToJobObject", "Owned launch job will close the process tree on helper or owner exit.");
+        }
         result.TargetThreadId = processInfo.dwThreadId;
         AddAudit(result, "process_created_suspended", "CreateProcessW", "Target process created suspended for early-bird launch capture.");
         EmitCaptureStreamSessionFrame(streamCallbacks, "session_state", result);
@@ -8261,9 +8326,12 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         if (request.OwnerProcessId != 0 && request.OwnerProcessId != GetCurrentProcessId())
         {
             ownerProcessHandle = OpenProcess(SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, FALSE, request.OwnerProcessId);
-            if (ownerProcessHandle == nullptr)
+            if (ownerProcessHandle == nullptr || request.OwnerProcessCreationTime == 0 ||
+                ProcessCreationTime(ownerProcessHandle) != request.OwnerProcessCreationTime || WaitForSingleObject(ownerProcessHandle, 0) != WAIT_TIMEOUT)
             {
-                AddAudit(result, "owner_process_observe_unavailable", "OpenProcess", "Launch owner process could not be opened for exit observation.", GetLastError(), "win32");
+                SetResultError(result, ERROR_ACCESS_DENIED, "knmon-core", "owner_identity_invalid", "Launch owner process identity could not be verified.");
+                fatalError = true;
+                break;
             }
             else
             {
@@ -8306,8 +8374,9 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         processResumed = true;
         AddAudit(result, "primary_thread_resumed", "ResumeThread", "Target primary thread resumed.");
 
+        AgentChannel channel(result.OperationId, result.TargetProcessId, channelNonce);
         DWORD pipeError = 0;
-        if (!WaitForPipeConnection(pipeHandle, request.TimeoutMs, &pipeError))
+        if (!WaitForPipeConnection(pipeHandle, processInfo.hProcess, request.TimeoutMs, &pipeError))
         {
             if (processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
             {
@@ -8383,7 +8452,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
             JsonDocument payload;
             pipeError = 0;
-            if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError))
+            if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError, channel))
             {
                 consumePayload(payload);
                 DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
@@ -8538,7 +8607,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
                 JsonDocument payload;
                 pipeError = 0;
-                if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError))
+                if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError, channel))
                 {
                     consumePayload(payload);
                     DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
@@ -8689,6 +8758,21 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         AddAudit(result, "cleanup_completed", "handle_cleanup", "Launch controller handle cleanup completed.");
     }
 
+    if (ownedJob != nullptr)
+    {
+        if (processResumed && !ownerExited)
+        {
+            // A controlled stop relinquishes ownership, including incomplete agent cleanup.
+            JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = {};
+            if (!SetInformationJobObject(ownedJob, JobObjectExtendedLimitInformation, &limits, sizeof(limits)))
+            {
+                SetResultError(result, GetLastError(), "win32", "launch_job_release_failed", "Owned launch job could not relinquish kill-on-close.");
+            }
+        }
+        CloseHandle(ownedJob);
+        ownedJob = nullptr;
+    }
+
     if (pipeHandle != INVALID_HANDLE_VALUE)
     {
         DisconnectNamedPipe(pipeHandle);
@@ -8760,6 +8844,11 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
     }
     const KnMonAgentArchitecture requestedArchitecture = RequestedArchitectureOrNative(request.Architecture);
     result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
+    if (!ValidOperationId(result.OperationId))
+    {
+        SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "invalid_operation_id", "Operation id must contain 1 to 63 ASCII letters, digits, hyphens, or underscores.");
+        return result;
+    }
     result.TargetPath = request.TargetPath;
     result.AgentPath = request.AgentPath;
     result.ApiSelection = request.ApiSelection;
@@ -8800,16 +8889,9 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
 
         AddAudit(result, "capture_requested", "capture_requested", "Controlled File I/O capture requested.");
 
-        const std::wstring pipeName = L"\\\\.\\pipe\\knmon_agent_" + Utf8ToWide(result.OperationId);
-        pipeHandle = CreateNamedPipeW(
-            pipeName.c_str(),
-            PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
-            PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
-            1,
-            65536,
-            65536,
-            request.TimeoutMs,
-            nullptr);
+        std::wstring pipeName;
+        pipeHandle = CreateLocalAgentPipe(pipeName, request.TimeoutMs);
+        const std::string channelNonce = WideToUtf8(ChannelNonce(pipeName).c_str());
 
         if (pipeHandle == INVALID_HANDLE_VALUE)
         {
@@ -8848,12 +8930,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
         mutableCommandLine.push_back(L'\0');
 
-        EnvironmentOverride pipeEnv(L"KNMON_AGENT_PIPE", pipeName);
-        EnvironmentOverride operationEnv(L"KNMON_OPERATION_ID", Utf8ToWide(result.OperationId));
-        EnvironmentOverride modeEnv(L"KNMON_CAPTURE_MODE", L"fileio");
-        EnvironmentOverride transportEnv(L"KNMON_TRANSPORT_NAME", transport.MappingName);
-        EnvironmentOverride transportRequiredEnv(L"KNMON_TRANSPORT_REQUIRED", L"1");
-        EnvironmentOverride selectedApisEnv(L"KNMON_SELECTED_APIS", Utf8ToWide(request.ApiSelection));
+        auto environment = AgentEnvironment(pipeName, result.OperationId, transport.MappingName, transport.MappingSize, request.ApiSelection, L"fileio");
 
         if (!CreateProcessW(
             targetPath.c_str(),
@@ -8861,8 +8938,8 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
             nullptr,
             nullptr,
             FALSE,
-            CREATE_SUSPENDED | DETACHED_PROCESS,
-            nullptr,
+            CREATE_SUSPENDED | DETACHED_PROCESS | CREATE_UNICODE_ENVIRONMENT,
+            environment.data(),
             workingDirectory.empty() ? nullptr : workingDirectory.c_str(),
             &startupInfo,
             &processInfo))
@@ -8912,8 +8989,9 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         processResumed = true;
         AddAudit(result, "primary_thread_resumed", "ResumeThread", "Target primary thread resumed.");
 
+        AgentChannel channel(result.OperationId, result.TargetProcessId, channelNonce);
         DWORD pipeError = 0;
-        if (!WaitForPipeConnection(pipeHandle, request.TimeoutMs, &pipeError))
+        if (!WaitForPipeConnection(pipeHandle, processInfo.hProcess, request.TimeoutMs, &pipeError))
         {
             if (processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
             {
@@ -8956,7 +9034,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
             pipeError = 0;
             DrainSharedTransport(result, transport);
 
-            if (ReadPipeMessage(pipeHandle, 2500, &payload, &pipeError))
+            if (ReadPipeMessage(pipeHandle, 2500, &payload, &pipeError, channel))
             {
                 KnMonAgentMessage message = BuildAgentMessage(result, payload);
                 result.AgentMessages.push_back(message);
@@ -9276,6 +9354,11 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
     }
     const KnMonAgentArchitecture requestedArchitecture = RequestedArchitectureOrNative(request.Architecture);
     result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
+    if (!ValidOperationId(result.OperationId))
+    {
+        SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "invalid_operation_id", "Operation id must contain 1 to 63 ASCII letters, digits, hyphens, or underscores.");
+        return result;
+    }
     result.SessionId = request.SessionId;
     result.SessionState = request.SessionId.empty() ? "" : "running";
     result.SessionKind = request.SessionKind.empty() ? "attach_capture" : request.SessionKind;
@@ -9775,16 +9858,9 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
             break;
         }
 
-        const std::wstring pipeName = L"\\\\.\\pipe\\knmon_agent_" + Utf8ToWide(result.OperationId);
-        pipeHandle = CreateNamedPipeW(
-            pipeName.c_str(),
-            PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
-            PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
-            1,
-            65536,
-            65536,
-            request.TimeoutMs,
-            nullptr);
+        std::wstring pipeName;
+        pipeHandle = CreateLocalAgentPipe(pipeName, request.TimeoutMs);
+        const std::string channelNonce = WideToUtf8(ChannelNonce(pipeName).c_str());
 
         if (pipeHandle == INVALID_HANDLE_VALUE)
         {
@@ -9833,6 +9909,9 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
         KnMonAttachConfigV1 attachConfig;
         attachConfig.StructSize = static_cast<std::uint16_t>(sizeof(attachConfig));
+        attachConfig.ControllerProcessId = GetCurrentProcessId();
+        attachConfig.ControllerCreationTime = ProcessCreationTime(GetCurrentProcess());
+        attachConfig.TransportSize = transport.MappingSize;
         if (
             !CopyWideBounded(attachConfig.OperationId, std::size(attachConfig.OperationId), Utf8ToWide(result.OperationId)) ||
             !CopyWideBounded(attachConfig.PipeName, std::size(attachConfig.PipeName), pipeName) ||
@@ -10001,8 +10080,9 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         AddAudit(result, "remote_agent_initialize_completed", "CreateRemoteThread", "Remote KnMonAgentInitialize completed.");
         (void)observeCancellation("attach_after_initialize");
 
+        AgentChannel channel(result.OperationId, result.TargetProcessId, channelNonce);
         DWORD pipeError = 0;
-        if (!WaitForPipeConnection(pipeHandle, request.TimeoutMs, &pipeError))
+        if (!WaitForPipeConnection(pipeHandle, processHandle, request.TimeoutMs, &pipeError))
         {
             if (WaitForSingleObject(processHandle, 0) == WAIT_OBJECT_0)
             {
@@ -10037,7 +10117,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
             JsonDocument payload;
             pipeError = 0;
-            if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError))
+            if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError, channel))
             {
                 consumePayload(payload);
                 DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
@@ -10114,7 +10194,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
             JsonDocument payload;
             pipeError = 0;
-            if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError))
+            if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError, channel))
             {
                 consumePayload(payload);
                 DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
@@ -10363,6 +10443,11 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
     const CaptureClock treeClock = SampleCaptureClock();
     KnMonProcessTreeResult result;
     result.OperationId = request.OperationId.empty() ? "manual-operation" : request.OperationId;
+    if (!ValidOperationId(result.OperationId))
+    {
+        SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "invalid_operation_id", "Operation id must contain 1 to 63 ASCII letters, digits, hyphens, or underscores.");
+        return result;
+    }
     result.SessionId = request.SessionId;
     result.SessionState = request.SessionId.empty() ? "" : "running";
     result.SessionKind = request.SessionKind.empty() ? "process_tree_supervision" : request.SessionKind;

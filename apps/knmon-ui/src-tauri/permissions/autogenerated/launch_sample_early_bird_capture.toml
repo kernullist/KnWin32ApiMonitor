@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-launch-sample-early-bird-capture"
+description = "Enables the launch_sample_early_bird_capture command without any pre-configured scope."
+commands.allow = ["launch_sample_early_bird_capture"]
+
+[[permission]]
+identifier = "deny-launch-sample-early-bird-capture"
+description = "Denies the launch_sample_early_bird_capture command without any pre-configured scope."
+commands.deny = ["launch_sample_early_bird_capture"]

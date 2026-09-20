@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-supervise-process-tree"
+description = "Enables the supervise_process_tree command without any pre-configured scope."
+commands.allow = ["supervise_process_tree"]
+
+[[permission]]
+identifier = "deny-supervise-process-tree"
+description = "Denies the supervise_process_tree command without any pre-configured scope."
+commands.deny = ["supervise_process_tree"]

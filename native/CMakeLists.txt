@@ -54,6 +54,10 @@ target_include_directories(knmon-common INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/knmon-common/include
 )
 
+add_library(knmon-ipc-security STATIC knmon-common/src/IpcSecurity.cpp)
+target_link_libraries(knmon-ipc-security PUBLIC knmon-common PRIVATE advapi32 bcrypt)
+target_compile_definitions(knmon-ipc-security PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+
 add_library(knmon-transport-support STATIC knmon-common/src/TransportWriter.cpp)
 target_link_libraries(knmon-transport-support PUBLIC knmon-common)
 target_compile_definitions(knmon-transport-support PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
@@ -74,6 +78,11 @@ target_link_libraries(knmon-json PUBLIC knmon-common)
 target_include_directories(knmon-json SYSTEM PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third-party")
 
 if(BUILD_TESTING)
+    add_executable(knmon-ipc-security-test tests/IpcSecurityTest.cpp)
+    target_link_libraries(knmon-ipc-security-test PRIVATE knmon-ipc-security knmon-json advapi32)
+    target_compile_definitions(knmon-ipc-security-test PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+    add_test(NAME ipc-security COMMAND knmon-ipc-security-test)
+    set_tests_properties(ipc-security PROPERTIES TIMEOUT 20)
     add_executable(knmon-bounded-json-test tests/BoundedJsonTest.cpp)
     target_link_libraries(knmon-bounded-json-test PRIVATE knmon-json)
     target_include_directories(knmon-bounded-json-test SYSTEM PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third-party")
@@ -131,7 +140,7 @@ target_include_directories(knmon-core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/knmon-core/include
 )
 target_link_libraries(knmon-core
-    PUBLIC knmon-common knmon-json
+    PUBLIC knmon-common knmon-json knmon-ipc-security
     PRIVATE knmon-collector-core
 )
 target_compile_definitions(knmon-core PRIVATE
@@ -180,7 +189,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         KNMON_AGENT_DLL_NAME="knmon-agent64.dll"
         KNMON_AGENT_HELLO_MESSAGE="KNMon x64 agent loaded by controlled early-bird APC"
     )
-    target_link_libraries(knmon-agent64 PRIVATE knmon-common knmon-transport-support)
+    target_link_libraries(knmon-agent64 PRIVATE knmon-common knmon-transport-support knmon-ipc-security)
     if(MSVC)
         target_compile_options(knmon-agent64 PRIVATE /EHa)
     endif()
@@ -196,7 +205,7 @@ elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
         KNMON_AGENT_DLL_NAME="knmon-agent32.dll"
         KNMON_AGENT_HELLO_MESSAGE="KNMon x86 agent loaded by controlled early-bird APC"
     )
-    target_link_libraries(knmon-agent32 PRIVATE knmon-common knmon-transport-support)
+    target_link_libraries(knmon-agent32 PRIVATE knmon-common knmon-transport-support knmon-ipc-security)
     if(MSVC)
         target_compile_options(knmon-agent32 PRIVATE /EHa)
     endif()

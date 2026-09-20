@@ -1,4 +1,5 @@
 #include <knmon/common/AttachConfig.h>
+#include <knmon/common/IpcSecurity.h>
 #include <knmon/common/GeneratedApiMetadata.h>
 #include <knmon/common/Protocol.h>
 #include <knmon/common/RuntimeSupport.h>
@@ -91,8 +92,8 @@
 
 namespace
 {
-constexpr const wchar_t* AgentVersion = L"0.3.0";
-constexpr DWORD AgentVersionPacked = 0x00030000;
+constexpr const wchar_t* AgentVersion = L"0.4.0";
+constexpr DWORD AgentVersionPacked = 0x00040000;
 constexpr std::size_t MaxBufferPreviewBytes = 16;
 constexpr std::size_t MaxNtObjectNameBytes = 512;
 constexpr std::size_t MaxRegistryStringChars = 256;
@@ -799,6 +800,7 @@ NtCreateFileFn g_originalNtCreateFile = nullptr;
 LdrLoadDllFn g_originalLdrLoadDll = nullptr;
 LdrGetProcedureAddressFn g_originalLdrGetProcedureAddress = nullptr;
 std::wstring g_operationId;
+std::wstring g_channelNonce;
 std::string g_selectedApiSelection;
 volatile LONG g_workerStarted = 0;
 
@@ -841,6 +843,9 @@ struct AgentWorkerConfig
     std::wstring OperationId;
     std::wstring SelectedApis;
     bool TransportRequired = false;
+    DWORD ControllerProcessId = 0;
+    std::uint64_t ControllerCreationTime = 0;
+    std::uint64_t TransportSize = 0;
 };
 
 struct ModuleInfo
@@ -1535,8 +1540,12 @@ knmon::KnMonAgentControlStatus CopyAttachConfig(
         copied.TransportName = WideBufferToString(config->TransportName);
         copied.SelectedApis = WideBufferToString(config->SelectedApis);
         copied.TransportRequired = true;
+        copied.ControllerProcessId = config->ControllerProcessId;
+        copied.ControllerCreationTime = config->ControllerCreationTime;
+        copied.TransportSize = config->TransportSize;
 
-        if (copied.OperationId.empty() || copied.PipeName.empty() || copied.TransportName.empty())
+        if (copied.OperationId.empty() || knmon::ChannelNonce(copied.PipeName).empty() || copied.TransportName.empty() ||
+            copied.ControllerProcessId == 0 || copied.ControllerCreationTime == 0 || copied.TransportSize == 0)
         {
             break;
         }
@@ -2567,36 +2576,45 @@ bool GeneratedModuleNameEquals(std::string_view left, const char* right)
 
 std::uint16_t ModuleId(const char* moduleName);
 
-bool OpenTransport(const std::wstring& mappingName)
+bool OpenTransport(const AgentWorkerConfig& config)
 {
     bool opened = false;
 
     do
     {
-        if (mappingName.empty())
+        const std::wstring& mappingName = config.TransportName;
+        const std::uint64_t minSize = sizeof(knmon::KnMonTransportHeader) + static_cast<std::uint64_t>(knmon::KnMonTransportMinCapacity) * sizeof(knmon::KnMonTransportRecord);
+        const std::uint64_t maxSize = sizeof(knmon::KnMonTransportHeader) + static_cast<std::uint64_t>(knmon::KnMonTransportMaxCapacity) * sizeof(knmon::KnMonTransportRecord);
+        if (mappingName.empty() || config.TransportSize < minSize || config.TransportSize > maxSize ||
+            (config.TransportSize - sizeof(knmon::KnMonTransportHeader)) % sizeof(knmon::KnMonTransportRecord) != 0)
         {
             break;
         }
 
-        g_transportMapping = OpenFileMappingW(FILE_MAP_ALL_ACCESS, FALSE, mappingName.c_str());
+        g_transportMapping = OpenFileMappingW(FILE_MAP_READ | FILE_MAP_WRITE, FALSE, mappingName.c_str());
         if (g_transportMapping == nullptr)
         {
             break;
         }
 
-        auto* header = static_cast<knmon::KnMonTransportHeader*>(MapViewOfFile(g_transportMapping, FILE_MAP_ALL_ACCESS, 0, 0, 0));
+        auto* header = static_cast<knmon::KnMonTransportHeader*>(MapViewOfFile(g_transportMapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, static_cast<SIZE_T>(config.TransportSize)));
         if (header == nullptr)
         {
             break;
         }
 
+        knmon::KnMonTransportHeader snapshot;
+        std::memcpy(&snapshot, header, sizeof(snapshot));
         if (
-            header->Magic != knmon::KnMonTransportMagic ||
-            header->AbiVersion != knmon::KnMonTransportAbiVersion ||
-            header->HeaderSize != sizeof(knmon::KnMonTransportHeader) ||
-            header->RecordSize != sizeof(knmon::KnMonTransportRecord) ||
-            header->Capacity < knmon::KnMonTransportMinCapacity ||
-            header->Capacity > knmon::KnMonTransportMaxCapacity)
+            snapshot.Magic != knmon::KnMonTransportMagic ||
+            snapshot.AbiVersion != knmon::KnMonTransportAbiVersion ||
+            snapshot.HeaderSize != sizeof(knmon::KnMonTransportHeader) ||
+            snapshot.RecordSize != sizeof(knmon::KnMonTransportRecord) ||
+            snapshot.Capacity < knmon::KnMonTransportMinCapacity ||
+            snapshot.Capacity > knmon::KnMonTransportMaxCapacity ||
+            snapshot.Capacity != (config.TransportSize - sizeof(knmon::KnMonTransportHeader)) / sizeof(knmon::KnMonTransportRecord) ||
+            !WideBufferTerminated(snapshot.OperationId) || std::wstring(snapshot.OperationId) != config.OperationId ||
+            snapshot.Architecture != static_cast<std::uint32_t>(sizeof(void*) == 8 ? knmon::KnMonAgentArchitecture::X64 : knmon::KnMonAgentArchitecture::X86))
         {
             UnmapViewOfFile(header);
             break;
@@ -2604,7 +2622,7 @@ bool OpenTransport(const std::wstring& mappingName)
 
         g_transportHeader = header;
         g_transportRecords = reinterpret_cast<knmon::KnMonTransportRecord*>(reinterpret_cast<unsigned char*>(header) + sizeof(knmon::KnMonTransportHeader));
-        g_transportCapacity = header->Capacity;
+        g_transportCapacity = static_cast<std::uint32_t>((config.TransportSize - sizeof(knmon::KnMonTransportHeader)) / sizeof(knmon::KnMonTransportRecord));
         opened = true;
     }
     while (false);
@@ -2756,6 +2774,7 @@ std::string MessagePrefix(const char* messageType, LONG64 sequence)
     stream << "\"schemaVersion\":\"0.1.0\",";
     stream << "\"messageType\":" << Q(messageType) << ",";
     stream << "\"operationId\":" << Q(WideToUtf8(g_operationId.c_str())) << ",";
+    stream << "\"channelNonce\":" << Q(WideToUtf8(g_channelNonce.c_str())) << ",";
     stream << "\"pid\":" << GetCurrentProcessId() << ",";
     stream << "\"tid\":" << GetCurrentThreadId() << ",";
     stream << "\"timestampUtc\":" << Q(NowUtc()) << ",";
@@ -20683,6 +20702,25 @@ bool ResetDisabledAgentForReinitialize()
     return reset;
 }
 
+std::uint64_t ReadEnvUInt64(const wchar_t* name)
+{
+    const std::wstring text = ReadEnv(name);
+    std::uint64_t value = 0;
+    if (text.empty() || text.size() > 20)
+    {
+        return 0;
+    }
+    for (const wchar_t ch : text)
+    {
+        if (ch < L'0' || ch > L'9' || value > (UINT64_MAX - static_cast<unsigned>(ch - L'0')) / 10)
+        {
+            return 0;
+        }
+        value = value * 10 + static_cast<unsigned>(ch - L'0');
+    }
+    return value;
+}
+
 DWORD WINAPI AgentWorker(void* context)
 {
     std::unique_ptr<AgentWorkerConfig> suppliedConfig(static_cast<AgentWorkerConfig*>(context));
@@ -20712,14 +20750,18 @@ DWORD WINAPI AgentWorker(void* context)
             runtimeConfig.OperationId = ReadEnv(L"KNMON_OPERATION_ID");
             runtimeConfig.SelectedApis = ReadEnv(L"KNMON_SELECTED_APIS");
             runtimeConfig.TransportRequired = EnvEnabled(L"KNMON_TRANSPORT_REQUIRED");
+            runtimeConfig.ControllerProcessId = static_cast<DWORD>(ReadEnvUInt64(L"KNMON_CONTROLLER_PID"));
+            runtimeConfig.ControllerCreationTime = ReadEnvUInt64(L"KNMON_CONTROLLER_CREATION_TIME");
+            runtimeConfig.TransportSize = ReadEnvUInt64(L"KNMON_TRANSPORT_SIZE");
         }
 
         g_operationId = runtimeConfig.OperationId;
+        g_channelNonce = knmon::ChannelNonce(runtimeConfig.PipeName);
         g_selectedApiSelection = LowerAscii(WideToUtf8(runtimeConfig.SelectedApis.c_str()));
 
         do
         {
-            if (runtimeConfig.PipeName.empty())
+            if (g_channelNonce.empty() || runtimeConfig.ControllerProcessId == 0 || runtimeConfig.ControllerCreationTime == 0)
             {
                 break;
             }
@@ -20729,11 +20771,11 @@ DWORD WINAPI AgentWorker(void* context)
             {
                 pipeHandle = CreateFileW(
                     runtimeConfig.PipeName.c_str(),
-                    GENERIC_WRITE,
+                    knmon::AgentPipeClientAccess,
                     0,
                     nullptr,
                     OPEN_EXISTING,
-                    FILE_ATTRIBUTE_NORMAL,
+                    FILE_ATTRIBUTE_NORMAL | SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION,
                     nullptr);
 
                 if (pipeHandle != INVALID_HANDLE_VALUE)
@@ -20756,6 +20798,11 @@ DWORD WINAPI AgentWorker(void* context)
                 break;
             }
 
+            if (!knmon::AuthenticatePipeServer(pipeHandle, runtimeConfig.ControllerProcessId, runtimeConfig.ControllerCreationTime))
+            {
+                CloseHandle(pipeHandle);
+                break;
+            }
             AcquireSRWLockExclusive(&g_pipeLock);
             g_pipeHandle = pipeHandle;
             ReleaseSRWLockExclusive(&g_pipeLock);
@@ -20771,7 +20818,7 @@ DWORD WINAPI AgentWorker(void* context)
                 break;
             }
 
-            if (runtimeConfig.TransportRequired && !OpenTransport(runtimeConfig.TransportName))
+            if (runtimeConfig.TransportRequired && !OpenTransport(runtimeConfig))
             {
                 SendHookStatus("knmon-transport", "shared_memory", false, "Required shared-memory transport could not be opened by the agent.");
                 SendDroppedEvents();
@@ -21194,7 +21241,10 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestStopRace(void* stage)
         knmon::KnMonAttachConfigV1 config;
         config.StructSize = sizeof(config);
         wcscpy_s(config.OperationId, L"lease-new");
-        wcscpy_s(config.PipeName, L"unused-test-pipe");
+        wcscpy_s(config.PipeName, L"\\\\.\\pipe\\knmon_agent_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+        config.ControllerProcessId = GetCurrentProcessId();
+        config.ControllerCreationTime = knmon::ProcessCreationTime(GetCurrentProcess());
+        config.TransportSize = sizeof(knmon::KnMonTransportHeader) + 2 * sizeof(knmon::KnMonTransportRecord);
         wcscpy_s(config.TransportName, L"unused-test-mapping");
         result = 5;
         if (KnMonAgentInitialize(&config) != static_cast<DWORD>(knmon::KnMonAgentControlStatus::AlreadyRunning))

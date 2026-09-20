@@ -15,12 +15,12 @@ int main()
         {
             break;
         }
-        mapping = OpenFileMappingW(FILE_MAP_ALL_ACCESS, FALSE, name);
+        mapping = OpenFileMappingW(FILE_MAP_READ | FILE_MAP_WRITE, FALSE, name);
         if (mapping == nullptr)
         {
             break;
         }
-        header = static_cast<knmon::KnMonTransportHeader*>(MapViewOfFile(mapping, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(*header)));
+        header = static_cast<knmon::KnMonTransportHeader*>(MapViewOfFile(mapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, sizeof(*header)));
         if (header == nullptr)
         {
             break;

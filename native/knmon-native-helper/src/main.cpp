@@ -1270,6 +1270,7 @@ struct NativeSessionInfo
     std::uint32_t OwnerProcessId = 0;
     std::uint32_t HelperProcessId = 0;
     std::uint32_t TargetProcessId = 0;
+    std::uint64_t TargetProcessCreationTime = 0;
     std::string SessionState;
     std::string StartedUtc;
     std::string UpdatedUtc;
@@ -1370,6 +1371,7 @@ std::string ToJson(const NativeSessionInfo& session)
     stream << "\"ownerProcessId\":" << session.OwnerProcessId << ",";
     stream << "\"helperProcessId\":" << session.HelperProcessId << ",";
     stream << "\"targetProcessId\":" << session.TargetProcessId << ",";
+    stream << "\"targetProcessCreationTime\":" << Q(std::to_string(session.TargetProcessCreationTime)) << ",";
     stream << "\"sessionState\":" << Q(session.SessionState) << ",";
     stream << "\"startedUtc\":" << Q(session.StartedUtc) << ",";
     stream << "\"updatedUtc\":" << Q(session.UpdatedUtc) << ",";
@@ -7091,6 +7093,7 @@ NativeSessionInfo BuildSessionInfoFromCapture(const knmon::KnMonCaptureResult& r
     if (result.TargetProcessId != 0)
     {
         session.TargetProcessId = result.TargetProcessId;
+        session.TargetProcessCreationTime = result.TargetProcessCreationTime;
     }
 
     session.SessionState = result.SessionState.empty() ? (result.Success ? "stopped" : "failed") : result.SessionState;
@@ -7179,6 +7182,16 @@ int LaunchSessionCommand(const std::vector<std::string>& args)
     request.CommandLineArguments = GetOption(args, "--args");
     request.ApiSelection = GetOption(args, "--api-selection");
     request.OwnerProcessId = ownerProcessId;
+    request.OwnLaunchJob = HasOption(args, "--own-launch-job");
+    const std::string ownerCreated = GetOption(args, "--owner-created");
+    if (!ownerCreated.empty())
+    {
+        if (ownerCreated.size() > 20 || ownerCreated.find_first_not_of("0123456789") != std::string::npos)
+        {
+            throw std::runtime_error("Invalid owner creation time.");
+        }
+        request.OwnerProcessCreationTime = std::stoull(ownerCreated);
+    }
     request.HelperProcessId = GetCurrentProcessId();
     request.CancellationEventName = cancellationEventName;
     request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);

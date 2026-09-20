@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-start-daemon-if-needed"
+description = "Enables the start_daemon_if_needed command without any pre-configured scope."
+commands.allow = ["start_daemon_if_needed"]
+
+[[permission]]
+identifier = "deny-start-daemon-if-needed"
+description = "Denies the start_daemon_if_needed command without any pre-configured scope."
+commands.deny = ["start_daemon_if_needed"]

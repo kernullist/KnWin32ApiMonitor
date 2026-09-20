@@ -399,10 +399,35 @@ async fn query_target_binary_architecture(path: String) -> Result<String, String
         .map_err(|error| format!("query_target_binary_architecture task failed: {error}"))?
 }
 
+fn allowed_navigation(url: &tauri::Url, development: bool) -> bool
+{
+    if !url.username().is_empty() || url.password().is_some()
+    {
+        return false;
+    }
+    let bundled = (url.scheme() == "tauri" && url.host_str() == Some("localhost") && url.port().is_none()) ||
+        (url.scheme() == "http" && url.host_str() == Some("tauri.localhost") && url.port_or_known_default() == Some(80));
+    let local_dev = development && url.scheme() == "http" && url.host_str() == Some("127.0.0.1") && url.port() == Some(5173);
+    bundled || local_dev
+}
+
 fn main()
 {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .setup(|app|
+        {
+            knmon_tauri::ensure_unelevated_renderer().map_err(std::io::Error::other)?;
+            let config = app.config().app.windows.first().ok_or("main window configuration missing")?;
+            tauri::WebviewWindowBuilder::from_config(app, config)?
+                .on_navigation(|url|
+                {
+                    allowed_navigation(url, cfg!(debug_assertions))
+                })
+                .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny)
+                .build()?;
+            Ok(())
+        })
         .on_window_event(|_window, event| {
             if matches!(event, tauri::WindowEvent::CloseRequested { .. })
             {
@@ -449,4 +474,51 @@ fn main()
         ])
         .run(tauri::generate_context!())
         .expect("failed to run KN Win32 API Monitor");
+}
+
+#[cfg(test)]
+mod security_tests
+{
+    use super::allowed_navigation;
+
+    #[test]
+    fn navigation_restricts_exact_origin_and_dev_mode()
+    {
+        for address in ["http://tauri.localhost/", "tauri://localhost/index.html"]
+        {
+            assert!(allowed_navigation(&address.parse().unwrap(), false));
+        }
+        for address in ["https://example.com/", "http://tauri.localhost.evil/", "http://tauri.localhost:8080/", "file:///C:/test.html",
+            "data:text/html,hello", "javascript:alert(1)", "http://user@tauri.localhost/", "http://127.0.0.1:5173/"]
+        {
+            assert!(!allowed_navigation(&address.parse().unwrap(), false), "{address}");
+        }
+        assert!(allowed_navigation(&"http://127.0.0.1:5173/".parse().unwrap(), true));
+        assert!(!allowed_navigation(&"http://127.0.0.1:5174/".parse().unwrap(), true));
+    }
+
+    #[test]
+    fn framework_authority_rejects_remote_and_ungranted_commands()
+    {
+        use tauri::ipc::Origin;
+        use tauri::utils::acl::resolved::Resolved;
+        let acl = serde_json::from_str(include_str!("../gen/schemas/acl-manifests.json")).unwrap();
+        let capabilities = serde_json::from_str(include_str!("../gen/schemas/capabilities.json")).unwrap();
+        let resolved = Resolved::resolve(&acl, capabilities, tauri::utils::platform::Target::Windows).unwrap();
+        assert!(resolved.has_app_acl);
+        let authority = tauri::runtime_authority!(acl, resolved);
+        for command in ["start_launch_monitor_session", "start_streaming_attach_session", "plugin:dialog|open"]
+        {
+            assert!(authority.resolve_access(command, "main", "main", &Origin::Local).is_some(), "{command}");
+            assert!(authority.resolve_access(command, "foreign", "foreign", &Origin::Local).is_none(), "{command}");
+            assert!(authority.resolve_access(command, "main", "main", &Origin::Remote
+            {
+                url: "https://example.com/".parse().unwrap(),
+            }).is_none(), "{command}");
+        }
+        for command in ["unregistered_command", "plugin:fs|read_file", "plugin:window|create", "plugin:shell|execute"]
+        {
+            assert!(authority.resolve_access(command, "main", "main", &Origin::Local).is_none(), "{command}");
+        }
+    }
 }

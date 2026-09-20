@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-daemon-sessions"
+description = "Enables the list_daemon_sessions command without any pre-configured scope."
+commands.allow = ["list_daemon_sessions"]
+
+[[permission]]
+identifier = "deny-list-daemon-sessions"
+description = "Denies the list_daemon_sessions command without any pre-configured scope."
+commands.deny = ["list_daemon_sessions"]

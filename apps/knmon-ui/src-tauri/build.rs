@@ -1,4 +1,45 @@
 fn main()
 {
-    tauri_build::build()
+    tauri_build::try_build(
+        tauri_build::Attributes::new().app_manifest(
+            tauri_build::AppManifest::new().commands(&[
+                    "list_native_target_processes",
+                    "launch_sample_early_bird_capture",
+                    "capture_sample_fileio_events",
+                    "capture_sample_fileio_session_events",
+                    "replay_last_sample_session",
+                    "replay_session_path",
+                    "attach_target_process_capture",
+                    "supervise_process_tree",
+                    "list_native_operations",
+                    "cancel_native_operation",
+                    "list_native_sessions",
+                    "stop_native_session",
+                    "start_streaming_attach_session",
+                    "start_launch_monitor_session",
+                    "start_daemon_if_needed",
+                    "native_daemon_status",
+                    "list_daemon_sessions",
+                    "audit_daemon_sessions",
+                    "plan_daemon_recovery",
+                    "apply_daemon_recovery",
+                    "prune_stale_daemon_sessions",
+                    "catalog_native_sessions",
+                    "query_native_session_catalog",
+                    "remove_missing_native_session_catalog_entries",
+                    "build_native_session_catalog_index",
+                    "query_native_session_catalog_index",
+                    "remove_missing_native_session_catalog_index_entries",
+                    "build_native_trace_index",
+                    "query_native_trace_index",
+                    "remove_missing_native_trace_index_entries",
+                    "start_daemon_supervised_session",
+                    "stop_daemon_session",
+                    "drain_native_trace_batches",
+                    "get_backend_status",
+                    "get_native_helper_architecture",
+                    "query_target_binary_architecture",
+            ]),
+        ),
+    ).expect("failed to configure application command permissions");
 }

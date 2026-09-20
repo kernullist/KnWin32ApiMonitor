@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-prune-stale-daemon-sessions"
+description = "Enables the prune_stale_daemon_sessions command without any pre-configured scope."
+commands.allow = ["prune_stale_daemon_sessions"]
+
+[[permission]]
+identifier = "deny-prune-stale-daemon-sessions"
+description = "Denies the prune_stale_daemon_sessions command without any pre-configured scope."
+commands.deny = ["prune_stale_daemon_sessions"]

@@ -17,7 +17,6 @@ const STREAM_BATCH_DRAIN_LIMIT: usize = 32;
 const INTERACTIVE_TRANSPORT_CAPACITY: &str = "16384";
 const STREAM_CONTROL_TIMEOUT_MS: u32 = 7_000;
 const SESSION_STOP_COMPLETION_WAIT_MS: u64 = 15_000;
-const APP_EXIT_LAUNCH_CLEANUP_WAIT_MS: u64 = 1_500;
 const API_SELECTION_MAX_BYTES: usize = 30_000;
 
 fn normalize_api_selection(selected_apis: &[String]) -> Result<String, String> {
@@ -29,11 +28,11 @@ fn normalize_api_selection(selected_apis: &[String]) -> Result<String, String> {
             continue;
         }
 
-        if token.len() > 192 || token.contains(';') || token.contains(',') || token.contains(' ') {
+        if token.len() > 192 || !token.is_ascii() || token.bytes().any(|ch| ch.is_ascii_control() || ch.is_ascii_whitespace() || ch == b';' || ch == b',') {
             return Err(format!("invalid API selection token: {token}"));
         }
 
-        if !token.contains('!') {
+        if token.matches('!').count() != 1 {
             return Err(format!(
                 "API selection token must use module!api format: {token}"
             ));
@@ -69,352 +68,12 @@ fn append_api_selection_arg(
     Ok(())
 }
 
-#[cfg(windows)]
-mod process_liveness {
-    use std::collections::{HashMap, HashSet};
-    use std::ffi::c_void;
-    use std::mem::size_of;
-    use std::ptr::null_mut;
+mod process_liveness;
 
-    const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
-    const PROCESS_TERMINATE: u32 = 0x0001;
-    const TH32CS_SNAPPROCESS: u32 = 0x00000002;
-    const ERROR_INVALID_PARAMETER: u32 = 87;
+pub use process_liveness::ensure_unelevated_renderer;
 
-    #[repr(C)]
-    struct ProcessEntry32W {
-        dw_size: u32,
-        cnt_usage: u32,
-        th32_process_id: u32,
-        th32_default_heap_id: usize,
-        th32_module_id: u32,
-        cnt_threads: u32,
-        th32_parent_process_id: u32,
-        pc_pri_class_base: i32,
-        dw_flags: u32,
-        sz_exe_file: [u16; 260],
-    }
-
-    #[derive(Clone)]
-    struct ProcessSnapshotRow {
-        process_id: u32,
-        parent_process_id: u32,
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct ProcessTreeTerminateReport {
-        pub process_ids: Vec<u32>,
-        pub terminated: Vec<u32>,
-        pub already_exited: Vec<u32>,
-        pub failed: Vec<(u32, u32)>,
-    }
-
-    #[link(name = "kernel32")]
-    extern "system" {
-        fn CreateToolhelp32Snapshot(dwFlags: u32, th32ProcessID: u32) -> *mut c_void;
-        fn Process32FirstW(hSnapshot: *mut c_void, lppe: *mut ProcessEntry32W) -> i32;
-        fn Process32NextW(hSnapshot: *mut c_void, lppe: *mut ProcessEntry32W) -> i32;
-        fn OpenProcess(dwDesiredAccess: u32, bInheritHandle: i32, dwProcessId: u32) -> *mut c_void;
-        fn TerminateProcess(hProcess: *mut c_void, uExitCode: u32) -> i32;
-        fn CloseHandle(hObject: *mut c_void) -> i32;
-        fn GetLastError() -> u32;
-        fn GetCurrentProcessId() -> u32;
-        fn WaitForSingleObject(hHandle: *mut c_void, dwMilliseconds: u32) -> u32;
-    }
-
-    const WAIT_TIMEOUT: u32 = 258;
-
-    fn invalid_handle_value() -> *mut c_void {
-        (-1isize) as *mut c_void
-    }
-
-    fn snapshot_processes() -> Result<Vec<ProcessSnapshotRow>, u32> {
-        let mut rows = Vec::new();
-        let snapshot;
-
-        unsafe {
-            snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-            if snapshot == invalid_handle_value() {
-                return Err(GetLastError());
-            }
-
-            let mut entry = ProcessEntry32W {
-                dw_size: size_of::<ProcessEntry32W>() as u32,
-                cnt_usage: 0,
-                th32_process_id: 0,
-                th32_default_heap_id: 0,
-                th32_module_id: 0,
-                cnt_threads: 0,
-                th32_parent_process_id: 0,
-                pc_pri_class_base: 0,
-                dw_flags: 0,
-                sz_exe_file: [0; 260],
-            };
-
-            if Process32FirstW(snapshot, &mut entry) != 0 {
-                loop {
-                    rows.push(ProcessSnapshotRow {
-                        process_id: entry.th32_process_id,
-                        parent_process_id: entry.th32_parent_process_id,
-                    });
-
-                    entry.dw_size = size_of::<ProcessEntry32W>() as u32;
-                    if Process32NextW(snapshot, &mut entry) == 0 {
-                        break;
-                    }
-                }
-            } else {
-                let error = GetLastError();
-                CloseHandle(snapshot);
-                return Err(error);
-            }
-
-            CloseHandle(snapshot);
-        }
-
-        Ok(rows)
-    }
-
-    fn is_descendant(
-        parent_by_pid: &HashMap<u32, u32>,
-        root_process_id: u32,
-        process_id: u32,
-    ) -> bool {
-        let mut descendant = false;
-        let mut visited = HashSet::new();
-        let mut current_process_id = process_id;
-
-        loop {
-            if current_process_id == 0 || current_process_id == root_process_id {
-                break;
-            }
-
-            if !visited.insert(current_process_id) {
-                break;
-            }
-
-            let Some(parent_process_id) = parent_by_pid.get(&current_process_id).copied() else {
-                break;
-            };
-
-            if parent_process_id == root_process_id {
-                descendant = true;
-                break;
-            }
-
-            if parent_process_id == 0 || parent_process_id == current_process_id {
-                break;
-            }
-
-            current_process_id = parent_process_id;
-        }
-
-        descendant
-    }
-
-    fn process_tree_depth(
-        parent_by_pid: &HashMap<u32, u32>,
-        root_process_id: u32,
-        process_id: u32,
-    ) -> usize {
-        let mut depth = 0;
-        let mut visited = HashSet::new();
-        let mut current_process_id = process_id;
-
-        loop {
-            if current_process_id == 0 || current_process_id == root_process_id {
-                break;
-            }
-
-            if !visited.insert(current_process_id) {
-                break;
-            }
-
-            let Some(parent_process_id) = parent_by_pid.get(&current_process_id).copied() else {
-                break;
-            };
-
-            depth += 1;
-            if parent_process_id == root_process_id {
-                break;
-            }
-
-            current_process_id = parent_process_id;
-        }
-
-        depth
-    }
-
-    pub fn collect_process_tree(process_id: u32) -> Vec<u32> {
-        let mut process_ids = Vec::new();
-
-        if process_id == 0 {
-            return process_ids;
-        }
-
-        process_ids.push(process_id);
-        if let Ok(snapshot) = snapshot_processes() {
-            let parent_by_pid: HashMap<u32, u32> = snapshot
-                .iter()
-                .map(|row| (row.process_id, row.parent_process_id))
-                .collect();
-
-            for row in snapshot {
-                if row.process_id != process_id
-                    && is_descendant(&parent_by_pid, process_id, row.process_id)
-                {
-                    process_ids.push(row.process_id);
-                }
-            }
-
-            process_ids.sort_by(|left, right| {
-                process_tree_depth(&parent_by_pid, process_id, *right)
-                    .cmp(&process_tree_depth(&parent_by_pid, process_id, *left))
-                    .then_with(|| right.cmp(left))
-            });
-            process_ids.dedup();
-        }
-
-        process_ids
-    }
-
-    pub fn is_process_alive(process_id: u32) -> bool {
-        let mut alive = false;
-        let mut process_handle = null_mut();
-
-        unsafe {
-            loop {
-                if process_id == 0 {
-                    break;
-                }
-
-                process_handle = OpenProcess(
-                    PROCESS_QUERY_LIMITED_INFORMATION | windows_sync_access(),
-                    0,
-                    process_id,
-                );
-                if process_handle.is_null() {
-                    break;
-                }
-
-                // Wait-based probe: GetExitCodeProcess == STILL_ACTIVE (259) also
-                // matches a process that legitimately exited with code 259.
-                alive = WaitForSingleObject(process_handle, 0) == WAIT_TIMEOUT;
-                break;
-            }
-
-            if !process_handle.is_null() {
-                CloseHandle(process_handle);
-            }
-        }
-
-        alive
-    }
-
-    fn windows_sync_access() -> u32 {
-        0x00100000 // SYNCHRONIZE
-    }
-
-    pub fn terminate_process(process_id: u32, exit_code: u32) -> Result<(), u32> {
-        let result;
-        let mut process_handle = null_mut();
-
-        unsafe {
-            loop {
-                if process_id == 0 {
-                    result = Err(87);
-                    break;
-                }
-
-                process_handle = OpenProcess(
-                    PROCESS_TERMINATE | PROCESS_QUERY_LIMITED_INFORMATION,
-                    0,
-                    process_id,
-                );
-                if process_handle.is_null() {
-                    result = Err(GetLastError());
-                    break;
-                }
-
-                if TerminateProcess(process_handle, exit_code) == 0 {
-                    result = Err(GetLastError());
-                    break;
-                }
-
-                result = Ok(());
-                break;
-            }
-
-            if !process_handle.is_null() {
-                CloseHandle(process_handle);
-            }
-        }
-
-        result
-    }
-
-    pub fn terminate_process_tree(process_id: u32, exit_code: u32) -> ProcessTreeTerminateReport {
-        let process_ids = collect_process_tree(process_id);
-        let current_process_id = unsafe { GetCurrentProcessId() };
-        let mut report = ProcessTreeTerminateReport {
-            process_ids,
-            terminated: Vec::new(),
-            already_exited: Vec::new(),
-            failed: Vec::new(),
-        };
-
-        for process_id in report.process_ids.iter().copied() {
-            if process_id == 0 || process_id == current_process_id {
-                report.failed.push((process_id, ERROR_INVALID_PARAMETER));
-                continue;
-            }
-
-            if !is_process_alive(process_id) {
-                report.already_exited.push(process_id);
-                continue;
-            }
-
-            match terminate_process(process_id, exit_code) {
-                Ok(()) => {
-                    report.terminated.push(process_id);
-                }
-                Err(error) => {
-                    report.failed.push((process_id, error));
-                }
-            }
-        }
-
-        report
-    }
-}
-
-#[cfg(not(windows))]
-mod process_liveness {
-    #[derive(Debug, Clone)]
-    pub struct ProcessTreeTerminateReport {
-        pub process_ids: Vec<u32>,
-        pub terminated: Vec<u32>,
-        pub already_exited: Vec<u32>,
-        pub failed: Vec<(u32, u32)>,
-    }
-
-    pub fn is_process_alive(_process_id: u32) -> bool {
-        false
-    }
-
-    pub fn terminate_process(_process_id: u32, _exit_code: u32) -> Result<(), u32> {
-        Err(1)
-    }
-
-    pub fn terminate_process_tree(process_id: u32, _exit_code: u32) -> ProcessTreeTerminateReport {
-        ProcessTreeTerminateReport {
-            process_ids: vec![process_id],
-            terminated: Vec::new(),
-            already_exited: vec![process_id],
-            failed: Vec::new(),
-        }
-    }
-}
+#[cfg(test)]
+mod security_tests;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -449,6 +108,8 @@ pub struct NativeSession {
     pub owner_process_id: u32,
     pub helper_process_id: u32,
     pub target_process_id: u32,
+    #[serde(default)]
+    pub target_process_creation_time: String,
     pub session_state: String,
     pub started_utc: String,
     pub updated_utc: String,
@@ -777,6 +438,11 @@ struct NativeOperationRecord {
     finished_at_ms: u128,
     duration_ms: u32,
     helper_process_id: u32,
+    helper_handle: Option<process_liveness::RetainedProcess>,
+    owned_target: Option<process_liveness::RetainedProcess>,
+    target_process_creation_time: String,
+    stream_failed: bool,
+    stream_result_received: bool,
     last_transport_sequence: u64,
     records_streamed: u64,
     transport_dropped_events: u64,
@@ -1359,8 +1025,8 @@ fn is_terminal_operation_state(state: &str) -> bool {
 fn session_view(record: &NativeOperationRecord) -> NativeSession {
     let now_ms = now_epoch_ms();
     let elapsed_ms = record.started_at.elapsed().as_millis() as u64;
-    let helper_alive = process_liveness::is_process_alive(record.helper_process_id);
-    let target_alive = process_liveness::is_process_alive(record.target_process_id);
+    let helper_alive = record.helper_handle.as_ref().map_or_else(|| process_liveness::is_process_alive(record.helper_process_id), |process| process.alive());
+    let target_alive = record.owned_target.as_ref().map_or_else(|| process_liveness::is_process_alive(record.target_process_id), |process| process.alive());
     let target_exit_observed =
         record.target_exit_observed || (record.target_alive_observed && !target_alive);
     let stopped_utc = if record.finished_at_ms == 0 {
@@ -1377,6 +1043,7 @@ fn session_view(record: &NativeOperationRecord) -> NativeSession {
         owner_process_id: std::process::id(),
         helper_process_id: record.helper_process_id,
         target_process_id: record.target_process_id,
+        target_process_creation_time: record.target_process_creation_time.clone(),
         session_state: session_state_from_operation_state(&record.state),
         started_utc: timestamp_label(now_ms.saturating_sub(elapsed_ms as u128)),
         updated_utc: timestamp_label(now_ms),
@@ -1434,6 +1101,11 @@ fn register_native_operation(
             finished_at_ms: 0,
             duration_ms,
             helper_process_id: 0,
+            helper_handle: None,
+            owned_target: None,
+            target_process_creation_time: String::new(),
+            stream_failed: false,
+            stream_result_received: false,
             last_transport_sequence: 0,
             records_streamed: 0,
             transport_dropped_events: 0,
@@ -1494,6 +1166,7 @@ fn finish_native_operation_with_process_tree(
     }
 }
 
+#[cfg(test)]
 fn mark_native_operation_helper_pid(operation_id: &str, helper_process_id: u32) {
     let mut registry = operation_registry().lock().unwrap();
     if let Some(record) = registry.get_mut(operation_id) {
@@ -1502,13 +1175,21 @@ fn mark_native_operation_helper_pid(operation_id: &str, helper_process_id: u32) 
 }
 
 fn update_native_record_from_session(record: &mut NativeOperationRecord, session: &NativeSession) {
-    record.session_id = session.session_id.clone();
-    record.operation_id = session.operation_id.clone();
-    record.operation_kind = session.session_kind.clone();
+    if record.stream_failed
+    {
+        return;
+    }
+    if record.operation_kind == "launch_capture_stream" && record.owned_target.is_none() && session.target_process_id != 0
+    {
+        if let Ok(created) = session.target_process_creation_time.parse::<u64>()
+        {
+            record.owned_target = process_liveness::RetainedProcess::open_identified(session.target_process_id, created, true).ok();
+        }
+    }
+    record.target_process_creation_time = session.target_process_creation_time.clone();
     record.target_process_id = session.target_process_id;
     record.state = session.session_state.clone();
-    record.cancel_requested = session.stop_requested;
-    record.helper_process_id = session.helper_process_id;
+    record.cancel_requested |= session.stop_requested;
     record.last_transport_sequence = session.last_transport_sequence;
     record.records_streamed = session.records_streamed;
     record.transport_dropped_events = session.transport_dropped_events;
@@ -1539,6 +1220,10 @@ fn update_native_record_from_session(record: &mut NativeOperationRecord, session
 fn push_native_trace_batch(operation_id: &str, mut batch: NativeTraceBatch) {
     let mut registry = operation_registry().lock().unwrap();
     if let Some(record) = registry.get_mut(operation_id) {
+        if record.stream_failed || record.stream_result_received
+        {
+            return;
+        }
         while record.trace_batches.len() >= STREAM_BATCH_QUEUE_LIMIT {
             record.trace_batches.pop_front();
             record.host_dropped_batches = record.host_dropped_batches.saturating_add(1);
@@ -1576,6 +1261,11 @@ struct StreamingCaptureResultFrame {
 fn update_streaming_error(operation_id: &str, state: &str, message: String) {
     let mut registry = operation_registry().lock().unwrap();
     if let Some(record) = registry.get_mut(operation_id) {
+        if record.stream_failed
+        {
+            return;
+        }
+        record.stream_failed = true;
         record.state = state.to_string();
         record.last_error = message;
         record.finished_at_ms = now_epoch_ms();
@@ -1583,35 +1273,102 @@ fn update_streaming_error(operation_id: &str, state: &str, message: String) {
 }
 
 fn process_streaming_frame_line(operation_id: &str, line: &str) -> Result<(), String> {
+    if line.len() > STREAM_FRAME_MAX_BYTES
+    {
+        return Err("streaming frame exceeds byte budget".to_string());
+    }
+    let value: serde_json::Value = serde_json::from_str(line).map_err(|error| format!("invalid streaming frame: {error}"))?;
+    let registry = operation_registry().lock().unwrap();
+    let record = registry.get(operation_id).ok_or("unknown streaming operation")?;
+    if record.stream_failed || record.stream_result_received
+    {
+        return Err("operation stream is already terminal".to_string());
+    }
+    if value.get("schemaVersion").and_then(|version| version.as_str()) != Some("0.1.0")
+    {
+        return Err("unsupported stream schema".to_string());
+    }
+    let envelope = value.get("session").unwrap_or(&value);
+    if envelope.get("operationId").and_then(|v| v.as_str()) != Some(operation_id) ||
+        envelope.get("sessionId").and_then(|v| v.as_str()) != Some(record.session_id.as_str())
+    {
+        return Err("streaming operation or session identity mismatch".to_string());
+    }
+    if value.get("session").is_some() &&
+        (envelope.get("helperProcessId").and_then(|v| v.as_u64()) != Some(record.helper_process_id as u64) ||
+         envelope.get("sessionKind").and_then(|v| v.as_str()) != Some(record.operation_kind.as_str()))
+    {
+        return Err("streaming helper or session kind mismatch".to_string());
+    }
+    if let Some(result) = value.get("captureResult")
+    {
+        if result.get("operationId").and_then(|v| v.as_str()) != Some(operation_id)
+        {
+            return Err("capture result operation mismatch".to_string());
+        }
+    }
+    let expected_pid = record.target_process_id;
+    drop(registry);
     let header: StreamingFrameHeader = serde_json::from_str(line)
-        .map_err(|error| format!("failed to parse streaming frame header: {error}; line={line}"))?;
+        .map_err(|error| format!("failed to parse streaming frame header: {error}"))?;
 
     match header.frame_type.as_str() {
         "trace_batch" => {
             let batch: NativeTraceBatch = serde_json::from_str(line).map_err(|error| {
-                format!("failed to parse trace_batch frame: {error}; line={line}")
+                format!("failed to parse trace_batch frame: {error}")
             })?;
+            if expected_pid == 0 || batch.event_count != batch.events.len() as u64 || batch.events.len() > 4096 ||
+                batch.events.iter().any(|event| event.operation_id != operation_id || event.pid != expected_pid ||
+                    event.message_type != "api_call" || event.schema_version != "0.1.0")
+            {
+                return Err("trace batch count or event identity mismatch".to_string());
+            }
             push_native_trace_batch(operation_id, batch);
         }
         "session_started" | "session_state" | "session_stopping" | "session_stopped"
         | "session_failed" => {
             let frame: StreamingSessionFrame = serde_json::from_str(line)
-                .map_err(|error| format!("failed to parse session frame: {error}; line={line}"))?;
+                .map_err(|error| format!("failed to parse session frame: {error}"))?;
             let mut registry = operation_registry().lock().unwrap();
             if let Some(record) = registry.get_mut(operation_id) {
+                if record.stream_failed || record.stream_result_received
+                {
+                    return Err("operation stream became terminal".to_string());
+                }
                 let state = if frame.frame_type == "session_stopping" {
                     "stop_requested".to_string()
                 } else {
                     frame.session.session_state.clone()
                 };
+                if record.target_process_id != 0 && frame.session.target_process_id != record.target_process_id
+                {
+                    return Err("target process identity changed within a stream".to_string());
+                }
+                if record.operation_kind == "launch_capture_stream" && frame.session.target_process_id != 0 &&
+                    frame.session.target_process_creation_time.parse::<u64>().unwrap_or(0) == 0
+                {
+                    return Err("launch target creation time missing".to_string());
+                }
+                if !record.target_process_creation_time.is_empty() && record.target_process_creation_time != "0" &&
+                    record.target_process_creation_time != frame.session.target_process_creation_time
+                {
+                    return Err("target creation time changed within a stream".to_string());
+                }
                 update_native_record_from_session(record, &frame.session);
-                record.state = state;
+                record.state = if record.cancel_requested && !is_terminal_operation_state(&state)
+                {
+                    "cancel_requested".to_string()
+                }
+                else
+                {
+                    state
+                };
             }
         }
         "capture_result" => {
             let frame: StreamingCaptureResultFrame =
                 serde_json::from_str(line).map_err(|error| {
-                    format!("failed to parse capture_result frame: {error}; line={line}")
+                    format!("failed to parse capture_result frame: {error}")
                 })?;
             let operation_state = if frame.capture_result.operation_state.is_empty() {
                 if frame.capture_result.success {
@@ -1627,7 +1384,26 @@ fn process_streaming_frame_line(operation_id: &str, line: &str) -> Result<(), St
 
             let mut registry = operation_registry().lock().unwrap();
             if let Some(record) = registry.get_mut(operation_id) {
+                if record.stream_failed || record.stream_result_received
+                {
+                    return Err("operation stream became terminal".to_string());
+                }
+                if record.target_process_id != 0 && frame.session.target_process_id != record.target_process_id
+                {
+                    return Err("target process identity changed within a stream".to_string());
+                }
+                if record.operation_kind == "launch_capture_stream" && frame.session.target_process_id != 0 &&
+                    frame.session.target_process_creation_time.parse::<u64>().unwrap_or(0) == 0
+                {
+                    return Err("launch target creation time missing".to_string());
+                }
+                if !record.target_process_creation_time.is_empty() && record.target_process_creation_time != "0" &&
+                    record.target_process_creation_time != frame.session.target_process_creation_time
+                {
+                    return Err("target creation time changed within a stream".to_string());
+                }
                 update_native_record_from_session(record, &frame.session);
+                record.stream_result_received = true;
                 record.state = operation_state;
                 record.finished_at_ms = now_epoch_ms();
                 record.last_transport_sequence = frame.capture_result.last_transport_sequence;
@@ -1697,17 +1473,15 @@ pub fn cancel_native_operation(operation_id: String) -> Result<NativeOperation, 
         let record = registry
             .get_mut(&operation_id)
             .ok_or_else(|| format!("operation not found: {operation_id}"))?;
+        if is_terminal_operation_state(&record.state)
+        {
+            return Ok(operation_view(record));
+        }
         record.cancel_requested = true;
         record.state = "cancel_requested".to_string();
     }
 
-    let signal = signal_cancel_operation(&operation_id)?;
-    if !signal.success {
-        return Err(format!(
-            "{} failed with {}: {}",
-            signal.operation, signal.win32_error_code, signal.message
-        ));
-    }
+    signal_registered_operation(&operation_id)?;
 
     let registry = operation_registry().lock().unwrap();
     registry
@@ -1723,18 +1497,16 @@ pub fn stop_native_session(session_id: String) -> Result<NativeSession, String> 
             .values_mut()
             .find(|record| record.session_id == session_id)
             .ok_or_else(|| format!("session not found: {session_id}"))?;
+        if is_terminal_operation_state(&record.state)
+        {
+            return Ok(session_view(record));
+        }
         record.cancel_requested = true;
         record.state = "cancel_requested".to_string();
         record.operation_id.clone()
     };
 
-    let signal = signal_cancel_operation(&operation_id)?;
-    if !signal.success {
-        return Err(format!(
-            "{} failed with {}: {}",
-            signal.operation, signal.win32_error_code, signal.message
-        ));
-    }
+    signal_registered_operation(&operation_id)?;
 
     if let Some(session) =
         wait_for_native_session_terminal(&operation_id, SESSION_STOP_COMPLETION_WAIT_MS)
@@ -1749,116 +1521,340 @@ pub fn stop_native_session(session_id: String) -> Result<NativeSession, String> 
         .ok_or_else(|| format!("session not found after stop: {session_id}"))
 }
 
-pub fn cleanup_active_sessions_on_exit() -> Vec<String> {
-    let candidates: Vec<(String, String, String, String, u32, u32)> = {
-        let mut registry = operation_registry().lock().unwrap();
-        registry
-            .values_mut()
-            .filter(|record| {
-                if record.operation_kind == "launch_capture_stream" {
-                    // Only live launch operations get tree cleanup. Terminal ones
-                    // had their cleanup at completion, and by now the target PID
-                    // may have been reused by an unrelated process.
-                    return !is_terminal_operation_state(&record.state);
-                }
-
-                record.operation_kind == "attach_capture_stream"
-                    && !is_terminal_operation_state(&record.state)
-            })
-            .map(|record| {
-                if !is_terminal_operation_state(&record.state) {
-                    record.cancel_requested = true;
-                    record.state = "cancel_requested".to_string();
-                }
-
-                (
-                    record.operation_id.clone(),
-                    record.session_id.clone(),
-                    record.operation_kind.clone(),
-                    record.state.clone(),
-                    record.target_process_id,
-                    record.helper_process_id,
-                )
-            })
-            .collect()
-    };
-
-    let mut notes = Vec::new();
-    for (
-        operation_id,
-        session_id,
-        operation_kind,
-        operation_state,
-        target_process_id,
-        helper_process_id,
-    ) in candidates
+pub fn cleanup_active_sessions_on_exit() -> Vec<String>
+{
+    let candidates =
     {
-        const LAUNCH_OPERATION_KIND: &str = "launch_capture_stream";
-        let operation_terminal = is_terminal_operation_state(&operation_state);
-
-        if target_process_id == 0 && operation_kind == LAUNCH_OPERATION_KIND {
-            notes.push(format!("{session_id}: launch target pid is not known yet; helper owner-death cleanup will handle it."));
-            continue;
-        }
-
-        if operation_terminal {
-            notes.push(format!("{session_id}: session already terminal ({operation_state}); launch process tree cleanup will still run if owned target descendants remain."));
-        } else {
-            match signal_cancel_operation(&operation_id) {
-                Ok(signal) if signal.success => {
-                    notes.push(format!("{session_id}: stop signal sent."));
-                }
-                Ok(signal) => {
-                    notes.push(format!(
-                        "{session_id}: stop signal failed with {}.",
-                        signal.win32_error_code
-                    ));
-                }
-                Err(error) => {
-                    notes.push(format!("{session_id}: stop signal failed: {error}"));
-                }
-            }
-
-            let wait_start = Instant::now();
-            while helper_process_id != 0
-                && process_liveness::is_process_alive(helper_process_id)
-                && wait_start.elapsed() < Duration::from_millis(APP_EXIT_LAUNCH_CLEANUP_WAIT_MS)
+        let registry = operation_registry().lock().unwrap();
+        registry.values().filter(|record| !is_terminal_operation_state(&record.state) &&
+            (record.operation_kind == "launch_capture_stream" || record.operation_kind == "attach_capture_stream"))
+            .map(|record| (record.operation_id.clone(), record.operation_kind.clone(), record.helper_handle.clone(), record.owned_target.clone()))
+            .collect::<Vec<_>>()
+    };
+    let mut notes = Vec::new();
+    for (operation_id, kind, helper, target) in candidates
+    {
+        if kind == "launch_capture_stream"
+        {
+            if helper.as_ref().is_some_and(|process| process.alive())
             {
-                thread::sleep(Duration::from_millis(50));
+                // The helper owns the launch job and watches our original process object.
+                notes.push(format!("{operation_id}: owned launch job will close after owner exit."));
             }
-        }
-
-        if operation_kind != LAUNCH_OPERATION_KIND {
-            notes.push(format!(
-                "{session_id}: monitoring session stop requested without terminating target."
-            ));
+            else if let Some(process) = target
+            {
+                match process.terminate_owned(1)
+                {
+                    Ok(()) => notes.push(format!("{operation_id}: owned process handle cleanup completed; pid={} created={}.", process.process_id, process.creation_time)),
+                    Err(error) => notes.push(format!("{operation_id}: owned process cleanup failed; win32={error}.")),
+                }
+            }
             continue;
         }
-
-        let report = process_liveness::terminate_process_tree(target_process_id, 1);
-        notes.push(format!(
-            "{session_id}: launch process tree cleanup scanned {} process(es), terminated {}, already exited {}, failed {}.",
-            report.process_ids.len(),
-            report.terminated.len(),
-            report.already_exited.len(),
-            report.failed.len()
-        ));
-
-        if !report.terminated.is_empty() {
-            notes.push(format!(
-                "{session_id}: terminated launch tree pids {:?}.",
-                report.terminated
-            ));
-        }
-
-        for (process_id, error) in report.failed {
-            notes.push(format!(
-                "{session_id}: failed to terminate launch tree pid {process_id}; win32={error}."
-            ));
+        match signal_cancel_operation(&operation_id)
+        {
+            Ok(signal) => notes.push(format!("{operation_id}: stop signal success={}", signal.success)),
+            Err(error) => notes.push(format!("{operation_id}: stop signal failed: {error}")),
         }
     }
-
     notes
+}
+
+const STREAM_FRAME_MAX_BYTES: usize = 8 * 1024 * 1024;
+const STREAM_STDERR_MAX_BYTES: usize = 64 * 1024;
+
+struct OperationStart
+{
+    operation_id: String,
+    committed: bool,
+}
+
+impl OperationStart
+{
+    fn new(operation_id: &str, kind: &str, pid: u32, duration: u32) -> Self
+    {
+        register_native_operation(operation_id, kind, pid, duration);
+        Self { operation_id: operation_id.to_string(), committed: false }
+    }
+
+    fn finish<T>(mut self, result: Result<T, String>) -> Result<T, String>
+    {
+        if let Err(error) = &result
+        {
+            update_streaming_error(&self.operation_id, "failed", error.clone());
+        }
+        self.committed = true;
+        result
+    }
+}
+
+impl Drop for OperationStart
+{
+    fn drop(&mut self)
+    {
+        if !self.committed
+        {
+            update_streaming_error(&self.operation_id, "failed", "operation startup rolled back".to_string());
+        }
+    }
+}
+
+struct OwnedChild(std::process::Child);
+
+impl Drop for OwnedChild
+{
+    fn drop(&mut self)
+    {
+        if !matches!(self.0.try_wait(), Ok(Some(_)))
+        {
+            let _ = self.0.kill();
+        }
+        let _ = self.0.wait();
+    }
+}
+
+fn read_stream_line(reader: &mut impl BufRead) -> Result<Option<String>, String>
+{
+    let mut bytes = Vec::new();
+    loop
+    {
+        let available = reader.fill_buf().map_err(|e| e.to_string())?;
+        if available.is_empty()
+        {
+            if bytes.is_empty()
+            {
+                return Ok(None);
+            }
+            return Err("stream ended with an incomplete frame".to_string());
+        }
+        let newline = available.iter().position(|value| *value == b'\n');
+        let count = newline.map_or(available.len(), |index| index + 1);
+        if bytes.len() + count > STREAM_FRAME_MAX_BYTES
+        {
+            return Err("streaming frame exceeds byte budget".to_string());
+        }
+        bytes.extend_from_slice(&available[..count]);
+        reader.consume(count);
+        if newline.is_some()
+        {
+            return String::from_utf8(bytes).map(Some).map_err(|_| "streaming frame is not UTF-8".to_string());
+        }
+    }
+}
+
+fn read_bounded_stderr(mut pipe: impl Read, stop: Option<&std::sync::atomic::AtomicBool>) -> String
+{
+    let mut saved = Vec::new();
+    let mut buffer = [0u8; 4096];
+    loop
+    {
+        if stop.is_some_and(|flag| flag.load(std::sync::atomic::Ordering::Acquire))
+        {
+            break;
+        }
+        match pipe.read(&mut buffer)
+        {
+            Ok(0) | Err(_) => break,
+            Ok(count) =>
+            {
+                let keep = count.min(STREAM_STDERR_MAX_BYTES.saturating_sub(saved.len()));
+                saved.extend_from_slice(&buffer[..keep]);
+            }
+        }
+    }
+    String::from_utf8_lossy(&saved).into_owned()
+}
+
+fn stop_reader<T>(thread: thread::JoinHandle<T>) -> Option<T>
+{
+    #[cfg(windows)]
+    {
+        use std::os::windows::io::AsRawHandle;
+        #[link(name = "kernel32")]
+        extern "system"
+        {
+            fn CancelSynchronousIo(thread: *mut std::ffi::c_void) -> i32;
+        }
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while !thread.is_finished() && Instant::now() < deadline
+        {
+            unsafe
+            {
+                CancelSynchronousIo(thread.as_raw_handle());
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+    }
+    if thread.is_finished()
+    {
+        thread.join().ok()
+    }
+    else
+    {
+        None
+    }
+}
+
+fn spawn_streaming_helper(helper_path: &Path, args: &[String], operation_id: &str) -> Result<NativeSession, String>
+{
+    let mut child = OwnedChild(Command::new(helper_path)
+        .env("KNMON_TRANSPORT_CAPACITY", INTERACTIVE_TRANSPORT_CAPACITY)
+        .args(args).stdout(Stdio::piped()).stderr(Stdio::piped())
+        .spawn().map_err(|error| format!("failed to start {}: {error}", helper_path.display()))?);
+    let retained = process_liveness::RetainedProcess::from_child(&child.0)?;
+    let stdout = child.0.stdout.take().ok_or("helper stdout unavailable")?;
+    let stderr = child.0.stderr.take().ok_or("helper stderr unavailable")?;
+    {
+        let mut registry = operation_registry().lock().unwrap();
+        let record = registry.get_mut(operation_id).ok_or("operation missing during helper start")?;
+        record.helper_process_id = retained.process_id;
+        record.helper_handle = Some(retained);
+    }
+    let worker_operation_id = operation_id.to_string();
+    thread::Builder::new().name("knmon-stream".to_string()).spawn(move ||
+    {
+        let stop_readers = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let stderr_stop = stop_readers.clone();
+        let stderr_thread = match thread::Builder::new().name("knmon-stderr".to_string()).spawn(move || read_bounded_stderr(stderr, Some(&stderr_stop)))
+        {
+            Ok(thread) => thread,
+            Err(error) =>
+            {
+                update_streaming_error(&worker_operation_id, "failed", format!("stderr reader startup failed: {error}"));
+                return;
+            }
+        };
+        let (sender, receiver) = std::sync::mpsc::sync_channel(2);
+        let stdout_stop = stop_readers.clone();
+        let stdout_thread = match thread::Builder::new().name("knmon-stdout".to_string()).spawn(move ||
+        {
+            let mut reader = BufReader::new(stdout);
+            loop
+            {
+                if stdout_stop.load(std::sync::atomic::Ordering::Acquire)
+                {
+                    break;
+                }
+                let line = read_stream_line(&mut reader);
+                let done = !matches!(&line, Ok(Some(_)));
+                if sender.send(line).is_err() || done
+                {
+                    break;
+                }
+            }
+            // On a framing fault, keep the native helper's cleanup writes flowing.
+            let mut discard = [0u8; 4096];
+            while !stdout_stop.load(std::sync::atomic::Ordering::Acquire)
+            {
+                if !matches!(reader.read(&mut discard), Ok(count) if count > 0)
+                {
+                    break;
+                }
+            }
+        })
+        {
+            Ok(thread) => thread,
+            Err(error) =>
+            {
+                update_streaming_error(&worker_operation_id, "failed", format!("stdout reader startup failed: {error}"));
+                stop_readers.store(true, std::sync::atomic::Ordering::Release);
+                let _ = child.0.kill();
+                let _ = child.0.wait();
+                let _ = stop_reader(stderr_thread);
+                return;
+            }
+        };
+        let mut saw_result = false;
+        let mut failed_at: Option<Instant> = None;
+        let mut stdout_done = false;
+        let mut stdout_ended_at: Option<Instant> = None;
+        let mut exited_at: Option<Instant> = None;
+        let mut status = None;
+        loop
+        {
+            let mut failure = None;
+            match receiver.recv_timeout(Duration::from_millis(100))
+            {
+                Ok(Ok(Some(line))) if failed_at.is_none() && !line.trim().is_empty() =>
+                {
+                    match process_streaming_frame_line(&worker_operation_id, line.trim())
+                    {
+                        Ok(()) =>
+                        {
+                            let frame: StreamingFrameHeader = serde_json::from_str(line.trim()).expect("validated frame");
+                            saw_result |= frame.frame_type == "capture_result";
+                        }
+                        Err(error) => failure = Some(error),
+                    }
+                }
+                Ok(Err(error)) =>
+                {
+                    stdout_done = true;
+                    failure = Some(error);
+                }
+                Ok(Ok(None)) | Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => stdout_done = true,
+                _ => {},
+            }
+            match child.0.try_wait()
+            {
+                Ok(Some(exit_status)) =>
+                {
+                    status = Some(exit_status);
+                    exited_at.get_or_insert_with(Instant::now);
+                }
+                Ok(None) => {},
+                Err(error) => failure = Some(format!("helper status query failed: {error}")),
+            }
+            if stdout_done
+            {
+                stdout_ended_at.get_or_insert_with(Instant::now);
+            }
+            if stdout_ended_at.is_some_and(|start| start.elapsed() >= Duration::from_secs(2)) && status.is_none() && failed_at.is_none()
+            {
+                failure = Some("helper closed stdout before exiting".to_string());
+            }
+            if failed_at.is_none()
+            {
+                if let Some(error) = failure
+                {
+                    update_streaming_error(&worker_operation_id, "failed", error);
+                    failed_at = Some(Instant::now());
+                    let _ = signal_cancel_operation(&worker_operation_id);
+                }
+            }
+            if stdout_done && status.is_some()
+            {
+                break;
+            }
+            if stdout_done
+            {
+                thread::sleep(Duration::from_millis(25));
+            }
+            if failed_at.is_some_and(|start| start.elapsed() >= Duration::from_secs(15)) ||
+                exited_at.is_some_and(|start| start.elapsed() >= Duration::from_secs(2))
+            {
+                let _ = child.0.kill();
+                let _ = child.0.wait();
+                update_streaming_error(&worker_operation_id, "failed", "helper cleanup deadline exceeded".to_string());
+                break;
+            }
+        }
+        drop(receiver);
+        stop_readers.store(true, std::sync::atomic::Ordering::Release);
+        let stdout_stopped = stop_reader(stdout_thread).is_some();
+        let stderr_result = stop_reader(stderr_thread);
+        if !stdout_stopped || stderr_result.is_none()
+        {
+            update_streaming_error(&worker_operation_id, "failed", "reader shutdown did not complete".to_string());
+        }
+        let stderr_text = stderr_result.unwrap_or_default();
+        if !status.is_some_and(|value| value.success()) || !saw_result
+        {
+            update_streaming_error(&worker_operation_id, "failed", format!("helper stream ended without successful final result: {status:?}; stderr={stderr_text}"));
+        }
+    }).map_err(|error| format!("stream worker startup failed: {error}"))?;
+    let registry = operation_registry().lock().unwrap();
+    registry.get(operation_id).map(session_view).ok_or_else(|| "operation missing after helper start".to_string())
 }
 
 pub fn start_streaming_attach_session(
@@ -1869,120 +1865,38 @@ pub fn start_streaming_attach_session(
     let helper_timeout = STREAM_CONTROL_TIMEOUT_MS;
     let operation_id = new_operation_id("ui-stream", process_id);
     let session_id = new_session_id(&operation_id);
-    register_native_operation(&operation_id, "attach_capture_stream", process_id, duration);
-
-    let helper_path = find_helper_path().ok_or_else(|| {
-        "knmon-native-helper.exe was not found. Run `npm run native:build` first.".to_string()
-    })?;
-
-    let mut args = vec![
-        "attach-session".to_string(),
-        "--pid".to_string(),
-        process_id.to_string(),
-        "--timeout-ms".to_string(),
-        helper_timeout.to_string(),
-        "--operation-id".to_string(),
-        operation_id.clone(),
-        "--session-id".to_string(),
-        session_id.clone(),
-        "--stream-batches".to_string(),
-        "--batch-size".to_string(),
-        "64".to_string(),
-        "--batch-interval-ms".to_string(),
-        "100".to_string(),
-    ];
-    append_api_selection_arg(&mut args, &selected_apis)?;
-
-    let mut child = Command::new(&helper_path)
-        .env("KNMON_TRANSPORT_CAPACITY", INTERACTIVE_TRANSPORT_CAPACITY)
-        .args(&args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|error| {
-            format!(
-                "failed to run {} attach-session: {error}",
-                helper_path.display()
-            )
+    let start = OperationStart::new(&operation_id, "attach_capture_stream", process_id, duration);
+    let result = (||
+    {
+        if process_id == 0 || process_id == std::process::id()
+        {
+            return Err("attach target PID is invalid".to_string());
+        }
+        let helper_path = find_helper_path().ok_or_else(|| {
+            "knmon-native-helper.exe was not found. Run `npm run native:build` first.".to_string()
         })?;
 
-    mark_native_operation_helper_pid(&operation_id, child.id());
+        let mut args = vec![
+            "attach-session".to_string(),
+            "--pid".to_string(),
+            process_id.to_string(),
+            "--timeout-ms".to_string(),
+            helper_timeout.to_string(),
+            "--operation-id".to_string(),
+            operation_id.clone(),
+            "--session-id".to_string(),
+            session_id.clone(),
+            "--stream-batches".to_string(),
+            "--batch-size".to_string(),
+            "64".to_string(),
+            "--batch-interval-ms".to_string(),
+            "100".to_string(),
+        ];
+        append_api_selection_arg(&mut args, &selected_apis)?;
 
-    let stdout = child
-        .stdout
-        .take()
-        .ok_or_else(|| "failed to capture attach-session stdout".to_string())?;
-    let stderr = child.stderr.take();
-    let worker_operation_id = operation_id.clone();
-    thread::spawn(move || {
-        let stderr_thread = stderr.map(|mut pipe| {
-            thread::spawn(move || {
-                let mut text = String::new();
-                let _ = pipe.read_to_string(&mut text);
-                text
-            })
-        });
-
-        let reader = BufReader::new(stdout);
-        for line_result in reader.lines() {
-            match line_result {
-                Ok(line) => {
-                    let trimmed = line.trim();
-                    if trimmed.is_empty() {
-                        continue;
-                    }
-
-                    if let Err(error) = process_streaming_frame_line(&worker_operation_id, trimmed)
-                    {
-                        update_streaming_error(&worker_operation_id, "failed", error);
-                    }
-                }
-                Err(error) => {
-                    update_streaming_error(
-                        &worker_operation_id,
-                        "failed",
-                        format!("streaming stdout read failed: {error}"),
-                    );
-                    break;
-                }
-            }
-        }
-
-        let status = child.wait();
-        let stderr_text = match stderr_thread {
-            Some(handle) => handle.join().unwrap_or_default(),
-            None => String::new(),
-        };
-
-        match status {
-            Ok(exit_status) => {
-                if !exit_status.success() {
-                    update_streaming_error(
-                        &worker_operation_id,
-                        "failed",
-                        format!(
-                            "attach-session exited with {:?}; stderr={}",
-                            exit_status.code(),
-                            stderr_text.trim()
-                        ),
-                    );
-                }
-            }
-            Err(error) => {
-                update_streaming_error(
-                    &worker_operation_id,
-                    "failed",
-                    format!("failed to wait for attach-session: {error}"),
-                );
-            }
-        }
-    });
-
-    let registry = operation_registry().lock().unwrap();
-    registry
-        .get(&operation_id)
-        .map(session_view)
-        .ok_or_else(|| format!("streaming session not found after start: {session_id}"))
+        spawn_streaming_helper(&helper_path, &args, &operation_id)
+    })();
+    start.finish(result)
 }
 
 pub fn start_launch_monitor_session(
@@ -1996,136 +1910,64 @@ pub fn start_launch_monitor_session(
         return Err("launch target path is required".to_string());
     }
 
+    if !Path::new(target).is_absolute() || !Path::new(target).is_file() || target.contains('\0') ||
+        launch_arguments.contains('\0') || launch_arguments.encode_utf16().count() + target.encode_utf16().count() + 4 >= 32767
+    {
+        return Err("launch requires an absolute executable path and a bounded command line".to_string());
+    }
+    if !working_directory.trim().is_empty() &&
+        (!Path::new(working_directory.trim()).is_absolute() || !Path::new(working_directory.trim()).is_dir() || working_directory.contains('\0'))
+    {
+        return Err("working directory must be an existing absolute directory".to_string());
+    }
+
     let duration = 0;
     let helper_timeout = STREAM_CONTROL_TIMEOUT_MS;
     let operation_id = new_operation_id("ui-launch", 0);
     let session_id = new_session_id(&operation_id);
-    register_native_operation(&operation_id, "launch_capture_stream", 0, duration);
-
-    let helper_path = find_helper_path().ok_or_else(|| {
-        "knmon-native-helper.exe was not found. Run `npm run native:build` first.".to_string()
-    })?;
-
-    let mut args = vec![
-        "launch-session".to_string(),
-        "--target".to_string(),
-        target.to_string(),
-        "--timeout-ms".to_string(),
-        helper_timeout.to_string(),
-        "--owner-pid".to_string(),
-        std::process::id().to_string(),
-        "--operation-id".to_string(),
-        operation_id.clone(),
-        "--session-id".to_string(),
-        session_id.clone(),
-        "--stream-batches".to_string(),
-        "--batch-size".to_string(),
-        "64".to_string(),
-    ];
-
-    let cwd = working_directory.trim();
-    if !cwd.is_empty() {
-        args.push("--cwd".to_string());
-        args.push(cwd.to_string());
-    }
-
-    let command_line_arguments = launch_arguments.trim();
-    if !command_line_arguments.is_empty() {
-        args.push("--args".to_string());
-        args.push(command_line_arguments.to_string());
-    }
-    append_api_selection_arg(&mut args, &selected_apis)?;
-
-    let mut child = Command::new(&helper_path)
-        .env("KNMON_TRANSPORT_CAPACITY", INTERACTIVE_TRANSPORT_CAPACITY)
-        .args(&args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|error| {
-            format!(
-                "failed to run {} launch-session: {error}",
-                helper_path.display()
-            )
+    let start = OperationStart::new(&operation_id, "launch_capture_stream", 0, duration);
+    let result = (||
+    {
+        let helper_path = find_helper_path().ok_or_else(|| {
+            "knmon-native-helper.exe was not found. Run `npm run native:build` first.".to_string()
         })?;
 
-    mark_native_operation_helper_pid(&operation_id, child.id());
+        let mut args = vec![
+            "launch-session".to_string(),
+            "--target".to_string(),
+            target.to_string(),
+            "--timeout-ms".to_string(),
+            helper_timeout.to_string(),
+            "--own-launch-job".to_string(),
+            "--owner-created".to_string(),
+            process_liveness::current_creation_time().to_string(),
+            "--owner-pid".to_string(),
+            std::process::id().to_string(),
+            "--operation-id".to_string(),
+            operation_id.clone(),
+            "--session-id".to_string(),
+            session_id.clone(),
+            "--stream-batches".to_string(),
+            "--batch-size".to_string(),
+            "64".to_string(),
+        ];
 
-    let stdout = child
-        .stdout
-        .take()
-        .ok_or_else(|| "failed to capture launch-session stdout".to_string())?;
-    let stderr = child.stderr.take();
-    let worker_operation_id = operation_id.clone();
-    thread::spawn(move || {
-        let stderr_thread = stderr.map(|mut pipe| {
-            thread::spawn(move || {
-                let mut text = String::new();
-                let _ = pipe.read_to_string(&mut text);
-                text
-            })
-        });
-
-        let reader = BufReader::new(stdout);
-        for line_result in reader.lines() {
-            match line_result {
-                Ok(line) => {
-                    let trimmed = line.trim();
-                    if trimmed.is_empty() {
-                        continue;
-                    }
-
-                    if let Err(error) = process_streaming_frame_line(&worker_operation_id, trimmed)
-                    {
-                        update_streaming_error(&worker_operation_id, "failed", error);
-                    }
-                }
-                Err(error) => {
-                    update_streaming_error(
-                        &worker_operation_id,
-                        "failed",
-                        format!("streaming stdout read failed: {error}"),
-                    );
-                    break;
-                }
-            }
+        let cwd = working_directory.trim();
+        if !cwd.is_empty() {
+            args.push("--cwd".to_string());
+            args.push(cwd.to_string());
         }
 
-        let status = child.wait();
-        let stderr_text = match stderr_thread {
-            Some(handle) => handle.join().unwrap_or_default(),
-            None => String::new(),
-        };
-
-        match status {
-            Ok(exit_status) => {
-                if !exit_status.success() {
-                    update_streaming_error(
-                        &worker_operation_id,
-                        "failed",
-                        format!(
-                            "launch-session exited with {:?}; stderr={}",
-                            exit_status.code(),
-                            stderr_text.trim()
-                        ),
-                    );
-                }
-            }
-            Err(error) => {
-                update_streaming_error(
-                    &worker_operation_id,
-                    "failed",
-                    format!("failed to wait for launch-session: {error}"),
-                );
-            }
+        let command_line_arguments = launch_arguments.trim();
+        if !command_line_arguments.is_empty() {
+            args.push("--args".to_string());
+            args.push(command_line_arguments.to_string());
         }
-    });
+        append_api_selection_arg(&mut args, &selected_apis)?;
 
-    let registry = operation_registry().lock().unwrap();
-    registry
-        .get(&operation_id)
-        .map(session_view)
-        .ok_or_else(|| format!("launch session not found after start: {session_id}"))
+        spawn_streaming_helper(&helper_path, &args, &operation_id)
+    })();
+    start.finish(result)
 }
 
 pub fn start_daemon_if_needed() -> Result<NativeDaemonStatus, String> {
@@ -2734,42 +2576,45 @@ pub fn attach_target_process_capture(
     let helper_timeout = helper_inner_timeout_ms(duration);
     let command_timeout = helper_process_timeout_ms(duration);
     let operation_id = new_operation_id("ui-attach", process_id);
-    register_native_operation(&operation_id, "attach_capture", process_id, duration);
+    let start = OperationStart::new(&operation_id, "attach_capture", process_id, duration);
+    let outcome = (||
+    {
+        let mut args = vec![
+            "attach-capture".to_string(),
+            "--pid".to_string(),
+            process_id.to_string(),
+            "--duration-ms".to_string(),
+            duration.to_string(),
+            "--timeout-ms".to_string(),
+            helper_timeout.to_string(),
+            "--operation-id".to_string(),
+            operation_id.clone(),
+        ];
+        append_api_selection_arg(&mut args, &selected_apis)?;
 
-    let mut args = vec![
-        "attach-capture".to_string(),
-        "--pid".to_string(),
-        process_id.to_string(),
-        "--duration-ms".to_string(),
-        duration.to_string(),
-        "--timeout-ms".to_string(),
-        helper_timeout.to_string(),
-        "--operation-id".to_string(),
-        operation_id.clone(),
-    ];
-    append_api_selection_arg(&mut args, &selected_apis)?;
+        let helper_output =
+            match run_helper_args_with_timeout(&args, command_timeout, Some(&operation_id)) {
+                Ok(output) => output,
+                Err(error) => {
+                    finish_native_operation(&operation_id, "failed");
+                    return Err(error);
+                }
+            };
 
-    let helper_output =
-        match run_helper_args_with_timeout(&args, command_timeout, Some(&operation_id)) {
-            Ok(output) => output,
-            Err(error) => {
-                finish_native_operation(&operation_id, "failed");
-                return Err(error);
+        let result: CaptureResult = parse_helper_json(&helper_output, "attach-capture")?;
+        let operation_state = if result.operation_state.is_empty() {
+            if result.success {
+                "completed"
+            } else {
+                "failed"
             }
-        };
-
-    let result: CaptureResult = parse_helper_json(&helper_output, "attach-capture")?;
-    let operation_state = if result.operation_state.is_empty() {
-        if result.success {
-            "completed"
         } else {
-            "failed"
-        }
-    } else {
-        result.operation_state.as_str()
-    };
-    finish_native_operation_with_capture(&operation_id, operation_state, &result);
-    Ok(result)
+            result.operation_state.as_str()
+        };
+        finish_native_operation_with_capture(&operation_id, operation_state, &result);
+        Ok(result)
+    })();
+    start.finish(outcome)
 }
 
 pub fn supervise_process_tree(
@@ -2787,49 +2632,47 @@ pub fn supervise_process_tree(
     let helper_timeout = helper_inner_timeout_ms(duration);
     let command_timeout = helper_process_timeout_ms(duration);
     let operation_id = new_operation_id("ui-tree", root_process_id);
-    register_native_operation(
-        &operation_id,
-        "process_tree_supervision",
-        root_process_id,
-        duration,
-    );
+    let start = OperationStart::new(&operation_id, "process_tree_supervision", root_process_id, duration);
+    let outcome = (||
+    {
+        let mut args = vec![
+            "supervise-tree".to_string(),
+            "--pid".to_string(),
+            root_process_id.to_string(),
+            "--duration-ms".to_string(),
+            duration.to_string(),
+            "--timeout-ms".to_string(),
+            helper_timeout.to_string(),
+            "--child-policy".to_string(),
+            normalized_policy,
+            "--operation-id".to_string(),
+            operation_id.clone(),
+        ];
+        append_api_selection_arg(&mut args, &selected_apis)?;
 
-    let mut args = vec![
-        "supervise-tree".to_string(),
-        "--pid".to_string(),
-        root_process_id.to_string(),
-        "--duration-ms".to_string(),
-        duration.to_string(),
-        "--timeout-ms".to_string(),
-        helper_timeout.to_string(),
-        "--child-policy".to_string(),
-        normalized_policy,
-        "--operation-id".to_string(),
-        operation_id.clone(),
-    ];
-    append_api_selection_arg(&mut args, &selected_apis)?;
+        let helper_output =
+            match run_helper_args_with_timeout(&args, command_timeout, Some(&operation_id)) {
+                Ok(output) => output,
+                Err(error) => {
+                    finish_native_operation(&operation_id, "failed");
+                    return Err(error);
+                }
+            };
 
-    let helper_output =
-        match run_helper_args_with_timeout(&args, command_timeout, Some(&operation_id)) {
-            Ok(output) => output,
-            Err(error) => {
-                finish_native_operation(&operation_id, "failed");
-                return Err(error);
+        let result: ProcessTreeResult = parse_helper_json(&helper_output, "supervise-tree")?;
+        let operation_state = if result.operation_state.is_empty() {
+            if result.success {
+                "completed"
+            } else {
+                "failed"
             }
-        };
-
-    let result: ProcessTreeResult = parse_helper_json(&helper_output, "supervise-tree")?;
-    let operation_state = if result.operation_state.is_empty() {
-        if result.success {
-            "completed"
         } else {
-            "failed"
-        }
-    } else {
-        result.operation_state.as_str()
-    };
-    finish_native_operation_with_process_tree(&operation_id, operation_state, &result);
-    Ok(result)
+            result.operation_state.as_str()
+        };
+        finish_native_operation_with_process_tree(&operation_id, operation_state, &result);
+        Ok(result)
+    })();
+    start.finish(outcome)
 }
 
 fn parse_helper_json<T>(helper_output: &str, command_name: &str) -> Result<T, String>
@@ -2880,69 +2723,45 @@ fn run_helper_args(args: &[String]) -> Result<String, String> {
     Ok(stdout)
 }
 
-fn signal_cancel_operation(operation_id: &str) -> Result<CancellationSignalResult, String> {
-    let helper_path = find_helper_path().ok_or_else(|| {
-        "knmon-native-helper.exe was not found. Run `npm run native:build` first.".to_string()
-    })?;
+fn signal_cancel_operation(operation_id: &str) -> Result<CancellationSignalResult, String>
+{
+    let name = cancellation_event_name(operation_id);
+    let result = process_liveness::signal_cancel_event(&name);
+    Ok(CancellationSignalResult
+    {
+        success: result.is_ok(),
+        operation_id: operation_id.to_string(),
+        cancellation_event_name: name,
+        win32_error_code: result.err().unwrap_or(0),
+        operation: "cancel_operation".to_string(),
+        message: "Cancellation event signal attempted.".to_string(),
+    })
+}
 
-    let mut child = Command::new(&helper_path)
-        .args(["cancel-operation", "--operation-id", operation_id])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|error| {
-            format!(
-                "failed to run {} cancel-operation: {error}",
-                helper_path.display()
-            )
-        })?;
-
-    // Bounded wait: this runs from cancellation, timeout, and app-exit paths that
-    // must never block indefinitely on a wedged helper.
-    let deadline = Instant::now() + Duration::from_millis(5_000);
-    loop {
-        match child.try_wait() {
-            Ok(Some(_)) => break,
-            Ok(None) if Instant::now() < deadline => {
-                thread::sleep(Duration::from_millis(25));
-            }
-            Ok(None) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err(format!(
-                    "{} cancel-operation timed out after 5000 ms",
-                    helper_path.display()
-                ));
-            }
-            Err(error) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err(format!(
-                    "failed to poll {} cancel-operation: {error}",
-                    helper_path.display()
-                ));
+fn signal_registered_operation(operation_id: &str) -> Result<(), String>
+{
+    let deadline = Instant::now() + Duration::from_millis(STREAM_CONTROL_TIMEOUT_MS as u64);
+    loop
+    {
+        {
+            let registry = operation_registry().lock().unwrap();
+            let record = registry.get(operation_id).ok_or("operation disappeared during cancellation")?;
+            if is_terminal_operation_state(&record.state)
+            {
+                return Ok(());
             }
         }
+        let signal = signal_cancel_operation(operation_id)?;
+        if signal.success
+        {
+            return Ok(());
+        }
+        if signal.win32_error_code != 2 || Instant::now() >= deadline
+        {
+            return Err(format!("cancel event signal failed: win32={}", signal.win32_error_code));
+        }
+        thread::sleep(Duration::from_millis(25));
     }
-
-    let output = child
-        .wait_with_output()
-        .map_err(|error| format!("failed to collect {} cancel-operation: {error}", helper_path.display()))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-
-    if !output.status.success() {
-        return Err(format!(
-            "{} cancel-operation exited with {:?}; stderr={}; stdout={}",
-            helper_path.display(),
-            output.status.code(),
-            stderr,
-            stdout
-        ));
-    }
-
-    parse_helper_json(&stdout, "cancel-operation")
 }
 
 fn run_helper_args_with_timeout(
@@ -2954,23 +2773,29 @@ fn run_helper_args_with_timeout(
         "knmon-native-helper.exe was not found. Run `npm run native:build` first.".to_string()
     })?;
 
-    let mut child = Command::new(&helper_path)
+    let mut child = OwnedChild(Command::new(&helper_path)
         .args(args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|error| format!("failed to run {}: {error}", helper_path.display()))?;
+        .map_err(|error| format!("failed to run {}: {error}", helper_path.display()))?);
 
     if let Some(id) = operation_id {
-        mark_native_operation_helper_pid(id, child.id());
+        let retained = process_liveness::RetainedProcess::from_child(&child.0)?;
+        let mut registry = operation_registry().lock().unwrap();
+        if let Some(record) = registry.get_mut(id)
+        {
+            record.helper_process_id = retained.process_id;
+            record.helper_handle = Some(retained);
+        }
     }
 
     // Drain both pipes on reader threads: the helper can emit more than the pipe
     // buffer holds (full CaptureResult JSON), and nothing else reads it until
     // after exit — the child would block in WriteFile and hit the process
     // timeout even though the capture succeeded.
-    let stdout_pipe = child.stdout.take();
-    let stderr_pipe = child.stderr.take();
+    let stdout_pipe = child.0.stdout.take();
+    let stderr_pipe = child.0.stderr.take();
     let stdout_reader = thread::spawn(move || {
         let mut text = String::new();
         if let Some(mut pipe) = stdout_pipe {
@@ -2992,12 +2817,12 @@ fn run_helper_args_with_timeout(
     let mut cancel_note = String::new();
 
     loop {
-        match child.try_wait() {
+        match child.0.try_wait() {
             Ok(Some(_)) => break,
             Ok(None) => {}
             Err(error) => {
-                let _ = child.kill();
-                let _ = child.wait();
+                let _ = child.0.kill();
+                let _ = child.0.wait();
                 return Err(format!("failed to poll {}: {error}", helper_path.display()));
             }
         }
@@ -3020,12 +2845,12 @@ fn run_helper_args_with_timeout(
                 let grace_start = Instant::now();
                 let grace_timeout = Duration::from_millis(12_000);
                 while grace_start.elapsed() < grace_timeout {
-                    match child.try_wait() {
+                    match child.0.try_wait() {
                         Ok(Some(_)) => break,
                         Ok(None) => {}
                         Err(error) => {
-                            let _ = child.kill();
-                            let _ = child.wait();
+                            let _ = child.0.kill();
+                            let _ = child.0.wait();
                             return Err(format!(
                                 "failed to poll {} after cancel: {error}",
                                 helper_path.display()
@@ -3036,7 +2861,7 @@ fn run_helper_args_with_timeout(
                     thread::sleep(Duration::from_millis(25));
                 }
 
-                if child
+                if child.0
                     .try_wait()
                     .map(|state| state.is_some())
                     .unwrap_or(false)
@@ -3045,14 +2870,14 @@ fn run_helper_args_with_timeout(
                 }
             }
 
-            let _ = child.kill();
+            let _ = child.0.kill();
             break;
         }
 
         thread::sleep(Duration::from_millis(25));
     }
 
-    let exit_status = child.wait().map_err(|error| {
+    let exit_status = child.0.wait().map_err(|error| {
         format!(
             "failed to collect {} exit status: {error}",
             helper_path.display()
@@ -3155,24 +2980,9 @@ fn push_unique_path(paths: &mut Vec<PathBuf>, path: PathBuf) {
     }
 }
 
-fn portable_root_candidates() -> Vec<PathBuf> {
-    let mut roots = Vec::new();
-
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(exe_dir) = exe_path.parent() {
-            push_unique_path(&mut roots, exe_dir.to_path_buf());
-
-            if let Some(parent_dir) = exe_dir.parent() {
-                push_unique_path(&mut roots, parent_dir.to_path_buf());
-            }
-        }
-    }
-
-    if let Ok(current_dir) = std::env::current_dir() {
-        push_unique_path(&mut roots, current_dir);
-    }
-
-    roots
+fn portable_root_candidates() -> Vec<PathBuf>
+{
+    std::env::current_exe().ok().and_then(|path| path.parent().map(Path::to_path_buf)).into_iter().collect()
 }
 
 fn runtime_root_path() -> PathBuf {
@@ -3191,64 +3001,22 @@ fn runtime_root_path() -> PathBuf {
     repo_root_path()
 }
 
-fn find_helper_path() -> Option<PathBuf> {
-    let repo_root = repo_root_path();
-    let current_dir = std::env::current_dir().ok();
-
+fn find_helper_path() -> Option<PathBuf>
+{
     let mut candidates = Vec::new();
-    for root in portable_root_candidates() {
+    for root in portable_root_candidates()
+    {
         push_unique_path(&mut candidates, root.join("knmon-native-helper.exe"));
-        push_unique_path(
-            &mut candidates,
-            root.join("native")
-                .join("x64")
-                .join("knmon-native-helper.exe"),
-        );
+        push_unique_path(&mut candidates, root.join("native/x64/knmon-native-helper.exe"));
     }
-
-    push_unique_path(
-        &mut candidates,
-        repo_root
-            .join("build")
-            .join("native")
-            .join("Debug")
-            .join("knmon-native-helper.exe"),
-    );
-    push_unique_path(
-        &mut candidates,
-        repo_root
-            .join("build")
-            .join("native")
-            .join("Release")
-            .join("knmon-native-helper.exe"),
-    );
-    push_unique_path(
-        &mut candidates,
-        repo_root
-            .join("build")
-            .join("native")
-            .join("RelWithDebInfo")
-            .join("knmon-native-helper.exe"),
-    );
-
-    if let Some(dir) = current_dir {
-        push_unique_path(
-            &mut candidates,
-            dir.join("build")
-                .join("native")
-                .join("Debug")
-                .join("knmon-native-helper.exe"),
-        );
-        push_unique_path(
-            &mut candidates,
-            dir.join("build")
-                .join("native")
-                .join("Release")
-                .join("knmon-native-helper.exe"),
-        );
+    if cfg!(debug_assertions)
+    {
+        for directory in ["build/native-msvc/Debug", "build/native/Debug", "build/native-msvc/Release", "build/native/Release"]
+        {
+            push_unique_path(&mut candidates, repo_root_path().join(directory).join("knmon-native-helper.exe"));
+        }
     }
-
-    candidates.into_iter().find(|candidate| candidate.is_file())
+    candidates.into_iter().find(|candidate| candidate.is_file()).and_then(|path| path.canonicalize().ok())
 }
 
 #[cfg(test)]
@@ -3290,6 +3058,8 @@ mod tests {
     }
 
     fn test_batch(operation_id: &str, session_id: &str, batch_sequence: u64) -> NativeTraceBatch {
+        let mut event = test_event(operation_id, batch_sequence);
+        event.pid = operation_registry().lock().unwrap().get(operation_id).unwrap().target_process_id;
         NativeTraceBatch {
             schema_version: "0.1.0".to_string(),
             frame_type: "trace_batch".to_string(),
@@ -3302,7 +3072,7 @@ mod tests {
             dropped_events: 0,
             records_streamed: batch_sequence,
             host_dropped_batches: 0,
-            events: vec![test_event(operation_id, batch_sequence)],
+            events: vec![event],
         }
     }
 
@@ -3374,6 +3144,7 @@ mod tests {
         let session_id = new_session_id(&operation_id);
         register_native_operation(&operation_id, "attach_capture_stream", 9012, 1000);
 
+        mark_native_operation_helper_pid(&operation_id, 2);
         let frame = serde_json::json!({
             "schemaVersion": "0.1.0",
             "frameType": "capture_result",

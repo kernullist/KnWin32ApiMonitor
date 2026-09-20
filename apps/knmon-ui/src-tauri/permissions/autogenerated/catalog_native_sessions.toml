@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-catalog-native-sessions"
+description = "Enables the catalog_native_sessions command without any pre-configured scope."
+commands.allow = ["catalog_native_sessions"]
+
+[[permission]]
+identifier = "deny-catalog-native-sessions"
+description = "Denies the catalog_native_sessions command without any pre-configured scope."
+commands.deny = ["catalog_native_sessions"]

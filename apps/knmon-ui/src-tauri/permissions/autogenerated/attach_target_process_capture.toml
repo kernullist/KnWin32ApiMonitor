@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-attach-target-process-capture"
+description = "Enables the attach_target_process_capture command without any pre-configured scope."
+commands.allow = ["attach_target_process_capture"]
+
+[[permission]]
+identifier = "deny-attach-target-process-capture"
+description = "Denies the attach_target_process_capture command without any pre-configured scope."
+commands.deny = ["attach_target_process_capture"]

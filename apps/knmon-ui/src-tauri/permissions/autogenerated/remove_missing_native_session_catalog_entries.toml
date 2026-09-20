@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-remove-missing-native-session-catalog-entries"
+description = "Enables the remove_missing_native_session_catalog_entries command without any pre-configured scope."
+commands.allow = ["remove_missing_native_session_catalog_entries"]
+
+[[permission]]
+identifier = "deny-remove-missing-native-session-catalog-entries"
+description = "Denies the remove_missing_native_session_catalog_entries command without any pre-configured scope."
+commands.deny = ["remove_missing_native_session_catalog_entries"]

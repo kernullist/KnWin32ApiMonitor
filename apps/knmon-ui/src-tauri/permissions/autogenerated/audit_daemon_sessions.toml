@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-audit-daemon-sessions"
+description = "Enables the audit_daemon_sessions command without any pre-configured scope."
+commands.allow = ["audit_daemon_sessions"]
+
+[[permission]]
+identifier = "deny-audit-daemon-sessions"
+description = "Denies the audit_daemon_sessions command without any pre-configured scope."
+commands.deny = ["audit_daemon_sessions"]
