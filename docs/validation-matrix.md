@@ -7,15 +7,15 @@ Windows 10/11 release or every API input.
 | Component | x64 Debug | x86 Debug | x64 Release | x86 Release |
 |---|---|---|---|---|
 | Native compile/link | passed | passed | passed | passed |
-| Native CTest | 23/23 passed | 23/23 passed | 22/22 passed before sustained test addition | 17 passed, 5 not started before sustained test addition |
+| Native CTest | 23/23 passed | 23/23 passed | 23/23 passed | 17 passed, 6 not started |
 | Desktop compile/link | test executable passed | test executable passed | application passed | application passed |
 | Desktop security tests | 3/3 passed | 3/3 passed | 3/3 passed | 3/3 passed |
 | Desktop attach/filter/stop/export and Job resources | native tools used | native tools used | passed with Debug native tools | passed with Debug native tools |
 | Desktop PE hardening | passed | passed | passed | passed |
-| Rust backend with real helper | 18/18 passed | 18/18 passed | 18/18 with Debug helper | 18/18 with Debug helper |
+| Rust backend with real helper | 18/18 passed | 18/18 passed | 18/18 with Debug and Release helpers | 18/18 with Debug helper; Release helper blocked before tests |
 | All-supported sample live/replay | 376 events, 16 errors | 376 events, 16 errors | 376 events, 16 errors | blocked before launch |
 | Comparative six-API corpus | 50 runs passed | 50 runs passed | not run | not run |
-| Sustained overload, original/observed | 5 s and 15 s passed | 5 s and 15 s passed | not run | not run |
+| Sustained overload, original/observed | 5 s and 15 s passed | 5 s and 15 s passed | default 5 s CTest passed | blocked before launch |
 | Clean source ZIP native reconstruction | 23/23 passed | 23/23 passed | not run | not run |
 
 The Debug comparison uses ten fresh-process repetitions of each of five modes.
@@ -24,18 +24,29 @@ events and matching outputs/errors. Frida CModule is faster and uses less
 target RSS than KNMon on this corpus. This evidence does not support a World
 No.1 or lowest-overhead claim.
 
-Defender quarantined these x86 Release artifacts during actual execution:
+After the failure-state correction in `4e5a9df`, both native Release builds
+completed again. x64 executed all 23 CTests. x86 passed 17; six cases could not
+start. Defender recorded these x86 Release detections on 2026-09-20:
 
 | Artifact | Detection time (Asia/Seoul) | Result |
 |---|---|---|
-| `knmon-runtime-support-test.exe` | 16:27:16 | runtime-support test not started |
-| `knmon-capture-semantics-test.exe` | 16:27:26 | four capture tests not started |
-| `knmon-native-helper.exe` | 16:28:28 | production live/replay launch blocked |
+| `knmon-runtime-support-test.exe` | 21:22:13 | runtime-support test not started |
+| `knmon-sustained-capture-test.exe` | 21:22:23 | sustained-capture test not started |
+| `knmon-capture-semantics-test.exe` | 21:22:23 | four capture tests not started |
+| `knmon-native-helper.exe` | 21:26:19 | file hashing failed before the Release backend test process launched |
 
-The recorded threat ID is 2147959533 and the reported quarantine action
-succeeded. No exclusion, policy change or renaming workaround was applied.
+The recorded threat ID is 2147959533 and Defender reports successful actions;
+the four files are absent afterward. The initial detections at 16:27-16:28 are
+retained separately. No exclusion, policy change or renaming workaround was applied.
 The x86 Release runtime gate remains incomplete. A successful desktop build
 does not clear the separate native-helper gate.
+
+The current CTest XML consumer accepts the x64 report and rejects the actual
+x86 report as failed or unexecuted. The x64 Release backend additionally ran
+all 18 tests against the Release helper, with matching native binary hashes
+before and after execution. These direct probes retain commands and raw logs;
+they are not a complete source-bound, two-architecture Release evidence pack.
+The integrated native Release gate therefore remains `not_verified`.
 
 Desktop Release builds were executed through `Build.ps1 -Release -SkipNative`
 and `Build.ps1 -Release -Win32 -SkipNative`; native Release builds were executed
