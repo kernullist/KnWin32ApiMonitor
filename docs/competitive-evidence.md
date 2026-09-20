@@ -40,6 +40,22 @@ semantics. KN Monitor used more target memory than this Frida adapter; this is a
 measured improvement target. The system-logger probe returned access denied (5)
 on both architectures. No kernel ETW execution is claimed for this run.
 
+The next validated run removed the unused x64 generic-dispatch exports and the
+host-only API catalog from the injected DLL. All 320 supported wrappers remain.
+The x64 Debug DLL shrank from 83,187,200 to 2,127,360 bytes; the x86 DLL remained
+1,686,016 bytes. The `agent-footprint` CTest enforces an 8 MiB on-disk budget,
+checks the four control exports and rejects test or disabled-dispatch exports.
+
+The same 80-run comparison then measured x64 KN Monitor target RSS at 17.12 MiB
+(54% below the initial 37.14 MiB), median call time at 10.95 us and median run
+p99 at 335.00 us. The contemporaneous original/Frida JS RSS values were
+5.51/14.06 MiB and median call times were 6.25/23.25 us. x86 KN Monitor RSS was
+17.46 MiB and median call time was 12.05 us. All 450 calls per run still matched,
+with zero transport loss. This is a measured footprint improvement; it does
+not establish a latency improvement from these separate short experiments.
+The current proof records this second run; the table above retains the original
+baseline. Native ABI/live/replay proof and all 18 CTests pass on each architecture.
+
 Private ETW is an application-instrumented auxiliary trace. The target emits its
 oracle records through an actual in-process ETW provider, and a separate native
 reader decodes the ETL file. It checks transport/replay fidelity; it does not

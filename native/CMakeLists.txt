@@ -184,14 +184,8 @@ set(KNMON_AGENT_SOURCE
 )
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    file(GLOB KNMON_AGENT_GENERATED_HOOK_SOURCES CONFIGURE_DEPENDS
-        knmon-agent64/src/GeneratedAgentHooksChunk*.cpp
-    )
     add_library(knmon-agent64 SHARED
         ${KNMON_AGENT_SOURCE}
-        knmon-common/src/GeneratedApiMetadata.cpp
-        ${KNMON_COMMON_GENERATED_METADATA_PARAMETER_SOURCES}
-        ${KNMON_AGENT_GENERATED_HOOK_SOURCES}
     )
     target_compile_definitions(knmon-agent64 PRIVATE
         WIN32_LEAN_AND_MEAN
@@ -226,8 +220,20 @@ else()
 endif()
 
 if(BUILD_TESTING)
+    if(MSVC)
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+            set(KNMON_PRODUCTION_AGENT knmon-agent64)
+        else()
+            set(KNMON_PRODUCTION_AGENT knmon-agent32)
+        endif()
+        add_test(NAME agent-footprint COMMAND "${CMAKE_COMMAND}"
+            "-DAGENT_PATH=$<TARGET_FILE:${KNMON_PRODUCTION_AGENT}>"
+            "-DLINKER=${CMAKE_LINKER}"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CheckAgentFootprint.cmake")
+        set_tests_properties(agent-footprint PROPERTIES TIMEOUT 20)
+    endif()
     add_library(knmon-lifecycle-test-agent SHARED ${KNMON_AGENT_SOURCE})
-    target_link_libraries(knmon-lifecycle-test-agent PRIVATE knmon-common knmon-core knmon-transport-support)
+    target_link_libraries(knmon-lifecycle-test-agent PRIVATE knmon-common knmon-transport-support knmon-ipc-security)
     target_compile_definitions(knmon-lifecycle-test-agent PRIVATE
         WIN32_LEAN_AND_MEAN NOMINMAX KNMON_LIFECYCLE_TESTING
     )
