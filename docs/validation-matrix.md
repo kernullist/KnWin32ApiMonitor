@@ -61,9 +61,14 @@ and export them, detach while the target survives, and exit normally. Raw Job
 samples include WebView children and separate target resources. The hidden-window
 scope and sampled working-set sums are not a foreground performance score.
 
-The clean source archive from `50bf0e7` was extracted without Git metadata and
+The clean source archive from `d1180bb` was extracted without Git metadata and
 rebuilt with the pinned Node/CMake/MSVC/SDK configuration. npm installation,
 frontend build/validation and both complete native Debug suites passed. The
 frozen reconstruction producer retained source, command, compiler and binary
-hashes. See `source-build-contract.md` for reproduction and
+hashes. The archive contains 760 entries and has SHA-256
+`bbdf39d2f9a4090a79d6802dac28648286867007ff4c40bacfb6443dcddf0026`.
+Both architectures executed all 23 CTests; the extracted-source WOW64 UI
+regressions also passed. Revalidation rejects altered command, compiler, binary,
+test and frontend records. The integrated report passes six evidence scopes
+and retains eleven incomplete scopes. See `source-build-contract.md` for reproduction and
 `technical-readiness.md` for the fail-closed artifact verification policy.
