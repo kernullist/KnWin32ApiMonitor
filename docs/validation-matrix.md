@@ -1,6 +1,6 @@
 # Executed Windows validation matrix
 
-Observed on 2026-09-20, Windows 10.0.26200, with the compiler/SDK versions in
+Observed on 2026-09-20 and 2026-09-21, Windows 10.0.26200, with the compiler/SDK versions in
 `toolchain.json`. Rows describe executed checks, not certification of every
 Windows 10/11 release or every API input.
 
@@ -66,8 +66,8 @@ The Debug desktop entries describe the earlier three-test dependency baseline;
 they are not a validation of the new backport.
 The post-backport desktop runs each export 250 native events, retain exact
 terminal totals with no recorded loss, leave the targets alive after stop,
-and close normally with all owned Jobs drained. Both retain 201 process-tree
-samples; the largest observed sampling gaps are 422 ms (x64) and 328 ms (x86).
+and close normally with all owned Jobs drained. The latest runs retain 201/202
+process-tree samples; the largest observed gaps are 359 ms (x64) and 344 ms (x86).
 
 The [Release backend suite](backend-release-evidence.md) now includes the actual
 failed-target path. Missing the target's dynamic probe DLL previously left a
@@ -93,33 +93,40 @@ and export them, detach while the target survives, and exit normally. Raw Job
 samples include WebView children and separate target resources. The hidden-window
 scope and sampled working-set sums are not a foreground performance score.
 
-The prior clean source archive from `9c0a253` was extracted without Git metadata and
+The current clean source archive from `7e290fc` was extracted without Git metadata and
 rebuilt with the pinned Node/CMake/MSVC/SDK configuration. npm installation,
 frontend build/validation and both complete native Debug suites passed. The
 frozen reconstruction producer retained source, command, compiler and binary
-hashes. The archive contains 765 source files plus its manifest (766 ZIP entries)
+hashes. The archive contains 805 source files plus its manifest (806 ZIP entries)
 and has SHA-256
-`38084e9e89ca14dfd540f82b11f1f0cb3823825cf37c1eb7e57d595d082d22e8`.
+`39e9a770fbadf8dba4bdfb923b93cac261efd7da467ecbf553abeda766d90c9a`.
 Both architectures executed all 23 CTests, including the new failed-launch
 regression; the extracted-source UI suite includes all 14 polling, terminal-tail
 and WOW64 regressions. All cases actually ran; none were skipped or disabled.
 Revalidation rejects 31 malformed or altered readiness/source-evidence cases,
 including command, compiler, binary, test and frontend records.
 
-The first attempt failed during linking with LNK1180 because the volume ran out
-of space. Its failed record and logs remain intact. NTFS compression of prior
-build outputs preserved their recorded source, command, compiler, test and
-binary hashes. The unchanged archive and producer then passed in a fresh output
-directory. The failed attempt is not counted as a successful reconstruction.
+An earlier attempt passed both test suites but failed final source closure:
+an independently executed dependency inventory had generated a Python cache
+file in the extracted source. The inventory now disables bytecode writes before
+local imports. Its BOM also uses locked package names instead of checkout and
+workspace directory labels. The failed attempt remains recorded as failed.
 
-The URLPattern backport changes source inputs, so the prior clean archive is
-historical until a new shipped revision is reconstructed. The dependency graph
-and advisory evidence now remove the five reachable UNIC warnings while
+The corrected archive passed in a fresh directory. Running the extracted
+inventory afterward produced a byte-identical 339-component BOM, including
+metadata, with SHA-256
+`137ed5dccff850b027640f13a157af5957769705b15608a5c681628587348179`.
+The direct CLI created no source cache; complete source closure and every
+retained reconstruction artifact revalidated afterward.
+
+The dependency graph and advisory evidence now remove the five reachable UNIC
+warnings while
 retaining two warnings outside the Windows graphs. Native Release, broader
 platform and performance claims remain subject to the separate limits above.
-The current integrated report has seven passed scopes, zero failed scopes and
-ten unverified scopes. Windows dependency maintenance now passes; current
-source reconstruction awaits the next clean archive. All failed attempts and
-their raw logs remain distinct from the successful evidence sets.
+The current integrated report has eight passed scopes, zero failed scopes and
+nine unverified scopes. Current source reconstruction, dependency maintenance,
+Release backend and actual desktop paths pass together with the existing
+advisory, inventory, typed-ABI and competitive-semantics evidence. All failed
+attempts and their raw logs remain distinct from the successful evidence sets.
 See `source-build-contract.md` for reproduction and
 `technical-readiness.md` for the fail-closed artifact verification policy.
