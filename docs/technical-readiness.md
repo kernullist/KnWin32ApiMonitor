@@ -52,6 +52,11 @@ The [advisory consumer](advisory-evidence.md) checks current lockfiles, retained
 unfiltered npm/Cargo scans, tool identities, a bounded report age and the current
 official RustSec database contents. Windows-reachable warning packages remain a
 separate maintenance gate; advisories outside those graphs are still retained.
+The pinned local Tauri backport also receives an upstream registry-identity
+scan, because cargo-audit skips local path packages. Inherited warnings map to
+its local graph version. A passed maintenance row means that the current
+Windows graphs contain no reported maintenance warning; it does not certify
+the long-term maintenance of every dependency or the absence of unknown bugs.
 
 The [desktop consumer](desktop-evidence.md) verifies both architectures of the
 actual attach/filter/stop/export path and recomputes process-tree resource

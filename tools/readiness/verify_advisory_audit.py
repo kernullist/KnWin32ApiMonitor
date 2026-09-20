@@ -2,6 +2,7 @@
 import argparse
 import copy
 from datetime import datetime, timedelta, timezone
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -9,7 +10,8 @@ import sys
 import tempfile
 
 sys.dont_write_bytecode = True
-from advisory_audit import ROOT, audit_results, database_files, decoded, read_json, require, validate_cargo_scope, verify_record
+from advisory_audit import ROOT, audit_results, combined_results, database_files, decoded, read_json, require, validate_cargo_scope, verify_record
+from owned_command import run
 
 
 def rejected(function, label, message):
@@ -57,6 +59,63 @@ def database_controls(output):
     rejected(lambda: database_files(root, duplicate), "duplicate database path", "Unsafe RustSec source path")
 
 
+def local_backport_control(output, audit):
+    fixture = output / "local-backport-control"
+    db = fixture / "synthetic-db"
+    advisory = db / "crates/tauri-utils/RUSTSEC-2000-0001.md"
+    advisory.parent.mkdir(parents=True)
+    advisory.write_text('''```toml
+[advisory]
+id = "RUSTSEC-2000-0001"
+package = "tauri-utils"
+date = "2000-01-01"
+[versions]
+patched = [">= 2.9.3"]
+unaffected = ["< 2.9.2"]
+```
+# Synthetic local-package audit control
+
+This private fixture tests version matching. It is not an upstream advisory.
+''', encoding="ascii")
+    subprocess.run(["git", "init", "-q", db], cwd=ROOT, check=True, capture_output=True, timeout=30)
+    lock = fixture / "Cargo.lock"
+    lock.write_text('''version = 4
+
+[[package]]
+name = "tauri-utils"
+version = "2.9.2+knmon.1"
+
+[[package]]
+name = "tauri-utils"
+version = "2.9.3+knmon.1"
+''', encoding="ascii")
+    run([audit, "audit", "--no-fetch", "--db", db, "--file", lock, "--json"], ROOT,
+        fixture / "local-audit.log", dict(os.environ), timeout=60)
+    local = read_json(fixture / "local-audit.log")
+    require(local["database"]["advisory-count"] == 1 and local["lockfile"]["dependency-count"] == 2 and
+            local["vulnerabilities"]["found"] is False, "Local-source skip behavior changed; reassess the upstream overlay.")
+    # The overlay changes only advisory lookup identity, never the actual build lock.
+    overlay = fixture / "upstream.Cargo.lock"
+    overlay.write_text(lock.read_text().replace('version = "2.9.2+knmon.1"', 'version = "2.9.2"\nsource = "registry+https://github.com/rust-lang/crates.io-index"').replace(
+        'version = "2.9.3+knmon.1"', 'version = "2.9.3"\nsource = "registry+https://github.com/rust-lang/crates.io-index"'), encoding="ascii")
+    try:
+        run([audit, "audit", "--no-fetch", "--db", db, "--file", overlay, "--json"], ROOT,
+            fixture / "upstream-audit.log", dict(os.environ), timeout=60)
+    except RuntimeError as error:
+        require("Owned command failed (1)" in str(error), "Local-package audit control failed to execute.")
+    else:
+        raise RuntimeError("Upstream identity overlay bypassed the synthetic advisory.")
+    result = read_json(fixture / "upstream-audit.log")
+    require(result["database"]["advisory-count"] == 1 and result["lockfile"]["dependency-count"] == 2 and
+            result["vulnerabilities"]["found"] is True and result["vulnerabilities"]["count"] == 1,
+            "Synthetic local-package audit scope differs.")
+    finding = result["vulnerabilities"]["list"][0]
+    require(finding["package"]["name"] == "tauri-utils" and finding["package"]["version"] == "2.9.2" and
+            finding["package"]["source"] == "registry+https://github.com/rust-lang/crates.io-index" and finding["advisory"]["id"] == "RUSTSEC-2000-0001",
+            "Synthetic local-package advisory matched the wrong version.")
+    print("Passed: upstream identity overlay detects the synthetic vulnerability skipped for local source; patched control is excluded.", flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("evidence", type=Path)
@@ -69,7 +128,27 @@ def main():
     evidence = read_json(directory / "evidence.json")
     current = evidence["databaseAfter"]
     verify_record(evidence, directory, db, current)
+    local_backport_control(output, evidence["tools"]["cargoAudit"]["path"])
     npm, cargo = read_json(directory / "npm-audit.log"), read_json(directory / "cargo-audit.log")
+    vendor = read_json(directory / "vendor-upstream-audit.log")
+    for label, edit, message in (
+        ("vendor partial database", lambda value: value["database"].update({"advisory-count": current["advisoryCount"] - 1}), "Vendor upstream audit loaded"),
+        ("vendor wrong identity count", lambda value: value["lockfile"].update({"dependency-count": 2}), "Vendor upstream audit loaded"),
+        ("vendor advisory suppressed", lambda value: value["settings"].update(ignore=["RUSTSEC-2000-0001"]), "filtered its findings"),
+        ("vendor reported vulnerability", lambda value: value["vulnerabilities"].update(found=True), "Cargo audit found"),
+    ):
+        mutated = copy.deepcopy(vendor)
+        edit(mutated)
+        rejected(lambda: combined_results(npm, cargo, mutated, current), label, message)
+    warning = {"package": {"name": "tauri-utils", "version": "2.9.2"}, "advisory": {"id": "RUSTSEC-2000-0001"}}
+    warning_vendor = copy.deepcopy(vendor)
+    warning_vendor["warnings"] = {"unmaintained": [warning]}
+    mapped = combined_results(npm, cargo, warning_vendor, current)["warnings"][-1]
+    require(mapped == {"kind": "unmaintained", "package": "tauri-utils", "version": "2.9.2+knmon.1",
+                       "upstreamVersion": "2.9.2", "advisory": "RUSTSEC-2000-0001"}, "Vendor warning lost its local graph identity.")
+    print("Passed: inherited warning maps to the local Cargo graph identity.", flush=True)
+    warning["package"]["name"] = "unrelated-package"
+    rejected(lambda: combined_results(npm, cargo, warning_vendor, current), "wrong vendor warning identity", "unexpected package identity")
     result = audit_results(npm, cargo)
     validate_cargo_scope(cargo, current)
     incomplete = copy.deepcopy(cargo)
@@ -110,6 +189,8 @@ def main():
         ("missing database query", lambda value: value["databaseArtifacts"].pop("before-db-remote.log"), "query evidence changed or is incomplete"),
         ("changed database query", lambda value: value["databaseArtifacts"].update({"before-db-remote.log": "0" * 64}), "query evidence changed or is incomplete"),
         ("missing audit execution", lambda value: value["steps"].pop(), "command set is incomplete"),
+        ("wrong vendor audit input hash", lambda value: value.update(vendorAuditLockSha256="0" * 64), "Vendor upstream audit input differs"),
+        ("vendor scan uses build lock", lambda value: value["steps"][-1]["command"].__setitem__(-2, "apps/knmon-ui/src-tauri/Cargo.lock"), "command or exit status differs"),
         ("nonzero audit exit", lambda value: value["steps"][3].update(exitCode=1), "command or exit status differs"),
         ("modified audit flags", lambda value: value["steps"][3]["command"].append("--omit=dev"), "command or exit status differs"),
         ("altered audit output", lambda value: value["steps"][3].update(logSha256="0" * 64), "audit log changed"),
@@ -118,6 +199,14 @@ def main():
         mutated = copy.deepcopy(evidence)
         edit(mutated)
         rejected(lambda: verify_record(mutated, directory, db, current, now), label, message)
+    altered = output / "altered-overlay"
+    shutil.copytree(directory, altered)
+    overlay_file = altered / "vendor-upstream.Cargo.lock"
+    overlay_file.write_bytes(overlay_file.read_bytes().replace(b'version = "2.9.2"', b'version = "9.9.9"'))
+    changed = read_json(altered / "evidence.json")
+    from source_evidence import digest_file
+    changed["vendorAuditLockSha256"] = digest_file(overlay_file)
+    rejected(lambda: verify_record(changed, altered, db, current, now), "consistently rehashed vendor audit identity", "Vendor upstream audit input differs")
     rejected(lambda: decoded(b'{"count":0,"count":1}'), "duplicate audit JSON key", "Duplicate source manifest key")
     rejected(lambda: decoded(b'{"count":NaN}'), "nonfinite audit JSON", "Non-finite advisory evidence number")
     print("Advisory adversarial validation PASS: " + str(output))

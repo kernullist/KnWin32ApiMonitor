@@ -6,15 +6,17 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 
 sys.dont_write_bytecode = True
 import dependency_inventory as inventory
 
 
-def rejected(function, label):
+def rejected(function, label, expected=None):
     try:
         function()
-    except (ValueError, KeyError, OSError):
+    except (ValueError, KeyError, OSError) as error:
+        inventory.require(expected is None or expected in str(error), "Negative inventory control rejected at the wrong boundary: " + label)
         print(f"Rejected: {label}")
     else:
         raise RuntimeError(f"Negative evidence accepted: {label}")
@@ -31,6 +33,20 @@ def main():
                for target, arch in zip(inventory.TARGETS, ("x64", "x86"))}
     npm = inventory.read_json(directory / "npm.json")
     lock = inventory.read_json(inventory.ROOT / "package-lock.json")
+    cargo_lock = tomllib.loads((inventory.ROOT / inventory.LOCK).read_text(encoding="utf-8"))
+    for label in ("registry substitutes backport", "wrong backport version", "wrong backport path", "missing backport graph node"):
+        modified = copy.deepcopy(current)
+        data = modified[inventory.TARGETS[0]]
+        package = next(row for row in data["packages"] if row["name"] == "tauri-utils")
+        if label == "registry substitutes backport":
+            package["source"] = inventory.REGISTRY
+        elif label == "wrong backport version":
+            package["version"] = "2.9.2"
+        elif label == "wrong backport path":
+            package["manifest_path"] = str(inventory.ROOT / "crates/knmon-tauri/Cargo.toml")
+        else:
+            data["resolve"]["nodes"] = [node for node in data["resolve"]["nodes"] if node["id"] != package["id"]]
+        rejected(lambda: inventory.cargo_components(modified, cargo_lock, inventory.ROOT), label, "pinned Tauri backport")
     for label in ("duplicate npm identity", "missing npm component", "wrong npm integrity", "removed npm edge"):
         value = copy.deepcopy(npm)
         if label == "duplicate npm identity":
@@ -44,7 +60,7 @@ def main():
         rejected(lambda: inventory.npm_components(value, lock), label)
     with tempfile.TemporaryDirectory(prefix="inventory-negatives-", dir=inventory.ROOT / "build") as temporary:
         temporary = Path(temporary)
-        for label in ("artifact hash", "stale source", "missing target", "path escape", "missing graph edge", "wrong feature scope"):
+        for label in ("artifact hash", "stale source", "missing target", "path escape", "missing graph edge", "wrong feature scope", "forged backport pedigree"):
             case = temporary / label.replace(" ", "-")
             shutil.copytree(directory, case)
             evidence = inventory.read_json(case / "evidence.json")
@@ -61,6 +77,12 @@ def main():
                 tools["cargoFeatures"] = []
                 (case / "tools.json").write_bytes(inventory.encoded(tools))
                 evidence["artifacts"]["tools.json"] = inventory.digest((case / "tools.json").read_bytes())
+            elif label == "forged backport pedigree":
+                bom = inventory.read_json(case / "bom.cdx.json")
+                component = next(row for row in bom["components"] if row["name"] == "tauri-utils")
+                component["pedigree"]["ancestors"][0]["hashes"][0]["content"] = "0" * 64
+                (case / "bom.cdx.json").write_bytes(inventory.encoded(bom))
+                evidence["artifacts"]["bom.cdx.json"] = inventory.digest((case / "bom.cdx.json").read_bytes())
             else:
                 modified = copy.deepcopy(current)
                 data = modified[inventory.TARGETS[0]]
@@ -102,7 +124,7 @@ def main():
         inventory.require(result.returncode != 0 and b"Pinned zstd manifest does not cover the retained files." in result.stdout + result.stderr,
                           "CMake failed to reject an unlisted vendored source at its checksum boundary.")
         print("Rejected: unlisted CMake input")
-    print("Dependency evidence adversarial validation PASS: 18 negative controls.")
+    print("Dependency evidence adversarial validation PASS: 23 negative controls.")
 
 
 if __name__ == "__main__":

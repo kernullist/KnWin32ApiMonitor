@@ -37,6 +37,11 @@ desktop exit code zero and all three Jobs drained.
 The main window is hidden for the measurements. Input goes through CDP mouse and
 keyboard commands against actual rendered controls. The screenshot proves what
 the renderer displayed; it is not a foreground frame-rate or usability score.
+Before refreshing targets, the driver waits for the real button to become
+enabled within its deadline. A fixed startup delay alone was insufficient on
+an observed x86 run while initial native enumeration was still active. The
+driver retains button readiness in its observations and never force-enables
+or bypasses an unavailable control.
 
 The evidence retains:
 

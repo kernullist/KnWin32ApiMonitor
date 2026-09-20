@@ -3,8 +3,10 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { verifyTauriBackport } from "./tauri-backport.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
+verifyTauriBackport(root);
 const [major, minor] = process.versions.node.split(".").map(Number);
 if (!((major === 22 && minor >= 18) || major === 24 || major === 26))
 {

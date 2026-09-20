@@ -12,6 +12,7 @@ import subprocess
 import tempfile
 import tomllib
 from urllib.parse import quote
+from tauri_backport import verify as verify_tauri_backport, LOCAL_VERSION as TAURI_VERSION
 
 ROOT = Path(__file__).resolve().parents[2]
 TARGETS = ("x86_64-pc-windows-msvc", "i686-pc-windows-msvc")
@@ -97,7 +98,10 @@ def source_inputs(root=ROOT):
              "crates/knmon-tauri/Cargo.toml", "native/CMakeLists.txt", "native/third-party/zstd/CMakeLists.txt",
              "native/third-party/zstd/SHA256SUMS", "native/third-party/zstd/README.knmon.md",
              "native/third-party/nlohmann/README.md", "VERSION", "toolchain.json", ".cargo/config.toml", ".gitattributes",
-             "tools/security/dependency_inventory.py", "tools/security/verify_dependency_inventory.py", "tools/security/validate-sbom-schema.mjs"}
+             "tools/security/dependency_inventory.py", "tools/security/verify_dependency_inventory.py", "tools/security/validate-sbom-schema.mjs",
+             "tools/security/tauri_backport.py", "tools/security/verify_tauri_backport.py", "tools/source/tauri-backport.mjs",
+             "tools/source/preflight.mjs", "crates/third-party/README.md"}
+    names.update(verify_tauri_backport(root)["inputs"])
     names.update(native_files(root))
     names.update(file.relative_to(root).as_posix() for file in (root / "tools/security/cyclonedx").iterdir() if file.is_file())
     return {name: digest(bounded_bytes(safe_file(root, name))) for name in sorted(names)}
@@ -186,6 +190,7 @@ def npm_components(bom, lock):
 
 def cargo_components(metadata, lock, root):
     locked = {(row["name"], row["version"], row.get("source")): row for row in lock["package"]}
+    backport = verify_tauri_backport(root)
     components, edges, graphs, roots = {}, {}, {}, set()
     require(set(metadata) == set(TARGETS), "Both Windows Cargo target graphs are required.")
     for target in TARGETS:
@@ -196,6 +201,10 @@ def cargo_components(metadata, lock, root):
         nodes = {row["id"]: row for row in data["resolve"]["nodes"]}
         require(len(nodes) == len(data["resolve"]["nodes"]), "Duplicate Cargo graph node.")
         require(data["resolve"]["root"] in nodes, "Missing Cargo root.")
+        patched = [packages[identity] for identity in nodes if packages[identity]["name"] == "tauri-utils"]
+        require(len(patched) == 1 and patched[0]["source"] is None and patched[0]["version"] == TAURI_VERSION and
+                Path(patched[0]["manifest_path"]).resolve() == (root / "crates/third-party/tauri-utils/Cargo.toml").resolve(),
+                "Cargo did not resolve the pinned Tauri backport.")
         refs = {}
         for identity in nodes:
             package = packages[identity]
@@ -218,6 +227,17 @@ def cargo_components(metadata, lock, root):
                 component["hashes"] = [{"alg": "SHA-256", "content": checksum}]
             if package.get("license"):
                 component["licenses"] = [{"expression": package["license"]}]
+            if package["name"] == "tauri-utils":
+                provenance = backport["manifest"]
+                component["properties"].append(prop("sourceTreeSha256", backport["sourceTreeSha256"]))
+                component["pedigree"] = {
+                    "ancestors": [{"type": "library", "name": "tauri-utils", "version": provenance["package"]["upstreamVersion"],
+                                   "purl": "pkg:cargo/tauri-utils@" + provenance["package"]["upstreamVersion"],
+                                   "hashes": [{"alg": "SHA-256", "content": provenance["upstream"]["sha256"]}],
+                                   "externalReferences": [{"type": "distribution", "url": provenance["upstream"]["url"]}]}],
+                    "commits": [{"uid": provenance["backport"]["commit"], "url": provenance["backport"]["url"]}],
+                    "notes": "Local backport changes only the URLPattern dependency and package build metadata in the two Cargo manifests. Upstream Rust source is unchanged.",
+                }
             require(ref not in components or components[ref] == component, "Cargo target metadata conflict.")
             components[ref] = component
         roots.add(refs[data["resolve"]["root"]])

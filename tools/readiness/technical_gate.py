@@ -31,7 +31,7 @@ PRODUCERS = ("tools/readiness/source_evidence.py", "tools/readiness/technical_ga
              "tools/security/validate-sbom-schema.mjs", "tools/abi-proof/proof.mjs", "tools/abi-proof/check-proof.mjs",
              "tools/comparison/check_proof.py", "tools/comparison/replay_comparison.py", "tools/comparison/run_comparison.py", "tools/readiness/advisory_audit.py",
              "tools/readiness/desktop_evidence.py", "tools/readiness/desktop_processes.py", "tools/readiness/desktop_driver.mjs", "tools/readiness/desktop_check.py",
-             "tools/readiness/backend_release.py")
+             "tools/readiness/backend_release.py", "tools/security/tauri_backport.py")
 
 
 def outcome(rows):

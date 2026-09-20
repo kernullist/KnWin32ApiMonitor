@@ -14,13 +14,16 @@ sys.dont_write_bytecode = True
 from source_evidence import ROOT, contained, digest_file, read_bytes, read_json, require
 from owned_command import run
 from source_archive import unique_object
+sys.path.insert(0, str(ROOT / "tools/security"))
+from tauri_backport import verify as verify_tauri_backport
 
 DATABASE_URL = "https://github.com/RustSec/advisory-db.git"
 REGISTRY = "https://registry.npmjs.org/"
 SOURCES = ("package.json", "package-lock.json", "apps/knmon-ui/package.json", "apps/knmon-ui/src-tauri/Cargo.toml",
            "apps/knmon-ui/src-tauri/Cargo.lock", "crates/knmon-tauri/Cargo.toml", ".cargo/config.toml", "toolchain.json")
-PRODUCERS = ("tools/readiness/advisory_audit.py", "tools/readiness/source_evidence.py", "tools/source/owned_command.py", "tools/source/source_archive.py")
-LABELS = ("node-version", "npm-version", "cargo-version", "npm-audit", "cargo-audit")
+PRODUCERS = ("tools/readiness/advisory_audit.py", "tools/readiness/source_evidence.py", "tools/source/owned_command.py", "tools/source/source_archive.py",
+             "tools/security/tauri_backport.py")
+LABELS = ("node-version", "npm-version", "cargo-version", "npm-audit", "cargo-audit", "vendor-upstream-audit")
 DB_LABELS = tuple(prefix + "-" + suffix for prefix in ("before-db", "after-db") for suffix in ("head", "tree", "remote", "checked-head"))
 
 
@@ -35,6 +38,10 @@ def decoded(data):
 
 def fingerprints(names):
     return {name: digest_file(ROOT / name) for name in names}
+
+
+def source_fingerprints():
+    return {**fingerprints(SOURCES), **verify_tauri_backport(ROOT)["inputs"]}
 
 
 def command(command_line, output, label):
@@ -124,12 +131,20 @@ def audit_results(npm, cargo):
             "npmDependencies": npm["metadata"]["dependencies"]["total"], "cargoDependencies": cargo["lockfile"]["dependency-count"]}
 
 
-def commands(tools, db):
+def vendor_upstream_lock():
+    manifest = verify_tauri_backport(ROOT)["manifest"]
+    package, upstream = manifest["package"], manifest["upstream"]
+    return ('version = 4\n\n[[package]]\nname = "' + package["name"] + '"\nversion = "' + package["upstreamVersion"] +
+            '"\nsource = "registry+https://github.com/rust-lang/crates.io-index"\nchecksum = "' + upstream["sha256"] + '"\n').encode("ascii")
+
+
+def commands(tools, db, directory):
     node, npm, audit = tools["node"]["path"], tools["npm"]["path"], tools["cargoAudit"]["path"]
     return [[node, "--version"], [node, npm, "--version"], [audit, "audit", "--version"],
             [node, npm, "audit", "--json", "--package-lock-only", "--include=prod", "--include=dev", "--include=optional", "--include=peer",
              "--workspaces", "--include-workspace-root", "--audit-level=low", "--registry=" + REGISTRY, "--prefer-online"],
-            [audit, "audit", "--no-fetch", "--db", str(db), "--file", "apps/knmon-ui/src-tauri/Cargo.lock", "--json"]]
+            [audit, "audit", "--no-fetch", "--db", str(db), "--file", "apps/knmon-ui/src-tauri/Cargo.lock", "--json"],
+            [audit, "audit", "--no-fetch", "--db", str(db), "--file", str(directory / "vendor-upstream.Cargo.lock"), "--json"]]
 
 
 def validate_cargo_scope(cargo, database):
@@ -138,12 +153,30 @@ def validate_cargo_scope(cargo, database):
             cargo["lockfile"]["dependency-count"] == len(packages), "Cargo audit loaded an incomplete database or lockfile scope.")
 
 
+def combined_results(npm, cargo, vendor, database):
+    result = audit_results(npm, cargo)
+    validate_cargo_scope(cargo, database)
+    audited = audit_results(npm, vendor)
+    require(vendor["database"]["advisory-count"] == database["advisoryCount"] and audited["cargoDependencies"] == 1,
+            "Vendor upstream audit loaded an incomplete database or identity scope.")
+    manifest = verify_tauri_backport(ROOT)["manifest"]
+    package = manifest["package"]
+    for warning in audited["warnings"]:
+        require(warning["package"] == package["name"] and warning["version"] == package["upstreamVersion"],
+                "Vendor upstream warning has an unexpected package identity.")
+        result["warnings"].append({**warning, "version": package["localVersion"], "upstreamVersion": package["upstreamVersion"]})
+    result["vendorUpstreamAudits"] = [{"package": package["name"], "upstreamVersion": package["upstreamVersion"],
+                                       "localVersion": package["localVersion"], "archiveSha256": manifest["upstream"]["sha256"],
+                                       "cargoDependencies": audited["cargoDependencies"]}]
+    return result
+
+
 def verify_record(evidence, directory, db, current_db, now=None):
     require(type(evidence["schemaVersion"]) is int and evidence["schemaVersion"] == 1 and evidence["status"] == "passed", "Advisory audit did not pass.")
     observed = datetime.fromisoformat(evidence["observedAtUtc"])
     now = now or datetime.now(timezone.utc)
     require(observed.tzinfo is not None and -timedelta(minutes=5) <= now - observed <= timedelta(hours=24), "Advisory audit is stale or future-dated.")
-    require(evidence["sources"] == fingerprints(SOURCES) and evidence["producer"] == fingerprints(PRODUCERS), "Advisory source or producer fingerprints are stale.")
+    require(evidence["sources"] == source_fingerprints() and evidence["producer"] == fingerprints(PRODUCERS), "Advisory source or producer fingerprints are stale.")
     require(evidence["databaseBefore"] == evidence["databaseAfter"] == current_db, "Advisory database changed or is no longer current.")
     expected_artifacts = {label + extension for label in DB_LABELS for extension in (".log", ".command.json")}
     require(set(evidence["databaseArtifacts"]) == expected_artifacts, "Advisory database query evidence changed or is incomplete.")
@@ -161,7 +194,10 @@ def verify_record(evidence, directory, db, current_db, now=None):
                                   ("remote", ["git", "ls-remote", "--exit-code", DATABASE_URL, "refs/heads/main"]),
                                   ("checked-head", ["git", "-C", str(db), "rev-parse", "HEAD"])):
             require(decoded(raw_database[prefix + "-" + suffix + ".command.json"]) == {"command": arguments, "cwd": str(ROOT)}, "Advisory database query command differs.")
-    expected_commands = commands(evidence["tools"], db)
+    overlay = read_bytes(contained(directory, "vendor-upstream.Cargo.lock"))
+    require(overlay == vendor_upstream_lock() and hashlib.sha256(overlay).hexdigest() == evidence["vendorAuditLockSha256"],
+            "Vendor upstream audit input differs from the verified source origin.")
+    expected_commands = commands(evidence["tools"], db, directory)
     require(set(evidence["tools"]) == {"node", "npm", "cargoAudit"} and
             all(digest_file(Path(record["path"])) == record["sha256"] for record in evidence["tools"].values()), "Advisory tool identity changed.")
     require([step["label"] for step in evidence["steps"]] == list(LABELS), "Advisory audit command set is incomplete.")
@@ -176,10 +212,9 @@ def verify_record(evidence, directory, db, current_db, now=None):
     require(logs["node-version"].decode().strip() == "v" + read_json(ROOT / "toolchain.json")["node"], "Advisory audit Node baseline differs.")
     require(re.fullmatch(r"cargo-audit(?:-audit)? 0\.22\.2", logs["cargo-version"].decode().strip()), "Unsupported cargo-audit version.")
     cargo = decoded(logs["cargo-audit"])
-    result = audit_results(decoded(logs["npm-audit"]), cargo)
-    validate_cargo_scope(cargo, current_db)
+    result = combined_results(decoded(logs["npm-audit"]), cargo, decoded(logs["vendor-upstream-audit"]), current_db)
     require(result == evidence["result"], "Advisory summary differs from raw reports.")
-    require(evidence["sources"] == fingerprints(SOURCES) and evidence["producer"] == fingerprints(PRODUCERS), "Advisory inputs changed during verification.")
+    require(evidence["sources"] == source_fingerprints() and evidence["producer"] == fingerprints(PRODUCERS), "Advisory inputs changed during verification.")
     return {"observedAtUtc": evidence["observedAtUtc"], "databaseRevision": current_db["revision"], **result}
 
 
@@ -206,20 +241,24 @@ def main():
         return
     evidence = {"schemaVersion": 1, "status": "failed", "observedAtUtc": datetime.now(timezone.utc).isoformat(), "steps": [],
                 "scope": "Known npm and Cargo advisories; dated registry response and current official RustSec worktree; warnings retained.",
-                "sources": fingerprints(SOURCES), "producer": fingerprints(PRODUCERS)}
+                "sources": source_fingerprints(), "producer": fingerprints(PRODUCERS)}
     print("Advisory evidence: " + str(output), flush=True)
     try:
         evidence["tools"] = {name: {"path": str(path.resolve()), "sha256": digest_file(path.resolve())}
                              for name, path in (("node", args.node), ("npm", args.npm_cli), ("cargoAudit", args.cargo_audit))}
+        overlay = vendor_upstream_lock()
+        (output / "vendor-upstream.Cargo.lock").write_bytes(overlay)
+        evidence["vendorAuditLockSha256"] = hashlib.sha256(overlay).hexdigest()
         evidence["databaseBefore"] = current_database(db, output, "before-db")
-        for label, arguments in zip(LABELS, commands(evidence["tools"], db)):
+        for label, arguments in zip(LABELS, commands(evidence["tools"], db, output)):
             print("Advisory audit: " + label, flush=True)
             result = command(arguments, output, label)
             evidence["steps"].append({"label": label, "command": arguments, **result})
-        evidence["result"] = audit_results(read_json(output / "npm-audit.log"), read_json(output / "cargo-audit.log"))
+        evidence["result"] = combined_results(read_json(output / "npm-audit.log"), read_json(output / "cargo-audit.log"),
+                                               read_json(output / "vendor-upstream-audit.log"), evidence["databaseBefore"])
         evidence["databaseAfter"] = current_database(db, output, "after-db")
         evidence["databaseArtifacts"] = {label + extension: digest_file(output / (label + extension)) for label in DB_LABELS for extension in (".log", ".command.json")}
-        require(evidence["sources"] == fingerprints(SOURCES) and evidence["producer"] == fingerprints(PRODUCERS) and
+        require(evidence["sources"] == source_fingerprints() and evidence["producer"] == fingerprints(PRODUCERS) and
                 evidence["databaseBefore"] == evidence["databaseAfter"], "Advisory inputs changed during execution.")
         candidate = dict(evidence, status="passed")
         verify_record(candidate, output, db, evidence["databaseAfter"])

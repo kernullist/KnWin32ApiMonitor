@@ -112,6 +112,7 @@ async function observe(name)
       status: text(".statusbar"), stats: text(".trace-stats"), session: text(".session-strip"),
       selectedTarget: text(".process-row.selected"), output: text(".output-log"),
       eligibility: text(".eligibility-badge"), helperArchitecture: text(".target-action-grid"),
+      refreshEnabled: document.querySelector('button[title="Refresh process list"]')?.disabled === false,
       rows: [...document.querySelectorAll(".trace-virtual-row")].map(element =>
         [...element.querySelectorAll(":scope > span")].map(cell => cell.innerText)),
       filter: document.querySelector("#quick-api-filter")?.value ?? "" };
@@ -136,7 +137,9 @@ try
   await observe("idle");
   phase("idle");
   await delay(3000);
-  await click(button('button[title="Refresh process list"]'));
+  const refresh = 'button[title="Refresh process list"]';
+  await waitFor(`${button(refresh)}?.disabled === false`, "native target refresh enabled");
+  await click(button(refresh));
   const target = `[...document.querySelectorAll(".process-row")].find(element =>
     element.querySelector(".process-meta span")?.textContent === ${JSON.stringify(String(request.targetPid))} &&
     element.querySelector(".process-main small")?.textContent?.toLowerCase() === ${JSON.stringify(request.targetPath.toLowerCase())})`;

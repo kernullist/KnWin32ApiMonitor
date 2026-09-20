@@ -15,7 +15,7 @@ from source_archive import digest_file, inspect_archive, parse_manifest, require
 
 LABELS = ("preflight", "npm-ci", "frontend-build", "frontend-validation", "x64-native-build", "x64-ctest", "x86-native-build", "x86-ctest")
 PRODUCERS = ("rebuild_source.py", "source_archive.py", "owned_command.py")
-SOURCE_TREES = ("native", "apps/knmon-ui/src", "apps/knmon-ui/public", "crates/knmon-tauri/src", "tools", "generated", "samples/targets")
+SOURCE_TREES = ("native", "apps/knmon-ui/src", "apps/knmon-ui/public", "crates/knmon-tauri/src", "crates/third-party", "tools", "generated", "samples/targets")
 
 
 def read_bytes(path, limit=4 * 1024 * 1024):

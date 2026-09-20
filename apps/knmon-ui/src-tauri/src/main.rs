@@ -483,6 +483,81 @@ mod security_tests
 {
     use super::allowed_navigation;
 
+    #[test]
+    fn remote_url_patterns_follow_current_identifier_rules()
+    {
+        use tauri::utils::acl::RemoteUrlPattern;
+        for name in ["name123", "_", "$", "\u{d55c}", "\u{11f02}", "\u{11f02}_7",
+            "a\u{0301}", "a\u{200c}", "a\u{200d}"]
+        {
+            let pattern: RemoteUrlPattern = format!("https://api.example.com/:{name}").parse().unwrap();
+            assert!(pattern.test(&"https://api.example.com/value".parse().unwrap()));
+            assert!(!pattern.test(&"https://api.example.com/value/extra".parse().unwrap()));
+        }
+        for name in ["", "0name", "-name", "\u{0301}", "\u{200c}", "\u{200d}", "\u{1f600}"]
+        {
+            assert!(format!("https://api.example.com/:{name}").parse::<RemoteUrlPattern>().is_err());
+        }
+    }
+
+    #[test]
+    fn remote_url_patterns_preserve_component_boundaries()
+    {
+        use tauri::utils::acl::RemoteUrlPattern;
+        let pattern: RemoteUrlPattern = "https://api.example.com:443/v1/*".parse().unwrap();
+        for address in ["https://api.example.com/v1/", "https://API.EXAMPLE.COM/v1/item",
+            "https://api.example.com:443/v1/item?key=value#fragment"]
+        {
+            assert!(pattern.test(&address.parse().unwrap()), "{address}");
+        }
+        for address in ["http://api.example.com/v1/item", "https://api.example.com:8443/v1/item",
+            "https://api.example.com.evil/v1/item", "https://sub.api.example.com/v1/item",
+            "https://api.example.com@evil.example/v1/item", "https://api.example.com/v10/item",
+            "https://api.example.com/v1", "https://api.example.com/v1/../private",
+            "https://api.example.com/v1/%2e%2e/private"]
+        {
+            assert!(!pattern.test(&address.parse().unwrap()), "{address}");
+        }
+        // Tauri intentionally treats an omitted or root pathname as a wildcard.
+        let root: RemoteUrlPattern = "https://api.example.com/".parse().unwrap();
+        assert!(root.test(&"https://api.example.com/other/path".parse().unwrap()));
+        for malformed in ["/relative-only", "https://api.example.com/:",
+            "https://api.example.com/:name(", "https://api.example.com/{unclosed"]
+        {
+            assert!(malformed.parse::<RemoteUrlPattern>().is_err(), "{malformed}");
+        }
+    }
+
+    #[test]
+    fn framework_remote_fixture_restricts_url_and_window()
+    {
+        use tauri::ipc::Origin;
+        use tauri::utils::acl::resolved::Resolved;
+        let acl = serde_json::from_str(include_str!("../gen/schemas/acl-manifests.json")).unwrap();
+        let mut fixture: serde_json::Value = serde_json::from_str(include_str!("../gen/schemas/capabilities.json")).unwrap();
+        // Only this test grants remote access; shipping capabilities remain local-only.
+        fixture["default"]["local"] = serde_json::json!(false);
+        fixture["default"]["remote"] = serde_json::json!({"urls": ["https://api.example.com/v1/*"]});
+        let capabilities = serde_json::from_value(fixture).unwrap();
+        let resolved = Resolved::resolve(&acl, capabilities, tauri::utils::platform::Target::Windows).unwrap();
+        let authority = tauri::runtime_authority!(acl, resolved);
+        let command = "start_launch_monitor_session";
+        assert!(authority.resolve_access(command, "main", "main", &Origin::Local).is_none());
+        for (address, permitted) in [("https://api.example.com/v1/item", true),
+            ("https://api.example.com:443/v1/item?q=1", true), ("https://api.example.com/private", false),
+            ("https://api.example.com:8443/v1/item", false), ("http://api.example.com/v1/item", false),
+            ("https://api.example.com.evil/v1/item", false), ("https://api.example.com@evil.example/v1/item", false)]
+        {
+            let origin = Origin::Remote
+            {
+                url: address.parse().unwrap(),
+            };
+            assert_eq!(authority.resolve_access(command, "main", "main", &origin).is_some(), permitted, "{address}");
+            assert!(authority.resolve_access(command, "foreign", "foreign", &origin).is_none(), "{address}");
+            assert!(authority.resolve_access("plugin:shell|execute", "main", "main", &origin).is_none(), "{address}");
+        }
+    }
+
     #[cfg(windows)]
     #[test]
     fn desktop_process_enforces_control_flow_guard()

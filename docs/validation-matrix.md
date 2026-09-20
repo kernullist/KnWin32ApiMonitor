@@ -9,7 +9,7 @@ Windows 10/11 release or every API input.
 | Native compile/link | passed | passed | passed | passed |
 | Native CTest | 23/23 passed | 23/23 passed | 23/23 passed | 17 passed, 6 not started |
 | Desktop compile/link | test executable passed | test executable passed | application passed | application passed |
-| Desktop security tests | 3/3 passed | 3/3 passed | 3/3 passed | 3/3 passed |
+| Desktop security tests | prior 3/3 passed | prior 3/3 passed | 6/6 passed | 6/6 passed |
 | Desktop attach/filter/stop/export and Job resources | native tools used | native tools used | passed with Debug native tools | passed with Debug native tools |
 | Desktop PE hardening | passed | passed | passed | passed |
 | Rust backend with real helper | 18/18 passed | 18/18 passed | 18/18 with Debug and Release helpers | 18/18 with Debug helper; Release helper blocked before tests |
@@ -27,7 +27,7 @@ No.1 or lowest-overhead claim.
 The [desktop polling change](desktop-control-polling.md) passes 14 deterministic
 polling, terminal-tail and WOW64 regressions, the full UI validator suite, both
 Release desktop builds/security suites, and real attach/filter/stop/export on
-both architectures. The final UI runs exported 250/230 events, retained native
+both architectures. Those UI runs exported 250/230 events, retained native
 record totals through terminal draining and left both targets alive after stop.
 
 After the failure-state correction in `4e5a9df`, both native Release builds
@@ -60,6 +60,14 @@ separately with CMake. The desktop release security tests used `cargo test
 --release --locked --features tauri/custom-protocol` with each explicit target.
 This validates the bundled-protocol build configuration, CFG policy and command
 authority/navigation checks; it is not an end-to-end WebView interaction test.
+After the URLPattern backport, both Release suites execute six tests, adding
+Unicode identifier, URL component and remote-fixture authority regressions.
+The Debug desktop entries describe the earlier three-test dependency baseline;
+they are not a validation of the new backport.
+The post-backport desktop runs each export 250 native events, retain exact
+terminal totals with no recorded loss, leave the targets alive after stop,
+and close normally with all owned Jobs drained. Both retain 201 process-tree
+samples; the largest observed sampling gaps are 422 ms (x64) and 328 ms (x86).
 
 The [Release backend suite](backend-release-evidence.md) now includes the actual
 failed-target path. Missing the target's dynamic probe DLL previously left a
@@ -85,7 +93,7 @@ and export them, detach while the target survives, and exit normally. Raw Job
 samples include WebView children and separate target resources. The hidden-window
 scope and sampled working-set sums are not a foreground performance score.
 
-The current clean source archive from `9c0a253` was extracted without Git metadata and
+The prior clean source archive from `9c0a253` was extracted without Git metadata and
 rebuilt with the pinned Node/CMake/MSVC/SDK configuration. npm installation,
 frontend build/validation and both complete native Debug suites passed. The
 frozen reconstruction producer retained source, command, compiler and binary
@@ -104,10 +112,14 @@ build outputs preserved their recorded source, command, compiler, test and
 binary hashes. The unchanged archive and producer then passed in a fresh output
 directory. The failed attempt is not counted as a successful reconstruction.
 
-The current integrated report passes seven evidence scopes and retains ten
-incomplete scopes, with source reconstruction, Release backend execution,
-desktop interaction, dependency/advisory checks, typed ABI freshness and
-competitive semantics verified together. Native Release, broader platform and
-performance claims remain subject to the separate limits above.
+The URLPattern backport changes source inputs, so the prior clean archive is
+historical until a new shipped revision is reconstructed. The dependency graph
+and advisory evidence now remove the five reachable UNIC warnings while
+retaining two warnings outside the Windows graphs. Native Release, broader
+platform and performance claims remain subject to the separate limits above.
+The current integrated report has seven passed scopes, zero failed scopes and
+ten unverified scopes. Windows dependency maintenance now passes; current
+source reconstruction awaits the next clean archive. All failed attempts and
+their raw logs remain distinct from the successful evidence sets.
 See `source-build-contract.md` for reproduction and
 `technical-readiness.md` for the fail-closed artifact verification policy.

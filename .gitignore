@@ -77,3 +77,4 @@ exports/
 *.temp
 *.bak
 *.orig
+!/crates/third-party/tauri-utils/Cargo.toml.orig

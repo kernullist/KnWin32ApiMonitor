@@ -26,6 +26,21 @@ the advisory collections, rejects directory reparse points and compares the
 auditor's loaded advisory and package counts with the verified database and
 complete Cargo lockfile.
 
+Cargo-audit 0.22.2 skips local path packages. The Tauri backport therefore has
+an additional audit input containing its original registry name, version and
+archive checksum, derived from the independently verified vendor provenance.
+This one-package `vendor-upstream.Cargo.lock` is retained separately from the
+actual build lockfile. The sixth audit step scans it against the same complete
+RustSec database. Its bytes, hash, exact command and raw result are verified;
+rewriting its package version and recomputing the hash cannot pass.
+
+Inherited warnings retain the upstream version and map to the local
+`tauri-utils 2.9.2+knmon.1` graph identity. This keeps them visible to the Windows
+maintenance gate. An inherited vulnerability fails the audit. This scope covers
+the original published Rust source; the maintained URLPattern dependency is
+also present in the ordinary build-lock scan. It does not claim that registry
+advisories discover new defects introduced by a local patch.
+
 The result binds both dependency lockfiles/manifests, tool binaries, producer
 files, exact audit arguments, successful process exits and raw report hashes.
 Parsers consume the bytes whose hashes were checked. Warning rows remain in the
@@ -45,4 +60,7 @@ establish the absence of unknown vulnerabilities.
 Use `python tools/readiness/verify_advisory_audit.py build/advisory-evidence-ID`
 to test altered/stale reports, filtered findings, hidden advisory inputs and
 missing execution evidence. Synthetic fixtures remain separate from actual
-audit results.
+audit results. An executed private advisory fixture reproduces the local-source
+skip, detects the vulnerable original version through registry identity, and
+excludes a patched-version control. Additional controls exercise inherited
+warning mapping, incomplete vendor scope, suppression and altered audit inputs.

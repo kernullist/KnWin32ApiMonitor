@@ -22,13 +22,14 @@ producer with identical source inputs and dependency resolution produces the
 same BOM bytes. Raw npm timestamps and local Cargo paths are retained only in
 their separate evidence files, not copied into the BOM.
 
-The inventory currently contains 344 top-level components: 80 npm packages
-including the workspace roots, 261 distinct Rust packages across the two
-Windows target graphs, two vendored native libraries and one Windows platform
-requirement. Each Cargo target selects 259 packages; target-specific packages
-explain the larger union. The native libraries include 69 independently hashed
-source/license files. These counts are observations, not fixed acceptance
-thresholds.
+The inventory includes npm workspace roots, both Windows Rust graphs, two
+vendored native libraries and a Windows platform requirement. Target-specific
+packages explain why the union is larger than either Cargo graph. The native
+libraries include 69 independently hashed source/license files. Component
+counts are observations in each retained report, not acceptance thresholds.
+The 2026-09-20 backport inventory contains 339 components: 80 npm, 256 Rust,
+two native libraries and the Windows requirement; each Windows graph has 254
+packages.
 
 The verifier checks more than file hashes:
 
@@ -38,6 +39,13 @@ The verifier checks more than file hashes:
   manifests. Features, dependency kinds and target-specific edges are retained.
   Verification repeats current locked Cargo resolution so a consistently
   rewritten graph cannot silently omit a dependency.
+- Both Cargo graphs must resolve the exact local `tauri-utils 2.9.2+knmon.1`
+  backport. Its CycloneDX pedigree records the original registry archive and
+  upstream commit separately from the local source-tree hash. The pinned
+  archive independently reconstructs all 34 retained files; only the two Cargo
+  manifests differ from upstream. Registry substitution, another local path,
+  altered source/provenance and unlisted files fail verification. See the
+  [backport provenance and removal policy](../crates/third-party/README.md).
 - Every retained vendored file must appear in the checksum manifest. CMake
   enforces the same zstd file-set boundary before compilation; newly added
   files cannot bypass validation merely because the manifest omits them.
@@ -49,9 +57,14 @@ The verifier checks more than file hashes:
   `format` annotations are not asserted by Ajv; source/graph validation handles
   the identities, checksums and distribution URLs used by this producer.
 
-The adversarial command includes 18 negative controls, including a Cargo edge
+The adversarial command includes 23 negative controls, including a Cargo edge
 removed from raw metadata and all derived files with recomputed hashes, plus
-an actual CMake configure attempt with an unlisted zstd source file.
+an actual CMake configure attempt with an unlisted zstd source file. The added
+controls cover backport registry/version/path/node substitution and a
+consistently rehashed false upstream pedigree. Separately,
+`python tools/security/verify_tauri_backport.py` exercises 12 corrupted-input
+classes against both Python and Node consumers and reconstructs the backport
+offline through the actual CLI.
 
 This is a **pre-build source dependency inventory**. npm includes development
 and optional packages for other platforms. Rust includes build dependencies.
