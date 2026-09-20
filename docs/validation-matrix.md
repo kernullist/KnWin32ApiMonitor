@@ -85,20 +85,29 @@ and export them, detach while the target survives, and exit normally. Raw Job
 samples include WebView children and separate target resources. The hidden-window
 scope and sampled working-set sums are not a foreground performance score.
 
-The earlier clean source archive from `4e5a9df` was extracted without Git metadata and
+The current clean source archive from `9c0a253` was extracted without Git metadata and
 rebuilt with the pinned Node/CMake/MSVC/SDK configuration. npm installation,
 frontend build/validation and both complete native Debug suites passed. The
 frozen reconstruction producer retained source, command, compiler and binary
-hashes. The archive contains 763 entries and has SHA-256
-`76e86e5a680eea586b949c100a11ef1fa3ef2e29b602f4b79f1e54029a6bd29e`.
+hashes. The archive contains 765 source files plus its manifest (766 ZIP entries)
+and has SHA-256
+`38084e9e89ca14dfd540f82b11f1f0cb3823825cf37c1eb7e57d595d082d22e8`.
 Both architectures executed all 23 CTests, including the new failed-launch
-regression; the extracted-source WOW64 UI regressions also passed. Revalidation
-rejects altered command, compiler, binary, test and frontend records. The
-integrated report for that revision passed seven evidence scopes and retained ten incomplete
-scopes, with current source reconstruction, Release backend execution, desktop
-interaction, dependency/advisory checks, typed ABI freshness and competitive
-semantics verified together. The subsequent desktop polling and tail-retention
-changes require a fresh source reconstruction from their shipped revision before
-that gate can pass again; the earlier archive is historical evidence.
+regression; the extracted-source UI suite includes all 14 polling, terminal-tail
+and WOW64 regressions. All cases actually ran; none were skipped or disabled.
+Revalidation rejects 31 malformed or altered readiness/source-evidence cases,
+including command, compiler, binary, test and frontend records.
+
+The first attempt failed during linking with LNK1180 because the volume ran out
+of space. Its failed record and logs remain intact. NTFS compression of prior
+build outputs preserved their recorded source, command, compiler, test and
+binary hashes. The unchanged archive and producer then passed in a fresh output
+directory. The failed attempt is not counted as a successful reconstruction.
+
+The current integrated report passes seven evidence scopes and retains ten
+incomplete scopes, with source reconstruction, Release backend execution,
+desktop interaction, dependency/advisory checks, typed ABI freshness and
+competitive semantics verified together. Native Release, broader platform and
+performance claims remain subject to the separate limits above.
 See `source-build-contract.md` for reproduction and
 `technical-readiness.md` for the fail-closed artifact verification policy.
