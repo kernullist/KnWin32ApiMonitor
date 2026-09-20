@@ -21,6 +21,14 @@ The output includes a CycloneDX 1.7 `bom.cdx.json`, architecture-specific
 producer with identical source inputs and dependency resolution produces the
 same BOM bytes. Raw npm timestamps and local Cargo paths are retained only in
 their separate evidence files, not copied into the BOM.
+The npm emitter uses directory-derived display names for the source root and
+linked workspaces. The combined inventory takes their canonical names,
+including scopes, from the validated lockfile identities and checks every
+package URL plus the root identity. Renaming or extracting the checkout must
+not change the resulting BOM. See the
+[npm 11.19.0 emitter](https://github.com/npm/cli/blob/v11.19.0/lib/utils/sbom-cyclonedx.js).
+The Python entry point disables bytecode writes before importing local modules,
+so running it directly does not add cache files to an extracted source tree.
 
 The inventory includes npm workspace roots, both Windows Rust graphs, two
 vendored native libraries and a Windows platform requirement. Target-specific
@@ -57,7 +65,7 @@ The verifier checks more than file hashes:
   `format` annotations are not asserted by Ajv; source/graph validation handles
   the identities, checksums and distribution URLs used by this producer.
 
-The adversarial command includes 23 negative controls, including a Cargo edge
+The adversarial command includes 28 negative controls, including a Cargo edge
 removed from raw metadata and all derived files with recomputed hashes, plus
 an actual CMake configure attempt with an unlisted zstd source file. The added
 controls cover backport registry/version/path/node substitution and a
@@ -65,6 +73,10 @@ consistently rehashed false upstream pedigree. Separately,
 `python tools/security/verify_tauri_backport.py` exercises 12 corrupted-input
 classes against both Python and Node consumers and reconstructs the backport
 offline through the actual CLI.
+Two inventory positive controls compare renamed root/workspace labels and
+execute a copied CLI without a bytecode-suppression environment variable. Added
+negative cases reject npm root/package-URL substitutions, false registry names
+and a consistently rehashed noncanonical name in the final BOM.
 
 This is a **pre-build source dependency inventory**. npm includes development
 and optional packages for other platforms. Rust includes build dependencies.

@@ -1,4 +1,8 @@
 """Produce and verify a bounded, source-bound pre-build dependency inventory."""
+import sys
+
+sys.dont_write_bytecode = True
+
 import argparse
 import base64
 import copy
@@ -150,6 +154,9 @@ def npm_edges(lock):
 
 def npm_components(bom, lock):
     require(bom["bomFormat"] == "CycloneDX", "Invalid npm inventory format.")
+    root = lock["packages"][""]
+    require(bom["metadata"]["component"]["bom-ref"] == root["name"] + "@" + root["version"],
+            "npm inventory root differs from lockfile identity.")
     rows = [bom["metadata"]["component"], *bom["components"]]
     by_ref = {row["bom-ref"]: row for row in rows}
     require(len(by_ref) == len(rows), "Duplicate npm component identity.")
@@ -166,8 +173,13 @@ def npm_components(bom, lock):
     require(set(expected) == set(by_ref), "npm inventory does not match every lockfile package.")
     for key, entry in expected.items():
         row = by_ref[key]
+        name, version = key.rsplit("@", 1)
         require(row["version"] == entry["version"], "npm version differs from lockfile.")
+        require(row.get("purl") == "pkg:npm/" + quote(name, safe="/") + "@" + quote(version, safe=""),
+                "npm package URL differs from lockfile identity.")
+        require(isinstance(row.get("name"), str) and row["name"], "Invalid npm display name.")
         if "integrity" in entry:
+            require(row["name"] == name, "npm registry package name differs from lockfile identity.")
             hashes = []
             for integrity in entry["integrity"].split():
                 algorithm, value = integrity.split("-", 1)
@@ -179,6 +191,8 @@ def npm_components(bom, lock):
     output = []
     for key, original in sorted(by_ref.items()):
         row = copy.deepcopy(original)
+        # npm uses directory-derived labels for root and linked workspace nodes.
+        row["name"] = key.rsplit("@", 1)[0]
         row["bom-ref"] = "npm:" + key
         row.setdefault("properties", []).append(prop("inventoryScope", "npm lockfile; includes development and optional platforms"))
         output.append(row)
