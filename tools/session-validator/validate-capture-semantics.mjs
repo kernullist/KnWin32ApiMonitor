@@ -47,7 +47,7 @@ for (let index = 0; index < capture.capturedEvents.length; ++index)
     const parsedUtc = BigInt(Date.parse(event.timestampUtc)) * 10000n + 116444736000000000n + BigInt(fraction.slice(3));
     assert.equal(parsedUtc, utc);
     const live = plain(convert(event, saved.eventId, []));
-    for (const key of ["relativeTimeMs", "durationUs", "timeSource", "timing", "timestampUtc", "collectedAtUtc",
+    for (const key of ["recordSequence", "observation", "arguments", "relativeTimeMs", "durationUs", "timeSource", "timing", "timestampUtc", "collectedAtUtc",
         "rawReturnValue", "rawReturnBits", "rawLastErrorCode", "rawWinsockErrorCode", "errorDomain", "outcome",
         "errorValidity", "successPredicate", "winsockErrorSampled", "error"])
     {

@@ -218,7 +218,7 @@ export interface NativeTraceIndexEvent {
   sessionId: string;
   operationId: string;
   eventId: number;
-  recordSequence: number;
+  recordSequence: string | null;
   chunkSequence: number;
   batchSequence: number;
   targetProcessId: number;
@@ -305,7 +305,25 @@ export interface LaunchResult {
   auditEvents: AuditEvent[];
 }
 
+export interface ArgumentCapture {
+  phase: "entry" | "exit" | "none";
+  readStatus: "complete" | "null_pointer" | "unreadable" | "partial" | "not_captured";
+  byteCountSource: string;
+  requestedBytes: number;
+  capturedBytes: number;
+  limitBytes: number;
+  truncationReason: string;
+}
+
+export interface CaptureObservation {
+  eventPhase: "return";
+  nestedCalls: "suppressed";
+  exceptionEvents: "not_emitted";
+  completionCorrelation: "not_tracked";
+}
+
 export interface AgentApiArgument {
+  capture?: ArgumentCapture;
   index: number;
   type: string;
   name: string;
@@ -314,7 +332,7 @@ export interface AgentApiArgument {
   preCallValue: string;
   postCallValue: string;
   decodedValue: string;
-  decodeStatus: "decoded" | "partial" | "invalid_pointer" | "unreadable_memory" | "definition_missing" | "truncated";
+  decodeStatus: "decoded" | "partial" | "invalid_pointer" | "unreadable_memory" | "definition_missing" | "truncated" | "not_captured";
   decodeAlias?: string;
   captureTiming?: "pre" | "post" | "pre_post";
 }
@@ -330,6 +348,7 @@ export interface CaptureTiming {
 }
 
 export interface AgentApiCallEvent {
+  observation?: CaptureObservation;
   rawReturnValue?: string;
   rawReturnBits?: number;
   rawLastErrorCode?: number;
@@ -346,6 +365,7 @@ export interface AgentApiCallEvent {
   collectedAtUtc?: string;
   schemaVersion: string;
   messageType: "api_call";
+  recordSequence?: string;
   operationId: string;
   pid: number;
   tid: number;
@@ -554,6 +574,7 @@ export interface SessionInfo {
 }
 
 export interface KnMonArgument {
+  capture?: ArgumentCapture;
   index: number;
   type: string;
   name: string;
@@ -562,7 +583,7 @@ export interface KnMonArgument {
   postCallValue: string;
   rawValue: string;
   decodedValue: string;
-  decodeStatus: "decoded" | "partial" | "invalid_pointer" | "unreadable_memory" | "definition_missing" | "truncated";
+  decodeStatus: "decoded" | "partial" | "invalid_pointer" | "unreadable_memory" | "definition_missing" | "truncated" | "not_captured";
   decodeAlias?: string;
   captureTiming?: "pre" | "post" | "pre_post";
 }
@@ -574,6 +595,8 @@ export interface TraceError {
 }
 
 export interface TraceEvent {
+  observation?: CaptureObservation;
+  recordSequence?: string;
   rawReturnValue?: string;
   rawReturnBits?: number;
   rawLastErrorCode?: number;

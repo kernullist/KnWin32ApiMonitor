@@ -6,8 +6,11 @@
 #include <knmon/common/TransportWriter.h>
 #include <knmon/common/SessionLease.h>
 #include <knmon/common/ModuleGeneration.h>
+#include <knmon/common/NativeApiAbi.h>
+#include <knmon/common/IoObservation.h>
 
 #include <WinSock2.h>
+#include <mstcpip.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
 #include <knmon/common/ThreadErrorState.h>
@@ -41,6 +44,46 @@
 #include <winhttp.h>
 #include <wininet.h>
 #include <winternl.h>
+#include <commdlg.h>
+#include <dwmapi.h>
+#include <mmsystem.h>
+#include <mmreg.h>
+#include <msacm.h>
+#include <winspool.h>
+#include <uxtheme.h>
+#include <avrt.h>
+#include <mmddk.h>
+#include <d3d9.h>
+#include <dxgi1_6.h>
+#include <DbgHelp.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include <cfgmgr32.h>
+#include <dhcpsapi.h>
+#include <dhcpcsdk.h>
+#include <dciman.h>
+#include <fxsutility.h>
+#include <advpub.h>
+#include <Ratings.h>
+#include <sqlext.h>
+#include <Wscapi.h>
+#include <winldap.h>
+#include <snmp.h>
+#include <msi.h>
+#include <msiquery.h>
+#include <magnification.h>
+#include <UIAutomationCore.h>
+#include <UIAutomationCoreApi.h>
+#include <mswsock.h>
+#include <gdiplus.h>
+#include <Dhcpv6cSdk.h>
+#undef ASN_UNIVERSAL
+#undef ASN_APPLICATION
+#undef ASN_CONTEXT
+#undef ASN_PRIVATE
+#undef ASN_PRIMITIVE
+#undef ASN_CONSTRUCTOR
+#include <WinSnmp.h>
 
 #include <algorithm>
 #include <array>
@@ -184,7 +227,7 @@ using WindowsGetStringRawBufferFn = PCWSTR(WINAPI*)(HSTRING, UINT32*);
 using RevertToSelfFn = BOOL(WINAPI*)();
 using CommDlgExtendedErrorFn = DWORD(WINAPI*)();
 using DwmFlushFn = HRESULT(WINAPI*)();
-using AcmGetVersionFn = UINT(WINAPI*)();
+using AcmGetVersionFn = DWORD(WINAPI*)();
 using AuxGetNumDevsFn = UINT(WINAPI*)();
 using JoyGetNumDevsFn = UINT(WINAPI*)();
 using MidiInGetNumDevsFn = UINT(WINAPI*)();
@@ -208,7 +251,7 @@ using D3DPerfEndEventFn = INT(WINAPI*)();
 using D3DPerfGetStatusFn = DWORD(WINAPI*)();
 using D3DPerfQueryRepeatFrameFn = BOOL(WINAPI*)();
 using GetSymLoadErrorFn = DWORD(WINAPI*)();
-using ImagehlpApiVersionFn = PVOID(WINAPI*)();
+using ImagehlpApiVersionFn = LPAPI_VERSION(WINAPI*)();
 using RangeMapCreateFn = PVOID(WINAPI*)();
 using SymGetOptionsFn = DWORD(WINAPI*)();
 using GlEndFn = void(WINAPI*)();
@@ -225,9 +268,9 @@ using GlPopNameFn = void(WINAPI*)();
 using GlPushMatrixFn = void(WINAPI*)();
 using WglGetCurrentContextFn = HGLRC(WINAPI*)();
 using WglGetCurrentDCFn = HDC(WINAPI*)();
-using GluNewNurbsRendererFn = PVOID(WINAPI*)();
-using GluNewQuadricFn = PVOID(WINAPI*)();
-using GluNewTessFn = PVOID(WINAPI*)();
+using GluNewNurbsRendererFn = GLUnurbs*(WINAPI*)();
+using GluNewQuadricFn = GLUquadric*(WINAPI*)();
+using GluNewTessFn = GLUtesselator*(WINAPI*)();
 using AreFileApisANSIFn = BOOL(WINAPI*)();
 using CreateThreadpoolCleanupGroupFn = PTP_CLEANUP_GROUP(WINAPI*)();
 using CreateTimerQueueFn = HANDLE(WINAPI*)();
@@ -253,7 +296,7 @@ using GetProcessHeapFn = HANDLE(WINAPI*)();
 using GetSystemDefaultLangIDFn = LANGID(WINAPI*)();
 using GetSystemDefaultLCIDFn = LCID(WINAPI*)();
 using GetSystemDefaultUILanguageFn = LANGID(WINAPI*)();
-using GetSystemDEPPolicyFn = DWORD(WINAPI*)();
+using GetSystemDEPPolicyFn = DEP_SYSTEM_POLICY_TYPE(WINAPI*)();
 using GetThreadEnabledXStateFeaturesFn = DWORD64(WINAPI*)();
 using GetThreadErrorModeFn = DWORD(WINAPI*)();
 using GetThreadLocaleFn = LCID(WINAPI*)();
@@ -280,7 +323,7 @@ using DXGIDisableVBlankVirtualizationFn = HRESULT(WINAPI*)();
 using MagInitializeFn = BOOL(WINAPI*)();
 using MagUninitializeFn = BOOL(WINAPI*)();
 using MsiCloseAllHandlesFn = UINT(WINAPI*)();
-using MsiGetLastErrorRecordFn = UINT(WINAPI*)();
+using MsiGetLastErrorRecordFn = MSIHANDLE(WINAPI*)();
 using ODBCGetTryWaitValueFn = DWORD(WINAPI*)();
 using SnmpSvcGetUptimeFn = DWORD(WINAPI*)();
 using WinHttpCheckPlatformFn = BOOL(WINAPI*)();
@@ -304,8 +347,8 @@ using ImmDisableLegacyIMEFn = BOOL(WINAPI*)();
 using RatingInitFn = HRESULT(WINAPI*)();
 using UiaDisconnectAllProvidersFn = HRESULT(WINAPI*)();
 using WscRegisterForUserNotificationsFn = HRESULT(WINAPI*)();
-using SnmpCleanupFn = INT(WINAPI*)();
-using SnmpCleanupExFn = INT(WINAPI*)();
+using SnmpCleanupFn = SNMPAPI_STATUS(WINAPI*)();
+using SnmpCleanupExFn = SNMPAPI_STATUS(WINAPI*)();
 using GetModuleHandleWFn = HMODULE(WINAPI*)(LPCWSTR);
 using GetModuleHandleExWFn = BOOL(WINAPI*)(DWORD, LPCWSTR, HMODULE*);
 using GetModuleFileNameWFn = DWORD(WINAPI*)(HMODULE, LPWSTR, DWORD);
@@ -332,7 +375,7 @@ using LoadLibraryExWFn = HMODULE(WINAPI*)(LPCWSTR, HANDLE, DWORD);
 using LoadLibraryExAFn = HMODULE(WINAPI*)(LPCSTR, HANDLE, DWORD);
 using GetProcAddressFn = FARPROC(WINAPI*)(HMODULE, LPCSTR);
 using RegOpenKeyExWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR, DWORD, REGSAM, PHKEY);
-using RegCreateKeyExWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR, DWORD, LPWSTR, DWORD, REGSAM, const SECURITY_ATTRIBUTES*, PHKEY, LPDWORD);
+using RegCreateKeyExWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR, DWORD, LPWSTR, DWORD, REGSAM, LPSECURITY_ATTRIBUTES, PHKEY, LPDWORD);
 using RegQueryValueExWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR, LPDWORD, LPDWORD, LPBYTE, LPDWORD);
 using RegSetValueExWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR, DWORD, DWORD, const BYTE*, DWORD);
 using RegDeleteValueWFn = LSTATUS(WINAPI*)(HKEY, LPCWSTR);
@@ -365,25 +408,25 @@ using GetActiveWindowFn = HWND(WINAPI*)();
 using GetCaptureFn = HWND(WINAPI*)();
 using GetCaretBlinkTimeFn = UINT(WINAPI*)();
 using GetClipboardOwnerFn = HWND(WINAPI*)();
-using GetClipboardSequenceNumberFn = UINT(WINAPI*)();
+using GetClipboardSequenceNumberFn = DWORD(WINAPI*)();
 using GetClipboardViewerFn = HWND(WINAPI*)();
 using GetCursorFn = HCURSOR(WINAPI*)();
-using GetDialogBaseUnitsFn = INT(WINAPI*)();
+using GetDialogBaseUnitsFn = LONG(WINAPI*)();
 using GetDoubleClickTimeFn = UINT(WINAPI*)();
 using GetDpiForSystemFn = UINT(WINAPI*)();
 using GetFocusFn = HWND(WINAPI*)();
 using GetInputStateFn = BOOL(WINAPI*)();
 using GetKBCodePageFn = UINT(WINAPI*)();
-using GetMenuCheckMarkDimensionsFn = INT(WINAPI*)();
+using GetMenuCheckMarkDimensionsFn = LONG(WINAPI*)();
 using GetMessageExtraInfoFn = LPARAM(WINAPI*)();
-using GetMessagePosFn = UINT(WINAPI*)();
-using GetMessageTimeFn = INT(WINAPI*)();
+using GetMessagePosFn = DWORD(WINAPI*)();
+using GetMessageTimeFn = LONG(WINAPI*)();
 using GetOpenClipboardWindowFn = HWND(WINAPI*)();
 using GetProcessWindowStationFn = HWINSTA(WINAPI*)();
 using GetShellWindowFn = HWND(WINAPI*)();
 using GetThreadDpiAwarenessContextFn = DPI_AWARENESS_CONTEXT(WINAPI*)();
 using GetThreadDpiHostingBehaviorFn = DPI_HOSTING_BEHAVIOR(WINAPI*)();
-using GetUnpredictedMessagePosFn = UINT(WINAPI*)();
+using GetUnpredictedMessagePosFn = DWORD(WINAPI*)();
 using InSendMessageFn = BOOL(WINAPI*)();
 using IsMouseInPointerEnabledFn = BOOL(WINAPI*)();
 using IsProcessDPIAwareFn = BOOL(WINAPI*)();
@@ -429,7 +472,7 @@ using RpcBindingFreeFn = RPC_STATUS(RPC_ENTRY*)(RPC_BINDING_HANDLE*);
 using RpcBindingSetOptionFn = RPC_STATUS(RPC_ENTRY*)(RPC_BINDING_HANDLE, unsigned long, ULONG_PTR);
 using RpcMgmtEpEltInqDoneFn = RPC_STATUS(RPC_ENTRY*)(RPC_EP_INQ_HANDLE*);
 using UuidCreateFn = RPC_STATUS(RPC_ENTRY*)(UUID*);
-using UuidToStringWFn = RPC_STATUS(RPC_ENTRY*)(UUID*, RPC_WSTR*);
+using UuidToStringWFn = RPC_STATUS(RPC_ENTRY*)(const UUID*, RPC_WSTR*);
 using UuidFromStringWFn = RPC_STATUS(RPC_ENTRY*)(RPC_WSTR, UUID*);
 using IRpcGetCurrentCallHandleFn = PVOID(RPC_ENTRY*)();
 using IRpcGetExtendedErrorFn = RPC_STATUS(RPC_ENTRY*)();
@@ -471,8 +514,8 @@ using NtCreateFileFn = NTSTATUS(NTAPI*)(
     ULONG,
     PVOID,
     ULONG);
-using LdrLoadDllFn = NTSTATUS(NTAPI*)(PWSTR, ULONG, PUNICODE_STRING, PHANDLE);
-using LdrGetProcedureAddressFn = NTSTATUS(NTAPI*)(HMODULE, PANSI_STRING, ULONG, PVOID*);
+using LdrLoadDllFn = knmon::native_abi::LdrLoadDll;
+using LdrGetProcedureAddressFn = knmon::native_abi::LdrGetProcedureAddress;
 using RtlNtStatusToDosErrorFn = ULONG(WINAPI*)(NTSTATUS);
 
 HMODULE g_agentModule = nullptr;
@@ -6510,53 +6553,41 @@ void EmitCreateFileAEvent(
     });
 }
 
-void EmitReadFileEvent(
+void EmitFileIoEvent(
+    knmon::KnMonTransportApiId apiId,
     BOOL result,
     DWORD errorCode,
     const LARGE_INTEGER& start,
     const LARGE_INTEGER& end,
     HANDLE file,
-    LPVOID buffer,
-    DWORD bytesToRead,
-    DWORD bytesRead)
+    const void* buffer,
+    DWORD requestedBytes,
+    LPDWORD countAddress,
+    LPOVERLAPPED overlapped,
+    DWORD transferredBytes,
+    bool countCaptured,
+    const knmon::IoObservation& observation,
+    DWORD phase)
 {
     LARGE_INTEGER overheadStart = {};
     QueryPerformanceCounter(&overheadStart);
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
-        FillTransportCommon(record, knmon::KnMonTransportApiId::ReadFile, "kernel32.dll", start, end, errorCode);
+        FillTransportCommon(record, apiId, "kernel32.dll", start, end, errorCode);
         record->ReturnValue = result ? 1 : 0;
-        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
-        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(buffer));
-        record->Values32[0] = bytesToRead;
-        record->Values32[1] = bytesRead;
-        CopyBufferPreviewText(record->Text0, &record->Text0Length, sizeof(record->Text0), result ? buffer : nullptr, bytesRead);
-    });
-}
-
-void EmitWriteFileEvent(
-    BOOL result,
-    DWORD errorCode,
-    const LARGE_INTEGER& start,
-    const LARGE_INTEGER& end,
-    HANDLE file,
-    LPCVOID buffer,
-    DWORD bytesToWrite,
-    DWORD bytesWritten)
-{
-    LARGE_INTEGER overheadStart = {};
-    QueryPerformanceCounter(&overheadStart);
-    EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
-    {
-        FillTransportCommon(record, knmon::KnMonTransportApiId::WriteFile, "kernel32.dll", start, end, errorCode);
-        record->ReturnValue = result ? 1 : 0;
-        record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
-        record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(buffer));
-        record->Values32[0] = bytesToWrite;
-        record->Values32[1] = bytesWritten;
-        // Only preview the caller buffer after a successful write; a rejected
-        // buffer was never consumed and may not be readable.
-        CopyBufferPreviewText(record->Text0, &record->Text0Length, sizeof(record->Text0), result ? buffer : nullptr, result ? bytesWritten : 0);
+        record->Values64[0] = reinterpret_cast<std::uintptr_t>(file);
+        record->Values64[1] = reinterpret_cast<std::uintptr_t>(buffer);
+        record->Values64[2] = reinterpret_cast<std::uintptr_t>(countAddress);
+        record->Values64[3] = reinterpret_cast<std::uintptr_t>(overlapped);
+        record->Values32[0] = requestedBytes;
+        record->Values32[1] = transferredBytes;
+        record->Values32[2] = countCaptured ? 1 : 0;
+        record->Values32[3] = observation.Requested;
+        record->Values32[4] = observation.Captured;
+        record->Values32[5] = static_cast<DWORD>(observation.Status);
+        record->Values32[6] = phase;
+        record->Values32[7] = knmon::IoObservation::Limit;
+        CopyAsciiText(record->Text0, &record->Text0Length, sizeof(record->Text0), observation.Text);
     });
 }
 
@@ -7804,9 +7835,9 @@ void EmitLdrLoadDllEvent(
     DWORD errorCode,
     const LARGE_INTEGER& start,
     const LARGE_INTEGER& end,
-    PWSTR pathToFile,
-    ULONG flags,
-    PUNICODE_STRING moduleFileName,
+    PCWSTR pathToFile,
+    PULONG flags,
+    const UNICODE_STRING* moduleFileName,
     PHANDLE moduleHandle)
 {
     LARGE_INTEGER overheadStart = {};
@@ -7815,14 +7846,19 @@ void EmitLdrLoadDllEvent(
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::LdrLoadDll, "ntdll.dll", start, end, errorCode);
         record->ReturnCode = static_cast<std::uint32_t>(status);
-        record->Values32[0] = flags;
+        record->Values64[2] = reinterpret_cast<std::uintptr_t>(flags);
+        record->Values64[3] = reinterpret_cast<std::uintptr_t>(pathToFile);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(moduleHandle));
         HANDLE loadedModule = nullptr;
         if (NT_SUCCESS(status) && ReadCurrentProcessValue(moduleHandle, &loadedModule))
         {
             record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(loadedModule));
         }
-        CopyWideText(record->Text0, &record->Text0Length, sizeof(record->Text0), pathToFile);
+        // A tagged loader path is a flag value, not a string address.
+        if ((reinterpret_cast<std::uintptr_t>(pathToFile) & 1) == 0)
+        {
+            CopyWideText(record->Text0, &record->Text0Length, sizeof(record->Text0), pathToFile);
+        }
         record->Values32[1] = CopyUnicodeStringText(record->Text1, &record->Text1Length, sizeof(record->Text1), moduleFileName);
     });
 }
@@ -7867,8 +7903,8 @@ void EmitLdrGetProcedureAddressEvent(
     DWORD errorCode,
     const LARGE_INTEGER& start,
     const LARGE_INTEGER& end,
-    HMODULE module,
-    PANSI_STRING functionName,
+    PVOID module,
+    const ANSI_STRING* functionName,
     ULONG ordinal,
     PVOID* functionAddress)
 {
@@ -10024,7 +10060,7 @@ void EmitUuidToStringWEvent(
     RPC_STATUS result,
     const LARGE_INTEGER& start,
     const LARGE_INTEGER& end,
-    UUID* uuid,
+    const UUID* uuid,
     RPC_WSTR* stringUuid)
 {
     LARGE_INTEGER overheadStart = {};
@@ -10832,7 +10868,7 @@ UINT32 WINAPI HookedWindowsGetStringLen(HSTRING string);
 BOOL WINAPI HookedRevertToSelf();
 DWORD WINAPI HookedCommDlgExtendedError();
 HRESULT WINAPI HookedDwmFlush();
-UINT WINAPI HookedAcmGetVersion();
+DWORD WINAPI HookedAcmGetVersion();
 UINT WINAPI HookedAuxGetNumDevs();
 UINT WINAPI HookedJoyGetNumDevs();
 UINT WINAPI HookedMidiInGetNumDevs();
@@ -10856,7 +10892,7 @@ INT WINAPI HookedD3DPerfEndEvent();
 DWORD WINAPI HookedD3DPerfGetStatus();
 BOOL WINAPI HookedD3DPerfQueryRepeatFrame();
 DWORD WINAPI HookedGetSymLoadError();
-PVOID WINAPI HookedImagehlpApiVersion();
+LPAPI_VERSION WINAPI HookedImagehlpApiVersion();
 PVOID WINAPI HookedRangeMapCreate();
 DWORD WINAPI HookedSymGetOptions();
 void WINAPI HookedGlEnd();
@@ -10873,9 +10909,9 @@ void WINAPI HookedGlPopName();
 void WINAPI HookedGlPushMatrix();
 HGLRC WINAPI HookedWglGetCurrentContext();
 HDC WINAPI HookedWglGetCurrentDC();
-PVOID WINAPI HookedGluNewNurbsRenderer();
-PVOID WINAPI HookedGluNewQuadric();
-PVOID WINAPI HookedGluNewTess();
+GLUnurbs* WINAPI HookedGluNewNurbsRenderer();
+GLUquadric* WINAPI HookedGluNewQuadric();
+GLUtesselator* WINAPI HookedGluNewTess();
 BOOL WINAPI HookedAreFileApisANSI();
 PTP_CLEANUP_GROUP WINAPI HookedCreateThreadpoolCleanupGroup();
 HANDLE WINAPI HookedCreateTimerQueue();
@@ -10901,7 +10937,7 @@ HANDLE WINAPI HookedGetProcessHeap();
 LANGID WINAPI HookedGetSystemDefaultLangID();
 LCID WINAPI HookedGetSystemDefaultLCID();
 LANGID WINAPI HookedGetSystemDefaultUILanguage();
-DWORD WINAPI HookedGetSystemDEPPolicy();
+DEP_SYSTEM_POLICY_TYPE WINAPI HookedGetSystemDEPPolicy();
 DWORD64 WINAPI HookedGetThreadEnabledXStateFeatures();
 DWORD WINAPI HookedGetThreadErrorMode();
 LCID WINAPI HookedGetThreadLocale();
@@ -10928,7 +10964,7 @@ HRESULT WINAPI HookedDXGIDisableVBlankVirtualization();
 BOOL WINAPI HookedMagInitialize();
 BOOL WINAPI HookedMagUninitialize();
 UINT WINAPI HookedMsiCloseAllHandles();
-UINT WINAPI HookedMsiGetLastErrorRecord();
+MSIHANDLE WINAPI HookedMsiGetLastErrorRecord();
 DWORD WINAPI HookedODBCGetTryWaitValue();
 DWORD WINAPI HookedSnmpSvcGetUptime();
 BOOL WINAPI HookedWinHttpCheckPlatform();
@@ -10952,8 +10988,8 @@ BOOL WINAPI HookedImmDisableLegacyIME();
 HRESULT WINAPI HookedRatingInit();
 HRESULT WINAPI HookedUiaDisconnectAllProviders();
 HRESULT WINAPI HookedWscRegisterForUserNotifications();
-INT WINAPI HookedSnmpCleanup();
-INT WINAPI HookedSnmpCleanupEx();
+SNMPAPI_STATUS WINAPI HookedSnmpCleanup();
+SNMPAPI_STATUS WINAPI HookedSnmpCleanupEx();
 HANDLE WINAPI HookedCreateThread(LPSECURITY_ATTRIBUTES threadAttributes, SIZE_T stackSize, LPTHREAD_START_ROUTINE startAddress, LPVOID parameter, DWORD creationFlags, LPDWORD threadId);
 HANDLE WINAPI HookedOpenThread(DWORD desiredAccess, BOOL inheritHandle, DWORD threadId);
 DWORD WINAPI HookedWaitForSingleObject(HANDLE handle, DWORD milliseconds);
@@ -10980,7 +11016,7 @@ HMODULE WINAPI HookedLoadLibraryExW(LPCWSTR fileName, HANDLE file, DWORD flags);
 HMODULE WINAPI HookedLoadLibraryExA(LPCSTR fileName, HANDLE file, DWORD flags);
 FARPROC WINAPI HookedGetProcAddress(HMODULE module, LPCSTR procName);
 LSTATUS WINAPI HookedRegOpenKeyExW(HKEY key, LPCWSTR subKey, DWORD options, REGSAM desiredAccess, PHKEY resultKey);
-LSTATUS WINAPI HookedRegCreateKeyExW(HKEY key, LPCWSTR subKey, DWORD reserved, LPWSTR keyClass, DWORD options, REGSAM desiredAccess, const SECURITY_ATTRIBUTES* securityAttributes, PHKEY resultKey, LPDWORD disposition);
+LSTATUS WINAPI HookedRegCreateKeyExW(HKEY key, LPCWSTR subKey, DWORD reserved, LPWSTR keyClass, DWORD options, REGSAM desiredAccess, LPSECURITY_ATTRIBUTES securityAttributes, PHKEY resultKey, LPDWORD disposition);
 LSTATUS WINAPI HookedRegQueryValueExW(HKEY key, LPCWSTR valueName, LPDWORD reserved, LPDWORD valueType, LPBYTE data, LPDWORD dataBytes);
 LSTATUS WINAPI HookedRegSetValueExW(HKEY key, LPCWSTR valueName, DWORD reserved, DWORD valueType, const BYTE* data, DWORD dataBytes);
 LSTATUS WINAPI HookedRegDeleteValueW(HKEY key, LPCWSTR valueName);
@@ -11013,25 +11049,25 @@ HWND WINAPI HookedGetActiveWindow();
 HWND WINAPI HookedGetCapture();
 UINT WINAPI HookedGetCaretBlinkTime();
 HWND WINAPI HookedGetClipboardOwner();
-UINT WINAPI HookedGetClipboardSequenceNumber();
+DWORD WINAPI HookedGetClipboardSequenceNumber();
 HWND WINAPI HookedGetClipboardViewer();
 HCURSOR WINAPI HookedGetCursor();
-INT WINAPI HookedGetDialogBaseUnits();
+LONG WINAPI HookedGetDialogBaseUnits();
 UINT WINAPI HookedGetDoubleClickTime();
 UINT WINAPI HookedGetDpiForSystem();
 HWND WINAPI HookedGetFocus();
 BOOL WINAPI HookedGetInputState();
 UINT WINAPI HookedGetKBCodePage();
-INT WINAPI HookedGetMenuCheckMarkDimensions();
+LONG WINAPI HookedGetMenuCheckMarkDimensions();
 LPARAM WINAPI HookedGetMessageExtraInfo();
-UINT WINAPI HookedGetMessagePos();
-INT WINAPI HookedGetMessageTime();
+DWORD WINAPI HookedGetMessagePos();
+LONG WINAPI HookedGetMessageTime();
 HWND WINAPI HookedGetOpenClipboardWindow();
 HWINSTA WINAPI HookedGetProcessWindowStation();
 HWND WINAPI HookedGetShellWindow();
 DPI_AWARENESS_CONTEXT WINAPI HookedGetThreadDpiAwarenessContext();
 DPI_HOSTING_BEHAVIOR WINAPI HookedGetThreadDpiHostingBehavior();
-UINT WINAPI HookedGetUnpredictedMessagePos();
+DWORD WINAPI HookedGetUnpredictedMessagePos();
 BOOL WINAPI HookedInSendMessage();
 BOOL WINAPI HookedIsMouseInPointerEnabled();
 BOOL WINAPI HookedIsProcessDPIAware();
@@ -11077,7 +11113,7 @@ RPC_STATUS RPC_ENTRY HookedRpcBindingFree(RPC_BINDING_HANDLE* binding);
 RPC_STATUS RPC_ENTRY HookedRpcBindingSetOption(RPC_BINDING_HANDLE binding, unsigned long option, ULONG_PTR optionValue);
 RPC_STATUS RPC_ENTRY HookedRpcMgmtEpEltInqDone(RPC_EP_INQ_HANDLE* inquiryContext);
 RPC_STATUS RPC_ENTRY HookedUuidCreate(UUID* uuid);
-RPC_STATUS RPC_ENTRY HookedUuidToStringW(UUID* uuid, RPC_WSTR* stringUuid);
+RPC_STATUS RPC_ENTRY HookedUuidToStringW(const UUID* uuid, RPC_WSTR* stringUuid);
 RPC_STATUS RPC_ENTRY HookedUuidFromStringW(RPC_WSTR stringUuid, UUID* uuid);
 PVOID RPC_ENTRY HookedIRpcGetCurrentCallHandle();
 RPC_STATUS RPC_ENTRY HookedIRpcGetExtendedError();
@@ -11108,10 +11144,11 @@ int WINAPI HookedGetAddrInfo(PCSTR nodeName, PCSTR serviceName, const ADDRINFOA*
 void WINAPI HookedFreeAddrInfo(PADDRINFOA addrInfo);
 int WINAPI HookedWSAGetLastError();
 NTSTATUS NTAPI HookedNtCreateFile(PHANDLE fileHandle, ACCESS_MASK desiredAccess, POBJECT_ATTRIBUTES objectAttributes, PIO_STATUS_BLOCK ioStatusBlock, PLARGE_INTEGER allocationSize, ULONG fileAttributes, ULONG shareAccess, ULONG createDisposition, ULONG createOptions, PVOID eaBuffer, ULONG eaLength);
-NTSTATUS NTAPI HookedLdrLoadDll(PWSTR pathToFile, ULONG flags, PUNICODE_STRING moduleFileName, PHANDLE moduleHandle);
-NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functionName, ULONG ordinal, PVOID* functionAddress);
+NTSTATUS NTAPI HookedLdrLoadDll(PCWSTR pathToFile, PULONG flags, const UNICODE_STRING* moduleFileName, PHANDLE moduleHandle);
+NTSTATUS NTAPI HookedLdrGetProcedureAddress(PVOID module, const ANSI_STRING* functionName, ULONG ordinal, PVOID* functionAddress);
 
 #include "GeneratedAgentHooks.inc"
+#include "GeneratedSdkAbiChecks.inc"
 
 std::uint16_t ModuleId(const char* moduleName)
 {
@@ -12172,7 +12209,7 @@ std::string CaptureResolverProcName(LPCSTR procName, bool ordinal)
     return result;
 }
 
-std::string CaptureResolverAnsiStringName(PANSI_STRING functionName)
+std::string CaptureResolverAnsiStringName(const ANSI_STRING* functionName)
 {
     std::string result;
 
@@ -12899,11 +12936,15 @@ BOOL WINAPI HookedReadFile(HANDLE file, LPVOID buffer, DWORD bytesToRead, LPDWOR
     QueryPerformanceCounter(&end);
 
     DWORD actualBytes = 0;
-    ReadCurrentProcessValue(bytesRead, &actualBytes);
+    const bool countCaptured = result && overlapped == nullptr &&
+        ReadCurrentProcessValue(bytesRead, &actualBytes) && actualBytes <= bytesToRead;
+    const auto observation = countCaptured ? knmon::CaptureIoBuffer(buffer, actualBytes) : knmon::IoObservation{};
     const DWORD eventError = result ? 0 : lastError;
     if (HooksEnabled())
     {
-        EmitReadFileEvent(result, eventError, start, end, file, buffer, bytesToRead, actualBytes);
+        EmitFileIoEvent(knmon::KnMonTransportApiId::ReadFile, result, eventError, start, end,
+            file, buffer, bytesToRead, bytesRead, overlapped, countCaptured ? actualBytes : 0,
+            countCaptured, observation, countCaptured ? 2 : 0);
     }
 
     SetLastError(lastError);
@@ -12924,6 +12965,7 @@ BOOL WINAPI HookedWriteFile(HANDLE file, LPCVOID buffer, DWORD bytesToWrite, LPD
     }
 
     HookReentryGuard guard;
+    const auto observation = knmon::CaptureIoBuffer(buffer, bytesToWrite);
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
@@ -12935,11 +12977,14 @@ BOOL WINAPI HookedWriteFile(HANDLE file, LPCVOID buffer, DWORD bytesToWrite, LPD
     QueryPerformanceCounter(&end);
 
     DWORD actualBytes = 0;
-    ReadCurrentProcessValue(bytesWritten, &actualBytes);
+    const bool countCaptured = result && overlapped == nullptr &&
+        ReadCurrentProcessValue(bytesWritten, &actualBytes) && actualBytes <= bytesToWrite;
     const DWORD eventError = result ? 0 : lastError;
     if (HooksEnabled())
     {
-        EmitWriteFileEvent(result, eventError, start, end, file, buffer, bytesToWrite, actualBytes);
+        EmitFileIoEvent(knmon::KnMonTransportApiId::WriteFile, result, eventError, start, end,
+            file, buffer, bytesToWrite, bytesWritten, overlapped, countCaptured ? actualBytes : 0,
+            countCaptured, observation, 1);
     }
 
     SetLastError(lastError);
@@ -14333,7 +14378,7 @@ HRESULT WINAPI HookedDwmFlush()
     return InvokeTier2ReturnOnlyHResultHook(g_originalDwmFlush, Metadata);
 }
 
-UINT WINAPI HookedAcmGetVersion()
+DWORD WINAPI HookedAcmGetVersion()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
         "msacm32.dll",
@@ -14345,7 +14390,7 @@ UINT WINAPI HookedAcmGetVersion()
         GenericReturnFormat::UInt32
     };
 
-    return InvokeTier2ReturnOnlyHook(g_originalAcmGetVersion, static_cast<UINT>(0), Metadata);
+    return InvokeTier2ReturnOnlyHook(g_originalAcmGetVersion, static_cast<DWORD>(0), Metadata);
 }
 
 UINT WINAPI HookedAuxGetNumDevs()
@@ -14768,7 +14813,7 @@ HWND WINAPI HookedGetClipboardOwner()
     return InvokeTier2ReturnOnlyHook(g_originalGetClipboardOwner, static_cast<HWND>(nullptr), Metadata);
 }
 
-UINT WINAPI HookedGetClipboardSequenceNumber()
+DWORD WINAPI HookedGetClipboardSequenceNumber()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
         "user32.dll",
@@ -14780,7 +14825,7 @@ UINT WINAPI HookedGetClipboardSequenceNumber()
         GenericReturnFormat::UInt32
     };
 
-    return InvokeTier2ReturnOnlyHook(g_originalGetClipboardSequenceNumber, static_cast<UINT>(0), Metadata);
+    return InvokeTier2ReturnOnlyHook(g_originalGetClipboardSequenceNumber, static_cast<DWORD>(0), Metadata);
 }
 
 HWND WINAPI HookedGetClipboardViewer()
@@ -14813,7 +14858,7 @@ HCURSOR WINAPI HookedGetCursor()
     return InvokeTier2ReturnOnlyHook(g_originalGetCursor, static_cast<HCURSOR>(nullptr), Metadata);
 }
 
-INT WINAPI HookedGetDialogBaseUnits()
+LONG WINAPI HookedGetDialogBaseUnits()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
         "user32.dll",
@@ -14825,7 +14870,7 @@ INT WINAPI HookedGetDialogBaseUnits()
         GenericReturnFormat::UInt32
     };
 
-    return InvokeTier2ReturnOnlyHook(g_originalGetDialogBaseUnits, static_cast<INT>(0), Metadata);
+    return InvokeTier2ReturnOnlyHook(g_originalGetDialogBaseUnits, static_cast<LONG>(0), Metadata);
 }
 
 UINT WINAPI HookedGetDoubleClickTime()
@@ -14903,7 +14948,7 @@ UINT WINAPI HookedGetKBCodePage()
     return InvokeTier2ReturnOnlyHook(g_originalGetKBCodePage, static_cast<UINT>(0), Metadata);
 }
 
-INT WINAPI HookedGetMenuCheckMarkDimensions()
+LONG WINAPI HookedGetMenuCheckMarkDimensions()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
         "user32.dll",
@@ -14915,7 +14960,7 @@ INT WINAPI HookedGetMenuCheckMarkDimensions()
         GenericReturnFormat::UInt32
     };
 
-    return InvokeTier2ReturnOnlyHook(g_originalGetMenuCheckMarkDimensions, static_cast<INT>(0), Metadata);
+    return InvokeTier2ReturnOnlyHook(g_originalGetMenuCheckMarkDimensions, static_cast<LONG>(0), Metadata);
 }
 
 LPARAM WINAPI HookedGetMessageExtraInfo()
@@ -14933,7 +14978,7 @@ LPARAM WINAPI HookedGetMessageExtraInfo()
     return InvokeTier2ReturnOnlyHook(g_originalGetMessageExtraInfo, static_cast<LPARAM>(0), Metadata);
 }
 
-UINT WINAPI HookedGetMessagePos()
+DWORD WINAPI HookedGetMessagePos()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
         "user32.dll",
@@ -14945,10 +14990,10 @@ UINT WINAPI HookedGetMessagePos()
         GenericReturnFormat::UInt32
     };
 
-    return InvokeTier2ReturnOnlyHook(g_originalGetMessagePos, static_cast<UINT>(0), Metadata);
+    return InvokeTier2ReturnOnlyHook(g_originalGetMessagePos, static_cast<DWORD>(0), Metadata);
 }
 
-INT WINAPI HookedGetMessageTime()
+LONG WINAPI HookedGetMessageTime()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
         "user32.dll",
@@ -14960,7 +15005,7 @@ INT WINAPI HookedGetMessageTime()
         GenericReturnFormat::UInt32
     };
 
-    return InvokeTier2ReturnOnlyHook(g_originalGetMessageTime, static_cast<INT>(0), Metadata);
+    return InvokeTier2ReturnOnlyHook(g_originalGetMessageTime, static_cast<LONG>(0), Metadata);
 }
 
 HWND WINAPI HookedGetOpenClipboardWindow()
@@ -15038,7 +15083,7 @@ DPI_HOSTING_BEHAVIOR WINAPI HookedGetThreadDpiHostingBehavior()
     return InvokeTier2ReturnOnlyHook(g_originalGetThreadDpiHostingBehavior, static_cast<DPI_HOSTING_BEHAVIOR>(0), Metadata);
 }
 
-UINT WINAPI HookedGetUnpredictedMessagePos()
+DWORD WINAPI HookedGetUnpredictedMessagePos()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
         "user32.dll",
@@ -15050,7 +15095,7 @@ UINT WINAPI HookedGetUnpredictedMessagePos()
         GenericReturnFormat::UInt32
     };
 
-    return InvokeTier2ReturnOnlyHook(g_originalGetUnpredictedMessagePos, static_cast<UINT>(0), Metadata);
+    return InvokeTier2ReturnOnlyHook(g_originalGetUnpredictedMessagePos, static_cast<DWORD>(0), Metadata);
 }
 
 BOOL WINAPI HookedInSendMessage()
@@ -15173,7 +15218,7 @@ DWORD WINAPI HookedGetSymLoadError()
     return InvokeTier2ReturnOnlyHook(g_originalGetSymLoadError, static_cast<DWORD>(0), Metadata);
 }
 
-PVOID WINAPI HookedImagehlpApiVersion()
+LPAPI_VERSION WINAPI HookedImagehlpApiVersion()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
         "dbghelp.dll",
@@ -15185,7 +15230,7 @@ PVOID WINAPI HookedImagehlpApiVersion()
         GenericReturnFormat::Pointer
     };
 
-    return InvokeTier2ReturnOnlyHook(g_originalImagehlpApiVersion, static_cast<PVOID>(nullptr), Metadata);
+    return InvokeTier2ReturnOnlyHook(g_originalImagehlpApiVersion, static_cast<LPAPI_VERSION>(nullptr), Metadata);
 }
 
 PVOID WINAPI HookedRangeMapCreate()
@@ -15428,7 +15473,7 @@ HDC WINAPI HookedWglGetCurrentDC()
     return InvokeTier2ReturnOnlyHook(g_originalWglGetCurrentDC, static_cast<HDC>(nullptr), Metadata);
 }
 
-PVOID WINAPI HookedGluNewNurbsRenderer()
+GLUnurbs* WINAPI HookedGluNewNurbsRenderer()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
         "glu32.dll",
@@ -15440,10 +15485,10 @@ PVOID WINAPI HookedGluNewNurbsRenderer()
         GenericReturnFormat::Pointer
     };
 
-    return InvokeTier2ReturnOnlyHook(g_originalGluNewNurbsRenderer, static_cast<PVOID>(nullptr), Metadata);
+    return InvokeTier2ReturnOnlyHook(g_originalGluNewNurbsRenderer, static_cast<GLUnurbs*>(nullptr), Metadata);
 }
 
-PVOID WINAPI HookedGluNewQuadric()
+GLUquadric* WINAPI HookedGluNewQuadric()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
         "glu32.dll",
@@ -15455,10 +15500,10 @@ PVOID WINAPI HookedGluNewQuadric()
         GenericReturnFormat::Pointer
     };
 
-    return InvokeTier2ReturnOnlyHook(g_originalGluNewQuadric, static_cast<PVOID>(nullptr), Metadata);
+    return InvokeTier2ReturnOnlyHook(g_originalGluNewQuadric, static_cast<GLUquadric*>(nullptr), Metadata);
 }
 
-PVOID WINAPI HookedGluNewTess()
+GLUtesselator* WINAPI HookedGluNewTess()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
         "glu32.dll",
@@ -15470,7 +15515,7 @@ PVOID WINAPI HookedGluNewTess()
         GenericReturnFormat::Pointer
     };
 
-    return InvokeTier2ReturnOnlyHook(g_originalGluNewTess, static_cast<PVOID>(nullptr), Metadata);
+    return InvokeTier2ReturnOnlyHook(g_originalGluNewTess, static_cast<GLUtesselator*>(nullptr), Metadata);
 }
 
 BOOL WINAPI HookedAreFileApisANSI()
@@ -15848,7 +15893,7 @@ LANGID WINAPI HookedGetSystemDefaultUILanguage()
     return InvokeTier2ReturnOnlyHook(g_originalGetSystemDefaultUILanguage, static_cast<LANGID>(0), Metadata);
 }
 
-DWORD WINAPI HookedGetSystemDEPPolicy()
+DEP_SYSTEM_POLICY_TYPE WINAPI HookedGetSystemDEPPolicy()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
         "kernel32.dll",
@@ -15860,7 +15905,7 @@ DWORD WINAPI HookedGetSystemDEPPolicy()
         GenericReturnFormat::UInt32
     };
 
-    return InvokeTier2ReturnOnlyHook(g_originalGetSystemDEPPolicy, static_cast<DWORD>(0), Metadata);
+    return InvokeTier2ReturnOnlyHook(g_originalGetSystemDEPPolicy, static_cast<DEP_SYSTEM_POLICY_TYPE>(0), Metadata);
 }
 
 DWORD64 WINAPI HookedGetThreadEnabledXStateFeatures()
@@ -16253,7 +16298,7 @@ UINT WINAPI HookedMsiCloseAllHandles()
     return InvokeTier2ReturnOnlyHook(g_originalMsiCloseAllHandles, static_cast<UINT>(0), Metadata);
 }
 
-UINT WINAPI HookedMsiGetLastErrorRecord()
+MSIHANDLE WINAPI HookedMsiGetLastErrorRecord()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
         "msi.dll",
@@ -16265,7 +16310,7 @@ UINT WINAPI HookedMsiGetLastErrorRecord()
         GenericReturnFormat::UInt32
     };
 
-    return InvokeTier2ReturnOnlyHook(g_originalMsiGetLastErrorRecord, static_cast<UINT>(0), Metadata);
+    return InvokeTier2ReturnOnlyHook(g_originalMsiGetLastErrorRecord, static_cast<MSIHANDLE>(0), Metadata);
 }
 
 DWORD WINAPI HookedODBCGetTryWaitValue()
@@ -16613,7 +16658,7 @@ HRESULT WINAPI HookedWscRegisterForUserNotifications()
     return InvokeTier2ReturnOnlyHResultHook(g_originalWscRegisterForUserNotifications, Metadata);
 }
 
-INT WINAPI HookedSnmpCleanup()
+SNMPAPI_STATUS WINAPI HookedSnmpCleanup()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
         "wsnmp32.dll",
@@ -16625,10 +16670,10 @@ INT WINAPI HookedSnmpCleanup()
         GenericReturnFormat::UInt32
     };
 
-    return InvokeTier2ReturnOnlyHook(g_originalSnmpCleanup, static_cast<INT>(0), Metadata);
+    return InvokeTier2ReturnOnlyHook(g_originalSnmpCleanup, static_cast<SNMPAPI_STATUS>(0), Metadata);
 }
 
-INT WINAPI HookedSnmpCleanupEx()
+SNMPAPI_STATUS WINAPI HookedSnmpCleanupEx()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
         "wsnmp32.dll",
@@ -16640,7 +16685,7 @@ INT WINAPI HookedSnmpCleanupEx()
         GenericReturnFormat::UInt32
     };
 
-    return InvokeTier2ReturnOnlyHook(g_originalSnmpCleanupEx, static_cast<INT>(0), Metadata);
+    return InvokeTier2ReturnOnlyHook(g_originalSnmpCleanupEx, static_cast<SNMPAPI_STATUS>(0), Metadata);
 }
 
 PVOID RPC_ENTRY HookedIRpcGetCurrentCallHandle()
@@ -17941,7 +17986,7 @@ NTSTATUS NTAPI HookedNtCreateFile(
     return status;
 }
 
-NTSTATUS NTAPI HookedLdrLoadDll(PWSTR pathToFile, ULONG flags, PUNICODE_STRING moduleFileName, PHANDLE moduleHandle)
+NTSTATUS NTAPI HookedLdrLoadDll(PCWSTR pathToFile, PULONG flags, const UNICODE_STRING* moduleFileName, PHANDLE moduleHandle)
 {
     if (g_inHook || !HooksEnabled() || g_originalLdrLoadDll == nullptr)
     {
@@ -17976,7 +18021,7 @@ NTSTATUS NTAPI HookedLdrLoadDll(PWSTR pathToFile, ULONG flags, PUNICODE_STRING m
     return status;
 }
 
-NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functionName, ULONG ordinal, PVOID* functionAddress)
+NTSTATUS NTAPI HookedLdrGetProcedureAddress(PVOID module, const ANSI_STRING* functionName, ULONG ordinal, PVOID* functionAddress)
 {
     if (g_inHook || !HooksEnabled() || g_originalLdrGetProcedureAddress == nullptr)
     {
@@ -18010,7 +18055,7 @@ NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functio
                 const std::string requestedName = CaptureResolverAnsiStringName(functionName);
                 const bool lookupByOrdinal = requestedName.empty() && ordinal != 0;
                 ResolverPointerClassification classification = ClassifyResolverPointer(
-                    module,
+                    static_cast<HMODULE>(module),
                     requestedName,
                     lookupByOrdinal,
                     lookupByOrdinal ? ordinal : 0,
@@ -18038,7 +18083,7 @@ NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functio
                         "LdrGetProcedureAddress",
                         classification,
                         lookupByOrdinal,
-                        module,
+                        static_cast<HMODULE>(module),
                         resolvedAddress);
                 }
             }
@@ -18089,7 +18134,7 @@ LSTATUS WINAPI HookedRegCreateKeyExW(
     LPWSTR keyClass,
     DWORD options,
     REGSAM desiredAccess,
-    const SECURITY_ATTRIBUTES* securityAttributes,
+    LPSECURITY_ATTRIBUTES securityAttributes,
     PHKEY resultKey,
     LPDWORD disposition)
 {
@@ -20254,7 +20299,7 @@ RPC_STATUS RPC_ENTRY HookedUuidCreate(UUID* uuid)
     return result;
 }
 
-RPC_STATUS RPC_ENTRY HookedUuidToStringW(UUID* uuid, RPC_WSTR* stringUuid)
+RPC_STATUS RPC_ENTRY HookedUuidToStringW(const UUID* uuid, RPC_WSTR* stringUuid)
 {
     if (g_inHook || !HooksEnabled() || g_originalUuidToStringW == nullptr)
     {
@@ -21450,4 +21495,5 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestHoldTeardownLocks(void* r
 #pragma comment(linker, "/EXPORT:KnMonTestStopRace=_KnMonTestStopRace@4")
 #pragma comment(linker, "/EXPORT:KnMonTestErrorParity=_KnMonTestErrorParity@4")
 #endif
+#include "AbiDifferentialTests.inc"
 #endif

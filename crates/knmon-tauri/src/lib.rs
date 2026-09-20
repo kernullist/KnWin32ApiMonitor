@@ -368,7 +368,7 @@ pub struct NativeTraceIndexEvent {
     pub session_id: String,
     pub operation_id: String,
     pub event_id: u64,
-    pub record_sequence: u64,
+    pub record_sequence: Option<String>,
     pub chunk_sequence: u64,
     pub batch_sequence: u64,
     pub target_process_id: u32,
@@ -542,6 +542,8 @@ pub struct LaunchResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentApiArgument {
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
     pub index: u32,
     #[serde(rename = "type")]
     pub argument_type: String,
@@ -572,6 +574,8 @@ pub struct CaptureTiming
 #[serde(rename_all = "camelCase")]
 pub struct CapturedSemantics
 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub observation: Option<serde_json::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub raw_return_value: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -614,6 +618,8 @@ pub struct AgentApiCallEvent {
     pub tid: u32,
     pub timestamp_utc: String,
     pub sequence: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub record_sequence: Option<String>,
     pub api: String,
     pub module: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3083,6 +3089,29 @@ fn find_helper_path() -> Option<PathBuf>
 mod tests {
     use super::*;
 
+    #[test]
+    fn argument_observation_survives_host_roundtrip()
+    {
+        let argument = serde_json::json!({
+            "index": 1, "type": "LPVOID", "name": "lpBuffer", "direction": "out",
+            "rawValue": "0x123456789", "preCallValue": "0x123456789", "postCallValue": "0x123456789",
+            "decodedValue": "01 02", "decodeStatus": "decoded", "captureTiming": "post",
+            "targetMemoryRead": true, "decodeAlias": "byte_buffer",
+            "capture": { "phase": "exit", "readStatus": "complete", "requestedBytes": 2,
+                "capturedBytes": 2, "limitBytes": 16, "byteCountSource": "transferred_count_after_sync_success",
+                "truncationReason": "none" }
+        });
+        let mut event = test_event("preserve-observation", 9007199254740993);
+        event.arguments.push(serde_json::from_value(argument.clone()).unwrap());
+        event.semantics.observation = Some(serde_json::json!({ "eventPhase": "return", "nestedCalls": "suppressed",
+            "exceptionEvents": "not_emitted", "completionCorrelation": "not_tracked" }));
+        let encoded = serde_json::to_value(&event).unwrap();
+        assert_eq!(encoded["arguments"][0], argument);
+        assert_eq!(encoded["recordSequence"], "9007199254740993");
+        let decoded: AgentApiCallEvent = serde_json::from_value(encoded.clone()).unwrap();
+        assert_eq!(serde_json::to_value(decoded).unwrap(), encoded);
+    }
+
     fn test_operation_id(name: &str) -> String {
         format!("{name}-{}", now_epoch_ms())
     }
@@ -3098,6 +3127,7 @@ mod tests {
             tid: 200,
             timestamp_utc: "2026-06-10T00:00:00.000Z".to_string(),
             sequence,
+            record_sequence: Some(sequence.to_string()),
             api: "CreateFileW".to_string(),
             module: "kernel32.dll".to_string(),
             api_family: Some("file_io".to_string()),

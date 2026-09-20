@@ -1,6 +1,7 @@
 #include <knmon/common/BoundedJson.h>
 #include <knmon/common/CaptureClock.h>
 #include <charconv>
+#include <algorithm>
 #include <cmath>
 #include <nlohmann/json.hpp>
 
@@ -396,6 +397,26 @@ void ValidateCapturedResult(const JsonDocument& value)
 void ValidateCaptureTiming(const JsonDocument& value)
 {
     ValidateCapturedResult(value);
+    if (value.Has("observation"))
+    {
+        const auto observation = value.Object("observation", true);
+        if (observation.String("eventPhase", true) != "return" ||
+            observation.String("nestedCalls", true) != "suppressed" ||
+            observation.String("exceptionEvents", true) != "not_emitted" ||
+            observation.String("completionCorrelation", true) != "not_tracked")
+        {
+            throw JsonInputError("Unsupported call observation contract.");
+        }
+    }
+    if (value.Has("recordSequence"))
+    {
+        const auto sequence = value.DecimalUInt64("recordSequence");
+        if (sequence > static_cast<std::uint64_t>(INT64_MAX) ||
+            (value.Has("sequence") && sequence != value.UInt64("sequence", true)))
+        {
+            throw JsonInputError("Invalid transport record sequence identity.");
+        }
+    }
     if (value.Has("timing"))
     {
         const auto timing = value.Object("timing", true);
@@ -419,6 +440,30 @@ void ValidateCaptureTiming(const JsonDocument& value)
     else if (value.Has("timeSource") && value.String("timeSource") != "unavailable" && value.String("timeSource") != "legacy")
     {
         throw JsonInputError("Timing source requires a valid QPC anchor.");
+    }
+}
+
+void ValidateArgumentCapture(const JsonDocument& value)
+{
+    if (value.Has("capture"))
+    {
+        const auto capture = value.Object("capture", true);
+        const auto phase = capture.String("phase", true);
+        const auto status = capture.String("readStatus", true);
+        const auto requested = capture.UInt32("requestedBytes", true);
+        const auto captured = capture.UInt32("capturedBytes", true);
+        const auto limit = capture.UInt32("limitBytes", true);
+        capture.String("byteCountSource", true);
+        capture.String("truncationReason", true);
+        if ((phase != "entry" && phase != "exit" && phase != "none") ||
+            (status != "complete" && status != "null_pointer" && status != "unreadable" &&
+                status != "partial" && status != "not_captured") || captured > requested || captured > limit ||
+            (phase == "none" && (captured != 0 || status != "not_captured")) ||
+            (status == "complete" && captured != (std::min)(requested, limit)) ||
+            ((status == "null_pointer" || status == "unreadable" || status == "not_captured") && captured != 0))
+        {
+            throw JsonInputError("Inconsistent argument capture observation.");
+        }
     }
 }
 
@@ -466,6 +511,7 @@ void ValidateAgentJson(const JsonDocument& value)
         value.UInt64("durationUs", true);
         for (const auto& argument : value.Array("arguments", true).Objects())
         {
+            ValidateArgumentCapture(argument);
             argument.UInt32("index", true);
             for (const auto* key : {"name", "type", "direction", "rawValue", "preCallValue",
                 "postCallValue", "decodedValue", "decodeStatus"})
@@ -507,7 +553,10 @@ void ValidateTraceJson(const JsonDocument& value)
     value.String("returnValue", true);
     value.UInt64("durationUs", true);
     value.String("bufferPreview", true);
-    value.Array("arguments", true).Objects();
+    for (const auto& argument : value.Array("arguments", true).Objects())
+    {
+        ValidateArgumentCapture(argument);
+    }
     value.Array("tags", true).RequireStringArray();
     value.Array("stack", true).RequireStringArray();
     const auto error = value.ObjectOrNull("error", true);

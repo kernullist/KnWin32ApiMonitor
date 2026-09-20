@@ -3,21 +3,8 @@ import type { TraceEvent } from "./types";
 export function buildJsonl(events: TraceEvent[]): string {
   return events
     .map((event) => JSON.stringify({
-      schemaVersion: event.schemaVersion,
-      eventId: event.eventId,
-      relativeTimeMs: event.relativeTimeMs,
-      pid: event.pid,
-      tid: event.tid,
-      process: event.process,
-      module: event.module,
-      api: event.api,
-      arguments: event.arguments,
-      returnValue: event.returnValue,
-      error: event.error,
-      durationUs: event.durationUs,
-      tags: event.tags,
-      stack: event.stack,
-      bufferPreview: event.bufferPreview ?? null
+      ...event,
+      bufferPreview: event.bufferPreview ?? ""
     }))
     .join("\n");
 }

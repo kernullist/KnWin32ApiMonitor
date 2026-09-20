@@ -1,0 +1,2914 @@
+{
+  "schemaVersion": 1,
+  "sdk": "10.0.26100.0",
+  "compilerToolset": "v143,version=14.44.35207",
+  "architectures": [
+    "x86",
+    "x64"
+  ],
+  "nativeSource": {
+    "commit": "53fbbdc5b5d2b08761db1c7b26bfa8c820924356",
+    "name": "PHNT",
+    "note": "Generated from PHNT Native API headers for ntdll export prototype enrichment.",
+    "repository": "https://github.com/winsiderss/phnt.git"
+  },
+  "nativePrototypes": [
+    {
+      "callingConvention": "ntapi",
+      "name": "LdrLoadDll",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "DllPath",
+          "nullable": true,
+          "type": "PCWSTR"
+        },
+        {
+          "direction": "in",
+          "name": "DllCharacteristics",
+          "nullable": true,
+          "type": "PULONG"
+        },
+        {
+          "direction": "in",
+          "name": "DllName",
+          "type": "PCUNICODE_STRING"
+        },
+        {
+          "direction": "out",
+          "name": "DllHandle",
+          "type": "PVOID *"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "ntldr.h"
+      }
+    },
+    {
+      "callingConvention": "ntapi",
+      "name": "LdrGetProcedureAddress",
+      "parameters": [
+        {
+          "direction": "in",
+          "name": "DllHandle",
+          "type": "PVOID"
+        },
+        {
+          "direction": "in",
+          "name": "ProcedureName",
+          "nullable": true,
+          "type": "PCANSI_STRING"
+        },
+        {
+          "direction": "in",
+          "name": "ProcedureNumber",
+          "nullable": true,
+          "type": "ULONG"
+        },
+        {
+          "direction": "out",
+          "name": "ProcedureAddress",
+          "type": "PVOID *"
+        }
+      ],
+      "returnType": "NTSTATUS",
+      "source": {
+        "file": "ntldr.h"
+      }
+    }
+  ],
+  "requiredChecks": [
+    "compiler_type_equality",
+    "differential_corpus",
+    "negative_controls"
+  ],
+  "bindings": [
+    {
+      "module": "kernel32.dll",
+      "name": "CreateFileW",
+      "wrapper": "HookedCreateFileW",
+      "original": "g_originalCreateFileW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CreateFileW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "CreateFileA",
+      "wrapper": "HookedCreateFileA",
+      "original": "g_originalCreateFileA",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CreateFileA",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "ReadFile",
+      "wrapper": "HookedReadFile",
+      "original": "g_originalReadFile",
+      "authority": "windows_sdk",
+      "sdkSymbol": "ReadFile",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "WriteFile",
+      "wrapper": "HookedWriteFile",
+      "original": "g_originalWriteFile",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WriteFile",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "CloseHandle",
+      "wrapper": "HookedCloseHandle",
+      "original": "g_originalCloseHandle",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CloseHandle",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "VirtualAlloc",
+      "wrapper": "HookedVirtualAlloc",
+      "original": "g_originalVirtualAlloc",
+      "authority": "windows_sdk",
+      "sdkSymbol": "VirtualAlloc",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "VirtualFree",
+      "wrapper": "HookedVirtualFree",
+      "original": "g_originalVirtualFree",
+      "authority": "windows_sdk",
+      "sdkSymbol": "VirtualFree",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "VirtualProtect",
+      "wrapper": "HookedVirtualProtect",
+      "original": "g_originalVirtualProtect",
+      "authority": "windows_sdk",
+      "sdkSymbol": "VirtualProtect",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "VirtualQuery",
+      "wrapper": "HookedVirtualQuery",
+      "original": "g_originalVirtualQuery",
+      "authority": "windows_sdk",
+      "sdkSymbol": "VirtualQuery",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "CreateFileMappingW",
+      "wrapper": "HookedCreateFileMappingW",
+      "original": "g_originalCreateFileMappingW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CreateFileMappingW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "OpenFileMappingW",
+      "wrapper": "HookedOpenFileMappingW",
+      "original": "g_originalOpenFileMappingW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "OpenFileMappingW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "MapViewOfFile",
+      "wrapper": "HookedMapViewOfFile",
+      "original": "g_originalMapViewOfFile",
+      "authority": "windows_sdk",
+      "sdkSymbol": "MapViewOfFile",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "UnmapViewOfFile",
+      "wrapper": "HookedUnmapViewOfFile",
+      "original": "g_originalUnmapViewOfFile",
+      "authority": "windows_sdk",
+      "sdkSymbol": "UnmapViewOfFile",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetCurrentProcess",
+      "wrapper": "HookedGetCurrentProcess",
+      "original": "g_originalGetCurrentProcess",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetCurrentProcess",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetCurrentProcessId",
+      "wrapper": "HookedGetCurrentProcessId",
+      "original": "g_originalGetCurrentProcessId",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetCurrentProcessId",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetCurrentThread",
+      "wrapper": "HookedGetCurrentThread",
+      "original": "g_originalGetCurrentThread",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetCurrentThread",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetCurrentThreadId",
+      "wrapper": "HookedGetCurrentThreadId",
+      "original": "g_originalGetCurrentThreadId",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetCurrentThreadId",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetProcessId",
+      "wrapper": "HookedGetProcessId",
+      "original": "g_originalGetProcessId",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetProcessId",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetThreadId",
+      "wrapper": "HookedGetThreadId",
+      "original": "g_originalGetThreadId",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetThreadId",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetStdHandle",
+      "wrapper": "HookedGetStdHandle",
+      "original": "g_originalGetStdHandle",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetStdHandle",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetFileType",
+      "wrapper": "HookedGetFileType",
+      "original": "g_originalGetFileType",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetFileType",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetHandleInformation",
+      "wrapper": "HookedGetHandleInformation",
+      "original": "g_originalGetHandleInformation",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetHandleInformation",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "SetHandleInformation",
+      "wrapper": "HookedSetHandleInformation",
+      "original": "g_originalSetHandleInformation",
+      "authority": "windows_sdk",
+      "sdkSymbol": "SetHandleInformation",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetFileSizeEx",
+      "wrapper": "HookedGetFileSizeEx",
+      "original": "g_originalGetFileSizeEx",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetFileSizeEx",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetFileTime",
+      "wrapper": "HookedGetFileTime",
+      "original": "g_originalGetFileTime",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetFileTime",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetFileInformationByHandle",
+      "wrapper": "HookedGetFileInformationByHandle",
+      "original": "g_originalGetFileInformationByHandle",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetFileInformationByHandle",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetSystemTime",
+      "wrapper": "HookedGetSystemTime",
+      "original": "g_originalGetSystemTime",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetSystemTime",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "setupapi.dll",
+      "name": "SetupDiClassNameFromGuidW",
+      "wrapper": "HookedSetupDiClassNameFromGuidW",
+      "original": "g_originalSetupDiClassNameFromGuidW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "SetupDiClassNameFromGuidW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetCursorPos",
+      "wrapper": "HookedGetCursorPos",
+      "original": "g_originalGetCursorPos",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetCursorPos",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "iphlpapi.dll",
+      "name": "GetIpStatistics",
+      "wrapper": "HookedGetIpStatistics",
+      "original": "g_originalGetIpStatistics",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetIpStatistics",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "gdi32.dll",
+      "name": "GetStockObject",
+      "wrapper": "HookedGetStockObject",
+      "original": "g_originalGetStockObject",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetStockObject",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "api-ms-win-core-winrt-string-l1-1-0.dll",
+      "name": "WindowsGetStringLen",
+      "wrapper": "HookedWindowsGetStringLen",
+      "original": "g_originalWindowsGetStringLen",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WindowsGetStringLen",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "combase.dll",
+      "name": "WindowsGetStringLen",
+      "wrapper": "HookedWindowsGetStringLen",
+      "original": "g_originalWindowsGetStringLen",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WindowsGetStringLen",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "advapi32.dll",
+      "name": "RevertToSelf",
+      "wrapper": "HookedRevertToSelf",
+      "original": "g_originalRevertToSelf",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RevertToSelf",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "comdlg32.dll",
+      "name": "CommDlgExtendedError",
+      "wrapper": "HookedCommDlgExtendedError",
+      "original": "g_originalCommDlgExtendedError",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CommDlgExtendedError",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "dwmapi.dll",
+      "name": "DwmFlush",
+      "wrapper": "HookedDwmFlush",
+      "original": "g_originalDwmFlush",
+      "authority": "windows_sdk",
+      "sdkSymbol": "DwmFlush",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "msacm32.dll",
+      "name": "acmGetVersion",
+      "wrapper": "HookedAcmGetVersion",
+      "original": "g_originalAcmGetVersion",
+      "authority": "windows_sdk",
+      "sdkSymbol": "acmGetVersion",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "winmm.dll",
+      "name": "auxGetNumDevs",
+      "wrapper": "HookedAuxGetNumDevs",
+      "original": "g_originalAuxGetNumDevs",
+      "authority": "windows_sdk",
+      "sdkSymbol": "auxGetNumDevs",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "winmm.dll",
+      "name": "joyGetNumDevs",
+      "wrapper": "HookedJoyGetNumDevs",
+      "original": "g_originalJoyGetNumDevs",
+      "authority": "windows_sdk",
+      "sdkSymbol": "joyGetNumDevs",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "winmm.dll",
+      "name": "midiInGetNumDevs",
+      "wrapper": "HookedMidiInGetNumDevs",
+      "original": "g_originalMidiInGetNumDevs",
+      "authority": "windows_sdk",
+      "sdkSymbol": "midiInGetNumDevs",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "winmm.dll",
+      "name": "midiOutGetNumDevs",
+      "wrapper": "HookedMidiOutGetNumDevs",
+      "original": "g_originalMidiOutGetNumDevs",
+      "authority": "windows_sdk",
+      "sdkSymbol": "midiOutGetNumDevs",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "winmm.dll",
+      "name": "mixerGetNumDevs",
+      "wrapper": "HookedMixerGetNumDevs",
+      "original": "g_originalMixerGetNumDevs",
+      "authority": "windows_sdk",
+      "sdkSymbol": "mixerGetNumDevs",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "winmm.dll",
+      "name": "mmGetCurrentTask",
+      "wrapper": "HookedMmGetCurrentTask",
+      "original": "g_originalMmGetCurrentTask",
+      "authority": "windows_sdk",
+      "sdkSymbol": "mmGetCurrentTask",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "winmm.dll",
+      "name": "mmTaskYield",
+      "wrapper": "HookedMmTaskYield",
+      "original": "g_originalMmTaskYield",
+      "authority": "windows_sdk",
+      "sdkSymbol": "mmTaskYield",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "winmm.dll",
+      "name": "timeGetTime",
+      "wrapper": "HookedTimeGetTime",
+      "original": "g_originalTimeGetTime",
+      "authority": "windows_sdk",
+      "sdkSymbol": "timeGetTime",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "winmm.dll",
+      "name": "waveInGetNumDevs",
+      "wrapper": "HookedWaveInGetNumDevs",
+      "original": "g_originalWaveInGetNumDevs",
+      "authority": "windows_sdk",
+      "sdkSymbol": "waveInGetNumDevs",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "winmm.dll",
+      "name": "waveOutGetNumDevs",
+      "wrapper": "HookedWaveOutGetNumDevs",
+      "original": "g_originalWaveOutGetNumDevs",
+      "authority": "windows_sdk",
+      "sdkSymbol": "waveOutGetNumDevs",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "uxtheme.dll",
+      "name": "BufferedPaintInit",
+      "wrapper": "HookedBufferedPaintInit",
+      "original": "g_originalBufferedPaintInit",
+      "authority": "windows_sdk",
+      "sdkSymbol": "BufferedPaintInit",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "uxtheme.dll",
+      "name": "BufferedPaintUnInit",
+      "wrapper": "HookedBufferedPaintUnInit",
+      "original": "g_originalBufferedPaintUnInit",
+      "authority": "windows_sdk",
+      "sdkSymbol": "BufferedPaintUnInit",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "uxtheme.dll",
+      "name": "GetThemeAppProperties",
+      "wrapper": "HookedGetThemeAppProperties",
+      "original": "g_originalGetThemeAppProperties",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetThemeAppProperties",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "uxtheme.dll",
+      "name": "IsAppThemed",
+      "wrapper": "HookedIsAppThemed",
+      "original": "g_originalIsAppThemed",
+      "authority": "windows_sdk",
+      "sdkSymbol": "IsAppThemed",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "uxtheme.dll",
+      "name": "IsCompositionActive",
+      "wrapper": "HookedIsCompositionActive",
+      "original": "g_originalIsCompositionActive",
+      "authority": "windows_sdk",
+      "sdkSymbol": "IsCompositionActive",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "uxtheme.dll",
+      "name": "IsThemeActive",
+      "wrapper": "HookedIsThemeActive",
+      "original": "g_originalIsThemeActive",
+      "authority": "windows_sdk",
+      "sdkSymbol": "IsThemeActive",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "comctl32.dll",
+      "name": "GetMUILanguage",
+      "wrapper": "HookedGetMUILanguage",
+      "original": "g_originalGetMUILanguage",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetMUILanguage",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "comctl32.dll",
+      "name": "ImageList_EndDrag",
+      "wrapper": "HookedImageListEndDrag",
+      "original": "g_originalImageListEndDrag",
+      "authority": "windows_sdk",
+      "sdkSymbol": "ImageList_EndDrag",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "comctl32.dll",
+      "name": "InitCommonControls",
+      "wrapper": "HookedInitCommonControls",
+      "original": "g_originalInitCommonControls",
+      "authority": "windows_sdk",
+      "sdkSymbol": "InitCommonControls",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "AnyPopup",
+      "wrapper": "HookedAnyPopup",
+      "original": "g_originalAnyPopup",
+      "authority": "windows_sdk",
+      "sdkSymbol": "AnyPopup",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "CloseClipboard",
+      "wrapper": "HookedCloseClipboard",
+      "original": "g_originalCloseClipboard",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CloseClipboard",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "CountClipboardFormats",
+      "wrapper": "HookedCountClipboardFormats",
+      "original": "g_originalCountClipboardFormats",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CountClipboardFormats",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "CreateMenu",
+      "wrapper": "HookedCreateMenu",
+      "original": "g_originalCreateMenu",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CreateMenu",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "CreatePopupMenu",
+      "wrapper": "HookedCreatePopupMenu",
+      "original": "g_originalCreatePopupMenu",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CreatePopupMenu",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetActiveWindow",
+      "wrapper": "HookedGetActiveWindow",
+      "original": "g_originalGetActiveWindow",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetActiveWindow",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetCapture",
+      "wrapper": "HookedGetCapture",
+      "original": "g_originalGetCapture",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetCapture",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetCaretBlinkTime",
+      "wrapper": "HookedGetCaretBlinkTime",
+      "original": "g_originalGetCaretBlinkTime",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetCaretBlinkTime",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetClipboardOwner",
+      "wrapper": "HookedGetClipboardOwner",
+      "original": "g_originalGetClipboardOwner",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetClipboardOwner",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetClipboardSequenceNumber",
+      "wrapper": "HookedGetClipboardSequenceNumber",
+      "original": "g_originalGetClipboardSequenceNumber",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetClipboardSequenceNumber",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetClipboardViewer",
+      "wrapper": "HookedGetClipboardViewer",
+      "original": "g_originalGetClipboardViewer",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetClipboardViewer",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetCursor",
+      "wrapper": "HookedGetCursor",
+      "original": "g_originalGetCursor",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetCursor",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetDialogBaseUnits",
+      "wrapper": "HookedGetDialogBaseUnits",
+      "original": "g_originalGetDialogBaseUnits",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetDialogBaseUnits",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetDoubleClickTime",
+      "wrapper": "HookedGetDoubleClickTime",
+      "original": "g_originalGetDoubleClickTime",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetDoubleClickTime",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetDpiForSystem",
+      "wrapper": "HookedGetDpiForSystem",
+      "original": "g_originalGetDpiForSystem",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetDpiForSystem",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetFocus",
+      "wrapper": "HookedGetFocus",
+      "original": "g_originalGetFocus",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetFocus",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetInputState",
+      "wrapper": "HookedGetInputState",
+      "original": "g_originalGetInputState",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetInputState",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetKBCodePage",
+      "wrapper": "HookedGetKBCodePage",
+      "original": "g_originalGetKBCodePage",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetKBCodePage",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetMenuCheckMarkDimensions",
+      "wrapper": "HookedGetMenuCheckMarkDimensions",
+      "original": "g_originalGetMenuCheckMarkDimensions",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetMenuCheckMarkDimensions",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetMessageExtraInfo",
+      "wrapper": "HookedGetMessageExtraInfo",
+      "original": "g_originalGetMessageExtraInfo",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetMessageExtraInfo",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetMessagePos",
+      "wrapper": "HookedGetMessagePos",
+      "original": "g_originalGetMessagePos",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetMessagePos",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetMessageTime",
+      "wrapper": "HookedGetMessageTime",
+      "original": "g_originalGetMessageTime",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetMessageTime",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetOpenClipboardWindow",
+      "wrapper": "HookedGetOpenClipboardWindow",
+      "original": "g_originalGetOpenClipboardWindow",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetOpenClipboardWindow",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetProcessWindowStation",
+      "wrapper": "HookedGetProcessWindowStation",
+      "original": "g_originalGetProcessWindowStation",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetProcessWindowStation",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetShellWindow",
+      "wrapper": "HookedGetShellWindow",
+      "original": "g_originalGetShellWindow",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetShellWindow",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetThreadDpiAwarenessContext",
+      "wrapper": "HookedGetThreadDpiAwarenessContext",
+      "original": "g_originalGetThreadDpiAwarenessContext",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetThreadDpiAwarenessContext",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetThreadDpiHostingBehavior",
+      "wrapper": "HookedGetThreadDpiHostingBehavior",
+      "original": "g_originalGetThreadDpiHostingBehavior",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetThreadDpiHostingBehavior",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetUnpredictedMessagePos",
+      "wrapper": "HookedGetUnpredictedMessagePos",
+      "original": "g_originalGetUnpredictedMessagePos",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetUnpredictedMessagePos",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "InSendMessage",
+      "wrapper": "HookedInSendMessage",
+      "original": "g_originalInSendMessage",
+      "authority": "windows_sdk",
+      "sdkSymbol": "InSendMessage",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "IsMouseInPointerEnabled",
+      "wrapper": "HookedIsMouseInPointerEnabled",
+      "original": "g_originalIsMouseInPointerEnabled",
+      "authority": "windows_sdk",
+      "sdkSymbol": "IsMouseInPointerEnabled",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "IsProcessDPIAware",
+      "wrapper": "HookedIsProcessDPIAware",
+      "original": "g_originalIsProcessDPIAware",
+      "authority": "windows_sdk",
+      "sdkSymbol": "IsProcessDPIAware",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "IsWow64Message",
+      "wrapper": "HookedIsWow64Message",
+      "original": "g_originalIsWow64Message",
+      "authority": "windows_sdk",
+      "sdkSymbol": "IsWow64Message",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "d3d9.dll",
+      "name": "D3DPERF_EndEvent",
+      "wrapper": "HookedD3DPerfEndEvent",
+      "original": "g_originalD3DPerfEndEvent",
+      "authority": "windows_sdk",
+      "sdkSymbol": "D3DPERF_EndEvent",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "d3d9.dll",
+      "name": "D3DPERF_GetStatus",
+      "wrapper": "HookedD3DPerfGetStatus",
+      "original": "g_originalD3DPerfGetStatus",
+      "authority": "windows_sdk",
+      "sdkSymbol": "D3DPERF_GetStatus",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "d3d9.dll",
+      "name": "D3DPERF_QueryRepeatFrame",
+      "wrapper": "HookedD3DPerfQueryRepeatFrame",
+      "original": "g_originalD3DPerfQueryRepeatFrame",
+      "authority": "windows_sdk",
+      "sdkSymbol": "D3DPERF_QueryRepeatFrame",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "dbghelp.dll",
+      "name": "GetSymLoadError",
+      "wrapper": "HookedGetSymLoadError",
+      "original": "g_originalGetSymLoadError",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetSymLoadError",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "dbghelp.dll",
+      "name": "ImagehlpApiVersion",
+      "wrapper": "HookedImagehlpApiVersion",
+      "original": "g_originalImagehlpApiVersion",
+      "authority": "windows_sdk",
+      "sdkSymbol": "ImagehlpApiVersion",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "dbghelp.dll",
+      "name": "RangeMapCreate",
+      "wrapper": "HookedRangeMapCreate",
+      "original": "g_originalRangeMapCreate",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RangeMapCreate",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "dbghelp.dll",
+      "name": "SymGetOptions",
+      "wrapper": "HookedSymGetOptions",
+      "original": "g_originalSymGetOptions",
+      "authority": "windows_sdk",
+      "sdkSymbol": "SymGetOptions",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "opengl32.dll",
+      "name": "glEnd",
+      "wrapper": "HookedGlEnd",
+      "original": "g_originalGlEnd",
+      "authority": "windows_sdk",
+      "sdkSymbol": "glEnd",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "opengl32.dll",
+      "name": "glEndList",
+      "wrapper": "HookedGlEndList",
+      "original": "g_originalGlEndList",
+      "authority": "windows_sdk",
+      "sdkSymbol": "glEndList",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "opengl32.dll",
+      "name": "glFinish",
+      "wrapper": "HookedGlFinish",
+      "original": "g_originalGlFinish",
+      "authority": "windows_sdk",
+      "sdkSymbol": "glFinish",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "opengl32.dll",
+      "name": "glFlush",
+      "wrapper": "HookedGlFlush",
+      "original": "g_originalGlFlush",
+      "authority": "windows_sdk",
+      "sdkSymbol": "glFlush",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "opengl32.dll",
+      "name": "glGetError",
+      "wrapper": "HookedGlGetError",
+      "original": "g_originalGlGetError",
+      "authority": "windows_sdk",
+      "sdkSymbol": "glGetError",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "opengl32.dll",
+      "name": "glInitNames",
+      "wrapper": "HookedGlInitNames",
+      "original": "g_originalGlInitNames",
+      "authority": "windows_sdk",
+      "sdkSymbol": "glInitNames",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "opengl32.dll",
+      "name": "glLoadIdentity",
+      "wrapper": "HookedGlLoadIdentity",
+      "original": "g_originalGlLoadIdentity",
+      "authority": "windows_sdk",
+      "sdkSymbol": "glLoadIdentity",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "opengl32.dll",
+      "name": "glPopAttrib",
+      "wrapper": "HookedGlPopAttrib",
+      "original": "g_originalGlPopAttrib",
+      "authority": "windows_sdk",
+      "sdkSymbol": "glPopAttrib",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "opengl32.dll",
+      "name": "glPopClientAttrib",
+      "wrapper": "HookedGlPopClientAttrib",
+      "original": "g_originalGlPopClientAttrib",
+      "authority": "windows_sdk",
+      "sdkSymbol": "glPopClientAttrib",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "opengl32.dll",
+      "name": "glPopMatrix",
+      "wrapper": "HookedGlPopMatrix",
+      "original": "g_originalGlPopMatrix",
+      "authority": "windows_sdk",
+      "sdkSymbol": "glPopMatrix",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "opengl32.dll",
+      "name": "glPopName",
+      "wrapper": "HookedGlPopName",
+      "original": "g_originalGlPopName",
+      "authority": "windows_sdk",
+      "sdkSymbol": "glPopName",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "opengl32.dll",
+      "name": "glPushMatrix",
+      "wrapper": "HookedGlPushMatrix",
+      "original": "g_originalGlPushMatrix",
+      "authority": "windows_sdk",
+      "sdkSymbol": "glPushMatrix",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "opengl32.dll",
+      "name": "wglGetCurrentContext",
+      "wrapper": "HookedWglGetCurrentContext",
+      "original": "g_originalWglGetCurrentContext",
+      "authority": "windows_sdk",
+      "sdkSymbol": "wglGetCurrentContext",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "opengl32.dll",
+      "name": "wglGetCurrentDC",
+      "wrapper": "HookedWglGetCurrentDC",
+      "original": "g_originalWglGetCurrentDC",
+      "authority": "windows_sdk",
+      "sdkSymbol": "wglGetCurrentDC",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "glu32.dll",
+      "name": "gluNewNurbsRenderer",
+      "wrapper": "HookedGluNewNurbsRenderer",
+      "original": "g_originalGluNewNurbsRenderer",
+      "authority": "windows_sdk",
+      "sdkSymbol": "gluNewNurbsRenderer",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "glu32.dll",
+      "name": "gluNewQuadric",
+      "wrapper": "HookedGluNewQuadric",
+      "original": "g_originalGluNewQuadric",
+      "authority": "windows_sdk",
+      "sdkSymbol": "gluNewQuadric",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "glu32.dll",
+      "name": "gluNewTess",
+      "wrapper": "HookedGluNewTess",
+      "original": "g_originalGluNewTess",
+      "authority": "windows_sdk",
+      "sdkSymbol": "gluNewTess",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "AreFileApisANSI",
+      "wrapper": "HookedAreFileApisANSI",
+      "original": "g_originalAreFileApisANSI",
+      "authority": "windows_sdk",
+      "sdkSymbol": "AreFileApisANSI",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "CreateThreadpoolCleanupGroup",
+      "wrapper": "HookedCreateThreadpoolCleanupGroup",
+      "original": "g_originalCreateThreadpoolCleanupGroup",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CreateThreadpoolCleanupGroup",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "CreateTimerQueue",
+      "wrapper": "HookedCreateTimerQueue",
+      "original": "g_originalCreateTimerQueue",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CreateTimerQueue",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetACP",
+      "wrapper": "HookedGetACP",
+      "original": "g_originalGetACP",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetACP",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetActiveProcessorGroupCount",
+      "wrapper": "HookedGetActiveProcessorGroupCount",
+      "original": "g_originalGetActiveProcessorGroupCount",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetActiveProcessorGroupCount",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetCommandLineA",
+      "wrapper": "HookedGetCommandLineA",
+      "original": "g_originalGetCommandLineA",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetCommandLineA",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetCommandLineW",
+      "wrapper": "HookedGetCommandLineW",
+      "original": "g_originalGetCommandLineW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetCommandLineW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetConsoleAliasExesLengthA",
+      "wrapper": "HookedGetConsoleAliasExesLengthA",
+      "original": "g_originalGetConsoleAliasExesLengthA",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetConsoleAliasExesLengthA",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetConsoleAliasExesLengthW",
+      "wrapper": "HookedGetConsoleAliasExesLengthW",
+      "original": "g_originalGetConsoleAliasExesLengthW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetConsoleAliasExesLengthW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetConsoleCP",
+      "wrapper": "HookedGetConsoleCP",
+      "original": "g_originalGetConsoleCP",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetConsoleCP",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetConsoleOutputCP",
+      "wrapper": "HookedGetConsoleOutputCP",
+      "original": "g_originalGetConsoleOutputCP",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetConsoleOutputCP",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetConsoleWindow",
+      "wrapper": "HookedGetConsoleWindow",
+      "original": "g_originalGetConsoleWindow",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetConsoleWindow",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetCurrentProcessorNumber",
+      "wrapper": "HookedGetCurrentProcessorNumber",
+      "original": "g_originalGetCurrentProcessorNumber",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetCurrentProcessorNumber",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetEnabledXStateFeatures",
+      "wrapper": "HookedGetEnabledXStateFeatures",
+      "original": "g_originalGetEnabledXStateFeatures",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetEnabledXStateFeatures",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetEnvironmentStrings",
+      "wrapper": "HookedGetEnvironmentStrings",
+      "original": "g_originalGetEnvironmentStrings",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetEnvironmentStrings",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetEnvironmentStringsW",
+      "wrapper": "HookedGetEnvironmentStringsW",
+      "original": "g_originalGetEnvironmentStringsW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetEnvironmentStringsW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetErrorMode",
+      "wrapper": "HookedGetErrorMode",
+      "original": "g_originalGetErrorMode",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetErrorMode",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetLargePageMinimum",
+      "wrapper": "HookedGetLargePageMinimum",
+      "original": "g_originalGetLargePageMinimum",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetLargePageMinimum",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetLogicalDrives",
+      "wrapper": "HookedGetLogicalDrives",
+      "original": "g_originalGetLogicalDrives",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetLogicalDrives",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetMaximumProcessorGroupCount",
+      "wrapper": "HookedGetMaximumProcessorGroupCount",
+      "original": "g_originalGetMaximumProcessorGroupCount",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetMaximumProcessorGroupCount",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetOEMCP",
+      "wrapper": "HookedGetOEMCP",
+      "original": "g_originalGetOEMCP",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetOEMCP",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetProcessHeap",
+      "wrapper": "HookedGetProcessHeap",
+      "original": "g_originalGetProcessHeap",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetProcessHeap",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetSystemDefaultLangID",
+      "wrapper": "HookedGetSystemDefaultLangID",
+      "original": "g_originalGetSystemDefaultLangID",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetSystemDefaultLangID",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetSystemDefaultLCID",
+      "wrapper": "HookedGetSystemDefaultLCID",
+      "original": "g_originalGetSystemDefaultLCID",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetSystemDefaultLCID",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetSystemDefaultUILanguage",
+      "wrapper": "HookedGetSystemDefaultUILanguage",
+      "original": "g_originalGetSystemDefaultUILanguage",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetSystemDefaultUILanguage",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetSystemDEPPolicy",
+      "wrapper": "HookedGetSystemDEPPolicy",
+      "original": "g_originalGetSystemDEPPolicy",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetSystemDEPPolicy",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetThreadEnabledXStateFeatures",
+      "wrapper": "HookedGetThreadEnabledXStateFeatures",
+      "original": "g_originalGetThreadEnabledXStateFeatures",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetThreadEnabledXStateFeatures",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetThreadErrorMode",
+      "wrapper": "HookedGetThreadErrorMode",
+      "original": "g_originalGetThreadErrorMode",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetThreadErrorMode",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetThreadLocale",
+      "wrapper": "HookedGetThreadLocale",
+      "original": "g_originalGetThreadLocale",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetThreadLocale",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetThreadUILanguage",
+      "wrapper": "HookedGetThreadUILanguage",
+      "original": "g_originalGetThreadUILanguage",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetThreadUILanguage",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetTickCount",
+      "wrapper": "HookedGetTickCount",
+      "original": "g_originalGetTickCount",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetTickCount",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetTickCount64",
+      "wrapper": "HookedGetTickCount64",
+      "original": "g_originalGetTickCount64",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetTickCount64",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetUserDefaultLangID",
+      "wrapper": "HookedGetUserDefaultLangID",
+      "original": "g_originalGetUserDefaultLangID",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetUserDefaultLangID",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetUserDefaultLCID",
+      "wrapper": "HookedGetUserDefaultLCID",
+      "original": "g_originalGetUserDefaultLCID",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetUserDefaultLCID",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetUserDefaultUILanguage",
+      "wrapper": "HookedGetUserDefaultUILanguage",
+      "original": "g_originalGetUserDefaultUILanguage",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetUserDefaultUILanguage",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetVersion",
+      "wrapper": "HookedGetVersion",
+      "original": "g_originalGetVersion",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetVersion",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "IsDebuggerPresent",
+      "wrapper": "HookedIsDebuggerPresent",
+      "original": "g_originalIsDebuggerPresent",
+      "authority": "windows_sdk",
+      "sdkSymbol": "IsDebuggerPresent",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "IsSystemResumeAutomatic",
+      "wrapper": "HookedIsSystemResumeAutomatic",
+      "original": "g_originalIsSystemResumeAutomatic",
+      "authority": "windows_sdk",
+      "sdkSymbol": "IsSystemResumeAutomatic",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "IsThreadAFiber",
+      "wrapper": "HookedIsThreadAFiber",
+      "original": "g_originalIsThreadAFiber",
+      "authority": "windows_sdk",
+      "sdkSymbol": "IsThreadAFiber",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "SwitchToThread",
+      "wrapper": "HookedSwitchToThread",
+      "original": "g_originalSwitchToThread",
+      "authority": "windows_sdk",
+      "sdkSymbol": "SwitchToThread",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "TlsAlloc",
+      "wrapper": "HookedTlsAlloc",
+      "original": "g_originalTlsAlloc",
+      "authority": "windows_sdk",
+      "sdkSymbol": "TlsAlloc",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "UnregisterApplicationRecoveryCallback",
+      "wrapper": "HookedUnregisterApplicationRecoveryCallback",
+      "original": "g_originalUnregisterApplicationRecoveryCallback",
+      "authority": "windows_sdk",
+      "sdkSymbol": "UnregisterApplicationRecoveryCallback",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "UnregisterApplicationRestart",
+      "wrapper": "HookedUnregisterApplicationRestart",
+      "original": "g_originalUnregisterApplicationRestart",
+      "authority": "windows_sdk",
+      "sdkSymbol": "UnregisterApplicationRestart",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "WTSGetActiveConsoleSessionId",
+      "wrapper": "HookedWTSGetActiveConsoleSessionId",
+      "original": "g_originalWTSGetActiveConsoleSessionId",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WTSGetActiveConsoleSessionId",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "gdiplus.dll",
+      "name": "GdipCreateHalftonePalette",
+      "wrapper": "HookedGdipCreateHalftonePalette",
+      "original": "g_originalGdipCreateHalftonePalette",
+      "authority": "windows_sdk",
+      "sdkSymbol": "Gdiplus::DllExports::GdipCreateHalftonePalette",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "oleaut32.dll",
+      "name": "OaBuildVersion",
+      "wrapper": "HookedOaBuildVersion",
+      "original": "g_originalOaBuildVersion",
+      "authority": "windows_sdk",
+      "sdkSymbol": "OaBuildVersion",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "oleaut32.dll",
+      "name": "OaEnablePerUserTLibRegistration",
+      "wrapper": "HookedOaEnablePerUserTLibRegistration",
+      "original": "g_originalOaEnablePerUserTLibRegistration",
+      "authority": "windows_sdk",
+      "sdkSymbol": "OaEnablePerUserTLibRegistration",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "dxgi.dll",
+      "name": "DXGIDeclareAdapterRemovalSupport",
+      "wrapper": "HookedDXGIDeclareAdapterRemovalSupport",
+      "original": "g_originalDXGIDeclareAdapterRemovalSupport",
+      "authority": "windows_sdk",
+      "sdkSymbol": "DXGIDeclareAdapterRemovalSupport",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "dxgi.dll",
+      "name": "DXGIDisableVBlankVirtualization",
+      "wrapper": "HookedDXGIDisableVBlankVirtualization",
+      "original": "g_originalDXGIDisableVBlankVirtualization",
+      "authority": "windows_sdk",
+      "sdkSymbol": "DXGIDisableVBlankVirtualization",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "magnification.dll",
+      "name": "MagInitialize",
+      "wrapper": "HookedMagInitialize",
+      "original": "g_originalMagInitialize",
+      "authority": "windows_sdk",
+      "sdkSymbol": "MagInitialize",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "magnification.dll",
+      "name": "MagUninitialize",
+      "wrapper": "HookedMagUninitialize",
+      "original": "g_originalMagUninitialize",
+      "authority": "windows_sdk",
+      "sdkSymbol": "MagUninitialize",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "msi.dll",
+      "name": "MsiCloseAllHandles",
+      "wrapper": "HookedMsiCloseAllHandles",
+      "original": "g_originalMsiCloseAllHandles",
+      "authority": "windows_sdk",
+      "sdkSymbol": "MsiCloseAllHandles",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "msi.dll",
+      "name": "MsiGetLastErrorRecord",
+      "wrapper": "HookedMsiGetLastErrorRecord",
+      "original": "g_originalMsiGetLastErrorRecord",
+      "authority": "windows_sdk",
+      "sdkSymbol": "MsiGetLastErrorRecord",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "odbc32.dll",
+      "name": "ODBCGetTryWaitValue",
+      "wrapper": "HookedODBCGetTryWaitValue",
+      "original": "g_originalODBCGetTryWaitValue",
+      "authority": "windows_sdk",
+      "sdkSymbol": "ODBCGetTryWaitValue",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "snmpapi.dll",
+      "name": "SnmpSvcGetUptime",
+      "wrapper": "HookedSnmpSvcGetUptime",
+      "original": "g_originalSnmpSvcGetUptime",
+      "authority": "windows_sdk",
+      "sdkSymbol": "SnmpSvcGetUptime",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "winhttp.dll",
+      "name": "WinHttpCheckPlatform",
+      "wrapper": "HookedWinHttpCheckPlatform",
+      "original": "g_originalWinHttpCheckPlatform",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WinHttpCheckPlatform",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "wldap32.dll",
+      "name": "LdapGetLastError",
+      "wrapper": "HookedLdapGetLastError",
+      "original": "g_originalLdapGetLastError",
+      "authority": "windows_sdk",
+      "sdkSymbol": "LdapGetLastError",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "advpack.dll",
+      "name": "NeedRebootInit",
+      "wrapper": "HookedNeedRebootInit",
+      "original": "g_originalNeedRebootInit",
+      "authority": "windows_sdk",
+      "sdkSymbol": "NeedRebootInit",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "dciman32.dll",
+      "name": "DCIOpenProvider",
+      "wrapper": "HookedDCIOpenProvider",
+      "original": "g_originalDCIOpenProvider",
+      "authority": "windows_sdk",
+      "sdkSymbol": "DCIOpenProvider",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "dhcpcsvc6.dll",
+      "name": "Dhcpv6CApiCleanup",
+      "wrapper": "HookedDhcpv6CApiCleanup",
+      "original": "g_originalDhcpv6CApiCleanup",
+      "authority": "windows_sdk",
+      "sdkSymbol": "Dhcpv6CApiCleanup",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "fwpuclnt.dll",
+      "name": "WSARevertImpersonation",
+      "wrapper": "HookedWSARevertImpersonation",
+      "original": "g_originalWSARevertImpersonation",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WSARevertImpersonation",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "ntdll.dll",
+      "name": "RtlGetReturnAddressHijackTarget",
+      "wrapper": "HookedRtlGetReturnAddressHijackTarget",
+      "original": "g_originalRtlGetReturnAddressHijackTarget",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RtlGetReturnAddressHijackTarget",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "propsys.dll",
+      "name": "PSRefreshPropertySchema",
+      "wrapper": "HookedPSRefreshPropertySchema",
+      "original": "g_originalPSRefreshPropertySchema",
+      "authority": "windows_sdk",
+      "sdkSymbol": "PSRefreshPropertySchema",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "urlmon.dll",
+      "name": "IEGetUserPrivateNamespaceName",
+      "wrapper": "HookedIEGetUserPrivateNamespaceName",
+      "original": "g_originalIEGetUserPrivateNamespaceName",
+      "authority": "windows_sdk",
+      "sdkSymbol": "IEGetUserPrivateNamespaceName",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "cfgmgr32.dll",
+      "name": "CM_Get_Version",
+      "wrapper": "HookedCMGetVersion",
+      "original": "g_originalCMGetVersion",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CM_Get_Version",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "imm32.dll",
+      "name": "ImmCreateContext",
+      "wrapper": "HookedImmCreateContext",
+      "original": "g_originalImmCreateContext",
+      "authority": "windows_sdk",
+      "sdkSymbol": "ImmCreateContext",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "uiautomationcore.dll",
+      "name": "UiaClientsAreListening",
+      "wrapper": "HookedUiaClientsAreListening",
+      "original": "g_originalUiaClientsAreListening",
+      "authority": "windows_sdk",
+      "sdkSymbol": "UiaClientsAreListening",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "wscapi.dll",
+      "name": "WscQueryAntiMalwareUri",
+      "wrapper": "HookedWscQueryAntiMalwareUri",
+      "original": "g_originalWscQueryAntiMalwareUri",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WscQueryAntiMalwareUri",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "msrating.dll",
+      "name": "RatingEnabledQuery",
+      "wrapper": "HookedRatingEnabledQuery",
+      "original": "g_originalRatingEnabledQuery",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RatingEnabledQuery",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "fxsutility.dll",
+      "name": "CanSendToFaxRecipient",
+      "wrapper": "HookedCanSendToFaxRecipient",
+      "original": "g_originalCanSendToFaxRecipient",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CanSendToFaxRecipient",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "dhcpsapi.dll",
+      "name": "DhcpDsCleanup",
+      "wrapper": "HookedDhcpDsCleanup",
+      "original": "g_originalDhcpDsCleanup",
+      "authority": "windows_sdk",
+      "sdkSymbol": "DhcpDsCleanup",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "dhcpsapi.dll",
+      "name": "DhcpDsInit",
+      "wrapper": "HookedDhcpDsInit",
+      "original": "g_originalDhcpDsInit",
+      "authority": "windows_sdk",
+      "sdkSymbol": "DhcpDsInit",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "imm32.dll",
+      "name": "ImmDisableLegacyIME",
+      "wrapper": "HookedImmDisableLegacyIME",
+      "original": "g_originalImmDisableLegacyIME",
+      "authority": "windows_sdk",
+      "sdkSymbol": "ImmDisableLegacyIME",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "msrating.dll",
+      "name": "RatingInit",
+      "wrapper": "HookedRatingInit",
+      "original": "g_originalRatingInit",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RatingInit",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "uiautomationcore.dll",
+      "name": "UiaDisconnectAllProviders",
+      "wrapper": "HookedUiaDisconnectAllProviders",
+      "original": "g_originalUiaDisconnectAllProviders",
+      "authority": "windows_sdk",
+      "sdkSymbol": "UiaDisconnectAllProviders",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "wscapi.dll",
+      "name": "WscRegisterForUserNotifications",
+      "wrapper": "HookedWscRegisterForUserNotifications",
+      "original": "g_originalWscRegisterForUserNotifications",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WscRegisterForUserNotifications",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "wsnmp32.dll",
+      "name": "SnmpCleanup",
+      "wrapper": "HookedSnmpCleanup",
+      "original": "g_originalSnmpCleanup",
+      "authority": "windows_sdk",
+      "sdkSymbol": "SnmpCleanup",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "wsnmp32.dll",
+      "name": "SnmpCleanupEx",
+      "wrapper": "HookedSnmpCleanupEx",
+      "original": "g_originalSnmpCleanupEx",
+      "authority": "windows_sdk",
+      "sdkSymbol": "SnmpCleanupEx",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "I_RpcGetCurrentCallHandle",
+      "wrapper": "HookedIRpcGetCurrentCallHandle",
+      "original": "g_originalIRpcGetCurrentCallHandle",
+      "authority": "windows_sdk",
+      "sdkSymbol": "I_RpcGetCurrentCallHandle",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "I_RpcGetExtendedError",
+      "wrapper": "HookedIRpcGetExtendedError",
+      "original": "g_originalIRpcGetExtendedError",
+      "authority": "windows_sdk",
+      "sdkSymbol": "I_RpcGetExtendedError",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "I_RpcMgmtEnableDedicatedThreadPool",
+      "wrapper": "HookedIRpcMgmtEnableDedicatedThreadPool",
+      "original": "g_originalIRpcMgmtEnableDedicatedThreadPool",
+      "authority": "windows_sdk",
+      "sdkSymbol": "I_RpcMgmtEnableDedicatedThreadPool",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "I_RpcServerDisableExceptionFilter",
+      "wrapper": "HookedIRpcServerDisableExceptionFilter",
+      "original": "g_originalIRpcServerDisableExceptionFilter",
+      "authority": "windows_sdk",
+      "sdkSymbol": "I_RpcServerDisableExceptionFilter",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "I_RpcServerInqAddressChangeFn",
+      "wrapper": "HookedIRpcServerInqAddressChangeFn",
+      "original": "g_originalIRpcServerInqAddressChangeFn",
+      "authority": "windows_sdk",
+      "sdkSymbol": "I_RpcServerInqAddressChangeFn",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "I_RpcSessionStrictContextHandle",
+      "wrapper": "HookedIRpcSessionStrictContextHandle",
+      "original": "g_originalIRpcSessionStrictContextHandle",
+      "authority": "windows_sdk",
+      "sdkSymbol": "I_RpcSessionStrictContextHandle",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "I_RpcSsDontSerializeContext",
+      "wrapper": "HookedIRpcSsDontSerializeContext",
+      "original": "g_originalIRpcSsDontSerializeContext",
+      "authority": "windows_sdk",
+      "sdkSymbol": "I_RpcSsDontSerializeContext",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "I_RpcTurnOnEEInfoPropagation",
+      "wrapper": "HookedIRpcTurnOnEEInfoPropagation",
+      "original": "g_originalIRpcTurnOnEEInfoPropagation",
+      "authority": "windows_sdk",
+      "sdkSymbol": "I_RpcTurnOnEEInfoPropagation",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcErrorClearInformation",
+      "wrapper": "HookedRpcErrorClearInformation",
+      "original": "g_originalRpcErrorClearInformation",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcErrorClearInformation",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcMgmtEnableIdleCleanup",
+      "wrapper": "HookedRpcMgmtEnableIdleCleanup",
+      "original": "g_originalRpcMgmtEnableIdleCleanup",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcMgmtEnableIdleCleanup",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcRevertContainerImpersonation",
+      "wrapper": "HookedRpcRevertContainerImpersonation",
+      "original": "g_originalRpcRevertContainerImpersonation",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcRevertContainerImpersonation",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcRevertToSelf",
+      "wrapper": "HookedRpcRevertToSelf",
+      "original": "g_originalRpcRevertToSelf",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcRevertToSelf",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcServerYield",
+      "wrapper": "HookedRpcServerYield",
+      "original": "g_originalRpcServerYield",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcServerYield",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcSmDisableAllocate",
+      "wrapper": "HookedRpcSmDisableAllocate",
+      "original": "g_originalRpcSmDisableAllocate",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcSmDisableAllocate",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcSmEnableAllocate",
+      "wrapper": "HookedRpcSmEnableAllocate",
+      "original": "g_originalRpcSmEnableAllocate",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcSmEnableAllocate",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcSsDisableAllocate",
+      "wrapper": "HookedRpcSsDisableAllocate",
+      "original": "g_originalRpcSsDisableAllocate",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcSsDisableAllocate",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcSsDontSerializeContext",
+      "wrapper": "HookedRpcSsDontSerializeContext",
+      "original": "g_originalRpcSsDontSerializeContext",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcSsDontSerializeContext",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcSsEnableAllocate",
+      "wrapper": "HookedRpcSsEnableAllocate",
+      "original": "g_originalRpcSsEnableAllocate",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcSsEnableAllocate",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcSsGetThreadHandle",
+      "wrapper": "HookedRpcSsGetThreadHandle",
+      "original": "g_originalRpcSsGetThreadHandle",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcSsGetThreadHandle",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcTestCancel",
+      "wrapper": "HookedRpcTestCancel",
+      "original": "g_originalRpcTestCancel",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcTestCancel",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetModuleHandleW",
+      "wrapper": "HookedGetModuleHandleW",
+      "original": "g_originalGetModuleHandleW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetModuleHandleW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetModuleHandleExW",
+      "wrapper": "HookedGetModuleHandleExW",
+      "original": "g_originalGetModuleHandleExW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetModuleHandleExW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetModuleFileNameW",
+      "wrapper": "HookedGetModuleFileNameW",
+      "original": "g_originalGetModuleFileNameW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetModuleFileNameW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "FreeLibrary",
+      "wrapper": "HookedFreeLibrary",
+      "original": "g_originalFreeLibrary",
+      "authority": "windows_sdk",
+      "sdkSymbol": "FreeLibrary",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "CreateThread",
+      "wrapper": "HookedCreateThread",
+      "original": "g_originalCreateThread",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CreateThread",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "OpenThread",
+      "wrapper": "HookedOpenThread",
+      "original": "g_originalOpenThread",
+      "authority": "windows_sdk",
+      "sdkSymbol": "OpenThread",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "WaitForSingleObject",
+      "wrapper": "HookedWaitForSingleObject",
+      "original": "g_originalWaitForSingleObject",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WaitForSingleObject",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetExitCodeThread",
+      "wrapper": "HookedGetExitCodeThread",
+      "original": "g_originalGetExitCodeThread",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetExitCodeThread",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "CreateEventW",
+      "wrapper": "HookedCreateEventW",
+      "original": "g_originalCreateEventW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CreateEventW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "OpenEventW",
+      "wrapper": "HookedOpenEventW",
+      "original": "g_originalOpenEventW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "OpenEventW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "SetEvent",
+      "wrapper": "HookedSetEvent",
+      "original": "g_originalSetEvent",
+      "authority": "windows_sdk",
+      "sdkSymbol": "SetEvent",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "ResetEvent",
+      "wrapper": "HookedResetEvent",
+      "original": "g_originalResetEvent",
+      "authority": "windows_sdk",
+      "sdkSymbol": "ResetEvent",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "WaitForSingleObjectEx",
+      "wrapper": "HookedWaitForSingleObjectEx",
+      "original": "g_originalWaitForSingleObjectEx",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WaitForSingleObjectEx",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "CreateMutexW",
+      "wrapper": "HookedCreateMutexW",
+      "original": "g_originalCreateMutexW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CreateMutexW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "OpenMutexW",
+      "wrapper": "HookedOpenMutexW",
+      "original": "g_originalOpenMutexW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "OpenMutexW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "ReleaseMutex",
+      "wrapper": "HookedReleaseMutex",
+      "original": "g_originalReleaseMutex",
+      "authority": "windows_sdk",
+      "sdkSymbol": "ReleaseMutex",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "CreateSemaphoreW",
+      "wrapper": "HookedCreateSemaphoreW",
+      "original": "g_originalCreateSemaphoreW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CreateSemaphoreW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "OpenSemaphoreW",
+      "wrapper": "HookedOpenSemaphoreW",
+      "original": "g_originalOpenSemaphoreW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "OpenSemaphoreW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "ReleaseSemaphore",
+      "wrapper": "HookedReleaseSemaphore",
+      "original": "g_originalReleaseSemaphore",
+      "authority": "windows_sdk",
+      "sdkSymbol": "ReleaseSemaphore",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "WaitForMultipleObjectsEx",
+      "wrapper": "HookedWaitForMultipleObjectsEx",
+      "original": "g_originalWaitForMultipleObjectsEx",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WaitForMultipleObjectsEx",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "ntdll.dll",
+      "name": "NtCreateFile",
+      "wrapper": "HookedNtCreateFile",
+      "original": "g_originalNtCreateFile",
+      "authority": "windows_sdk",
+      "sdkSymbol": "NtCreateFile",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "LoadLibraryW",
+      "wrapper": "HookedLoadLibraryW",
+      "original": "g_originalLoadLibraryW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "LoadLibraryW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "LoadLibraryA",
+      "wrapper": "HookedLoadLibraryA",
+      "original": "g_originalLoadLibraryA",
+      "authority": "windows_sdk",
+      "sdkSymbol": "LoadLibraryA",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "LoadLibraryExW",
+      "wrapper": "HookedLoadLibraryExW",
+      "original": "g_originalLoadLibraryExW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "LoadLibraryExW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "LoadLibraryExA",
+      "wrapper": "HookedLoadLibraryExA",
+      "original": "g_originalLoadLibraryExA",
+      "authority": "windows_sdk",
+      "sdkSymbol": "LoadLibraryExA",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "ntdll.dll",
+      "name": "LdrLoadDll",
+      "wrapper": "HookedLdrLoadDll",
+      "original": "g_originalLdrLoadDll",
+      "authority": "pinned_phnt",
+      "sdkSymbol": null,
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetProcAddress",
+      "wrapper": "HookedGetProcAddress",
+      "original": "g_originalGetProcAddress",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetProcAddress",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "ntdll.dll",
+      "name": "LdrGetProcedureAddress",
+      "wrapper": "HookedLdrGetProcedureAddress",
+      "original": "g_originalLdrGetProcedureAddress",
+      "authority": "pinned_phnt",
+      "sdkSymbol": null,
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "advapi32.dll",
+      "name": "RegOpenKeyExW",
+      "wrapper": "HookedRegOpenKeyExW",
+      "original": "g_originalRegOpenKeyExW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RegOpenKeyExW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "advapi32.dll",
+      "name": "RegCreateKeyExW",
+      "wrapper": "HookedRegCreateKeyExW",
+      "original": "g_originalRegCreateKeyExW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RegCreateKeyExW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "advapi32.dll",
+      "name": "RegQueryValueExW",
+      "wrapper": "HookedRegQueryValueExW",
+      "original": "g_originalRegQueryValueExW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RegQueryValueExW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "advapi32.dll",
+      "name": "RegSetValueExW",
+      "wrapper": "HookedRegSetValueExW",
+      "original": "g_originalRegSetValueExW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RegSetValueExW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "advapi32.dll",
+      "name": "RegDeleteValueW",
+      "wrapper": "HookedRegDeleteValueW",
+      "original": "g_originalRegDeleteValueW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RegDeleteValueW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "advapi32.dll",
+      "name": "RegCloseKey",
+      "wrapper": "HookedRegCloseKey",
+      "original": "g_originalRegCloseKey",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RegCloseKey",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "advapi32.dll",
+      "name": "OpenProcessToken",
+      "wrapper": "HookedOpenProcessToken",
+      "original": "g_originalOpenProcessToken",
+      "authority": "windows_sdk",
+      "sdkSymbol": "OpenProcessToken",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "advapi32.dll",
+      "name": "LookupPrivilegeValueW",
+      "wrapper": "HookedLookupPrivilegeValueW",
+      "original": "g_originalLookupPrivilegeValueW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "LookupPrivilegeValueW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "bcrypt.dll",
+      "name": "BCryptOpenAlgorithmProvider",
+      "wrapper": "HookedBCryptOpenAlgorithmProvider",
+      "original": "g_originalBCryptOpenAlgorithmProvider",
+      "authority": "windows_sdk",
+      "sdkSymbol": "BCryptOpenAlgorithmProvider",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "bcrypt.dll",
+      "name": "BCryptCloseAlgorithmProvider",
+      "wrapper": "HookedBCryptCloseAlgorithmProvider",
+      "original": "g_originalBCryptCloseAlgorithmProvider",
+      "authority": "windows_sdk",
+      "sdkSymbol": "BCryptCloseAlgorithmProvider",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "bcrypt.dll",
+      "name": "BCryptGetProperty",
+      "wrapper": "HookedBCryptGetProperty",
+      "original": "g_originalBCryptGetProperty",
+      "authority": "windows_sdk",
+      "sdkSymbol": "BCryptGetProperty",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "bcrypt.dll",
+      "name": "BCryptGenRandom",
+      "wrapper": "HookedBCryptGenRandom",
+      "original": "g_originalBCryptGenRandom",
+      "authority": "windows_sdk",
+      "sdkSymbol": "BCryptGenRandom",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "bcrypt.dll",
+      "name": "BCryptDestroyKey",
+      "wrapper": "HookedBCryptDestroyKey",
+      "original": "g_originalBCryptDestroyKey",
+      "authority": "windows_sdk",
+      "sdkSymbol": "BCryptDestroyKey",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "crypt32.dll",
+      "name": "CertOpenStore",
+      "wrapper": "HookedCertOpenStore",
+      "original": "g_originalCertOpenStore",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CertOpenStore",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "crypt32.dll",
+      "name": "CertCloseStore",
+      "wrapper": "HookedCertCloseStore",
+      "original": "g_originalCertCloseStore",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CertCloseStore",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "crypt32.dll",
+      "name": "CryptMsgOpenToDecode",
+      "wrapper": "HookedCryptMsgOpenToDecode",
+      "original": "g_originalCryptMsgOpenToDecode",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CryptMsgOpenToDecode",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "crypt32.dll",
+      "name": "CryptMsgClose",
+      "wrapper": "HookedCryptMsgClose",
+      "original": "g_originalCryptMsgClose",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CryptMsgClose",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "wininet.dll",
+      "name": "InternetOpenW",
+      "wrapper": "HookedInternetOpenW",
+      "original": "g_originalInternetOpenW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "InternetOpenW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "wininet.dll",
+      "name": "InternetCloseHandle",
+      "wrapper": "HookedInternetCloseHandle",
+      "original": "g_originalInternetCloseHandle",
+      "authority": "windows_sdk",
+      "sdkSymbol": "InternetCloseHandle",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "winhttp.dll",
+      "name": "WinHttpOpen",
+      "wrapper": "HookedWinHttpOpen",
+      "original": "g_originalWinHttpOpen",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WinHttpOpen",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "winhttp.dll",
+      "name": "WinHttpCloseHandle",
+      "wrapper": "HookedWinHttpCloseHandle",
+      "original": "g_originalWinHttpCloseHandle",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WinHttpCloseHandle",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "winhttp.dll",
+      "name": "WinHttpSetOption",
+      "wrapper": "HookedWinHttpSetOption",
+      "original": "g_originalWinHttpSetOption",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WinHttpSetOption",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetSystemMetrics",
+      "wrapper": "HookedGetSystemMetrics",
+      "original": "g_originalGetSystemMetrics",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetSystemMetrics",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetDesktopWindow",
+      "wrapper": "HookedGetDesktopWindow",
+      "original": "g_originalGetDesktopWindow",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetDesktopWindow",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetForegroundWindow",
+      "wrapper": "HookedGetForegroundWindow",
+      "original": "g_originalGetForegroundWindow",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetForegroundWindow",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetWindowThreadProcessId",
+      "wrapper": "HookedGetWindowThreadProcessId",
+      "original": "g_originalGetWindowThreadProcessId",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetWindowThreadProcessId",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "gdi32.dll",
+      "name": "CreateCompatibleDC",
+      "wrapper": "HookedCreateCompatibleDC",
+      "original": "g_originalCreateCompatibleDC",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CreateCompatibleDC",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "gdi32.dll",
+      "name": "GetDeviceCaps",
+      "wrapper": "HookedGetDeviceCaps",
+      "original": "g_originalGetDeviceCaps",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetDeviceCaps",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "gdi32.dll",
+      "name": "DeleteDC",
+      "wrapper": "HookedDeleteDC",
+      "original": "g_originalDeleteDC",
+      "authority": "windows_sdk",
+      "sdkSymbol": "DeleteDC",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "psapi.dll",
+      "name": "EnumProcessModules",
+      "wrapper": "HookedEnumProcessModules",
+      "original": "g_originalEnumProcessModules",
+      "authority": "windows_sdk",
+      "sdkSymbol": "K32EnumProcessModules",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "psapi.dll",
+      "name": "GetModuleInformation",
+      "wrapper": "HookedGetModuleInformation",
+      "original": "g_originalGetModuleInformation",
+      "authority": "windows_sdk",
+      "sdkSymbol": "K32GetModuleInformation",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "psapi.dll",
+      "name": "GetModuleBaseNameW",
+      "wrapper": "HookedGetModuleBaseNameW",
+      "original": "g_originalGetModuleBaseNameW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "K32GetModuleBaseNameW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "psapi.dll",
+      "name": "GetModuleFileNameExW",
+      "wrapper": "HookedGetModuleFileNameExW",
+      "original": "g_originalGetModuleFileNameExW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "K32GetModuleFileNameExW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "version.dll",
+      "name": "GetFileVersionInfoSizeW",
+      "wrapper": "HookedGetFileVersionInfoSizeW",
+      "original": "g_originalGetFileVersionInfoSizeW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetFileVersionInfoSizeW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "version.dll",
+      "name": "GetFileVersionInfoW",
+      "wrapper": "HookedGetFileVersionInfoW",
+      "original": "g_originalGetFileVersionInfoW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetFileVersionInfoW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "version.dll",
+      "name": "VerQueryValueW",
+      "wrapper": "HookedVerQueryValueW",
+      "original": "g_originalVerQueryValueW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "VerQueryValueW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "shell32.dll",
+      "name": "SHGetKnownFolderPath",
+      "wrapper": "HookedSHGetKnownFolderPath",
+      "original": "g_originalSHGetKnownFolderPath",
+      "authority": "windows_sdk",
+      "sdkSymbol": "SHGetKnownFolderPath",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "shell32.dll",
+      "name": "SHGetSpecialFolderPathW",
+      "wrapper": "HookedSHGetSpecialFolderPathW",
+      "original": "g_originalSHGetSpecialFolderPathW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "SHGetSpecialFolderPathW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "ole32.dll",
+      "name": "CoInitializeEx",
+      "wrapper": "HookedCoInitializeEx",
+      "original": "g_originalCoInitializeEx",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CoInitializeEx",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "ole32.dll",
+      "name": "CoUninitialize",
+      "wrapper": "HookedCoUninitialize",
+      "original": "g_originalCoUninitialize",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CoUninitialize",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "ole32.dll",
+      "name": "CoCreateGuid",
+      "wrapper": "HookedCoCreateGuid",
+      "original": "g_originalCoCreateGuid",
+      "authority": "windows_sdk",
+      "sdkSymbol": "CoCreateGuid",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "ole32.dll",
+      "name": "StringFromGUID2",
+      "wrapper": "HookedStringFromGUID2",
+      "original": "g_originalStringFromGUID2",
+      "authority": "windows_sdk",
+      "sdkSymbol": "StringFromGUID2",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "api-ms-win-core-winrt-l1-1-0.dll",
+      "name": "RoInitialize",
+      "wrapper": "HookedRoInitialize",
+      "original": "g_originalRoInitialize",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RoInitialize",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "api-ms-win-core-winrt-l1-1-0.dll",
+      "name": "RoUninitialize",
+      "wrapper": "HookedRoUninitialize",
+      "original": "g_originalRoUninitialize",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RoUninitialize",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "api-ms-win-core-winrt-l1-1-0.dll",
+      "name": "RoGetApartmentIdentifier",
+      "wrapper": "HookedRoGetApartmentIdentifier",
+      "original": "g_originalRoGetApartmentIdentifier",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RoGetApartmentIdentifier",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "oleaut32.dll",
+      "name": "SysFreeString",
+      "wrapper": "HookedSysFreeString",
+      "original": "g_originalSysFreeString",
+      "authority": "windows_sdk",
+      "sdkSymbol": "SysFreeString",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "oleaut32.dll",
+      "name": "VariantClear",
+      "wrapper": "HookedVariantClear",
+      "original": "g_originalVariantClear",
+      "authority": "windows_sdk",
+      "sdkSymbol": "VariantClear",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "oleaut32.dll",
+      "name": "SafeArrayDestroy",
+      "wrapper": "HookedSafeArrayDestroy",
+      "original": "g_originalSafeArrayDestroy",
+      "authority": "windows_sdk",
+      "sdkSymbol": "SafeArrayDestroy",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "secur32.dll",
+      "name": "FreeCredentialsHandle",
+      "wrapper": "HookedFreeCredentialsHandle",
+      "original": "g_originalFreeCredentialsHandle",
+      "authority": "windows_sdk",
+      "sdkSymbol": "FreeCredentialsHandle",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "secur32.dll",
+      "name": "DeleteSecurityContext",
+      "wrapper": "HookedDeleteSecurityContext",
+      "original": "g_originalDeleteSecurityContext",
+      "authority": "windows_sdk",
+      "sdkSymbol": "DeleteSecurityContext",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "dnsapi.dll",
+      "name": "DnsFree",
+      "wrapper": "HookedDnsFree",
+      "original": "g_originalDnsFree",
+      "authority": "windows_sdk",
+      "sdkSymbol": "DnsFree",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "setupapi.dll",
+      "name": "SetupDiDestroyDeviceInfoList",
+      "wrapper": "HookedSetupDiDestroyDeviceInfoList",
+      "original": "g_originalSetupDiDestroyDeviceInfoList",
+      "authority": "windows_sdk",
+      "sdkSymbol": "SetupDiDestroyDeviceInfoList",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "userenv.dll",
+      "name": "DestroyEnvironmentBlock",
+      "wrapper": "HookedDestroyEnvironmentBlock",
+      "original": "g_originalDestroyEnvironmentBlock",
+      "authority": "windows_sdk",
+      "sdkSymbol": "DestroyEnvironmentBlock",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "iphlpapi.dll",
+      "name": "GetAdaptersAddresses",
+      "wrapper": "HookedGetAdaptersAddresses",
+      "original": "g_originalGetAdaptersAddresses",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetAdaptersAddresses",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "iphlpapi.dll",
+      "name": "GetIfEntry2",
+      "wrapper": "HookedGetIfEntry2",
+      "original": "g_originalGetIfEntry2",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetIfEntry2",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "shlwapi.dll",
+      "name": "PathFileExistsW",
+      "wrapper": "HookedPathFileExistsW",
+      "original": "g_originalPathFileExistsW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "PathFileExistsW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "wintrust.dll",
+      "name": "WTHelperProvDataFromStateData",
+      "wrapper": "HookedWTHelperProvDataFromStateData",
+      "original": "g_originalWTHelperProvDataFromStateData",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WTHelperProvDataFromStateData",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "dbghelp.dll",
+      "name": "SymInitializeW",
+      "wrapper": "HookedSymInitializeW",
+      "original": "g_originalSymInitializeW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "SymInitializeW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "dbghelp.dll",
+      "name": "SymCleanup",
+      "wrapper": "HookedSymCleanup",
+      "original": "g_originalSymCleanup",
+      "authority": "windows_sdk",
+      "sdkSymbol": "SymCleanup",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcStringBindingComposeW",
+      "wrapper": "HookedRpcStringBindingComposeW",
+      "original": "g_originalRpcStringBindingComposeW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcStringBindingComposeW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcBindingFromStringBindingW",
+      "wrapper": "HookedRpcBindingFromStringBindingW",
+      "original": "g_originalRpcBindingFromStringBindingW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcBindingFromStringBindingW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcStringFreeW",
+      "wrapper": "HookedRpcStringFreeW",
+      "original": "g_originalRpcStringFreeW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcStringFreeW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcBindingFree",
+      "wrapper": "HookedRpcBindingFree",
+      "original": "g_originalRpcBindingFree",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcBindingFree",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcBindingSetOption",
+      "wrapper": "HookedRpcBindingSetOption",
+      "original": "g_originalRpcBindingSetOption",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcBindingSetOption",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "RpcMgmtEpEltInqDone",
+      "wrapper": "HookedRpcMgmtEpEltInqDone",
+      "original": "g_originalRpcMgmtEpEltInqDone",
+      "authority": "windows_sdk",
+      "sdkSymbol": "RpcMgmtEpEltInqDone",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "UuidCreate",
+      "wrapper": "HookedUuidCreate",
+      "original": "g_originalUuidCreate",
+      "authority": "windows_sdk",
+      "sdkSymbol": "UuidCreate",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "UuidToStringW",
+      "wrapper": "HookedUuidToStringW",
+      "original": "g_originalUuidToStringW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "UuidToStringW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "rpcrt4.dll",
+      "name": "UuidFromStringW",
+      "wrapper": "HookedUuidFromStringW",
+      "original": "g_originalUuidFromStringW",
+      "authority": "windows_sdk",
+      "sdkSymbol": "UuidFromStringW",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "ws2_32.dll",
+      "name": "WSAStartup",
+      "wrapper": "HookedWSAStartup",
+      "original": "g_originalWSAStartup",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WSAStartup",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "ws2_32.dll",
+      "name": "WSACleanup",
+      "wrapper": "HookedWSACleanup",
+      "original": "g_originalWSACleanup",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WSACleanup",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "ws2_32.dll",
+      "name": "socket",
+      "wrapper": "HookedSocket",
+      "original": "g_originalSocket",
+      "authority": "windows_sdk",
+      "sdkSymbol": "socket",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "ws2_32.dll",
+      "name": "closesocket",
+      "wrapper": "HookedClosesocket",
+      "original": "g_originalClosesocket",
+      "authority": "windows_sdk",
+      "sdkSymbol": "closesocket",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "ws2_32.dll",
+      "name": "connect",
+      "wrapper": "HookedConnect",
+      "original": "g_originalConnect",
+      "authority": "windows_sdk",
+      "sdkSymbol": "connect",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "ws2_32.dll",
+      "name": "getaddrinfo",
+      "wrapper": "HookedGetAddrInfo",
+      "original": "g_originalGetAddrInfo",
+      "authority": "windows_sdk",
+      "sdkSymbol": "getaddrinfo",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "ws2_32.dll",
+      "name": "freeaddrinfo",
+      "wrapper": "HookedFreeAddrInfo",
+      "original": "g_originalFreeAddrInfo",
+      "authority": "windows_sdk",
+      "sdkSymbol": "freeaddrinfo",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "ws2_32.dll",
+      "name": "WSAGetLastError",
+      "wrapper": "HookedWSAGetLastError",
+      "original": "g_originalWSAGetLastError",
+      "authority": "windows_sdk",
+      "sdkSymbol": "WSAGetLastError",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    }
+  ]
+}

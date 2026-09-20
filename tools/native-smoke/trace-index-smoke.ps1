@@ -76,7 +76,7 @@ try
     Assert-True (Test-Path -LiteralPath $database) "Trace index database was not created."
     Assert-True ($build.databasePath -eq $database) "Trace index response database path mismatch."
     Assert-True ($build.indexBackend -eq "winsqlite3-fts5") "Trace index backend mismatch."
-    Assert-True ($build.indexSchemaVersion -eq 1) "Trace index schema version mismatch."
+    Assert-True ($build.indexSchemaVersion -eq 2) "Trace index schema version mismatch."
     Assert-True ($build.sessionCount -ge 4) "Trace index should inspect copied fixture sessions."
     Assert-True ($build.indexedSessionCount -ge 3) "Trace index should include valid fixture sessions."
     Assert-True ($build.invalidSessionCount -ge 1) "Trace index should count invalid fixture sessions."

@@ -120,6 +120,34 @@ function editTrace(directory, transform)
     editManifest(directory, (value) => ({ ...value, storedBytes: bytes, uncompressedBytes: bytes }));
 }
 mutation("trace-null-error", (directory) => editTrace(directory, (text) => text), true);
+const observedTrace = (text) => ({ ...JSON.parse(text), observation: { eventPhase: "return", nestedCalls: "suppressed",
+    exceptionEvents: "not_emitted", completionCorrelation: "not_tracked" }, arguments: [{ index: 1,
+        name: "lpBuffer", type: "LPVOID", direction: "out", rawValue: "0x1234", preCallValue: "0x1234",
+        postCallValue: "0x1234", decodedValue: "01 02", decodeStatus: "decoded",
+        capture: { phase: "exit", readStatus: "complete", requestedBytes: 32, capturedBytes: 16,
+            limitBytes: 16, byteCountSource: "transferred_count_after_sync_success", truncationReason: "capture_limit" } }] });
+mutation("observation-valid", (directory) => editTrace(directory, (text) => JSON.stringify(observedTrace(text)) + "\n"), true);
+for (const [name, change] of [
+    ["false-completion-claim", (value) => { value.observation.completionCorrelation = "tracked"; }],
+    ["observation-type", (value) => { value.observation = "return"; }],
+    ["missing-observation-scope", (value) => { delete value.observation.nestedCalls; }],
+    ["capture-type", (value) => { value.arguments[0].capture = []; }],
+    ["capture-phase", (value) => { value.arguments[0].capture.phase = "during"; }],
+    ["capture-number-type", (value) => { value.arguments[0].capture.capturedBytes = "16"; }],
+    ["capture-count-limit", (value) => { value.arguments[0].capture.capturedBytes = 17; }],
+    ["capture-short-complete", (value) => { value.arguments[0].capture.capturedBytes = 15; }],
+    ["capture-unreadable-nonzero", (value) => { value.arguments[0].capture.readStatus = "unreadable"; }],
+    ["capture-none-nonzero", (value) => { value.arguments[0].capture.phase = "none"; }],
+    ["capture-missing-source", (value) => { delete value.arguments[0].capture.byteCountSource; }]
+])
+{
+    mutation(name, (directory) => editTrace(directory, (text) =>
+    {
+        const value = observedTrace(text);
+        change(value);
+        return JSON.stringify(value) + "\n";
+    }));
+}
 const clockTrace = (text) => ({ ...JSON.parse(text), timeSource: "qpc", relativeTimeMs: 0.1, durationUs: 100000,
     timestampUtc: "2022-06-18T04:26:40.0001000Z", collectedAtUtc: "2026-09-20T00:00:00.0000000Z",
     timing: { qpcFrequency: "10000000", qpcBase: "9007199254740993", utcBaseFileTime: "133000000000000000",

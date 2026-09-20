@@ -9,6 +9,8 @@ export function createTraceEventFromAgentApiCall(event: AgentApiCallEvent, event
   return {
     schemaVersion: event.schemaVersion,
     eventId,
+    recordSequence: event.recordSequence,
+    observation: event.observation,
     relativeTimeMs,
     timeSource: hasTiming ? "qpc" : "unavailable",
     timing: hasTiming ? event.timing : undefined,

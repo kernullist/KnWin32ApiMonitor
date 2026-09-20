@@ -11,6 +11,10 @@ native/third-party/zstd/** text eol=lf whitespace=-blank-at-eol
 # Generated artifacts are byte-compared by validators. Keep them LF on Windows.
 generated/definition-ids.json text eol=lf
 generated/ui-catalog.json text eol=lf
+generated/sdk-abi-ir.json text eol=lf
+generated/sdk-abi-sources.json text eol=lf
+native/knmon-common/include/knmon/common/NativeApiAbi.h text eol=lf
+native/knmon-agent64/src/GeneratedSdkAbiChecks.inc text eol=lf
 generated/dll-batch-promotion-plan.json text eol=lf
 generated/manual-decoder-batch-plan.json text eol=lf
 generated/tier2-hook-plan.json text eol=lf

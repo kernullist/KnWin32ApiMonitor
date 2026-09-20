@@ -3303,3 +3303,9 @@ code {
     overflow-x: auto;
   }
 }
+.argument-capture
+{
+  display: block;
+  opacity: 0.72;
+  overflow-wrap: anywhere;
+}

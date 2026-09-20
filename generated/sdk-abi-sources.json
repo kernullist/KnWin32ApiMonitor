@@ -1,0 +1,1384 @@
+{
+  "sdk": "10.0.26100.0",
+  "nativeSource": {
+    "commit": "53fbbdc5b5d2b08761db1c7b26bfa8c820924356",
+    "name": "PHNT",
+    "note": "Generated from PHNT Native API headers for ntdll export prototype enrichment.",
+    "repository": "https://github.com/winsiderss/phnt.git"
+  },
+  "nativePrototypeSha256": "0fa553ca66d9fe96ff938a055c4d6e4367d48e36b943713beb89a821f559e38f",
+  "sdkHeaders": [
+    {
+      "file": "shared/apiset.h",
+      "sha256": "e984e20681fd3de73ce14ab09d759d5b4faf03f7d66a78602da2ac9234b24df4"
+    },
+    {
+      "file": "shared/apisetcconv.h",
+      "sha256": "1093683104f97c8c9725bb2e7539dca22722dc8c5618cd846287e9458698abfe"
+    },
+    {
+      "file": "shared/basetsd.h",
+      "sha256": "d35b73f885d7ef7dfd27fce3762c190c1c952a21e10a3945bcb3d1860c673b12"
+    },
+    {
+      "file": "shared/bcrypt.h",
+      "sha256": "c979ee7490ec190779385d69a39026f9d79308eeb6aaada64ef0766c1e3e0376"
+    },
+    {
+      "file": "shared/cderr.h",
+      "sha256": "bf32afdc975ba03781b01dfc7b3a450787cc213257a3f4b7f53ec168ce07dd7c"
+    },
+    {
+      "file": "shared/cfg.h",
+      "sha256": "6e2aa35c540ec4754d8e13666b0b17f83cb174c4dfd34cf9076565f72361f5e3"
+    },
+    {
+      "file": "shared/concurrencysal.h",
+      "sha256": "1ea9a2e32a6ff298ad7904610cc71028caa9b172399a579ca90a120d1b1aec12"
+    },
+    {
+      "file": "shared/d3d9.h",
+      "sha256": "df78083ee8e75e6d3851422f6aa8abf6213e349f22bf27e7f161e98e8d90df04"
+    },
+    {
+      "file": "shared/d3d9caps.h",
+      "sha256": "ce1d3698749e228cb952651ddfe03f75915f0d322c6d88ae01b9139102624a4f"
+    },
+    {
+      "file": "shared/d3d9types.h",
+      "sha256": "ce75dc368d5f37506ada4c32062a96ab4d4894fead5d21ad5844fc9f0a2e62c2"
+    },
+    {
+      "file": "shared/dciddi.h",
+      "sha256": "5ed1b1314c5ae25e390c50e267069e251b34a66fd2ec2bb311fe2f6cc253e875"
+    },
+    {
+      "file": "shared/devpkey.h",
+      "sha256": "132ad3ea096996fbbf79ea8b23c4adb5b348d95a9d2d854bc076cc7fa6a091ab"
+    },
+    {
+      "file": "shared/devpropdef.h",
+      "sha256": "79e4631e9e0cfda0975270f71c9970d731352ad8d198d6706ac13a3970ceaa98"
+    },
+    {
+      "file": "shared/DriverSpecs.h",
+      "sha256": "9cf7e9e1c9b55c7c351e87ff5a98e362b6ffdb511c3309ab9cf46b62b0dace42"
+    },
+    {
+      "file": "shared/dxgi.h",
+      "sha256": "4b983ac75717296191a5faef4a87ff0b02b0e8d6202cd5af85bf75accea2cbbe"
+    },
+    {
+      "file": "shared/dxgi1_2.h",
+      "sha256": "437968928ac29f1b5facb43035b89e85d2ac605f57bdbd354af94d57d9b3c31a"
+    },
+    {
+      "file": "shared/dxgi1_3.h",
+      "sha256": "481308a20158c062d70fee7801a23d390827ddfe2b40d792cdb31d532650db99"
+    },
+    {
+      "file": "shared/dxgi1_4.h",
+      "sha256": "69f8a3028afe3560fbb026dbdc3dfa923e17d4a8bfe93173a1737a522fd95e11"
+    },
+    {
+      "file": "shared/dxgi1_5.h",
+      "sha256": "b8a349eb873e50e992ffc619e353037c936b9e867407380683a1d949e23fd07d"
+    },
+    {
+      "file": "shared/dxgi1_6.h",
+      "sha256": "720f9f871e82118e1a33997558ec1ccd7fbd00e27cfce13a0b803448f5f99c9f"
+    },
+    {
+      "file": "shared/dxgicommon.h",
+      "sha256": "bef78ab75f5dd09bf8f8f26fbfc66c6b5770b0eeb968ec4b87934cf8d187f490"
+    },
+    {
+      "file": "shared/dxgiformat.h",
+      "sha256": "0ac14d7da595c528e0f14c64685d83596c392d36a0ab49ce2ecab05299e6c0d0"
+    },
+    {
+      "file": "shared/dxgitype.h",
+      "sha256": "1fd2510bb1b5ee2fc240a9505e0ff5fee603cb80ccc576a7c03780f23337effa"
+    },
+    {
+      "file": "shared/guiddef.h",
+      "sha256": "0c08463fbc5a23a8862e57699e2f30dd14cd3db4a40903e4fca9392a57942dae"
+    },
+    {
+      "file": "shared/ifdef.h",
+      "sha256": "cefa534e00e88225d7820ac45aceb8437d53f8ff3c9103eecf9c31e23f35d03a"
+    },
+    {
+      "file": "shared/ifmib.h",
+      "sha256": "f4c23e12ec16f550af96b25d25bd159a3b08466571ca992b9f253b366dd1eb91"
+    },
+    {
+      "file": "shared/in6addr.h",
+      "sha256": "b363d5f7e732bde66acd46b211d3f9c4470c9571b9447b9d28cf1e0d46fcbf4c"
+    },
+    {
+      "file": "shared/inaddr.h",
+      "sha256": "a2ae281be066b6a2164ae5639dca411d8b03842ff91b216396203b1e62038572"
+    },
+    {
+      "file": "shared/intsafe.h",
+      "sha256": "e2bd9872e5402f8a802946d4859526fdfda55c3a08f52249b0d976cb6e177a19"
+    },
+    {
+      "file": "shared/ipifcons.h",
+      "sha256": "d5069d018bc8da7ebf219f84b8c047cebe5cff22a3c25cb15814cd867dabfe59"
+    },
+    {
+      "file": "shared/ipmib.h",
+      "sha256": "9c1414adfaec3c7d519be7640e372604f2653872e5e86d003b9e6e169492e2b5"
+    },
+    {
+      "file": "shared/iprtrmib.h",
+      "sha256": "cd2cd4632870f8e6dbc835f8f25a86934c138719ff89f9b00c417fb0f4a3e1fb"
+    },
+    {
+      "file": "shared/ipv6prefast.h",
+      "sha256": "04f427d25b49f3f766caa4a4390c1cffc13c84052ecbfa14b3490e8b56115b16"
+    },
+    {
+      "file": "shared/issper16.h",
+      "sha256": "803ffc6d0cc7dc961beef8d65bebf51a8c611610b9862244028bd4688ec172c9"
+    },
+    {
+      "file": "shared/kernelspecs.h",
+      "sha256": "e844c7726c42736df74445b36351dc01e29bccee7d57ea208f77f61aa4c2b191"
+    },
+    {
+      "file": "shared/ktmtypes.h",
+      "sha256": "68d2848d00ae33282fb265880f8166f2b5dc60cd7a26db652450a5b44d44ee11"
+    },
+    {
+      "file": "shared/lmcons.h",
+      "sha256": "5c92ff88ccd9f0e72015eb42626178fc5f9de3d0a08fa7b3a84fdb90db66085d"
+    },
+    {
+      "file": "shared/minwindef.h",
+      "sha256": "a9cf08be8407a196104124d5ade2308e204e47d3252bcd2ad20d0f2137843d62"
+    },
+    {
+      "file": "shared/mmreg.h",
+      "sha256": "f1bfa2fdb661f7b3188813f9b4a056d818d26a95941155f13d9b7aab15772631"
+    },
+    {
+      "file": "shared/mprapidef.h",
+      "sha256": "afd5b586425eaaf3fbcebd228bbc26cc38c3f41c189f7cc872c6a6fbbfce054c"
+    },
+    {
+      "file": "shared/mstcpip.h",
+      "sha256": "73766ccfdf28d1005f5e40662f66c63fe221ee5d5eef82622e878e97e8ea1a32"
+    },
+    {
+      "file": "shared/mswsockdef.h",
+      "sha256": "6555e8528263de35defd45f80232c86dc36f3bbf1576ae261296250431a5d9ca"
+    },
+    {
+      "file": "shared/ndis/hashtypes.h",
+      "sha256": "84c3b1547e51aee8d340112ad5798a2b1ea7ce9052b7a677f8ee4f3cddaa34dc"
+    },
+    {
+      "file": "shared/ndis/ioctltypes.h",
+      "sha256": "7fc3f0b87be7c2eaabb8fcbc5764f73f6564d69ac6847d32d823a64378f402ff"
+    },
+    {
+      "file": "shared/ndis/nbluro.h",
+      "sha256": "927bba0eac13df7d100df68663f69e88f999b0240cea9244109add4ea8145b4f"
+    },
+    {
+      "file": "shared/ndis/ndisport.h",
+      "sha256": "7bc057a910c5e0d76d6b59539a4afcf9c5bfb1a09753df6a27c9f53b91ad0444"
+    },
+    {
+      "file": "shared/ndis/nicswitchtypes.h",
+      "sha256": "0b8e49dd5eed4fbd25b3abb1e865d746439963fb434b6aab432e077886168fd6"
+    },
+    {
+      "file": "shared/ndis/objectheader.h",
+      "sha256": "bebe4cbf03adfa98fd0ffe5a45f61756528d1e72cca6cc1ea7683beea06ec52b"
+    },
+    {
+      "file": "shared/ndis/offloadtypes.h",
+      "sha256": "611cf1460910e92897b24a07075860210c424aed06841e17be9bf065e59849e4"
+    },
+    {
+      "file": "shared/ndis/oidtypes.h",
+      "sha256": "db46a33e25968f4b23422f69552a9096312f9e76d302ac6681500b803c92207d"
+    },
+    {
+      "file": "shared/ndis/types.h",
+      "sha256": "034cc9d50885d8d33b83140cae7a9e100a3e5023b71546ec7d6108fca0bcfcdf"
+    },
+    {
+      "file": "shared/ndis/version.h",
+      "sha256": "15cd282dc1f057f98171d5dc61f341d76e2933cb20194217c95732564f8914ce"
+    },
+    {
+      "file": "shared/ndkinfo.h",
+      "sha256": "ddbfa886ad382a2f409c7a23b30ff2caed822659245ee273d6e980747f26552f"
+    },
+    {
+      "file": "shared/netioapi.h",
+      "sha256": "7035f59fd6bd88b4b7b023ff25dd66eaec4116646275ba81e29e7598edafb71f"
+    },
+    {
+      "file": "shared/nldef.h",
+      "sha256": "11942b91df8cc1c2fc9928db7ecc686daec2603023d87a9235a4be966738dda3"
+    },
+    {
+      "file": "shared/no_sal2.h",
+      "sha256": "9f724caeb812488b79e6e56f6144fed08751c30f6ebc96b1ce852cce1b93768d"
+    },
+    {
+      "file": "shared/ntddndis.h",
+      "sha256": "c2d369a293e68fb895be2c2d7afad55af098ca395363f709c8c7eb6611852a40"
+    },
+    {
+      "file": "shared/pciprop.h",
+      "sha256": "324e884ba572c8fd7b2447cfc7b1767f301f04e4d1705340d957ab450e2eede7"
+    },
+    {
+      "file": "shared/poppack.h",
+      "sha256": "a50d0ef5cfe96d634a41ee9a97749c147165f8656cdfed5df53bc24c8adb1210"
+    },
+    {
+      "file": "shared/pshpack1.h",
+      "sha256": "dee27f2712b9e72ca78a404834735303d16bdb21c8aa3addaca7dbca22664529"
+    },
+    {
+      "file": "shared/pshpack2.h",
+      "sha256": "971d19074639cb36134bb40776cb2f817c53cbd05d748b52468f571932bbcc49"
+    },
+    {
+      "file": "shared/pshpack4.h",
+      "sha256": "1cb4d07a218ec43c7935b431b16146fc0f3d29d43bd192f12959051d62c48d57"
+    },
+    {
+      "file": "shared/pshpack8.h",
+      "sha256": "47f3972a1211e3a5ac32b18fae1a824db087dc7dc562d152e9ccab9b297faef0"
+    },
+    {
+      "file": "shared/qos.h",
+      "sha256": "e1dda564159bb080003a051a939278cd20aff626c06815e9bcae04607931165d"
+    },
+    {
+      "file": "shared/rpc.h",
+      "sha256": "063bd35df91c85b029064abe19d635d985e414c9733c60ee8ca8ce937c98d6d5"
+    },
+    {
+      "file": "shared/rpcasync.h",
+      "sha256": "5e91801cee17b175a397cc56ff08790783d4fcdbc8d52fe7bb7461ccfa369a85"
+    },
+    {
+      "file": "shared/rpcdce.h",
+      "sha256": "991883893134c8ecbe6af8335df0781bfb779c11684b3367def514136241b866"
+    },
+    {
+      "file": "shared/rpcdcep.h",
+      "sha256": "df032ed7952b84113857284d86e7365b158cc57f955a5c0580e57e96c6df5ba2"
+    },
+    {
+      "file": "shared/rpcndr.h",
+      "sha256": "7eeaaa2b4a5972b44a03086884eeb4338d2b0790e3dbc3cb858cbab5fa813978"
+    },
+    {
+      "file": "shared/rpcnterr.h",
+      "sha256": "9d94281cbd9272e02a39b51e19367df2a87f3756b85b5c848bee38828e0cdc23"
+    },
+    {
+      "file": "shared/rpcsal.h",
+      "sha256": "c15959eb632ab0f27d2bcb3b6873cd2873bdd5669069409d936ef993dcb1c108"
+    },
+    {
+      "file": "shared/sal.h",
+      "sha256": "a2b3ee38bc3b998d7162a38d1aa1c8d19eb3f72eea64eb5ee68fb6497b65e7f1"
+    },
+    {
+      "file": "shared/sdkddkver.h",
+      "sha256": "2472140e0a4d56595743bb74002a51aee9b58667bd178fc43742e19debfeb774"
+    },
+    {
+      "file": "shared/sdv_driverspecs.h",
+      "sha256": "99fd81f9464150f56963c3bbafaa95f93b837c221c4237e6e399a85e00ea9f39"
+    },
+    {
+      "file": "shared/secext.h",
+      "sha256": "22c2fdcfd609a59f8c1d4cf22a61e540896ce309ae1239cef2b746e88cb84ef1"
+    },
+    {
+      "file": "shared/security.h",
+      "sha256": "9913d07182898801a2176776240f7c8feda78d8bd587c3522401d8f22e15560a"
+    },
+    {
+      "file": "shared/specstrings_strict.h",
+      "sha256": "49b12898b42bcf53e5f8fb75e6db1a5d3ffb7a9f394e50df3351e0824d4a8b42"
+    },
+    {
+      "file": "shared/specstrings_undef.h",
+      "sha256": "6aba76eabbec627edadba5ab29304d9e2ff4eb9da165fd81a9095c851f405a01"
+    },
+    {
+      "file": "shared/specstrings.h",
+      "sha256": "3b83b1cd3b4f9bf46009bfdccf01d5c3a6fa6eed3f823d1ef497ed6d1b9bce0e"
+    },
+    {
+      "file": "shared/sspi.h",
+      "sha256": "0a3bc3c5f2d8db8d23c370999a9e0208678a97a665f4d1b633a601e6f2b836ca"
+    },
+    {
+      "file": "shared/stralign.h",
+      "sha256": "f7d2f48b6a9154937ad907e91b70faf6c68044fbe9d4042c392ac3c0eb1a82ef"
+    },
+    {
+      "file": "shared/tcpestats.h",
+      "sha256": "e4a81ecffab0f30391856cc9ed899a4a9c2334613c8591b8e8db427efb77df45"
+    },
+    {
+      "file": "shared/tcpmib.h",
+      "sha256": "8d202a04f8252892a3d9bcb752dded6ace19a8e56a2e7b92e805208b3f1c9b0f"
+    },
+    {
+      "file": "shared/tvout.h",
+      "sha256": "8c359d2dff894d546f3eced2fe9463dfa4824bffc6c8c71ecd8feef02e7eae21"
+    },
+    {
+      "file": "shared/udpmib.h",
+      "sha256": "da6d5bd0106aecedfcccf63c8da5ecf687933f53129f869fb7282b1312c57275"
+    },
+    {
+      "file": "shared/winapifamily.h",
+      "sha256": "bda507d14f2e40023d344cb943cbd98af26de8a47f3b0f5fac694d2025711af1"
+    },
+    {
+      "file": "shared/windef.h",
+      "sha256": "040535b19a60264e5fe6971f7cb13cbf24be17abeeaa8acd21e44f5d7dfe8d22"
+    },
+    {
+      "file": "shared/windnsdef.h",
+      "sha256": "905489cca8b6b1b3a796bd715fdbafa2eef251aa651b848e88427e62e75ffa7a"
+    },
+    {
+      "file": "shared/windot11.h",
+      "sha256": "f4d2a90e587c840b71afa2d75d35eb8bfa576e08de78aace037cee891030084a"
+    },
+    {
+      "file": "shared/winerror.h",
+      "sha256": "0284ea46280c14063bb714d08c9ec48de18de6a7f0384323b263fec234428833"
+    },
+    {
+      "file": "shared/winpackagefamily.h",
+      "sha256": "8f74e254896094a3884e6975fd24b3493846514065f47d2666df53cdea45b8ea"
+    },
+    {
+      "file": "shared/winsmcrd.h",
+      "sha256": "d692cc4fe3b409bbbf175df4ef4d648813d366001e479de06631650d548a517e"
+    },
+    {
+      "file": "shared/WlanTypes.h",
+      "sha256": "94438ef9987faa22000f6b9ecb101314fb0fc766fb49c9d3b1941757fb8c2fab"
+    },
+    {
+      "file": "shared/wnnc.h",
+      "sha256": "fb3aaeef324b5d00ce0a6ae11702dcc3c1de65fa0a10caaab4336b97d3adf493"
+    },
+    {
+      "file": "shared/ws2def.h",
+      "sha256": "57c53a7faa53bb1acfec935eb8e562b1f2d51069a7f30ac3dfa2e046dd6c304f"
+    },
+    {
+      "file": "shared/ws2ipdef.h",
+      "sha256": "31395c8b1b6d00f73bbcdea55d7d88e0cc9d5fcee6565b1c407808bbff067abe"
+    },
+    {
+      "file": "shared/wtypes.h",
+      "sha256": "71417094369493700ce385e32c63002ed651dd70b5d7f7d8a6f64c9e9a0939db"
+    },
+    {
+      "file": "shared/wtypesbase.h",
+      "sha256": "e5277f89186f786ae0923c9d7689a16d91dbeff7fad36a86b08671416e4b679d"
+    },
+    {
+      "file": "ucrt/corecrt_malloc.h",
+      "sha256": "44bd1bb518e730ba0be045f44a4735869e08f7d54ab85c298270770812fcff80"
+    },
+    {
+      "file": "ucrt/corecrt_memcpy_s.h",
+      "sha256": "359f3ce9e84bc00c983f01d9c3375d0ca9e0ef6a42e797d16e119c62b2ef333b"
+    },
+    {
+      "file": "ucrt/corecrt_memory.h",
+      "sha256": "18ca520416579183bc369c0a8e555914db5c7577075b9359173fc6bc45595560"
+    },
+    {
+      "file": "ucrt/corecrt_search.h",
+      "sha256": "fe06c4dd27c3df5ca6bed52a433b8848f32e14ed0f3712d00f7e602416471c1b"
+    },
+    {
+      "file": "ucrt/corecrt_stdio_config.h",
+      "sha256": "a7e100624320a8e0123890c5008bcb2281c1273ca7ce5bb1d297f987fdbe79a0"
+    },
+    {
+      "file": "ucrt/corecrt_wctype.h",
+      "sha256": "b622b24cbda842a1736987f38c9deb5076e51af018630842a127bebd9104076e"
+    },
+    {
+      "file": "ucrt/corecrt_wstdio.h",
+      "sha256": "a10bbf4667b3aada380a6b80df853f9fbddc3cc691ca57389b3b6759f119e515"
+    },
+    {
+      "file": "ucrt/corecrt_wstdlib.h",
+      "sha256": "98b62ac5fb4291961c19ecf5c1b2e641b437f9042054f1a56ebdfd0deb71eca1"
+    },
+    {
+      "file": "ucrt/corecrt_wstring.h",
+      "sha256": "c485f918d43f0f846d77a36eaee9e111f57bf2eec32db7d9719ff924771744c6"
+    },
+    {
+      "file": "ucrt/corecrt_wtime.h",
+      "sha256": "4e487fddafbc724cf4e6df45feb920bc46dae80f54ffe5d983bf742a1fd9a12f"
+    },
+    {
+      "file": "ucrt/corecrt.h",
+      "sha256": "822e503b81dd7b3d7df93ca22fced3672a5154484fd42054d5941e619bcf6cbc"
+    },
+    {
+      "file": "ucrt/ctype.h",
+      "sha256": "6a10e9f0505b896d356d986d671c939b7fb0602012e463314ff7bfd0182a861f"
+    },
+    {
+      "file": "ucrt/errno.h",
+      "sha256": "c64e8df96f057fdebc0474bd765cee3ae17de34a2b1fc9d197597321f2d1e447"
+    },
+    {
+      "file": "ucrt/float.h",
+      "sha256": "0fbf87532c053b666940a65360f2488f5b6bb2e601632e32a0f1a8a078d8fdcd"
+    },
+    {
+      "file": "ucrt/malloc.h",
+      "sha256": "8acfe0c7a33a4d5ae2253f7167f92b0e728dea86f83289cee9d583c45b175b6e"
+    },
+    {
+      "file": "ucrt/stddef.h",
+      "sha256": "3f1f7eeefad270928749c89a2a2094ccc3f38829b1d8c197f6ce7483ead2284c"
+    },
+    {
+      "file": "ucrt/stdio.h",
+      "sha256": "06cbab3a501306fdd9176a00a83e5bb92ea4d7863cfd666355743527cf99edc6"
+    },
+    {
+      "file": "ucrt/stdlib.h",
+      "sha256": "1576fdb40eb225dff53489db2fd52e41c7bb24f1e621e4a95c2c7f4a7216949c"
+    },
+    {
+      "file": "ucrt/string.h",
+      "sha256": "39767b2e1963b8ef679b62d5e27cb2d0ca1de6a6173b75389b79c9d575da92fc"
+    },
+    {
+      "file": "ucrt/time.h",
+      "sha256": "b775fe03a3288dfcd68a72caad43e8198283164eae94b665fdd3375a3baea44c"
+    },
+    {
+      "file": "um/advpub.h",
+      "sha256": "63eb078ec24ef4f8746b24041362f05d4318585f5af51a7f2793aab9aa354fd2"
+    },
+    {
+      "file": "um/apiquery2.h",
+      "sha256": "56c61c2ee306428d38037a578b66a49ef347a14a3760936416035b0d45da2b11"
+    },
+    {
+      "file": "um/avrt.h",
+      "sha256": "9ad68e7c0709d64c283b88af31a9fd59b5d1054768cd4c7af51551b8424450e4"
+    },
+    {
+      "file": "um/cfgmgr32.h",
+      "sha256": "5c7cec278e684cf89591331391622441f660c5b9852351312fd910ae5930ae22"
+    },
+    {
+      "file": "um/cguid.h",
+      "sha256": "36eaed76fe65e7dc5382761439bc9f22a66701d0259001943bfbe35f257aa6e2"
+    },
+    {
+      "file": "um/combaseapi.h",
+      "sha256": "4b33bdf8cad7d07a0bd2945b4b96436b21021c46eee900881d2531616ba4df5f"
+    },
+    {
+      "file": "um/comcat.h",
+      "sha256": "d98cfdd6689005d58a1e22d1ae64a9a04c422f7ed8ba2308107296613a6c34f8"
+    },
+    {
+      "file": "um/coml2api.h",
+      "sha256": "73b81b7fefef903c28a3c2eab09cc52139ede97c38d8fe0e3f46faddb106a65e"
+    },
+    {
+      "file": "um/commctrl.h",
+      "sha256": "6b8fa0799817fd438a9a3539c3e743b40acf6c77763c8f5acdbc91988e4736b0"
+    },
+    {
+      "file": "um/commctrl.inl",
+      "sha256": "c2ee81b223d39efa987de165cd8a9b2d6444b8dc407e8e76f4fc7a51e166394f"
+    },
+    {
+      "file": "um/commctrl.rh",
+      "sha256": "bf4ab17e6e9b0b456704a8e0a09f48cec2652b9b4cde57a90f5c481c95c045d3"
+    },
+    {
+      "file": "um/commdlg.h",
+      "sha256": "8b98a194569e52ca87266b5a8d676ccba67538ce7851571003db8f7a606b0d2b"
+    },
+    {
+      "file": "um/commdlg.inl",
+      "sha256": "f7263d76a95ef0cef7aa671f0422c3f8b58314db95d35f899095390e5031ff7e"
+    },
+    {
+      "file": "um/consoleapi.h",
+      "sha256": "a0e727e696f3599ef0b570942f28646dbd94374e62c812659eba5ebe2a42a99f"
+    },
+    {
+      "file": "um/consoleapi2.h",
+      "sha256": "f2134e1d2c01611e60ff939ccd45561884aa0ccbce590136ffd1d95161892d17"
+    },
+    {
+      "file": "um/consoleapi3.h",
+      "sha256": "0a00bf6ca901d0d980fe8c2b9bb91a39fb84c3a99e9c87498149a04cf7cf5925"
+    },
+    {
+      "file": "um/datetimeapi.h",
+      "sha256": "a4325c76b9bc900c22ef3d766c739ccd3a71894e81833ad637d50f9e45417117"
+    },
+    {
+      "file": "um/DbgHelp.h",
+      "sha256": "55ec5ffea6c2a099316df485cd054c46e48ffc7b016f81158f8b5d6fed6d161c"
+    },
+    {
+      "file": "um/dciman.h",
+      "sha256": "435434604482e04c138fba94aac2465127cd602283fb574410e7490ea91d2821"
+    },
+    {
+      "file": "um/dcommon.h",
+      "sha256": "f63b1c38f068b4abeb8e574d56544a2ad27eaf204e5103fb5a1a166d03519470"
+    },
+    {
+      "file": "um/dde.h",
+      "sha256": "dfa78b30d4c4a6bd7fc0db7e2df4041c589db7068b5c5020c5671b674416df11"
+    },
+    {
+      "file": "um/dde.rh",
+      "sha256": "ca9ee69286b7f8bd7e15cef7e34e2587aeb88e49673fff436f2e811c6f513c85"
+    },
+    {
+      "file": "um/ddeml.h",
+      "sha256": "c97abab2627346d786459fc86a5da696f930c85c622a78732a71b7ad0790c1dc"
+    },
+    {
+      "file": "um/debugapi.h",
+      "sha256": "d63f6c4aad9787bb8ff2e54966c8db156b0ef1570be58201d74dff12cd6f1e22"
+    },
+    {
+      "file": "um/dhcpcsdk.h",
+      "sha256": "0a5b9bd25ad8d9079506229d06dd5a16999de9177efabcbe5e1c569f2e4becfb"
+    },
+    {
+      "file": "um/dhcpsapi.h",
+      "sha256": "a2cfda0309f30b167d08218c6ffe89e57b860a2690a6f49650d4a252a8a0ac4d"
+    },
+    {
+      "file": "um/Dhcpv6cSdk.h",
+      "sha256": "1018c3fbeaf08b3b11da6e9af89bbcc98724561eeb363f4ca2f61d14fb8415a6"
+    },
+    {
+      "file": "um/dlgs.h",
+      "sha256": "12b23d2256c80141d61044010c9fc16610a8ae0086c7dbe8376295d4b5f06f31"
+    },
+    {
+      "file": "um/docobj.h",
+      "sha256": "94737278a9b0e81a567f8b5927ad25c9b7d88db88ea63ea169ced3b8860c9baf"
+    },
+    {
+      "file": "um/dpa_dsa.h",
+      "sha256": "e0d5490bf2c73c0dc5e94746b2704c2a6efdf0543de1e00447b8f781fc6a186f"
+    },
+    {
+      "file": "um/dpa_dsa.inl",
+      "sha256": "ab6fafb3b6af47eedfc34e6526091bd7cfbda62cad1acd0796cbe9c59cfd7485"
+    },
+    {
+      "file": "um/dpapi.h",
+      "sha256": "a98783da8086def831c97880296504468a043b01e7eb35e500a70198f33582bc"
+    },
+    {
+      "file": "um/dwmapi.h",
+      "sha256": "cb7aa3810f0676539fb8222d70a04d3f934d0ed0e7ca226531820c650ff6e314"
+    },
+    {
+      "file": "um/enclaveapi.h",
+      "sha256": "9467c4bc6400057c3d3205d53667000be525cad64a381552291e869430af6a76"
+    },
+    {
+      "file": "um/errhandlingapi.h",
+      "sha256": "b73cccce6dac8ce02c6a399862ec2a6e22fe27a4d09874d86ec2be3bd5d17fbf"
+    },
+    {
+      "file": "um/exdisp.h",
+      "sha256": "0bbb6112511f2cbe31af849cc2280f25558cf1cabf12e7227bc2c03b8e88730f"
+    },
+    {
+      "file": "um/fibersapi.h",
+      "sha256": "f8eeadc28f8e3e4c7bfd1217d55315eb31d63f3d86c66a3948d74ceb8e7a00d0"
+    },
+    {
+      "file": "um/fileapi.h",
+      "sha256": "f8927178c75de487c0e57f044a215e455522bf6eaa0b660421be09cd06ae05a1"
+    },
+    {
+      "file": "um/fileapifromapp.h",
+      "sha256": "d07110e7f7989aeef7eed77d5f584f3ee60ff2ce58bc1a374d70151a18b4a664"
+    },
+    {
+      "file": "um/fxsutility.h",
+      "sha256": "a8ef328a70bc9c5e6aa2cf660c1dd8b775979c17cf20b8fabee73374f63771f5"
+    },
+    {
+      "file": "um/gdiplus.h",
+      "sha256": "1c420a028f937ae91e5c22e69b4afedfaa0799cb99bdc82790f026ce978e164b"
+    },
+    {
+      "file": "um/GdiplusBase.h",
+      "sha256": "03fcf1ffb77372cbb3294ef990a352a14af069fe1d943a089d099ca689befc19"
+    },
+    {
+      "file": "um/GdiplusBitmap.h",
+      "sha256": "a38d4fead29dd30a646aaa7e4d18ca9d92c304891934054f53abb40eea9fd3ff"
+    },
+    {
+      "file": "um/GdiplusBrush.h",
+      "sha256": "8d257e6c4c1173563f9152944e67bf49542a44cd57e044f87e252f04cff8d169"
+    },
+    {
+      "file": "um/GdiplusCachedBitmap.h",
+      "sha256": "d2299506a91d4b08780c6fe5026c3f0fa8ac66e221685d8e3c9daa64b6954f75"
+    },
+    {
+      "file": "um/GdiplusColor.h",
+      "sha256": "af04d2dbaf626ae3b67e49071f34ff72cc0b4380550c8d96b799b626c767054f"
+    },
+    {
+      "file": "um/GdiplusColorMatrix.h",
+      "sha256": "4121d811cab64470852d2278276e974438dd0f080c4b639d43b3ee0da0a7bcb6"
+    },
+    {
+      "file": "um/GdiplusEffects.h",
+      "sha256": "65ea64da9e4c1d4be2b4b9f543df0f33cf0f1b4acfaf85b7d8284fd4117f6543"
+    },
+    {
+      "file": "um/GdiplusEnums.h",
+      "sha256": "cbc7bf08d7bbded17a9dfb4851ff62fcab3280ee890a8c1b372d3c097666f77d"
+    },
+    {
+      "file": "um/GdiplusFlat.h",
+      "sha256": "28a3e8fcf58047d3ac1ad5beb133817687c1ac3a21cc16bc6ae09124b54dcd14"
+    },
+    {
+      "file": "um/GdiplusFont.h",
+      "sha256": "c8a50d0737c4d405199387717abdb0b16b3cd295edc21dc8c4edb925f8a27c67"
+    },
+    {
+      "file": "um/GdiplusFontCollection.h",
+      "sha256": "1d98835e2164dd66fdf89509f6b65f62a6dfb0a808a65b920fdd072afa698f4e"
+    },
+    {
+      "file": "um/GdiplusFontFamily.h",
+      "sha256": "56215103c57f2d997d9f6fe02d9785404e10dc9d1ac4abd651bbe29e85fa6515"
+    },
+    {
+      "file": "um/GdiplusGpStubs.h",
+      "sha256": "524126d539562582dcafc645429152f2a3948c75af8f4f60c5956f88c9dbd794"
+    },
+    {
+      "file": "um/GdiplusGraphics.h",
+      "sha256": "d4dc48b583bf93f1be5a1a8653f8f778e66a3a48322d70be403a68455ec23d37"
+    },
+    {
+      "file": "um/GdiplusHeaders.h",
+      "sha256": "c47da15209bc32d900a6daed0df69345bada74f1802039845264b6f5f42aef93"
+    },
+    {
+      "file": "um/GdiplusImageAttributes.h",
+      "sha256": "eefedd11c30aacf8e93aea97b7094f171fa50122ba31723c13ccad4bdfe437ea"
+    },
+    {
+      "file": "um/GdiplusImageCodec.h",
+      "sha256": "26bcc9ef3bad4ecd4055b318003f5c0224ff424a3a5e88c806d9518c680b9886"
+    },
+    {
+      "file": "um/GdiplusImaging.h",
+      "sha256": "b829dacfacef4364941303825d69989f48c0e4496c87b685304a31a8742f7f75"
+    },
+    {
+      "file": "um/GdiplusInit.h",
+      "sha256": "950c01b3d4f57b849b2efc1cbeeac46eb90b83a8dfe46cd1aee8adffb8e84863"
+    },
+    {
+      "file": "um/GdiplusLineCaps.h",
+      "sha256": "2db40dd42d2738dcce5746563c191bf152c25ee98ec7d48f4c9190a060c5c37b"
+    },
+    {
+      "file": "um/GdiplusMatrix.h",
+      "sha256": "5e9af8157e12db9a88e71ba447199a701a175e9e4ba66a3efc837b1870c1ab16"
+    },
+    {
+      "file": "um/GdiplusMem.h",
+      "sha256": "d1758f79857d58666ab417355fd998f0ed12f6e76ae63f6221bce0950ca17519"
+    },
+    {
+      "file": "um/GdiplusMetafile.h",
+      "sha256": "9a66d8ad3564f38a0d34a494d4d3a0e72c9e825e09415c045241f9ee8daf1b2c"
+    },
+    {
+      "file": "um/GdiplusMetaHeader.h",
+      "sha256": "2c97b9fc96d0e2611d4ebbe5a94103c6963c8cb44e0661bfa94f02a0dc85c596"
+    },
+    {
+      "file": "um/GdiplusPath.h",
+      "sha256": "01f1d2aef5f1466c98d36f689b222fb46e39bcf24d3bce9d6de771c0a7b2e1a7"
+    },
+    {
+      "file": "um/GdiplusPen.h",
+      "sha256": "4d196ac92c8cc8c63f8eb5014ddfd4c08123ab98554c35f58fd57235070ec86e"
+    },
+    {
+      "file": "um/GdiplusPixelFormats.h",
+      "sha256": "a8bc2f8f61fb1fa3c005f5bc8a209f2b96b92157a98787c500ae2bd1c007c888"
+    },
+    {
+      "file": "um/GdiplusRegion.h",
+      "sha256": "7e8e47d8d5edcf96de393fab293eba2e7027bcc98979a4c6ba73b9bb48817e65"
+    },
+    {
+      "file": "um/GdiplusStringFormat.h",
+      "sha256": "34a0c7dffb37fe47824f56697ac829a57189c7262f21b6b73e39d85ed5a96d7b"
+    },
+    {
+      "file": "um/GdiplusTypes.h",
+      "sha256": "96e9186acd42da2f50ef428dbbbe2715b7a99726104d67e3241da7b46ffbe421"
+    },
+    {
+      "file": "um/GL/gl.h",
+      "sha256": "5a24c6fd7b416dd53b68a1c766c338ba2ee6f2b57a43ad7868bb5308d0e5fbb9"
+    },
+    {
+      "file": "um/GL/glu.h",
+      "sha256": "db307251615fe0fc6c827e49b1d66de95a01c7b66f5bcc5924fae9b66bb10af6"
+    },
+    {
+      "file": "um/handleapi.h",
+      "sha256": "c967fdf1a98e4ce8d501dae26b905f6452173b2be1c25e6aa2e5eeae415369cc"
+    },
+    {
+      "file": "um/heapapi.h",
+      "sha256": "22b606b0a4096295272bcae6fc353c4f159f0cdfc90b5f1a9a712b2fff50b53f"
+    },
+    {
+      "file": "um/ime_cmodes.h",
+      "sha256": "27904e900938749c12a4d1e741afd564198a57a24724c1ddd36cd3302224df26"
+    },
+    {
+      "file": "um/imm.h",
+      "sha256": "942d0b80eb7d186ee935fce8064ccdcdea3a49b39bcc03f55208b7c37e289779"
+    },
+    {
+      "file": "um/interlockedapi.h",
+      "sha256": "4b0d3bc138eaab8dc9dd40bfb109f5fea4cbd2caaf92d63a4cf60a8edcfb0e3a"
+    },
+    {
+      "file": "um/ioapiset.h",
+      "sha256": "7c3f659f98b3f1748a314bd64106583d01649333e0419b66232b4f64b3f85b0c"
+    },
+    {
+      "file": "um/ipexport.h",
+      "sha256": "e5dc60d0f9f73ba3633f5186ed60531a261b53476198e3dbe554c88ef8bb2c10"
+    },
+    {
+      "file": "um/iphlpapi.h",
+      "sha256": "639cf8963b00a11fdffa8955ef71e9ca2294f0fbb4193d5df3823e64ab8f5c51"
+    },
+    {
+      "file": "um/iptypes.h",
+      "sha256": "1335fa9ccded9a98fc7faea84dd7e47d9419c771953892ad6c754b0bd35deb81"
+    },
+    {
+      "file": "um/isguids.h",
+      "sha256": "8ef314088ec2219a9fa51a439291b3a896cf55748e9e7f649702bb00679ed3dc"
+    },
+    {
+      "file": "um/jobapi.h",
+      "sha256": "08ddff85ec80f12b156837bbce4f969480fea0e32a08dade7cc16acecb0892d1"
+    },
+    {
+      "file": "um/jobapi2.h",
+      "sha256": "a8f9591dc2b0bd249d03150b70abd47c0068c6eda2a1d74d24bc8964bcd68549"
+    },
+    {
+      "file": "um/joystickapi.h",
+      "sha256": "d87b7dd3517d2018478df501ba3ea578d7ecdc4dddf44720802c414376fb5734"
+    },
+    {
+      "file": "um/knownfolders.h",
+      "sha256": "c0b5033fa5d65c2d27213ea6cbd2ad13a0cdb2091406dae366d2a4fafa8afcd4"
+    },
+    {
+      "file": "um/libloaderapi.h",
+      "sha256": "8ad0ba5600d6c2e9aed318ca9d2f48f2bdf9f47ed3cd5d9f243e6f779c8e04c4"
+    },
+    {
+      "file": "um/lzexpand.h",
+      "sha256": "55e2fe7b987a83eeb10466a2f38411f406480362accce187fdc222af36656061"
+    },
+    {
+      "file": "um/magnification.h",
+      "sha256": "886ba6f9181c1b747ff704e3181bc64980fd60b828366f2b3cc3dd10e8eb7a84"
+    },
+    {
+      "file": "um/mciapi.h",
+      "sha256": "b1cf4890ae3d0153c3c998f6286df53969e106db2da08564a7c37acfdbf70dd8"
+    },
+    {
+      "file": "um/mcx.h",
+      "sha256": "4ee416b2d24e45cfc5d35ce5b34833b64b34fd9a39957c66d75509f6d3b8f972"
+    },
+    {
+      "file": "um/memoryapi.h",
+      "sha256": "58edcc2090c411a1821e04a6a2954c258fd59ded44440bdd671984027e0a852f"
+    },
+    {
+      "file": "um/minidumpapiset.h",
+      "sha256": "4fe26e01204f91a1597b6eb4660d9e85ff292d3cf1801b7723ca4dbe72b427b6"
+    },
+    {
+      "file": "um/minschannel.h",
+      "sha256": "788edff9e4af84ddef6fc3009bfe1f5f3da989efc22a6aad79c32334fe77a724"
+    },
+    {
+      "file": "um/minwinbase.h",
+      "sha256": "7d1408f4b8eeba96ae45892209132258cde80cab6dab192b4cceea591972c78b"
+    },
+    {
+      "file": "um/mmddk.h",
+      "sha256": "a63170a41008e5ac10ce8a9b7171094eeabdf2bb312c103f9014d6ab8c499e99"
+    },
+    {
+      "file": "um/mmeapi.h",
+      "sha256": "ee475f72ae76fea07ce189895a14a4c7dd345568f59884801e6aa4744e931c65"
+    },
+    {
+      "file": "um/mmiscapi.h",
+      "sha256": "c732d81ff59b188f570972cbeeedfd5bc3bc5d18cceb5475c41c4ab540358cf3"
+    },
+    {
+      "file": "um/mmiscapi2.h",
+      "sha256": "3cac85c113c9b56101d3e3d5c5eb51542400764af7ef49f641fcd215aed6b830"
+    },
+    {
+      "file": "um/mmsyscom.h",
+      "sha256": "e312d128602e8e6d51456f12229f81b0228ad1c8ea6c9ac438053966a7d20c8f"
+    },
+    {
+      "file": "um/mmsystem.h",
+      "sha256": "86d1387337af7793c583262108c1d671413ea5d6eaff597e0161ad6b604e33e0"
+    },
+    {
+      "file": "um/msacm.h",
+      "sha256": "8c38e5aa5b3eec7909ba17384ec2ac5421d702d52e00badb06db80e033def375"
+    },
+    {
+      "file": "um/msi.h",
+      "sha256": "1e6372bf9015ce2bc6b9960a605b67b38019e6422ab636d61693c290e127484f"
+    },
+    {
+      "file": "um/msiquery.h",
+      "sha256": "e75952b2f2f5ec2fdc17ce24cc7a6ebaf9f213ce4a4424584d2b493a334cfd4c"
+    },
+    {
+      "file": "um/mswsock.h",
+      "sha256": "3b3e501df4fae9683e4216f909083ca1e0278efa99f8624655c6742439e8d5c7"
+    },
+    {
+      "file": "um/msxml.h",
+      "sha256": "001de8d9f111a4449dffbd9c2640f92eb329ff43fff9e6b46c1a10a6bcddc16b"
+    },
+    {
+      "file": "um/namedpipeapi.h",
+      "sha256": "37062eba19e35b391cf050519c9403e19c6782663ea644ff38b2b5eb71dfce6b"
+    },
+    {
+      "file": "um/namespaceapi.h",
+      "sha256": "3257ad8af53c5809be4d5d17ed0ffd8b49451d3f27c1fd747ffde3e0a7a81583"
+    },
+    {
+      "file": "um/nb30.h",
+      "sha256": "69759909f41583263f20cadfe1a013f023ba89a6a7752dccc16240b1e9b5fc1b"
+    },
+    {
+      "file": "um/ncrypt.h",
+      "sha256": "3319fb310ba9056c4b5d8457bc14f5fabd1c7a428f2611d6d4f9084d9cb42e66"
+    },
+    {
+      "file": "um/oaidl.h",
+      "sha256": "6432dc84174c12d5d3764b83fb4a21c5aed38b6a839c968133eca2920ee702fb"
+    },
+    {
+      "file": "um/objbase.h",
+      "sha256": "14d465a8f602f2394c5455f67f129756fc525b26ad9c3099d3f6d943cafb5007"
+    },
+    {
+      "file": "um/ObjectArray.h",
+      "sha256": "738b2fc7a6c60530a408beee09f11ca2638539d6f62c4ed4a79078fac517b8b0"
+    },
+    {
+      "file": "um/objidl.h",
+      "sha256": "6728b27fad8860be3a481ee33ae5bb8bda6acd5d692f79646fb7ef0c4cb03f0b"
+    },
+    {
+      "file": "um/objidlbase.h",
+      "sha256": "677379339246e36e9dfa9325ae41fe790579ea474f4d05f688cde2e8ac521bd6"
+    },
+    {
+      "file": "um/ocidl.h",
+      "sha256": "442c0879df95ec8dc0e8762902d338191a25df7d31ec2a0338da5694088b4bf5"
+    },
+    {
+      "file": "um/ole.h",
+      "sha256": "6870ead1bb0f12d7c32c99a3db54325e21e01ba3b4cb7354a54b2dd481eac0e0"
+    },
+    {
+      "file": "um/ole2.h",
+      "sha256": "ff6645d2ba037df3835689ca7efa3fa4990c229bc98e195e500145a6b1344ce6"
+    },
+    {
+      "file": "um/oleacc.h",
+      "sha256": "3a973e244aa4f417637d114a39cbed24ef032b41e3aa4de8d9f9f9d8115476af"
+    },
+    {
+      "file": "um/oleauto.h",
+      "sha256": "76a024c41b0778979c84466199d9c868fc767f1eaca8b2660d298798382137b4"
+    },
+    {
+      "file": "um/oleidl.h",
+      "sha256": "d9e6028b3447ad94b01d0676047355d8eebf6ff11afa8529904dfc11b941359d"
+    },
+    {
+      "file": "um/playsoundapi.h",
+      "sha256": "29fb73d46381a51143b05c0ba5603dad5dff3ec879bb7376dd20e4a271e2d818"
+    },
+    {
+      "file": "um/processenv.h",
+      "sha256": "c10dd3bd48a2416e0aece2259ea57cc47d6c8b9fdbae085a4c7a5b29c71a85dd"
+    },
+    {
+      "file": "um/processthreadsapi.h",
+      "sha256": "436ae4cbb017d1cdb381aaf2119a3f89b04bae257fd4c881ef251daa02533540"
+    },
+    {
+      "file": "um/processtopologyapi.h",
+      "sha256": "4507a5e0c4f41d19a80d1543833f1a9d90277bc376441b277884bb043be24ba5"
+    },
+    {
+      "file": "um/profileapi.h",
+      "sha256": "cfa8e3626dba11689997d8fcd65b5dfbf4bcef8de09dd7e4e881769d48d165a2"
+    },
+    {
+      "file": "um/profinfo.h",
+      "sha256": "916983fe0738bb0c43c0600e8f0e3b65c181277d9440de78ca2433c17741ffdc"
+    },
+    {
+      "file": "um/propidl.h",
+      "sha256": "07200a21ea1247b97a91f2e28991c2de475b03cf890155a4de3d0990a2b70066"
+    },
+    {
+      "file": "um/propidlbase.h",
+      "sha256": "637483de9f1d2d3d40c966e8daa9ed238a4469cb07fe168bac7c685e0cf1e1fd"
+    },
+    {
+      "file": "um/propkeydef.h",
+      "sha256": "cc4fa9a98ec03a9ef29f625255889b4fad984991d01d9bee4df496f506017a98"
+    },
+    {
+      "file": "um/propsys.h",
+      "sha256": "01e7c04dc26439c581ec36cd3d8477373d7883575e3a126138117a6a3647f767"
+    },
+    {
+      "file": "um/prsht.h",
+      "sha256": "c894f54ac5e0584457f176f668b20b14577b06aa2ba5ce321e243c46248ea242"
+    },
+    {
+      "file": "um/prsht.inl",
+      "sha256": "796b15d85902e7e22b08672978f5dba9e0875616874d35d9ea40f865d1c9e821"
+    },
+    {
+      "file": "um/psapi.h",
+      "sha256": "4166fbce43622f469aa46cd1cea27a73171353df8101643c2e850124622d5ef9"
+    },
+    {
+      "file": "um/Ratings.h",
+      "sha256": "8ad3bc56aa014022f4ff58abb228da1c396fd4a2e6f86f3ca7ea6cac0b6b38ce"
+    },
+    {
+      "file": "um/realtimeapiset.h",
+      "sha256": "00c874b981a1242ee4ebc21e6ae96a69d7aa70662d820ceffbabcfea859b03e4"
+    },
+    {
+      "file": "um/reason.h",
+      "sha256": "30540eb35daa79c7a5cb98059430df480e86b549b7980247288da8a2801add1d"
+    },
+    {
+      "file": "um/rpcnsi.h",
+      "sha256": "f49466a31875d34a6e5c02f301d81b7a78f25cb947f3d6e6ea712ab356b42c8e"
+    },
+    {
+      "file": "um/rpcnsip.h",
+      "sha256": "7c8138b43e028724e0fd143be29c40de5b5650a3e0f87356662a77dbad186712"
+    },
+    {
+      "file": "um/SCardErr.h",
+      "sha256": "975364f08d6266e25aea021d278c61c9e8baa54d4d330f66f195491e7b9175c6"
+    },
+    {
+      "file": "um/schannel.h",
+      "sha256": "72e2ebfe9dd487ab5baed64f2147c451b1954bf8b2b5d3db9ab3f9b4009be8ce"
+    },
+    {
+      "file": "um/schnlsp.h",
+      "sha256": "41a0a9d8b8872734a4042dda63615ab9af4d8664d4c70d29215ba1f1f8a9f8f2"
+    },
+    {
+      "file": "um/securityappcontainer.h",
+      "sha256": "85cc13ed7028960bd7f97c91f98b96825b46f4b8bc386aed2f2a6a9bccbe4083"
+    },
+    {
+      "file": "um/securitybaseapi.h",
+      "sha256": "a443b4183d3ec5b8e1ae40db5824f002a34eb0415f38227fa1dddbbf02a448d4"
+    },
+    {
+      "file": "um/servprov.h",
+      "sha256": "5f25310cfbfb07bfb737b37c04bb74cd6c713505fdb9c8c4954f76bccd86dea4"
+    },
+    {
+      "file": "um/setupapi.h",
+      "sha256": "3c027fd246aa6828287b0ac2496806fef70fb8cb05ed75fbceb57eb0e9369eeb"
+    },
+    {
+      "file": "um/shellapi.h",
+      "sha256": "c0712ed939babdd72f9602a031120d71360324d7ec7933c31d6739aadb49c989"
+    },
+    {
+      "file": "um/sherrors.h",
+      "sha256": "f0f2536dce1243d0e43e716fd5bc30973435234f9044dd63e0a5dbf8f85478d5"
+    },
+    {
+      "file": "um/shldisp.h",
+      "sha256": "b59d37ba8afb7c4166107d6840f3454e9e6b25568779e489196a93c19496ea5c"
+    },
+    {
+      "file": "um/shlguid.h",
+      "sha256": "845fe610549bb07f9be9d56105f076582adf400ed10933ddd003f53863018344"
+    },
+    {
+      "file": "um/shlobj_core.h",
+      "sha256": "9eb3a933681921c03766dd57ca8b7ab54fcb9f28f1d432eb0e546039f61d943d"
+    },
+    {
+      "file": "um/shlobj.h",
+      "sha256": "4c8cc5aaf1c4dc8778f16a67d883bd42efbe47f8a9f4ecf99e2da3a420c874fb"
+    },
+    {
+      "file": "um/shlwapi.h",
+      "sha256": "8845385de1a3c182fa00350925ca73e7c270ac579f3f5512f1b311ace8a226b1"
+    },
+    {
+      "file": "um/shobjidl_core.h",
+      "sha256": "1c6c0d74400d6dcb5b17fb2156a3ce8df420cd9271e0a23230d661790406a03f"
+    },
+    {
+      "file": "um/shobjidl.h",
+      "sha256": "fb0c66d7e4e95eae7a704647e15e9b7ad2a1132ae17a9e92137a7fd1ee9f8b6e"
+    },
+    {
+      "file": "um/shtypes.h",
+      "sha256": "7cc9a372c57d6e986905db5c09cc7d595e2d12ee90f89663de98fafca6682f80"
+    },
+    {
+      "file": "um/snmp.h",
+      "sha256": "1bd89a1560311993697025c2832d2c209a9947403c0cb8669b955458834e9a8c"
+    },
+    {
+      "file": "um/spapidef.h",
+      "sha256": "fec825710e44812d9033981b846ca7eb555a3180ce8a8067bcaa8aa591f45af4"
+    },
+    {
+      "file": "um/sql.h",
+      "sha256": "24fee5844ea099bd8cc7617a46fcae269138d1c77c18d23e38a80cd94d5f3b54"
+    },
+    {
+      "file": "um/sqlext.h",
+      "sha256": "5c8df9121dbfd1e0df83f15eb196ca8fbc7070462bedef4a9aeb36af4832e78d"
+    },
+    {
+      "file": "um/sqltypes.h",
+      "sha256": "82f5addd9b455cdc444a17388f739e00118af3d9f6aca386fca51ae2435b89de"
+    },
+    {
+      "file": "um/sqlucode.h",
+      "sha256": "ad731e59dc7fcf8c5757ab1914cac570f4406488f564f671bfc75bc06b3b1f65"
+    },
+    {
+      "file": "um/stringapiset.h",
+      "sha256": "624c82fb73517a3829f3766a50a0235e2f9a51cb4bda95a0c39981e39fa4d42d"
+    },
+    {
+      "file": "um/StructuredQueryCondition.h",
+      "sha256": "05fd13cd34c3ed083b98a3bf38fff42c80a9a0cf8b741ebb9bc902fca2cfce7c"
+    },
+    {
+      "file": "um/synchapi.h",
+      "sha256": "d962588974e5e100205f683160b351dee70ea100aa736e14d878b7a74577a9c5"
+    },
+    {
+      "file": "um/sysinfoapi.h",
+      "sha256": "077088cb53ec69d454916aac5f00e45dda79e09da64054acc141120eb67a5700"
+    },
+    {
+      "file": "um/systemtopologyapi.h",
+      "sha256": "8bfd1a78cc30b6d33c88e3f61ae2ac6468cee0607352ee8d096ba5375b4d401c"
+    },
+    {
+      "file": "um/threadpoolapiset.h",
+      "sha256": "e91d7dee4d22ca848e3110a4c55f32e1918dc865479343896aec9ab653ee5110"
+    },
+    {
+      "file": "um/threadpoollegacyapiset.h",
+      "sha256": "87c1630abf7dc4ed7978f2c4dbacf418f6bcf94cb946e277cb7250770bd44200"
+    },
+    {
+      "file": "um/timeapi.h",
+      "sha256": "0252981f62c9ed1ece53434c3863f4bf503c2ead70719adb2cfd38e3e21ab6da"
+    },
+    {
+      "file": "um/timezoneapi.h",
+      "sha256": "621c0252a8a831813592c4a95e183a2e7ae55efbbd7b8ad886af7d8871fc4d50"
+    },
+    {
+      "file": "um/UIAutomationCore.h",
+      "sha256": "4446d97a8da79008b0689f32beaaf32d9113405c89e05c33587eaf4eeadd978f"
+    },
+    {
+      "file": "um/UIAutomationCoreApi.h",
+      "sha256": "5aef9a750219f162a9f6c45bd1e10cabafed69ecae634e79d814902428ef22a8"
+    },
+    {
+      "file": "um/unknwn.h",
+      "sha256": "d0bbc6a30fa025fa3e5c198c68c638dec855b27b3ec34c9d404a95f890dd6a53"
+    },
+    {
+      "file": "um/unknwnbase.h",
+      "sha256": "7fc28ae112c678a18567387fdbb43c615af6253429c9c1a8037cd0861f7568b6"
+    },
+    {
+      "file": "um/urlmon.h",
+      "sha256": "a69ff621172bda7dcbd26b92f209e0bd7a7b00bad74e2ef375c2b6a8ec8b6f2f"
+    },
+    {
+      "file": "um/userenv.h",
+      "sha256": "a7ec0bae6a5e46d41cfc49a85d7a0578eab55a2383ada88f03cd7e99ba53c59f"
+    },
+    {
+      "file": "um/utilapiset.h",
+      "sha256": "a8e0f6001c784b3ad9feb44c61d96b58c57366c473832ca8b2ea5de05877b470"
+    },
+    {
+      "file": "um/uxtheme.h",
+      "sha256": "57822aa309f31ae2564c2fdf7eae6df6e42d3bd55d26e4762a090b172421da67"
+    },
+    {
+      "file": "um/verrsrc.h",
+      "sha256": "ff9bee8ee5b7aa81eaf79a1eab0e93bd307601e87d3b80a73f24984e9c951c61"
+    },
+    {
+      "file": "um/wbemcli.h",
+      "sha256": "f15905ed45edbea1a0a9095f263c331e74962f054ca394af21c9d44b67a4a2f0"
+    },
+    {
+      "file": "um/winbase.h",
+      "sha256": "ec538199f5ebe8cec2dfd4f1ba48316ef776c82d37277aed3a677965e494f192"
+    },
+    {
+      "file": "um/winbase.inl",
+      "sha256": "cb0807d27da742a705ed4c8ff6779f8c47ee495e995455c5d6687be8b102bbe8"
+    },
+    {
+      "file": "um/wincodec.h",
+      "sha256": "ca7bbd9d01a939cd12f12d54d5f6c9a5c4068055c974ec36031f9f1e513f0535"
+    },
+    {
+      "file": "um/wincon.h",
+      "sha256": "98e33720f9ec8fded808ab94f111b8335d0ba2fd2246a5adab3aab2ce05503d9"
+    },
+    {
+      "file": "um/wincontypes.h",
+      "sha256": "209e79fdbbb30971740e59b2da2d6c86e27c0e9dd02bee9cbc21736fbd2426ad"
+    },
+    {
+      "file": "um/wincrypt.h",
+      "sha256": "d73ba64946bbaad342447564676a837e15380041b37674639fcf659ee67f13e2"
+    },
+    {
+      "file": "um/windns.h",
+      "sha256": "b1586ec874ee2892216035b819f5a88c4c8f5e967590c7510213791b96f2666e"
+    },
+    {
+      "file": "um/Windows.h",
+      "sha256": "b337d661d03a4abefb7b86a2742ce1ad5d19b57cd8b858bd13e7bbcc1dbeeaaa"
+    },
+    {
+      "file": "um/winefs.h",
+      "sha256": "9db6c6c3188c7a4822f7484c554846795d859f498b7568f8014abad513437000"
+    },
+    {
+      "file": "um/wingdi.h",
+      "sha256": "96f3528cabc7e5fe30e2f2c51daa01c018dd6cedb3768121202434758629b8a2"
+    },
+    {
+      "file": "um/winhttp.h",
+      "sha256": "45b2ccf904eeaa904e773e90a1e677bd04e41fb57e003f3f398cde0195c2fdd2"
+    },
+    {
+      "file": "um/wininet.h",
+      "sha256": "11be77dda11353695cbb64984b8d056e9ccf7a5e833413883c239e59d5fe2d72"
+    },
+    {
+      "file": "um/winioctl.h",
+      "sha256": "e4f42e55b43604f34c8d7080c2435363845ba13484f4163b2d8ac5f730bd8fd2"
+    },
+    {
+      "file": "um/winldap.h",
+      "sha256": "d500763d0b73c0cfbe57d1d850be7c1d74f61d9731890f84b9908e13d5c5b88d"
+    },
+    {
+      "file": "um/winnetwk.h",
+      "sha256": "7c7412df502fb6ea390c96d7c9f805a2a211609b95b8fdb4740540f789d9c4ce"
+    },
+    {
+      "file": "um/winnls.h",
+      "sha256": "e47861762a4b51a2689c8a99798a1a7e68335573e03c857e545172b095c5c829"
+    },
+    {
+      "file": "um/winnt.h",
+      "sha256": "8693f0ad4ada355c912d40ca41ce929b480e92291bda2f9227acf56736bffbff"
+    },
+    {
+      "file": "um/winnt.rh",
+      "sha256": "3941c8c79b6ef88a1d5ac6c0259193e3f597385df82e81177164b1a5ed005f10"
+    },
+    {
+      "file": "um/winperf.h",
+      "sha256": "f73392e4535cbd70ef811b91d9de580a35e57930640a8a8b584507841006e20a"
+    },
+    {
+      "file": "um/winreg.h",
+      "sha256": "bff833e8d092a0cb657837e3162b8bb0cf35b43105203f4ce880972a501d61d6"
+    },
+    {
+      "file": "um/winresrc.h",
+      "sha256": "37196b88339f4f21451e10866c6b65c6a408688c3f6ae55e2759d9b53bc55406"
+    },
+    {
+      "file": "um/winscard.h",
+      "sha256": "ee43c5a32fd009da030047a0df19a66e02ed6387f54af0162ec9bd6f9854e845"
+    },
+    {
+      "file": "um/WinSnmp.h",
+      "sha256": "51e142484656573d0f94f2f2ccce1f43b53f296b1946884e86c57eb2c208d2ae"
+    },
+    {
+      "file": "um/winsock.h",
+      "sha256": "f5d2165d8609daf35bfc796846f67c8f6129e47b4c6536aefba90f9488520737"
+    },
+    {
+      "file": "um/WinSock2.h",
+      "sha256": "15098cbb8780bf917b155e2a7df9201f9768717a26544ec3912fd32addcea2c7"
+    },
+    {
+      "file": "um/winspool.h",
+      "sha256": "c9954b0f6051bbac7dc550f92b88c9306c2d76ddd5cffdb224fee4de3c010f23"
+    },
+    {
+      "file": "um/winsvc.h",
+      "sha256": "8108fe3f099960014f36d1b2da425a8382e9d839de3477eb06f181289a0685c8"
+    },
+    {
+      "file": "um/winternl.h",
+      "sha256": "a43424486349c38f697c009512dfe4eb8fca733d7665afab42f50752170b9785"
+    },
+    {
+      "file": "um/wintrust.h",
+      "sha256": "340a90182fc0fddaac188a2921bb49dd3a5486d968831764dbde81bb0beedbeb"
+    },
+    {
+      "file": "um/winuser.h",
+      "sha256": "014e26f0041535ebcc53c7b46f1d280f66283ec5eb4612b4e82f5b0f6c0d428c"
+    },
+    {
+      "file": "um/winuser.inl",
+      "sha256": "0299780b0df0db25b15cf466734dd58509ce8ebd72c0096c4662cc545bc78c04"
+    },
+    {
+      "file": "um/winuser.rh",
+      "sha256": "58621e11df3b06d9e055a026cbab8dffac450aa5e3f03cd5e7568d781876dc02"
+    },
+    {
+      "file": "um/winver.h",
+      "sha256": "c60e137e7ff88582f72e50fe74904f5773502d229f78234ea83abb2688f6e8ae"
+    },
+    {
+      "file": "um/wow64apiset.h",
+      "sha256": "6b14e2b59ae5b9f22bfd9a1e989a5589adf5790832ff24cb9d8828d4e8d45cda"
+    },
+    {
+      "file": "um/WS2tcpip.h",
+      "sha256": "76011c9095fcd50af68eb7d3ffb828d4d2b710cbda09ec4b2653371319886a21"
+    },
+    {
+      "file": "um/Wscapi.h",
+      "sha256": "34e079e0ddf931ddd634bb8e99ee0fc467d134531920c40e25c233427e182b5b"
+    },
+    {
+      "file": "um/wsipv6ok.h",
+      "sha256": "9a24fc59dd06e9e7cc03f5ad6461614e99063e5139e4d7dfd1e4e15efbc74254"
+    },
+    {
+      "file": "um/wspiapi.h",
+      "sha256": "9dd657c94f08f6a68ef752ae931767da83b9815e1abf34c4ce6560ba96c900d2"
+    },
+    {
+      "file": "winrt/activation.h",
+      "sha256": "9296d6db4ae0a9ca875c941eacd2da2c89fb894f15ac712a81f23c1763931c65"
+    },
+    {
+      "file": "winrt/hstring.h",
+      "sha256": "169d6779f382d275a7ac277bb49946c017b31790a43f4b831cedc96629fcfcfc"
+    },
+    {
+      "file": "winrt/inspectable.h",
+      "sha256": "ff6c9d58bea8e577177a47d46bb164b593f54ee051353059feded7f783edefa9"
+    },
+    {
+      "file": "winrt/roapi.h",
+      "sha256": "07c564d33b64745ed92c5dccf7915e4191083aebe84a4c7d6a7c87561ab0245e"
+    },
+    {
+      "file": "winrt/winstring.h",
+      "sha256": "a3685255b11f4f58c123fd45c5aa4be3526a9e9e8f939c3a5c80b859f48a7b43"
+    }
+  ]
+}

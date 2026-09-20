@@ -3316,7 +3316,15 @@ function App() {
                             <td>{argument.name}</td>
                             <td>{argument.preCallValue}</td>
                             <td>{argument.postCallValue}</td>
-                            <td>{argument.decodedValue}</td>
+                            <td>
+                              {argument.decodedValue}
+                              {argument.capture ? (
+                                <small className="argument-capture" title={argument.capture.byteCountSource}>
+                                  {argument.capture.phase} · {argument.capture.capturedBytes}/{argument.capture.requestedBytes} B
+                                  {` · ${argument.capture.readStatus} · ${argument.capture.truncationReason}`}
+                                </small>
+                              ) : null}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -3327,7 +3335,9 @@ function App() {
                     <div className="buffer-view">
                       <div className="buffer-toolbar">
                         <HardDrive size={14} />
-                        <span>{selectedEvent.bufferPreview ? "Hex Buffer 16 bytes" : "No buffer snapshot for this call"}</span>
+                        <span>{selectedEvent.bufferPreview ? "Hex buffer snapshot" : "No buffer snapshot for this call"}
+                          {selectedEvent.arguments[1]?.capture ? ` · ${selectedEvent.arguments[1].capture.phase} · ${selectedEvent.arguments[1].capture.capturedBytes}/${selectedEvent.arguments[1].capture.requestedBytes} B · ${selectedEvent.arguments[1].capture.truncationReason}` : " · capture phase unavailable"}
+                        </span>
                       </div>
                       <pre>{selectedEvent.bufferPreview ?? "buffer snapshot unavailable"}</pre>
                     </div>

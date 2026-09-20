@@ -94,9 +94,9 @@
       "success": { "ntSuccess": true },
       "failure": { "ntSuccess": false },
       "parameters": [
-        { "name": "PathToFile", "type": "PWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
-        { "name": "Flags", "type": "ULONG", "direction": "in", "decode": "load_library_flags", "flags": "load_library_flags" },
-        { "name": "ModuleFileName", "type": "PUNICODE_STRING", "direction": "in", "decode": "unicode_string", "maxBytes": 512 },
+        { "name": "PathToFile", "type": "PCWSTR", "direction": "in", "decode": "utf16_string_optional", "nullable": true, "maxBytes": 512 },
+        { "name": "DllCharacteristics", "type": "PULONG", "direction": "in", "decode": "pointer", "nullable": true },
+        { "name": "ModuleFileName", "type": "PCUNICODE_STRING", "direction": "in", "decode": "unicode_string", "maxBytes": 512 },
         { "name": "ModuleHandle", "type": "PHANDLE", "direction": "out", "decode": "module_handle_pointer", "captureTiming": "post" }
       ]
     }
