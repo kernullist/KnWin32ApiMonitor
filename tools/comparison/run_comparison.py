@@ -18,6 +18,7 @@ import frida
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "tests/corpus/windows-api-v1.json"
 FIELDS = ("api", "success", "error", "byteCount", "preview")
+MODES = ("original", "knmon", "frida", "frida-cmodule", "etw")
 
 
 def read_json(path, expected_sha256=None):
@@ -116,7 +117,8 @@ def knmon_events(capture, oracle):
     return events
 
 
-def frida_run(executable, directory, iterations, extra_args=()):
+def frida_run(executable, directory, iterations, extra_args=(), mode="frida"):
+    assert mode in ("frida", "frida-cmodule")
     device = frida.get_local_device()
     pid = device.spawn([str(executable), str(directory), str(iterations), *extra_args])
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -138,7 +140,8 @@ def frida_run(executable, directory, iterations, extra_args=()):
     try:
         session = device.attach(pid)
         session.on("detached", lambda *args: detached.set())
-        script = session.create_script((ROOT / "tools/comparison/frida-observer.js").read_text(encoding="utf-8"))
+        observer = "frida-cmodule-observer.js" if mode == "frida-cmodule" else "frida-observer.js"
+        script = session.create_script((ROOT / "tools/comparison" / observer).read_text(encoding="utf-8"))
 
         def message(value, data):
             messages.append(value)
@@ -158,6 +161,7 @@ def frida_run(executable, directory, iterations, extra_args=()):
         assert not any(value["type"] == "error" for value in messages), messages
         result = [value["payload"] for value in messages if value.get("payload", {}).get("kind") == "corpus"]
         assert len(result) == 1, "Missing/duplicate Frida completion batch."
+        assert result[0]["adapter"] == ("cmodule" if mode == "frida-cmodule" else "javascript")
         assert result[0]["errors"] == [], result[0]["errors"]
         return result[0]["events"]
     finally:
@@ -220,8 +224,8 @@ def main():
             probe = json.loads(checked_run([directory / "knmon-etw-corpus-reader.exe", "--probe-kernel", root / f"{architecture}-kernel-probe.etl"]))
             summary["kernelEtwProbes"].append({"architecture": architecture, **probe})
             for repetition in range(options.repetitions):
-                order = ["original", "knmon", "frida", "etw"]
-                order = order[repetition % 4:] + order[:repetition % 4]
+                order = list(MODES)
+                order = order[repetition % len(order):] + order[:repetition % len(order)]
                 baseline = None
                 group = []
                 for mode in order:
@@ -229,8 +233,8 @@ def main():
                     trial.mkdir()
                     start = time.perf_counter_ns()
                     observed = None
-                    if mode == "frida":
-                        observed = frida_run(target, trial, options.iterations)
+                    if mode in ("frida", "frida-cmodule"):
+                        observed = frida_run(target, trial, options.iterations, mode=mode)
                     elif mode == "knmon":
                         capture_text = checked_run([directory / "knmon-native-helper.exe", "capture-sample", "--target", target,
                             "--target-args", subprocess.list2cmdline([str(trial), str(options.iterations)]), "--timeout-ms", "30000",

@@ -2,7 +2,7 @@ import argparse
 import json
 from pathlib import Path
 
-from run_comparison import MANIFEST, assert_oracle, compare, digest, knmon_events, oracle_metrics, read_json, semantic, source_hashes
+from run_comparison import MANIFEST, MODES, assert_oracle, compare, digest, knmon_events, oracle_metrics, read_json, semantic, source_hashes
 
 
 def inside(root, relative):
@@ -25,7 +25,7 @@ def replay(root, current_sources=True, report_override=None):
         assert report["sourceHashes"] == source_hashes(), "Comparison evidence has stale sources."
     assert 1 <= report["repetitions"] <= 100 and 1 <= report["iterations"] <= 10000
     expected = {(arch, mode, repeat) for arch in manifest["architectures"]
-                for mode in ("original", "knmon", "frida", "etw") for repeat in range(report["repetitions"])}
+                for mode in MODES for repeat in range(report["repetitions"])}
     seen = set()
     groups = {}
     total_bytes = 0
@@ -52,12 +52,13 @@ def replay(root, current_sources=True, report_override=None):
             capture = read_json(inside(directory, "capture.json"), run["artifacts"]["capture.json"])
             assert capture["success"] and capture["targetExitCode"] == 0 and capture["transportDroppedEvents"] == 0
             observed = knmon_events(capture, oracle)
-        elif run["mode"] == "frida":
+        elif run["mode"] in ("frida", "frida-cmodule"):
             assert "frida-messages.json" in run["artifacts"]
             messages = read_json(inside(directory, "frida-messages.json"), run["artifacts"]["frida-messages.json"])
             assert not any(message["type"] == "error" for message in messages)
             results = [message["payload"] for message in messages if message.get("payload", {}).get("kind") == "corpus"]
             assert len(results) == 1 and results[0]["errors"] == []
+            assert results[0]["adapter"] == ("cmodule" if run["mode"] == "frida-cmodule" else "javascript")
             observed = results[0]["events"]
         elif run["mode"] == "etw":
             assert "etw.json" in run["artifacts"] and "corpus.etl" in run["artifacts"]

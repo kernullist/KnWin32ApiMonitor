@@ -13,7 +13,7 @@
   "previewHex": "202122232425262728292a2b2c2d2e2f",
   "defaultIterations": 64,
   "scope": "Synchronous direct IAT calls from one target thread. EOF, invalid handle, missing file, allocation and free. Six APIs, not general Windows coverage.",
-  "baseline": { "tool": "Frida", "version": "17.18.0", "mode": "JavaScript Interceptor onEnter/onLeave, batched matched preview" },
+  "baseline": { "tool": "Frida", "version": "17.18.0", "modes": ["JavaScript Interceptor", "CModule internal TinyCC Interceptor"], "observation": "onEnter/onLeave, batched matched preview" },
   "etw": { "mode": "application_instrumented_private_etw", "independentApiCoverage": false },
   "sources": [
     "https://frida.re/news/2026/09/09/frida-17-18-0-released/",

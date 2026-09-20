@@ -6,41 +6,45 @@ Each iteration creates a file, writes and reads 64 bytes, reads EOF, closes the
 handle, allocates memory and frees it. Invalid-handle and missing-file failures
 follow the loop. Sleep and SetFilePointerEx are unselected negative controls.
 
-Four modes run in fresh processes with rotating order: original, KN Monitor,
-Frida and private ETW. Ten repetitions per architecture produce 80 runs, with
+Five modes run in fresh processes with rotating order: original, KN Monitor,
+Frida JS, Frida CModule and private ETW. Ten repetitions per architecture produce 100 runs, with
 450 expected selected calls in each run. Counts, ordering, success/failure, raw
 last-error and 16-byte buffer previews must match the target oracle. Caller
 observations must also match the original process. Failure, timeout, nonzero
 exit, observer errors and unaccounted transport loss fail the comparison.
 
 The Frida adapter pins [17.18.0](https://frida.re/news/2026/09/09/frida-17-18-0-released/)
-and uses JavaScript Interceptor callbacks with batched delivery. It filters for
+and runs both JavaScript and native CModule Interceptor callbacks with batched delivery. It filters for
 the target's direct call sites and observation interval, then detaches before
-process teardown. These measurements describe that adapter. Frida also supports
-[native CModule callbacks](https://frida.re/docs/javascript-api/), which require
-a separate measurement before making a claim about its lowest overhead.
+process teardown. The [CModule adapter](https://frida.re/docs/javascript-api/)
+uses Frida's internal TinyCC compiler, bounded native records and safe memory
+reads. Both adapters capture the same 16-byte previews and raw last-error values.
+Neither adapter represents every possible optimized Frida implementation.
 
-The first validated Debug comparison on Windows 10.0.26200 recorded the following
+The current validated Debug comparison on Windows 10.0.26200 recorded the following
 medians across ten fresh-process runs per architecture and mode. The p99 column
 is the median of each run's p99, not a pooled p99.
 
 | Architecture | Mode | Median call, us | Median run p99, us | Target RSS, MiB |
 | --- | --- | ---: | ---: | ---: |
-| x64 | Original | 6.65 | 324.65 | 5.52 |
-| x64 | KN Monitor | 11.55 | 334.35 | 37.14 |
-| x64 | Frida JS | 24.15 | 349.95 | 14.07 |
-| x64 | Private ETW | 6.55 | 327.25 | 5.72 |
-| x86 | Original | 6.50 | 308.30 | 6.51 |
-| x86 | KN Monitor | 12.15 | 343.15 | 17.46 |
-| x86 | Frida JS | 27.00 | 351.90 | 13.42 |
-| x86 | Private ETW | 6.85 | 339.50 | 6.76 |
+| x64 | Original | 7.10 | 316.45 | 5.51 |
+| x64 | KN Monitor | 11.30 | 333.40 | 17.12 |
+| x64 | Frida JS | 23.00 | 337.00 | 14.07 |
+| x64 | Frida CModule | 9.20 | 322.55 | 14.51 |
+| x64 | Private ETW | 8.65 | 330.95 | 5.72 |
+| x86 | Original | 7.15 | 314.60 | 6.51 |
+| x86 | KN Monitor | 12.40 | 337.85 | 17.45 |
+| x86 | Frida JS | 26.20 | 337.40 | 13.43 |
+| x86 | Frida CModule | 10.30 | 322.35 | 13.76 |
+| x86 | Private ETW | 6.55 | 322.95 | 6.76 |
 
 Each mode matched all 450 expected calls per run, including failure and preview
-semantics. KN Monitor used more target memory than this Frida adapter; this is a
-measured improvement target. The system-logger probe returned access denied (5)
+semantics. KN Monitor used more target memory and had higher median call latency
+than the CModule adapter in this corpus. These are measured improvement targets.
+The system-logger probe returned access denied (5)
 on both architectures. No kernel ETW execution is claimed for this run.
 
-The next validated run removed the unused x64 generic-dispatch exports and the
+The prior footprint improvement removed the unused x64 generic-dispatch exports and the
 host-only API catalog from the injected DLL. All 320 supported wrappers remain.
 The x64 Debug DLL shrank from 83,187,200 to 2,127,360 bytes; the x86 DLL remained
 1,686,016 bytes. The `agent-footprint` CTest enforces an 8 MiB on-disk budget,
@@ -53,8 +57,8 @@ p99 at 335.00 us. The contemporaneous original/Frida JS RSS values were
 17.46 MiB and median call time was 12.05 us. All 450 calls per run still matched,
 with zero transport loss. This is a measured footprint improvement; it does
 not establish a latency improvement from these separate short experiments.
-The current proof records this second run; the table above retains the original
-baseline. Native ABI/live/replay proof and all 18 CTests pass on each architecture.
+The current proof records the subsequent five-mode run in the table above.
+Native ABI/live/replay proof and all 18 CTests pass on each architecture.
 
 Private ETW is an application-instrumented auxiliary trace. The target emits its
 oracle records through an actual in-process ETW provider, and a separate native
@@ -84,7 +88,7 @@ discarded. Per-run call quantiles are nearest-rank estimates, not guarantees.
 
 These are scoped Debug results on the recorded Windows build. Six successful
 API comparisons establish neither complete Windows API coverage nor a World
-No.1 ranking. Other OS builds, Release behavior, CModule comparison, sustained
+No.1 ranking. Other OS builds, Release behavior, sustained
 overload and complete UI/helper resource costs remain separate gates.
 
 ## Reproduce and inspect

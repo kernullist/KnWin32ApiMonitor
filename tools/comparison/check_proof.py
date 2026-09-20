@@ -6,7 +6,7 @@ import re
 import statistics
 
 from replay_comparison import replay
-from run_comparison import ROOT, MANIFEST, digest, native_source_hash, read_json, source_hashes
+from run_comparison import ROOT, MANIFEST, MODES, digest, native_source_hash, read_json, source_hashes
 
 
 def validate(proof):
@@ -18,7 +18,7 @@ def validate(proof):
     assert proof["nativeSourceSha256"] == native_source_hash(), "Native source proof is stale."
     assert 10 <= proof["repetitions"] <= 100 and proof["iterations"] == manifest["defaultIterations"]
     expected = {(arch, mode, repeat) for arch in manifest["architectures"]
-                for mode in ("original", "knmon", "frida", "etw") for repeat in range(proof["repetitions"])}
+                for mode in MODES for repeat in range(proof["repetitions"])}
     seen = set()
     binaries = {}
     for run in proof["runs"]:
@@ -61,7 +61,7 @@ def main():
         arguments.proof.write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
     print(f"Comparison proof current: {len(proof['runs'])} executed runs, six APIs, {proof['windowsVersion']}")
     for architecture in ("x64", "x86"):
-        for mode in ("original", "knmon", "frida", "etw"):
+        for mode in MODES:
             rows = [row for row in proof["runs"] if row["architecture"] == architecture and row["mode"] == mode]
             p50 = statistics.median(row["callLatencyUs"]["median"] for row in rows)
             p99 = statistics.median(row["callLatencyUs"]["p99"] for row in rows)

@@ -33,14 +33,15 @@ def main():
             file.write_bytes(changed)
             result = subprocess.run([str(directory / "knmon-etw-corpus-reader.exe"), str(file)], capture_output=True, timeout=30)
             assert result.returncode != 0 and b"invalid=1" in result.stderr, name
-        failure = root / f"{architecture}-nonzero-frida"
-        failure.mkdir()
-        rejected = False
-        try:
-            frida_run(target, failure, 2, ["--nonzero-exit"])
-        except AssertionError as error:
-            rejected = "exit code: 7" in str(error)
-        assert rejected, "A valid report followed by nonzero target exit must not pass."
+        for mode in ("frida", "frida-cmodule"):
+            failure = root / f"{architecture}-nonzero-{mode}"
+            failure.mkdir()
+            rejected = False
+            try:
+                frida_run(target, failure, 2, ["--nonzero-exit"], mode=mode)
+            except AssertionError as error:
+                rejected = "exit code: 7" in str(error)
+            assert rejected, "A valid report followed by nonzero target exit must not pass."
         print(f"Native corpus negatives PASS: {architecture}, malformed ETL and observed nonzero process exit")
     print(f"Native corpus evidence: {root}")
 

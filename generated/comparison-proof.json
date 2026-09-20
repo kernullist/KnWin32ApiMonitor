@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "corpus": "knmon-windows-api-v1",
   "windowsVersion": "10.0.26200",
-  "observedAtUtc": "2026-09-20T06:24:52.007482+00:00",
+  "observedAtUtc": "2026-09-20T06:34:16.741479+00:00",
   "iterations": 64,
   "repetitions": 10,
   "sourceHashEncoding": "utf8-LF",
@@ -10,17 +10,18 @@
   "python": "3.12.2",
   "fridaVersion": "17.18.0",
   "cpu": "AMD64 Family 25 Model 33 Stepping 2, AuthenticAMD",
-  "manifestSha256": "ebe2188e5e70d3f28514102e3122866c3cb544ed796c8b1760deca54cc2e7f81",
+  "manifestSha256": "01e770985f8d56964b4e232e4d9f8dc8198a247c4d43986722a74105405ae938",
   "fridaBinarySha256": "51f709278609e0a2b2d074856bf2575307d6ce324e59a449ad81b344a7d73b4e",
   "sourceHashes": {
-    "tests/corpus/windows-api-v1.json": "ebe2188e5e70d3f28514102e3122866c3cb544ed796c8b1760deca54cc2e7f81",
-    "tools/comparison/check_proof.py": "61a39b2a03724c810bbdb4113604eb4d73baa035b28d6ef86e7f05263bf4b8ea",
-    "tools/comparison/replay_comparison.py": "62545fb5548c1a02d445839c749370087948bdd33ca4f04c44675cbc80c54df6",
-    "tools/comparison/run_comparison.py": "692500a5f2ea0912fa070fbfb7b744d68a8eb21553e58f4bce710ee73cd8282d",
+    "tests/corpus/windows-api-v1.json": "01e770985f8d56964b4e232e4d9f8dc8198a247c4d43986722a74105405ae938",
+    "tools/comparison/check_proof.py": "a4b75580fd660688a23f5ae4439bc43eede4eb97cde304f2565179e8d1161573",
+    "tools/comparison/replay_comparison.py": "28adec5a36675510eb5ced6c016d04f5d61c71da423d5be2c828060646b4b4f5",
+    "tools/comparison/run_comparison.py": "17d268f6b9d8e529ca0061546bbdcbb0b99e810eca5e82fd17d5d690950bdc87",
     "tools/comparison/test_comparison.py": "3a64dd236448fcbb6441e4ac86030ee28231f347189c136a47cb9518773fc314",
     "tools/comparison/validate_evidence_mutations.py": "1daad0d7c9fc44cc2ae7e5dbc31a35f93c1c312f870737856cc99d1cbf971f7a",
-    "tools/comparison/validate_native_corpus.py": "91a26661a8ea5d2f0050959628d438288aac2e98c7676ab08f5c8b0bcdfff742",
-    "tools/comparison/frida-observer.js": "70007c4a3277cd4966e258c2e8f0c27d7f6c6ebfbd056185ed0c79fdc9b5ae78",
+    "tools/comparison/validate_native_corpus.py": "ae8dbc03a229049976f6f1eeb554574c3885524e2fba65b28adcdca47d9c8479",
+    "tools/comparison/frida-cmodule-observer.js": "dce3f921e4c4516f6a7f454ba1acba8117fa297d085f4ef85880cb30d8626b03",
+    "tools/comparison/frida-observer.js": "10ba0a18987fbf751afa2b0a88254e4a96a9c7804447d3e6a89da8b890b3d7bd",
     "tools/comparison/test_frida_observer.mjs": "f18f82770be67a442a941117817c94219ed43cb05c01dc7d28cae86471b9d889",
     "tools/comparison/requirements.txt": "2e99e26c6d7f4ebd7e3b0f3681fee150fd07bf18026b54794dcedf6526aaec75",
     "native/samples/ComparisonTarget.cpp": "f54918fcc938d58e4c4ef1b357f7afec207771e4b932f053f72c2e486a055399",
@@ -59,7 +60,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "f0f0f598f7abe9752fcceaeab67f66bed0a195b7eb1bc58426697666244081a3"
+        "oracle.json": "59875661792868178383b90ca733c94076f792235ec4bb1f8c8a43021e1587cd"
       },
       "comparison": {
         "missing": 0,
@@ -70,19 +71,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-00-original",
-      "controllerStartNs": "104895192347400",
-      "controllerEndNs": "104895237452000",
-      "processWallMs": 45.1046,
+      "controllerStartNs": "105459845060200",
+      "controllerEndNs": "105459883151000",
+      "processWallMs": 38.0908,
       "events": 450,
-      "workloadUs": 25283.9,
+      "workloadUs": 19554.1,
       "callLatencyUs": {
-        "median": 6.2,
-        "p95": 235.6,
-        "p99": 323.9
+        "median": 7.0,
+        "p95": 183.2,
+        "p99": 301.9
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 5775360,
-      "peakWorkingSetBytes": 5775360
+      "workingSetBytes": 5812224,
+      "peakWorkingSetBytes": 5812224
     },
     {
       "architecture": "x64",
@@ -96,13 +97,13 @@
         "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
       },
       "artifacts": {
-        "capture.json": "4e3fe3e41deed3c85a32db2675ca478c81b5f592e6b14fa12f96c9342fe7f76d",
+        "capture.json": "1d827ee0b0f2d8b8bd15376fad135d933241db3c29d8f8a93a417d42bc3bfbe1",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "b00437a0a887c60d4b1ada47ddf2f5db67398c1a79b19852154bad6b321f2961",
-        "session/agent-events.jsonl": "119165de921cbc47660d67f5ddd9a216ede53258d0ad37888eded403d4368b0e",
-        "session/audit.jsonl": "5d83fccef5d8b385ac9a244850ef8dd7e2bceac3f5027234c3a0d2241b113634",
-        "session/manifest.json": "2ff5c820844955d97dbf879cb659c165b5ddac3a246982e7df409a044f2b8068",
-        "session/trace-events.jsonl": "f7084ff3cec5e63eda7f20a96b575b24c38027370c6f2e0b4750d79f778a767f"
+        "oracle.json": "45cd149021fc46ad3ee3d052b2a15ee3ae4f2fb99eb729a60b1b5f27a207ded9",
+        "session/agent-events.jsonl": "85392d80fd1be4f5ee06d0044359c72ae7ea2827a336ef9fb33c30261a5fe0ba",
+        "session/audit.jsonl": "2a00404c81a2a40d425b21a1e153eba0c27f5b9b63e7a354f8b915276d364144",
+        "session/manifest.json": "ac58527c21ca08eb766418d37ddc5f82310f721efa1687cb962a6a55666f199c",
+        "session/trace-events.jsonl": "6caafe1d865da6127d1d798344c33cbf37c586360015e54aa07740237a96ddad"
       },
       "comparison": {
         "missing": 0,
@@ -113,19 +114,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-00-knmon",
-      "controllerStartNs": "104895253968700",
-      "controllerEndNs": "104898143510100",
-      "processWallMs": 2889.5414,
+      "controllerStartNs": "105459899001100",
+      "controllerEndNs": "105462785477400",
+      "processWallMs": 2886.4763,
       "events": 450,
-      "workloadUs": 22395.0,
+      "workloadUs": 22962.6,
       "callLatencyUs": {
-        "median": 10.7,
-        "p95": 219.5,
-        "p99": 307.9
+        "median": 11.9,
+        "p95": 252.7,
+        "p99": 335.3
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 17952768,
-      "peakWorkingSetBytes": 19341312
+      "workingSetBytes": 17948672,
+      "peakWorkingSetBytes": 19337216
     },
     {
       "architecture": "x64",
@@ -140,8 +141,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
-        "oracle.json": "7e89c6116b77c738e58326c6f2ce1d39c05114a20fdf67924b4a953712378aa5"
+        "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
+        "oracle.json": "8a24d65ca91413540ba3668bcb7949236eea8d8960c2e83efc4d9637711bfbc9"
       },
       "comparison": {
         "missing": 0,
@@ -152,19 +153,58 @@
       },
       "targetExitCode": 0,
       "directory": "x64-00-frida",
-      "controllerStartNs": "104898165292800",
-      "controllerEndNs": "104898405348500",
-      "processWallMs": 240.0557,
+      "controllerStartNs": "105462808420600",
+      "controllerEndNs": "105463040136300",
+      "processWallMs": 231.7157,
       "events": 450,
-      "workloadUs": 28223.4,
+      "workloadUs": 27538.9,
       "callLatencyUs": {
-        "median": 23.9,
-        "p95": 286.1,
-        "p99": 349.2
+        "median": 22.9,
+        "p95": 288.8,
+        "p99": 333.1
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 14757888,
-      "peakWorkingSetBytes": 14757888
+      "cpu100ns": 312500,
+      "workingSetBytes": 14749696,
+      "peakWorkingSetBytes": 14749696
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida-cmodule",
+      "repetition": 0,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
+        "oracle.json": "5a44fc300306be3f13ffca88e500c1f46592fa3a633ac6fc8582d015659e9b50"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-00-frida-cmodule",
+      "controllerStartNs": "105463059551600",
+      "controllerEndNs": "105463126651200",
+      "processWallMs": 67.0996,
+      "events": 450,
+      "workloadUs": 22020.7,
+      "callLatencyUs": {
+        "median": 9.2,
+        "p95": 230.3,
+        "p99": 346.6
+      },
+      "cpu100ns": 0,
+      "workingSetBytes": 15216640,
+      "peakWorkingSetBytes": 15216640
     },
     {
       "architecture": "x64",
@@ -179,9 +219,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "e05939d0e55952c84ca24d39ffa6666110840c3b9362643cc920cde27bba1a6e",
-        "etw.json": "20a2beeda8b4e598d4b2ebb6f1fd33311d5cfaebe378703380b14fb2426a6be1",
-        "oracle.json": "a958fd3f2d36739526ea9fdc43a0b342152d27fda1cbdcdafd53dc46cbeca323"
+        "corpus.etl": "95bced068835ef03c34b51474c99aa1311cd90b9fab7b179a5df43489a685af8",
+        "etw.json": "2061b60d82df848a8ef2744d6981933313e2c78ddf49769608834d7ba6869180",
+        "oracle.json": "c385b916daf32e8d7830d930c98089b4b924a17ff54364bd6f4c5d791455beef"
       },
       "comparison": {
         "missing": 0,
@@ -192,19 +232,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-00-etw",
-      "controllerStartNs": "104898429180400",
-      "controllerEndNs": "104898784179400",
-      "processWallMs": 354.999,
+      "controllerStartNs": "105463146947100",
+      "controllerEndNs": "105463497740500",
+      "processWallMs": 350.7934,
       "events": 450,
-      "workloadUs": 20514.5,
+      "workloadUs": 20589.4,
       "callLatencyUs": {
-        "median": 6.4,
-        "p95": 212.2,
-        "p99": 314.2
+        "median": 13.7,
+        "p95": 202.7,
+        "p99": 313.8
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 6012928,
-      "peakWorkingSetBytes": 6012928
+      "workingSetBytes": 6000640,
+      "peakWorkingSetBytes": 6000640
     },
     {
       "architecture": "x64",
@@ -218,13 +258,13 @@
         "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
       },
       "artifacts": {
-        "capture.json": "09fade43da7571169f3bbefee50696ff4f0dfa44fdb69a9f1583dcb64c7c8487",
+        "capture.json": "170536bbd263c09bb130bccd5402893508de0142083c8a71c28d24dbbda9a60d",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "9599cbed36fe00c10d8c0416160502687e879c6277a7124c0b476cd7ef052b32",
-        "session/agent-events.jsonl": "538458285f0266fb1f08e90ef37c16ed06869e3de9766e97bb371ff8499edd99",
-        "session/audit.jsonl": "b2cffad82cc5322f4714ba7997979536eac9f80080f394c0d37a2c20d0a8c894",
-        "session/manifest.json": "ed74cc80694335b04c4805a82bf4c5cb721ec7bf57f326d65d700c26f68c3382",
-        "session/trace-events.jsonl": "967861474278f61729fd4108095172247c568f702b10fbf8c5200d8ff8711c28"
+        "oracle.json": "c5b51dfbf1c651b4ebdd44071fd00cff9c09b58602c392b3ef4c3ff19e8c0d17",
+        "session/agent-events.jsonl": "0db24a719715521b495900c7cf005ec924e73839b4a7667066556cd3330f42d7",
+        "session/audit.jsonl": "58ea692b41ac8ce2cb60cd555bfa3b3bc57ec9f3b07030bb97a76d60877aa0a1",
+        "session/manifest.json": "a2a68005eefaaff51184db148fadf767335d53816ee6c226ee2af8801919b41f",
+        "session/trace-events.jsonl": "f0d4440513c4761f2bdd604e6a8a03f51e32dd6e8509cbfb829305881816d152"
       },
       "comparison": {
         "missing": 0,
@@ -235,19 +275,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-01-knmon",
-      "controllerStartNs": "104898829598700",
-      "controllerEndNs": "104901718766000",
-      "processWallMs": 2889.1673,
+      "controllerStartNs": "105463544408900",
+      "controllerEndNs": "105466443646300",
+      "processWallMs": 2899.2374,
       "events": 450,
-      "workloadUs": 22266.1,
+      "workloadUs": 23107.6,
       "callLatencyUs": {
-        "median": 10.6,
-        "p95": 210.6,
-        "p99": 319.7
+        "median": 18.0,
+        "p95": 225.5,
+        "p99": 347.4
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 17960960,
-      "peakWorkingSetBytes": 19333120
+      "cpu100ns": 0,
+      "workingSetBytes": 17948672,
+      "peakWorkingSetBytes": 19341312
     },
     {
       "architecture": "x64",
@@ -262,8 +302,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
-        "oracle.json": "2b19f4e331e2bb80790ef0f4d6db960d1b031cb2d3f0ecc6eff14ebb705959e4"
+        "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
+        "oracle.json": "fe4564f978e712e0a3718a769a7957bbc24f3979e286cbc31121059cffc9c455"
       },
       "comparison": {
         "missing": 0,
@@ -274,19 +314,58 @@
       },
       "targetExitCode": 0,
       "directory": "x64-01-frida",
-      "controllerStartNs": "104901740266200",
-      "controllerEndNs": "104901811240900",
-      "processWallMs": 70.9747,
+      "controllerStartNs": "105466466289200",
+      "controllerEndNs": "105466538335000",
+      "processWallMs": 72.0458,
       "events": 450,
-      "workloadUs": 28419.5,
+      "workloadUs": 27267.7,
       "callLatencyUs": {
-        "median": 23.6,
-        "p95": 283.6,
-        "p99": 347.6
+        "median": 23.2,
+        "p95": 281.3,
+        "p99": 320.7
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14757888,
+      "peakWorkingSetBytes": 14757888
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida-cmodule",
+      "repetition": 1,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
+        "oracle.json": "c316a7e009137fe780f69527190d25683dd45234cda0d1df820b8a362cdb2eed"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-01-frida-cmodule",
+      "controllerStartNs": "105466559941600",
+      "controllerEndNs": "105466627021700",
+      "processWallMs": 67.0801,
+      "events": 450,
+      "workloadUs": 20871.2,
+      "callLatencyUs": {
+        "median": 9.8,
+        "p95": 206.0,
+        "p99": 317.8
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 14745600,
-      "peakWorkingSetBytes": 14745600
+      "workingSetBytes": 15237120,
+      "peakWorkingSetBytes": 15237120
     },
     {
       "architecture": "x64",
@@ -301,9 +380,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "6c0f71c90ea6667031a75b14c975a99369ead1b3453eefbea8d7ce863c1c0154",
-        "etw.json": "7d213036d6ef04d39617ad8beeade48040c69ee11d933a38f62e6c9055fa26ae",
-        "oracle.json": "ce2f9ae0a5b040f37bbeca526f3dce18ccd56a95d5a7e7787d160365234170d5"
+        "corpus.etl": "4ae1d3b8c11e80a31407b48267a6ffbbbc5557bc85f5a6625d76112f8362a1d1",
+        "etw.json": "534388ff388288b60bcf9a2d012631b86cf97164b2cc3cf2560ff78c2be3adcc",
+        "oracle.json": "9e00d96ded62422573a115d861891ead95adc7e63687eadcd72b9654088b4d17"
       },
       "comparison": {
         "missing": 0,
@@ -314,19 +393,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-01-etw",
-      "controllerStartNs": "104901833740400",
-      "controllerEndNs": "104902178116700",
-      "processWallMs": 344.3763,
+      "controllerStartNs": "105466642943300",
+      "controllerEndNs": "105466986512700",
+      "processWallMs": 343.5694,
       "events": 450,
-      "workloadUs": 20638.3,
+      "workloadUs": 21788.0,
       "callLatencyUs": {
-        "median": 5.3,
-        "p95": 231.0,
-        "p99": 316.6
+        "median": 7.2,
+        "p95": 237.6,
+        "p99": 334.4
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 6004736,
-      "peakWorkingSetBytes": 6004736
+      "cpu100ns": 312500,
+      "workingSetBytes": 6008832,
+      "peakWorkingSetBytes": 6008832
     },
     {
       "architecture": "x64",
@@ -341,7 +420,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "d19533224e6aca3d79288df4d0f7bf503ce9af4eb19c42380218ab689ada5f21"
+        "oracle.json": "6386b1af0c17e07d741d44edb4db1aecd00b0dcf596d0846f3fcd9bd2eec8307"
       },
       "comparison": {
         "missing": 0,
@@ -352,19 +431,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-01-original",
-      "controllerStartNs": "104902225332500",
-      "controllerEndNs": "104902265273500",
-      "processWallMs": 39.941,
+      "controllerStartNs": "105467030074500",
+      "controllerEndNs": "105467070294800",
+      "processWallMs": 40.2203,
       "events": 450,
-      "workloadUs": 20420.0,
+      "workloadUs": 21199.4,
       "callLatencyUs": {
-        "median": 5.8,
-        "p95": 223.2,
-        "p99": 321.6
+        "median": 6.7,
+        "p95": 239.6,
+        "p99": 347.5
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 5779456,
-      "peakWorkingSetBytes": 5779456
+      "cpu100ns": 0,
+      "workingSetBytes": 5771264,
+      "peakWorkingSetBytes": 5771264
     },
     {
       "architecture": "x64",
@@ -379,8 +458,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
-        "oracle.json": "f3271c15c61e16e73f5ec8a0e89a87152302a87a2a8514fa55c93e3f91050065"
+        "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
+        "oracle.json": "f30080cb4c5b6bf41fcaea4b9ab3aad8c0a5f4ff22908f64731cc5d96a2a4573"
       },
       "comparison": {
         "missing": 0,
@@ -391,19 +470,58 @@
       },
       "targetExitCode": 0,
       "directory": "x64-02-frida",
-      "controllerStartNs": "104902285774900",
-      "controllerEndNs": "104902357227700",
-      "processWallMs": 71.4528,
+      "controllerStartNs": "105467089028700",
+      "controllerEndNs": "105467160903100",
+      "processWallMs": 71.8744,
       "events": 450,
-      "workloadUs": 26637.8,
+      "workloadUs": 27426.0,
       "callLatencyUs": {
-        "median": 22.5,
-        "p95": 270.6,
-        "p99": 323.9
+        "median": 22.4,
+        "p95": 274.7,
+        "p99": 338.2
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 14737408,
-      "peakWorkingSetBytes": 14737408
+      "workingSetBytes": 14749696,
+      "peakWorkingSetBytes": 14749696
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida-cmodule",
+      "repetition": 2,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
+        "oracle.json": "3c3d509bb3c3caa71c225be33f902c8246e6ea51ecac0f5ae4f08c7a2dee7b2a"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-02-frida-cmodule",
+      "controllerStartNs": "105467182451700",
+      "controllerEndNs": "105467249588700",
+      "processWallMs": 67.137,
+      "events": 450,
+      "workloadUs": 20354.0,
+      "callLatencyUs": {
+        "median": 8.9,
+        "p95": 203.5,
+        "p99": 278.2
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 15208448,
+      "peakWorkingSetBytes": 15208448
     },
     {
       "architecture": "x64",
@@ -418,9 +536,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "fb92f4759290a99da32227df2e3b2503234a038ab8bfe9577eb1f44047ce59b8",
-        "etw.json": "1f2b52faa28dbea1fd66de5a19b070e49f5456b84c6b0db94ea3c0a3d17dc55b",
-        "oracle.json": "15a97341923cc0121109b10c19ca0cffaad7313f5be86f0296905d6175f2ae4e"
+        "corpus.etl": "5d3f2f674d0f4711c624e0e367fa35756a58657e2404aec86a51a49a46a255bf",
+        "etw.json": "fb19c339f092e35a6f79d0b54ea77c657ad766c886052cb57f0e810997aaecd4",
+        "oracle.json": "e09c0be0146c07f8b31a81c2584129ca1550223a6262ed3511ecaa0cb3e8a43b"
       },
       "comparison": {
         "missing": 0,
@@ -431,19 +549,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-02-etw",
-      "controllerStartNs": "104902375816400",
-      "controllerEndNs": "104902729658800",
-      "processWallMs": 353.8424,
+      "controllerStartNs": "105467269600300",
+      "controllerEndNs": "105467629753000",
+      "processWallMs": 360.1527,
       "events": 450,
-      "workloadUs": 20996.9,
+      "workloadUs": 23033.2,
       "callLatencyUs": {
-        "median": 5.7,
-        "p95": 226.5,
-        "p99": 320.0
+        "median": 6.8,
+        "p95": 243.7,
+        "p99": 382.5
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 6000640,
-      "peakWorkingSetBytes": 6000640
+      "cpu100ns": 156250,
+      "workingSetBytes": 5988352,
+      "peakWorkingSetBytes": 5988352
     },
     {
       "architecture": "x64",
@@ -458,7 +576,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "01931c764a4e661e9f5c11e4d3f452cd272d9f0612b36dfb479190f41b1b013f"
+        "oracle.json": "e0756848c7a32fcf568dcd58f2156bc9170e69885edf702408a44fc307da0aaa"
       },
       "comparison": {
         "missing": 0,
@@ -469,19 +587,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-02-original",
-      "controllerStartNs": "104902777656400",
-      "controllerEndNs": "104902816909500",
-      "processWallMs": 39.2531,
+      "controllerStartNs": "105467673652700",
+      "controllerEndNs": "105467712279300",
+      "processWallMs": 38.6266,
       "events": 450,
-      "workloadUs": 19942.7,
+      "workloadUs": 20363.9,
       "callLatencyUs": {
-        "median": 6.3,
-        "p95": 187.3,
-        "p99": 298.3
+        "median": 7.2,
+        "p95": 199.0,
+        "p99": 312.7
       },
-      "cpu100ns": 0,
-      "workingSetBytes": 5775360,
-      "peakWorkingSetBytes": 5775360
+      "cpu100ns": 156250,
+      "workingSetBytes": 5779456,
+      "peakWorkingSetBytes": 5779456
     },
     {
       "architecture": "x64",
@@ -495,13 +613,13 @@
         "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
       },
       "artifacts": {
-        "capture.json": "72cec8996e8cc2df02279dee1d77d5cb9278b894a874f83b197f937a79e228c7",
+        "capture.json": "d1f887e986acfa182ff643a31461189cc71e7ab0aee75b2205a62b60a00e70b0",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "bef441226cc9ca251d8a7492a801cef80aaa666f92451f1a333d19e8024bce51",
-        "session/agent-events.jsonl": "0f1116e528c31e24c7cd04456c35032af58f301332c0c849e76c184b0923aea4",
-        "session/audit.jsonl": "40b90361ea50e29b127ef5c6e59bdbc9fed341f0b7d39df3b1d5e273e73fb4f4",
-        "session/manifest.json": "4985d096fcef2c64460d474e6d4fe202a9a66441484865a95dd3263a5ee9f86b",
-        "session/trace-events.jsonl": "44fc4a1dac147b9e437d004a3186a83cb60ca35a8d9fe9d216c2a03f561d8a45"
+        "oracle.json": "a711f6f7e21cccabd491c2eb7f69a9bb418a01dae7af5a1189c5b4c603b13a92",
+        "session/agent-events.jsonl": "42db8f06a6098ef52ed4311da7083f07b7a3352e4f4d1856397c14317dabc774",
+        "session/audit.jsonl": "c1ba908321c5671e00c40583208128f8e6cfd7059fab3d7f9dd97c4ce9699e4e",
+        "session/manifest.json": "14362d0de6a49bdc4931cc4523ca2094d4698a3363cb561ed69d667eeea7dc62",
+        "session/trace-events.jsonl": "ca064cf514231b6b0eb71eacf1af3ac585c0a4dda22218c1eb0afe40813967c3"
       },
       "comparison": {
         "missing": 0,
@@ -512,19 +630,58 @@
       },
       "targetExitCode": 0,
       "directory": "x64-02-knmon",
-      "controllerStartNs": "104902832614600",
-      "controllerEndNs": "104905739819500",
-      "processWallMs": 2907.2049,
+      "controllerStartNs": "105467725086400",
+      "controllerEndNs": "105470568098900",
+      "processWallMs": 2843.0125,
       "events": 450,
-      "workloadUs": 23078.8,
+      "workloadUs": 22374.3,
       "callLatencyUs": {
-        "median": 10.0,
-        "p95": 243.5,
-        "p99": 348.5
+        "median": 10.9,
+        "p95": 218.9,
+        "p99": 338.2
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 17952768,
-      "peakWorkingSetBytes": 19341312
+      "cpu100ns": 156250,
+      "workingSetBytes": 17944576,
+      "peakWorkingSetBytes": 19337216
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida-cmodule",
+      "repetition": 3,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
+        "oracle.json": "a858655dd63f1e47e9423d9871f9836d4b011d046fcf9a3a263f4ffd0dcbe2b9"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-03-frida-cmodule",
+      "controllerStartNs": "105470593509300",
+      "controllerEndNs": "105470662692500",
+      "processWallMs": 69.1832,
+      "events": 450,
+      "workloadUs": 23153.6,
+      "callLatencyUs": {
+        "median": 13.9,
+        "p95": 240.0,
+        "p99": 327.3
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 15220736,
+      "peakWorkingSetBytes": 15220736
     },
     {
       "architecture": "x64",
@@ -539,9 +696,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "e83f865e4ae6fec0d9f82281cb89b6c9c536318895416adb3c9ed44a26d9bd6a",
-        "etw.json": "98cee0c456617a3a930ab603abc6ce1ae2a5055e7b840a4da8b84806e13ad6f0",
-        "oracle.json": "7a11ef5ed4ea4b34a2fad788ff4750aab0d13a2d0f89e733a995607c04a7b146"
+        "corpus.etl": "6b49dc48285008179c6b203a83ebc34d95d0cbb1d1aa29733347c52eeb92daee",
+        "etw.json": "06708d840bbf27ad4a54db177bab658e836d42cf3f5069ce887499056077202d",
+        "oracle.json": "e3b35e7f570b371ca26de88072df2ce822e29a2125db5ace6fb0899b4307b7ca"
       },
       "comparison": {
         "missing": 0,
@@ -552,19 +709,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-03-etw",
-      "controllerStartNs": "104905769509200",
-      "controllerEndNs": "104906127278900",
-      "processWallMs": 357.7697,
+      "controllerStartNs": "105470679974300",
+      "controllerEndNs": "105471036627600",
+      "processWallMs": 356.6533,
       "events": 450,
-      "workloadUs": 25791.8,
+      "workloadUs": 21312.5,
       "callLatencyUs": {
-        "median": 7.2,
-        "p95": 299.0,
-        "p99": 401.1
+        "median": 7.1,
+        "p95": 223.6,
+        "p99": 333.2
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 6037504,
-      "peakWorkingSetBytes": 6037504
+      "cpu100ns": 156250,
+      "workingSetBytes": 5996544,
+      "peakWorkingSetBytes": 5996544
     },
     {
       "architecture": "x64",
@@ -579,7 +736,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "1f3107c861a14dd4ee1a821f21be50755d3b7f5e1a6d0c37c93db488fbd51e8e"
+        "oracle.json": "1a9200bf56e6e8bf8bd5477d8a13c65404d322fc1e9dcfacc6a9c8cafa844df2"
       },
       "comparison": {
         "missing": 0,
@@ -590,19 +747,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-03-original",
-      "controllerStartNs": "104906169076600",
-      "controllerEndNs": "104906207101800",
-      "processWallMs": 38.0252,
+      "controllerStartNs": "105471080451300",
+      "controllerEndNs": "105471120479100",
+      "processWallMs": 40.0278,
       "events": 450,
-      "workloadUs": 19558.3,
+      "workloadUs": 20773.4,
       "callLatencyUs": {
-        "median": 6.1,
-        "p95": 191.8,
-        "p99": 283.0
+        "median": 13.6,
+        "p95": 201.5,
+        "p99": 335.7
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 5767168,
-      "peakWorkingSetBytes": 5767168
+      "cpu100ns": 312500,
+      "workingSetBytes": 5779456,
+      "peakWorkingSetBytes": 5779456
     },
     {
       "architecture": "x64",
@@ -616,13 +773,13 @@
         "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
       },
       "artifacts": {
-        "capture.json": "9d61b6b0c75f0409b072c5e8ad607c21c76e153c2907fb427246c37562324229",
+        "capture.json": "5611560f16fc82b01453af51c285f037ad4e4f0029a86773f938db2990cedf86",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "b72250c728af5088f0afffd4d6cc1e44156e84f298a173639564af72813cabad",
-        "session/agent-events.jsonl": "33dc5b529ef2891d1f7695d7c9698eec45e3a4507d482ddf2fcabaa74bfe92c8",
-        "session/audit.jsonl": "4d1c987d89808fdd677ab7eab2af9d9968e4fec08eb851d3f1b9f89f3e5077d4",
-        "session/manifest.json": "8f23f97dd077830deb65e5e921163f4fd9a73931e707b1ed7e4a1ae14f74ed9b",
-        "session/trace-events.jsonl": "5094c0061910e31d54260908eb0e921b089f8e0ce473a1f804bd8f06d0cb7611"
+        "oracle.json": "9203ad24cb7181050d788989f1887b2b0cc8b32378d892bd993bced855812fad",
+        "session/agent-events.jsonl": "7647ff700a207cb2b045f3e8141892b90d26300a7b0901556e2f89d9fe82c2b9",
+        "session/audit.jsonl": "3def52d7a3d5205e00bb2334a43d7d6d3dc105f07d1558a93604326f75a50c42",
+        "session/manifest.json": "c0022bb13244a22ee17cb90429360b875f91f2b5edb7f0180cba6cd099a18a97",
+        "session/trace-events.jsonl": "4ef3490e279c48762fcac2003636f05360cd408d377b74091ac3c10a91544189"
       },
       "comparison": {
         "missing": 0,
@@ -633,19 +790,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-03-knmon",
-      "controllerStartNs": "104906223671700",
-      "controllerEndNs": "104909141599200",
-      "processWallMs": 2917.9275,
+      "controllerStartNs": "105471136393700",
+      "controllerEndNs": "105473989490700",
+      "processWallMs": 2853.097,
       "events": 450,
-      "workloadUs": 22489.8,
+      "workloadUs": 22904.8,
       "callLatencyUs": {
-        "median": 11.0,
-        "p95": 209.0,
-        "p99": 325.9
+        "median": 11.1,
+        "p95": 216.3,
+        "p99": 336.1
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 17948672,
-      "peakWorkingSetBytes": 19341312
+      "workingSetBytes": 17960960,
+      "peakWorkingSetBytes": 19349504
     },
     {
       "architecture": "x64",
@@ -660,8 +817,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
-        "oracle.json": "d429badd73daf9365a9b44fa9444033382e272a7098eef0585db23486af6fe34"
+        "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
+        "oracle.json": "68dc9dc93afc4dee447fcb2ebb94d8949757ebddcc1f18c0fd7bef01212fec9d"
       },
       "comparison": {
         "missing": 0,
@@ -672,139 +829,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-03-frida",
-      "controllerStartNs": "104909163782000",
-      "controllerEndNs": "104909236093200",
-      "processWallMs": 72.3112,
+      "controllerStartNs": "105474011380900",
+      "controllerEndNs": "105474081717800",
+      "processWallMs": 70.3369,
       "events": 450,
-      "workloadUs": 28543.2,
+      "workloadUs": 28463.1,
       "callLatencyUs": {
-        "median": 21.5,
-        "p95": 293.7,
-        "p99": 334.2
+        "median": 23.1,
+        "p95": 299.4,
+        "p99": 335.8
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 14741504,
-      "peakWorkingSetBytes": 14741504
-    },
-    {
-      "architecture": "x64",
-      "mode": "original",
-      "repetition": 4,
-      "configuration": "Debug",
-      "binaries": {
-        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
-        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
-        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
-        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
-      },
-      "artifacts": {
-        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "5c24f652a436ded5d9a4cde26b224244027fb9adb00ced99b75793ba7c26396e"
-      },
-      "comparison": {
-        "missing": 0,
-        "unexpected": 0,
-        "orderMismatches": 0,
-        "expected": 450,
-        "observed": 450
-      },
-      "targetExitCode": 0,
-      "directory": "x64-04-original",
-      "controllerStartNs": "104909260508700",
-      "controllerEndNs": "104909300890400",
-      "processWallMs": 40.3817,
-      "events": 450,
-      "workloadUs": 20193.2,
-      "callLatencyUs": {
-        "median": 6.9,
-        "p95": 190.8,
-        "p99": 311.0
-      },
-      "cpu100ns": 156250,
-      "workingSetBytes": 5771264,
-      "peakWorkingSetBytes": 5771264
-    },
-    {
-      "architecture": "x64",
-      "mode": "knmon",
-      "repetition": 4,
-      "configuration": "Debug",
-      "binaries": {
-        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
-        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
-        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
-        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
-      },
-      "artifacts": {
-        "capture.json": "5f283d4aa6c1d96bc15934a40940a5aec152c930d2088618f1282251b86c24ce",
-        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "279908c4aa0c5dc50a62c6869fdbb0289313abf71492ba0e64645c4182f0a4b7",
-        "session/agent-events.jsonl": "c971f63c2d5bdd6b5febcdbef9304d918400b12e77dff7ddfa96ba0affa278c6",
-        "session/audit.jsonl": "ecc4e963387a0e75fb306089019f1b435b66016289bad0fff3ca6cf46d2acdcb",
-        "session/manifest.json": "ac810fc8d96fd81be7290f43ea9f9d4d2f80f5698de5dead5127f7353f97b28a",
-        "session/trace-events.jsonl": "7bd118e3daf135cabb63fd47704ad23043b9d3b5fcba9c8717b57f64b74e87df"
-      },
-      "comparison": {
-        "missing": 0,
-        "unexpected": 0,
-        "orderMismatches": 0,
-        "expected": 450,
-        "observed": 450
-      },
-      "targetExitCode": 0,
-      "directory": "x64-04-knmon",
-      "controllerStartNs": "104909318829700",
-      "controllerEndNs": "104912181063400",
-      "processWallMs": 2862.2337,
-      "events": 450,
-      "workloadUs": 22438.8,
-      "callLatencyUs": {
-        "median": 10.9,
-        "p95": 228.5,
-        "p99": 321.4
-      },
-      "cpu100ns": 156250,
-      "workingSetBytes": 17948672,
-      "peakWorkingSetBytes": 19337216
-    },
-    {
-      "architecture": "x64",
-      "mode": "frida",
-      "repetition": 4,
-      "configuration": "Debug",
-      "binaries": {
-        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
-        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
-        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
-        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
-      },
-      "artifacts": {
-        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
-        "oracle.json": "f74dfa51390c6f67e1259a9769807ca544a06d14f6b9f3caffe335fc87c4b27a"
-      },
-      "comparison": {
-        "missing": 0,
-        "unexpected": 0,
-        "orderMismatches": 0,
-        "expected": 450,
-        "observed": 450
-      },
-      "targetExitCode": 0,
-      "directory": "x64-04-frida",
-      "controllerStartNs": "104912202258000",
-      "controllerEndNs": "104912275853600",
-      "processWallMs": 73.5956,
-      "events": 450,
-      "workloadUs": 28902.9,
-      "callLatencyUs": {
-        "median": 22.3,
-        "p95": 302.2,
-        "p99": 354.6
-      },
-      "cpu100ns": 156250,
-      "workingSetBytes": 14757888,
-      "peakWorkingSetBytes": 14757888
+      "cpu100ns": 0,
+      "workingSetBytes": 14749696,
+      "peakWorkingSetBytes": 14749696
     },
     {
       "architecture": "x64",
@@ -819,9 +856,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "718c1f8ff95d101eefc2a6db369d9df197aff77001e504175dbed737bacf923d",
-        "etw.json": "31116428ba0856e427d0c1927568227f05cd5ac3e70784ca04b844d79dc029a5",
-        "oracle.json": "edc29f6f8573b6074fe71d3bd33df103577352ea43289f850286bb36b9b1020b"
+        "corpus.etl": "64e549f3e62d3f5161ec59cc2230d0db543fdd612b53b94359b63ed0edc81498",
+        "etw.json": "2111a577f959795442ffd3a94083a999308b56ee74505d094c60a6d658558f7a",
+        "oracle.json": "9bdcd1855eab6e77bb529b5caf4d40986e8d758a57e3d87d7e0a4a4f8e3dc562"
       },
       "comparison": {
         "missing": 0,
@@ -832,24 +869,62 @@
       },
       "targetExitCode": 0,
       "directory": "x64-04-etw",
-      "controllerStartNs": "104912298884900",
-      "controllerEndNs": "104912657570000",
-      "processWallMs": 358.6851,
+      "controllerStartNs": "105474105094400",
+      "controllerEndNs": "105474454054100",
+      "processWallMs": 348.9597,
       "events": 450,
-      "workloadUs": 22462.8,
+      "workloadUs": 19889.3,
       "callLatencyUs": {
-        "median": 9.4,
-        "p95": 218.0,
-        "p99": 365.8
+        "median": 5.7,
+        "p95": 216.8,
+        "p99": 285.6
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 6012928,
-      "peakWorkingSetBytes": 6012928
+      "cpu100ns": 156250,
+      "workingSetBytes": 6025216,
+      "peakWorkingSetBytes": 6025216
+    },
+    {
+      "architecture": "x64",
+      "mode": "original",
+      "repetition": 4,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "ed06c56da14d05c199a97ee71aaa710c550ff0858c7854ab0b9d1b0b14fa3ea1"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-04-original",
+      "controllerStartNs": "105474498669500",
+      "controllerEndNs": "105474539698800",
+      "processWallMs": 41.0293,
+      "events": 450,
+      "workloadUs": 20714.0,
+      "callLatencyUs": {
+        "median": 7.3,
+        "p95": 213.6,
+        "p99": 326.5
+      },
+      "cpu100ns": 0,
+      "workingSetBytes": 5791744,
+      "peakWorkingSetBytes": 5791744
     },
     {
       "architecture": "x64",
       "mode": "knmon",
-      "repetition": 5,
+      "repetition": 4,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
@@ -858,13 +933,13 @@
         "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
       },
       "artifacts": {
-        "capture.json": "78a0e7c350dfd57dce063f5cdda41bd8186b855bd4286add9c131a20eada8366",
+        "capture.json": "9eaffc166c0f4c2dde8c5accb3a4fd26b3429c2d42ae31186f7d5e6800270f97",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "4e4df2c84a4e629f26063c44fdd207e562a1b69823e3ee0961197faabcee4f1f",
-        "session/agent-events.jsonl": "e927337e65582e2f2e46a1c225b747ae5b9dda733ef2bd9dd1e92d28e547fd8e",
-        "session/audit.jsonl": "a5485971e3122f35809fef2009fb8e33862da84c5e0c62c82897f8b5a36e868f",
-        "session/manifest.json": "1eb69ecb59108bf517130f0e7511caa6218a21842be6c56944d26f8401bcb91f",
-        "session/trace-events.jsonl": "f792808755455efd1b0f2bf0df9e105b885abec250cfc21f226e5a86c54905a6"
+        "oracle.json": "25fa3e2d126d0a80684420e610a7ba25bdad591a0ff79440c0e3721e506adfda",
+        "session/agent-events.jsonl": "b4e7e5fd4c4d7c7ed332f148dc294b2a5f0b044f3bfc63389c794316b929c2c2",
+        "session/audit.jsonl": "91c5a64970235aaa446f977617121f694ef9cdcf4fa72b1cc137021a289acb24",
+        "session/manifest.json": "a76ca9b8bc0cfb9124326a98701a920dfec85761e8328df8fa0510a920ca1c5f",
+        "session/trace-events.jsonl": "268ee1b6af95cee43e9cccac08e0eca8b10fd832b47c8af80bda621c16c4043d"
       },
       "comparison": {
         "missing": 0,
@@ -874,25 +949,25 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x64-05-knmon",
-      "controllerStartNs": "104912705851600",
-      "controllerEndNs": "104915569026700",
-      "processWallMs": 2863.1751,
+      "directory": "x64-04-knmon",
+      "controllerStartNs": "105474558000600",
+      "controllerEndNs": "105477418580700",
+      "processWallMs": 2860.5801,
       "events": 450,
-      "workloadUs": 23425.3,
+      "workloadUs": 23341.7,
       "callLatencyUs": {
-        "median": 11.6,
-        "p95": 235.2,
-        "p99": 352.8
+        "median": 11.9,
+        "p95": 197.1,
+        "p99": 331.5
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 17965056,
-      "peakWorkingSetBytes": 19337216
+      "workingSetBytes": 17952768,
+      "peakWorkingSetBytes": 19341312
     },
     {
       "architecture": "x64",
       "mode": "frida",
-      "repetition": 5,
+      "repetition": 4,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
@@ -902,8 +977,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
-        "oracle.json": "c483c067a620d9356c638da290bedce49791412b82ca208a0c2e0218f7bbaab1"
+        "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
+        "oracle.json": "737a245999dcb022cdb44f1304ea2fde25a1c7318a832ebca36e51c135080348"
       },
       "comparison": {
         "missing": 0,
@@ -913,25 +988,25 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x64-05-frida",
-      "controllerStartNs": "104915591043400",
-      "controllerEndNs": "104915662050400",
-      "processWallMs": 71.007,
+      "directory": "x64-04-frida",
+      "controllerStartNs": "105477442159200",
+      "controllerEndNs": "105477512130300",
+      "processWallMs": 69.9711,
       "events": 450,
-      "workloadUs": 28228.3,
+      "workloadUs": 28237.9,
       "callLatencyUs": {
-        "median": 22.9,
-        "p95": 295.3,
-        "p99": 334.9
+        "median": 25.7,
+        "p95": 273.8,
+        "p99": 351.9
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 14757888,
-      "peakWorkingSetBytes": 14757888
+      "workingSetBytes": 14741504,
+      "peakWorkingSetBytes": 14741504
     },
     {
       "architecture": "x64",
-      "mode": "etw",
-      "repetition": 5,
+      "mode": "frida-cmodule",
+      "repetition": 4,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
@@ -941,9 +1016,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "c88a7595a57554278ff269002eee24efbd6e490175722d30c6aab982508c74a4",
-        "etw.json": "ef153d28dc0516cba94e0916131aca627104b58bc4647b408863eb2c3d2d098a",
-        "oracle.json": "65b697f663839f3565165848627bef7d3e79299a9a28d8f9fa4ee0610034ecf7"
+        "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
+        "oracle.json": "a7b36805c9bb30ddde730e7765fb30d32a237bfeff144f970333be5732cc5e14"
       },
       "comparison": {
         "missing": 0,
@@ -953,20 +1027,20 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x64-05-etw",
-      "controllerStartNs": "104915683161700",
-      "controllerEndNs": "104916028499400",
-      "processWallMs": 345.3377,
+      "directory": "x64-04-frida-cmodule",
+      "controllerStartNs": "105477530165000",
+      "controllerEndNs": "105477597979300",
+      "processWallMs": 67.8143,
       "events": 450,
-      "workloadUs": 20141.3,
+      "workloadUs": 21232.4,
       "callLatencyUs": {
-        "median": 7.3,
-        "p95": 198.3,
-        "p99": 314.7
+        "median": 8.0,
+        "p95": 222.9,
+        "p99": 342.5
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 5992448,
-      "peakWorkingSetBytes": 5992448
+      "workingSetBytes": 15196160,
+      "peakWorkingSetBytes": 15196160
     },
     {
       "architecture": "x64",
@@ -981,7 +1055,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "bbd073673ec175c59b5ef0be1f4d0029235149c0f303aba339a3b116b382fb1d"
+        "oracle.json": "4a80ee01ad40470eaaae0f39694ea3a346365a099801b7b1b5419625f3adada2"
       },
       "comparison": {
         "missing": 0,
@@ -992,24 +1066,24 @@
       },
       "targetExitCode": 0,
       "directory": "x64-05-original",
-      "controllerStartNs": "104916073662800",
-      "controllerEndNs": "104916113884400",
-      "processWallMs": 40.2216,
+      "controllerStartNs": "105477619128400",
+      "controllerEndNs": "105477659037700",
+      "processWallMs": 39.9093,
       "events": 450,
-      "workloadUs": 21053.6,
+      "workloadUs": 20130.6,
       "callLatencyUs": {
-        "median": 6.3,
-        "p95": 222.2,
-        "p99": 353.0
+        "median": 5.5,
+        "p95": 216.5,
+        "p99": 320.2
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 5779456,
-      "peakWorkingSetBytes": 5779456
+      "workingSetBytes": 5787648,
+      "peakWorkingSetBytes": 5787648
     },
     {
       "architecture": "x64",
-      "mode": "frida",
-      "repetition": 6,
+      "mode": "knmon",
+      "repetition": 5,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
@@ -1018,9 +1092,13 @@
         "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
       },
       "artifacts": {
+        "capture.json": "db463bf217307a098d1ba61b2a582e645f42a3602f61a4f599a46d69f93956af",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
-        "oracle.json": "d85c88c73646df2aafc88eb16496bc81de7faa49ab537189eef05ebf0d56a01c"
+        "oracle.json": "689376a383ff56600a8b3151ca37e34773e7859ad9fbaca3f9e6750dff60dc79",
+        "session/agent-events.jsonl": "7a5de5b130746ffb9529744ab6e104f3893f36930b1f90a943313ba577f738ac",
+        "session/audit.jsonl": "ac1f36c285359f1927da98aa7a491c703ecd05c0659f0317a941a6c8c61b29d0",
+        "session/manifest.json": "476fca6fc09661e5f8d888bc86abbe1a8695ce6fac07431921e4eee4a5ce29b6",
+        "session/trace-events.jsonl": "74d47f411cc0f8205de46159dbb82186076531107ab1697db863a9b9ee56551c"
       },
       "comparison": {
         "missing": 0,
@@ -1030,25 +1108,64 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x64-06-frida",
-      "controllerStartNs": "104916132944600",
-      "controllerEndNs": "104916237396900",
-      "processWallMs": 104.4523,
+      "directory": "x64-05-knmon",
+      "controllerStartNs": "105477673301500",
+      "controllerEndNs": "105480560525900",
+      "processWallMs": 2887.2244,
       "events": 450,
-      "workloadUs": 27450.4,
+      "workloadUs": 22859.2,
       "callLatencyUs": {
-        "median": 22.2,
-        "p95": 296.1,
-        "p99": 351.7
+        "median": 11.2,
+        "p95": 222.7,
+        "p99": 311.0
       },
       "cpu100ns": 156250,
+      "workingSetBytes": 17989632,
+      "peakWorkingSetBytes": 19345408
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida",
+      "repetition": 5,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
+        "oracle.json": "9b52062859d45b1d67da0501f54fc7fb2ce85a8a633b1c34f89017ae8955d7ff"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-05-frida",
+      "controllerStartNs": "105480584901000",
+      "controllerEndNs": "105480659296000",
+      "processWallMs": 74.395,
+      "events": 450,
+      "workloadUs": 29072.7,
+      "callLatencyUs": {
+        "median": 24.8,
+        "p95": 289.4,
+        "p99": 354.4
+      },
+      "cpu100ns": 312500,
       "workingSetBytes": 14741504,
       "peakWorkingSetBytes": 14741504
     },
     {
       "architecture": "x64",
-      "mode": "etw",
-      "repetition": 6,
+      "mode": "frida-cmodule",
+      "repetition": 5,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
@@ -1058,9 +1175,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "282603f3ddae1ba11614fb741b2527dd8414c6c3fff6c03e5f75d047ef962e1a",
-        "etw.json": "92804212ae7cccc1f8e951ae8c3f176ec8420f744dc9394cb5d25d3ac0293677",
-        "oracle.json": "67b98aa8b27526489612f06106e908328c8918fa6bdedccc6145421bf4ee0193"
+        "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
+        "oracle.json": "248e06bf4cba4c7a53fedcdd14c5871138ca27eca330210c71dbb79db54a4495"
       },
       "comparison": {
         "missing": 0,
@@ -1070,25 +1186,25 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x64-06-etw",
-      "controllerStartNs": "104916260131400",
-      "controllerEndNs": "104916614708900",
-      "processWallMs": 354.5775,
+      "directory": "x64-05-frida-cmodule",
+      "controllerStartNs": "105480681347400",
+      "controllerEndNs": "105480750268600",
+      "processWallMs": 68.9212,
       "events": 450,
-      "workloadUs": 21747.9,
+      "workloadUs": 21230.4,
       "callLatencyUs": {
-        "median": 6.7,
-        "p95": 224.2,
-        "p99": 298.4
+        "median": 9.2,
+        "p95": 216.0,
+        "p99": 291.7
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 6000640,
-      "peakWorkingSetBytes": 6000640
+      "workingSetBytes": 15216640,
+      "peakWorkingSetBytes": 15216640
     },
     {
       "architecture": "x64",
-      "mode": "original",
-      "repetition": 6,
+      "mode": "etw",
+      "repetition": 5,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
@@ -1098,7 +1214,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "c53207bd601226d8d2fb8e0aa7de22c964f0744767b64a3737783372fc7e323b"
+        "corpus.etl": "747112cdffd4e167653e844bb8065137360921bcd3a9ea1c871256d847490978",
+        "etw.json": "1874d7283c26c4436856c552bc0485742dc429ab280bb7a183315447103cb989",
+        "oracle.json": "ec3347c527306590c90269934714524c1396812550703b152336d1a507d54188"
       },
       "comparison": {
         "missing": 0,
@@ -1108,20 +1226,20 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x64-06-original",
-      "controllerStartNs": "104916660028200",
-      "controllerEndNs": "104916699492400",
-      "processWallMs": 39.4642,
+      "directory": "x64-05-etw",
+      "controllerStartNs": "105480768128900",
+      "controllerEndNs": "105481111297800",
+      "processWallMs": 343.1689,
       "events": 450,
-      "workloadUs": 20483.9,
+      "workloadUs": 20628.1,
       "callLatencyUs": {
-        "median": 6.0,
-        "p95": 207.4,
-        "p99": 305.6
+        "median": 6.7,
+        "p95": 213.2,
+        "p99": 299.1
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 5791744,
-      "peakWorkingSetBytes": 5791744
+      "cpu100ns": 156250,
+      "workingSetBytes": 6004736,
+      "peakWorkingSetBytes": 6004736
     },
     {
       "architecture": "x64",
@@ -1135,13 +1253,13 @@
         "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
       },
       "artifacts": {
-        "capture.json": "6187d966ad57a80d9da2a2df0a15cd73291d0096b1f538a8c448d717f63ea802",
+        "capture.json": "b16e725a30a0313a2047c48efb488cd99fb748654d851e2e826f558dda929bd7",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "8f6d9dd608b89ffbbca8edd56db83577e93de48d29b94703c9b668c5d1f0c171",
-        "session/agent-events.jsonl": "d1e3e71d9a555bb525cb6a8de9e3c03f7288125ca75499b0b211b28f5b944619",
-        "session/audit.jsonl": "89cb37fb90163952e98ca34dcc68ddd237fae5970f460f4a8d1cea4d8d3f9d03",
-        "session/manifest.json": "19bf1abb34d55af441a933cdc0e57ef83480e0f3ed6a8474e7b0b5bd2ee7499f",
-        "session/trace-events.jsonl": "d49cecd9ab0398194debfde1a79307d1f43892cc01f89bf63779d9750ed1f62f"
+        "oracle.json": "05d3d5ac8107b32bd3e41a529a8d8e09fc574cb793177fdc17f9e986ffe5c73f",
+        "session/agent-events.jsonl": "184e971d4efcd713006bf43d0b4d5aee4f3c048e80109dfb4351c1ccf9351d0f",
+        "session/audit.jsonl": "9b3c659028de5b3ea8301c6d30854ac752f012b770a6ddedcb019ec88f4799cc",
+        "session/manifest.json": "9eb68de487254044feaf7c1f9615e06b81dbebabb21cf21055024c5e1b5b0fb7",
+        "session/trace-events.jsonl": "a5b33a45c50dc81844c0e0598d140dba1751cfc9399e7f42221e8de0f9a9b41e"
       },
       "comparison": {
         "missing": 0,
@@ -1152,24 +1270,102 @@
       },
       "targetExitCode": 0,
       "directory": "x64-06-knmon",
-      "controllerStartNs": "104916716352600",
-      "controllerEndNs": "104919590879400",
-      "processWallMs": 2874.5268,
+      "controllerStartNs": "105481157111200",
+      "controllerEndNs": "105484063759900",
+      "processWallMs": 2906.6487,
       "events": 450,
-      "workloadUs": 22328.0,
+      "workloadUs": 22795.8,
       "callLatencyUs": {
-        "median": 10.3,
-        "p95": 205.6,
-        "p99": 344.1
+        "median": 11.7,
+        "p95": 237.2,
+        "p99": 323.3
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 17956864,
-      "peakWorkingSetBytes": 19345408
+      "workingSetBytes": 17944576,
+      "peakWorkingSetBytes": 19333120
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida",
+      "repetition": 6,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
+        "oracle.json": "9bede7063d85e75e8e921539f40bc333c644fe54d52179f668db2e7031226cbc"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-06-frida",
+      "controllerStartNs": "105484085637100",
+      "controllerEndNs": "105484155970200",
+      "processWallMs": 70.3331,
+      "events": 450,
+      "workloadUs": 28366.9,
+      "callLatencyUs": {
+        "median": 24.5,
+        "p95": 303.5,
+        "p99": 354.1
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14741504,
+      "peakWorkingSetBytes": 14741504
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida-cmodule",
+      "repetition": 6,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
+        "oracle.json": "33915f572e270885b80a1466b233c74574528d8270b255d80a236ccbe340084a"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-06-frida-cmodule",
+      "controllerStartNs": "105484174755800",
+      "controllerEndNs": "105484244247000",
+      "processWallMs": 69.4912,
+      "events": 450,
+      "workloadUs": 21950.7,
+      "callLatencyUs": {
+        "median": 8.8,
+        "p95": 227.8,
+        "p99": 331.3
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 15196160,
+      "peakWorkingSetBytes": 15196160
     },
     {
       "architecture": "x64",
       "mode": "etw",
-      "repetition": 7,
+      "repetition": 6,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
@@ -1179,9 +1375,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "4de1d5c600aac0d0b9d739cc359461da847fbc02ea6726a327be29de4442c2de",
-        "etw.json": "1a0a93a9d1221c2a793442fd670e85cb2a35376eef1be36589f237a96de6a98c",
-        "oracle.json": "9fd06de0519cc4931b5e496e1c92cce77d4d5397bef32ba3737b29838a10f3b7"
+        "corpus.etl": "07ecae66731f5393e88fc0cdfe200e32da6dbbfacb98cdccd5d5305b5635e113",
+        "etw.json": "0c5998fe1e19cec7006b8818f627234f63ec3c7405e0a33a5cde5896d83962d5",
+        "oracle.json": "147349873754fb985d7e32a8050a29e7e1c9ccbd302e5c69694935e7f78514c7"
       },
       "comparison": {
         "missing": 0,
@@ -1191,25 +1387,25 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x64-07-etw",
-      "controllerStartNs": "104919617661100",
-      "controllerEndNs": "104919967575000",
-      "processWallMs": 349.9139,
+      "directory": "x64-06-etw",
+      "controllerStartNs": "105484263958900",
+      "controllerEndNs": "105484613082000",
+      "processWallMs": 349.1231,
       "events": 450,
-      "workloadUs": 22591.3,
+      "workloadUs": 21842.1,
       "callLatencyUs": {
-        "median": 6.8,
-        "p95": 242.7,
-        "p99": 373.6
+        "median": 13.4,
+        "p95": 212.6,
+        "p99": 328.7
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 5992448,
-      "peakWorkingSetBytes": 5992448
+      "workingSetBytes": 6017024,
+      "peakWorkingSetBytes": 6017024
     },
     {
       "architecture": "x64",
       "mode": "original",
-      "repetition": 7,
+      "repetition": 6,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
@@ -1219,7 +1415,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "25b553f60c308e0ee94f5e6c1263f9c2d86e827cfe8379ac007f8e6fa8f50a54"
+        "oracle.json": "5b236af05db1ceab65e33dc6c8cd95c96bef2631f10d8389bd138e0fb5be8d0c"
       },
       "comparison": {
         "missing": 0,
@@ -1229,63 +1425,20 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x64-07-original",
-      "controllerStartNs": "104920010263900",
-      "controllerEndNs": "104920050415200",
-      "processWallMs": 40.1513,
+      "directory": "x64-06-original",
+      "controllerStartNs": "105484657194000",
+      "controllerEndNs": "105484696056900",
+      "processWallMs": 38.8629,
       "events": 450,
-      "workloadUs": 19990.4,
+      "workloadUs": 19689.0,
       "callLatencyUs": {
         "median": 6.0,
-        "p95": 195.3,
-        "p99": 316.9
+        "p95": 191.5,
+        "p99": 297.6
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 5787648,
-      "peakWorkingSetBytes": 5787648
-    },
-    {
-      "architecture": "x64",
-      "mode": "knmon",
-      "repetition": 7,
-      "configuration": "Debug",
-      "binaries": {
-        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
-        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
-        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
-        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
-      },
-      "artifacts": {
-        "capture.json": "f063ce7993000866534604308a34cedb0494501720726c6236f700ad26c126d5",
-        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "574e4423e915dd37479ee6e34dbe04863476722c5babdf3b01027c665464a170",
-        "session/agent-events.jsonl": "c8fd010510aed7338be9fcbe9ae00f2474b36f7651a19886556e9a9d95406241",
-        "session/audit.jsonl": "dcdc2c7e17389e570732972f3ecda1cb59ea422b053314dd3b8806013ca0a6ac",
-        "session/manifest.json": "c4c289928277a2a9d7ed058eba7dbb512368cfca736b4ea54ccbccb59ea58a0b",
-        "session/trace-events.jsonl": "ff3bf90b9564ba29bf44439e18856455281acd60f91e6bcd7c1fa558d57086f4"
-      },
-      "comparison": {
-        "missing": 0,
-        "unexpected": 0,
-        "orderMismatches": 0,
-        "expected": 450,
-        "observed": 450
-      },
-      "targetExitCode": 0,
-      "directory": "x64-07-knmon",
-      "controllerStartNs": "104920063750700",
-      "controllerEndNs": "104922947519700",
-      "processWallMs": 2883.769,
-      "events": 450,
-      "workloadUs": 22015.8,
-      "callLatencyUs": {
-        "median": 13.2,
-        "p95": 211.6,
-        "p99": 300.1
-      },
-      "cpu100ns": 156250,
-      "workingSetBytes": 17940480,
-      "peakWorkingSetBytes": 19329024
+      "workingSetBytes": 5791744,
+      "peakWorkingSetBytes": 5791744
     },
     {
       "architecture": "x64",
@@ -1300,8 +1453,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
-        "oracle.json": "2d97904a81f9bb3e0fdace2b9fbbad1c6743113113bf20d82eda5e999c47dfa9"
+        "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
+        "oracle.json": "faf3a5714ff0d18c03b95a828e2986468571fc573c33056a23b732b96eecc2a7"
       },
       "comparison": {
         "missing": 0,
@@ -1312,24 +1465,103 @@
       },
       "targetExitCode": 0,
       "directory": "x64-07-frida",
-      "controllerStartNs": "104922969629900",
-      "controllerEndNs": "104923042175400",
-      "processWallMs": 72.5455,
+      "controllerStartNs": "105484718478000",
+      "controllerEndNs": "105484790455400",
+      "processWallMs": 71.9774,
       "events": 450,
-      "workloadUs": 27814.8,
+      "workloadUs": 27433.4,
       "callLatencyUs": {
-        "median": 23.6,
-        "p95": 279.5,
-        "p99": 325.5
+        "median": 22.7,
+        "p95": 280.7,
+        "p99": 330.8
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 14725120,
-      "peakWorkingSetBytes": 14725120
+      "workingSetBytes": 14761984,
+      "peakWorkingSetBytes": 14761984
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida-cmodule",
+      "repetition": 7,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
+        "oracle.json": "c42fe7215118eb79508986de2cfee99037bae7789cab35d1068aefd515d53f14"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-07-frida-cmodule",
+      "controllerStartNs": "105484812398800",
+      "controllerEndNs": "105484883939100",
+      "processWallMs": 71.5403,
+      "events": 450,
+      "workloadUs": 21480.6,
+      "callLatencyUs": {
+        "median": 9.3,
+        "p95": 219.2,
+        "p99": 304.2
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 15249408,
+      "peakWorkingSetBytes": 15249408
+    },
+    {
+      "architecture": "x64",
+      "mode": "etw",
+      "repetition": 7,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "cea231dd832a4e8d58e980103919ad0d9aab6e0581b417599d2a6101de913037",
+        "etw.json": "0d0bbe2293b90d7e47318266a56c30dc1385a9dbb0cdbabdaf8d2bdcbf729838",
+        "oracle.json": "f3d4e558937ed8f931d5b9794936c9713d1a3f05aa057b5fa4a9554a663fdd65"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-07-etw",
+      "controllerStartNs": "105484903553500",
+      "controllerEndNs": "105485259159100",
+      "processWallMs": 355.6056,
+      "events": 450,
+      "workloadUs": 23319.5,
+      "callLatencyUs": {
+        "median": 10.5,
+        "p95": 209.6,
+        "p99": 362.6
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 6008832,
+      "peakWorkingSetBytes": 6008832
     },
     {
       "architecture": "x64",
       "mode": "original",
-      "repetition": 8,
+      "repetition": 7,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
@@ -1339,7 +1571,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "dffd27616daebee6d8e49209d3cb9a3d1a7e0f572af3f3e237891eb231f38aec"
+        "oracle.json": "d3f8f4290e07b8da6b0bb2bc44bc2700deb51596e808e8324b883c462024aab4"
       },
       "comparison": {
         "missing": 0,
@@ -1349,25 +1581,25 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x64-08-original",
-      "controllerStartNs": "104923063690800",
-      "controllerEndNs": "104923104622000",
-      "processWallMs": 40.9312,
+      "directory": "x64-07-original",
+      "controllerStartNs": "105485300957600",
+      "controllerEndNs": "105485340240100",
+      "processWallMs": 39.2825,
       "events": 450,
-      "workloadUs": 20916.3,
+      "workloadUs": 20575.5,
       "callLatencyUs": {
-        "median": 6.5,
-        "p95": 207.7,
-        "p99": 323.9
+        "median": 7.3,
+        "p95": 206.8,
+        "p99": 312.5
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 5771264,
-      "peakWorkingSetBytes": 5771264
+      "workingSetBytes": 5775360,
+      "peakWorkingSetBytes": 5775360
     },
     {
       "architecture": "x64",
       "mode": "knmon",
-      "repetition": 8,
+      "repetition": 7,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
@@ -1376,13 +1608,13 @@
         "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
       },
       "artifacts": {
-        "capture.json": "d609d8101ccef40248e4edc39c0ac6647612fbd2a9255ee2847df3dff7fe5ec8",
+        "capture.json": "355000ff43b78d4cbce5da98586aaa5c2d2d0bcc31a520536acbda2db3dd1164",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "5fcc21d74df2b77d0c9b199a37f5f3f9e7851cffb60f83cdecd97d4fd5238933",
-        "session/agent-events.jsonl": "4f53d87828bc2fcc7c009f7646c2e4c2cecf0826163c14b2c5ddee685838f3bc",
-        "session/audit.jsonl": "17e6aff3a263165b4a7a857a29da610eade60654d1bd721296953f11c48d5e73",
-        "session/manifest.json": "3e321131e8961ac0e45a5743da34c4e2107d9dc77c71cd42828dbbb6cbc64840",
-        "session/trace-events.jsonl": "cecb9874c722ea0fdacd3201a633bb60c3ebd8427c36a8713b9c12545c88b879"
+        "oracle.json": "941afb4df18f600bb258b6b9444eec148b9b9bc7cbf7ddbf5b4a46b29c406fa3",
+        "session/agent-events.jsonl": "14f855bdcdd9dc3641d2e3a69ba6e4318dc816746e89ac048557a475b458371c",
+        "session/audit.jsonl": "89c2de071afad6f242f247c7d5b48c44a69de23b76e403634b657ef46fb00b34",
+        "session/manifest.json": "505513fb4c6c0849dd5196a5483adbdcc28735f4faa79617813ab60765a7f7ea",
+        "session/trace-events.jsonl": "2bea376acb3885985799bf1b766b017b85b7be6d349234293f947b4c854a594d"
       },
       "comparison": {
         "missing": 0,
@@ -1392,24 +1624,24 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x64-08-knmon",
-      "controllerStartNs": "104923123011100",
-      "controllerEndNs": "104925999766300",
-      "processWallMs": 2876.7552,
+      "directory": "x64-07-knmon",
+      "controllerStartNs": "105485356839600",
+      "controllerEndNs": "105488204648700",
+      "processWallMs": 2847.8091,
       "events": 450,
-      "workloadUs": 24139.2,
+      "workloadUs": 23358.8,
       "callLatencyUs": {
-        "median": 13.4,
-        "p95": 249.0,
-        "p99": 359.2
+        "median": 10.5,
+        "p95": 242.8,
+        "p99": 328.5
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 17973248,
-      "peakWorkingSetBytes": 19329024
+      "cpu100ns": 312500,
+      "workingSetBytes": 17989632,
+      "peakWorkingSetBytes": 19349504
     },
     {
       "architecture": "x64",
-      "mode": "frida",
+      "mode": "frida-cmodule",
       "repetition": 8,
       "configuration": "Debug",
       "binaries": {
@@ -1420,8 +1652,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
-        "oracle.json": "38fb41436fb7050da4ad5f5572f2189e0c432fc96c36595bab5e0127742f7b70"
+        "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
+        "oracle.json": "7c1a0fbd4bd36bf856f53642bee845538dfa660a4798399b6c3b3e2241f6ba93"
       },
       "comparison": {
         "missing": 0,
@@ -1431,20 +1663,20 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x64-08-frida",
-      "controllerStartNs": "104926022243900",
-      "controllerEndNs": "104926123956400",
-      "processWallMs": 101.7125,
+      "directory": "x64-08-frida-cmodule",
+      "controllerStartNs": "105488229362100",
+      "controllerEndNs": "105488297091900",
+      "processWallMs": 67.7298,
       "events": 450,
-      "workloadUs": 28444.9,
+      "workloadUs": 20995.1,
       "callLatencyUs": {
-        "median": 24.7,
-        "p95": 298.2,
-        "p99": 357.1
+        "median": 11.9,
+        "p95": 203.2,
+        "p99": 295.4
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 14749696,
-      "peakWorkingSetBytes": 14749696
+      "cpu100ns": 156250,
+      "workingSetBytes": 15216640,
+      "peakWorkingSetBytes": 15216640
     },
     {
       "architecture": "x64",
@@ -1459,9 +1691,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "8928ef6f6e1f895c45570bfce55ca1d605d7295096fba87d9a4e15b325bd33ed",
-        "etw.json": "1e33bb5f53197a368f5a7b7525df97cdf9d4a5e5080bb0b0be5bbb953f919e76",
-        "oracle.json": "2392a18b8754d26b72b7c57027175f02c9d0c65036bbc23995d1c68eba2bb287"
+        "corpus.etl": "b784aab73c48515690a5b3c60dc98c2ddc9ccc26473e5339079f624d91ea7e6c",
+        "etw.json": "7c91afa760ff3f03519e6bdcd611da0d1056c3c87d874dd97fa5306ad7f2e8e2",
+        "oracle.json": "da42a216889ad63a24e2ffdb0703177eaef93d56da998403239a12f013458e10"
       },
       "comparison": {
         "missing": 0,
@@ -1472,24 +1704,62 @@
       },
       "targetExitCode": 0,
       "directory": "x64-08-etw",
-      "controllerStartNs": "104926144423700",
-      "controllerEndNs": "104926495845500",
-      "processWallMs": 351.4218,
+      "controllerStartNs": "105488314442600",
+      "controllerEndNs": "105488669158800",
+      "processWallMs": 354.7162,
       "events": 450,
-      "workloadUs": 21700.8,
+      "workloadUs": 20622.8,
       "callLatencyUs": {
-        "median": 5.9,
-        "p95": 228.8,
-        "p99": 346.4
+        "median": 10.1,
+        "p95": 197.1,
+        "p99": 342.0
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 5988352,
+      "peakWorkingSetBytes": 5988352
+    },
+    {
+      "architecture": "x64",
+      "mode": "original",
+      "repetition": 8,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "9248ffa9e41a7456eb608328befe1a968faec3276d0196a578497e8849a25aba"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-08-original",
+      "controllerStartNs": "105488716884900",
+      "controllerEndNs": "105488756198700",
+      "processWallMs": 39.3138,
+      "events": 450,
+      "workloadUs": 19911.6,
+      "callLatencyUs": {
+        "median": 6.1,
+        "p95": 206.1,
+        "p99": 288.9
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 6000640,
-      "peakWorkingSetBytes": 6000640
+      "workingSetBytes": 5763072,
+      "peakWorkingSetBytes": 5763072
     },
     {
       "architecture": "x64",
       "mode": "knmon",
-      "repetition": 9,
+      "repetition": 8,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
@@ -1498,13 +1768,13 @@
         "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
       },
       "artifacts": {
-        "capture.json": "49a98bf61744bab6cb0994e70f504107bd5ef022f8dc53aa6cfdd93960a9bfa1",
+        "capture.json": "4d334877ab47df8076e912558774d66f14c8879b3d4a018afac6acbc177ccd22",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "a421343d4501cadd63b0232c7b3d61724f502e86267fcaa2a9631910f95f6419",
-        "session/agent-events.jsonl": "71127997021edbb7613ddc473b7832df577e9271b2e0c48de78b105f123d1821",
-        "session/audit.jsonl": "8fcfd8a212f355bad801fd76c9be3c71bb648e251be2a30e909491bc61565a0e",
-        "session/manifest.json": "34faf409d2c4a70678ef7b7a0873e21c9ac5fd645aff44c2aa1916991956a2c4",
-        "session/trace-events.jsonl": "5e1cfed8cfd61858662b7a847d8518a13076bf2c9174f21cdc5207818a5ab83f"
+        "oracle.json": "94f724cd7b0d8afa084eaf7ac8758e088c1c86301b55ee9855acdbbc43e4399c",
+        "session/agent-events.jsonl": "1fdff3da7d91921b4d8e7ae53898a77fa36b5b56ff11e2604cd304fc6ee27292",
+        "session/audit.jsonl": "e358ea6ad9602a0142d3af9241d3cd12fb2b98d6a484e7717e728f2d0f7d6040",
+        "session/manifest.json": "4df84992877289740557e1b73ebf45b2784c88ed293737172b4759d8a80bf42d",
+        "session/trace-events.jsonl": "6006ed4f1a1e042a138ebe3119e88f92f58eaff1fdf4208048ef2e1ade6f728b"
       },
       "comparison": {
         "missing": 0,
@@ -1514,25 +1784,25 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x64-09-knmon",
-      "controllerStartNs": "104926544310800",
-      "controllerEndNs": "104929393163700",
-      "processWallMs": 2848.8529,
+      "directory": "x64-08-knmon",
+      "controllerStartNs": "105488769535800",
+      "controllerEndNs": "105491631548700",
+      "processWallMs": 2862.0129,
       "events": 450,
-      "workloadUs": 24036.7,
+      "workloadUs": 23713.5,
       "callLatencyUs": {
-        "median": 12.3,
-        "p95": 229.1,
-        "p99": 353.8
+        "median": 10.3,
+        "p95": 260.4,
+        "p99": 345.2
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 17952768,
-      "peakWorkingSetBytes": 19333120
+      "workingSetBytes": 17993728,
+      "peakWorkingSetBytes": 19345408
     },
     {
       "architecture": "x64",
       "mode": "frida",
-      "repetition": 9,
+      "repetition": 8,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
@@ -1542,8 +1812,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
-        "oracle.json": "e7412456be6a71a57c49616bc303cb68701caa622f3bb3184dfe95fce18efb07"
+        "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
+        "oracle.json": "0bc34f11dc73d8a978c906da66908af352a3dd94d01ca91cd390ad3006f4e921"
       },
       "comparison": {
         "missing": 0,
@@ -1553,16 +1823,16 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x64-09-frida",
-      "controllerStartNs": "104929416099400",
-      "controllerEndNs": "104929488430400",
-      "processWallMs": 72.331,
+      "directory": "x64-08-frida",
+      "controllerStartNs": "105491653997100",
+      "controllerEndNs": "105491724869800",
+      "processWallMs": 70.8727,
       "events": 450,
-      "workloadUs": 30419.5,
+      "workloadUs": 27612.7,
       "callLatencyUs": {
-        "median": 27.0,
-        "p95": 307.7,
-        "p99": 386.3
+        "median": 22.1,
+        "p95": 292.1,
+        "p99": 332.5
       },
       "cpu100ns": 156250,
       "workingSetBytes": 14749696,
@@ -1581,9 +1851,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "0fbc6ea706298c3c42814fba6e203f8c225939bcbbf5f404620660911061e57c",
-        "etw.json": "d2eb3ec4c2657e6e50eaf380670edaf5f14ead54dc32cbd3807813304e6b7ad1",
-        "oracle.json": "539fcb4a45f9f9a2401b8a90f31f0b76fabfbbed55d28440fae6b0f08f66ca67"
+        "corpus.etl": "1c27a6c80335ce9579ca551e002beb48d8e8b08ae3339d28da51bd6009199e7f",
+        "etw.json": "2b28be8f84827bae3ca3eaaadbfeba1d9e56d3f11fda5ab22b79d8017502e69d",
+        "oracle.json": "f48370b4f48ad51a74fd7ecde66d463b1a66426289fd84db89da7a45e6c7a6c8"
       },
       "comparison": {
         "missing": 0,
@@ -1594,19 +1864,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-09-etw",
-      "controllerStartNs": "104929505169100",
-      "controllerEndNs": "104929858082300",
-      "processWallMs": 352.9132,
+      "controllerStartNs": "105491750105300",
+      "controllerEndNs": "105492100437400",
+      "processWallMs": 350.3321,
       "events": 450,
-      "workloadUs": 20165.5,
+      "workloadUs": 20705.4,
       "callLatencyUs": {
-        "median": 7.0,
-        "p95": 195.0,
-        "p99": 311.9
+        "median": 10.6,
+        "p95": 207.2,
+        "p99": 299.1
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 6000640,
-      "peakWorkingSetBytes": 6000640
+      "cpu100ns": 156250,
+      "workingSetBytes": 5992448,
+      "peakWorkingSetBytes": 5992448
     },
     {
       "architecture": "x64",
@@ -1621,7 +1891,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "09f92729e3d563f60f33760aa9982a3626b8da0e138323ddb06d1eabd9aed847"
+        "oracle.json": "7909ccc980ffda51fe3c591f9d76a60aa810c09c91814233ecf48a7b849ca210"
       },
       "comparison": {
         "missing": 0,
@@ -1632,19 +1902,140 @@
       },
       "targetExitCode": 0,
       "directory": "x64-09-original",
-      "controllerStartNs": "104929904142500",
-      "controllerEndNs": "104929945832000",
-      "processWallMs": 41.6895,
+      "controllerStartNs": "105492149613500",
+      "controllerEndNs": "105492192447900",
+      "processWallMs": 42.8344,
       "events": 450,
-      "workloadUs": 21625.2,
+      "workloadUs": 21924.3,
       "callLatencyUs": {
-        "median": 6.7,
-        "p95": 213.1,
-        "p99": 337.0
+        "median": 7.4,
+        "p95": 225.7,
+        "p99": 333.3
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 5779456,
-      "peakWorkingSetBytes": 5779456
+      "workingSetBytes": 5771264,
+      "peakWorkingSetBytes": 5771264
+    },
+    {
+      "architecture": "x64",
+      "mode": "knmon",
+      "repetition": 9,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
+      },
+      "artifacts": {
+        "capture.json": "ef5d1b7b09e6acad3c82c3ecb76213afd17e6b3e5260046f47dbdb8cc9481613",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "24f98654a4c45982dbda633a8278302b6dd0776feb802f6fa909738b2eddc02c",
+        "session/agent-events.jsonl": "bf0ad7b592127b9e2c00994f632e9f9e15e44b1347e6946a7bac1fe16421dae3",
+        "session/audit.jsonl": "535a4a63dfca70a011142113efcf1c61a36867af5947a1366476ded4757c6e6f",
+        "session/manifest.json": "d13ab3780cf527f47a66428971dc994640a78862eb2b69a4fc8696fe9f237410",
+        "session/trace-events.jsonl": "69d87599cd73fc7f5706fc8979f7cb3b5d9f5840b24c3f370a5beafc91c4ef08"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-09-knmon",
+      "controllerStartNs": "105492210845000",
+      "controllerEndNs": "105495108416900",
+      "processWallMs": 2897.5719,
+      "events": 450,
+      "workloadUs": 22839.8,
+      "callLatencyUs": {
+        "median": 11.4,
+        "p95": 234.9,
+        "p99": 323.7
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 17960960,
+      "peakWorkingSetBytes": 19341312
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida",
+      "repetition": 9,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
+        "oracle.json": "75610fef6384e294b382e9259f2dd914d516eafa047388cab9995f8ed455adea"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-09-frida",
+      "controllerStartNs": "105495130787400",
+      "controllerEndNs": "105495200923300",
+      "processWallMs": 70.1359,
+      "events": 450,
+      "workloadUs": 26901.1,
+      "callLatencyUs": {
+        "median": 22.0,
+        "p95": 275.9,
+        "p99": 344.5
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 14753792,
+      "peakWorkingSetBytes": 14753792
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida-cmodule",
+      "repetition": 9,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "a90808d386ea74dc566f6c4a15481d6c7d8e86636f3733a208653c7bac499446"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
+        "oracle.json": "bf0c9a04553653903d0f306663e35deaa6b337d80128287f4e7f8524826cd636"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-09-frida-cmodule",
+      "controllerStartNs": "105495219269200",
+      "controllerEndNs": "105495287121600",
+      "processWallMs": 67.8524,
+      "events": 450,
+      "workloadUs": 21829.4,
+      "callLatencyUs": {
+        "median": 8.3,
+        "p95": 219.1,
+        "p99": 365.5
+      },
+      "cpu100ns": 0,
+      "workingSetBytes": 15208448,
+      "peakWorkingSetBytes": 15208448
     },
     {
       "architecture": "x86",
@@ -1659,7 +2050,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "eed6f6950027b2bd245fc755ce991649c326efb4c90efa8f7f396ecc3b0196a6"
+        "oracle.json": "56dd96bbbce5c94c66ede06aa364a40aa08206c6cc65364c6875b14e2a99600a"
       },
       "comparison": {
         "missing": 0,
@@ -1670,19 +2061,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-00-original",
-      "controllerStartNs": "104933515007000",
-      "controllerEndNs": "104933561602800",
-      "processWallMs": 46.5958,
+      "controllerStartNs": "105498765445100",
+      "controllerEndNs": "105498812471800",
+      "processWallMs": 47.0267,
       "events": 450,
-      "workloadUs": 20908.0,
+      "workloadUs": 21022.6,
       "callLatencyUs": {
-        "median": 8.6,
-        "p95": 208.7,
-        "p99": 295.5
+        "median": 6.6,
+        "p95": 198.2,
+        "p99": 324.9
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 6754304,
-      "peakWorkingSetBytes": 6754304
+      "workingSetBytes": 6770688,
+      "peakWorkingSetBytes": 6770688
     },
     {
       "architecture": "x86",
@@ -1696,13 +2087,13 @@
         "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
       },
       "artifacts": {
-        "capture.json": "028693c482d501c548b8294c2681edeaa3625c3b82da48aa36cf3f27c76033c7",
+        "capture.json": "ca12a1098c7511e6de428839f7a7ee31dc3aa564585d97fd41acf00d276c06bb",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "a78f63f55fd311571feacc5ecbca6158df89f09488a99acc9a2830ecda67dae9",
-        "session/agent-events.jsonl": "1a06d6dcfadca5877b73a9463a5a7660badb6dbb2524b5157be3cad26768dfba",
-        "session/audit.jsonl": "48ae8aed0899fb878bbacb8101680e7c2810ab9a3619c27fb89e8f3f08f08054",
-        "session/manifest.json": "1380061ed0b98e36bca1df8805c0ed75fc05ebca04be507447c5957a0f200f43",
-        "session/trace-events.jsonl": "9456cd98915f9c1cb75541832d8efcfb5fa760ecfb7c1729fc545e4872dd30b4"
+        "oracle.json": "a89a2e28f34caee45dd768ab8e343c25899c83b245e348a2000705d701f700fe",
+        "session/agent-events.jsonl": "6cb799eb338b939f7e6cbaa961f28e558d815f12bf237367555fbf7894c95296",
+        "session/audit.jsonl": "61c866ca2657a4204a4e90ce3c254d3f250092096701d51486a8ef86fde1cf2d",
+        "session/manifest.json": "f979f5a5cbe1a9edab7270804208c29ae332d79245cc8d59df75e6d820ef49a4",
+        "session/trace-events.jsonl": "cae92ea84efa84fe5e445f1ffdc5db3e69bd295d5aaf19786e01a45275fbcbca"
       },
       "comparison": {
         "missing": 0,
@@ -1713,18 +2104,18 @@
       },
       "targetExitCode": 0,
       "directory": "x86-00-knmon",
-      "controllerStartNs": "104933575058900",
-      "controllerEndNs": "104937761538600",
-      "processWallMs": 4186.4797,
+      "controllerStartNs": "105498827295300",
+      "controllerEndNs": "105503034946400",
+      "processWallMs": 4207.6511,
       "events": 450,
-      "workloadUs": 23916.8,
+      "workloadUs": 23522.3,
       "callLatencyUs": {
-        "median": 12.3,
-        "p95": 235.5,
-        "p99": 356.3
+        "median": 13.8,
+        "p95": 221.5,
+        "p99": 325.1
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 18276352,
+      "cpu100ns": 156250,
+      "workingSetBytes": 18284544,
       "peakWorkingSetBytes": 19648512
     },
     {
@@ -1740,8 +2131,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
-        "oracle.json": "7986dfa4c9ef03395eeffaf210b49dd161b809dad921d6e2d80b8efdc16313e0"
+        "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
+        "oracle.json": "a7dc9158ee2e42ad9a859d192a8cbf64986e7eeed444a9c31042024a7e7b7257"
       },
       "comparison": {
         "missing": 0,
@@ -1752,19 +2143,58 @@
       },
       "targetExitCode": 0,
       "directory": "x86-00-frida",
-      "controllerStartNs": "104937783736200",
-      "controllerEndNs": "104938782600300",
-      "processWallMs": 998.8641,
+      "controllerStartNs": "105503057852200",
+      "controllerEndNs": "105504007294100",
+      "processWallMs": 949.4419,
       "events": 450,
-      "workloadUs": 30420.8,
+      "workloadUs": 29588.2,
       "callLatencyUs": {
-        "median": 32.3,
-        "p95": 280.1,
-        "p99": 343.8
+        "median": 25.7,
+        "p95": 289.9,
+        "p99": 347.5
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14041088,
+      "peakWorkingSetBytes": 14041088
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida-cmodule",
+      "repetition": 0,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
+        "oracle.json": "aff8a718f49f3a4cb1cd43aa9f34db18eb895a3029fe733270e1936a55489edf"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-00-frida-cmodule",
+      "controllerStartNs": "105504024343100",
+      "controllerEndNs": "105504101866700",
+      "processWallMs": 77.5236,
+      "events": 450,
+      "workloadUs": 21844.0,
+      "callLatencyUs": {
+        "median": 9.2,
+        "p95": 227.9,
+        "p99": 347.9
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 14016512,
-      "peakWorkingSetBytes": 14016512
+      "workingSetBytes": 14426112,
+      "peakWorkingSetBytes": 14426112
     },
     {
       "architecture": "x86",
@@ -1779,9 +2209,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "2e75352f04bc63efb2bde39c10806c1d0fb9336e03ce8e61a40effa5f67da915",
-        "etw.json": "728de1dd68b7340b339ae7d40644f7d3ca16aa782ed37cc7b0b826cf3b38c09b",
-        "oracle.json": "582103f0dfe0fd3203c1669d26541996484f710f75c1920704157d0100aa8d63"
+        "corpus.etl": "b1630c7dfb371f944ba0f70d7321d13c77d157c707882f90b869b7cd167620a7",
+        "etw.json": "14423e618d51d19a77633213c3a805cd23cb945e745041456c7f030e45f85e2b",
+        "oracle.json": "8270a251037779cd971fd7afb12286a8c2043b8a66ef0ecb0dce5a979207e7d8"
       },
       "comparison": {
         "missing": 0,
@@ -1792,19 +2222,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-00-etw",
-      "controllerStartNs": "104938797363500",
-      "controllerEndNs": "104939157231900",
-      "processWallMs": 359.8684,
+      "controllerStartNs": "105504125215800",
+      "controllerEndNs": "105504478093800",
+      "processWallMs": 352.878,
       "events": 450,
-      "workloadUs": 22632.3,
+      "workloadUs": 20437.8,
       "callLatencyUs": {
-        "median": 7.3,
-        "p95": 217.4,
-        "p99": 310.2
+        "median": 6.6,
+        "p95": 206.1,
+        "p99": 293.7
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 7196672,
-      "peakWorkingSetBytes": 7196672
+      "workingSetBytes": 7077888,
+      "peakWorkingSetBytes": 7077888
     },
     {
       "architecture": "x86",
@@ -1818,13 +2248,13 @@
         "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
       },
       "artifacts": {
-        "capture.json": "041edc9b8398f32c800e3d6bf398bb8337e6dc5384181c660deeb68f0009aeff",
+        "capture.json": "cd63f1bb1382fdb7fa8421502654d395579aa07de61dff1f6739033802a99367",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "b58438a62ffd6987fc105d71e6351bf68132b4f42bac006457391837a35eeb5d",
-        "session/agent-events.jsonl": "df3fa209a6430c16a9ffeee24fcb2acec33266e89aca15f9143ca2c5ee193839",
-        "session/audit.jsonl": "3d8848e8fcbff1b7ba6c4f9bd150f8674d827a00bd019217e715686a4e1b0da5",
-        "session/manifest.json": "7bc7d3c295ca271b50ecaee06bd96adae5e911e1479330780cba06fe7cc7ffde",
-        "session/trace-events.jsonl": "71fe9ad51426bf64812cf80381a822124c89309249f26a6a0f6e171a6f873f90"
+        "oracle.json": "06e7f3f9c97de42fe34ea6b1455f501cad29a1e7c9e8b213d8e66e11f9ee97d5",
+        "session/agent-events.jsonl": "bcc1b2ee85632de2dea25c12a6cc3320c7c6793bd8f730e91215318570846ed0",
+        "session/audit.jsonl": "0454f8ba7c3a18c8b8c1cff4f0ab8b8fd026825b166e78ebe52adeec1c156329",
+        "session/manifest.json": "23d3d3d057c2502d12e6d971dddb0e303447a844ee6ec6c555e45d7b4b9efc2c",
+        "session/trace-events.jsonl": "34d290cb4c19e521a8460b3504deb285da69a93ab7ac56eea02efe1bc16ae626"
       },
       "comparison": {
         "missing": 0,
@@ -1835,19 +2265,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-01-knmon",
-      "controllerStartNs": "104939213259900",
-      "controllerEndNs": "104943388547000",
-      "processWallMs": 4175.2871,
+      "controllerStartNs": "105504530904600",
+      "controllerEndNs": "105508700789400",
+      "processWallMs": 4169.8848,
       "events": 450,
-      "workloadUs": 22783.0,
+      "workloadUs": 24405.5,
       "callLatencyUs": {
-        "median": 10.6,
-        "p95": 219.5,
-        "p99": 311.7
+        "median": 17.9,
+        "p95": 255.2,
+        "p99": 335.7
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 18305024,
-      "peakWorkingSetBytes": 19664896
+      "cpu100ns": 0,
+      "workingSetBytes": 18292736,
+      "peakWorkingSetBytes": 19668992
     },
     {
       "architecture": "x86",
@@ -1862,8 +2292,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
-        "oracle.json": "cde7e075109077fd2440bc8e6c2b94d940b672582ad282f53b307489cedd87b0"
+        "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
+        "oracle.json": "906013e0b3a53b2ed70555b576b1fd466c1bf183e6b5d9ca21ebf66d823bc1db"
       },
       "comparison": {
         "missing": 0,
@@ -1874,19 +2304,58 @@
       },
       "targetExitCode": 0,
       "directory": "x86-01-frida",
-      "controllerStartNs": "104943411054700",
-      "controllerEndNs": "104943492934800",
-      "processWallMs": 81.8801,
+      "controllerStartNs": "105508723146100",
+      "controllerEndNs": "105508802603500",
+      "processWallMs": 79.4574,
       "events": 450,
-      "workloadUs": 29694.3,
+      "workloadUs": 28258.6,
       "callLatencyUs": {
-        "median": 25.8,
-        "p95": 305.0,
-        "p99": 334.6
+        "median": 25.9,
+        "p95": 283.4,
+        "p99": 315.5
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 14082048,
-      "peakWorkingSetBytes": 14082048
+      "workingSetBytes": 14086144,
+      "peakWorkingSetBytes": 14086144
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida-cmodule",
+      "repetition": 1,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
+        "oracle.json": "4c0a6cca8f5db22d568a21d38a6593208d9cae1cc6ff30bc6ed2bb0cc8406b1c"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-01-frida-cmodule",
+      "controllerStartNs": "105508817807700",
+      "controllerEndNs": "105508930350200",
+      "processWallMs": 112.5425,
+      "events": 450,
+      "workloadUs": 21445.3,
+      "callLatencyUs": {
+        "median": 9.1,
+        "p95": 213.8,
+        "p99": 302.8
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 14426112,
+      "peakWorkingSetBytes": 14426112
     },
     {
       "architecture": "x86",
@@ -1901,9 +2370,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "13803894fb1e62ed29be35be756de7f1a181ace284e57015d17ed898211c0215",
-        "etw.json": "0be2a9153b46f72706f1b6282e88cb837bdfd630da6624b25143a6dafbb0c3cd",
-        "oracle.json": "df2e46d32fb9419bd24a840f1b69bc7b3d5a485a73c087e8f644438835b120fd"
+        "corpus.etl": "fefdc71cc998e656561c032ad47d2b48acf8ac560dbf22c54e83bbf0bf310731",
+        "etw.json": "1069b829bbbe2a51982454a66c667aa534e8a8d2580b3eec501be9d74655723c",
+        "oracle.json": "21441a902e475eee66483c6dda3ba4e1939458f00891f48aa4ba58abf9779e0e"
       },
       "comparison": {
         "missing": 0,
@@ -1914,19 +2383,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-01-etw",
-      "controllerStartNs": "104943509961200",
-      "controllerEndNs": "104943869552300",
-      "processWallMs": 359.5911,
+      "controllerStartNs": "105508949712500",
+      "controllerEndNs": "105509300599600",
+      "processWallMs": 350.8871,
       "events": 450,
-      "workloadUs": 21341.7,
+      "workloadUs": 20539.1,
       "callLatencyUs": {
-        "median": 6.9,
-        "p95": 215.9,
-        "p99": 329.5
+        "median": 6.1,
+        "p95": 207.5,
+        "p99": 328.2
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 7077888,
-      "peakWorkingSetBytes": 7077888
+      "cpu100ns": 0,
+      "workingSetBytes": 7184384,
+      "peakWorkingSetBytes": 7184384
     },
     {
       "architecture": "x86",
@@ -1941,7 +2410,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "cc69bf82d8d07d1973eff890a2fdd902d1ec20eeb34016052b1e1f5a1ad318ad"
+        "oracle.json": "730561690f0cd471e9b624fcf411ebfa8ddff9fcd4424fad316ae4ca945aabb5"
       },
       "comparison": {
         "missing": 0,
@@ -1952,19 +2421,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-01-original",
-      "controllerStartNs": "104943921171300",
-      "controllerEndNs": "104943967646100",
-      "processWallMs": 46.4748,
+      "controllerStartNs": "105509349564600",
+      "controllerEndNs": "105509394542800",
+      "processWallMs": 44.9782,
       "events": 450,
-      "workloadUs": 21149.6,
+      "workloadUs": 21020.4,
       "callLatencyUs": {
-        "median": 5.9,
-        "p95": 203.7,
-        "p99": 358.6
+        "median": 8.0,
+        "p95": 209.6,
+        "p99": 308.9
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 6828032,
-      "peakWorkingSetBytes": 6828032
+      "cpu100ns": 312500,
+      "workingSetBytes": 6823936,
+      "peakWorkingSetBytes": 6823936
     },
     {
       "architecture": "x86",
@@ -1979,8 +2448,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
-        "oracle.json": "002915722e2c4c64c37c77e7bb88d08db591244e7f9caa35183f468ba5225b9b"
+        "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
+        "oracle.json": "762ebdb9cf45b0c8a5eecbf169b6de6c96810d2ddf37a11d5a7f51aecdedc427"
       },
       "comparison": {
         "missing": 0,
@@ -1991,19 +2460,58 @@
       },
       "targetExitCode": 0,
       "directory": "x86-02-frida",
-      "controllerStartNs": "104943992027500",
-      "controllerEndNs": "104944072805500",
-      "processWallMs": 80.778,
+      "controllerStartNs": "105509414734400",
+      "controllerEndNs": "105509497960100",
+      "processWallMs": 83.2257,
       "events": 450,
-      "workloadUs": 28989.7,
+      "workloadUs": 30673.8,
       "callLatencyUs": {
-        "median": 26.6,
-        "p95": 288.3,
-        "p99": 331.7
+        "median": 25.9,
+        "p95": 313.9,
+        "p99": 395.5
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 14090240,
-      "peakWorkingSetBytes": 14090240
+      "workingSetBytes": 14082048,
+      "peakWorkingSetBytes": 14082048
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida-cmodule",
+      "repetition": 2,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
+        "oracle.json": "c4f2e5ef1e950eb0336d96aef9b867452de6ff3e8c4ceed10e7a1804af51ab8a"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-02-frida-cmodule",
+      "controllerStartNs": "105509516034800",
+      "controllerEndNs": "105509594641800",
+      "processWallMs": 78.607,
+      "events": 450,
+      "workloadUs": 22286.6,
+      "callLatencyUs": {
+        "median": 14.6,
+        "p95": 232.9,
+        "p99": 322.9
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14446592,
+      "peakWorkingSetBytes": 14446592
     },
     {
       "architecture": "x86",
@@ -2018,9 +2526,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "4b9ce533489d4f4dc7bf221f593aca5c490b889250dc4102a03652dacda2f748",
-        "etw.json": "993e5e6745569180b97f5cca9a0d8fcd3d768154866e259170c47285161dcaf5",
-        "oracle.json": "7e6441cb516de9fc3ef1dc1071d2864d6479d101b651f56379e5547746b88e85"
+        "corpus.etl": "b8a6d4bb8491959e6630a60c9697d65af0a357b64ecadc26f46e5fd7237d578e",
+        "etw.json": "1be9bd9b55f98cb687d6016db8167c200b7786ec03104809d367a8c191961454",
+        "oracle.json": "c5574a7085d1efca382e6531f29194a5c422afa41adf90e44e84f22783210342"
       },
       "comparison": {
         "missing": 0,
@@ -2031,19 +2539,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-02-etw",
-      "controllerStartNs": "104944092275200",
-      "controllerEndNs": "104944443752500",
-      "processWallMs": 351.4773,
+      "controllerStartNs": "105509616611800",
+      "controllerEndNs": "105509976461500",
+      "processWallMs": 359.8497,
       "events": 450,
-      "workloadUs": 21608.5,
+      "workloadUs": 20832.1,
       "callLatencyUs": {
-        "median": 6.2,
-        "p95": 232.0,
-        "p99": 337.1
+        "median": 6.5,
+        "p95": 210.3,
+        "p99": 336.4
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 7086080,
-      "peakWorkingSetBytes": 7086080
+      "cpu100ns": 156250,
+      "workingSetBytes": 7094272,
+      "peakWorkingSetBytes": 7094272
     },
     {
       "architecture": "x86",
@@ -2058,7 +2566,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "681998d31bd9f2dbceb460dc129484267942a0b51c0feef14b23e07f1af5bc23"
+        "oracle.json": "7c0898910d90efb17af491c960d3a701ccde2be4f3542ad2c63ba3dc62cf1196"
       },
       "comparison": {
         "missing": 0,
@@ -2069,19 +2577,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-02-original",
-      "controllerStartNs": "104944494497400",
-      "controllerEndNs": "104944540155000",
-      "processWallMs": 45.6576,
+      "controllerStartNs": "105510023421000",
+      "controllerEndNs": "105510067771500",
+      "processWallMs": 44.3505,
       "events": 450,
-      "workloadUs": 20686.2,
+      "workloadUs": 19775.8,
       "callLatencyUs": {
-        "median": 6.2,
-        "p95": 210.8,
-        "p99": 305.6
+        "median": 14.1,
+        "p95": 201.4,
+        "p99": 301.3
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 6819840,
-      "peakWorkingSetBytes": 6819840
+      "workingSetBytes": 6828032,
+      "peakWorkingSetBytes": 6828032
     },
     {
       "architecture": "x86",
@@ -2095,13 +2603,13 @@
         "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
       },
       "artifacts": {
-        "capture.json": "7cca3ff5732fd9481a668fbaee0c170e18afdbc182df97e55524fa1f1a854c6f",
+        "capture.json": "b1d26f017ace46eb010bdf4eefbf5d0b4fb90237e6902f750af7f6bfa85e5fd6",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "bdaba7eb8ea429b04b8377aa71fb880d132d4411c1a0aabf5400d8f3a53e67e5",
-        "session/agent-events.jsonl": "ebd0fca86c6b30d15e2856d8bae3651f3cc8dcdc3d3815a9e697dc41f8a5a101",
-        "session/audit.jsonl": "d070d2c13711a3c5dc63e4a0e940d9dc5b30172ee8e5160e290dba56087632a8",
-        "session/manifest.json": "20259a903bbb82435e53ab7d2352b32beefa182ccbd6c16ad37bf049958b77f5",
-        "session/trace-events.jsonl": "79b65b85fec1055b995efd5ddf6468e2baa437fbc71c4a64df171ab99339c5b3"
+        "oracle.json": "8e35354dec1d34a65ece9c620a54d64b7d696f88aa9bcec12501bc36b634db23",
+        "session/agent-events.jsonl": "7a0f3fde77d66791d52a00d82b4eb160adbbe4a6df867cafe89a6498a9e641e7",
+        "session/audit.jsonl": "f8652b12974360b7903af8ad04665f89f7520902b1d664495d815fd98cefff38",
+        "session/manifest.json": "9163ba09e97d1b11687fad507a0f8da162159038f8d2a42df43d28536a015e09",
+        "session/trace-events.jsonl": "975d670f3bc2b420ab48a63a05e660afa73ff48c9540dd668cd20bdb62dd0c47"
       },
       "comparison": {
         "missing": 0,
@@ -2112,19 +2620,58 @@
       },
       "targetExitCode": 0,
       "directory": "x86-02-knmon",
-      "controllerStartNs": "104944555955900",
-      "controllerEndNs": "104948694040100",
-      "processWallMs": 4138.0842,
+      "controllerStartNs": "105510082111200",
+      "controllerEndNs": "105514287031600",
+      "processWallMs": 4204.9204,
       "events": 450,
-      "workloadUs": 23621.2,
+      "workloadUs": 24307.9,
       "callLatencyUs": {
         "median": 11.8,
-        "p95": 225.4,
-        "p99": 328.0
+        "p95": 279.3,
+        "p99": 340.0
       },
-      "cpu100ns": 0,
-      "workingSetBytes": 18309120,
-      "peakWorkingSetBytes": 19673088
+      "cpu100ns": 156250,
+      "workingSetBytes": 18313216,
+      "peakWorkingSetBytes": 19681280
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida-cmodule",
+      "repetition": 3,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
+        "oracle.json": "e0a233f2db11dfccb2ec852a0410c829d3c8a23819c6c6f0de2309c28469a0f2"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-03-frida-cmodule",
+      "controllerStartNs": "105514313691500",
+      "controllerEndNs": "105514392266200",
+      "processWallMs": 78.5747,
+      "events": 450,
+      "workloadUs": 21868.5,
+      "callLatencyUs": {
+        "median": 14.2,
+        "p95": 222.9,
+        "p99": 332.8
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14426112,
+      "peakWorkingSetBytes": 14426112
     },
     {
       "architecture": "x86",
@@ -2139,9 +2686,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "ac55f84b361e2a3682e2b8d0ae9dd1302fd98b31344feef9f2bbeb78f2d9156b",
-        "etw.json": "a1bb3b79294d4e58109b6e511e57bd82145d3dd99f886b2a676e2f935ccdc593",
-        "oracle.json": "eee7b4f5c20df4e6ad15c23dba2f15163711eab3bf9fe49a8d38897407c6cf1a"
+        "corpus.etl": "dce7b2a7692a71498cec2f01b8d9c7976032b9e5a38a34711fa571e1e6441fae",
+        "etw.json": "17bd06d21e080b24dd68352ff1471bdcf9ad35c5d51d58b41c0b4d9f73eb7b3a",
+        "oracle.json": "3cb897a334b26fbdcd13d27a78f0aa32d40d66fe0c107585b10c7540ff2d93c3"
       },
       "comparison": {
         "missing": 0,
@@ -2152,19 +2699,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-03-etw",
-      "controllerStartNs": "104948718287500",
-      "controllerEndNs": "104949075063700",
-      "processWallMs": 356.7762,
+      "controllerStartNs": "105514413023000",
+      "controllerEndNs": "105514781226100",
+      "processWallMs": 368.2031,
       "events": 450,
-      "workloadUs": 20219.0,
+      "workloadUs": 19819.9,
       "callLatencyUs": {
-        "median": 6.6,
-        "p95": 205.8,
-        "p99": 323.4
+        "median": 6.0,
+        "p95": 191.9,
+        "p99": 291.9
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 7094272,
-      "peakWorkingSetBytes": 7094272
+      "workingSetBytes": 7073792,
+      "peakWorkingSetBytes": 7073792
     },
     {
       "architecture": "x86",
@@ -2179,7 +2726,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "aec41b70c73b2b072bcb3d46ea01bb9f2f8322c9a03fd3200a316668c0c8450d"
+        "oracle.json": "eb9eb3a84c3a103bc01489ba676c856d566e09c4583174253c408d752be50d49"
       },
       "comparison": {
         "missing": 0,
@@ -2190,19 +2737,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-03-original",
-      "controllerStartNs": "104949121854500",
-      "controllerEndNs": "104949165696700",
-      "processWallMs": 43.8422,
+      "controllerStartNs": "105514838316400",
+      "controllerEndNs": "105514887340300",
+      "processWallMs": 49.0239,
       "events": 450,
-      "workloadUs": 19465.1,
+      "workloadUs": 22197.5,
       "callLatencyUs": {
-        "median": 5.7,
-        "p95": 195.9,
-        "p99": 266.6
+        "median": 10.9,
+        "p95": 226.3,
+        "p99": 326.8
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 6836224,
-      "peakWorkingSetBytes": 6836224
+      "workingSetBytes": 6823936,
+      "peakWorkingSetBytes": 6823936
     },
     {
       "architecture": "x86",
@@ -2216,13 +2763,13 @@
         "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
       },
       "artifacts": {
-        "capture.json": "d2f5abd123a6f0437e8d33eca39fb4c38fd878b55d792f553713f7634d42b115",
+        "capture.json": "297b97c8178eea046e041098d8f09521ec69af7167e7fd35504210ba2ccabac5",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "816832a457797b783a4e15e641dd0259bb311e40811dce8e649c8b03dc8eccb4",
-        "session/agent-events.jsonl": "881af23d42f69f5dd3912ae8103ec7b87ad893c43531fad13383e5acaf77ffa2",
-        "session/audit.jsonl": "03d11db75d6f936890b539e5b0cdedd6d1a8497df8e7af6097cd62705b9d2cf1",
-        "session/manifest.json": "057e3815f47bab17fda61b6c6fc1c85b5506be76e6661b5eda7bd9782792f2ee",
-        "session/trace-events.jsonl": "2046f94834e74c2533b482c8e582dbb2237806d1421b28adf10480f8e28faaac"
+        "oracle.json": "6b36264314fc535a45eed4282b052055492a59f1af372e27a21824d59649a4aa",
+        "session/agent-events.jsonl": "eacce2d1e9a1b9aba19ebcb8dc9ec26c8f277ae926aa31db27df5162689f6ba6",
+        "session/audit.jsonl": "ae615c88d838187f05f7f3f7b3c0d0e7e55c00748b99a6f760868883f7f21a69",
+        "session/manifest.json": "9d0e203afd752832f1d970bc2518d400c7a127802aa67397e79b1a4f7c238951",
+        "session/trace-events.jsonl": "1bf4bd09c7ff685172621c298d4fbb0445f1693b0fe0b0a57f1b2c5f861d50b4"
       },
       "comparison": {
         "missing": 0,
@@ -2233,19 +2780,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-03-knmon",
-      "controllerStartNs": "104949178926900",
-      "controllerEndNs": "104953397440000",
-      "processWallMs": 4218.5131,
+      "controllerStartNs": "105514906535100",
+      "controllerEndNs": "105519072488300",
+      "processWallMs": 4165.9532,
       "events": 450,
-      "workloadUs": 23490.7,
+      "workloadUs": 23962.2,
       "callLatencyUs": {
-        "median": 11.3,
-        "p95": 228.0,
-        "p99": 329.4
+        "median": 12.6,
+        "p95": 236.4,
+        "p99": 361.3
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 18305024,
-      "peakWorkingSetBytes": 19668992
+      "cpu100ns": 312500,
+      "workingSetBytes": 18300928,
+      "peakWorkingSetBytes": 19673088
     },
     {
       "architecture": "x86",
@@ -2260,8 +2807,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
-        "oracle.json": "9ce4305d3fee1545a0c13854e55c981d8964b77ff682c04836f2565ab93acdc6"
+        "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
+        "oracle.json": "2e6bd282468db98ec06c60311bd9a65240708381c9bf192270f54b1944a5bce7"
       },
       "comparison": {
         "missing": 0,
@@ -2272,139 +2819,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-03-frida",
-      "controllerStartNs": "104953420749000",
-      "controllerEndNs": "104953501579600",
-      "processWallMs": 80.8306,
+      "controllerStartNs": "105519093665600",
+      "controllerEndNs": "105519171244700",
+      "processWallMs": 77.5791,
       "events": 450,
-      "workloadUs": 29666.3,
+      "workloadUs": 28296.1,
       "callLatencyUs": {
-        "median": 26.0,
-        "p95": 299.1,
-        "p99": 338.4
+        "median": 26.9,
+        "p95": 252.8,
+        "p99": 325.9
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 14094336,
-      "peakWorkingSetBytes": 14094336
-    },
-    {
-      "architecture": "x86",
-      "mode": "original",
-      "repetition": 4,
-      "configuration": "Debug",
-      "binaries": {
-        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
-        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
-        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
-        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
-      },
-      "artifacts": {
-        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "cd0f89ed492cf86ab02e7a00d94011e5387f79abb6dd19b44a5aad22c058e0e9"
-      },
-      "comparison": {
-        "missing": 0,
-        "unexpected": 0,
-        "orderMismatches": 0,
-        "expected": 450,
-        "observed": 450
-      },
-      "targetExitCode": 0,
-      "directory": "x86-04-original",
-      "controllerStartNs": "104953522781400",
-      "controllerEndNs": "104953572011800",
-      "processWallMs": 49.2304,
-      "events": 450,
-      "workloadUs": 23915.8,
-      "callLatencyUs": {
-        "median": 13.6,
-        "p95": 244.3,
-        "p99": 338.0
-      },
-      "cpu100ns": 156250,
-      "workingSetBytes": 6823936,
-      "peakWorkingSetBytes": 6823936
-    },
-    {
-      "architecture": "x86",
-      "mode": "knmon",
-      "repetition": 4,
-      "configuration": "Debug",
-      "binaries": {
-        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
-        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
-        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
-        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
-      },
-      "artifacts": {
-        "capture.json": "f257f3e49195e5f7e041bfbe1373ef388e8e154d172da862dfc557dc74878c01",
-        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "baf7d81acb9629811b75d02fc2972064c1fdda24d00cb7e2e7afa21619e50239",
-        "session/agent-events.jsonl": "8b5cb264a5cf8b6067735da67bfb9047760083be4d56659f903d60bb3e222df9",
-        "session/audit.jsonl": "3693153d2d126755100fbf9767c05ea47e795656f98b979f3154b22c65440476",
-        "session/manifest.json": "de5626e6e4f7319b18a8f49431828314d76fa0c8af72f86828848b06ab74f854",
-        "session/trace-events.jsonl": "1f2411b9c2205892038b4d5969b776015ab5d63f8acc99cdd4bc838667b03f4b"
-      },
-      "comparison": {
-        "missing": 0,
-        "unexpected": 0,
-        "orderMismatches": 0,
-        "expected": 450,
-        "observed": 450
-      },
-      "targetExitCode": 0,
-      "directory": "x86-04-knmon",
-      "controllerStartNs": "104953591117600",
-      "controllerEndNs": "104957815594800",
-      "processWallMs": 4224.4772,
-      "events": 450,
-      "workloadUs": 23424.2,
-      "callLatencyUs": {
-        "median": 10.7,
-        "p95": 265.0,
-        "p99": 362.1
-      },
-      "cpu100ns": 312500,
-      "workingSetBytes": 18296832,
-      "peakWorkingSetBytes": 19677184
-    },
-    {
-      "architecture": "x86",
-      "mode": "frida",
-      "repetition": 4,
-      "configuration": "Debug",
-      "binaries": {
-        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
-        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
-        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
-        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
-      },
-      "artifacts": {
-        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
-        "oracle.json": "553b0fdbb8fbd7e1e580fd3fb3ebeec708e972f235aaac47f9a49309074738b2"
-      },
-      "comparison": {
-        "missing": 0,
-        "unexpected": 0,
-        "orderMismatches": 0,
-        "expected": 450,
-        "observed": 450
-      },
-      "targetExitCode": 0,
-      "directory": "x86-04-frida",
-      "controllerStartNs": "104957837022800",
-      "controllerEndNs": "104957919445700",
-      "processWallMs": 82.4229,
-      "events": 450,
-      "workloadUs": 29996.8,
-      "callLatencyUs": {
-        "median": 25.2,
-        "p95": 305.0,
-        "p99": 342.5
-      },
-      "cpu100ns": 312500,
-      "workingSetBytes": 14090240,
-      "peakWorkingSetBytes": 14090240
+      "workingSetBytes": 14082048,
+      "peakWorkingSetBytes": 14082048
     },
     {
       "architecture": "x86",
@@ -2419,9 +2846,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "f9e7cd322f5745533de3197b8aa578b413cdbf12f049c933b282f4a082f34642",
-        "etw.json": "dbdbd86ea00a83d19314f39017683ccb75c9ba7e613d5c7e54401b0515b7c015",
-        "oracle.json": "4490a157ac64f963207e95d2e688f1e201f8825e810a696486a22c28baab07a1"
+        "corpus.etl": "b48a2d6cc0a1675bd7afa4f8db8ae62a63a496bad32bf76f2c7b97a166dac456",
+        "etw.json": "c98ac64c599b886de69d649b077dede3ece485b42f6ede8a780189afe6b7cd8a",
+        "oracle.json": "29c1b496b1cf996f3c887d503e66db1ae0e458c587f3068cdb48c9429c39e40c"
       },
       "comparison": {
         "missing": 0,
@@ -2432,24 +2859,62 @@
       },
       "targetExitCode": 0,
       "directory": "x86-04-etw",
-      "controllerStartNs": "104957937646100",
-      "controllerEndNs": "104958300394800",
-      "processWallMs": 362.7487,
+      "controllerStartNs": "105519189426900",
+      "controllerEndNs": "105519574735700",
+      "processWallMs": 385.3088,
       "events": 450,
-      "workloadUs": 21177.3,
+      "workloadUs": 21241.4,
       "callLatencyUs": {
-        "median": 6.1,
-        "p95": 247.3,
-        "p99": 299.5
+        "median": 6.2,
+        "p95": 221.1,
+        "p99": 318.1
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 7081984,
+      "peakWorkingSetBytes": 7090176
+    },
+    {
+      "architecture": "x86",
+      "mode": "original",
+      "repetition": 4,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "e4c6ff698b2e690d74e617c71fd49b259eb103e835d9a3cde8bce14121fa4488"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-04-original",
+      "controllerStartNs": "105519623970400",
+      "controllerEndNs": "105519669666400",
+      "processWallMs": 45.696,
+      "events": 450,
+      "workloadUs": 20823.9,
+      "callLatencyUs": {
+        "median": 5.7,
+        "p95": 219.1,
+        "p99": 311.5
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 7184384,
-      "peakWorkingSetBytes": 7184384
+      "workingSetBytes": 6828032,
+      "peakWorkingSetBytes": 6828032
     },
     {
       "architecture": "x86",
       "mode": "knmon",
-      "repetition": 5,
+      "repetition": 4,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
@@ -2458,13 +2923,13 @@
         "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
       },
       "artifacts": {
-        "capture.json": "8b312d285e36d6559485d60fae824d464bddc73bad3d8987dd691c0d4259b9c8",
+        "capture.json": "442a730746346ed5ddbdb024e84ffc1b63c46b5ae5752c4fdb3f4beadd3de7ac",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "c9ef3457daadab3807f6fad1d37db37a182436974dc707cade68455543cfa2aa",
-        "session/agent-events.jsonl": "5fb01563dc1cf7b218a2ca30121c9c20a0575a9cb0fe3e3c7d994855350bd8be",
-        "session/audit.jsonl": "cf994fb8ce1983e17e2247d28e98aae37851468d8f155cdb1204ebac2e866272",
-        "session/manifest.json": "195114be00f81713392da0d07392d0bde311e80de0fdddee08426ff7635468e1",
-        "session/trace-events.jsonl": "6a8e6c655fc2d9a1db91cca7568ce0157c3a9afc7210c0fb5596f57b84244480"
+        "oracle.json": "b48f2caf399ab78565515ecbc056f838f26a8f0da3deb977645a39a984f97da5",
+        "session/agent-events.jsonl": "91236a7fd250fca4266741e0b3ef687bddbeb6441e12bd445cfd02e87ea92140",
+        "session/audit.jsonl": "0ee561908aa9af640d6c6bc552218a6234e3b8b210e82b570fe0b5eb6d0e211c",
+        "session/manifest.json": "d96b177349f89940496b867c0d082180333de9aff9cd7eb2bbaaed270a887386",
+        "session/trace-events.jsonl": "17cd65b20469eab420c6e0351e4650ee24b72a9c939d896bc6ae657ee60b1824"
       },
       "comparison": {
         "missing": 0,
@@ -2474,25 +2939,25 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x86-05-knmon",
-      "controllerStartNs": "104958356333900",
-      "controllerEndNs": "104962508563400",
-      "processWallMs": 4152.2295,
+      "directory": "x86-04-knmon",
+      "controllerStartNs": "105519682425000",
+      "controllerEndNs": "105523853493700",
+      "processWallMs": 4171.0687,
       "events": 450,
-      "workloadUs": 23120.3,
+      "workloadUs": 25477.9,
       "callLatencyUs": {
-        "median": 14.1,
-        "p95": 220.6,
-        "p99": 321.1
+        "median": 15.4,
+        "p95": 286.5,
+        "p99": 367.0
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 18317312,
-      "peakWorkingSetBytes": 19664896
+      "cpu100ns": 312500,
+      "workingSetBytes": 18309120,
+      "peakWorkingSetBytes": 19677184
     },
     {
       "architecture": "x86",
       "mode": "frida",
-      "repetition": 5,
+      "repetition": 4,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
@@ -2502,8 +2967,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
-        "oracle.json": "331ac62051a9266f814b101bd67a973ad720f544c959cb7a4ece52b185c241ac"
+        "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
+        "oracle.json": "05243716ed5a3ed087fdd82ff6f5abdbd0457b2cf70b49dd6a64e395d3e98c6f"
       },
       "comparison": {
         "missing": 0,
@@ -2513,16 +2978,16 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x86-05-frida",
-      "controllerStartNs": "104962529662300",
-      "controllerEndNs": "104962609976400",
-      "processWallMs": 80.3141,
+      "directory": "x86-04-frida",
+      "controllerStartNs": "105523874870700",
+      "controllerEndNs": "105523955694800",
+      "processWallMs": 80.8241,
       "events": 450,
-      "workloadUs": 29391.7,
+      "workloadUs": 28553.4,
       "callLatencyUs": {
-        "median": 25.3,
-        "p95": 293.0,
-        "p99": 368.5
+        "median": 25.5,
+        "p95": 289.1,
+        "p99": 326.3
       },
       "cpu100ns": 312500,
       "workingSetBytes": 14073856,
@@ -2530,8 +2995,8 @@
     },
     {
       "architecture": "x86",
-      "mode": "etw",
-      "repetition": 5,
+      "mode": "frida-cmodule",
+      "repetition": 4,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
@@ -2541,9 +3006,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "f9cd10deeb2bc1a550dcb80d4ccc6bfe9f51199282cc0c5a3a41919443484420",
-        "etw.json": "7eb465557d8a2e233e2de148efc79a9f8de55c6db1aa4e0410227d0a165a2a67",
-        "oracle.json": "61386dd029edf4d4c60e9f94edec638fb15890f381ef1881a26f67206547c0b5"
+        "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
+        "oracle.json": "dbb9601a22c1fa61579d90ffdb08b652507dab3145b32e7c2e382e0c0424a214"
       },
       "comparison": {
         "missing": 0,
@@ -2553,20 +3017,20 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x86-05-etw",
-      "controllerStartNs": "104962629893400",
-      "controllerEndNs": "104962979114200",
-      "processWallMs": 349.2208,
+      "directory": "x86-04-frida-cmodule",
+      "controllerStartNs": "105523973358400",
+      "controllerEndNs": "105524051900400",
+      "processWallMs": 78.542,
       "events": 450,
-      "workloadUs": 21499.2,
+      "workloadUs": 22537.2,
       "callLatencyUs": {
-        "median": 6.8,
-        "p95": 209.5,
-        "p99": 347.0
+        "median": 12.7,
+        "p95": 237.2,
+        "p99": 321.1
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 7081984,
-      "peakWorkingSetBytes": 7081984
+      "cpu100ns": 312500,
+      "workingSetBytes": 14434304,
+      "peakWorkingSetBytes": 14434304
     },
     {
       "architecture": "x86",
@@ -2581,7 +3045,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "a6689d11c1e81bb357fcb2c251d57a2811fcd022fecfb577e64376426979ff6d"
+        "oracle.json": "c7df747d9d13c9a98ae289f26dfa8d016b65603b1603935692d2767f49213070"
       },
       "comparison": {
         "missing": 0,
@@ -2592,24 +3056,67 @@
       },
       "targetExitCode": 0,
       "directory": "x86-05-original",
-      "controllerStartNs": "104963031228200",
-      "controllerEndNs": "104963077388200",
-      "processWallMs": 46.16,
+      "controllerStartNs": "105524074852200",
+      "controllerEndNs": "105524121641800",
+      "processWallMs": 46.7896,
       "events": 450,
-      "workloadUs": 21206.2,
+      "workloadUs": 21077.8,
       "callLatencyUs": {
-        "median": 12.8,
-        "p95": 200.5,
-        "p99": 339.8
+        "median": 6.9,
+        "p95": 210.4,
+        "p99": 317.7
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 6832128,
+      "peakWorkingSetBytes": 6832128
+    },
+    {
+      "architecture": "x86",
+      "mode": "knmon",
+      "repetition": 5,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "capture.json": "b4f085b17c53465817d73866b84a96d4a62d784357bdbd717204e38c1a813fea",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "f2735d0bcfd8416f417c4a2e71f1a02318e98d976721f6127e6e9a4816843e17",
+        "session/agent-events.jsonl": "a5b124717ab47781da82e043ad4a714c21b3aa9ad1765b1b5e108fa195f7c478",
+        "session/audit.jsonl": "7bfeaa0ed575f5b69330537798e31fdd734bcd4e4f4eccf15d63827445481d04",
+        "session/manifest.json": "23ce3f20774ed0eac9f575cc404528baa1404315cd0e116bdf24f315102547f8",
+        "session/trace-events.jsonl": "69e784d78a5d1941be373dfc0e9c1dc2e49ab0ede389dae997a5b5a170f261e6"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-05-knmon",
+      "controllerStartNs": "105524138527200",
+      "controllerEndNs": "105528265585500",
+      "processWallMs": 4127.0583,
+      "events": 450,
+      "workloadUs": 23714.5,
+      "callLatencyUs": {
+        "median": 11.8,
+        "p95": 245.2,
+        "p99": 328.5
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 6823936,
-      "peakWorkingSetBytes": 6823936
+      "workingSetBytes": 18313216,
+      "peakWorkingSetBytes": 19677184
     },
     {
       "architecture": "x86",
       "mode": "frida",
-      "repetition": 6,
+      "repetition": 5,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
@@ -2619,8 +3126,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
-        "oracle.json": "4e9c77a08c0fe7cd869b34793a6ef0fe2025f915d20a186caaa0297189667c4a"
+        "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
+        "oracle.json": "225c46658007234b88ce20275812cc3b2c5acfa51f3b88317561df9d550673d2"
       },
       "comparison": {
         "missing": 0,
@@ -2630,25 +3137,64 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x86-06-frida",
-      "controllerStartNs": "104963096440900",
-      "controllerEndNs": "104963177937100",
-      "processWallMs": 81.4962,
+      "directory": "x86-05-frida",
+      "controllerStartNs": "105528288650200",
+      "controllerEndNs": "105528399417800",
+      "processWallMs": 110.7676,
       "events": 450,
-      "workloadUs": 29336.7,
+      "workloadUs": 29204.5,
       "callLatencyUs": {
-        "median": 27.8,
-        "p95": 294.4,
-        "p99": 344.4
+        "median": 28.4,
+        "p95": 283.9,
+        "p99": 318.6
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 14049280,
-      "peakWorkingSetBytes": 14049280
+      "cpu100ns": 156250,
+      "workingSetBytes": 14098432,
+      "peakWorkingSetBytes": 14098432
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida-cmodule",
+      "repetition": 5,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
+        "oracle.json": "33a6ea55f2e78e53e9281d257bee89e25f322d2061b772f1ad4fbc024cdb9eb3"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-05-frida-cmodule",
+      "controllerStartNs": "105528414186700",
+      "controllerEndNs": "105528493767000",
+      "processWallMs": 79.5803,
+      "events": 450,
+      "workloadUs": 22410.0,
+      "callLatencyUs": {
+        "median": 10.4,
+        "p95": 228.2,
+        "p99": 331.1
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 14434304,
+      "peakWorkingSetBytes": 14434304
     },
     {
       "architecture": "x86",
       "mode": "etw",
-      "repetition": 6,
+      "repetition": 5,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
@@ -2658,9 +3204,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "6dd38ca401a74f9c4496df45088a9e79d730504ce24293c05a1c547e59313903",
-        "etw.json": "2d04dfd2518b42365d63aed98386471348c81faecbf291f2b40549b91945f0ef",
-        "oracle.json": "8328d533a33c0926333cafeea0d8774e7719f80c5b5ace062be9d89b3e0793d0"
+        "corpus.etl": "46afc22dc9311438fa2e78d14a3bb651fa1b1afd1eb35f8128adc4d1018660d0",
+        "etw.json": "923cf9cfd0847d5c9571dacc77cd88cea19a4a19bf60c946c288ced0ecbbed46",
+        "oracle.json": "5a1c98205b57ed89572b25228a78c29a33fb1710889e5e0cd1e641beab14cb40"
       },
       "comparison": {
         "missing": 0,
@@ -2670,58 +3216,20 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x86-06-etw",
-      "controllerStartNs": "104963197047900",
-      "controllerEndNs": "104963550067500",
-      "processWallMs": 353.0196,
+      "directory": "x86-05-etw",
+      "controllerStartNs": "105528514312400",
+      "controllerEndNs": "105528871638700",
+      "processWallMs": 357.3263,
       "events": 450,
-      "workloadUs": 21884.3,
+      "workloadUs": 21491.5,
       "callLatencyUs": {
-        "median": 7.6,
-        "p95": 208.8,
-        "p99": 328.3
+        "median": 7.2,
+        "p95": 208.6,
+        "p99": 288.8
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 7086080,
-      "peakWorkingSetBytes": 7090176
-    },
-    {
-      "architecture": "x86",
-      "mode": "original",
-      "repetition": 6,
-      "configuration": "Debug",
-      "binaries": {
-        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
-        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
-        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
-        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
-      },
-      "artifacts": {
-        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "434ac87f6e5f596ba58bd75087a5c105d9d6bcb7f0cbef21e97adb8e8e60636b"
-      },
-      "comparison": {
-        "missing": 0,
-        "unexpected": 0,
-        "orderMismatches": 0,
-        "expected": 450,
-        "observed": 450
-      },
-      "targetExitCode": 0,
-      "directory": "x86-06-original",
-      "controllerStartNs": "104963600609600",
-      "controllerEndNs": "104963643878600",
-      "processWallMs": 43.269,
-      "events": 450,
-      "workloadUs": 19159.9,
-      "callLatencyUs": {
-        "median": 5.6,
-        "p95": 195.3,
-        "p99": 284.8
-      },
-      "cpu100ns": 156250,
-      "workingSetBytes": 6828032,
-      "peakWorkingSetBytes": 6828032
+      "workingSetBytes": 7094272,
+      "peakWorkingSetBytes": 7094272
     },
     {
       "architecture": "x86",
@@ -2735,13 +3243,13 @@
         "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
       },
       "artifacts": {
-        "capture.json": "26da9f811cfb10ce0b0f8e16cf448759ca783ec2c630117b4b80c00669a69a8f",
+        "capture.json": "4a5af26d709b893fbfb27698d005d6371cd32397857d80845148ff89637fe1da",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "d8ca6252391ed1ec58f065215b30ef959d5054a4e812e61ff03e8be92e08dbb2",
-        "session/agent-events.jsonl": "d489b7e8bce0d851dee91e8463adacad4fb7018e1ef86850ef3ab910cca474f4",
-        "session/audit.jsonl": "82c70aee294d415603db469f93bb1d12a80eb6e34f001ee9b3d5b6711f0182f5",
-        "session/manifest.json": "bcbcef320d6bf7e33c8daf61f09a33f94d6a5c462757c038ce3e41fbd4ad0faf",
-        "session/trace-events.jsonl": "e448ad0394a95bd1593aff5b5d84b9261a13786e88ec2501f3e737eddb0e1764"
+        "oracle.json": "38035ffb1c9da3270c1189422563a71b6d14b099026eaf7e09f966945325da22",
+        "session/agent-events.jsonl": "4efc4c75b6c80fed3caacb47986c8b00aaed4b38ffa5929ace66c86cada060be",
+        "session/audit.jsonl": "e2d05e3e7e24063ea123fe7f54046b86cd4e46d681d93b7657d5664007f477c1",
+        "session/manifest.json": "527ccd19d1a7c195ad0690b68c775ed203b1c7cdf3c0ad0848772d5d031f373f",
+        "session/trace-events.jsonl": "37a7528bf1b091f9f58e329b49dea421c095266eea806d8f1f9a4bd33c3d6150"
       },
       "comparison": {
         "missing": 0,
@@ -2752,24 +3260,24 @@
       },
       "targetExitCode": 0,
       "directory": "x86-06-knmon",
-      "controllerStartNs": "104963658941800",
-      "controllerEndNs": "104967827836700",
-      "processWallMs": 4168.8949,
+      "controllerStartNs": "105528926382900",
+      "controllerEndNs": "105533159836300",
+      "processWallMs": 4233.4534,
       "events": 450,
-      "workloadUs": 25972.5,
+      "workloadUs": 24288.0,
       "callLatencyUs": {
-        "median": 12.7,
-        "p95": 314.3,
-        "p99": 353.1
+        "median": 11.4,
+        "p95": 255.6,
+        "p99": 355.2
       },
-      "cpu100ns": 0,
+      "cpu100ns": 156250,
       "workingSetBytes": 18300928,
       "peakWorkingSetBytes": 19668992
     },
     {
       "architecture": "x86",
-      "mode": "etw",
-      "repetition": 7,
+      "mode": "frida",
+      "repetition": 6,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
@@ -2779,9 +3287,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "9fbde08cda7f07284e32ba6a902940c1b61eeb48cb1f6959b06dd3618edfd7da",
-        "etw.json": "07bccdecce16b230acf9dcb8a4f07e956e576de99f8702956bb4ce5b5b877cd5",
-        "oracle.json": "98d3f23a32b319ae1c05954f68f828c854b4d8d056a6b6623701f8d85fcefe6d"
+        "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
+        "oracle.json": "9a2757391775a8327b98b5f670070dfbc48cfd287af28f2d9e2c1cc5006b0f6f"
       },
       "comparison": {
         "missing": 0,
@@ -2791,25 +3298,104 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x86-07-etw",
-      "controllerStartNs": "104967853634300",
-      "controllerEndNs": "104968215828300",
-      "processWallMs": 362.194,
+      "directory": "x86-06-frida",
+      "controllerStartNs": "105533181677300",
+      "controllerEndNs": "105533263483200",
+      "processWallMs": 81.8059,
       "events": 450,
-      "workloadUs": 24542.5,
+      "workloadUs": 29868.8,
       "callLatencyUs": {
-        "median": 7.1,
-        "p95": 274.3,
-        "p99": 390.2
+        "median": 32.1,
+        "p95": 274.1,
+        "p99": 338.8
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14082048,
+      "peakWorkingSetBytes": 14082048
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida-cmodule",
+      "repetition": 6,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
+        "oracle.json": "5ff3e2ec1b1f662dc2738d897d291d94ee48ddc6417f3baf7ade0d5012427ad8"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-06-frida-cmodule",
+      "controllerStartNs": "105533279463800",
+      "controllerEndNs": "105533357610000",
+      "processWallMs": 78.1462,
+      "events": 450,
+      "workloadUs": 21383.5,
+      "callLatencyUs": {
+        "median": 8.9,
+        "p95": 196.8,
+        "p99": 321.8
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 7081984,
-      "peakWorkingSetBytes": 7081984
+      "workingSetBytes": 14413824,
+      "peakWorkingSetBytes": 14413824
+    },
+    {
+      "architecture": "x86",
+      "mode": "etw",
+      "repetition": 6,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "909c5e4d88b56e1ce7bbe63031a07aa7f11104d735e078b6019df76561353d9d",
+        "etw.json": "ae2327b15238fcdf4686c00eac604a63e07748eeb3da30b5cb135a18e9434cff",
+        "oracle.json": "76ae63ced9eab1e47f3bb7f54be555c2e9343e2364c523099082d0c1c9ebafa4"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-06-etw",
+      "controllerStartNs": "105533377794900",
+      "controllerEndNs": "105533729296300",
+      "processWallMs": 351.5014,
+      "events": 450,
+      "workloadUs": 21479.0,
+      "callLatencyUs": {
+        "median": 6.5,
+        "p95": 214.8,
+        "p99": 327.8
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 7077888,
+      "peakWorkingSetBytes": 7077888
     },
     {
       "architecture": "x86",
       "mode": "original",
-      "repetition": 7,
+      "repetition": 6,
       "configuration": "Debug",
       "binaries": {
         "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
@@ -2819,7 +3405,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "bf7c5243257329b0bdbbd3704fb9b75fac3edc9169c20261e57b5f06cad397ff"
+        "oracle.json": "b75080db5d00967d4ce7229447d4fa364e8343c360253e25d193d996693cc267"
       },
       "comparison": {
         "missing": 0,
@@ -2829,63 +3415,20 @@
         "observed": 450
       },
       "targetExitCode": 0,
-      "directory": "x86-07-original",
-      "controllerStartNs": "104968263132800",
-      "controllerEndNs": "104968308239900",
-      "processWallMs": 45.1071,
+      "directory": "x86-06-original",
+      "controllerStartNs": "105533777672900",
+      "controllerEndNs": "105533823104000",
+      "processWallMs": 45.4311,
       "events": 450,
-      "workloadUs": 20475.5,
+      "workloadUs": 20789.9,
       "callLatencyUs": {
-        "median": 6.7,
-        "p95": 208.2,
-        "p99": 310.4
+        "median": 5.9,
+        "p95": 205.8,
+        "p99": 309.9
       },
-      "cpu100ns": 0,
-      "workingSetBytes": 6823936,
-      "peakWorkingSetBytes": 6823936
-    },
-    {
-      "architecture": "x86",
-      "mode": "knmon",
-      "repetition": 7,
-      "configuration": "Debug",
-      "binaries": {
-        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
-        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
-        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
-        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
-      },
-      "artifacts": {
-        "capture.json": "07bdf4b7e00f151fd3d9f9708443e50992b8710f952c24d4ce65f71373cd6b09",
-        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "d9092a3a5e067145cbb87bee256f06b9993945828841f467c64a6a3ae2f3aed7",
-        "session/agent-events.jsonl": "612392d12d7f9949b701ab5e7e176c1616f1b12c4c507d4ec9d6b24a8a5be467",
-        "session/audit.jsonl": "5327f9a5ce244b6fed5f60aed3c75ecfedcac2c665c763e014643c678cc7b415",
-        "session/manifest.json": "1e95071a614237c5d96a6b02a82996daa72d73a26ba9023bcb1ae87d205d09b4",
-        "session/trace-events.jsonl": "4965e5bc1197ebaf9b002c74e1f7e123ba15b138c48bc1dcf4ee4e6720f183ca"
-      },
-      "comparison": {
-        "missing": 0,
-        "unexpected": 0,
-        "orderMismatches": 0,
-        "expected": 450,
-        "observed": 450
-      },
-      "targetExitCode": 0,
-      "directory": "x86-07-knmon",
-      "controllerStartNs": "104968323040600",
-      "controllerEndNs": "104972559637900",
-      "processWallMs": 4236.5973,
-      "events": 450,
-      "workloadUs": 27054.1,
-      "callLatencyUs": {
-        "median": 15.3,
-        "p95": 275.4,
-        "p99": 393.8
-      },
-      "cpu100ns": 312500,
-      "workingSetBytes": 18296832,
-      "peakWorkingSetBytes": 19677184
+      "cpu100ns": 156250,
+      "workingSetBytes": 6828032,
+      "peakWorkingSetBytes": 6828032
     },
     {
       "architecture": "x86",
@@ -2900,8 +3443,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
-        "oracle.json": "52d70ca9466e19ff102175ce54a4dae5c54cc34d5b10613cf46359aa1b259eb9"
+        "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
+        "oracle.json": "0e08233d73dca3cd5e91200cc43c05d0bc74fbb9b19d798a07452e6aeb3439b5"
       },
       "comparison": {
         "missing": 0,
@@ -2912,19 +3455,258 @@
       },
       "targetExitCode": 0,
       "directory": "x86-07-frida",
-      "controllerStartNs": "104972582870500",
-      "controllerEndNs": "104972665452700",
-      "processWallMs": 82.5822,
+      "controllerStartNs": "105533839923000",
+      "controllerEndNs": "105533920947200",
+      "processWallMs": 81.0242,
       "events": 450,
-      "workloadUs": 29051.9,
+      "workloadUs": 29096.5,
       "callLatencyUs": {
-        "median": 26.2,
-        "p95": 291.2,
-        "p99": 348.3
+        "median": 26.9,
+        "p95": 294.6,
+        "p99": 336.2
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14069760,
+      "peakWorkingSetBytes": 14069760
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida-cmodule",
+      "repetition": 7,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
+        "oracle.json": "290b3d3bda3bb9dc0309ee3ae9f14f1231cc71b2603ad9c61f6e6c5bd86c2899"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-07-frida-cmodule",
+      "controllerStartNs": "105533936383300",
+      "controllerEndNs": "105534046431400",
+      "processWallMs": 110.0481,
+      "events": 450,
+      "workloadUs": 22484.9,
+      "callLatencyUs": {
+        "median": 13.1,
+        "p95": 217.3,
+        "p99": 332.8
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14442496,
+      "peakWorkingSetBytes": 14442496
+    },
+    {
+      "architecture": "x86",
+      "mode": "etw",
+      "repetition": 7,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "3605d5a9379be71b9fbf7272a0db18fc8664b4df429816055c4ac7f71b63c012",
+        "etw.json": "fde151196cafd041d95f5d15e0b2279bfb7f17bff64753ed0b9cda044e1a5d92",
+        "oracle.json": "6168bd3d58705e012d179229b49b499f36ea36c62e996e4f15b811ad9b6c034e"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-07-etw",
+      "controllerStartNs": "105534063343300",
+      "controllerEndNs": "105534421037300",
+      "processWallMs": 357.694,
+      "events": 450,
+      "workloadUs": 22361.6,
+      "callLatencyUs": {
+        "median": 6.8,
+        "p95": 236.6,
+        "p99": 358.8
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 7188480,
+      "peakWorkingSetBytes": 7188480
+    },
+    {
+      "architecture": "x86",
+      "mode": "original",
+      "repetition": 7,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "066ccf5f15d2a534f72532344584932f47ccab321863227164974c551f1b6d9a"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-07-original",
+      "controllerStartNs": "105534473235200",
+      "controllerEndNs": "105534519482800",
+      "processWallMs": 46.2476,
+      "events": 450,
+      "workloadUs": 21466.7,
+      "callLatencyUs": {
+        "median": 7.4,
+        "p95": 187.0,
+        "p99": 330.2
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 6819840,
+      "peakWorkingSetBytes": 6819840
+    },
+    {
+      "architecture": "x86",
+      "mode": "knmon",
+      "repetition": 7,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "capture.json": "0473c2f928d40d8854db6b0c550ba8691acabe1a7711abca5f1956d1ac723122",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "3184773e16f318d6bba49d2161bbff52451166ef11b0ebaf6745144d473fb7ad",
+        "session/agent-events.jsonl": "6c73d6e54d18878adb314ae48c9dbe464ae70549970f6e0f25ef433bb6b70d78",
+        "session/audit.jsonl": "04ad38ddd1cc8be7ac1b92fad1861c2ef0e8280e9c37ac90069186d052f715fe",
+        "session/manifest.json": "a38251f0fdd5611285a183e3e6ec1e64971ce037f919a92fb2777fe52f81bcb0",
+        "session/trace-events.jsonl": "1cebba8ed882eac54c6cba6641653c497d1a952bd1febdf6afd78b8fbbe8bc17"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-07-knmon",
+      "controllerStartNs": "105534534843500",
+      "controllerEndNs": "105538653215300",
+      "processWallMs": 4118.3718,
+      "events": 450,
+      "workloadUs": 23224.9,
+      "callLatencyUs": {
+        "median": 10.9,
+        "p95": 235.5,
+        "p99": 345.3
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 18300928,
+      "peakWorkingSetBytes": 19673088
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida-cmodule",
+      "repetition": 8,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
+        "oracle.json": "70d7bb719534d4ebb0e91607931d938a76b1e7b430a807e645775ac5f9dc43fe"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-08-frida-cmodule",
+      "controllerStartNs": "105538677951700",
+      "controllerEndNs": "105538756079400",
+      "processWallMs": 78.1277,
+      "events": 450,
+      "workloadUs": 21081.8,
+      "callLatencyUs": {
+        "median": 8.5,
+        "p95": 204.3,
+        "p99": 301.8
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 14090240,
-      "peakWorkingSetBytes": 14090240
+      "workingSetBytes": 14446592,
+      "peakWorkingSetBytes": 14446592
+    },
+    {
+      "architecture": "x86",
+      "mode": "etw",
+      "repetition": 8,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "8419d6de52c4797bcbcb9ea25112e4291f2f89008b360cd7ffd7fd4bb8b1d4b3",
+        "etw.json": "abd45a60059c14b91aa0af885c38bf7b2d34dbfb0b94ed36c97b337bcba607e6",
+        "oracle.json": "fec2fea4fcb0d776c960a608a1d3e7a4c6c4a4cd97aa0412221e91161527319a"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-08-etw",
+      "controllerStartNs": "105538776430700",
+      "controllerEndNs": "105539139322800",
+      "processWallMs": 362.8921,
+      "events": 450,
+      "workloadUs": 21600.2,
+      "callLatencyUs": {
+        "median": 12.9,
+        "p95": 208.3,
+        "p99": 330.6
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 7192576,
+      "peakWorkingSetBytes": 7192576
     },
     {
       "architecture": "x86",
@@ -2939,7 +3721,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "efaf325efdfdef0752d95c32aaa0f8226a7093d5b4366d532f09addfc50e3393"
+        "oracle.json": "6c739acfec8cad1eae85bb23729fa63dbc0a5db0afad93022679ba2c639e508d"
       },
       "comparison": {
         "missing": 0,
@@ -2950,19 +3732,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-08-original",
-      "controllerStartNs": "104972683975500",
-      "controllerEndNs": "104972731438200",
-      "processWallMs": 47.4627,
+      "controllerStartNs": "105539221894600",
+      "controllerEndNs": "105539266811800",
+      "processWallMs": 44.9172,
       "events": 450,
-      "workloadUs": 22489.7,
+      "workloadUs": 20793.0,
       "callLatencyUs": {
-        "median": 6.6,
-        "p95": 230.0,
-        "p99": 356.7
+        "median": 7.4,
+        "p95": 195.5,
+        "p99": 334.0
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 6832128,
-      "peakWorkingSetBytes": 6832128
+      "workingSetBytes": 6819840,
+      "peakWorkingSetBytes": 6819840
     },
     {
       "architecture": "x86",
@@ -2976,13 +3758,13 @@
         "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
       },
       "artifacts": {
-        "capture.json": "35a3e5610681574c9165244938a8272accf1726b7f0efcf6b048ac3b6538b65e",
+        "capture.json": "0daf85880684e658c6a95ca3a482eb48c700884443986acc06fabb4ff1675241",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "ae59afe391d779ffadc57ed69debe24534c02c8852efdf26cbea43465c665ee2",
-        "session/agent-events.jsonl": "3dac7a88f9b38956283bdf249c7de47e5098f8094c0e98a43a6b8d98d7763b15",
-        "session/audit.jsonl": "cdb91a849ba709c8e9e8982c39fc94ee647053220ea551a9b4647ffa22649f47",
-        "session/manifest.json": "62f64187c30785bb5536c7e988894fba70eb224e39659dc62a051357fc74d8ab",
-        "session/trace-events.jsonl": "86469d0e95e393e6ee1f86032a49f31f96e2930865d7e460e992234ff09da7a6"
+        "oracle.json": "43c618a209e8ca278e17d792d0b4e989cae7290b74f63ce106f39017a5caca5f",
+        "session/agent-events.jsonl": "d85cc8722db8caacbc51377fe64d4d6978cd1a7fe7e100570bfdc48df5b0d846",
+        "session/audit.jsonl": "903853514595d7ea561cb15f70e35e604af86fdd5d15f82f839d20a414a91caa",
+        "session/manifest.json": "141f28cf859dcecf7b5c9bf870740b76af7ff370884be3c9ee961263b569de47",
+        "session/trace-events.jsonl": "938af02225f4671631c9c538cd561598b717e4490b635d71aa0de70ca831e2f9"
       },
       "comparison": {
         "missing": 0,
@@ -2993,18 +3775,18 @@
       },
       "targetExitCode": 0,
       "directory": "x86-08-knmon",
-      "controllerStartNs": "104972745540200",
-      "controllerEndNs": "104976956224800",
-      "processWallMs": 4210.6846,
+      "controllerStartNs": "105539284926800",
+      "controllerEndNs": "105543461122700",
+      "processWallMs": 4176.1959,
       "events": 450,
-      "workloadUs": 23609.8,
+      "workloadUs": 23625.5,
       "callLatencyUs": {
-        "median": 11.3,
-        "p95": 234.4,
-        "p99": 339.8
+        "median": 14.7,
+        "p95": 206.6,
+        "p99": 332.7
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 18321408,
+      "cpu100ns": 0,
+      "workingSetBytes": 18296832,
       "peakWorkingSetBytes": 19668992
     },
     {
@@ -3020,8 +3802,8 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
-        "oracle.json": "16a7d3b6e937880c6a34fe90aa5825ea56b17c68c05b6163faf061f61c6fe92c"
+        "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
+        "oracle.json": "793d873aaa2e52a8c5083a5cd00b8953f0e7af2a92ce101fb238ebd4cc9e47c3"
       },
       "comparison": {
         "missing": 0,
@@ -3032,141 +3814,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-08-frida",
-      "controllerStartNs": "104976977574700",
-      "controllerEndNs": "104977056454000",
-      "processWallMs": 78.8793,
+      "controllerStartNs": "105543483416900",
+      "controllerEndNs": "105543563355500",
+      "processWallMs": 79.9386,
       "events": 450,
-      "workloadUs": 29035.6,
+      "workloadUs": 29228.4,
       "callLatencyUs": {
-        "median": 25.9,
-        "p95": 288.4,
-        "p99": 332.5
+        "median": 26.5,
+        "p95": 297.6,
+        "p99": 338.6
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 14094336,
-      "peakWorkingSetBytes": 14094336
-    },
-    {
-      "architecture": "x86",
-      "mode": "etw",
-      "repetition": 8,
-      "configuration": "Debug",
-      "binaries": {
-        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
-        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
-        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
-        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
-      },
-      "artifacts": {
-        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "fa332205421a23eb17cf34be6caf44e008d4ff823fe55a51e3409c29b48de8b6",
-        "etw.json": "7b56d9f96a2a620b39af62d14ce159e04f3f33cc54f03f5d6578f094ff4cc3b3",
-        "oracle.json": "60ff2f6151dd7b2db9bd54b3e034f6c0b638b4e92d0ff817f80fe55bb1a0fe0c"
-      },
-      "comparison": {
-        "missing": 0,
-        "unexpected": 0,
-        "orderMismatches": 0,
-        "expected": 450,
-        "observed": 450
-      },
-      "targetExitCode": 0,
-      "directory": "x86-08-etw",
-      "controllerStartNs": "104977075742000",
-      "controllerEndNs": "104977428127400",
-      "processWallMs": 352.3854,
-      "events": 450,
-      "workloadUs": 23175.6,
-      "callLatencyUs": {
-        "median": 7.7,
-        "p95": 239.4,
-        "p99": 358.7
-      },
-      "cpu100ns": 312500,
-      "workingSetBytes": 7188480,
-      "peakWorkingSetBytes": 7188480
-    },
-    {
-      "architecture": "x86",
-      "mode": "knmon",
-      "repetition": 9,
-      "configuration": "Debug",
-      "binaries": {
-        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
-        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
-        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
-        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
-      },
-      "artifacts": {
-        "capture.json": "6ee433d8b6ee3fc024458d15c1ee8dd1bd8405929e6acceb2d406c771fbddfb8",
-        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "6930125408290f1703538ab89b01f2c802977ae8536fa15adee31ef6815a1f87",
-        "session/agent-events.jsonl": "fee106d3027c3c96434e5ae3dc8998b1bf7cb642599497d858b496078c060779",
-        "session/audit.jsonl": "4519a69c4880ddc892f28fafe9866437ed23055449c719cf1607555781ee72ba",
-        "session/manifest.json": "303753def9e2f70010b4ea9a894da455f72886be9bf692c3badaafe21caa21e8",
-        "session/trace-events.jsonl": "1688431133c2cb364872c65db5b2f3e7689ee733072cef9cfa3f81cb844dcbdd"
-      },
-      "comparison": {
-        "missing": 0,
-        "unexpected": 0,
-        "orderMismatches": 0,
-        "expected": 450,
-        "observed": 450
-      },
-      "targetExitCode": 0,
-      "directory": "x86-09-knmon",
-      "controllerStartNs": "104977484299800",
-      "controllerEndNs": "104981622408400",
-      "processWallMs": 4138.1086,
-      "events": 450,
-      "workloadUs": 23263.7,
-      "callLatencyUs": {
-        "median": 13.2,
-        "p95": 215.7,
-        "p99": 334.0
-      },
-      "cpu100ns": 156250,
-      "workingSetBytes": 18305024,
-      "peakWorkingSetBytes": 19677184
-    },
-    {
-      "architecture": "x86",
-      "mode": "frida",
-      "repetition": 9,
-      "configuration": "Debug",
-      "binaries": {
-        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
-        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
-        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
-        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
-      },
-      "artifacts": {
-        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
-        "oracle.json": "8c12dcfd6fba654e28e784e28a89de55bd94e238cb9c3f4c5bac81b99deef0dd"
-      },
-      "comparison": {
-        "missing": 0,
-        "unexpected": 0,
-        "orderMismatches": 0,
-        "expected": 450,
-        "observed": 450
-      },
-      "targetExitCode": 0,
-      "directory": "x86-09-frida",
-      "controllerStartNs": "104981644138000",
-      "controllerEndNs": "104981722923900",
-      "processWallMs": 78.7859,
-      "events": 450,
-      "workloadUs": 28850.5,
-      "callLatencyUs": {
-        "median": 25.4,
-        "p95": 292.3,
-        "p99": 328.8
-      },
-      "cpu100ns": 312500,
-      "workingSetBytes": 14053376,
-      "peakWorkingSetBytes": 14053376
+      "workingSetBytes": 14098432,
+      "peakWorkingSetBytes": 14098432
     },
     {
       "architecture": "x86",
@@ -3181,9 +3841,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "9b909b8bf69e7a0e1647fc32f0f834c1a585313de534c9bb7e2c06acb62ad479",
-        "etw.json": "72d035f9b74045d33813e47dec56386063aa27a927225f65c0bd1406af50dcaf",
-        "oracle.json": "3e476fe76dccdb9411379a4ecbb96ac1bdab179540f9cbd57e99c4755454b070"
+        "corpus.etl": "fe97b5a407765181f8cdd6937e91d68fdf5364f8684850923c82032bee3d22e2",
+        "etw.json": "a8e87762557cdb22669f6084c7bf3c8e9f87f0c859655a1e01b9afb67256a656",
+        "oracle.json": "568e09c199dc569e1000658a4e7cfee970e1468ef03b6317c5a5950b09d141b8"
       },
       "comparison": {
         "missing": 0,
@@ -3194,19 +3854,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-09-etw",
-      "controllerStartNs": "104981742447600",
-      "controllerEndNs": "104982098668200",
-      "processWallMs": 356.2206,
+      "controllerStartNs": "105543587167700",
+      "controllerEndNs": "105543981033100",
+      "processWallMs": 393.8654,
       "events": 450,
-      "workloadUs": 21890.5,
+      "workloadUs": 20989.4,
       "callLatencyUs": {
-        "median": 7.1,
-        "p95": 230.5,
-        "p99": 327.4
+        "median": 7.0,
+        "p95": 207.9,
+        "p99": 299.8
       },
       "cpu100ns": 156250,
       "workingSetBytes": 7086080,
-      "peakWorkingSetBytes": 7094272
+      "peakWorkingSetBytes": 7086080
     },
     {
       "architecture": "x86",
@@ -3221,7 +3881,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "d8f67f05a445eb40a6b3b3bf6dbf06b75dbcf0e863b495936d53c8c50d6141fb"
+        "oracle.json": "51e8ff49616ad29203e0097083086484c65ed903a39e22d59c72da72c461f673"
       },
       "comparison": {
         "missing": 0,
@@ -3232,19 +3892,140 @@
       },
       "targetExitCode": 0,
       "directory": "x86-09-original",
-      "controllerStartNs": "104982149647700",
-      "controllerEndNs": "104982195359600",
-      "processWallMs": 45.7119,
+      "controllerStartNs": "105544028695000",
+      "controllerEndNs": "105544073403800",
+      "processWallMs": 44.7088,
       "events": 450,
-      "workloadUs": 20307.0,
+      "workloadUs": 20586.6,
       "callLatencyUs": {
-        "median": 5.8,
-        "p95": 184.9,
-        "p99": 312.3
+        "median": 6.1,
+        "p95": 194.2,
+        "p99": 299.5
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 6832128,
-      "peakWorkingSetBytes": 6832128
+      "workingSetBytes": 6819840,
+      "peakWorkingSetBytes": 6819840
+    },
+    {
+      "architecture": "x86",
+      "mode": "knmon",
+      "repetition": 9,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "capture.json": "fd02b5170b1539103526aa8dfa54c579de2fa56a6c3f6944256254a717c99143",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "eb178df58b85e3dc1e57b59a7fc0188d19730c958e6789ed53627a96a0ea4ac2",
+        "session/agent-events.jsonl": "c0f63caa8febf3dec57ca19bbafa2b2cad3cca4e2b09d97cf5f51ca3fb8fa399",
+        "session/audit.jsonl": "203a07766e7fae2990ac583be4f0d04e20c7d571ca39edaebc2a20cb445e4614",
+        "session/manifest.json": "186ebe8dda5b49cf3930d1a81bcf4fb0512201ed19b16d0b221ea35793d3e239",
+        "session/trace-events.jsonl": "e08ecb959209662a757fee333967bac21929974659c6aebaf61b60b1a8ea5b96"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-09-knmon",
+      "controllerStartNs": "105544090675200",
+      "controllerEndNs": "105548296699900",
+      "processWallMs": 4206.0247,
+      "events": 450,
+      "workloadUs": 23624.2,
+      "callLatencyUs": {
+        "median": 12.2,
+        "p95": 229.1,
+        "p99": 329.0
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 18313216,
+      "peakWorkingSetBytes": 19681280
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida",
+      "repetition": 9,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
+        "oracle.json": "d8773cfe939bb606dbd952c3bfa04839239e34893bec7ae49413594a9f6210fb"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-09-frida",
+      "controllerStartNs": "105548319511300",
+      "controllerEndNs": "105548401900000",
+      "processWallMs": 82.3887,
+      "events": 450,
+      "workloadUs": 29810.1,
+      "callLatencyUs": {
+        "median": 25.9,
+        "p95": 291.6,
+        "p99": 370.9
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14094336,
+      "peakWorkingSetBytes": 14094336
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida-cmodule",
+      "repetition": 9,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "1bc0ed283d6e489d1e9c2d2e8615eac48e46b5ee97c72644e72dbdc841981240"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
+        "oracle.json": "136bf28520041fdf62eabf4dcfeb2df331768e0291b2da0909d4c3451623f77d"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-09-frida-cmodule",
+      "controllerStartNs": "105548420076700",
+      "controllerEndNs": "105548499576300",
+      "processWallMs": 79.4996,
+      "events": 450,
+      "workloadUs": 21495.8,
+      "callLatencyUs": {
+        "median": 10.2,
+        "p95": 212.0,
+        "p99": 307.2
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14413824,
+      "peakWorkingSetBytes": 14413824
     }
   ],
   "status": "passed"

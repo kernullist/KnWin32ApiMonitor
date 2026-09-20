@@ -30,7 +30,7 @@ Interceptor.attach(marker("KnMonCorpusEnd"),
     {
         activeThread = 0;
         Interceptor.detachAll();
-        send({ kind: "corpus", events, errors });
+        send({ kind: "corpus", adapter: "javascript", events, errors });
     }
 });
 for (const api of ["CreateFileW", "WriteFile", "ReadFile", "CloseHandle", "VirtualAlloc", "VirtualFree"])
@@ -106,4 +106,4 @@ for (const api of ["CreateFileW", "WriteFile", "ReadFile", "CloseHandle", "Virtu
         }
     });
 }
-send({ kind: "ready", architecture: Process.arch });
+send({ kind: "ready", adapter: "javascript", architecture: Process.arch });
