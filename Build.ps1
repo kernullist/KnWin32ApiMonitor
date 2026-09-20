@@ -136,7 +136,15 @@ try
     {
         if ($Release)
         {
-            Invoke-Checked -FilePath "npm.cmd" -Arguments @("run", "tauri:build")
+            $rustTarget = if ($Win32)
+            {
+                "i686-pc-windows-msvc"
+            }
+            else
+            {
+                "x86_64-pc-windows-msvc"
+            }
+            Invoke-Checked -FilePath "npm.cmd" -Arguments @("--workspace", "apps/knmon-ui", "run", "tauri:build", "--", "--ci", "--target", $rustTarget, "--", "--locked")
         }
         else
         {

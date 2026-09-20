@@ -8,6 +8,13 @@ processes: an allowed indirect call succeeds and a guard-suppressed call must
 terminate with `0xc0000409`. CET compatibility metadata does not prove hardware
 shadow-stack enforcement on every host.
 
+The Rust desktop uses `.cargo/config.toml` target-specific MSVC flags, including
+`-C control-flow-guard=yes` for LLVM instrumentation. Rust's
+[documented default is disabled](https://doc.rust-lang.org/rustc/codegen-options/index.html#control-flow-guard).
+Its test executable queries the actual process CFG policy. As with native
+linkage, system libraries and precompiled runtime dependencies do not become
+newly instrumented merely because the application is built with CFG enabled.
+
 Enabling CFG exposed an existing resolver defect on Windows 10.0.26200:
 `kernel32!GetProcAddress` has `IMAGE_GUARD_FLAG_FID_SUPPRESSED`. Calling its
 correct export address through a mutable function pointer fails CFG. The

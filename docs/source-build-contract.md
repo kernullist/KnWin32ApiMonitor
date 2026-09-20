@@ -21,6 +21,13 @@ Node 20 is excluded. Compiler/SDK baseline selection is explicit in `Build.ps1`.
    `Cargo.lock`; `cargo test --locked --manifest-path apps/knmon-ui/src-tauri/Cargo.toml`
    validates that resolved desktop dependency graph.
 5. Release builds preserve `VERSION`. `-BumpBuildVersion` is an explicit opt-in.
+   `./Build.ps1 -Release` builds the x64 desktop and native tools;
+   `./Build.ps1 -Release -Win32` selects `i686-pc-windows-msvc` for the desktop
+   as well as Win32 for native tools. Install that Rust target with
+   `rustup target add i686-pc-windows-msvc` before the first x86 desktop build.
+   Tauri receives `--locked`, so a release build cannot silently update the
+   application dependency graph. Run from this repository or a descendant so
+   Cargo loads the repository's Windows hardening configuration.
 
 `python tools/source/package-source.py --output dist/release/knmon-source.zip`
 packages tracked files from a clean checkout, including hydrated LFS bytes.

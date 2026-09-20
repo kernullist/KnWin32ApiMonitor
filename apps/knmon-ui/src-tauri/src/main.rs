@@ -481,6 +481,28 @@ mod security_tests
 {
     use super::allowed_navigation;
 
+    #[cfg(windows)]
+    #[test]
+    fn desktop_process_enforces_control_flow_guard()
+    {
+        #[link(name = "kernel32")]
+        extern "system"
+        {
+            fn GetCurrentProcess() -> *mut core::ffi::c_void;
+            fn GetProcessMitigationPolicy(process: *mut core::ffi::c_void, policy: u32,
+                buffer: *mut core::ffi::c_void, length: usize) -> i32;
+        }
+        let mut flags = 0u32;
+        // PROCESS_MITIGATION_CONTROL_FLOW_GUARD_POLICY is a DWORD bitfield; policy ID is 7.
+        let queried = unsafe
+        {
+            GetProcessMitigationPolicy(GetCurrentProcess(), 7,
+                (&mut flags as *mut u32).cast(), core::mem::size_of_val(&flags))
+        };
+        assert_ne!(queried, 0, "Cannot query the process CFG policy");
+        assert_ne!(flags & 1, 0, "Desktop tests must run with CFG enabled");
+    }
+
     #[test]
     fn navigation_restricts_exact_origin_and_dev_mode()
     {

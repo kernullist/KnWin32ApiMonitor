@@ -1,0 +1,16 @@
+[target.x86_64-pc-windows-msvc]
+rustflags = [
+    "-C", "control-flow-guard=yes",
+    "-C", "link-arg=/DYNAMICBASE",
+    "-C", "link-arg=/NXCOMPAT",
+    "-C", "link-arg=/HIGHENTROPYVA",
+    "-C", "link-arg=/CETCOMPAT",
+]
+
+[target.i686-pc-windows-msvc]
+rustflags = [
+    "-C", "control-flow-guard=yes",
+    "-C", "link-arg=/DYNAMICBASE",
+    "-C", "link-arg=/NXCOMPAT",
+    "-C", "link-arg=/SAFESEH",
+]
