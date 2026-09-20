@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "knmon-windows-api-v1",
+  "license": "Apache-2.0",
+  "source": "native/samples/ComparisonTarget.cpp",
+  "architectures": ["x86", "x64"],
+  "apis": ["CreateFileW", "WriteFile", "ReadFile", "CloseHandle", "VirtualAlloc", "VirtualFree"],
+  "iterationOrder": ["CreateFileW", "WriteFile", "ReadFile", "ReadFile", "CloseHandle", "VirtualAlloc", "VirtualFree"],
+  "trailingFailureOrder": ["ReadFile", "CreateFileW"],
+  "negativeControls": ["Sleep", "SetFilePointerEx"],
+  "previewBytes": 16,
+  "ioBytes": 64,
+  "previewHex": "202122232425262728292a2b2c2d2e2f",
+  "defaultIterations": 64,
+  "scope": "Synchronous direct IAT calls from one target thread. EOF, invalid handle, missing file, allocation and free. Six APIs, not general Windows coverage.",
+  "baseline": { "tool": "Frida", "version": "17.18.0", "mode": "JavaScript Interceptor onEnter/onLeave, batched matched preview" },
+  "etw": { "mode": "application_instrumented_private_etw", "independentApiCoverage": false },
+  "sources": [
+    "https://frida.re/news/2026/09/09/frida-17-18-0-released/",
+    "https://frida.re/docs/javascript-api/",
+    "https://learn.microsoft.com/en-us/windows/win32/etw/configuring-and-starting-a-private-logger-session"
+  ]
+}

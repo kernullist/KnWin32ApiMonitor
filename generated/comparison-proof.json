@@ -1,0 +1,3251 @@
+{
+  "schemaVersion": 1,
+  "corpus": "knmon-windows-api-v1",
+  "windowsVersion": "10.0.26200",
+  "observedAtUtc": "2026-09-20T06:05:16.542906+00:00",
+  "iterations": 64,
+  "repetitions": 10,
+  "sourceHashEncoding": "utf8-LF",
+  "measurement": "Fresh processes, rotated mode order, no warmup discard. Caller QPC intervals include wrapper work; RSS is target working set. CPU accounting may round short runs to zero.",
+  "python": "3.12.2",
+  "fridaVersion": "17.18.0",
+  "cpu": "AMD64 Family 25 Model 33 Stepping 2, AuthenticAMD",
+  "manifestSha256": "ebe2188e5e70d3f28514102e3122866c3cb544ed796c8b1760deca54cc2e7f81",
+  "fridaBinarySha256": "51f709278609e0a2b2d074856bf2575307d6ce324e59a449ad81b344a7d73b4e",
+  "sourceHashes": {
+    "tests/corpus/windows-api-v1.json": "ebe2188e5e70d3f28514102e3122866c3cb544ed796c8b1760deca54cc2e7f81",
+    "tools/comparison/check_proof.py": "61a39b2a03724c810bbdb4113604eb4d73baa035b28d6ef86e7f05263bf4b8ea",
+    "tools/comparison/replay_comparison.py": "62545fb5548c1a02d445839c749370087948bdd33ca4f04c44675cbc80c54df6",
+    "tools/comparison/run_comparison.py": "692500a5f2ea0912fa070fbfb7b744d68a8eb21553e58f4bce710ee73cd8282d",
+    "tools/comparison/test_comparison.py": "3a64dd236448fcbb6441e4ac86030ee28231f347189c136a47cb9518773fc314",
+    "tools/comparison/validate_evidence_mutations.py": "1daad0d7c9fc44cc2ae7e5dbc31a35f93c1c312f870737856cc99d1cbf971f7a",
+    "tools/comparison/validate_native_corpus.py": "91a26661a8ea5d2f0050959628d438288aac2e98c7676ab08f5c8b0bcdfff742",
+    "tools/comparison/frida-observer.js": "70007c4a3277cd4966e258c2e8f0c27d7f6c6ebfbd056185ed0c79fdc9b5ae78",
+    "tools/comparison/test_frida_observer.mjs": "f18f82770be67a442a941117817c94219ed43cb05c01dc7d28cae86471b9d889",
+    "tools/comparison/requirements.txt": "2e99e26c6d7f4ebd7e3b0f3681fee150fd07bf18026b54794dcedf6526aaec75",
+    "native/samples/ComparisonTarget.cpp": "f54918fcc938d58e4c4ef1b357f7afec207771e4b932f053f72c2e486a055399",
+    "native/samples/CorpusProtocol.h": "ca0bf4305f61328a9b40e6aef53f1f6a39e8418af387430d13e9d8eb5cecbd6a",
+    "native/samples/EtwCorpusReader.cpp": "be705df478f7efdc5d437233845bf2cdd67847a2de6c1b4f34bb96168bfbcbfa",
+    "native/samples/TypedAbiTarget.cpp": "441a28ae93c5df956ade20638ae604d8b0f6bc2b8974def8d01170f5767010f3"
+  },
+  "nativeSourceSha256": "566c9c61e695166adbac3f80875916dd872f44109036e262b3acc20aa81665ff",
+  "kernelEtwProbes": [
+    {
+      "architecture": "x64",
+      "scope": "kernel_etw_session_availability",
+      "startStatus": 5,
+      "stopStatus": null,
+      "available": false
+    },
+    {
+      "architecture": "x86",
+      "scope": "kernel_etw_session_availability",
+      "startStatus": 5,
+      "stopStatus": null,
+      "available": false
+    }
+  ],
+  "runs": [
+    {
+      "architecture": "x64",
+      "mode": "original",
+      "repetition": 0,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "f4a60c727ae340013c9dc41f6d4e56bca56625f8c2645ad80b6b97e4acf025e1"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-00-original",
+      "controllerStartNs": "103719914465800",
+      "controllerEndNs": "103719954478700",
+      "processWallMs": 40.0129,
+      "events": 450,
+      "workloadUs": 20435.8,
+      "callLatencyUs": {
+        "median": 6.2,
+        "p95": 208.6,
+        "p99": 320.7
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 5771264,
+      "peakWorkingSetBytes": 5771264
+    },
+    {
+      "architecture": "x64",
+      "mode": "knmon",
+      "repetition": 0,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "capture.json": "abeef99cacf522fc36a389b7d7f62709398b4e94dd4a7eeb7f0ea669efcba3c1",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "f0fe49e29a0f795a3cc2bb3e2e02499ef53ada2de21ebe2f82de4cb4ba6b8514",
+        "session/agent-events.jsonl": "6b8dd31f8b4a5625335c5ca7ff1c27ae18207cc1754ab6c0e316764e8ea82215",
+        "session/audit.jsonl": "0cdefab81dfef059fff70a9a452e032668758f088f89da8969edeefe658ce82b",
+        "session/manifest.json": "b5835492d31aa070abbcd89c3aa7fa6ab82bac8fa8ddc4807402c8200fe1700a",
+        "session/trace-events.jsonl": "301299e78523f191fd0025f7954d2879b979487a3a9d9c5296aad585a847f68a"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-00-knmon",
+      "controllerStartNs": "103719972804500",
+      "controllerEndNs": "103722860545700",
+      "processWallMs": 2887.7412,
+      "events": 450,
+      "workloadUs": 23316.4,
+      "callLatencyUs": {
+        "median": 11.8,
+        "p95": 259.4,
+        "p99": 326.7
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 38944768,
+      "peakWorkingSetBytes": 40349696
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida",
+      "repetition": 0,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
+        "oracle.json": "a5a2da5974ea0ccde0bbc09ed053c1b898a3d9f57ed085af7a7940c9e34bb93b"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-00-frida",
+      "controllerStartNs": "103722882093000",
+      "controllerEndNs": "103723119129400",
+      "processWallMs": 237.0364,
+      "events": 450,
+      "workloadUs": 27481.6,
+      "callLatencyUs": {
+        "median": 23.9,
+        "p95": 284.5,
+        "p99": 316.9
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14757888,
+      "peakWorkingSetBytes": 14757888
+    },
+    {
+      "architecture": "x64",
+      "mode": "etw",
+      "repetition": 0,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "8559a5930f2b1eff59a33abd718d8b106368b6f429990055123670104d4bcbc4",
+        "etw.json": "7400913bedf6c342a0fcebf23797d97c8f330ceae88cd6fedb9d220e8c6a9c53",
+        "oracle.json": "15c74cc13adea667c9a85149b5c21820d6dbd6e9d2b2d30f9966343f94a98ace"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-00-etw",
+      "controllerStartNs": "103723143862600",
+      "controllerEndNs": "103723501467200",
+      "processWallMs": 357.6046,
+      "events": 450,
+      "workloadUs": 21170.6,
+      "callLatencyUs": {
+        "median": 6.8,
+        "p95": 235.9,
+        "p99": 306.5
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 6004736,
+      "peakWorkingSetBytes": 6004736
+    },
+    {
+      "architecture": "x64",
+      "mode": "knmon",
+      "repetition": 1,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "capture.json": "fbcceff0afe5fd1240d27bdf77998c5f2db6b4b5a8c41ae574e25121310a7809",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "5a9236a91d5787d4371b9ca9c808a03a09a3694a3664cb283ec5775e0ce0a26c",
+        "session/agent-events.jsonl": "76106f52b14baed5e8f631f450629f872bb389b0ad63bb49f9f39b8c6f4ba90e",
+        "session/audit.jsonl": "7b9c8d8225915182fe98fb49077b6f8315387379399b0a37e048bc8c1f404aa5",
+        "session/manifest.json": "19700dc1d7f18afadf5e2459e4d14d9afa702f3ab533716a4a52e92cd92e47d5",
+        "session/trace-events.jsonl": "cf0547e643baf27f592ad84d439834f552d5548dcd38aee2ee507c17b5fded73"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-01-knmon",
+      "controllerStartNs": "103723551361300",
+      "controllerEndNs": "103726452159100",
+      "processWallMs": 2900.7978,
+      "events": 450,
+      "workloadUs": 24153.0,
+      "callLatencyUs": {
+        "median": 11.7,
+        "p95": 248.2,
+        "p99": 341.0
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 38948864,
+      "peakWorkingSetBytes": 40349696
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida",
+      "repetition": 1,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
+        "oracle.json": "c91f982602709d69b28da4fd0f63a1c031486e70727345711a280acca90c5891"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-01-frida",
+      "controllerStartNs": "103726473904700",
+      "controllerEndNs": "103726542469200",
+      "processWallMs": 68.5645,
+      "events": 450,
+      "workloadUs": 26771.2,
+      "callLatencyUs": {
+        "median": 22.0,
+        "p95": 270.7,
+        "p99": 334.5
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14753792,
+      "peakWorkingSetBytes": 14753792
+    },
+    {
+      "architecture": "x64",
+      "mode": "etw",
+      "repetition": 1,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "fb0419248c06deeee80d582cc0eedee37a050e3a28224a4c21089b0f2692c757",
+        "etw.json": "61b6bc81a88006ae5c6fc36061548074018dd56ef977a356af43ebb3e4205bc3",
+        "oracle.json": "e87cf5b7d0166b6cf34b5c8d0520a2e775c8fbe545f0ef5a825e51b01f6dcc24"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-01-etw",
+      "controllerStartNs": "103726559451600",
+      "controllerEndNs": "103726911108000",
+      "processWallMs": 351.6564,
+      "events": 450,
+      "workloadUs": 22643.6,
+      "callLatencyUs": {
+        "median": 6.5,
+        "p95": 240.8,
+        "p99": 360.6
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 6033408,
+      "peakWorkingSetBytes": 6033408
+    },
+    {
+      "architecture": "x64",
+      "mode": "original",
+      "repetition": 1,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "7837c55203c1207d06cce1f50b7d94deb3a7dc907eb7cff1b271783d4af9e973"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-01-original",
+      "controllerStartNs": "103726955304600",
+      "controllerEndNs": "103726995251300",
+      "processWallMs": 39.9467,
+      "events": 450,
+      "workloadUs": 20567.5,
+      "callLatencyUs": {
+        "median": 10.6,
+        "p95": 222.1,
+        "p99": 325.7
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 5779456,
+      "peakWorkingSetBytes": 5779456
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida",
+      "repetition": 2,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
+        "oracle.json": "8a8a17f190b67697674b65279d93740a5860a15e9fd5d9c99489cfd0b759e757"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-02-frida",
+      "controllerStartNs": "103727014494500",
+      "controllerEndNs": "103727086192600",
+      "processWallMs": 71.6981,
+      "events": 450,
+      "workloadUs": 27538.1,
+      "callLatencyUs": {
+        "median": 23.7,
+        "p95": 255.9,
+        "p99": 327.4
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 14745600,
+      "peakWorkingSetBytes": 14745600
+    },
+    {
+      "architecture": "x64",
+      "mode": "etw",
+      "repetition": 2,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "6d57a074895358746eb3a722fd4e854c3a8b64707fae514571ae0db35c20abde",
+        "etw.json": "b3cfbecb77e4ba58334112e6ae460666dd697da00871d023fee6d6ec937d6203",
+        "oracle.json": "679d36510e996bfc2bb159c5d5954a7429d2f74350abe2a72dc3cd7b4c399aae"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-02-etw",
+      "controllerStartNs": "103727103341600",
+      "controllerEndNs": "103727456243900",
+      "processWallMs": 352.9023,
+      "events": 450,
+      "workloadUs": 23549.4,
+      "callLatencyUs": {
+        "median": 7.7,
+        "p95": 251.0,
+        "p99": 345.6
+      },
+      "cpu100ns": 0,
+      "workingSetBytes": 6012928,
+      "peakWorkingSetBytes": 6012928
+    },
+    {
+      "architecture": "x64",
+      "mode": "original",
+      "repetition": 2,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "bed91dd7457a0216f2cc769dc9efbe65095d7f8b383cd337746605612a01c3ce"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-02-original",
+      "controllerStartNs": "103727499285200",
+      "controllerEndNs": "103727538846200",
+      "processWallMs": 39.561,
+      "events": 450,
+      "workloadUs": 20804.5,
+      "callLatencyUs": {
+        "median": 6.5,
+        "p95": 226.0,
+        "p99": 307.4
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 5763072,
+      "peakWorkingSetBytes": 5763072
+    },
+    {
+      "architecture": "x64",
+      "mode": "knmon",
+      "repetition": 2,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "capture.json": "badf636aaae9237aa7fd03688f6d7c7212dd5618857d16f8e257cf9ad118a39c",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "dbe4c7fafa80035a09ed306e148d9309d7ff7a4da04e64751195245784e597a0",
+        "session/agent-events.jsonl": "2e461ec47fe8419f916a8ec299bfb9c10b46079bcff1128dd50413104d149520",
+        "session/audit.jsonl": "c236bbd704d143a024611e1af7e8921faeb3cd346ea89d44a1840af3f7035ece",
+        "session/manifest.json": "6926edf57e31276e879b47f3fb08018f82dcc27549321fabd7452a119836f427",
+        "session/trace-events.jsonl": "0beb8597d796b973692b8d47f3f7fecd85d557f590d9956383056e20d40f8d13"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-02-knmon",
+      "controllerStartNs": "103727557047300",
+      "controllerEndNs": "103730447467300",
+      "processWallMs": 2890.42,
+      "events": 450,
+      "workloadUs": 24240.9,
+      "callLatencyUs": {
+        "median": 12.5,
+        "p95": 224.4,
+        "p99": 364.8
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 38952960,
+      "peakWorkingSetBytes": 40353792
+    },
+    {
+      "architecture": "x64",
+      "mode": "etw",
+      "repetition": 3,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "fc46dc5b0a50c2b877b5603b297aa584392dc2c1f8f15f5ba2f31e3596901be1",
+        "etw.json": "c23a38dad8ea46a00771979136d2e39004746d416a556605b13ae715b7625933",
+        "oracle.json": "5593070ab52749dc81174e557a9704be90db4b0053fc38ebf9aedbb72796d4ef"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-03-etw",
+      "controllerStartNs": "103730470847900",
+      "controllerEndNs": "103730823516800",
+      "processWallMs": 352.6689,
+      "events": 450,
+      "workloadUs": 19992.9,
+      "callLatencyUs": {
+        "median": 5.6,
+        "p95": 199.0,
+        "p99": 296.6
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 5992448,
+      "peakWorkingSetBytes": 5992448
+    },
+    {
+      "architecture": "x64",
+      "mode": "original",
+      "repetition": 3,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "87c970ec097283353e6e483124462548f757acf163e12ef96a635b340918f5ef"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-03-original",
+      "controllerStartNs": "103730864006000",
+      "controllerEndNs": "103730902812200",
+      "processWallMs": 38.8062,
+      "events": 450,
+      "workloadUs": 20456.7,
+      "callLatencyUs": {
+        "median": 6.1,
+        "p95": 198.7,
+        "p99": 323.6
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 5799936,
+      "peakWorkingSetBytes": 5799936
+    },
+    {
+      "architecture": "x64",
+      "mode": "knmon",
+      "repetition": 3,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "capture.json": "c39673bb05814b4d1df954353a577e44c83a20a1cb98ddbeedc369d2e3d03510",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "362bf5799357ee52afadddce9e3b7acc5df9ee71e7471ff0ae47484cb12a5e37",
+        "session/agent-events.jsonl": "3e3dc170d5d8bf945367099700e779601fe08d50882ee080a2add5a900ba9b8e",
+        "session/audit.jsonl": "c3ab06903acd4441b6aaaccd5211f576c76a0ec548f93fab2f48b9b45fda336f",
+        "session/manifest.json": "17c7a35839ea34e45571745bcdf4e6f1ab650d92b550fb88b5e3fba1e60c89dd",
+        "session/trace-events.jsonl": "426c912e6e1783043d44a80f7200ed3df9f3e71ddba9416eac7788a98ececa54"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-03-knmon",
+      "controllerStartNs": "103730919195800",
+      "controllerEndNs": "103733828341600",
+      "processWallMs": 2909.1458,
+      "events": 450,
+      "workloadUs": 21951.0,
+      "callLatencyUs": {
+        "median": 10.1,
+        "p95": 204.2,
+        "p99": 331.2
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 38977536,
+      "peakWorkingSetBytes": 40349696
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida",
+      "repetition": 3,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
+        "oracle.json": "4e17d58ec8ef124b580d8a6b9033213f4585ae4762d887122cba3f1dc1cf3a50"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-03-frida",
+      "controllerStartNs": "103733854889900",
+      "controllerEndNs": "103733927117800",
+      "processWallMs": 72.2279,
+      "events": 450,
+      "workloadUs": 28790.1,
+      "callLatencyUs": {
+        "median": 24.0,
+        "p95": 299.2,
+        "p99": 383.3
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14741504,
+      "peakWorkingSetBytes": 14741504
+    },
+    {
+      "architecture": "x64",
+      "mode": "original",
+      "repetition": 4,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "4d67ef0d5923cf2f355b8910b179ba1e8d5b6fdcbec5d36d84cb5c328d430b9a"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-04-original",
+      "controllerStartNs": "103733957393100",
+      "controllerEndNs": "103734001978100",
+      "processWallMs": 44.585,
+      "events": 450,
+      "workloadUs": 22401.6,
+      "callLatencyUs": {
+        "median": 6.8,
+        "p95": 225.3,
+        "p99": 337.5
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 5787648,
+      "peakWorkingSetBytes": 5787648
+    },
+    {
+      "architecture": "x64",
+      "mode": "knmon",
+      "repetition": 4,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "capture.json": "9428da5ef413b2c4d0256c5a84e5730eb22f8a15f7b0cc98dc51e14ee9feb567",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "fe4f7ebe3dcc175b23b04619d3d94e7a07c3db92a03bed2f235c8c3466ed3bdb",
+        "session/agent-events.jsonl": "5a5d6f77a7f06f623cf298deaa268b955957a3b9a88065ff9d619c1b6da16dc4",
+        "session/audit.jsonl": "6437777cd2a5097047f55033542ba1c72d2b0dfa74918acae9031256484d9018",
+        "session/manifest.json": "fd512ef9407eb9e9773d4d5c65f7deb00d408f2020e7b268b0d7734370f811e1",
+        "session/trace-events.jsonl": "c5ff426c5fb6b583fb4bca73ea66a84dfc7f24ffd002938b75f6d7bef396ccca"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-04-knmon",
+      "controllerStartNs": "103734017818500",
+      "controllerEndNs": "103736916828500",
+      "processWallMs": 2899.01,
+      "events": 450,
+      "workloadUs": 23230.7,
+      "callLatencyUs": {
+        "median": 11.2,
+        "p95": 233.4,
+        "p99": 351.4
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 38944768,
+      "peakWorkingSetBytes": 40345600
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida",
+      "repetition": 4,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
+        "oracle.json": "7af54f576fab75ff1dc91b0e04f6b57dd661d8c8513985aaeac466f32d9f0f92"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-04-frida",
+      "controllerStartNs": "103736939579300",
+      "controllerEndNs": "103737012821200",
+      "processWallMs": 73.2419,
+      "events": 450,
+      "workloadUs": 30529.3,
+      "callLatencyUs": {
+        "median": 24.3,
+        "p95": 298.6,
+        "p99": 520.5
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14737408,
+      "peakWorkingSetBytes": 14737408
+    },
+    {
+      "architecture": "x64",
+      "mode": "etw",
+      "repetition": 4,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "aecb9fb48cec30c06fe69dc1307cf6f6de1cc96a9304d610665baeeb2d4e4715",
+        "etw.json": "6435317cfa53c02b1332f7bd1384dd12fe71665e82ff1a4b7e358b6ce8f933cd",
+        "oracle.json": "c62606360a13c3078abe6887adc0a4623829bce5f98ed1de511ee3af295dac4d"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-04-etw",
+      "controllerStartNs": "103737035273300",
+      "controllerEndNs": "103737380923700",
+      "processWallMs": 345.6504,
+      "events": 450,
+      "workloadUs": 20446.4,
+      "callLatencyUs": {
+        "median": 6.2,
+        "p95": 206.3,
+        "p99": 331.3
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 6008832,
+      "peakWorkingSetBytes": 6008832
+    },
+    {
+      "architecture": "x64",
+      "mode": "knmon",
+      "repetition": 5,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "capture.json": "aaaaa4799d92468ae786a9a5e042736eba489ae7e646a38efd7f21fd41a74ae7",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "4386b1cef0106083a752eccca0fcfe66a8e9590c916e16d0c25f7a5b116038bd",
+        "session/agent-events.jsonl": "49a60d4c22787c08e09c4625811ec31ca64fc53257096f7bb965415592340620",
+        "session/audit.jsonl": "4fc0d281fa6d8b219a139121db6e0b7fbd6881ee7d30295c1907aadc280e5bff",
+        "session/manifest.json": "ac2a78adeac987c4d1c85d120809e6339517416bc69bc532b631e21b7ff6375f",
+        "session/trace-events.jsonl": "0e5058906f38281b88bf70bf51187d54c4f5e659d584ea8d5f80899b1f7ea9e7"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-05-knmon",
+      "controllerStartNs": "103737429747600",
+      "controllerEndNs": "103740347498100",
+      "processWallMs": 2917.7505,
+      "events": 450,
+      "workloadUs": 24064.1,
+      "callLatencyUs": {
+        "median": 11.4,
+        "p95": 237.6,
+        "p99": 369.2
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 38940672,
+      "peakWorkingSetBytes": 40341504
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida",
+      "repetition": 5,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
+        "oracle.json": "5b700899de772c22d064126d47b54f1034d13de01a218c1ba4afeb8c22bbf509"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-05-frida",
+      "controllerStartNs": "103740370074500",
+      "controllerEndNs": "103740445190800",
+      "processWallMs": 75.1163,
+      "events": 450,
+      "workloadUs": 31633.9,
+      "callLatencyUs": {
+        "median": 26.3,
+        "p95": 302.0,
+        "p99": 465.3
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14749696,
+      "peakWorkingSetBytes": 14749696
+    },
+    {
+      "architecture": "x64",
+      "mode": "etw",
+      "repetition": 5,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "86d22d2a217e6da4d28e0ba757ab09d03007ce6138471cf904b290db0c9dda78",
+        "etw.json": "29b3a3dfbb8c0fb17f7d8c09124bb1fe8beea4f08b84c680edaf8213d4e76462",
+        "oracle.json": "3c0eb7af56d6686589a2b63adb3bbf46e3f6b48137c5263d8c30dd7c6d41e1a8"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-05-etw",
+      "controllerStartNs": "103740462731700",
+      "controllerEndNs": "103740810470500",
+      "processWallMs": 347.7388,
+      "events": 450,
+      "workloadUs": 20082.7,
+      "callLatencyUs": {
+        "median": 6.3,
+        "p95": 201.2,
+        "p99": 310.4
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 5996544,
+      "peakWorkingSetBytes": 5996544
+    },
+    {
+      "architecture": "x64",
+      "mode": "original",
+      "repetition": 5,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "cb674298aa6a7ce41ed576a6ab23f399bac33362f30092c08768b31f4773eaf9"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-05-original",
+      "controllerStartNs": "103740855830100",
+      "controllerEndNs": "103740897457800",
+      "processWallMs": 41.6277,
+      "events": 450,
+      "workloadUs": 22654.4,
+      "callLatencyUs": {
+        "median": 12.6,
+        "p95": 240.8,
+        "p99": 322.1
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 5767168,
+      "peakWorkingSetBytes": 5767168
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida",
+      "repetition": 6,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
+        "oracle.json": "f6768b1c2f3693994a6119ca929037cc1a623512bc789eb612f60ea80479ea16"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-06-frida",
+      "controllerStartNs": "103740913472500",
+      "controllerEndNs": "103740991294600",
+      "processWallMs": 77.8221,
+      "events": 450,
+      "workloadUs": 32466.5,
+      "callLatencyUs": {
+        "median": 29.3,
+        "p95": 312.3,
+        "p99": 432.4
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14749696,
+      "peakWorkingSetBytes": 14749696
+    },
+    {
+      "architecture": "x64",
+      "mode": "etw",
+      "repetition": 6,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "7ca6d4591f5d11fc2fc9b68e5b8a7cae86f20596be44403c6437f140596add86",
+        "etw.json": "99d2fe12862ab692fb474a4e87baae0f3a88a72d42170886a757d628338e5ee9",
+        "oracle.json": "47e908a31185c6019881e51bd675f60627cc64b3514781be66e697285e5f43f5"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-06-etw",
+      "controllerStartNs": "103741011760300",
+      "controllerEndNs": "103741366822300",
+      "processWallMs": 355.062,
+      "events": 450,
+      "workloadUs": 21705.1,
+      "callLatencyUs": {
+        "median": 10.1,
+        "p95": 214.7,
+        "p99": 345.2
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 5992448,
+      "peakWorkingSetBytes": 5992448
+    },
+    {
+      "architecture": "x64",
+      "mode": "original",
+      "repetition": 6,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "2d2487b15c2625947964fddb8ef22a07ce65f4842c31194b035cb08c168a8188"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-06-original",
+      "controllerStartNs": "103741411789300",
+      "controllerEndNs": "103741451117200",
+      "processWallMs": 39.3279,
+      "events": 450,
+      "workloadUs": 20513.7,
+      "callLatencyUs": {
+        "median": 6.8,
+        "p95": 201.5,
+        "p99": 335.0
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 5795840,
+      "peakWorkingSetBytes": 5795840
+    },
+    {
+      "architecture": "x64",
+      "mode": "knmon",
+      "repetition": 6,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "capture.json": "d1c2520ee1383c8ea1d9a2c9da2f30d3fe6da90651cd6a96718d7e0d235517e1",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "d1c35998cc4e40f5c068e98af6b0da7b657e1a51f214a99a3719b24a1bb478ff",
+        "session/agent-events.jsonl": "fed05ad17a4138d43c8dff27969e8294a2af62c9e0d8c45c7ab2cf6165854c18",
+        "session/audit.jsonl": "168c1eaf038c39c3475119788dec1b014173e8b5b1f455b557b91f695b6e3387",
+        "session/manifest.json": "d4593ce470930013bcc535b0579e43cb56c20e80b5ddfd1cc7d1499499bbdbfb",
+        "session/trace-events.jsonl": "18ebb2d0606b7dd5c988ce87c4ebd77eb3fd20cc3a03a6667e95fe39459aec25"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-06-knmon",
+      "controllerStartNs": "103741464331100",
+      "controllerEndNs": "103744373922500",
+      "processWallMs": 2909.5914,
+      "events": 450,
+      "workloadUs": 22497.2,
+      "callLatencyUs": {
+        "median": 10.3,
+        "p95": 226.5,
+        "p99": 300.6
+      },
+      "cpu100ns": 0,
+      "workingSetBytes": 38989824,
+      "peakWorkingSetBytes": 40361984
+    },
+    {
+      "architecture": "x64",
+      "mode": "etw",
+      "repetition": 7,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "99153f6de891b374b4ae5ad56575d0a4eeeccceb56cac10d79f06fc12eee8a94",
+        "etw.json": "3e3076a12b982c0f33d64df42ca73b5ab4bcbf7438f938f9549b1e340ee75dd5",
+        "oracle.json": "dc4a939e81972ad3e4b891d4e7c793ab1b690d2c2cc4e5a1616b98968f7cf412"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-07-etw",
+      "controllerStartNs": "103744398350600",
+      "controllerEndNs": "103744753272200",
+      "processWallMs": 354.9216,
+      "events": 450,
+      "workloadUs": 19875.8,
+      "callLatencyUs": {
+        "median": 6.0,
+        "p95": 185.0,
+        "p99": 323.2
+      },
+      "cpu100ns": 0,
+      "workingSetBytes": 6000640,
+      "peakWorkingSetBytes": 6000640
+    },
+    {
+      "architecture": "x64",
+      "mode": "original",
+      "repetition": 7,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "f5217ba35f6fee2043c6bccd50d0a31536933c230d128ea98bfbee9f42b32b23"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-07-original",
+      "controllerStartNs": "103744794384600",
+      "controllerEndNs": "103744832874900",
+      "processWallMs": 38.4903,
+      "events": 450,
+      "workloadUs": 20183.5,
+      "callLatencyUs": {
+        "median": 7.4,
+        "p95": 203.1,
+        "p99": 312.3
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 5787648,
+      "peakWorkingSetBytes": 5787648
+    },
+    {
+      "architecture": "x64",
+      "mode": "knmon",
+      "repetition": 7,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "capture.json": "17a56dc2c1234bca5e0c5011d176e7249c018482acc8a5ba96c350594a611ab6",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "867007d9175b1fc911eb2351bc34007647a0a2e80078bd43033d681518f593fe",
+        "session/agent-events.jsonl": "bf0da3c1505aca6ed625164341eaf0b66f7ae8791915e2c1a51ed43869430579",
+        "session/audit.jsonl": "64b3c8127c8af0fa396262c3e2bc9c64168fbc4dab22181dcba14b66e8d74dff",
+        "session/manifest.json": "6df69eef62c8f212a15965045b6450018c030594bc18ca07a79620173ea99cf6",
+        "session/trace-events.jsonl": "fd70deee5290f7407748272d6a51b4c336fe1671e7e6f1034ab14cae0f8b13cc"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-07-knmon",
+      "controllerStartNs": "103744847989200",
+      "controllerEndNs": "103747760907600",
+      "processWallMs": 2912.9184,
+      "events": 450,
+      "workloadUs": 22603.0,
+      "callLatencyUs": {
+        "median": 10.8,
+        "p95": 224.8,
+        "p99": 324.6
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 38965248,
+      "peakWorkingSetBytes": 40353792
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida",
+      "repetition": 7,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
+        "oracle.json": "25b9d8b7b11823febffdf59df78b809141bc7582b942665422edd0ea69abd1ac"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-07-frida",
+      "controllerStartNs": "103747782926800",
+      "controllerEndNs": "103747852694100",
+      "processWallMs": 69.7673,
+      "events": 450,
+      "workloadUs": 26579.4,
+      "callLatencyUs": {
+        "median": 24.3,
+        "p95": 251.8,
+        "p99": 331.5
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 14741504,
+      "peakWorkingSetBytes": 14741504
+    },
+    {
+      "architecture": "x64",
+      "mode": "original",
+      "repetition": 8,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "3b66f9184b27e0cc318c878023a16140a8a219807063580c1b3d3f39a194f860"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-08-original",
+      "controllerStartNs": "103747877759500",
+      "controllerEndNs": "103747919653000",
+      "processWallMs": 41.8935,
+      "events": 450,
+      "workloadUs": 21865.2,
+      "callLatencyUs": {
+        "median": 6.3,
+        "p95": 223.0,
+        "p99": 330.3
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 5787648,
+      "peakWorkingSetBytes": 5787648
+    },
+    {
+      "architecture": "x64",
+      "mode": "knmon",
+      "repetition": 8,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "capture.json": "8695640f1def5fa56d4e53fd33a3c2a3d5aa9d00a0c5dbd00f37154d979bcec5",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "c524adfce079880e19fbe509a67b994ca67c0fde26f3e6928d4d0ee3b898a94f",
+        "session/agent-events.jsonl": "90b5b390f8db0a1e3b78a1398381bb5641d22a172ddb52132619ef37df23217e",
+        "session/audit.jsonl": "4c877230a147cf335b85227a32cf4f6c71648ee3c6a3fe23aee9a7eb533bcd9f",
+        "session/manifest.json": "cc34e3c623ab29a715aad9b5d521d4cf7c6108f4776b019fcfe204f08702e027",
+        "session/trace-events.jsonl": "82ba40b2941aab55cb15004dae01433fa11f779cc1e51e2483e5928d74e6e5ec"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-08-knmon",
+      "controllerStartNs": "103747936436000",
+      "controllerEndNs": "103750855342200",
+      "processWallMs": 2918.9062,
+      "events": 450,
+      "workloadUs": 23094.5,
+      "callLatencyUs": {
+        "median": 13.9,
+        "p95": 239.6,
+        "p99": 334.1
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 38948864,
+      "peakWorkingSetBytes": 40349696
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida",
+      "repetition": 8,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
+        "oracle.json": "144001fb6e91628eb1460d6910438a3d35649e16d9b744f304db259a0311c422"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-08-frida",
+      "controllerStartNs": "103750878306800",
+      "controllerEndNs": "103750950710600",
+      "processWallMs": 72.4038,
+      "events": 450,
+      "workloadUs": 29198.6,
+      "callLatencyUs": {
+        "median": 25.6,
+        "p95": 299.2,
+        "p99": 354.1
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14753792,
+      "peakWorkingSetBytes": 14753792
+    },
+    {
+      "architecture": "x64",
+      "mode": "etw",
+      "repetition": 8,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "a2535f22122cbbcadba9fcfefa50821b21583fc84f0356c741f446cc401678fb",
+        "etw.json": "3445652fa46fe27dea5a5a89557f9e30965f3a5269270c72db7b810e9bb56b4c",
+        "oracle.json": "def24f4ec6704295907c06b1a966894e932ff9e731b8abb35f80917a946a3d86"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-08-etw",
+      "controllerStartNs": "103750971336900",
+      "controllerEndNs": "103751320047600",
+      "processWallMs": 348.7107,
+      "events": 450,
+      "workloadUs": 21860.0,
+      "callLatencyUs": {
+        "median": 11.9,
+        "p95": 221.0,
+        "p99": 343.0
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 6008832,
+      "peakWorkingSetBytes": 6008832
+    },
+    {
+      "architecture": "x64",
+      "mode": "knmon",
+      "repetition": 9,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "capture.json": "5422d297f7c5ccce1b810351673476311bcfafdf8ad93c0ee1ae8c3ab671ea16",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "d8315a02efe61f8f4f3476fa1b8c6d4f1a06995ddab46925b99478be92766770",
+        "session/agent-events.jsonl": "68aa7a63dd7ac56fe32a6dab18c500210d158cdd84eea555826bce63877b67f1",
+        "session/audit.jsonl": "b74f013aa618302b8471bb1bf6a5019987292958632ad268722c061444c2c456",
+        "session/manifest.json": "3ba81e0508256ec903ae79c92bed8c80791c85a703dd65264f96da5d0d3f31e3",
+        "session/trace-events.jsonl": "550faf1aed2f70db4e343d990bd6b760d7a5b0876d8d52cd928e00ea6867a85f"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-09-knmon",
+      "controllerStartNs": "103751367830100",
+      "controllerEndNs": "103754257965300",
+      "processWallMs": 2890.1352,
+      "events": 450,
+      "workloadUs": 22346.6,
+      "callLatencyUs": {
+        "median": 11.7,
+        "p95": 238.5,
+        "p99": 334.6
+      },
+      "cpu100ns": 0,
+      "workingSetBytes": 38940672,
+      "peakWorkingSetBytes": 40341504
+    },
+    {
+      "architecture": "x64",
+      "mode": "frida",
+      "repetition": 9,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "daa127eaa465270b1125e031066f38a694b63e4daf1d99704bd095126253b776",
+        "oracle.json": "cd93978d7adff60136cb1f99e8a4b09824e41504dbd43ac538fec4ef5659eb86"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-09-frida",
+      "controllerStartNs": "103754280056900",
+      "controllerEndNs": "103754351164500",
+      "processWallMs": 71.1076,
+      "events": 450,
+      "workloadUs": 28006.2,
+      "callLatencyUs": {
+        "median": 22.0,
+        "p95": 298.7,
+        "p99": 345.8
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14761984,
+      "peakWorkingSetBytes": 14761984
+    },
+    {
+      "architecture": "x64",
+      "mode": "etw",
+      "repetition": 9,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "3419efe3b00c89906b0bddfdbf324b82a1145366310bfaa01c3c568109ffb3cb",
+        "etw.json": "648aa4390063094fc91b647246afe832d6a5b30b564ae038acb1d4fbb58f87e7",
+        "oracle.json": "9872e7e9efcdf7e64a00e0da70c8e07155c8aaf82478fe6bd5a20b5ca9996f84"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-09-etw",
+      "controllerStartNs": "103754367724100",
+      "controllerEndNs": "103754712320800",
+      "processWallMs": 344.5967,
+      "events": 450,
+      "workloadUs": 20168.8,
+      "callLatencyUs": {
+        "median": 6.6,
+        "p95": 200.6,
+        "p99": 322.9
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 5996544,
+      "peakWorkingSetBytes": 5996544
+    },
+    {
+      "architecture": "x64",
+      "mode": "original",
+      "repetition": 9,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "078fb2ca04e424ee18f78a3226ead87c894919f37e4cef64c4b30a1fc36716da",
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-etw-corpus-reader.exe": "391ebd979edbe8a1f077296c93f757f09ac4b6109c1fa3b405f93aa1dc5dc810",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "6976e285efaadc2fbd85893bdb4962465a15ec2a2bb16cc3ba62499facaf04c0"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x64-09-original",
+      "controllerStartNs": "103754759040200",
+      "controllerEndNs": "103754800189200",
+      "processWallMs": 41.149,
+      "events": 450,
+      "workloadUs": 21702.1,
+      "callLatencyUs": {
+        "median": 5.8,
+        "p95": 223.8,
+        "p99": 349.4
+      },
+      "cpu100ns": 0,
+      "workingSetBytes": 5787648,
+      "peakWorkingSetBytes": 5787648
+    },
+    {
+      "architecture": "x86",
+      "mode": "original",
+      "repetition": 0,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "7b3e575c2a058120212afc59f9c1e8a11789df2e483b24f4169407d8229646bc"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-00-original",
+      "controllerStartNs": "103757865518600",
+      "controllerEndNs": "103757910496900",
+      "processWallMs": 44.9783,
+      "events": 450,
+      "workloadUs": 20357.9,
+      "callLatencyUs": {
+        "median": 8.7,
+        "p95": 185.4,
+        "p99": 313.4
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 6762496,
+      "peakWorkingSetBytes": 6762496
+    },
+    {
+      "architecture": "x86",
+      "mode": "knmon",
+      "repetition": 0,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "capture.json": "0fe63b3fb7fdb3c933bf4646cb737e9fb3ac77c93d227f77bd25c075016b1cea",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "b857d90e92f383fe9b34ac1c3b7dfc21be5949bb7ce03f96d980f18ef3d0f557",
+        "session/agent-events.jsonl": "cce0fb827bfc649da69e18cec29ba343b8141ccc1d04053eb1372f166f22b134",
+        "session/audit.jsonl": "19fc305883ddef3fafe280fbf9fbf2d7644f0c3fbef744deb57da3b4f1d3ab54",
+        "session/manifest.json": "2b046572b360634f8188776e68bddbc20d3f966dfa2222d077b5405c141297f7",
+        "session/trace-events.jsonl": "8e119a503dd5ba78912e5090b9c4c3d84a8cdd955913c4051e630f933859705d"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-00-knmon",
+      "controllerStartNs": "103757923358500",
+      "controllerEndNs": "103762096569000",
+      "processWallMs": 4173.2105,
+      "events": 450,
+      "workloadUs": 23540.9,
+      "callLatencyUs": {
+        "median": 12.4,
+        "p95": 234.6,
+        "p99": 325.2
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 18292736,
+      "peakWorkingSetBytes": 19656704
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida",
+      "repetition": 0,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
+        "oracle.json": "8d9956c6534149a763d20350b0ed7ad9d3e24aeacc7fc24eb353fca0650d2d59"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-00-frida",
+      "controllerStartNs": "103762118038200",
+      "controllerEndNs": "103763069388300",
+      "processWallMs": 951.3501,
+      "events": 450,
+      "workloadUs": 33596.9,
+      "callLatencyUs": {
+        "median": 31.6,
+        "p95": 330.7,
+        "p99": 387.7
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14024704,
+      "peakWorkingSetBytes": 14024704
+    },
+    {
+      "architecture": "x86",
+      "mode": "etw",
+      "repetition": 0,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "9e78c26fb64c0fa232c4f16a7e75b22fcbd69aaec261a4a994d2ac8325ecd0bf",
+        "etw.json": "1231a1cea7e5ddc331e0d6edbcbbc1ca67131558c7d4c5db007c7e13d8cca6ba",
+        "oracle.json": "a763604368b0081c721cad5cb2d2e8e5cb546ed1c95c9caa80fe84c4843ffffd"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-00-etw",
+      "controllerStartNs": "103763085090100",
+      "controllerEndNs": "103763443456500",
+      "processWallMs": 358.3664,
+      "events": 450,
+      "workloadUs": 22581.4,
+      "callLatencyUs": {
+        "median": 7.9,
+        "p95": 232.2,
+        "p99": 344.4
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 7077888,
+      "peakWorkingSetBytes": 7090176
+    },
+    {
+      "architecture": "x86",
+      "mode": "knmon",
+      "repetition": 1,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "capture.json": "c30261bbe6aa551b40b80680b15535834539bdc5427478e1e87d8c297418fb92",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "36fb571377835b1cbfcd4b8f60f6cdc02b2d58b6eaf619f8302e1047bb55ba96",
+        "session/agent-events.jsonl": "5490996ce272de3c393df5409f46c85a22fad45c1481043d0971073702a6425b",
+        "session/audit.jsonl": "716eb88432e108f59b54b0a956cc0287be0c0879d973d5b9b65438033c33793d",
+        "session/manifest.json": "03b4964c65f76e13af2251b45add7f28bc327179d921f9d6d9a0546e0ea3af9c",
+        "session/trace-events.jsonl": "10ece8335eb53e71af087675fd0bb4f84c725f04522a835c5a4672dee92c0fd7"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-01-knmon",
+      "controllerStartNs": "103763498432500",
+      "controllerEndNs": "103767744875500",
+      "processWallMs": 4246.443,
+      "events": 450,
+      "workloadUs": 26307.9,
+      "callLatencyUs": {
+        "median": 14.1,
+        "p95": 287.8,
+        "p99": 379.8
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 18309120,
+      "peakWorkingSetBytes": 19677184
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida",
+      "repetition": 1,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
+        "oracle.json": "5ddc6d204b49e80ceb9f9946124c9a88a264ee3308b83f038b5f929b09a36e81"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-01-frida",
+      "controllerStartNs": "103767771408600",
+      "controllerEndNs": "103767853336800",
+      "processWallMs": 81.9282,
+      "events": 450,
+      "workloadUs": 30354.8,
+      "callLatencyUs": {
+        "median": 28.9,
+        "p95": 286.2,
+        "p99": 383.2
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 14086144,
+      "peakWorkingSetBytes": 14086144
+    },
+    {
+      "architecture": "x86",
+      "mode": "etw",
+      "repetition": 1,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "5d8ac9c7ea05ff5f2a28da39ca5acd35621de1c91d197434ef3476f9b5487146",
+        "etw.json": "26aa7e95535ab1fd04b4edbd3f46a4c1a3f3e5bd66e955f965cb0ffc5819e5fc",
+        "oracle.json": "36e0e532bf173e9a6f036a07d70a112ff8b01d8d0c65efd04812a95f8b65130c"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-01-etw",
+      "controllerStartNs": "103767872171600",
+      "controllerEndNs": "103768237042600",
+      "processWallMs": 364.871,
+      "events": 450,
+      "workloadUs": 22704.9,
+      "callLatencyUs": {
+        "median": 7.3,
+        "p95": 246.5,
+        "p99": 360.0
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 7090176,
+      "peakWorkingSetBytes": 7090176
+    },
+    {
+      "architecture": "x86",
+      "mode": "original",
+      "repetition": 1,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "47e3e7fc7598c6d4ded7e669bb8a0daa2be642d7508fa1616c76b814ce3abd36"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-01-original",
+      "controllerStartNs": "103768291024400",
+      "controllerEndNs": "103768339203300",
+      "processWallMs": 48.1789,
+      "events": 450,
+      "workloadUs": 22861.7,
+      "callLatencyUs": {
+        "median": 6.9,
+        "p95": 240.8,
+        "p99": 330.2
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 6832128,
+      "peakWorkingSetBytes": 6832128
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida",
+      "repetition": 2,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
+        "oracle.json": "4a222fbac1e5ca0e96ece160ef45fcfd5df7c15966d7bb3432c3284ef89870a1"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-02-frida",
+      "controllerStartNs": "103768367935400",
+      "controllerEndNs": "103768449409000",
+      "processWallMs": 81.4736,
+      "events": 450,
+      "workloadUs": 28856.6,
+      "callLatencyUs": {
+        "median": 25.9,
+        "p95": 299.2,
+        "p99": 351.5
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 14098432,
+      "peakWorkingSetBytes": 14098432
+    },
+    {
+      "architecture": "x86",
+      "mode": "etw",
+      "repetition": 2,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "13a5387de29f7309d45517bd2d16d5598ca93f542fe0a212a3af5fceebd645a8",
+        "etw.json": "2e52951b3edb400efcbcf62df7fb38a9e84de35ca563e7eb5a6d96e4dcb13eb0",
+        "oracle.json": "eec3497a520a6a2e57533ed9688a067bd35510951a56c2b4d266c2c4c8020548"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-02-etw",
+      "controllerStartNs": "103768467099600",
+      "controllerEndNs": "103768819446300",
+      "processWallMs": 352.3467,
+      "events": 450,
+      "workloadUs": 21109.6,
+      "callLatencyUs": {
+        "median": 7.0,
+        "p95": 201.3,
+        "p99": 331.7
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 7094272,
+      "peakWorkingSetBytes": 7094272
+    },
+    {
+      "architecture": "x86",
+      "mode": "original",
+      "repetition": 2,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "becbb0e360b720b43e5ae75f756798c18a16719857c21003bebad8cb722724c3"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-02-original",
+      "controllerStartNs": "103768868135200",
+      "controllerEndNs": "103768912586300",
+      "processWallMs": 44.4511,
+      "events": 450,
+      "workloadUs": 20851.7,
+      "callLatencyUs": {
+        "median": 6.5,
+        "p95": 205.7,
+        "p99": 302.0
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 6823936,
+      "peakWorkingSetBytes": 6823936
+    },
+    {
+      "architecture": "x86",
+      "mode": "knmon",
+      "repetition": 2,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "capture.json": "7210eb115ef48fc6ca8a8850d0e9aebef38630a2af7b5b68fae45c13d5d4ff3f",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "00a091c734f3152c0411023b755957127eee22bfd6507506914f64886308efa4",
+        "session/agent-events.jsonl": "be4eb7ca35eca65b2adbce2ab1eac3147ec8452fd00d394e762e5323700563c0",
+        "session/audit.jsonl": "916ead78ee284c1c1b604e88c31d40de54641c29030a90b8ee706072774a0cd5",
+        "session/manifest.json": "e45864ff8d7e730aba2f645999f73dc60c54c4cafb919da31b63bfffbf621df3",
+        "session/trace-events.jsonl": "60fc9504f665e206a49f3642363d275c946997d65378ca0adc283b3fcaa9e259"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-02-knmon",
+      "controllerStartNs": "103768930946400",
+      "controllerEndNs": "103773089902700",
+      "processWallMs": 4158.9563,
+      "events": 450,
+      "workloadUs": 23556.1,
+      "callLatencyUs": {
+        "median": 11.9,
+        "p95": 225.4,
+        "p99": 362.2
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 18300928,
+      "peakWorkingSetBytes": 19673088
+    },
+    {
+      "architecture": "x86",
+      "mode": "etw",
+      "repetition": 3,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "d50e0444ecfc867ae933e21a6dba9c691a7b30621c1dfd506e11f12ec41194df",
+        "etw.json": "17f1c0afb7f659665623f44ad5ef519f99d13155f7a1462ad2e87fbbce2268ac",
+        "oracle.json": "0a2caa53ac19307c0f52e2a1fcea95efc47761c255f662359d3f279b9aaed6ef"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-03-etw",
+      "controllerStartNs": "103773113399900",
+      "controllerEndNs": "103773468513600",
+      "processWallMs": 355.1137,
+      "events": 450,
+      "workloadUs": 21493.6,
+      "callLatencyUs": {
+        "median": 11.0,
+        "p95": 212.8,
+        "p99": 319.2
+      },
+      "cpu100ns": 0,
+      "workingSetBytes": 7081984,
+      "peakWorkingSetBytes": 7090176
+    },
+    {
+      "architecture": "x86",
+      "mode": "original",
+      "repetition": 3,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "ebeb2e50257c5c9f7a65c42a393ec3f2c711105dd2b5c08b9136ea31bcb6e303"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-03-original",
+      "controllerStartNs": "103773548241200",
+      "controllerEndNs": "103773592960200",
+      "processWallMs": 44.719,
+      "events": 450,
+      "workloadUs": 20132.0,
+      "callLatencyUs": {
+        "median": 6.1,
+        "p95": 192.1,
+        "p99": 317.9
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 6823936,
+      "peakWorkingSetBytes": 6823936
+    },
+    {
+      "architecture": "x86",
+      "mode": "knmon",
+      "repetition": 3,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "capture.json": "0ea70bf7e52ef40dcf3366ee1c1d9d26796f6800cbe3909d457726eeaae77070",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "462c346f0b95e8d1203a7574d1e4b123b9cb6b2396353161b946269818c9f16e",
+        "session/agent-events.jsonl": "c6b1e684ead1e254d27bd06bd51feb0d1c48dcbfc03a084db886e24f498c602d",
+        "session/audit.jsonl": "91cceebef397803f5cc2829179c5a26794ab9372f5f2621cfc3a98aa6789e3ec",
+        "session/manifest.json": "33c394a896ba907933beb5d866297f0715e657307cc97a9eae5a8786194c2928",
+        "session/trace-events.jsonl": "f40a5301b8467c9f6df3618aed33eea0a9730aa2cfba3e27ed24212e55eeecc2"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-03-knmon",
+      "controllerStartNs": "103773611104000",
+      "controllerEndNs": "103777783573100",
+      "processWallMs": 4172.4691,
+      "events": 450,
+      "workloadUs": 23933.0,
+      "callLatencyUs": {
+        "median": 11.6,
+        "p95": 222.7,
+        "p99": 360.4
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 18305024,
+      "peakWorkingSetBytes": 19673088
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida",
+      "repetition": 3,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
+        "oracle.json": "332f27a1792dded693be4d778cbb0d14377b55199870f1d4f631cbf891109f9a"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-03-frida",
+      "controllerStartNs": "103777806802500",
+      "controllerEndNs": "103777889963200",
+      "processWallMs": 83.1607,
+      "events": 450,
+      "workloadUs": 29931.2,
+      "callLatencyUs": {
+        "median": 26.3,
+        "p95": 285.1,
+        "p99": 356.1
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14073856,
+      "peakWorkingSetBytes": 14073856
+    },
+    {
+      "architecture": "x86",
+      "mode": "original",
+      "repetition": 4,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "63783facff0ba89969f3692b05786f52b838aa04577abd8f7a73eadf29533a74"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-04-original",
+      "controllerStartNs": "103777907615400",
+      "controllerEndNs": "103777953139500",
+      "processWallMs": 45.5241,
+      "events": 450,
+      "workloadUs": 20337.3,
+      "callLatencyUs": {
+        "median": 6.5,
+        "p95": 198.1,
+        "p99": 268.8
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 6828032,
+      "peakWorkingSetBytes": 6828032
+    },
+    {
+      "architecture": "x86",
+      "mode": "knmon",
+      "repetition": 4,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "capture.json": "43e871328a8e789c0bc9f3a32a127bfdaa2dee881a4af210e58d1363ac1694d8",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "18395e89c4f5b64715ee03ea24316aa0de9b99081513a51071f280d7deaff4fb",
+        "session/agent-events.jsonl": "70a90ae305a92bdaeabcd236bf1021d8c422bb0c846b509a2cf53cb152bb634f",
+        "session/audit.jsonl": "3ef4390d3e1d48fc2eab12ee76a28be05fb7a9979d963be9d425437d48298b22",
+        "session/manifest.json": "681a2032f1fcd878d883345d5d00a2b9ff47151914e1b61425a40fd26fc74d0a",
+        "session/trace-events.jsonl": "745d72bf0fd43b392e482049bb645984e0ea589f58c851845f9ca2cd5bc43bab"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-04-knmon",
+      "controllerStartNs": "103777970165100",
+      "controllerEndNs": "103782171605900",
+      "processWallMs": 4201.4408,
+      "events": 450,
+      "workloadUs": 23843.9,
+      "callLatencyUs": {
+        "median": 13.0,
+        "p95": 230.2,
+        "p99": 324.1
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 18309120,
+      "peakWorkingSetBytes": 19681280
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida",
+      "repetition": 4,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
+        "oracle.json": "78f9f5867c1c686d50145c0ab4869f3d524e71f6eff4d7682c49afe91ce7246f"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-04-frida",
+      "controllerStartNs": "103782193581800",
+      "controllerEndNs": "103782273184300",
+      "processWallMs": 79.6025,
+      "events": 450,
+      "workloadUs": 28779.4,
+      "callLatencyUs": {
+        "median": 27.0,
+        "p95": 286.6,
+        "p99": 342.9
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 14077952,
+      "peakWorkingSetBytes": 14077952
+    },
+    {
+      "architecture": "x86",
+      "mode": "etw",
+      "repetition": 4,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "b38fc710c264b22778013b7eccc1e19a5816a4679f11e1314d07d0132be544b8",
+        "etw.json": "912c3e5abbe792fec57b7aaa452b733290b1760bf827753e063c014ba08b1afa",
+        "oracle.json": "69f4a76aff8696c09992f8a8a3f3a3423764564176664e092eb716aabd774b8d"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-04-etw",
+      "controllerStartNs": "103782290935000",
+      "controllerEndNs": "103782640114900",
+      "processWallMs": 349.1799,
+      "events": 450,
+      "workloadUs": 21672.2,
+      "callLatencyUs": {
+        "median": 6.4,
+        "p95": 218.7,
+        "p99": 347.9
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 7094272,
+      "peakWorkingSetBytes": 7098368
+    },
+    {
+      "architecture": "x86",
+      "mode": "knmon",
+      "repetition": 5,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "capture.json": "a938b17272ff1a5faee2af5b8bf9db123bd090a07d7374a219a11128d43255a5",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "2324f45aceefc5b170323f16856a1ea1f2332c482c63f4ff87084f3716ae30c0",
+        "session/agent-events.jsonl": "0492fb7f08a26187f63f465827e66ed43e1f28bb69c00dd821098392aeaeded8",
+        "session/audit.jsonl": "f23436caf1be7ab0f764aa2bc2d9f5936a92fddb8afc239bbee2a7b726862141",
+        "session/manifest.json": "f5018f8db0cc7f3dc1d50729960214577108945cc63a382c09d3b4ef7da654dc",
+        "session/trace-events.jsonl": "cc15332d68f104b08fe6d2a90217db56c9eda0f5c8c5a76f1fbcebb9a39596e3"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-05-knmon",
+      "controllerStartNs": "103782700769000",
+      "controllerEndNs": "103786932738000",
+      "processWallMs": 4231.969,
+      "events": 450,
+      "workloadUs": 24002.6,
+      "callLatencyUs": {
+        "median": 11.8,
+        "p95": 230.6,
+        "p99": 329.5
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 18309120,
+      "peakWorkingSetBytes": 19677184
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida",
+      "repetition": 5,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
+        "oracle.json": "133c7b317a6a2d56db80e4523b44a86ce2740934ef16a456facaa082decf1362"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-05-frida",
+      "controllerStartNs": "103786954835600",
+      "controllerEndNs": "103787039643800",
+      "processWallMs": 84.8082,
+      "events": 450,
+      "workloadUs": 29223.4,
+      "callLatencyUs": {
+        "median": 25.3,
+        "p95": 296.4,
+        "p99": 350.9
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14090240,
+      "peakWorkingSetBytes": 14090240
+    },
+    {
+      "architecture": "x86",
+      "mode": "etw",
+      "repetition": 5,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "d013ee97f2437e3304e9112f7b0b893d94eb5c8eba1957de612d322873acd796",
+        "etw.json": "e235bd7264558a5dc6a7c6681dba21147aac50ad057926cdbf36d495537b9a72",
+        "oracle.json": "0ec3b53f367b171255d2293c656ff77ed39fd7d98452bdd00873834d37d68edf"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-05-etw",
+      "controllerStartNs": "103787058565200",
+      "controllerEndNs": "103787415065800",
+      "processWallMs": 356.5006,
+      "events": 450,
+      "workloadUs": 21602.7,
+      "callLatencyUs": {
+        "median": 6.3,
+        "p95": 217.5,
+        "p99": 295.6
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 7090176,
+      "peakWorkingSetBytes": 7094272
+    },
+    {
+      "architecture": "x86",
+      "mode": "original",
+      "repetition": 5,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "61eb3d9de39814e08b314ff2895bd0621b11c5717ed7acdaedb8bf42e88305d7"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-05-original",
+      "controllerStartNs": "103787468357400",
+      "controllerEndNs": "103787512336300",
+      "processWallMs": 43.9789,
+      "events": 450,
+      "workloadUs": 19586.9,
+      "callLatencyUs": {
+        "median": 8.6,
+        "p95": 188.8,
+        "p99": 287.7
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 6828032,
+      "peakWorkingSetBytes": 6828032
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida",
+      "repetition": 6,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
+        "oracle.json": "25f3e0c1f9f608637568ce0116c90cbad91e1482b28ba4daf4575ee1725c7722"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-06-frida",
+      "controllerStartNs": "103787527240900",
+      "controllerEndNs": "103787606524000",
+      "processWallMs": 79.2831,
+      "events": 450,
+      "workloadUs": 27981.4,
+      "callLatencyUs": {
+        "median": 27.0,
+        "p95": 276.0,
+        "p99": 353.3
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14049280,
+      "peakWorkingSetBytes": 14049280
+    },
+    {
+      "architecture": "x86",
+      "mode": "etw",
+      "repetition": 6,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "45f3961edee8fd93da5e3d08e1eeb80357471f7115cbc52718fd2b766159b0d3",
+        "etw.json": "e3e92f7c68a5926defde2a2feb8b0d3b50d2c35d90126182a83da881ff94ae1d",
+        "oracle.json": "e12314fc7ab5e2dfb932e582cc3c8b1c016a7dc50e96b03f90620b0aeca3e193"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-06-etw",
+      "controllerStartNs": "103787623709100",
+      "controllerEndNs": "103787975079100",
+      "processWallMs": 351.37,
+      "events": 450,
+      "workloadUs": 21086.4,
+      "callLatencyUs": {
+        "median": 6.7,
+        "p95": 209.3,
+        "p99": 352.3
+      },
+      "cpu100ns": 0,
+      "workingSetBytes": 7086080,
+      "peakWorkingSetBytes": 7086080
+    },
+    {
+      "architecture": "x86",
+      "mode": "original",
+      "repetition": 6,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "7ea93dd0c63cfb58e0e13bda5318b3e4f20d207c77d32eea49742357db59e393"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-06-original",
+      "controllerStartNs": "103788028915000",
+      "controllerEndNs": "103788072427400",
+      "processWallMs": 43.5124,
+      "events": 450,
+      "workloadUs": 19409.2,
+      "callLatencyUs": {
+        "median": 6.0,
+        "p95": 196.4,
+        "p99": 280.2
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 6832128,
+      "peakWorkingSetBytes": 6832128
+    },
+    {
+      "architecture": "x86",
+      "mode": "knmon",
+      "repetition": 6,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "capture.json": "e34105ded65946f797302316f723f0a2a7cd7dd33c63866cb0c17781eee58b12",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "3712dc291a7d9b6c47b20dcd4ccca90017c6a9f577176701fb7da601a64d9d30",
+        "session/agent-events.jsonl": "e2f58f7218ebb652f5450f700e07edd6dab2d7020fc2b18c33c6cdb73207dc80",
+        "session/audit.jsonl": "5fa979cb700e81002b0cb1a3ae380f3ef79de396b86117c86e3b22bcb853dc8c",
+        "session/manifest.json": "90a602c8a8dbb0b1532a80ec838f6cd54e07b16459990937986f3b0f847b8f00",
+        "session/trace-events.jsonl": "7ccae11d66d47d23dfd2f5ad1f22e885cd806d89c48baefc0e91e67db00a04e7"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-06-knmon",
+      "controllerStartNs": "103788090007800",
+      "controllerEndNs": "103792230084900",
+      "processWallMs": 4140.0771,
+      "events": 450,
+      "workloadUs": 22801.2,
+      "callLatencyUs": {
+        "median": 10.5,
+        "p95": 208.5,
+        "p99": 339.6
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 18305024,
+      "peakWorkingSetBytes": 19673088
+    },
+    {
+      "architecture": "x86",
+      "mode": "etw",
+      "repetition": 7,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "c852a9a6f5a768b4d5fc3cac5130e898debd02d592651ea6a43a7013fcadce8f",
+        "etw.json": "cc740dc5864cb22a19fd36f1d63432d2404a7b1b77715d7ce3df8009e690cc9c",
+        "oracle.json": "a9f30a243b2784b24757bec632ab1f68ea6c8083a891aff9086329331672139a"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-07-etw",
+      "controllerStartNs": "103792254750800",
+      "controllerEndNs": "103792605868500",
+      "processWallMs": 351.1177,
+      "events": 450,
+      "workloadUs": 19794.0,
+      "callLatencyUs": {
+        "median": 6.0,
+        "p95": 203.3,
+        "p99": 269.4
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 7086080,
+      "peakWorkingSetBytes": 7094272
+    },
+    {
+      "architecture": "x86",
+      "mode": "original",
+      "repetition": 7,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "14c0c31a233f329236258be430bc88cde49028c8621f75f6b8314a47d46b4b71"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-07-original",
+      "controllerStartNs": "103792653436200",
+      "controllerEndNs": "103792700144600",
+      "processWallMs": 46.7084,
+      "events": 450,
+      "workloadUs": 19871.1,
+      "callLatencyUs": {
+        "median": 5.7,
+        "p95": 197.4,
+        "p99": 314.7
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 6823936,
+      "peakWorkingSetBytes": 6823936
+    },
+    {
+      "architecture": "x86",
+      "mode": "knmon",
+      "repetition": 7,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "capture.json": "9288f7a571b07d8f57284528e809344d9613cc0ac7eedcd4458f3d1922be45d1",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "ab1e037c7d1da7c35ec051dd3aefc171b8576ab6ee4f451abd036cd6a51dc69d",
+        "session/agent-events.jsonl": "92dcaad3d81e103aad1348b6b9024deba83b19e8f7055e48417953bfb2b0349e",
+        "session/audit.jsonl": "6943b9e458733ef5393595e0f187e98212b914804eeeeae96f7115b5543266e1",
+        "session/manifest.json": "5672f3c510335fb9ab42415e6d6b7bcdf12f988024cf1e63b921e38b5e755785",
+        "session/trace-events.jsonl": "dbeeb76a4d6e1eddf521ff55178df32048a45be8125beaab5a052e31417d7845"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-07-knmon",
+      "controllerStartNs": "103792714342200",
+      "controllerEndNs": "103796873620800",
+      "processWallMs": 4159.2786,
+      "events": 450,
+      "workloadUs": 23281.7,
+      "callLatencyUs": {
+        "median": 13.1,
+        "p95": 217.1,
+        "p99": 346.7
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 18296832,
+      "peakWorkingSetBytes": 19660800
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida",
+      "repetition": 7,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
+        "oracle.json": "557f155f014c5ea57647aa4ae3736f7ea7fb91e6baad71ac8424541d4bb70e9d"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-07-frida",
+      "controllerStartNs": "103796894814300",
+      "controllerEndNs": "103796974111300",
+      "processWallMs": 79.297,
+      "events": 450,
+      "workloadUs": 29530.0,
+      "callLatencyUs": {
+        "median": 25.6,
+        "p95": 290.0,
+        "p99": 352.3
+      },
+      "cpu100ns": 0,
+      "workingSetBytes": 14045184,
+      "peakWorkingSetBytes": 14045184
+    },
+    {
+      "architecture": "x86",
+      "mode": "original",
+      "repetition": 8,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "7474414f980e3b96b64c538ed07e2c72b3107c50c9bbedeb24c20144c0ff6560"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-08-original",
+      "controllerStartNs": "103796993122300",
+      "controllerEndNs": "103797043123800",
+      "processWallMs": 50.0015,
+      "events": 450,
+      "workloadUs": 25420.3,
+      "callLatencyUs": {
+        "median": 7.6,
+        "p95": 269.2,
+        "p99": 370.2
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 6836224,
+      "peakWorkingSetBytes": 6836224
+    },
+    {
+      "architecture": "x86",
+      "mode": "knmon",
+      "repetition": 8,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "capture.json": "72e3594cd46e626e4bc89e024ff134527ad1724217a567fc536db5e0e3772fc2",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "129a10f043a3f41b90252794616b2b973796f9a752ca31989ea2338af932062b",
+        "session/agent-events.jsonl": "8ca9d7833fa936986518acf63006b4a15426920aeb54c2dd4b0a641c1a6f9822",
+        "session/audit.jsonl": "6a91f98b78832f8b5b4abccf3b6c09de287e9a7beb28c49f2648adc0cdf8024c",
+        "session/manifest.json": "274759e964314d63d37049dee078382855da66db0371fba039f16d1bc6e17c1e",
+        "session/trace-events.jsonl": "1ce7c7c89a28056244dbad0b66d51b8215762207c21b3ce62885b14eabe7d0e6"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-08-knmon",
+      "controllerStartNs": "103797061215600",
+      "controllerEndNs": "103801328156300",
+      "processWallMs": 4266.9407,
+      "events": 450,
+      "workloadUs": 23119.5,
+      "callLatencyUs": {
+        "median": 10.4,
+        "p95": 229.6,
+        "p99": 329.7
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 18300928,
+      "peakWorkingSetBytes": 19668992
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida",
+      "repetition": 8,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
+        "oracle.json": "5b9b1e8917ad4bc2ffabaef823bf7f4794093e074d22106db2d39da490ec0c6f"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-08-frida",
+      "controllerStartNs": "103801349452600",
+      "controllerEndNs": "103801433209000",
+      "processWallMs": 83.7564,
+      "events": 450,
+      "workloadUs": 29293.4,
+      "callLatencyUs": {
+        "median": 27.9,
+        "p95": 284.0,
+        "p99": 332.0
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 14045184,
+      "peakWorkingSetBytes": 14045184
+    },
+    {
+      "architecture": "x86",
+      "mode": "etw",
+      "repetition": 8,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "c49e6b0bc93d04bf8bd58fcd253ad6dba2fb3008d60583b07c1235f3a6ae77da",
+        "etw.json": "c753d75a877d803db70fe6c63465593c93fa516a98c00f96541066249a799651",
+        "oracle.json": "3ec30015f949065d40472094711e2dda0c99c70d30abdcfdfc0685cdf7e01be8"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-08-etw",
+      "controllerStartNs": "103801451241400",
+      "controllerEndNs": "103801804523000",
+      "processWallMs": 353.2816,
+      "events": 450,
+      "workloadUs": 22682.3,
+      "callLatencyUs": {
+        "median": 7.0,
+        "p95": 242.3,
+        "p99": 334.6
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 7077888,
+      "peakWorkingSetBytes": 7077888
+    },
+    {
+      "architecture": "x86",
+      "mode": "knmon",
+      "repetition": 9,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "capture.json": "a9678be0852aa6944b95b3f987d7e716fdf5e393db84bd1fa99ddde8d1284815",
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "e4042647e218ba29f0241292a3184bf04da60045b733c50961e38a1e8da4bb64",
+        "session/agent-events.jsonl": "9363f983a5731ada9e800fee42a17f915f3a3e74b09a857f6c04d8fb2000f98f",
+        "session/audit.jsonl": "af766567fb94051e334d1dfeae5797d0e97fd29bde34be84f15ed7c66b663afb",
+        "session/manifest.json": "29ee9dbfd1efd0a416b4642ba9963a1bbdc6c4400363ed2b753417cc955ace63",
+        "session/trace-events.jsonl": "89ba21d4efe3899f584cb82e7f611b7951e31317ebf835f0121a3c627e4d3de5"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-09-knmon",
+      "controllerStartNs": "103801858098900",
+      "controllerEndNs": "103806000256800",
+      "processWallMs": 4142.1579,
+      "events": 450,
+      "workloadUs": 27276.8,
+      "callLatencyUs": {
+        "median": 13.1,
+        "p95": 284.5,
+        "p99": 392.0
+      },
+      "cpu100ns": 0,
+      "workingSetBytes": 18300928,
+      "peakWorkingSetBytes": 19673088
+    },
+    {
+      "architecture": "x86",
+      "mode": "frida",
+      "repetition": 9,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "frida-messages.json": "89aabf545c319e21273d725853fb449f8728437cbe5c8547db2912ad7b8c3ee5",
+        "oracle.json": "e5e04add644eef408d2ff1727f24783b701d16157aa43a0c095b5a8a7dc6d95d"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-09-frida",
+      "controllerStartNs": "103806023917700",
+      "controllerEndNs": "103806105722400",
+      "processWallMs": 81.8047,
+      "events": 450,
+      "workloadUs": 28461.2,
+      "callLatencyUs": {
+        "median": 27.7,
+        "p95": 273.4,
+        "p99": 326.6
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 14077952,
+      "peakWorkingSetBytes": 14077952
+    },
+    {
+      "architecture": "x86",
+      "mode": "etw",
+      "repetition": 9,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "corpus.etl": "ada580ae90c3189696c98df95ad8311e95105f0ff673b026f7980fadb559378a",
+        "etw.json": "d6b07184f521b3870d43c03ee3b24023d27bec604adb566b1d157a77107fee10",
+        "oracle.json": "57d1e87a89703313ac4fd752809af7148a484d0baf93941585ed2aac92b7c2d9"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-09-etw",
+      "controllerStartNs": "103806124414600",
+      "controllerEndNs": "103806476268900",
+      "processWallMs": 351.8543,
+      "events": 450,
+      "workloadUs": 22369.9,
+      "callLatencyUs": {
+        "median": 6.5,
+        "p95": 227.9,
+        "p99": 345.0
+      },
+      "cpu100ns": 312500,
+      "workingSetBytes": 7086080,
+      "peakWorkingSetBytes": 7094272
+    },
+    {
+      "architecture": "x86",
+      "mode": "original",
+      "repetition": 9,
+      "configuration": "Debug",
+      "binaries": {
+        "knmon-comparison-target.exe": "1b6ca67c10eeb2160cf58e42d8fd409fbe274cbe256cf528a321f2bb24066bca",
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-etw-corpus-reader.exe": "56e8a1c5f5fc2bb3edd82f414bfb2271aba6553850af943e462d07e1bba3971a",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4"
+      },
+      "artifacts": {
+        "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
+        "oracle.json": "efd28a23a3f2baa695601c2a370feb4d5473ba38a14f3184b758daa8abb41ebb"
+      },
+      "comparison": {
+        "missing": 0,
+        "unexpected": 0,
+        "orderMismatches": 0,
+        "expected": 450,
+        "observed": 450
+      },
+      "targetExitCode": 0,
+      "directory": "x86-09-original",
+      "controllerStartNs": "103806525695900",
+      "controllerEndNs": "103806571885300",
+      "processWallMs": 46.1894,
+      "events": 450,
+      "workloadUs": 20853.4,
+      "callLatencyUs": {
+        "median": 6.3,
+        "p95": 207.7,
+        "p99": 303.2
+      },
+      "cpu100ns": 156250,
+      "workingSetBytes": 6823936,
+      "peakWorkingSetBytes": 6823936
+    }
+  ],
+  "status": "passed"
+}

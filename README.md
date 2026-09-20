@@ -45,6 +45,11 @@ The current definition and hook pipeline reports:
   generator, native selection policy, Agent, and UI
 - Dynamic resolver substitution is restricted to the same compiled subset
 
+The [executed comparison corpus](docs/competitive-evidence.md) records actual
+x86/x64 original, KN Monitor, Frida and private ETW runs with source/binary hashes,
+semantic comparisons and caller-measured latency/RSS. Its scope and unverified
+platforms are explicit; it does not establish a general competitive ranking.
+
 Catalog definitions do not imply safe runtime support. Opaque prototypes,
 variadic calls, aggregates, and unresolved typedefs cannot use the old integer
 dispatcher. Explicit unsupported selections fail before injection; module
