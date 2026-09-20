@@ -24,6 +24,12 @@ events and matching outputs/errors. Frida CModule is faster and uses less
 target RSS than KNMon on this corpus. This evidence does not support a World
 No.1 or lowest-overhead claim.
 
+The [desktop polling change](desktop-control-polling.md) passes 14 deterministic
+polling, terminal-tail and WOW64 regressions, the full UI validator suite, both
+Release desktop builds/security suites, and real attach/filter/stop/export on
+both architectures. The final UI runs exported 250/230 events, retained native
+record totals through terminal draining and left both targets alive after stop.
+
 After the failure-state correction in `4e5a9df`, both native Release builds
 completed again. x64 executed all 23 CTests. x86 passed 17; six cases could not
 start. Defender recorded these x86 Release detections on 2026-09-20:
@@ -79,7 +85,7 @@ and export them, detach while the target survives, and exit normally. Raw Job
 samples include WebView children and separate target resources. The hidden-window
 scope and sampled working-set sums are not a foreground performance score.
 
-The clean source archive from `4e5a9df` was extracted without Git metadata and
+The earlier clean source archive from `4e5a9df` was extracted without Git metadata and
 rebuilt with the pinned Node/CMake/MSVC/SDK configuration. npm installation,
 frontend build/validation and both complete native Debug suites passed. The
 frozen reconstruction producer retained source, command, compiler and binary
@@ -88,10 +94,11 @@ hashes. The archive contains 763 entries and has SHA-256
 Both architectures executed all 23 CTests, including the new failed-launch
 regression; the extracted-source WOW64 UI regressions also passed. Revalidation
 rejects altered command, compiler, binary, test and frontend records. The
-integrated report now passes seven evidence scopes and retains ten incomplete
+integrated report for that revision passed seven evidence scopes and retained ten incomplete
 scopes, with current source reconstruction, Release backend execution, desktop
 interaction, dependency/advisory checks, typed ABI freshness and competitive
-semantics verified together. Subsequent product changes require a fresh source
-reconstruction before that gate can pass again.
+semantics verified together. The subsequent desktop polling and tail-retention
+changes require a fresh source reconstruction from their shipped revision before
+that gate can pass again; the earlier archive is historical evidence.
 See `source-build-contract.md` for reproduction and
 `technical-readiness.md` for the fail-closed artifact verification policy.

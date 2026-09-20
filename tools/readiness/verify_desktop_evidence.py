@@ -104,6 +104,8 @@ def evidence_controls(directory):
         ("missing UI phase", lambda value: value["observations"].pop(2), "phases"),
         ("wrong page", lambda value: value["observations"][2].update(url="https://example.invalid/"), "page identity"),
         ("renderer exception", lambda value: value["errors"].append({"text": "failure"}), "interaction failed"),
+        ("ownership poll failure", lambda value: value["observations"][3].update(output=value["observations"][3]["output"] + "\nnative_ownership_poll_failed: list_daemon_sessions; failure"), "polling failure"),
+        ("trace drain failure", lambda value: value["observations"][4].update(output=value["observations"][4]["output"] + "\nstream_batch_poll_failed: drain_native_trace_batches; failure"), "polling failure"),
         ("nonempty initial trace", lambda value: value["observations"][0]["rows"].append(["1"]), "preexisting"),
         ("wrong target selection", lambda value: value["observations"][1].update(selectedTarget="wrong"), "owned target"),
         ("dropped native events", lambda value: value["observations"][2].update(status=value["observations"][2]["status"].replace("Dropped: 0", "Dropped: 1")), "event loss"),

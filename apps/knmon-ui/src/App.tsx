@@ -70,6 +70,8 @@ import type { TraceThreadGroup, TraceTimelineBucket } from "./traceViews";
 import { computeVirtualTraceWindow } from "./virtualTrace";
 import { architectureMismatchMessage, normalizeNativeArchitecture, targetEligibilityReason } from "./targetArchitecture";
 import type { NativeArchitecture } from "./targetArchitecture";
+import { createNativeOwnershipPolling, isDaemonSession, mergeSessionSnapshot, retainUnchangedSnapshot, selectTraceDrainSession } from "./nativeOwnershipPolling";
+import type { NativeOwnershipPolling } from "./nativeOwnershipPolling";
 
 type LeftTab = "targets" | "apis" | "profiles";
 type TraceMode = "flat" | "call-tree" | "errors" | "threads" | "timeline";
@@ -509,10 +511,6 @@ function isNativeSessionTerminal(session: NativeSession): boolean {
   return ["stopped", "failed", "stale", "recovery_required"].includes(session.sessionState);
 }
 
-function isDaemonSession(session: NativeSession): boolean {
-  return session.sessionKind.startsWith("daemon_") || session.daemonProcessId > 0;
-}
-
 function targetExitNoticeMessage(session: NativeSession): string {
   return `Target process ${session.targetProcessId} exited while ${session.sessionKind} was being monitored.`;
 }
@@ -615,7 +613,8 @@ function App() {
   ]);
   const nextQueryClauseId = useRef(1);
   const streamBatchCursors = useRef<Record<string, number>>({});
-  const terminalDrainCompleted = useRef<Set<string>>(new Set());
+  const [terminalDrainCompleted, setTerminalDrainCompleted] = useState<Set<string>>(() => new Set());
+  const [traceDrainFailedSession, setTraceDrainFailedSession] = useState<string | null>(null);
   const lastSessionTargetAlive = useRef<Record<string, boolean>>({});
   const notifiedExitedSessions = useRef<Set<string>>(new Set());
   const traceScrollRef = useRef<HTMLDivElement | null>(null);
@@ -627,6 +626,7 @@ function App() {
   const traceSessionId = useRef<string | null>(null);
   const traceAutoScrollRef = useRef(traceAutoScroll);
   const selectedEventIdRef = useRef(selectedEventId);
+  const ownershipPolling = useRef<NativeOwnershipPolling | null>(null);
 
   useEffect(() => {
     traceAutoScrollRef.current = traceAutoScroll;
@@ -680,6 +680,7 @@ function App() {
     }, (message) =>
     {
       setOutputEvents((current) => [makeAuditEvent("trace_ingest_worker_failed", "trace_ingest_worker", message), ...current].slice(0, 80));
+      setTraceDrainFailedSession(traceSessionId.current);
       worker.terminate();
     });
     worker.onmessage = (event: MessageEvent<TraceIngestDelta>) => client.receive(event.data);
@@ -760,6 +761,19 @@ function App() {
 
   function appendOutput(eventsToAppend: AuditEvent[]) {
     setOutputEvents((current) => [...eventsToAppend, ...current].slice(0, 80));
+  }
+
+  function rememberNativeSession(session: NativeSession)
+  {
+    if (isDaemonSession(session))
+    {
+      ownershipPolling.current?.refreshDaemons();
+    }
+    else
+    {
+      ownershipPolling.current?.refreshLocal();
+    }
+    setNativeSessions((current) => [session, ...current.filter((item) => item.sessionId !== session.sessionId)]);
   }
 
   function postTraceIngest(command: TraceIngestCommand, epoch = traceIngestClient.current?.epoch): Promise<boolean>
@@ -1009,56 +1023,44 @@ function App() {
   const nativePollingEnabled =
     nativeBusy ||
     nativeOperations.some((operation) => isNativeOperationActive(operation)) ||
-    nativeSessions.some((session) => isNativeSessionActive(session));
+    nativeSessions.some((session) => !isDaemonSession(session) && isNativeSessionActive(session));
+  const daemonPollingActive = nativeSessions.some((session) => isDaemonSession(session) && isNativeSessionActive(session));
 
-  useEffect(() => {
-    if (!nativePollingEnabled) {
-      return undefined;
-    }
-
-    let active = true;
-    let pollInFlight = false;
-
-    const refreshNativeOwnership = async () => {
-      if (pollInFlight) {
-        return;
+  useEffect(() =>
+  {
+    const polling = createNativeOwnershipPolling({
+      operations: listNativeOperations,
+      sessions: listNativeSessions,
+      daemons: listDaemonSessions,
+      onLocal: (operations, sessions) =>
+      {
+        setNativeOperations((current) => retainUnchangedSnapshot(current, operations));
+        setNativeSessions((current) => mergeSessionSnapshot(current, sessions, false));
+      },
+      onDaemons: (sessions) => setNativeSessions((current) => mergeSessionSnapshot(current, sessions, true)),
+      onError: (source, error) =>
+      {
+        const message = error instanceof Error ? error.message : String(error);
+        appendOutput([makeAuditEvent("native_ownership_poll_failed", source === "daemon" ? "list_daemon_sessions" : "list_native_sessions", message)]);
       }
-
-      pollInFlight = true;
-      try {
-        const [operations, sessions, daemonSessions] = await Promise.all([
-          listNativeOperations(),
-          listNativeSessions(),
-          listDaemonSessions()
-        ]);
-        if (active) {
-          setNativeOperations(operations);
-          const daemonIds = new Set(daemonSessions.map((session) => session.sessionId));
-          const nextSessions = [...daemonSessions, ...sessions.filter((session) => !daemonIds.has(session.sessionId))];
-          observeTargetExitTransitions(nextSessions);
-          setNativeSessions(nextSessions);
-        }
-      } catch (error) {
-        if (active) {
-          const message = error instanceof Error ? error.message : String(error);
-          appendOutput([makeAuditEvent("native_ownership_poll_failed", "list_native_sessions", message)]);
-        }
-      }
-      finally {
-        pollInFlight = false;
-      }
+    });
+    ownershipPolling.current = polling;
+    return () =>
+    {
+      polling.dispose();
+      ownershipPolling.current = null;
     };
+  }, []);
 
-    void refreshNativeOwnership();
-    const timer = window.setInterval(() => {
-      void refreshNativeOwnership();
-    }, 500);
+  useEffect(() =>
+  {
+    ownershipPolling.current?.setActivity(nativePollingEnabled, daemonPollingActive);
+  }, [nativePollingEnabled, daemonPollingActive]);
 
-    return () => {
-      active = false;
-      window.clearInterval(timer);
-    };
-  }, [nativePollingEnabled]);
+  useEffect(() =>
+  {
+    observeTargetExitTransitions(nativeSessions);
+  }, [nativeSessions]);
 
   const compiledTraceQuery = useMemo(
     () => compileTraceQuery(traceQueryClauses, traceQueryMatchMode),
@@ -1145,6 +1147,12 @@ function App() {
     ? nativeSessions.find((session) => session.sessionId === launchSession.sessionId) ?? launchSession
     : null;
   const displayNativeSession = activeNativeSession ?? currentLaunchSession;
+  const traceNativeSession = nativeSessions.find((session) => session.sessionId === traceSessionId.current) ?? null;
+  const traceDrainFailed = traceViewMode.current === "live" && traceSessionId.current !== null && traceDrainFailedSession === traceSessionId.current;
+  const drainNativeSession = traceDrainFailed ? null
+    : selectTraceDrainSession(nativeSessions, traceSessionId.current, traceViewMode.current, terminalDrainCompleted);
+  const traceTailDraining = drainNativeSession !== null && isNativeSessionTerminal(drainNativeSession);
+  const traceStatus = traceDrainFailed ? "drain_failed" : traceTailDraining ? "draining" : null;
   const canStopNativeSession = activeNativeSession !== null && !activeNativeSession.stopRequested;
   const launchMonitorActive = activeNativeSession?.sessionKind === "launch_capture_stream";
   const launchButtonLabel = launchDialogOpen ? "Choose Target" : launchMonitorActive ? "Monitoring" : nativeBusy ? "Working" : "Launch & Monitor";
@@ -1155,7 +1163,7 @@ function App() {
       : displayNativeSession && isNativeSessionTerminal(displayNativeSession)
         ? "pulse stopped"
         : "pulse";
-  const topbarStatusLabel = processExitNotice
+  const topbarStatusLabel = traceStatus ?? (processExitNotice
     ? "target exited"
     : activeNativeSession
       ? activeNativeSession.sessionState
@@ -1163,21 +1171,15 @@ function App() {
         ? "working"
         : displayNativeSession
           ? displayNativeSession.sessionState
-          : "idle";
-  const canLaunchMonitor = !apiSelectionBlocked && !launchDialogOpen && !nativeBusy && activeNativeOperation === null && activeNativeSession === null;
-  const canRunTargetAction = !apiSelectionBlocked && targetBlockReason === null && !nativeBusy && activeNativeOperation === null && activeNativeSession === null;
-  const drainNativeSession = activeNativeSession && !isDaemonSession(activeNativeSession)
-    ? activeNativeSession
-    : currentLaunchSession && !isDaemonSession(currentLaunchSession) && !terminalDrainCompleted.current.has(currentLaunchSession.sessionId)
-      ? currentLaunchSession
-      : null;
+          : "idle");
+  const canLaunchMonitor = !apiSelectionBlocked && !launchDialogOpen && !nativeBusy && !traceTailDraining && activeNativeOperation === null && activeNativeSession === null;
+  const canRunTargetAction = !apiSelectionBlocked && targetBlockReason === null && !nativeBusy && !traceTailDraining && activeNativeOperation === null && activeNativeSession === null;
   const processTreeSummary = summarizeProcessTree(processTreeResult);
   // Byte estimate comes incrementally from the ingest worker; re-serializing the
   // whole window here would run multi-MB JSON.stringify on every snapshot.
   const sessionBytes = estimatedSessionBytes;
   const totalTraceEventCount = Math.max(totalCapturedEvents,
-    traceViewMode.current === "live" && displayNativeSession?.sessionId === traceSessionId.current
-      ? displayNativeSession?.recordsStreamed ?? 0 : 0);
+    traceViewMode.current === "live" ? traceNativeSession?.recordsStreamed ?? 0 : 0);
   const trimmedTraceEventCount = Math.max(0, totalTraceEventCount - events.length);
   const selectedCatalogRow = sessionCatalog?.sessions.find((row) => row.path === selectedCatalogPath) ?? null;
   const selectedTraceIndexEvent = traceIndex?.events.find((event) => traceIndexEventKey(event) === selectedTraceIndexEventKey) ?? null;
@@ -1416,7 +1418,7 @@ function App() {
           // Drain until an empty response so the tail is never dropped, then
           // mark the session fully drained.
           if (batches.length === 0) {
-            terminalDrainCompleted.current.add(sessionId);
+            setTerminalDrainCompleted(new Set([sessionId]));
             active = false;
 
             if (timer !== undefined) {
@@ -1437,6 +1439,7 @@ function App() {
         // forever; stop after a bounded number of consecutive failures.
         if (consecutiveFailures >= maxConsecutivePollFailures) {
           active = false;
+          setTraceDrainFailedSession(sessionId);
           if (timer !== undefined) {
             window.clearInterval(timer);
           }
@@ -1468,7 +1471,8 @@ function App() {
     void postTraceIngest({ type: "reset" });
     setReplaySource(null);
     setProcessExitNotice(null);
-    terminalDrainCompleted.current.clear();
+    setTerminalDrainCompleted(new Set());
+    setTraceDrainFailedSession(null);
   }
 
   async function startLaunchMonitorForTarget(targetPath: string, workingDirectory: string) {
@@ -1510,15 +1514,11 @@ function App() {
 
       appendOutput([makeAuditEvent("launch_requested", "start_launch_monitor_session", `Early-bird launch monitor requested for ${targetPath}; scope=${apiSelectionSummary}.`)]);
       const session = await startLaunchMonitorSession(targetPath, workingDirectory, launchArguments.trim(), apiSelectionRequest);
-      terminalDrainCompleted.current.delete(session.sessionId);
       traceSessionId.current = session.sessionId;
       streamBatchCursors.current[session.sessionId] = 0;
       setLaunchSession(session);
       setBackendMode("native-capture");
-      setNativeSessions((current) => {
-        const remaining = current.filter((item) => item.sessionId !== session.sessionId);
-        return [session, ...remaining];
-      });
+      rememberNativeSession(session);
       setInspectorTab("output");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -1980,13 +1980,9 @@ function App() {
     try {
       appendOutput([makeAuditEvent("stream_attach_requested", "start_streaming_attach_session", `Streaming attach requested for PID ${selectedTarget.pid}; scope=${apiSelectionSummary}.`)]);
       const session = await startStreamingAttachSession(selectedTarget.pid, apiSelectionRequest);
-      terminalDrainCompleted.current.delete(session.sessionId);
       traceSessionId.current = session.sessionId;
       streamBatchCursors.current[session.sessionId] = 0;
-      setNativeSessions((current) => {
-        const remaining = current.filter((item) => item.sessionId !== session.sessionId);
-        return [session, ...remaining];
-      });
+      rememberNativeSession(session);
       setInspectorTab("output");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -2016,11 +2012,7 @@ function App() {
     try {
       appendOutput([makeAuditEvent("daemon_session_requested", "start_daemon_supervised_session", `Daemon-supervised attach requested for PID ${selectedTarget.pid}; scope=${apiSelectionSummary}.`)]);
       const session = await startDaemonSupervisedSession(selectedTarget.pid, apiSelectionRequest);
-      terminalDrainCompleted.current.delete(session.sessionId);
-      setNativeSessions((current) => {
-        const remaining = current.filter((item) => item.sessionId !== session.sessionId);
-        return [session, ...remaining];
-      });
+      rememberNativeSession(session);
       setInspectorTab("output");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -2100,6 +2092,7 @@ function App() {
     try {
       appendOutput([makeAuditEvent("operation_cancel_requested", "cancel_native_operation", activeNativeOperation.operationId)]);
       const operation = await cancelNativeOperation(activeNativeOperation.operationId);
+      ownershipPolling.current?.refreshLocal();
       setNativeOperations((current) => {
         const remaining = current.filter((item) => item.operationId !== operation.operationId);
         return [operation, ...remaining];
@@ -2122,10 +2115,7 @@ function App() {
       const session = isDaemonSession(activeNativeSession)
         ? await stopDaemonSession(activeNativeSession.sessionId)
         : await stopNativeSession(activeNativeSession.sessionId);
-      setNativeSessions((current) => {
-        const remaining = current.filter((item) => item.sessionId !== session.sessionId);
-        return [session, ...remaining];
-      });
+      rememberNativeSession(session);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       appendOutput([makeAuditEvent("session_stop_failed", "stop_native_session", message)]);
@@ -2177,7 +2167,7 @@ function App() {
           <button className="tool-button" type="button" title="Open session">
             <FolderOpen size={15} />
           </button>
-          <button className="tool-button" type="button" title="Export JSONL" onClick={() => downloadJsonl(events)}>
+          <button className="tool-button" type="button" title="Export JSONL" onClick={() => downloadJsonl(events)} disabled={traceTailDraining}>
             <Download size={15} />
           </button>
           <button className="tool-button" type="button" title="Refresh process list" onClick={handleLoadNativeTargets} disabled={nativeBusy}>
@@ -3373,7 +3363,7 @@ function App() {
       </main>
 
       <footer className="statusbar">
-        <span>State: {displayNativeSession ? displayNativeSession.sessionState : "idle"}</span>
+        <span>State: {traceStatus ?? (displayNativeSession ? displayNativeSession.sessionState : "idle")}</span>
         {processExitNotice ? <span>Target exited: {processExitNotice.targetProcessId}</span> : null}
         <span>Events: {events.length}/{totalTraceEventCount}</span>
         {trimmedTraceEventCount > 0 ? <span>Trimmed: {trimmedTraceEventCount}</span> : null}

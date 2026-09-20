@@ -160,7 +160,8 @@ try
   fs.writeFileSync(path.join(output, "capture.png"), Buffer.from(screenshot.data, "base64"));
   phase("stop");
   await click(button('.primary-toolbar button[title="Stop native session"]'));
-  await waitFor(`!document.querySelector(".session-strip") && ${button('.primary-toolbar button[title="Stop native session"]')}?.disabled === true`, "native stop completed", 20000);
+  await waitFor(`!document.querySelector(".session-strip") && ${button('.primary-toolbar button[title="Stop native session"]')}?.disabled === true &&
+    ${button('button[title="Export JSONL"]')}?.disabled === false && document.querySelector(".statusbar")?.innerText.startsWith("State: idle\\n")`, "native stop and terminal trace drain completed", 20000);
   await observe("stopped");
   phase("settled");
   await delay(2000);

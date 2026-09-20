@@ -53,6 +53,8 @@ def verify_interaction(execution, driver, events):
     names = ("idle", "selected", "capture", "filtered", "stopped", "settled")
     require([item["phase"] for item in observations] == list(names), "Desktop interaction phases are incomplete or reordered.")
     require(all(item["url"] == "http://tauri.localhost/" and item["readyState"] == "complete" for item in observations), "Desktop page identity differs.")
+    require(all("native_ownership_poll_failed:" not in item["output"] and "stream_batch_poll_failed:" not in item["output"]
+                for item in observations), "Healthy desktop probe contains a polling failure.")
     by_name = dict(zip(names, observations))
     require(event_count(by_name["idle"]) == 0 and not by_name["idle"]["rows"], "Desktop started with preexisting events.")
     require(execution["binaries"]["knmon-sample-fileio.exe"]["path"].lower() in by_name["selected"]["selectedTarget"].lower() and

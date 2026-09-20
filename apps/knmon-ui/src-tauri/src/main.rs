@@ -203,9 +203,11 @@ fn native_daemon_status() -> Result<NativeDaemonStatus, String>
 }
 
 #[tauri::command]
-fn list_daemon_sessions() -> Result<Vec<NativeSession>, String>
+async fn list_daemon_sessions() -> Result<Vec<NativeSession>, String>
 {
-    native_daemon_sessions()
+    tauri::async_runtime::spawn_blocking(native_daemon_sessions)
+        .await
+        .map_err(|error| format!("list_daemon_sessions task failed: {error}"))?
 }
 
 #[tauri::command]
@@ -529,7 +531,7 @@ mod security_tests
         let resolved = Resolved::resolve(&acl, capabilities, tauri::utils::platform::Target::Windows).unwrap();
         assert!(resolved.has_app_acl);
         let authority = tauri::runtime_authority!(acl, resolved);
-        for command in ["start_launch_monitor_session", "start_streaming_attach_session", "plugin:dialog|open"]
+        for command in ["start_launch_monitor_session", "start_streaming_attach_session", "list_daemon_sessions", "plugin:dialog|open"]
         {
             assert!(authority.resolve_access(command, "main", "main", &Origin::Local).is_some(), "{command}");
             assert!(authority.resolve_access(command, "foreign", "foreign", &Origin::Local).is_none(), "{command}");

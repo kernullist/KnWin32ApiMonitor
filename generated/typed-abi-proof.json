@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "observedAtUtc": "2026-09-20T11:55:03.010Z",
+  "observedAtUtc": "2026-09-20T12:51:32.577Z",
   "windowsRelease": "10.0.26200",
   "configuration": "Debug",
   "apiKeys": [
@@ -12,7 +12,7 @@
     "user32.dll!enumchildwindows"
   ],
   "source": {
-    "sha256": "24e3b3975842dd67af478a57d58ec9ea81f57f80bf29eb3a8b5ea39a333daa1c",
+    "sha256": "08455c0de2c8d942fdabd80e2b59f88b2de74392c5e05bbd5608b11975a0b4c4",
     "files": [
       {
         "path": "apps/knmon-ui/src/traceConversion.ts",
@@ -816,7 +816,7 @@
       },
       {
         "path": "package.json",
-        "sha256": "65e329d7d36b54a9bd87e4dfa041d93590a6ec72e9ec7c2f9b0ba796c586556f"
+        "sha256": "9537f8f628f53e00b28ee6f93940a668baac094bea085ecd0621459982768056"
       },
       {
         "path": "samples/targets/dynamic-probe/src/main.cpp",
@@ -926,7 +926,7 @@
         "d2d1.dll": "78deb0fc7c3195a691864ee0638912ea3ef46e72d2ad6af258b7ac815798dcb1",
         "user32.dll": "fb15460c5a7068a9cb118cfdec0b60f2c715018c4af8f501b62825a6435421d1"
       },
-      "ctestLogSha256": "d3bbe21423f21dde623611f38e3172db4ff65f0605ce637d9e4b907795cb27da",
+      "ctestLogSha256": "7c2bb4f0f79055a3d44c5c4adf986e15ee25ef83984d1d0064b0b3d78becbd83",
       "live": {
         "success": true,
         "apis": [
@@ -964,7 +964,7 @@
         "d2d1.dll": "6eaffafef20b3ff8ab828b210b09898d099ceaad630040be4488f265ce74ca7c",
         "user32.dll": "225f16bf0969e8f0869484791fd5764d879e2905de912a475ebdd63ad6763558"
       },
-      "ctestLogSha256": "207bd138c8d8d6890bf7cb5a45c06af781f2cd670d8455be2f3220e66ec0b441",
+      "ctestLogSha256": "7d35222a817bf56bf78f7c34ad9722de79ddaeff6e62edd7c2ac5cbb0958a7cf",
       "live": {
         "success": true,
         "apis": [
