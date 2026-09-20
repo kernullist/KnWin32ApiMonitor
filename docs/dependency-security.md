@@ -36,3 +36,11 @@ Re-run audits when preparing a release; a dated clean report cannot rule out
 later advisories or unknown defects. The source lockfiles and registry checksums
 are the dependency identities. These audit results do not certify native PE
 hardening, the Windows OS matrix or the complete release package.
+
+The combined [dependency inventory](dependency-inventory.md) now preserves npm
+archive integrity, both locked Windows Cargo graphs, dependency edges and native
+file checksums in CycloneDX 1.7. Its verifier rejects stale and consistently
+rewritten graph evidence. A fresh 2026-09-20 audit still reports zero npm/Cargo
+vulnerabilities. RustSec upstream `main` and the audited local database both
+resolve to `d5c17953a895cf19e8d3ce66eaa42b6fcfe1fb16`; the five Windows-reachable
+unmaintained UNIC warnings remain unchanged.

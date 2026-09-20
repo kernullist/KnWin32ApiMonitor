@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "corpus": "knmon-windows-api-v1",
   "windowsVersion": "10.0.26200",
-  "observedAtUtc": "2026-09-20T08:02:56.615102+00:00",
+  "observedAtUtc": "2026-09-20T08:28:16.690021+00:00",
   "iterations": 64,
   "repetitions": 10,
   "sourceHashEncoding": "utf8-LF",
@@ -30,7 +30,7 @@
     "native/samples/PressureTarget.cpp": "cd3217558e2d2ccd8fdd59c6aeae32477c5564bd3bf9c830d9469fbf953c16d4",
     "native/samples/TypedAbiTarget.cpp": "441a28ae93c5df956ade20638ae604d8b0f6bc2b8974def8d01170f5767010f3"
   },
-  "nativeSourceSha256": "a813f81b67f0ebd2dc8bebcace0708e9d15366d2c461eb787bc4e7728aa48e29",
+  "nativeSourceSha256": "493746c2d2c23b47a1aef2608a8ceae86624c0e142147ee7d7a2ea7bf2d85860",
   "kernelEtwProbes": [
     {
       "architecture": "x64",
@@ -61,7 +61,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "0b0ee2d1695bfebf438619cb21ca406d99f0e28c29c8a4fb98e6d0df80341f27"
+        "oracle.json": "c0d3bdfc4565832e5621d0431b9f7e4dd6b33b9ef77e1014bf9eca5ca3f8c1d6"
       },
       "comparison": {
         "missing": 0,
@@ -72,19 +72,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-00-original",
-      "controllerStartNs": "110779408869500",
-      "controllerEndNs": "110779457308100",
-      "processWallMs": 48.4386,
+      "controllerStartNs": "112307845719400",
+      "controllerEndNs": "112307937972300",
+      "processWallMs": 92.2529,
       "events": 450,
-      "workloadUs": 25478.8,
+      "workloadUs": 37075.6,
       "callLatencyUs": {
-        "median": 7.8,
-        "p95": 254.7,
-        "p99": 393.1
+        "median": 8.1,
+        "p95": 341.6,
+        "p99": 578.7
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 5939200,
-      "peakWorkingSetBytes": 5939200
+      "cpu100ns": 156250,
+      "workingSetBytes": 5931008,
+      "peakWorkingSetBytes": 5931008
     },
     {
       "architecture": "x64",
@@ -98,13 +98,13 @@
         "knmon-agent64.dll": "6bdc891d2bbe09991df102691485b73328ff1c373e464ec4d92c21a6300763d7"
       },
       "artifacts": {
-        "capture.json": "b225b784e44cacfe16c83718ff168644e98cf367e447d236effdcd7d6f7da332",
+        "capture.json": "3cfa5dc6ea85a0e0ffbd06503e8daa2609715da50b73b7079039e3993d15fbe6",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "025122f89847037dcb27b30924e15206b9039c8be3ebe941064ed7c3271ce7ee",
-        "session/agent-events.jsonl": "f92d85274db6ff297086d7fac87a177f65314265a80ca342848d906e2caf4be0",
-        "session/audit.jsonl": "1a29d35955ffbdf957804e7a6b451914ecb08bb102140144841d25c39cece357",
-        "session/manifest.json": "ddb0d95c47abb2de347b560c0301d166cb041ca9ad5d2f347b099708c9b33d6f",
-        "session/trace-events.jsonl": "7dbab9b2958eedd94f671fa2b73a817e680a05eafef3fddd2c4b691d438c1f04"
+        "oracle.json": "b9580ece41be33c31f19f598fba74df52890504e339a6b4306de70f247e9ccfd",
+        "session/agent-events.jsonl": "6295bd385e2ed620b6e0cd06f8d721fdc7ac8c74ce443f8dafec3372d1c753db",
+        "session/audit.jsonl": "f2c9dbc8e024ecc9686fa5a5409133d7911e35055cf30b0eef0921a1df76e6c9",
+        "session/manifest.json": "7976d4d20fe2b04a1854d9a86bb793e99a7549fff4215d42580e65f21c4434fd",
+        "session/trace-events.jsonl": "dd862728d0aae61a58074e8fcce28cfd554de0ec1951bdbab02b85692a22876a"
       },
       "comparison": {
         "missing": 0,
@@ -115,19 +115,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-00-knmon",
-      "controllerStartNs": "110779474944700",
-      "controllerEndNs": "110782731589600",
-      "processWallMs": 3256.6449,
+      "controllerStartNs": "112307971576100",
+      "controllerEndNs": "112312847814800",
+      "processWallMs": 4876.2387,
       "events": 450,
-      "workloadUs": 23595.9,
+      "workloadUs": 47171.6,
       "callLatencyUs": {
-        "median": 11.3,
-        "p95": 263.2,
-        "p99": 348.5
+        "median": 15.0,
+        "p95": 346.4,
+        "p99": 910.6
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 18202624,
-      "peakWorkingSetBytes": 19566592
+      "workingSetBytes": 18157568,
+      "peakWorkingSetBytes": 19546112
     },
     {
       "architecture": "x64",
@@ -143,7 +143,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
-        "oracle.json": "411e39e204a6fcae34663ab926c14ff1a9b725e7a0335c4b802fb2b48d160267"
+        "oracle.json": "c48a2fc8311729871dd87083be264bd3ff48406d01c9f66914c7c56cc0d836dc"
       },
       "comparison": {
         "missing": 0,
@@ -154,19 +154,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-00-frida",
-      "controllerStartNs": "110782753620900",
-      "controllerEndNs": "110782994223500",
-      "processWallMs": 240.6026,
+      "controllerStartNs": "112312902014500",
+      "controllerEndNs": "112313285721400",
+      "processWallMs": 383.7069,
       "events": 450,
-      "workloadUs": 27792.4,
+      "workloadUs": 30294.6,
       "callLatencyUs": {
-        "median": 23.1,
-        "p95": 276.9,
-        "p99": 324.6
+        "median": 30.3,
+        "p95": 267.2,
+        "p99": 359.8
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 15192064,
-      "peakWorkingSetBytes": 15192064
+      "workingSetBytes": 15175680,
+      "peakWorkingSetBytes": 15175680
     },
     {
       "architecture": "x64",
@@ -182,7 +182,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
-        "oracle.json": "7d5c94266f902a7d59377dddeabbeb9f25a960540bcd4d7a3987f8be66d168ca"
+        "oracle.json": "132c5c7d27bdffc4e473a07188a6084f55d0edeb85b6346caccb972e4a9339e0"
       },
       "comparison": {
         "missing": 0,
@@ -193,19 +193,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-00-frida-cmodule",
-      "controllerStartNs": "110783019965500",
-      "controllerEndNs": "110783090582100",
-      "processWallMs": 70.6166,
+      "controllerStartNs": "112313340101700",
+      "controllerEndNs": "112313421735500",
+      "processWallMs": 81.6338,
       "events": 450,
-      "workloadUs": 22007.5,
+      "workloadUs": 25008.1,
       "callLatencyUs": {
-        "median": 8.6,
-        "p95": 223.0,
-        "p99": 331.9
+        "median": 8.8,
+        "p95": 256.6,
+        "p99": 423.0
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 15687680,
-      "peakWorkingSetBytes": 15687680
+      "workingSetBytes": 15695872,
+      "peakWorkingSetBytes": 15695872
     },
     {
       "architecture": "x64",
@@ -220,9 +220,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "9e3c574b6bb54d8eb0953cb1c8eef07d2ca1e31d3469a8d81803230bb15bf4da",
-        "etw.json": "236ea406b34ada56d76dfcd0f5d29b516a3b78950e410f3694ae9c350c065f10",
-        "oracle.json": "0103363c8639bee7df38e8a5c30272da57d65cc105d235f7948a86458f1c4184"
+        "corpus.etl": "cb995987994be3370b572edecc76a2dabd5dc5361032e6322d8d264e1d1a77eb",
+        "etw.json": "ec16112c1a0945ad678627d2de4289942dde7091d3c06ab67370563960de7e59",
+        "oracle.json": "a1687ca1ecab5b88999088d1ad7d84373dae20755b383ef882ad011c1f2d307e"
       },
       "comparison": {
         "missing": 0,
@@ -233,19 +233,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-00-etw",
-      "controllerStartNs": "110783109940700",
-      "controllerEndNs": "110783495951200",
-      "processWallMs": 386.0105,
+      "controllerStartNs": "112313450949800",
+      "controllerEndNs": "112313819877800",
+      "processWallMs": 368.928,
       "events": 450,
-      "workloadUs": 21440.4,
+      "workloadUs": 30370.6,
       "callLatencyUs": {
-        "median": 6.8,
-        "p95": 239.0,
-        "p99": 346.3
+        "median": 6.5,
+        "p95": 308.6,
+        "p99": 451.1
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 6164480,
-      "peakWorkingSetBytes": 6164480
+      "cpu100ns": 0,
+      "workingSetBytes": 6160384,
+      "peakWorkingSetBytes": 6160384
     },
     {
       "architecture": "x64",
@@ -259,13 +259,13 @@
         "knmon-agent64.dll": "6bdc891d2bbe09991df102691485b73328ff1c373e464ec4d92c21a6300763d7"
       },
       "artifacts": {
-        "capture.json": "8e012e9179176f661f7901834261dd773bd20d46e902838f9aef09d5b694915e",
+        "capture.json": "b398376b8d4300b3096b688df1e4fd02cc7c7987bbf0775b8a08578fc3b60fc8",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "398275574bde86f630580510ce4130e862c582ab84d92eda2eb4e79e34c684a3",
-        "session/agent-events.jsonl": "dbf5b240ab7c69ccc0a8b3175e1bb26fe4f910aa0707ef059ece2fe8017a9093",
-        "session/audit.jsonl": "2c404bf49849735ccb9af9d76a051c94740a67b5d408601731db33842e08ba00",
-        "session/manifest.json": "ec372ac2fb876ab6e3a2bcd806b48914e65ca0b7d086c973cd9045ce0e7abf99",
-        "session/trace-events.jsonl": "3dd298ede811530db6eb1ef070503252ccc9c72783190f13ed0c0f9316a07757"
+        "oracle.json": "ca9b17baeb6f1f71a1b9307aacacf4efbed68ce08c5d67c802c9e35d5910879f",
+        "session/agent-events.jsonl": "8c0d08e739a48933fe23e595568645a04379bbfd7b2a24c3c4f25316e28667fd",
+        "session/audit.jsonl": "abe7f90d865eeaf36255e8c920553772376881966e0603909925ece4de6a1c3e",
+        "session/manifest.json": "839a8569d3ab7456d2f30f2621da99779c84dbbac3a9733b0a3bab29bbb56ece",
+        "session/trace-events.jsonl": "eceae3289662241b86a92235c11292f64d3ea082a7f9edcb41e6fe2ad0e017dc"
       },
       "comparison": {
         "missing": 0,
@@ -276,19 +276,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-01-knmon",
-      "controllerStartNs": "110783544360000",
-      "controllerEndNs": "110786834067200",
-      "processWallMs": 3289.7072,
+      "controllerStartNs": "112313886143900",
+      "controllerEndNs": "112318330683800",
+      "processWallMs": 4444.5399,
       "events": 450,
-      "workloadUs": 23317.6,
+      "workloadUs": 25728.5,
       "callLatencyUs": {
-        "median": 10.2,
-        "p95": 236.3,
-        "p99": 354.7
+        "median": 11.6,
+        "p95": 254.3,
+        "p99": 405.2
       },
-      "cpu100ns": 0,
-      "workingSetBytes": 18182144,
-      "peakWorkingSetBytes": 19542016
+      "cpu100ns": 156250,
+      "workingSetBytes": 18190336,
+      "peakWorkingSetBytes": 19554304
     },
     {
       "architecture": "x64",
@@ -304,7 +304,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
-        "oracle.json": "7018ef626fab7d577973e51a019ad1d923bac7d26b4f3a658a7869968cfa9a6e"
+        "oracle.json": "20a6850ffa46972d061c9d4c59c2936ad1368cde3601cec93ab3a61677f557d7"
       },
       "comparison": {
         "missing": 0,
@@ -315,19 +315,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-01-frida",
-      "controllerStartNs": "110786856302000",
-      "controllerEndNs": "110786928313300",
-      "processWallMs": 72.0113,
+      "controllerStartNs": "112318371944600",
+      "controllerEndNs": "112318473201300",
+      "processWallMs": 101.2567,
       "events": 450,
-      "workloadUs": 27890.3,
+      "workloadUs": 37951.2,
       "callLatencyUs": {
-        "median": 23.3,
-        "p95": 297.8,
-        "p99": 328.6
+        "median": 32.7,
+        "p95": 316.4,
+        "p99": 549.7
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 15196160,
-      "peakWorkingSetBytes": 15196160
+      "cpu100ns": 468750,
+      "workingSetBytes": 15216640,
+      "peakWorkingSetBytes": 15216640
     },
     {
       "architecture": "x64",
@@ -343,7 +343,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
-        "oracle.json": "6989a4f3d5b14da516ad6c7448182add56ca3b3951650ad9a5a46b2cffd98038"
+        "oracle.json": "e7cca453bbd13d28da87ac251d9d0ca08c2522b1301f88d5684aaed3cc19015b"
       },
       "comparison": {
         "missing": 0,
@@ -354,19 +354,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-01-frida-cmodule",
-      "controllerStartNs": "110786946810000",
-      "controllerEndNs": "110787018654500",
-      "processWallMs": 71.8445,
+      "controllerStartNs": "112318505689000",
+      "controllerEndNs": "112318610750600",
+      "processWallMs": 105.0616,
       "events": 450,
-      "workloadUs": 21754.3,
+      "workloadUs": 38463.2,
       "callLatencyUs": {
-        "median": 9.5,
-        "p95": 223.2,
-        "p99": 324.6
+        "median": 10.6,
+        "p95": 324.8,
+        "p99": 958.8
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 15671296,
-      "peakWorkingSetBytes": 15671296
+      "cpu100ns": 468750,
+      "workingSetBytes": 15654912,
+      "peakWorkingSetBytes": 15654912
     },
     {
       "architecture": "x64",
@@ -381,9 +381,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "f19803bf637a250cfc6293e1b679bce25cf92327e67b25b332bcf5d665abe7b0",
-        "etw.json": "ef2cd6466d7adafd2e3021705c0aa79343f83fadcd1b124a7ce7a722dc06e05d",
-        "oracle.json": "74651a050a363e2d248667e68096bd7ebb7a4de95c064d6baede938621fedd52"
+        "corpus.etl": "5eb08e701f3ec3a77bd793e573e46f30d32a45cab6fa940ae93619984d5d7304",
+        "etw.json": "3d78486e54d01ec3620ca9ab9e5b4f74d9b7f29906247783497acdd378904254",
+        "oracle.json": "f42703c76fe4bda411ba6a40db873b5d73d5f0be82fa29cfaee47da4625ac56a"
       },
       "comparison": {
         "missing": 0,
@@ -394,19 +394,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-01-etw",
-      "controllerStartNs": "110787037691800",
-      "controllerEndNs": "110787386560900",
-      "processWallMs": 348.8691,
+      "controllerStartNs": "112318639054100",
+      "controllerEndNs": "112318996774400",
+      "processWallMs": 357.7203,
       "events": 450,
-      "workloadUs": 20631.7,
+      "workloadUs": 22579.4,
       "callLatencyUs": {
-        "median": 8.3,
-        "p95": 201.3,
-        "p99": 338.4
+        "median": 6.4,
+        "p95": 240.4,
+        "p99": 390.4
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 6176768,
-      "peakWorkingSetBytes": 6176768
+      "cpu100ns": 312500,
+      "workingSetBytes": 6156288,
+      "peakWorkingSetBytes": 6156288
     },
     {
       "architecture": "x64",
@@ -421,7 +421,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "ed19d87b614ffca298aea338debb12e739ef9f9bdcea9922f97ca41b44dc7545"
+        "oracle.json": "eb8db1a2ef4a2fb6ce9c1e181d85889a7ad2fe2625dbe2bd430d9024de3682cf"
       },
       "comparison": {
         "missing": 0,
@@ -432,19 +432,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-01-original",
-      "controllerStartNs": "110787432079500",
-      "controllerEndNs": "110787472456600",
-      "processWallMs": 40.3771,
+      "controllerStartNs": "112319061735900",
+      "controllerEndNs": "112319116015200",
+      "processWallMs": 54.2793,
       "events": 450,
-      "workloadUs": 19854.3,
+      "workloadUs": 23606.7,
       "callLatencyUs": {
-        "median": 7.9,
-        "p95": 177.3,
-        "p99": 343.8
+        "median": 6.1,
+        "p95": 263.0,
+        "p99": 384.9
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 5931008,
-      "peakWorkingSetBytes": 5931008
+      "cpu100ns": 312500,
+      "workingSetBytes": 5922816,
+      "peakWorkingSetBytes": 5922816
     },
     {
       "architecture": "x64",
@@ -460,7 +460,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
-        "oracle.json": "89781a88e62ed99f19a291b3083b2f3b1b821fc084c0dc149133eede0176b3d5"
+        "oracle.json": "fac7466fb2632cedb7fb8c5d13f2e08cfa663e921091fee22152940783ad2a8c"
       },
       "comparison": {
         "missing": 0,
@@ -471,19 +471,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-02-frida",
-      "controllerStartNs": "110787493333200",
-      "controllerEndNs": "110787602585900",
-      "processWallMs": 109.2527,
+      "controllerStartNs": "112319143989000",
+      "controllerEndNs": "112319270047100",
+      "processWallMs": 126.0581,
       "events": 450,
-      "workloadUs": 30184.0,
+      "workloadUs": 29287.6,
       "callLatencyUs": {
-        "median": 22.1,
-        "p95": 319.3,
-        "p99": 360.6
+        "median": 28.7,
+        "p95": 247.7,
+        "p99": 409.3
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 15241216,
-      "peakWorkingSetBytes": 15241216
+      "workingSetBytes": 15187968,
+      "peakWorkingSetBytes": 15187968
     },
     {
       "architecture": "x64",
@@ -499,7 +499,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
-        "oracle.json": "cc64485f631d62bcc0c3cd4582487e9b44d2e208717bc93f201a8f7b070a3906"
+        "oracle.json": "d41652c926315fdf995c41747f2c53821a0abbe64e78a42992d3aeb258e4bd64"
       },
       "comparison": {
         "missing": 0,
@@ -510,19 +510,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-02-frida-cmodule",
-      "controllerStartNs": "110787621433700",
-      "controllerEndNs": "110787694251200",
-      "processWallMs": 72.8175,
+      "controllerStartNs": "112319293559300",
+      "controllerEndNs": "112319374260900",
+      "processWallMs": 80.7016,
       "events": 450,
-      "workloadUs": 22340.0,
+      "workloadUs": 22590.5,
       "callLatencyUs": {
-        "median": 10.2,
-        "p95": 238.8,
-        "p99": 329.3
+        "median": 7.2,
+        "p95": 234.1,
+        "p99": 349.1
       },
-      "cpu100ns": 0,
-      "workingSetBytes": 15663104,
-      "peakWorkingSetBytes": 15663104
+      "cpu100ns": 312500,
+      "workingSetBytes": 15667200,
+      "peakWorkingSetBytes": 15667200
     },
     {
       "architecture": "x64",
@@ -537,9 +537,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "b8258e261e81ddf37f3f33e7fe469562875b07452739dc44c048cb5aeeb46c0c",
-        "etw.json": "b3f8aee652a357bf94f950af65ed3a881fda312eefdd913cd8fce16c580e0338",
-        "oracle.json": "33f4e0fcbe1fdaa4a0e67c2dd12331883e8e059ab8f91e1f3a69c283410da330"
+        "corpus.etl": "ac4c2c509935f5cb88af84f97493500c50a96d5be0a905522071417c07392d2e",
+        "etw.json": "f4d0712b9efc17285723a8a8f9b15b371ffcf6a28537de2bca1454b797d0bd18",
+        "oracle.json": "24215dc7d5c84a6658c8c3b79ccb4ee8197a8776686555780a5e8690d666a41b"
       },
       "comparison": {
         "missing": 0,
@@ -550,19 +550,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-02-etw",
-      "controllerStartNs": "110787714008600",
-      "controllerEndNs": "110788067141900",
-      "processWallMs": 353.1333,
+      "controllerStartNs": "112319395269900",
+      "controllerEndNs": "112319763565800",
+      "processWallMs": 368.2959,
       "events": 450,
-      "workloadUs": 21416.1,
+      "workloadUs": 23490.9,
       "callLatencyUs": {
         "median": 6.5,
-        "p95": 216.4,
-        "p99": 327.1
+        "p95": 260.5,
+        "p99": 386.6
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 6168576,
-      "peakWorkingSetBytes": 6168576
+      "workingSetBytes": 6156288,
+      "peakWorkingSetBytes": 6156288
     },
     {
       "architecture": "x64",
@@ -577,7 +577,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "c3ad79b159fd683d2272facdc732957264878d1d80bbf37ce270ed7e97a2ab22"
+        "oracle.json": "988e264d2b52f6a3eeb8c7784c3985aee59582cf92bc8a600ffd2a5bc4284380"
       },
       "comparison": {
         "missing": 0,
@@ -588,19 +588,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-02-original",
-      "controllerStartNs": "110788110303400",
-      "controllerEndNs": "110788149549800",
-      "processWallMs": 39.2464,
+      "controllerStartNs": "112319821543200",
+      "controllerEndNs": "112319871034500",
+      "processWallMs": 49.4913,
       "events": 450,
-      "workloadUs": 19606.5,
+      "workloadUs": 23943.1,
       "callLatencyUs": {
-        "median": 6.0,
-        "p95": 188.1,
-        "p99": 312.7
+        "median": 6.9,
+        "p95": 241.9,
+        "p99": 400.9
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 5939200,
-      "peakWorkingSetBytes": 5939200
+      "workingSetBytes": 5971968,
+      "peakWorkingSetBytes": 5971968
     },
     {
       "architecture": "x64",
@@ -614,13 +614,13 @@
         "knmon-agent64.dll": "6bdc891d2bbe09991df102691485b73328ff1c373e464ec4d92c21a6300763d7"
       },
       "artifacts": {
-        "capture.json": "26cbba2754ba4e8e6dea0793ddb7b9f40d33873a2a365242c30a51ebfb12e2cb",
+        "capture.json": "7ac5bfae06716c57d0bd0fb11433e093e4bcfe50bf544b2f730ea3cd77b6aa0b",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "149fb46adba5f2cf05b2eaab07c704dd862db49493618fc57ae810163758ae26",
-        "session/agent-events.jsonl": "a45a578b1d9b4f39955ea821af1f75a5fd471f837c327b9534638566853ee64b",
-        "session/audit.jsonl": "4a0a4a7f1df0f369cbcd02a727693345e9fe00bf75139c259a98a5c6e34ed109",
-        "session/manifest.json": "08f72985623fa285aef82468f7764aecbb9d65a84d1d1d96a6f009c8173eb224",
-        "session/trace-events.jsonl": "ec61ee49f1b976d9c428819f0b69cef0fafd33ee9cdf770975490ce21d7a2829"
+        "oracle.json": "3967d93a8a9212c964b810a124568cbfb569e1a5d2a877c7056c94a18ad5e24b",
+        "session/agent-events.jsonl": "ed45e82296173cfd2d733a3cf09a4035c52ebd9efab8b65c3b2d7b6411230623",
+        "session/audit.jsonl": "ddc4b0e3a6358ecb8475d6bd0077b59167b36ca8677d411b036240b6618181e3",
+        "session/manifest.json": "40c53a671638272f11ef1d4cadeaed759291520cf47d39c02930ab70ef60f4bd",
+        "session/trace-events.jsonl": "cefd80b8f16bad7e2e8eb6f7e6707ce9713583371275f6784e9f649167261481"
       },
       "comparison": {
         "missing": 0,
@@ -631,19 +631,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-02-knmon",
-      "controllerStartNs": "110788166716800",
-      "controllerEndNs": "110791475692900",
-      "processWallMs": 3308.9761,
+      "controllerStartNs": "112319890986900",
+      "controllerEndNs": "112324635453900",
+      "processWallMs": 4744.467,
       "events": 450,
-      "workloadUs": 23563.0,
+      "workloadUs": 25541.9,
       "callLatencyUs": {
-        "median": 9.9,
-        "p95": 263.1,
-        "p99": 342.9
+        "median": 11.3,
+        "p95": 271.1,
+        "p99": 422.4
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 18190336,
-      "peakWorkingSetBytes": 19582976
+      "cpu100ns": 156250,
+      "workingSetBytes": 18182144,
+      "peakWorkingSetBytes": 19546112
     },
     {
       "architecture": "x64",
@@ -659,7 +659,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
-        "oracle.json": "28e2abf56315b59f0ba59093b5ae8f5dc5478de23ed98874df657f10ce989623"
+        "oracle.json": "8b87692fff52dda24a532189ef0878c7c7295c9f9ca6870d0dc49be74fe27bbc"
       },
       "comparison": {
         "missing": 0,
@@ -670,19 +670,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-03-frida-cmodule",
-      "controllerStartNs": "110791501627800",
-      "controllerEndNs": "110791570571800",
-      "processWallMs": 68.944,
+      "controllerStartNs": "112324707479000",
+      "controllerEndNs": "112325888602400",
+      "processWallMs": 1181.1234,
       "events": 450,
-      "workloadUs": 20367.7,
+      "workloadUs": 991069.6,
       "callLatencyUs": {
-        "median": 8.3,
-        "p95": 198.2,
-        "p99": 309.7
+        "median": 18.1,
+        "p95": 5672.9,
+        "p99": 34222.9
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 15654912,
-      "peakWorkingSetBytes": 15654912
+      "workingSetBytes": 15630336,
+      "peakWorkingSetBytes": 15630336
     },
     {
       "architecture": "x64",
@@ -697,9 +697,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "415b5c4350a6a9d172d70f4e361c87d7fb925128d3b0e53a9abfd91d7511c240",
-        "etw.json": "978789670bdaf45af99dd8df9207ec068ed40719707c7077ab7e8a5acef63641",
-        "oracle.json": "477fd17c7d04bb0e6cd88d89e0ff8ede9df922a1fe851cd82a51ec1bd23eb915"
+        "corpus.etl": "a7c02fbf3d685f2126c5749abe7353e7f6caf594f06e7c91f3057b25391ee34b",
+        "etw.json": "c4db5d8e965e9e826f942ad731161b35633bd6362db4156ea2e4477e175c4ded",
+        "oracle.json": "b9aca794834e276d99930ac8feabdefd5cb655ed1dae7bf97162bfaf09bebc80"
       },
       "comparison": {
         "missing": 0,
@@ -710,19 +710,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-03-etw",
-      "controllerStartNs": "110791588669700",
-      "controllerEndNs": "110791946730300",
-      "processWallMs": 358.0606,
+      "controllerStartNs": "112325930836200",
+      "controllerEndNs": "112326422088400",
+      "processWallMs": 491.2522,
       "events": 450,
-      "workloadUs": 20707.3,
+      "workloadUs": 102531.9,
       "callLatencyUs": {
-        "median": 6.7,
-        "p95": 200.9,
-        "p99": 332.1
+        "median": 9.6,
+        "p95": 773.1,
+        "p99": 3426.5
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 6193152,
-      "peakWorkingSetBytes": 6193152
+      "cpu100ns": 312500,
+      "workingSetBytes": 6262784,
+      "peakWorkingSetBytes": 6262784
     },
     {
       "architecture": "x64",
@@ -737,7 +737,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "a6f670a716032f54f922888c7ff9f3d17057b38c5dcb85d050c1ba4a12b850c9"
+        "oracle.json": "c7fa2c48dddd524e08c51104133961a4728387a165d616624f47b2e3ecf09bb9"
       },
       "comparison": {
         "missing": 0,
@@ -748,19 +748,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-03-original",
-      "controllerStartNs": "110791996804700",
-      "controllerEndNs": "110792044461300",
-      "processWallMs": 47.6566,
+      "controllerStartNs": "112326510589400",
+      "controllerEndNs": "112326623280100",
+      "processWallMs": 112.6907,
       "events": 450,
-      "workloadUs": 25032.5,
+      "workloadUs": 69710.5,
       "callLatencyUs": {
-        "median": 7.9,
-        "p95": 261.7,
-        "p99": 434.5
+        "median": 9.8,
+        "p95": 590.4,
+        "p99": 3062.6
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 5955584,
-      "peakWorkingSetBytes": 5955584
+      "cpu100ns": 468750,
+      "workingSetBytes": 5918720,
+      "peakWorkingSetBytes": 5918720
     },
     {
       "architecture": "x64",
@@ -774,13 +774,13 @@
         "knmon-agent64.dll": "6bdc891d2bbe09991df102691485b73328ff1c373e464ec4d92c21a6300763d7"
       },
       "artifacts": {
-        "capture.json": "6422bfaa979210c9740d185cad21d088ecbd28910cc9955a3c63499fa5886f62",
+        "capture.json": "3492a080fef756b5eeea47cc5ba6216e770db212a14c3780269848ba3103732f",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "05e30cff99fd92a835b10b61dd9cce065d17bdca4c0b0565a5c0822d4be7f055",
-        "session/agent-events.jsonl": "f03c24133e03e69dc43b1c4b93df1422086fd0e18b7355862061a20fdf284c9c",
-        "session/audit.jsonl": "cb0b18df54ceec4a74d5f91ef9e46356ff93b5be1161d59bd536b5adce5fd1cf",
-        "session/manifest.json": "7ad041b1ab044447ce8869d3e3a482892b0c7f765a9784d1c61a9cb24bba03d5",
-        "session/trace-events.jsonl": "6a516fc5a8da63d3cf8d2695c3ae55460dbd4d4d3b6a02c0df67a31c85dd1fd3"
+        "oracle.json": "fe2f1096d6cb4b7dcef031998de680e2be9dd8d73d4c8b5684a0c3f353cd92dc",
+        "session/agent-events.jsonl": "98950493dec9ec103bd10b0acbca44a31015e93af3b0884bcf988defffbbba52",
+        "session/audit.jsonl": "1570e01201189cf516617fa5128e2bae1c6019c3f459b20f60de6af4567c2c92",
+        "session/manifest.json": "b1019655737567209d7d2697a08ca863fdc9f9d1a5005333c546263441bf730e",
+        "session/trace-events.jsonl": "195389685f7c9334e694af1703c6fd56c649d70c453d504fc80ee2a17ce3864f"
       },
       "comparison": {
         "missing": 0,
@@ -791,19 +791,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-03-knmon",
-      "controllerStartNs": "110792061236800",
-      "controllerEndNs": "110795370496300",
-      "processWallMs": 3309.2595,
+      "controllerStartNs": "112326672086600",
+      "controllerEndNs": "112330845181800",
+      "processWallMs": 4173.0952,
       "events": 450,
-      "workloadUs": 23554.2,
+      "workloadUs": 25890.5,
       "callLatencyUs": {
-        "median": 12.2,
-        "p95": 222.8,
-        "p99": 357.2
+        "median": 11.2,
+        "p95": 240.9,
+        "p99": 379.2
       },
-      "cpu100ns": 0,
-      "workingSetBytes": 18210816,
-      "peakWorkingSetBytes": 19574784
+      "cpu100ns": 312500,
+      "workingSetBytes": 18178048,
+      "peakWorkingSetBytes": 19566592
     },
     {
       "architecture": "x64",
@@ -819,7 +819,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
-        "oracle.json": "bebcf11d6f5c6c089e65f102221641d5f281b5591635ad6b237449aef1b9db3c"
+        "oracle.json": "4f84d651190ab297030e8b56e7aacd1c08d5802217fd1cdfc8d166e95608d0ab"
       },
       "comparison": {
         "missing": 0,
@@ -830,19 +830,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-03-frida",
-      "controllerStartNs": "110795393043600",
-      "controllerEndNs": "110795469805200",
-      "processWallMs": 76.7616,
+      "controllerStartNs": "112330886965300",
+      "controllerEndNs": "112330988580600",
+      "processWallMs": 101.6153,
       "events": 450,
-      "workloadUs": 29333.5,
+      "workloadUs": 37905.5,
       "callLatencyUs": {
-        "median": 22.4,
-        "p95": 306.4,
-        "p99": 354.1
+        "median": 36.0,
+        "p95": 337.7,
+        "p99": 469.9
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 15196160,
-      "peakWorkingSetBytes": 15196160
+      "cpu100ns": 468750,
+      "workingSetBytes": 15187968,
+      "peakWorkingSetBytes": 15187968
     },
     {
       "architecture": "x64",
@@ -857,9 +857,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "c9689dee475f8ee3653a70a899dd3df9879946adc66140146a6974f60fee179d",
-        "etw.json": "4e569eb88df5367595043dcb3180a3834f5368bd399b8c7cb3ad61fba2e485a7",
-        "oracle.json": "0eac24cbc391bdb7e4da1122fee8903ea243af46dca231232fcc7934811cc341"
+        "corpus.etl": "8c4ad7a1cedf6960c4cd9e81d79276307afdb41f56478071525c69b70aff97bf",
+        "etw.json": "2670763b3c106003565bacd1a3d0f6ecb482ac4754bf8f0d8766b2ffe93fac63",
+        "oracle.json": "367210d2af49b917425ae3c070cc1757efcfdf5c8bd2e0789ba2324fd5c09229"
       },
       "comparison": {
         "missing": 0,
@@ -870,19 +870,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-04-etw",
-      "controllerStartNs": "110795493488200",
-      "controllerEndNs": "110795843843100",
-      "processWallMs": 350.3549,
+      "controllerStartNs": "112331018319500",
+      "controllerEndNs": "112331392343100",
+      "processWallMs": 374.0236,
       "events": 450,
-      "workloadUs": 21887.4,
+      "workloadUs": 31255.4,
       "callLatencyUs": {
-        "median": 6.3,
-        "p95": 245.3,
-        "p99": 338.6
+        "median": 7.7,
+        "p95": 343.3,
+        "p99": 499.4
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 6197248,
-      "peakWorkingSetBytes": 6197248
+      "cpu100ns": 312500,
+      "workingSetBytes": 6160384,
+      "peakWorkingSetBytes": 6160384
     },
     {
       "architecture": "x64",
@@ -897,7 +897,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "b1c570a2f0fb70a3e5640b03c114444299f782db3ac191baabc5502e09fa2305"
+        "oracle.json": "66a00a40cef272db5f617e7c266434bbb7f4e2ca63464f8384c7a5b38da74b0e"
       },
       "comparison": {
         "missing": 0,
@@ -908,19 +908,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-04-original",
-      "controllerStartNs": "110795895482900",
-      "controllerEndNs": "110795937885200",
-      "processWallMs": 42.4023,
+      "controllerStartNs": "112331452044400",
+      "controllerEndNs": "112331514107200",
+      "processWallMs": 62.0628,
       "events": 450,
-      "workloadUs": 21667.9,
+      "workloadUs": 26454.6,
       "callLatencyUs": {
-        "median": 7.1,
-        "p95": 224.7,
-        "p99": 331.0
+        "median": 7.6,
+        "p95": 280.7,
+        "p99": 426.4
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 5926912,
-      "peakWorkingSetBytes": 5926912
+      "cpu100ns": 156250,
+      "workingSetBytes": 5963776,
+      "peakWorkingSetBytes": 5963776
     },
     {
       "architecture": "x64",
@@ -934,13 +934,13 @@
         "knmon-agent64.dll": "6bdc891d2bbe09991df102691485b73328ff1c373e464ec4d92c21a6300763d7"
       },
       "artifacts": {
-        "capture.json": "9978960e4938ea25a6832fb7c187fb60794b8e3cbb68294bfcab732a2dfce1a3",
+        "capture.json": "4c987ec1ebce179855228311b942e18cba081fb00b6fcf8dce9024ed00f413c0",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "7a3fa63c079276dd5c6b0f7319bf2c80fd7d97d4837d2c37fb02898b69b2799c",
-        "session/agent-events.jsonl": "2a17580e3adb275825f306d532707d20c529aa903fdcc49f6800e3f3ab7ad3ca",
-        "session/audit.jsonl": "14ef96ea63efa5e23a35dec52bd690a0279a397d9779704956f6051af03c9881",
-        "session/manifest.json": "221c46b0698afa93a226214b8ac3c748989e505ff130a9d1d06f82c7c4415763",
-        "session/trace-events.jsonl": "f22fa24b8a883b4a74196b718b12cb81ba34dd225705f593fc04845fd11b3937"
+        "oracle.json": "2ffa3f493be676f36e21ad29c28114b5636555da67a05f93af2a5eb2a9a478a6",
+        "session/agent-events.jsonl": "579699a9d433aac5b8fef8f0e5653be3507039016dcfa570b3cf8c32d6859d30",
+        "session/audit.jsonl": "7958d49b749d1898756c96002f93180200b38fe77fdc6672bb40315e2a8d785e",
+        "session/manifest.json": "59c7d4ef6dac75efcd98fda456ae9f734a03d9dabd1b6024056885b96f947701",
+        "session/trace-events.jsonl": "774b537f1aa74f1226f30fbe98ef2fba518442f7dbeabb5a204fe6820702c6c7"
       },
       "comparison": {
         "missing": 0,
@@ -951,19 +951,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-04-knmon",
-      "controllerStartNs": "110795956894700",
-      "controllerEndNs": "110799210509100",
-      "processWallMs": 3253.6144,
+      "controllerStartNs": "112331536008700",
+      "controllerEndNs": "112335752685500",
+      "processWallMs": 4216.6768,
       "events": 450,
-      "workloadUs": 23262.8,
+      "workloadUs": 33138.6,
       "callLatencyUs": {
-        "median": 11.4,
-        "p95": 214.8,
-        "p99": 336.8
+        "median": 16.4,
+        "p95": 345.8,
+        "p99": 536.7
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 18186240,
-      "peakWorkingSetBytes": 19566592
+      "workingSetBytes": 18239488,
+      "peakWorkingSetBytes": 19603456
     },
     {
       "architecture": "x64",
@@ -979,7 +979,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
-        "oracle.json": "dff973d2943fbe7f8a3a520ba8a0367d7c5d81df3e401e75ac77cf1377002cba"
+        "oracle.json": "c7d206a9883e92e02a0e5c3b672f3bdbdd7dab67cc3c85fdd9964219ca812fd8"
       },
       "comparison": {
         "missing": 0,
@@ -990,19 +990,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-04-frida",
-      "controllerStartNs": "110799232041700",
-      "controllerEndNs": "110799335847600",
-      "processWallMs": 103.8059,
+      "controllerStartNs": "112335786703200",
+      "controllerEndNs": "112335874205400",
+      "processWallMs": 87.5022,
       "events": 450,
-      "workloadUs": 27521.5,
+      "workloadUs": 34314.8,
       "callLatencyUs": {
-        "median": 21.9,
-        "p95": 290.7,
-        "p99": 332.6
+        "median": 31.0,
+        "p95": 326.1,
+        "p99": 476.6
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 15208448,
-      "peakWorkingSetBytes": 15208448
+      "cpu100ns": 312500,
+      "workingSetBytes": 15204352,
+      "peakWorkingSetBytes": 15204352
     },
     {
       "architecture": "x64",
@@ -1018,7 +1018,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
-        "oracle.json": "c329eb76f23edea4889348d88713b761268587e52237a73c5f17673202902a49"
+        "oracle.json": "47f765f4f1dd765dfaada7d7e522406208d6c4e3643ce675a9d2d8b43ba5c55a"
       },
       "comparison": {
         "missing": 0,
@@ -1029,19 +1029,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-04-frida-cmodule",
-      "controllerStartNs": "110799357448600",
-      "controllerEndNs": "110799428114900",
-      "processWallMs": 70.6663,
+      "controllerStartNs": "112335902422800",
+      "controllerEndNs": "112335984677700",
+      "processWallMs": 82.2549,
       "events": 450,
-      "workloadUs": 22173.5,
+      "workloadUs": 26346.1,
       "callLatencyUs": {
-        "median": 8.2,
-        "p95": 233.3,
-        "p99": 339.8
+        "median": 9.5,
+        "p95": 256.0,
+        "p99": 489.1
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 15675392,
-      "peakWorkingSetBytes": 15675392
+      "cpu100ns": 312500,
+      "workingSetBytes": 15659008,
+      "peakWorkingSetBytes": 15659008
     },
     {
       "architecture": "x64",
@@ -1056,7 +1056,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "637224b5cf272f2742da91f7b98a348b0d310403e661729009282e755e7ce103"
+        "oracle.json": "fb0e084ae00a7dade77a2a8aca61263c1374e3b0b223f14c592c0a2d4e5d3447"
       },
       "comparison": {
         "missing": 0,
@@ -1067,19 +1067,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-05-original",
-      "controllerStartNs": "110799452088400",
-      "controllerEndNs": "110799493352000",
-      "processWallMs": 41.2636,
+      "controllerStartNs": "112336012909700",
+      "controllerEndNs": "112336059564600",
+      "processWallMs": 46.6549,
       "events": 450,
-      "workloadUs": 20502.1,
+      "workloadUs": 22369.7,
       "callLatencyUs": {
-        "median": 6.3,
-        "p95": 191.0,
-        "p99": 348.7
+        "median": 6.4,
+        "p95": 224.0,
+        "p99": 364.9
       },
-      "cpu100ns": 0,
-      "workingSetBytes": 5931008,
-      "peakWorkingSetBytes": 5931008
+      "cpu100ns": 156250,
+      "workingSetBytes": 5922816,
+      "peakWorkingSetBytes": 5922816
     },
     {
       "architecture": "x64",
@@ -1093,13 +1093,13 @@
         "knmon-agent64.dll": "6bdc891d2bbe09991df102691485b73328ff1c373e464ec4d92c21a6300763d7"
       },
       "artifacts": {
-        "capture.json": "46f84559c9efd3cb9fd8474b7c0ba3484bf1f1a65702cc29fb076657b575d77c",
+        "capture.json": "4f2d3f8aa8e20d8179b8f576ed41a9a95f25c676a70210edd48179cc3789892a",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "8bf4aec10ae291e5be3210625e31281f0b79054ccd56b07d681ad2a185dd3d52",
-        "session/agent-events.jsonl": "e360f5127e5722ba2ac2009d33b939cbc739af5f589ddedb946d4250969a0089",
-        "session/audit.jsonl": "05805a193850552725894890162a24d3c86c1e495eafcd380ad74c4a36f7fe22",
-        "session/manifest.json": "551c16a7c3c3957bda958c7ad7397bd688971c64f4c59b432c253b680755d20a",
-        "session/trace-events.jsonl": "34dc6fa59cb745e40e51e7efe22a9b8725ab8528b587af974c9b21fa8ea60348"
+        "oracle.json": "e606c294ccecae1d99886b3a748acb71e29f838b9bd79203a8393dc2c071dcb8",
+        "session/agent-events.jsonl": "91bd4341146aa51693de6adcfcb6ab50c90075f960403e9044620c2f5826bf0b",
+        "session/audit.jsonl": "a9a8f20570f1bb70534af7293ab19ffa7601a69600d75df10ffb253e153e349b",
+        "session/manifest.json": "fd14ef4b82596ac39471cf6db256ad4e545b26a09ea184248ef9d41e8a4cac35",
+        "session/trace-events.jsonl": "b7eb559b36fdff464f333ef4baf819e9cc2d0eeb5c09e3e8d396fdbc3e382792"
       },
       "comparison": {
         "missing": 0,
@@ -1110,19 +1110,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-05-knmon",
-      "controllerStartNs": "110799507767300",
-      "controllerEndNs": "110802786132300",
-      "processWallMs": 3278.365,
+      "controllerStartNs": "112336083787700",
+      "controllerEndNs": "112340085735700",
+      "processWallMs": 4001.948,
       "events": 450,
-      "workloadUs": 22837.3,
+      "workloadUs": 23749.0,
       "callLatencyUs": {
-        "median": 11.0,
-        "p95": 219.2,
-        "p99": 334.8
+        "median": 10.6,
+        "p95": 259.1,
+        "p99": 349.3
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 18169856,
-      "peakWorkingSetBytes": 19562496
+      "workingSetBytes": 18178048,
+      "peakWorkingSetBytes": 19566592
     },
     {
       "architecture": "x64",
@@ -1138,7 +1138,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
-        "oracle.json": "821922bb90cb05b653df65e1070cce384ea8b13824680c6d93ff1d19ea6d1695"
+        "oracle.json": "d709c296dd63d180b049b6f7a1233afd0daa49ddea7fa25e67a86ac77d7ded31"
       },
       "comparison": {
         "missing": 0,
@@ -1149,19 +1149,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-05-frida",
-      "controllerStartNs": "110802808459200",
-      "controllerEndNs": "110802880590000",
-      "processWallMs": 72.1308,
+      "controllerStartNs": "112340121034000",
+      "controllerEndNs": "112340201041800",
+      "processWallMs": 80.0078,
       "events": 450,
-      "workloadUs": 28080.9,
+      "workloadUs": 28785.5,
       "callLatencyUs": {
-        "median": 23.8,
-        "p95": 298.5,
-        "p99": 350.3
+        "median": 22.8,
+        "p95": 311.6,
+        "p99": 363.7
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 15200256,
-      "peakWorkingSetBytes": 15200256
+      "cpu100ns": 312500,
+      "workingSetBytes": 15187968,
+      "peakWorkingSetBytes": 15187968
     },
     {
       "architecture": "x64",
@@ -1177,7 +1177,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
-        "oracle.json": "19382a77804027e8acee5be935522cc6788b8950432197101045c85f93901429"
+        "oracle.json": "036096a974378e2ef6a8c87736abb26978e2b88dc29552c3d2072934fb27a378"
       },
       "comparison": {
         "missing": 0,
@@ -1188,19 +1188,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-05-frida-cmodule",
-      "controllerStartNs": "110802900772400",
-      "controllerEndNs": "110802972594600",
-      "processWallMs": 71.8222,
+      "controllerStartNs": "112340234985800",
+      "controllerEndNs": "112340312214100",
+      "processWallMs": 77.2283,
       "events": 450,
-      "workloadUs": 22134.0,
+      "workloadUs": 23922.8,
       "callLatencyUs": {
-        "median": 10.9,
-        "p95": 224.0,
-        "p99": 320.5
+        "median": 9.7,
+        "p95": 256.8,
+        "p99": 360.5
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 15675392,
-      "peakWorkingSetBytes": 15675392
+      "cpu100ns": 312500,
+      "workingSetBytes": 15704064,
+      "peakWorkingSetBytes": 15704064
     },
     {
       "architecture": "x64",
@@ -1215,9 +1215,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "438c2b951f1b0d740588bc49d58ea8ecdc541e908a8bbafca40e8f08645c864c",
-        "etw.json": "21b5a1d35ac1a484a24c7a367f86308664a0ff63fcc4fd9f1cae128a2fb86208",
-        "oracle.json": "cdf68584c59f8583f26294334209f21395ecc246e64cb2a67349a9a33c6e5049"
+        "corpus.etl": "e014fbac82301e8628c24922b2dc79b5b3bf0fac9d4c252b37bff2189c940a38",
+        "etw.json": "15e69188d79cda529621db64ddcb1e06fc4cf1931553a27411a79420ee88cfb0",
+        "oracle.json": "ecd796f3760b9564db856e351928ee6f7a7772fa96a10794ea8b3519d0189977"
       },
       "comparison": {
         "missing": 0,
@@ -1228,19 +1228,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-05-etw",
-      "controllerStartNs": "110802993014100",
-      "controllerEndNs": "110803372676300",
-      "processWallMs": 379.6622,
+      "controllerStartNs": "112340335749900",
+      "controllerEndNs": "112340689593200",
+      "processWallMs": 353.8433,
       "events": 450,
-      "workloadUs": 21120.5,
+      "workloadUs": 21024.1,
       "callLatencyUs": {
-        "median": 5.7,
-        "p95": 213.4,
-        "p99": 325.3
+        "median": 6.1,
+        "p95": 229.4,
+        "p99": 341.5
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 6176768,
-      "peakWorkingSetBytes": 6176768
+      "workingSetBytes": 6189056,
+      "peakWorkingSetBytes": 6189056
     },
     {
       "architecture": "x64",
@@ -1254,13 +1254,13 @@
         "knmon-agent64.dll": "6bdc891d2bbe09991df102691485b73328ff1c373e464ec4d92c21a6300763d7"
       },
       "artifacts": {
-        "capture.json": "4487861964038f875c97af9f5312474f39bf239a58ea77b351f3ae2632844b2e",
+        "capture.json": "55d7d5456dcc49762868a791b88cba0cf1f8c52d51f5bf5dd8129398ec85a8ff",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "e2325e4a9b49afc16a74bb967e4eb5650dc48b8a6226ba18f8e69817974c91ee",
-        "session/agent-events.jsonl": "9b7701c191b51b8db382eca3e6cd61cb717c6b964106a34f488442bdc7a48f2f",
-        "session/audit.jsonl": "dcc461a61b04225a93c07af3398f086367415af4cd492b1d4899993db644ce82",
-        "session/manifest.json": "c631a18b0d1c12b681d65fc5b639b9827d336837d4e5a366a1204b795f7334f2",
-        "session/trace-events.jsonl": "3913cae38f66fa39f59557269aa8e953370398ed5c7f07a3958e6f896c12e400"
+        "oracle.json": "31f6399c516b4ee9e3fd27d2926847c982f138f9b217c2d050eecf5f2d79c58f",
+        "session/agent-events.jsonl": "9449bd596775c01b430ada645fdccc5c05eef3298273b7fd4ff73c26e446a849",
+        "session/audit.jsonl": "98281de4a9a27cd2b90a75a1a0378c4e3f06864232f06c76e277b72e4ef97f32",
+        "session/manifest.json": "3f344f49b734f2196acafe8d06edffeb180f20b980d6f76affb51cf5eec7ae45",
+        "session/trace-events.jsonl": "4c03a7a1c230ee0f3e8d895cc0a5846d89e777150d9d1c4df41fdc05e808a1b0"
       },
       "comparison": {
         "missing": 0,
@@ -1271,19 +1271,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-06-knmon",
-      "controllerStartNs": "110803423136300",
-      "controllerEndNs": "110807046547500",
-      "processWallMs": 3623.4112,
+      "controllerStartNs": "112340755005600",
+      "controllerEndNs": "112345572488700",
+      "processWallMs": 4817.4831,
       "events": 450,
-      "workloadUs": 23597.0,
+      "workloadUs": 29639.5,
       "callLatencyUs": {
-        "median": 13.2,
-        "p95": 234.9,
-        "p99": 342.0
+        "median": 12.6,
+        "p95": 296.9,
+        "p99": 441.4
       },
-      "cpu100ns": 0,
-      "workingSetBytes": 18210816,
-      "peakWorkingSetBytes": 19570688
+      "cpu100ns": 312500,
+      "workingSetBytes": 18206720,
+      "peakWorkingSetBytes": 19566592
     },
     {
       "architecture": "x64",
@@ -1299,7 +1299,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
-        "oracle.json": "01ba87bc3ecfb4a0366ef30e694981a3ae491809378690dbe6c29f733e19c545"
+        "oracle.json": "ee5c56a2a32be7bed7d0cecd31213bbe006570f5680dedc5dfe02edbcfab0969"
       },
       "comparison": {
         "missing": 0,
@@ -1310,17 +1310,17 @@
       },
       "targetExitCode": 0,
       "directory": "x64-06-frida",
-      "controllerStartNs": "110807069800800",
-      "controllerEndNs": "110807142894200",
-      "processWallMs": 73.0934,
+      "controllerStartNs": "112345612049100",
+      "controllerEndNs": "112345692822700",
+      "processWallMs": 80.7736,
       "events": 450,
-      "workloadUs": 28782.3,
+      "workloadUs": 28047.9,
       "callLatencyUs": {
-        "median": 24.7,
-        "p95": 293.8,
-        "p99": 329.5
+        "median": 25.7,
+        "p95": 274.8,
+        "p99": 349.4
       },
-      "cpu100ns": 312500,
+      "cpu100ns": 156250,
       "workingSetBytes": 15200256,
       "peakWorkingSetBytes": 15200256
     },
@@ -1338,7 +1338,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
-        "oracle.json": "59e85d95468fc26003005f5572420bb8b31fceb9a1ecf39c2d9076ab52b2bb44"
+        "oracle.json": "e34ce0d930d61254c1bd262e1b55a39d3c7ab5549b4889b67e32b767cf90f29a"
       },
       "comparison": {
         "missing": 0,
@@ -1349,19 +1349,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-06-frida-cmodule",
-      "controllerStartNs": "110807164071200",
-      "controllerEndNs": "110807241714600",
-      "processWallMs": 77.6434,
+      "controllerStartNs": "112345725269700",
+      "controllerEndNs": "112345812608400",
+      "processWallMs": 87.3387,
       "events": 450,
-      "workloadUs": 23924.6,
+      "workloadUs": 27474.5,
       "callLatencyUs": {
-        "median": 14.8,
-        "p95": 245.6,
-        "p99": 348.7
+        "median": 9.7,
+        "p95": 261.1,
+        "p99": 427.2
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 15646720,
-      "peakWorkingSetBytes": 15646720
+      "workingSetBytes": 15654912,
+      "peakWorkingSetBytes": 15654912
     },
     {
       "architecture": "x64",
@@ -1376,9 +1376,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "d5121a8ba71895d21d7e6b8b89aa1a294921f35b37190f9f69be51fa81b31310",
-        "etw.json": "b1c4a4eb68e3b3f19dc38290b6209e813f36b41d12299aed77dccdf36ed4492c",
-        "oracle.json": "2dde13acd4986283fb6c12b7c2d1722528a77f99d2b0f5dd2d89cc2761c2f9c7"
+        "corpus.etl": "6473dd9cfd28cab3a69d7255b9d78b075951ca708c530b00aa728e0cd60a08ad",
+        "etw.json": "5e0350f1d1d95d9f0ea0ecda963be63430d0c736d30a09a16be599d421ab5823",
+        "oracle.json": "2e3355077e198f08c759af5ee893919897374eac6bd0e8de64a3f8f9e20102a5"
       },
       "comparison": {
         "missing": 0,
@@ -1389,19 +1389,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-06-etw",
-      "controllerStartNs": "110807258930800",
-      "controllerEndNs": "110807612495500",
-      "processWallMs": 353.5647,
+      "controllerStartNs": "112345838428800",
+      "controllerEndNs": "112346206791800",
+      "processWallMs": 368.363,
       "events": 450,
-      "workloadUs": 20252.5,
+      "workloadUs": 25132.5,
       "callLatencyUs": {
-        "median": 6.1,
-        "p95": 198.7,
-        "p99": 306.5
+        "median": 6.4,
+        "p95": 246.8,
+        "p99": 414.4
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 6172672,
-      "peakWorkingSetBytes": 6172672
+      "cpu100ns": 312500,
+      "workingSetBytes": 6152192,
+      "peakWorkingSetBytes": 6152192
     },
     {
       "architecture": "x64",
@@ -1416,7 +1416,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "42da4d944ec46b77e2b45f45be955f18ce435f7ce8e5dec3c2a2d137b47801d7"
+        "oracle.json": "8f0d9d9b8bf83fb254a56855c382f584eb6ebc93f2cb641ad04db8263b390cfa"
       },
       "comparison": {
         "missing": 0,
@@ -1427,19 +1427,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-06-original",
-      "controllerStartNs": "110807689722500",
-      "controllerEndNs": "110807730237300",
-      "processWallMs": 40.5148,
+      "controllerStartNs": "112346274382200",
+      "controllerEndNs": "112346384212200",
+      "processWallMs": 109.83,
       "events": 450,
-      "workloadUs": 20658.2,
+      "workloadUs": 46223.0,
       "callLatencyUs": {
-        "median": 6.0,
-        "p95": 205.3,
-        "p99": 317.7
+        "median": 9.1,
+        "p95": 318.7,
+        "p99": 500.2
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 5935104,
-      "peakWorkingSetBytes": 5935104
+      "workingSetBytes": 5922816,
+      "peakWorkingSetBytes": 5922816
     },
     {
       "architecture": "x64",
@@ -1455,7 +1455,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
-        "oracle.json": "63e9137d5d591605a7f87238d1bb07dd94be850ade5ffb636771063dc0bcd866"
+        "oracle.json": "c36b223cea2b5c789fe47ad919bda443ab4ba0ec12bb687e19bcb54cd3830df9"
       },
       "comparison": {
         "missing": 0,
@@ -1466,15 +1466,15 @@
       },
       "targetExitCode": 0,
       "directory": "x64-07-frida",
-      "controllerStartNs": "110807749144900",
-      "controllerEndNs": "110807824324900",
-      "processWallMs": 75.18,
+      "controllerStartNs": "112346410413800",
+      "controllerEndNs": "112346511130300",
+      "processWallMs": 100.7165,
       "events": 450,
-      "workloadUs": 27978.2,
+      "workloadUs": 40334.4,
       "callLatencyUs": {
-        "median": 22.7,
-        "p95": 284.0,
-        "p99": 374.5
+        "median": 33.1,
+        "p95": 350.8,
+        "p99": 740.8
       },
       "cpu100ns": 312500,
       "workingSetBytes": 15187968,
@@ -1494,7 +1494,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
-        "oracle.json": "25c8655c36a7cbe9189b090a6b512179d351d82e154d3a63fff106106a149537"
+        "oracle.json": "587552f662c36b3085a0b34ecd130d2b93fa17b78e092dcc6c29b75f0ae664de"
       },
       "comparison": {
         "missing": 0,
@@ -1505,19 +1505,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-07-frida-cmodule",
-      "controllerStartNs": "110807845143100",
-      "controllerEndNs": "110807917165000",
-      "processWallMs": 72.0219,
+      "controllerStartNs": "112346540966800",
+      "controllerEndNs": "112346630902600",
+      "processWallMs": 89.9358,
       "events": 450,
-      "workloadUs": 22317.0,
+      "workloadUs": 31010.9,
       "callLatencyUs": {
-        "median": 8.0,
-        "p95": 229.2,
-        "p99": 350.1
+        "median": 10.1,
+        "p95": 300.4,
+        "p99": 590.5
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 15654912,
-      "peakWorkingSetBytes": 15654912
+      "workingSetBytes": 15699968,
+      "peakWorkingSetBytes": 15699968
     },
     {
       "architecture": "x64",
@@ -1532,9 +1532,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "fcdd079a40fecb8aa4376c4403255c08707dc90f76596561210a1aab99d6c6eb",
-        "etw.json": "984a6b42ec990cfd8f64eb81639023f9a90eb63f211188e75cde708004c1dfd8",
-        "oracle.json": "167c2ce8b608bf6d447dfcd2d998f02320663b5404587291457a68f747875a90"
+        "corpus.etl": "81a99c9606787a25e642c69c1b1ef2ebbc14a2c94991c5ff68733d02d54344af",
+        "etw.json": "5e3fb3494a693216cf249145e17b28e1cbe1febf64a90718c99ffb10bd29a2cd",
+        "oracle.json": "54d642e356b6f78be0180a0e08d1d7749e8eba32ef14b2d8fb9f2bc1fa5b9e01"
       },
       "comparison": {
         "missing": 0,
@@ -1545,19 +1545,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-07-etw",
-      "controllerStartNs": "110807937960700",
-      "controllerEndNs": "110808290481300",
-      "processWallMs": 352.5206,
+      "controllerStartNs": "112346654601000",
+      "controllerEndNs": "112347016339500",
+      "processWallMs": 361.7385,
       "events": 450,
-      "workloadUs": 23966.5,
+      "workloadUs": 27710.8,
       "callLatencyUs": {
-        "median": 9.2,
-        "p95": 237.1,
-        "p99": 409.1
+        "median": 7.8,
+        "p95": 291.4,
+        "p99": 502.2
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 6160384,
-      "peakWorkingSetBytes": 6160384
+      "workingSetBytes": 6189056,
+      "peakWorkingSetBytes": 6189056
     },
     {
       "architecture": "x64",
@@ -1572,7 +1572,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "0a6f3638c919f547a2015d1206222b9bd520eaec17729068631f7e5c5117419a"
+        "oracle.json": "62361056c8759469f0dd10e181115d9642936a9bace7e22964497d055ab9d6b8"
       },
       "comparison": {
         "missing": 0,
@@ -1583,19 +1583,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-07-original",
-      "controllerStartNs": "110808336663200",
-      "controllerEndNs": "110808380290700",
-      "processWallMs": 43.6275,
+      "controllerStartNs": "112347074145900",
+      "controllerEndNs": "112347126739100",
+      "processWallMs": 52.5932,
       "events": 450,
-      "workloadUs": 20212.0,
+      "workloadUs": 27468.7,
       "callLatencyUs": {
-        "median": 14.5,
-        "p95": 198.9,
-        "p99": 304.4
+        "median": 6.7,
+        "p95": 267.0,
+        "p99": 475.7
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 5931008,
-      "peakWorkingSetBytes": 5931008
+      "cpu100ns": 312500,
+      "workingSetBytes": 6033408,
+      "peakWorkingSetBytes": 6033408
     },
     {
       "architecture": "x64",
@@ -1609,13 +1609,13 @@
         "knmon-agent64.dll": "6bdc891d2bbe09991df102691485b73328ff1c373e464ec4d92c21a6300763d7"
       },
       "artifacts": {
-        "capture.json": "3dd080f5374162b9177988b4b25b4e621a800768e9044d5462fcbab5a8ac19aa",
+        "capture.json": "9476606015f608521a085fde92670ce52f9a0f6c210f9aa3c96afa19720a65b7",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "0c49781206e2d4381562bc330e94479c3ffff3bff4b670a0e30612dffa3d9f01",
-        "session/agent-events.jsonl": "d2b6b6ce1e89078345d6a14f9876bf6bbacc309e7dc197906c137c6dffb00b9c",
-        "session/audit.jsonl": "1fa2c0eb8a0c631e10842c93618b3000a890fed501435dc5d02df9cb00f583cd",
-        "session/manifest.json": "e40495aba690207aec127c45509215d513cd8623a41e73d811de841868128b73",
-        "session/trace-events.jsonl": "f6f68d0e4e442c7cfc632b52df07fec8023f8c4a727f58389ae79fd2673dc0e8"
+        "oracle.json": "10d53e7e7cb7d1816ad285ac0b8dc9241eb13da7319aadfe876905e8ea15b63f",
+        "session/agent-events.jsonl": "8e0220b037c85fa67a420813eb498c3a62e407173478c9bd212f0e496fac733c",
+        "session/audit.jsonl": "07bd4f1235f2be3d1b0abeb3da18feb58e7c7ab352a09cf3cff14074bc1166d1",
+        "session/manifest.json": "1bde8af46150441f095e8a8b890530f2ba80c12c8acbfb818b6120c93fd1f8d9",
+        "session/trace-events.jsonl": "0e47b9389fba4ddce5ff7e8b7f137203428821aa60d6d4f1666109680641fcfe"
       },
       "comparison": {
         "missing": 0,
@@ -1626,19 +1626,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-07-knmon",
-      "controllerStartNs": "110808392732500",
-      "controllerEndNs": "110811716163800",
-      "processWallMs": 3323.4313,
+      "controllerStartNs": "112347147106900",
+      "controllerEndNs": "112351172039500",
+      "processWallMs": 4024.9326,
       "events": 450,
-      "workloadUs": 22687.2,
+      "workloadUs": 29864.7,
       "callLatencyUs": {
-        "median": 9.9,
-        "p95": 231.3,
-        "p99": 345.1
+        "median": 12.7,
+        "p95": 301.8,
+        "p99": 569.7
       },
-      "cpu100ns": 0,
-      "workingSetBytes": 18202624,
-      "peakWorkingSetBytes": 19562496
+      "cpu100ns": 156250,
+      "workingSetBytes": 18206720,
+      "peakWorkingSetBytes": 19595264
     },
     {
       "architecture": "x64",
@@ -1654,7 +1654,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
-        "oracle.json": "24bb7db6c82fde51ddfee69d5a4be9acefa815c594c1f48fbb76b409832cd188"
+        "oracle.json": "b9ba7ffb3ef9e40afe6a1b9dd03c9c2d683e71956654c5fee6e061430d0b47d8"
       },
       "comparison": {
         "missing": 0,
@@ -1665,19 +1665,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-08-frida-cmodule",
-      "controllerStartNs": "110811744951800",
-      "controllerEndNs": "110811819375000",
-      "processWallMs": 74.4232,
+      "controllerStartNs": "112351212450200",
+      "controllerEndNs": "112351295291800",
+      "processWallMs": 82.8416,
       "events": 450,
-      "workloadUs": 22947.8,
+      "workloadUs": 21793.1,
       "callLatencyUs": {
-        "median": 9.3,
-        "p95": 226.6,
-        "p99": 301.7
+        "median": 7.3,
+        "p95": 225.7,
+        "p99": 348.6
       },
-      "cpu100ns": 0,
-      "workingSetBytes": 15650816,
-      "peakWorkingSetBytes": 15650816
+      "cpu100ns": 312500,
+      "workingSetBytes": 15740928,
+      "peakWorkingSetBytes": 15740928
     },
     {
       "architecture": "x64",
@@ -1692,9 +1692,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "e5d1ce008eb79e6e8652c3273eb6b7f6b40420ad6ec8dad9bf6fc51fe9ba7ea9",
-        "etw.json": "450da0c3f1adede95dbd3eddf097c9d5103ccba01aaede5cc28f091c41405a57",
-        "oracle.json": "008987208d19c264966f6588143fca08eef3e779f7d437dcb5e0c727871337db"
+        "corpus.etl": "98ce7fdac444082fddee94438772479c0b95cdf35b56efdb4d766fd6ac053add",
+        "etw.json": "ef0554fbac03d74ad88c22d8e716a8fc83e3da3fae73b9d8fd3a69596e64afa9",
+        "oracle.json": "b90fa70bff19ac34e68a4b696c36bb5a09cf77b573613896fb0526865e0bb8f8"
       },
       "comparison": {
         "missing": 0,
@@ -1705,15 +1705,15 @@
       },
       "targetExitCode": 0,
       "directory": "x64-08-etw",
-      "controllerStartNs": "110811840195000",
-      "controllerEndNs": "110812193112200",
-      "processWallMs": 352.9172,
+      "controllerStartNs": "112351316960700",
+      "controllerEndNs": "112351680189800",
+      "processWallMs": 363.2291,
       "events": 450,
-      "workloadUs": 20955.6,
+      "workloadUs": 25508.5,
       "callLatencyUs": {
-        "median": 8.9,
-        "p95": 209.9,
-        "p99": 320.4
+        "median": 7.2,
+        "p95": 246.3,
+        "p99": 365.8
       },
       "cpu100ns": 156250,
       "workingSetBytes": 6156288,
@@ -1732,7 +1732,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "83f8e6f7a5abfe7dd8ef5c8d69c530365138ce64f8c9c3da7a339c13e32c290c"
+        "oracle.json": "1c183c0ee5b892b7df91c179f605cadff12abacb01349b23cffb73d70ec4242f"
       },
       "comparison": {
         "missing": 0,
@@ -1743,19 +1743,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-08-original",
-      "controllerStartNs": "110812241754800",
-      "controllerEndNs": "110812285379000",
-      "processWallMs": 43.6242,
+      "controllerStartNs": "112351739405300",
+      "controllerEndNs": "112351784975700",
+      "processWallMs": 45.5704,
       "events": 450,
-      "workloadUs": 22500.7,
+      "workloadUs": 20864.1,
       "callLatencyUs": {
-        "median": 14.5,
-        "p95": 226.8,
-        "p99": 351.3
+        "median": 5.3,
+        "p95": 228.6,
+        "p99": 327.4
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 5922816,
-      "peakWorkingSetBytes": 5922816
+      "workingSetBytes": 5984256,
+      "peakWorkingSetBytes": 5984256
     },
     {
       "architecture": "x64",
@@ -1769,13 +1769,13 @@
         "knmon-agent64.dll": "6bdc891d2bbe09991df102691485b73328ff1c373e464ec4d92c21a6300763d7"
       },
       "artifacts": {
-        "capture.json": "25a077a0d98f8bd639a8766bb80b8e30e146ac36bd117e355a308647e61153db",
+        "capture.json": "2376368e361bb1b8059cdc41c0a5e6272f39bfd7154247b860731ef2d069dd42",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "82b3a76d726ed0f8650716bade86454f45ed35d63a861f61f623490a12700cce",
-        "session/agent-events.jsonl": "8d1a3382ace1d3b15c19161a2d6b83d6e872dad2c95622a96091f588c9094e0a",
-        "session/audit.jsonl": "66639dfbeac6bbc07d62b09cbc8b4e54900be85964cae17f619ab8f4b7b54327",
-        "session/manifest.json": "e49a6e718c090882cc5afa7d33b11cabe672417b0dd7950bec1dd98b668036bd",
-        "session/trace-events.jsonl": "2a236226451e15f88399bd7bc496288bb7d702485ad992bdfcff3f83222bd9c8"
+        "oracle.json": "caf7506ba0c843c37d790983af9cc9d6239c2b0a2f3fcd17729f0820a5b37374",
+        "session/agent-events.jsonl": "bd81122689b0aea1e3668d4f5aa41b207de5920f79612ab843198c220e7b98b5",
+        "session/audit.jsonl": "9ab0675fef82f915e01cc66ef43db60d746565a90c7f98601cc29d301b28e24a",
+        "session/manifest.json": "3b7d0d342fb957a2fd8b4080d3b840e3dcdd60cb23b2014f6f0f48250ab8341b",
+        "session/trace-events.jsonl": "51dbd215d026d3f560b4842dc793e8d535d7dfc1959d004eebfecbf21a09c006"
       },
       "comparison": {
         "missing": 0,
@@ -1786,19 +1786,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-08-knmon",
-      "controllerStartNs": "110812300466100",
-      "controllerEndNs": "110815612617700",
-      "processWallMs": 3312.1516,
+      "controllerStartNs": "112351806723400",
+      "controllerEndNs": "112356197529300",
+      "processWallMs": 4390.8059,
       "events": 450,
-      "workloadUs": 25261.5,
+      "workloadUs": 21970.3,
       "callLatencyUs": {
-        "median": 19.7,
-        "p95": 242.3,
-        "p99": 359.5
+        "median": 9.2,
+        "p95": 215.2,
+        "p99": 344.1
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 18210816,
-      "peakWorkingSetBytes": 19570688
+      "cpu100ns": 0,
+      "workingSetBytes": 18169856,
+      "peakWorkingSetBytes": 19550208
     },
     {
       "architecture": "x64",
@@ -1814,7 +1814,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
-        "oracle.json": "0a5b346d548e2e701e79a65757ec4acf0a8c9a3ca77ce73fc59eaced7845ef9d"
+        "oracle.json": "4619a72591001b64b9cf73b638b2ac58e2a69c8859dfd106bc99f209cf8b31bf"
       },
       "comparison": {
         "missing": 0,
@@ -1825,19 +1825,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-08-frida",
-      "controllerStartNs": "110815635967600",
-      "controllerEndNs": "110815710142800",
-      "processWallMs": 74.1752,
+      "controllerStartNs": "112356234464300",
+      "controllerEndNs": "112356382424800",
+      "processWallMs": 147.9605,
       "events": 450,
-      "workloadUs": 28308.8,
+      "workloadUs": 42515.5,
       "callLatencyUs": {
-        "median": 22.1,
-        "p95": 300.4,
-        "p99": 337.6
+        "median": 35.4,
+        "p95": 393.2,
+        "p99": 511.4
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 15179776,
-      "peakWorkingSetBytes": 15179776
+      "cpu100ns": 312500,
+      "workingSetBytes": 15200256,
+      "peakWorkingSetBytes": 15200256
     },
     {
       "architecture": "x64",
@@ -1852,9 +1852,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "9d38dbdc0874e44fb591ace2a468b0ee054a5dec43a6a577b02ce28f06ec6c0b",
-        "etw.json": "f00bf7fb0f85811025026d4a022e49b18730b40b39b2d06ab6d8542755af67d8",
-        "oracle.json": "1869a9b80ed8665542fbb1ebf18f6d9cbb8208448fe10b32a85cd4a644686794"
+        "corpus.etl": "4df1f54649fe6dffe3b36318339e526c14c37c982b89aa9a1b410ef47d1e3e73",
+        "etw.json": "395c375c7d108b1f39aabfdcb0d939dc526a9bab47a3d73e17a0ad35c94539ff",
+        "oracle.json": "965f9d23f97158301d118ef79df48e8ace83ee47a924d7f7d6b93935bb0f2f6b"
       },
       "comparison": {
         "missing": 0,
@@ -1865,19 +1865,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-09-etw",
-      "controllerStartNs": "110815736282600",
-      "controllerEndNs": "110816082423800",
-      "processWallMs": 346.1412,
+      "controllerStartNs": "112356416204500",
+      "controllerEndNs": "112356787479100",
+      "processWallMs": 371.2746,
       "events": 450,
-      "workloadUs": 22049.9,
+      "workloadUs": 25705.5,
       "callLatencyUs": {
         "median": 6.8,
-        "p95": 218.0,
-        "p99": 386.9
+        "p95": 268.0,
+        "p99": 452.1
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 6156288,
-      "peakWorkingSetBytes": 6156288
+      "workingSetBytes": 6144000,
+      "peakWorkingSetBytes": 6144000
     },
     {
       "architecture": "x64",
@@ -1892,7 +1892,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "695ec2dc49211f441cebace87c4c305c370e0d8c381b65a211626701850abb95"
+        "oracle.json": "62d6775e91a99c3bbe421fa19dfc37b9f726d0c9f28afc7cd93c8d7ffb2d3330"
       },
       "comparison": {
         "missing": 0,
@@ -1903,19 +1903,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-09-original",
-      "controllerStartNs": "110816128014700",
-      "controllerEndNs": "110816174899900",
-      "processWallMs": 46.8852,
+      "controllerStartNs": "112356880135800",
+      "controllerEndNs": "112357029118800",
+      "processWallMs": 148.983,
       "events": 450,
-      "workloadUs": 25130.0,
+      "workloadUs": 103575.2,
       "callLatencyUs": {
-        "median": 6.5,
-        "p95": 276.0,
-        "p99": 418.2
+        "median": 17.2,
+        "p95": 682.3,
+        "p99": 3756.6
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 5931008,
-      "peakWorkingSetBytes": 5931008
+      "cpu100ns": 468750,
+      "workingSetBytes": 5947392,
+      "peakWorkingSetBytes": 5947392
     },
     {
       "architecture": "x64",
@@ -1929,13 +1929,13 @@
         "knmon-agent64.dll": "6bdc891d2bbe09991df102691485b73328ff1c373e464ec4d92c21a6300763d7"
       },
       "artifacts": {
-        "capture.json": "f0d1e6cff0abcb2065e6d1d6a21fc0b87b04ae0226a7a80bc18566a78e2410a7",
+        "capture.json": "863c00d1cbdb6d3b74be6fe3f9817363475a1ddcba5fd0beba112c125dd51f2c",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "c25df10d7d0e99f87ea256f62102807ed7af1dcbf19cdf3d23d891c9056a65ea",
-        "session/agent-events.jsonl": "a4095337d191c97e55bc4757e9b266aabd48d1452a808586d993b0685423193e",
-        "session/audit.jsonl": "1b8c101a749c2f2e245722098af0a9367b352eecaa8b9eea56e3b1ed441badb3",
-        "session/manifest.json": "b6a6e256590572502e3770157f07f98669525408e570a2000bd89c97222a1efd",
-        "session/trace-events.jsonl": "9c9cf3bd837bb9b1a21bc3444c83709f25039bb835678714878b8a37bfd048a0"
+        "oracle.json": "72b6bee4e9fa6cb7534c8dc5592544413592fe10eae3151a37ac692f23c642cf",
+        "session/agent-events.jsonl": "8b2a8ed8b11a2037cbe4db94ce7688f8bf70ae0780796a7f99c0aa95c0fd4d0b",
+        "session/audit.jsonl": "aca71314481c8c3dd52cd6248fc8c147501188cfcad9ca06c61cbe686752fb15",
+        "session/manifest.json": "ec7c8a0f39e44870162347c97836811f96fa6c816721c8c81248d88e43eaa9af",
+        "session/trace-events.jsonl": "413e1979aea418c364602046e16c2470935af772ac64022a7f460e371ee90a42"
       },
       "comparison": {
         "missing": 0,
@@ -1946,19 +1946,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-09-knmon",
-      "controllerStartNs": "110816190000900",
-      "controllerEndNs": "110819536667500",
-      "processWallMs": 3346.6666,
+      "controllerStartNs": "112357063729800",
+      "controllerEndNs": "112364528468900",
+      "processWallMs": 7464.7391,
       "events": 450,
-      "workloadUs": 24380.5,
+      "workloadUs": 55865.0,
       "callLatencyUs": {
-        "median": 10.5,
-        "p95": 273.8,
-        "p99": 363.7
+        "median": 14.0,
+        "p95": 431.4,
+        "p99": 2094.8
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 18190336,
-      "peakWorkingSetBytes": 19546112
+      "cpu100ns": 312500,
+      "workingSetBytes": 18198528,
+      "peakWorkingSetBytes": 19558400
     },
     {
       "architecture": "x64",
@@ -1974,7 +1974,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "557f1d0795217f6b6f2fa4ce9d3fc10d49235cd0bf38d481eb8194a140b31b4b",
-        "oracle.json": "c2a1a80323b62273bbcad3c5508d327142a10b370c8e3537fb7cd61b0b7991b2"
+        "oracle.json": "12517197c806cdf79512b950818e0782fe5e77f8d9876a70bacfceb8b8b731c6"
       },
       "comparison": {
         "missing": 0,
@@ -1985,19 +1985,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-09-frida",
-      "controllerStartNs": "110819560953400",
-      "controllerEndNs": "110819633589500",
-      "processWallMs": 72.6361,
+      "controllerStartNs": "112364633678800",
+      "controllerEndNs": "112364937794000",
+      "processWallMs": 304.1152,
       "events": 450,
-      "workloadUs": 26981.5,
+      "workloadUs": 174369.1,
       "callLatencyUs": {
-        "median": 21.8,
-        "p95": 291.8,
-        "p99": 324.9
+        "median": 44.7,
+        "p95": 784.9,
+        "p99": 6715.3
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 15241216,
-      "peakWorkingSetBytes": 15241216
+      "cpu100ns": 156250,
+      "workingSetBytes": 15249408,
+      "peakWorkingSetBytes": 15249408
     },
     {
       "architecture": "x64",
@@ -2013,7 +2013,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "afdc8988af975b077ecbf1a30e5512f427ef640b3048452c816dffb089cce393",
-        "oracle.json": "0228054af36807dd6ac1423c9f7b4185d91877972b6596b48a069d084fa7041a"
+        "oracle.json": "ddc280675c222cdc8c44af9cac00ce8d34b509b49029adac9bd48d8d84b6a501"
       },
       "comparison": {
         "missing": 0,
@@ -2024,19 +2024,19 @@
       },
       "targetExitCode": 0,
       "directory": "x64-09-frida-cmodule",
-      "controllerStartNs": "110819653164500",
-      "controllerEndNs": "110819725634600",
-      "processWallMs": 72.4701,
+      "controllerStartNs": "112364981138100",
+      "controllerEndNs": "112365149115200",
+      "processWallMs": 167.9771,
       "events": 450,
-      "workloadUs": 22396.0,
+      "workloadUs": 60042.7,
       "callLatencyUs": {
-        "median": 8.4,
-        "p95": 260.5,
-        "p99": 336.8
+        "median": 10.1,
+        "p95": 439.8,
+        "p99": 1778.0
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 15646720,
-      "peakWorkingSetBytes": 15646720
+      "cpu100ns": 0,
+      "workingSetBytes": 15794176,
+      "peakWorkingSetBytes": 15794176
     },
     {
       "architecture": "x86",
@@ -2051,7 +2051,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "bac0958a2c05312bdda59490ccb4a190a7c2492cc4e65e5986c9da552e98c35b"
+        "oracle.json": "657f4b27931644275222c5229ff902128dd10a25936b52bfac009c74094000b0"
       },
       "comparison": {
         "missing": 0,
@@ -2062,19 +2062,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-00-original",
-      "controllerStartNs": "110823371997200",
-      "controllerEndNs": "110823420592600",
-      "processWallMs": 48.5954,
+      "controllerStartNs": "112375037669400",
+      "controllerEndNs": "112375266673200",
+      "processWallMs": 229.0038,
       "events": 450,
-      "workloadUs": 21638.6,
+      "workloadUs": 98312.4,
       "callLatencyUs": {
-        "median": 6.5,
-        "p95": 212.7,
-        "p99": 334.4
+        "median": 9.9,
+        "p95": 531.8,
+        "p99": 3612.3
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 6975488,
-      "peakWorkingSetBytes": 6975488
+      "cpu100ns": 312500,
+      "workingSetBytes": 7028736,
+      "peakWorkingSetBytes": 7028736
     },
     {
       "architecture": "x86",
@@ -2088,13 +2088,13 @@
         "knmon-agent32.dll": "3ec01c8b534d3be2b8aa46265bb3338097cbf7f6bcba967e33d8681c6f953299"
       },
       "artifacts": {
-        "capture.json": "e6005943f535d4eaa7fbd2205e3db79c4d9bd834cb2b58cd425fca4a81b8c8eb",
+        "capture.json": "a712831c5b65ee2ae6927c63d5e94aa0f6c98ba40f904e6a7df6ded2d9c32438",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "626eb927a677ce15329c1c1fcbcae1b62494a10269f809bd774900a91eb377b7",
-        "session/agent-events.jsonl": "2b4ffbea0f334448e192b5deffb52e28c6aa6981cf965c5ba90ccc940b0c99aa",
-        "session/audit.jsonl": "97ab84ac581ab0d3e9ab71b6f6362b6e5845d43d599fffb793889b7b5a2b31d6",
-        "session/manifest.json": "efbbfe7b2a2bb9fb32d63c9a89c49066d3bab8397dcd916d4c3ec85ccd779127",
-        "session/trace-events.jsonl": "b504175c10938c7d905bf06a53a3ad0ab35e7a9dc423ad8536cc71a205cef443"
+        "oracle.json": "976e45f8241cd825dcdd39102f450d3580b04791c2d287acd908a6f2c13ceacf",
+        "session/agent-events.jsonl": "d0007d3cce217224aca1d1875a4c00c85aa7e0acd9cc6fcdf1ba3e1b1279b5a9",
+        "session/audit.jsonl": "ad73729d22be354f5fe2d9f9dc57b48f89a5a18d85db88640cbe3d01c81ca4ee",
+        "session/manifest.json": "7d08ee7139d967832b1d222cea2a46f03cc15532ae2181c273e952d699ae63a6",
+        "session/trace-events.jsonl": "34c86c620877cb1f97f687a72c0aa0e43af83b398590d2a57cd351abe4dd1f63"
       },
       "comparison": {
         "missing": 0,
@@ -2105,19 +2105,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-00-knmon",
-      "controllerStartNs": "110823436743800",
-      "controllerEndNs": "110827536781200",
-      "processWallMs": 4100.0374,
+      "controllerStartNs": "112375290704700",
+      "controllerEndNs": "112384855860500",
+      "processWallMs": 9565.1558,
       "events": 450,
-      "workloadUs": 23181.2,
+      "workloadUs": 54178.1,
       "callLatencyUs": {
-        "median": 13.9,
-        "p95": 207.0,
-        "p99": 337.9
+        "median": 16.5,
+        "p95": 445.0,
+        "p99": 1752.4
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 18554880,
-      "peakWorkingSetBytes": 19906560
+      "workingSetBytes": 18583552,
+      "peakWorkingSetBytes": 19922944
     },
     {
       "architecture": "x86",
@@ -2133,7 +2133,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
-        "oracle.json": "5c1ae3152c8d69dd2acf93616749d3618bb1fe880f00b23e35631356ec25a7bb"
+        "oracle.json": "0c5a66141a218f8e291e604519efc5b5437f15c5851f798b3a9817760cc4b20c"
       },
       "comparison": {
         "missing": 0,
@@ -2144,19 +2144,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-00-frida",
-      "controllerStartNs": "110827558553700",
-      "controllerEndNs": "110828553465400",
-      "processWallMs": 994.9117,
+      "controllerStartNs": "112384910187200",
+      "controllerEndNs": "112387262373600",
+      "processWallMs": 2352.1864,
       "events": 450,
-      "workloadUs": 30144.9,
+      "workloadUs": 122997.5,
       "callLatencyUs": {
-        "median": 27.9,
-        "p95": 288.6,
-        "p99": 386.8
+        "median": 43.5,
+        "p95": 878.5,
+        "p99": 5299.2
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 14422016,
-      "peakWorkingSetBytes": 14422016
+      "cpu100ns": 468750,
+      "workingSetBytes": 14454784,
+      "peakWorkingSetBytes": 14454784
     },
     {
       "architecture": "x86",
@@ -2172,7 +2172,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
-        "oracle.json": "171e74e4a489220b3a7045259d3d2af03f697134af4fd0fb7ebc4be3dd05531e"
+        "oracle.json": "d91432b2af5bfd39a8dafb63ba76c512eab965399c0f2b708e315dbef1f6ae4e"
       },
       "comparison": {
         "missing": 0,
@@ -2183,19 +2183,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-00-frida-cmodule",
-      "controllerStartNs": "110828567892200",
-      "controllerEndNs": "110828647787100",
-      "processWallMs": 79.8949,
+      "controllerStartNs": "112387312113700",
+      "controllerEndNs": "112387495722500",
+      "processWallMs": 183.6088,
       "events": 450,
-      "workloadUs": 22199.1,
+      "workloadUs": 61526.6,
       "callLatencyUs": {
-        "median": 8.6,
-        "p95": 231.0,
-        "p99": 322.6
+        "median": 11.7,
+        "p95": 470.7,
+        "p99": 2265.5
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 14745600,
-      "peakWorkingSetBytes": 14745600
+      "cpu100ns": 0,
+      "workingSetBytes": 14802944,
+      "peakWorkingSetBytes": 14802944
     },
     {
       "architecture": "x86",
@@ -2210,9 +2210,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "72bb6a3b3edafc0619608ed5acef06f78c52dd04f4b887bdead1fce564bfd163",
-        "etw.json": "3fdf9bab6e28ea76b3c348f93db2c906acfbff45689e11ebc2e1df03da7520b0",
-        "oracle.json": "9f2e77c7664b7e8f32d4573859a6d719f8a5a0f99b3f47d674314e889b525a6c"
+        "corpus.etl": "c1f56bb1ad437e860c7ba7ff414d507e3dff285c9e5a80770a63efb8f29843e3",
+        "etw.json": "b207b52a7140837bebfd1502616c67b46d8711a04298caa79f7288f09426c4e9",
+        "oracle.json": "d94265c1222f0b9a67c31b25bf8471bd8c7978fdb8d6383ae0a5b2304834dec9"
       },
       "comparison": {
         "missing": 0,
@@ -2223,19 +2223,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-00-etw",
-      "controllerStartNs": "110828670019400",
-      "controllerEndNs": "110829031719200",
-      "processWallMs": 361.6998,
+      "controllerStartNs": "112387535082400",
+      "controllerEndNs": "112388057335000",
+      "processWallMs": 522.2526,
       "events": 450,
-      "workloadUs": 20898.9,
+      "workloadUs": 120067.9,
       "callLatencyUs": {
-        "median": 6.7,
-        "p95": 210.4,
-        "p99": 322.6
+        "median": 15.8,
+        "p95": 954.8,
+        "p99": 3367.1
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 7249920,
-      "peakWorkingSetBytes": 7249920
+      "cpu100ns": 625000,
+      "workingSetBytes": 7217152,
+      "peakWorkingSetBytes": 7225344
     },
     {
       "architecture": "x86",
@@ -2249,13 +2249,13 @@
         "knmon-agent32.dll": "3ec01c8b534d3be2b8aa46265bb3338097cbf7f6bcba967e33d8681c6f953299"
       },
       "artifacts": {
-        "capture.json": "cbf8f43a1170cedfd70229c69fa7c7eef955c4f625fcb61b6b6b03ed73e44f48",
+        "capture.json": "eef5d8434440500379ae3c2e701d6ed3e8ac98dafc3faad9f1e441abb5613501",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "49770dc431798f09f6a3045b3d4e94a65f11967d6f530ac07fadde13f0b4cc0f",
-        "session/agent-events.jsonl": "27dbd21c8f528b2f0da0c624d7edce81760aeefadd04d40276abc4a697defe21",
-        "session/audit.jsonl": "4a55d189f2814d7647fc2eac518be396cfd5d5dac0a52dc0ca87142f564ed737",
-        "session/manifest.json": "9050ad0a519a4c3dfe209d6f41531077982e403aab3e71b519ab93c5d7fae6ca",
-        "session/trace-events.jsonl": "e0996539d9fad6a10daa269c7dedbef528602508e4bca9af1704b51cea3a2eca"
+        "oracle.json": "ec71d2fdde634611284a3bb32f8cb9d65376a8744b4de7247805fa7a86a33a8c",
+        "session/agent-events.jsonl": "257fdc5e3b2375c4f6d75753f6530bfb76c13c968575d0cd1a249e4514f1a25f",
+        "session/audit.jsonl": "f07a247f319c8b91d5bdbca9aa4e4c959ae5aadf2d804b39b2f993ff5f37af22",
+        "session/manifest.json": "fdb8366ec060921d576b05df88d6f739a500ccc0f87f77ad47b3e0aa3f8bf7bf",
+        "session/trace-events.jsonl": "ea94f1259aa3b206a13fb53850d37930f87fec68bf731b1cff24c0de8c5d0504"
       },
       "comparison": {
         "missing": 0,
@@ -2266,19 +2266,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-01-knmon",
-      "controllerStartNs": "110829087379200",
-      "controllerEndNs": "110833215584500",
-      "processWallMs": 4128.2053,
+      "controllerStartNs": "112388287594000",
+      "controllerEndNs": "112397811978400",
+      "processWallMs": 9524.3844,
       "events": 450,
-      "workloadUs": 26513.8,
+      "workloadUs": 316654.0,
       "callLatencyUs": {
-        "median": 15.3,
-        "p95": 293.8,
-        "p99": 374.2
+        "median": 29.9,
+        "p95": 3537.5,
+        "p99": 11905.3
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 18563072,
-      "peakWorkingSetBytes": 19906560
+      "cpu100ns": 468750,
+      "workingSetBytes": 18567168,
+      "peakWorkingSetBytes": 19927040
     },
     {
       "architecture": "x86",
@@ -2294,7 +2294,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
-        "oracle.json": "4f887c925ea67be81610b4761bc69549131e3d3fc5a553ab472d635a40bc510b"
+        "oracle.json": "21b1c7e10433f4e30224afaf534438bda7f5f210950ee67db41d93f246e6875b"
       },
       "comparison": {
         "missing": 0,
@@ -2305,19 +2305,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-01-frida",
-      "controllerStartNs": "110833237527800",
-      "controllerEndNs": "110833316976900",
-      "processWallMs": 79.4491,
+      "controllerStartNs": "112397869600400",
+      "controllerEndNs": "112398101523300",
+      "processWallMs": 231.9229,
       "events": 450,
-      "workloadUs": 27899.4,
+      "workloadUs": 107295.7,
       "callLatencyUs": {
-        "median": 27.8,
-        "p95": 267.9,
-        "p99": 327.8
+        "median": 45.4,
+        "p95": 911.7,
+        "p99": 4085.5
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 14462976,
-      "peakWorkingSetBytes": 14462976
+      "cpu100ns": 0,
+      "workingSetBytes": 14483456,
+      "peakWorkingSetBytes": 14483456
     },
     {
       "architecture": "x86",
@@ -2333,7 +2333,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
-        "oracle.json": "e079cbca662f2688b6ca46ba5eeba2d95bac233de2e9a9ddb411ef3a983401e0"
+        "oracle.json": "e2a6615233c8854eb20178b98360f34948c13217b7580815f2c5578a85f50a0d"
       },
       "comparison": {
         "missing": 0,
@@ -2344,19 +2344,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-01-frida-cmodule",
-      "controllerStartNs": "110833331642800",
-      "controllerEndNs": "110833411615900",
-      "processWallMs": 79.9731,
+      "controllerStartNs": "112398140951200",
+      "controllerEndNs": "112398353843300",
+      "processWallMs": 212.8921,
       "events": 450,
-      "workloadUs": 22359.3,
+      "workloadUs": 90608.4,
       "callLatencyUs": {
-        "median": 8.9,
-        "p95": 211.3,
-        "p99": 348.2
+        "median": 14.8,
+        "p95": 559.7,
+        "p99": 5737.2
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 14807040,
-      "peakWorkingSetBytes": 14807040
+      "cpu100ns": 312500,
+      "workingSetBytes": 14782464,
+      "peakWorkingSetBytes": 14782464
     },
     {
       "architecture": "x86",
@@ -2371,9 +2371,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "70fcbeb53907973cf4c6426bb8b64f25c5cf63491d21c210231e14baa2fb424d",
-        "etw.json": "1fde9b8d6bec01d37917bd963c06829f76053b0f729338e557bc4e9b5e08ceff",
-        "oracle.json": "c2bdd05306175b71e3a2f90516f02d0c62f1de2222b511163c17b55eccc11466"
+        "corpus.etl": "13a2deb85cf8fc2ffef27d607592d177e780a2cd7c05ab6bc341726a6885fc29",
+        "etw.json": "ce64e017e700d0a08dc8c85adc4e995facd42f187f1d553c8f24c645b33cebd3",
+        "oracle.json": "447ee6d42662c8014a21c5a3bb047ab653c9891465af3bf7ace0d2166824f057"
       },
       "comparison": {
         "missing": 0,
@@ -2384,19 +2384,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-01-etw",
-      "controllerStartNs": "110833432642700",
-      "controllerEndNs": "110833796378200",
-      "processWallMs": 363.7355,
+      "controllerStartNs": "112398424279100",
+      "controllerEndNs": "112398886337500",
+      "processWallMs": 462.0584,
       "events": 450,
-      "workloadUs": 20577.7,
+      "workloadUs": 90044.1,
       "callLatencyUs": {
-        "median": 6.3,
-        "p95": 195.4,
-        "p99": 342.3
+        "median": 9.7,
+        "p95": 529.7,
+        "p99": 4670.6
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 7294976,
-      "peakWorkingSetBytes": 7294976
+      "cpu100ns": 468750,
+      "workingSetBytes": 7213056,
+      "peakWorkingSetBytes": 7213056
     },
     {
       "architecture": "x86",
@@ -2411,7 +2411,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "81426051296877d27c28f2e440052c7fdd80d2c956b34302b4840d5625e3a6cc"
+        "oracle.json": "8322a39ea9a1e02a69168d560de3480018490d35ae69b06de2407c79cab4b957"
       },
       "comparison": {
         "missing": 0,
@@ -2422,19 +2422,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-01-original",
-      "controllerStartNs": "110833845709000",
-      "controllerEndNs": "110833891494400",
-      "processWallMs": 45.7854,
+      "controllerStartNs": "112398988110200",
+      "controllerEndNs": "112399206932100",
+      "processWallMs": 218.8219,
       "events": 450,
-      "workloadUs": 20171.6,
+      "workloadUs": 141546.2,
       "callLatencyUs": {
-        "median": 6.3,
-        "p95": 200.0,
-        "p99": 289.5
+        "median": 13.7,
+        "p95": 926.1,
+        "p99": 3824.4
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 6991872,
-      "peakWorkingSetBytes": 6991872
+      "cpu100ns": 312500,
+      "workingSetBytes": 7057408,
+      "peakWorkingSetBytes": 7057408
     },
     {
       "architecture": "x86",
@@ -2450,7 +2450,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
-        "oracle.json": "9abad7f6e7a848ad3f3e25a9899b7fb65710841e5296a4f03f448b46c75501fa"
+        "oracle.json": "1e64c4b6f1e05e8f813460e7c26af3e6414d28373689f8a298bf6818de2ed22a"
       },
       "comparison": {
         "missing": 0,
@@ -2461,19 +2461,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-02-frida",
-      "controllerStartNs": "110833912154300",
-      "controllerEndNs": "110833999868500",
-      "processWallMs": 87.7142,
+      "controllerStartNs": "112399257119600",
+      "controllerEndNs": "112399451764800",
+      "processWallMs": 194.6452,
       "events": 450,
-      "workloadUs": 33843.2,
+      "workloadUs": 71294.2,
       "callLatencyUs": {
-        "median": 28.2,
-        "p95": 321.9,
-        "p99": 380.7
+        "median": 43.1,
+        "p95": 537.2,
+        "p99": 2901.1
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 14450688,
-      "peakWorkingSetBytes": 14450688
+      "workingSetBytes": 14475264,
+      "peakWorkingSetBytes": 14475264
     },
     {
       "architecture": "x86",
@@ -2489,7 +2489,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
-        "oracle.json": "641329868d581c67d66205be45108f4884adafe9d238df05df6c611d1247a60d"
+        "oracle.json": "90cf0b37e2b4412f03b774c2254a88ae89126f3ead582d53bc7c07b75c12a974"
       },
       "comparison": {
         "missing": 0,
@@ -2500,19 +2500,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-02-frida-cmodule",
-      "controllerStartNs": "110834017568600",
-      "controllerEndNs": "110834097151600",
-      "processWallMs": 79.583,
+      "controllerStartNs": "112399485337100",
+      "controllerEndNs": "112399717684100",
+      "processWallMs": 232.347,
       "events": 450,
-      "workloadUs": 22927.2,
+      "workloadUs": 85810.3,
       "callLatencyUs": {
-        "median": 10.5,
-        "p95": 241.2,
-        "p99": 349.2
+        "median": 15.1,
+        "p95": 560.6,
+        "p99": 3465.6
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 14815232,
-      "peakWorkingSetBytes": 14815232
+      "workingSetBytes": 14790656,
+      "peakWorkingSetBytes": 14790656
     },
     {
       "architecture": "x86",
@@ -2527,9 +2527,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "d5ca42b6c56f299ed4dea7aefb168311ac87b97062601c81e6c0d1849f415197",
-        "etw.json": "a5ec2045fd5beafd82ec952e4c0a442749625ccabc613f10235cfdad60cac0df",
-        "oracle.json": "8e46be046ef67ae9c17f6c5a7d60159b0ff434beb247fc976d26195c2f55eea5"
+        "corpus.etl": "666eb54a693ad83ba09f2984eaae462ac0cca9686512e870b12f2bb038a10a6e",
+        "etw.json": "68d0672607c3646d4830b39bd19ad344debe62bc2b18e49b0884424c3ae645ed",
+        "oracle.json": "8ed618c138ceee2c15e7cb5f21e46744921845ce06c6d57f6aff670471b2c0d0"
       },
       "comparison": {
         "missing": 0,
@@ -2540,19 +2540,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-02-etw",
-      "controllerStartNs": "110834115255400",
-      "controllerEndNs": "110834475650200",
-      "processWallMs": 360.3948,
+      "controllerStartNs": "112399761525100",
+      "controllerEndNs": "112400223832600",
+      "processWallMs": 462.3075,
       "events": 450,
-      "workloadUs": 20475.8,
+      "workloadUs": 109081.4,
       "callLatencyUs": {
-        "median": 6.2,
-        "p95": 207.1,
-        "p99": 320.6
+        "median": 20.0,
+        "p95": 708.3,
+        "p99": 3612.3
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 7311360,
-      "peakWorkingSetBytes": 7311360
+      "cpu100ns": 468750,
+      "workingSetBytes": 7258112,
+      "peakWorkingSetBytes": 7258112
     },
     {
       "architecture": "x86",
@@ -2567,7 +2567,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "3fc3adad08c0a7122963b23ace27920b9c3e2905ddcbe597592f760535c47086"
+        "oracle.json": "37d516cba1f21590ac152fd754571acfb6f7fe13ec5ac2f08add05989995439b"
       },
       "comparison": {
         "missing": 0,
@@ -2578,19 +2578,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-02-original",
-      "controllerStartNs": "110834528911400",
-      "controllerEndNs": "110834607761300",
-      "processWallMs": 78.8499,
+      "controllerStartNs": "112400315718200",
+      "controllerEndNs": "112400467861000",
+      "processWallMs": 152.1428,
       "events": 450,
-      "workloadUs": 20674.7,
+      "workloadUs": 42208.1,
       "callLatencyUs": {
-        "median": 6.7,
-        "p95": 200.8,
-        "p99": 334.3
+        "median": 8.1,
+        "p95": 321.4,
+        "p99": 1618.1
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 7045120,
-      "peakWorkingSetBytes": 7045120
+      "cpu100ns": 468750,
+      "workingSetBytes": 7036928,
+      "peakWorkingSetBytes": 7036928
     },
     {
       "architecture": "x86",
@@ -2604,13 +2604,13 @@
         "knmon-agent32.dll": "3ec01c8b534d3be2b8aa46265bb3338097cbf7f6bcba967e33d8681c6f953299"
       },
       "artifacts": {
-        "capture.json": "a46a0df2471f0685c2e36109a7e265303ea54b15d0b746809abe8da07929aa92",
+        "capture.json": "a9939d761bdda3587b242603badf6dbfefd8dd69a89b496a8c6b661de93a93f9",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "83d4dbb2633b4a64263f00b5d8869af74384244c3011bade5f62586f828083e4",
-        "session/agent-events.jsonl": "09fb9376d6f82500f963d11b6c01e5b25a21fba339169463c96940eca4074884",
-        "session/audit.jsonl": "42e6a55faf56fcb5564ffd9125ec3a89a1f17673999a89ad3f81164a6445578c",
-        "session/manifest.json": "1a6d8a41059580a48be4ecd2678bfb7eda2a3d8ce5aa0d8e74fa047f062a126f",
-        "session/trace-events.jsonl": "a05b137ab1d9005bef37c9dab0564c5d423b7daf04f67ec7a7994422a5055344"
+        "oracle.json": "a79ab246ecdea2712e0882fb6d1b5cbe25af5ca7ba43be0baf4d04f6ed5e27dc",
+        "session/agent-events.jsonl": "0424fc686486b9958b7b35c7c615fa248f9b9421d286d0c061a4aa3e6ba74f3f",
+        "session/audit.jsonl": "d36a6f2649699e645db4765dd97ac28781b2da7582fe9bf80395c0d1d0ec7eab",
+        "session/manifest.json": "7f5d87479acc67ddcd5f549dce48bc38c24ff4277d0f3e6a526752c19858756d",
+        "session/trace-events.jsonl": "60805b41506997aa8913c2e874638f27eecfd5ad725e572bacc436edc1c78760"
       },
       "comparison": {
         "missing": 0,
@@ -2621,19 +2621,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-02-knmon",
-      "controllerStartNs": "110834622965100",
-      "controllerEndNs": "110838700785000",
-      "processWallMs": 4077.8199,
+      "controllerStartNs": "112400493100100",
+      "controllerEndNs": "112409273370200",
+      "processWallMs": 8780.2701,
       "events": 450,
-      "workloadUs": 24517.2,
+      "workloadUs": 62523.4,
       "callLatencyUs": {
-        "median": 11.5,
-        "p95": 289.4,
-        "p99": 351.6
+        "median": 17.1,
+        "p95": 586.4,
+        "p99": 1648.7
       },
-      "cpu100ns": 0,
-      "workingSetBytes": 18563072,
-      "peakWorkingSetBytes": 19906560
+      "cpu100ns": 468750,
+      "workingSetBytes": 18608128,
+      "peakWorkingSetBytes": 19959808
     },
     {
       "architecture": "x86",
@@ -2649,7 +2649,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
-        "oracle.json": "400ccbbbfbbc2d2e5ca7ec4fe49e630df6f31d71c603f89fd6e98fb5ffb7ad0e"
+        "oracle.json": "7ea9ce15722399882919ab86f9fed2fae8e45783c9803be7958c35a4c79a21b0"
       },
       "comparison": {
         "missing": 0,
@@ -2660,15 +2660,15 @@
       },
       "targetExitCode": 0,
       "directory": "x86-03-frida-cmodule",
-      "controllerStartNs": "110838726634200",
-      "controllerEndNs": "110838805132200",
-      "processWallMs": 78.498,
+      "controllerStartNs": "112409347042700",
+      "controllerEndNs": "112409716998100",
+      "processWallMs": 369.9554,
       "events": 450,
-      "workloadUs": 22296.4,
+      "workloadUs": 174719.3,
       "callLatencyUs": {
-        "median": 10.9,
-        "p95": 224.2,
-        "p99": 333.1
+        "median": 23.8,
+        "p95": 1531.6,
+        "p99": 6103.9
       },
       "cpu100ns": 156250,
       "workingSetBytes": 14819328,
@@ -2687,9 +2687,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "28462cf7f9d186e81d73732f5d91a95c16b99ba619b3512f077b587b5eb7a5e5",
-        "etw.json": "2e7ba217032e321c0f0acf600f4a396a8fa69d82a0f8b6a6ced9f77fc813d070",
-        "oracle.json": "797e4e5ec8a145dae1ca39e4c877adda1122d0acf00bbec7f1d9610b21d18ae0"
+        "corpus.etl": "27a19b3cad37275067bef4aa47c4be813d386ca27dae2aea064ac70710a55bfe",
+        "etw.json": "a85528aeff7038be4daab47e1da7c984da021c83f4b7213be6bd24d46ab7eafc",
+        "oracle.json": "9f398eba96fd209bd8c2a90562416eaebaecb679fdd5b4607e267fe0335083f1"
       },
       "comparison": {
         "missing": 0,
@@ -2700,19 +2700,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-03-etw",
-      "controllerStartNs": "110838823155500",
-      "controllerEndNs": "110839184104900",
-      "processWallMs": 360.9494,
+      "controllerStartNs": "112409793203000",
+      "controllerEndNs": "112410369721300",
+      "processWallMs": 576.5183,
       "events": 450,
-      "workloadUs": 20445.9,
+      "workloadUs": 137097.4,
       "callLatencyUs": {
-        "median": 6.2,
-        "p95": 197.9,
-        "p99": 325.6
+        "median": 14.5,
+        "p95": 674.5,
+        "p99": 5242.3
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 7311360,
-      "peakWorkingSetBytes": 7311360
+      "workingSetBytes": 7258112,
+      "peakWorkingSetBytes": 7258112
     },
     {
       "architecture": "x86",
@@ -2727,7 +2727,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "0eee806cfd80a8b09ca039828a36d50998f8b68f05c93fd2b266788aa67d73a2"
+        "oracle.json": "1d00d078446e4cdcb5657ec2bf097aa62594efcccfb76c52d5241cee2b07a0d3"
       },
       "comparison": {
         "missing": 0,
@@ -2738,19 +2738,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-03-original",
-      "controllerStartNs": "110839236355400",
-      "controllerEndNs": "110839282801100",
-      "processWallMs": 46.4457,
+      "controllerStartNs": "112410480320200",
+      "controllerEndNs": "112410608658100",
+      "processWallMs": 128.3379,
       "events": 450,
-      "workloadUs": 20792.9,
+      "workloadUs": 76177.0,
       "callLatencyUs": {
-        "median": 9.1,
-        "p95": 196.0,
-        "p99": 315.5
+        "median": 14.0,
+        "p95": 571.3,
+        "p99": 3417.8
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 7057408,
-      "peakWorkingSetBytes": 7057408
+      "workingSetBytes": 7069696,
+      "peakWorkingSetBytes": 7069696
     },
     {
       "architecture": "x86",
@@ -2764,13 +2764,13 @@
         "knmon-agent32.dll": "3ec01c8b534d3be2b8aa46265bb3338097cbf7f6bcba967e33d8681c6f953299"
       },
       "artifacts": {
-        "capture.json": "c07c81329ec1c1adb581c0b03a1a2b014364b930be51e17c176ffad21bbead85",
+        "capture.json": "d3638c65e058905bf791be8cc2aa1e8999e2b8e4c574eb3483c209ebab67a506",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "2b593c6d9274aaad662616b905a60d76326a0c5e4f53a6d055f4eb955d5c68e9",
-        "session/agent-events.jsonl": "7f57b0c4bd38eaf4ba3ac9183d651ee6c42fa1da8d667c0d051e50fce29d05f5",
-        "session/audit.jsonl": "001d6c4168faf374f74c451ebebeee4e9b5485c937f89c6c5cbcba259e0bf159",
-        "session/manifest.json": "9a9df2001788cacde2e11c909df30e055570d63cd2ad7d3b4827b9cdaff499d7",
-        "session/trace-events.jsonl": "dd5c0ad05261ef74e6216d133efdeac80c69cfc93338538c50efbb605abf90d8"
+        "oracle.json": "befb6603dd29dadd9b98015790ab47b45fab5418aa7573d25671f2d91cd7b7ec",
+        "session/agent-events.jsonl": "bdeb31ab9be12e912f68b6a633c28a0a757d199e6d55661b72e9a79dfeb4dc40",
+        "session/audit.jsonl": "fbb2f2a2ae09402e39eb5a9ca9b781d84d6a4ff0a0f7ebf56cb12c76b5a0c120",
+        "session/manifest.json": "dfbca8381f085ac443020a3f8442d9b4024fff3748e4c65bc75b7a00a2f4f93d",
+        "session/trace-events.jsonl": "e6d703ffe802b30350c17a1e091ed668b59e2a114a44c8b69e5c2844e0935214"
       },
       "comparison": {
         "missing": 0,
@@ -2781,19 +2781,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-03-knmon",
-      "controllerStartNs": "110839297884500",
-      "controllerEndNs": "110843394564800",
-      "processWallMs": 4096.6803,
+      "controllerStartNs": "112410638272500",
+      "controllerEndNs": "112419636040100",
+      "processWallMs": 8997.7676,
       "events": 450,
-      "workloadUs": 23390.7,
+      "workloadUs": 48970.5,
       "callLatencyUs": {
-        "median": 12.1,
-        "p95": 215.7,
-        "p99": 349.3
+        "median": 15.2,
+        "p95": 325.7,
+        "p99": 1391.7
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 18558976,
-      "peakWorkingSetBytes": 19910656
+      "cpu100ns": 468750,
+      "workingSetBytes": 18579456,
+      "peakWorkingSetBytes": 19931136
     },
     {
       "architecture": "x86",
@@ -2809,7 +2809,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
-        "oracle.json": "429c1a1da91bbcbe46e9927f666d20279332af1bc7b5c9fab9de2986a6a1fe72"
+        "oracle.json": "0192ee8e142a02456e825411e98e86ed851cba8cdc5a02974067d41ebb16b7fe"
       },
       "comparison": {
         "missing": 0,
@@ -2820,19 +2820,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-03-frida",
-      "controllerStartNs": "110843416589200",
-      "controllerEndNs": "110843496215300",
-      "processWallMs": 79.6261,
+      "controllerStartNs": "112419712389900",
+      "controllerEndNs": "112419989147300",
+      "processWallMs": 276.7574,
       "events": 450,
-      "workloadUs": 28473.1,
+      "workloadUs": 87389.0,
       "callLatencyUs": {
-        "median": 26.5,
-        "p95": 283.8,
-        "p99": 324.7
+        "median": 45.5,
+        "p95": 599.8,
+        "p99": 2122.5
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 14471168,
-      "peakWorkingSetBytes": 14471168
+      "cpu100ns": 312500,
+      "workingSetBytes": 14413824,
+      "peakWorkingSetBytes": 14413824
     },
     {
       "architecture": "x86",
@@ -2847,9 +2847,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "6bad2eeeb79b0a9684a6388dcc88d8c3a62f91d48bc92f3da3998ad5afb734cd",
-        "etw.json": "f2d71ff701e7cd4e983e2e5d9985059b3e0ed311d5cb984d53b47c0ed27d4106",
-        "oracle.json": "fa2a8dce5a402130faea4dc80564eaadda513ad521407493f0a8fcd241956a59"
+        "corpus.etl": "e71b8075ff6597329c0e0d9bf4a1760930441e35c36daa8a02ec0ed6e9c36499",
+        "etw.json": "5efaa5db94eabb9e817e44906f10c5f4414c9afdf449e98ea6d214e0dc324e67",
+        "oracle.json": "58df8e2763df332b262e900dec54e9c7143c2f0f888faafb11946f8e101e8d24"
       },
       "comparison": {
         "missing": 0,
@@ -2860,19 +2860,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-04-etw",
-      "controllerStartNs": "110843516164700",
-      "controllerEndNs": "110843867871300",
-      "processWallMs": 351.7066,
+      "controllerStartNs": "112420064436500",
+      "controllerEndNs": "112420546509200",
+      "processWallMs": 482.0727,
       "events": 450,
-      "workloadUs": 21184.3,
+      "workloadUs": 96398.7,
       "callLatencyUs": {
-        "median": 9.9,
-        "p95": 207.4,
-        "p99": 303.0
+        "median": 16.1,
+        "p95": 646.0,
+        "p99": 3249.1
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 7254016,
-      "peakWorkingSetBytes": 7266304
+      "cpu100ns": 156250,
+      "workingSetBytes": 7229440,
+      "peakWorkingSetBytes": 7233536
     },
     {
       "architecture": "x86",
@@ -2887,7 +2887,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "5b7f2e84e0dcb636c7a5012bec062659ed3161bf1950ec46c9ec237695932e97"
+        "oracle.json": "1557c530c74d9b3c98eed2515dd410eb453f8f0e751cf769c27a4e9f4880a4e3"
       },
       "comparison": {
         "missing": 0,
@@ -2898,19 +2898,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-04-original",
-      "controllerStartNs": "110843921486400",
-      "controllerEndNs": "110843975346500",
-      "processWallMs": 53.8601,
+      "controllerStartNs": "112420702182200",
+      "controllerEndNs": "112420807400700",
+      "processWallMs": 105.2185,
       "events": 450,
-      "workloadUs": 24314.2,
+      "workloadUs": 57632.6,
       "callLatencyUs": {
-        "median": 13.7,
-        "p95": 244.7,
-        "p99": 393.1
+        "median": 9.8,
+        "p95": 366.2,
+        "p99": 2393.7
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 6995968,
-      "peakWorkingSetBytes": 6995968
+      "cpu100ns": 156250,
+      "workingSetBytes": 6967296,
+      "peakWorkingSetBytes": 6967296
     },
     {
       "architecture": "x86",
@@ -2924,13 +2924,13 @@
         "knmon-agent32.dll": "3ec01c8b534d3be2b8aa46265bb3338097cbf7f6bcba967e33d8681c6f953299"
       },
       "artifacts": {
-        "capture.json": "f4cf1aec0d5ff4a4ba8490ddcb9ddf2f6bf976e886d725e2f9260e037c04d3ba",
+        "capture.json": "0d5243374755ea0aed268d42bc91620ac043faf60d5ca5d41bbba428f60233ba",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "c4765dda6fcfaabf4708e5b7185045df0f5cc548f9887b307cb4650656007333",
-        "session/agent-events.jsonl": "b6595e09363d7cc295425115692c681bb7483016d284edbb255f72897327082a",
-        "session/audit.jsonl": "8f56259cb58eefffd4838096017b96225624d2fba69b23623663cdafe4a7a5cf",
-        "session/manifest.json": "05fb21fa13521997ffb7b341284c8120e2e4505d912c2f1b2111a7b7f0b500e7",
-        "session/trace-events.jsonl": "3b307123f73e2b85a4e9ea2b85ba667781b214a983a544a8746b6381ec001790"
+        "oracle.json": "a65c52013ec8587f164c7a3ee10b8087d3894fcdf0703a9633dee9741f43e4be",
+        "session/agent-events.jsonl": "25a60ea83a3c206e6f2a830d1c75a335ec4387838e1b5284418ee7231d9d2f71",
+        "session/audit.jsonl": "781c45e573c76a3bfd6e18565edcbfb9a4e640991b53d7eb69e94c6d6bd3a01e",
+        "session/manifest.json": "beb238349eb914738824c22e3ca841ab8d392beb0b23154cd0d5c5cfe5a58795",
+        "session/trace-events.jsonl": "7be7ba5ced8f9daa64737b82abb075da6417b26e85dd7534f75cf4cdcfc88b36"
       },
       "comparison": {
         "missing": 0,
@@ -2941,19 +2941,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-04-knmon",
-      "controllerStartNs": "110843992196600",
-      "controllerEndNs": "110848104865600",
-      "processWallMs": 4112.669,
+      "controllerStartNs": "112420829263600",
+      "controllerEndNs": "112429468606200",
+      "processWallMs": 8639.3426,
       "events": 450,
-      "workloadUs": 28455.7,
+      "workloadUs": 54960.3,
       "callLatencyUs": {
-        "median": 20.9,
-        "p95": 288.1,
-        "p99": 413.8
+        "median": 16.4,
+        "p95": 440.0,
+        "p99": 1717.2
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 18571264,
-      "peakWorkingSetBytes": 19918848
+      "cpu100ns": 468750,
+      "workingSetBytes": 18579456,
+      "peakWorkingSetBytes": 19931136
     },
     {
       "architecture": "x86",
@@ -2969,7 +2969,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
-        "oracle.json": "8c1fc09c42f413e62ded7271060445ba60fd665441a44f3bfad98d96d274f193"
+        "oracle.json": "58ae2a69e9d75b3551e497038a6253a2501b3367294c312f25ae6a930d7b5204"
       },
       "comparison": {
         "missing": 0,
@@ -2980,19 +2980,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-04-frida",
-      "controllerStartNs": "110848128049100",
-      "controllerEndNs": "110848212185900",
-      "processWallMs": 84.1368,
+      "controllerStartNs": "112429519927300",
+      "controllerEndNs": "112429718691800",
+      "processWallMs": 198.7645,
       "events": 450,
-      "workloadUs": 31463.6,
+      "workloadUs": 96009.7,
       "callLatencyUs": {
-        "median": 26.6,
-        "p95": 321.2,
-        "p99": 370.2
+        "median": 47.1,
+        "p95": 573.2,
+        "p99": 3669.8
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 14454784,
-      "peakWorkingSetBytes": 14454784
+      "cpu100ns": 156250,
+      "workingSetBytes": 14467072,
+      "peakWorkingSetBytes": 14467072
     },
     {
       "architecture": "x86",
@@ -3008,7 +3008,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
-        "oracle.json": "1c6386ea6737315f70dc108829004e68c16e6cbbc6ccc6ef74b289316de99a3c"
+        "oracle.json": "9969b26a1c57c749c0c169bb1fbf51295bbadfaa5f7b0b81a61db2595c061362"
       },
       "comparison": {
         "missing": 0,
@@ -3019,19 +3019,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-04-frida-cmodule",
-      "controllerStartNs": "110848229128500",
-      "controllerEndNs": "110848312651100",
-      "processWallMs": 83.5226,
+      "controllerStartNs": "112429758918000",
+      "controllerEndNs": "112429959191400",
+      "processWallMs": 200.2734,
       "events": 450,
-      "workloadUs": 25334.9,
+      "workloadUs": 63355.0,
       "callLatencyUs": {
-        "median": 10.2,
-        "p95": 267.7,
-        "p99": 381.0
+        "median": 14.5,
+        "p95": 575.8,
+        "p99": 1830.1
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 14761984,
-      "peakWorkingSetBytes": 14761984
+      "cpu100ns": 156250,
+      "workingSetBytes": 15044608,
+      "peakWorkingSetBytes": 15044608
     },
     {
       "architecture": "x86",
@@ -3046,7 +3046,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "c234be58938d8f6f4b66915d2d62b2999867768488c2ef96d6d59c146a6263c5"
+        "oracle.json": "0b6cde2ba71685584891ac3816474b831fa4be592bb912b9f64f2bdb01db5e33"
       },
       "comparison": {
         "missing": 0,
@@ -3057,19 +3057,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-05-original",
-      "controllerStartNs": "110848334671200",
-      "controllerEndNs": "110848382172000",
-      "processWallMs": 47.5008,
+      "controllerStartNs": "112430035916400",
+      "controllerEndNs": "112430252838900",
+      "processWallMs": 216.9225,
       "events": 450,
-      "workloadUs": 22047.0,
+      "workloadUs": 137212.4,
       "callLatencyUs": {
-        "median": 6.8,
-        "p95": 229.8,
-        "p99": 352.8
+        "median": 15.6,
+        "p95": 894.9,
+        "p99": 4162.8
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 7000064,
-      "peakWorkingSetBytes": 7000064
+      "workingSetBytes": 7049216,
+      "peakWorkingSetBytes": 7049216
     },
     {
       "architecture": "x86",
@@ -3083,13 +3083,13 @@
         "knmon-agent32.dll": "3ec01c8b534d3be2b8aa46265bb3338097cbf7f6bcba967e33d8681c6f953299"
       },
       "artifacts": {
-        "capture.json": "d16e94efcc30913e0a8f67cbdf88a190ae7c57ec0b30d7c99636bcb73ce4c1be",
+        "capture.json": "5d548d36bf5ffede89fb3f3765292cc0314156a11cb86d59024a6a06e5e0ced8",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "d5dc198e527b093c50fd3511d9c88390c8051330960bf8d118c3adcae98ba489",
-        "session/agent-events.jsonl": "b65c504a52a9e996c3be643cb54bbe8737498292264b33187d1a0a04b070680a",
-        "session/audit.jsonl": "f1ad452106257daf7da2577377c1407e454fbaf0ed55891ad477f6ca11cf9776",
-        "session/manifest.json": "16d690663ad32c2d6c1d8e1f9876c52c4c13362bf240d1abb8109ca1c8f50404",
-        "session/trace-events.jsonl": "058e9786625780587f323be63899171b1ef946fb7dfc7de03d4ea1998783f5de"
+        "oracle.json": "e024b19abeb21288db50b23e8e46729882a1c225554856f93a8d790dffeb1bab",
+        "session/agent-events.jsonl": "4b6e6bc9f6b9ade517543a5561d2829bad66bbe64f87305ed935f0a9e99230d7",
+        "session/audit.jsonl": "28a65756c677657e20ce23c14ac255f25325d3d4e3c7eb3f733eebd79ee7a42a",
+        "session/manifest.json": "53399b69a25d54ddb26beda9f3fa29a43db26a898bb32c221f65d929d404bde8",
+        "session/trace-events.jsonl": "b1826609c5a1cbc45695ff58348067b2310c2c51593c0c5949a3d7bde4116416"
       },
       "comparison": {
         "missing": 0,
@@ -3100,19 +3100,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-05-knmon",
-      "controllerStartNs": "110848400439700",
-      "controllerEndNs": "110852556116900",
-      "processWallMs": 4155.6772,
+      "controllerStartNs": "112430291547400",
+      "controllerEndNs": "112438485615300",
+      "processWallMs": 8194.0679,
       "events": 450,
-      "workloadUs": 24355.9,
+      "workloadUs": 51921.0,
       "callLatencyUs": {
-        "median": 11.8,
-        "p95": 255.6,
-        "p99": 346.9
+        "median": 14.8,
+        "p95": 397.2,
+        "p99": 1666.2
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 18571264,
-      "peakWorkingSetBytes": 19918848
+      "cpu100ns": 0,
+      "workingSetBytes": 18575360,
+      "peakWorkingSetBytes": 19927040
     },
     {
       "architecture": "x86",
@@ -3128,7 +3128,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
-        "oracle.json": "81826716523efddae481ded10d24939de2a669b6b6154cd8a53e5db104523c11"
+        "oracle.json": "b6e13311cdfa3ed69964f7da44f80e825fa033e187b7834b36e54d4d9803307f"
       },
       "comparison": {
         "missing": 0,
@@ -3139,19 +3139,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-05-frida",
-      "controllerStartNs": "110852578577300",
-      "controllerEndNs": "110852661879800",
-      "processWallMs": 83.3025,
+      "controllerStartNs": "112438536478000",
+      "controllerEndNs": "112438727061600",
+      "processWallMs": 190.5836,
       "events": 450,
-      "workloadUs": 31436.0,
+      "workloadUs": 72258.9,
       "callLatencyUs": {
-        "median": 27.2,
-        "p95": 280.8,
-        "p99": 361.3
+        "median": 43.3,
+        "p95": 506.5,
+        "p99": 2422.9
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 14405632,
-      "peakWorkingSetBytes": 14405632
+      "cpu100ns": 468750,
+      "workingSetBytes": 14462976,
+      "peakWorkingSetBytes": 14462976
     },
     {
       "architecture": "x86",
@@ -3167,7 +3167,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
-        "oracle.json": "d06c0275ea3346ae4a3aa1e424b535993d9e25632fdf32708f6881602029e54d"
+        "oracle.json": "9146c7775853789bc0d5b53a52fa68d661ed53351c15c80d117efbbdc5bf0480"
       },
       "comparison": {
         "missing": 0,
@@ -3178,19 +3178,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-05-frida-cmodule",
-      "controllerStartNs": "110852679907600",
-      "controllerEndNs": "110852759938400",
-      "processWallMs": 80.0308,
+      "controllerStartNs": "112438752583800",
+      "controllerEndNs": "112438897627200",
+      "processWallMs": 145.0434,
       "events": 450,
-      "workloadUs": 22946.7,
+      "workloadUs": 45527.6,
       "callLatencyUs": {
-        "median": 12.9,
-        "p95": 236.3,
-        "p99": 345.8
+        "median": 11.9,
+        "p95": 334.7,
+        "p99": 1518.0
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 14798848,
-      "peakWorkingSetBytes": 14798848
+      "workingSetBytes": 14921728,
+      "peakWorkingSetBytes": 14921728
     },
     {
       "architecture": "x86",
@@ -3205,9 +3205,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "41760ef93123f9282668aabb53924a304b80740c424f2dd3a02fce98a0ade0e8",
-        "etw.json": "853af145598a9e99b552b19aeaf1ffcd41a178a2c87e3ca546c80013a7848a11",
-        "oracle.json": "ddea7ded2d8b1d72eff748339c803a091e4fa7aa49985ebb537dc1b0f83436f0"
+        "corpus.etl": "be66b43eb0072dba9ce4936e3c5b52cac1039ccab6d05729c1b2aa646f21615d",
+        "etw.json": "178a09dfa8d14d543aaeef61d9745bb9db0074b7e33f1c5cb5e22dd485f7df81",
+        "oracle.json": "a0a361c8bee8daaeb63b5190c2f01672e1711d9b34e47bae3273a25b0e06356c"
       },
       "comparison": {
         "missing": 0,
@@ -3218,19 +3218,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-05-etw",
-      "controllerStartNs": "110852782821600",
-      "controllerEndNs": "110853133849700",
-      "processWallMs": 351.0281,
+      "controllerStartNs": "112438936513700",
+      "controllerEndNs": "112439370657300",
+      "processWallMs": 434.1436,
       "events": 450,
-      "workloadUs": 21320.7,
+      "workloadUs": 71972.9,
       "callLatencyUs": {
-        "median": 6.5,
-        "p95": 221.5,
-        "p99": 330.2
+        "median": 11.1,
+        "p95": 444.5,
+        "p99": 1832.9
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 7409664,
-      "peakWorkingSetBytes": 7409664
+      "cpu100ns": 156250,
+      "workingSetBytes": 7376896,
+      "peakWorkingSetBytes": 7376896
     },
     {
       "architecture": "x86",
@@ -3244,13 +3244,13 @@
         "knmon-agent32.dll": "3ec01c8b534d3be2b8aa46265bb3338097cbf7f6bcba967e33d8681c6f953299"
       },
       "artifacts": {
-        "capture.json": "6d2844cd2b4356f29612ea3dae199042781b1f5b60e392a98d57a4dc87d84386",
+        "capture.json": "e94d654680323cc895b415ef5c69b8d9aceef634faf66b7b48eedce0f51b9184",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "5ef1b44d193969491bc53133b2222b26f7ff20b5956c5461e1bad378c5680fbb",
-        "session/agent-events.jsonl": "7e6ddfc94d1cb6243916c17019797d75c4722ac297b271e4a2d7ff2f90cd8175",
-        "session/audit.jsonl": "8b297eeeb7fbff5976b585783f63faaa4a6cf23c3e5e0794ec153494162295e5",
-        "session/manifest.json": "5313fa8a64f1a8459d742a9ac4de483eccd71ebad0dc6ec6249cb0e440ac07dd",
-        "session/trace-events.jsonl": "e6ed9175dbc0c5bd5397d3b9a1cbdb7a61b8f76abb640827f19891a5b4d964e6"
+        "oracle.json": "87348283f1babe3c026a70674e272b568d89c55a6cdb0e99f0066dde3d7fd522",
+        "session/agent-events.jsonl": "18a7477fd2129f9b876b39caa18c35bc367099912f69724622d90e1afc6f3f18",
+        "session/audit.jsonl": "68b4f7b13b43d40d63d87b8943d41bb7e715647303a13579e20b5c04538a4b88",
+        "session/manifest.json": "4d772effdaa745c4a6148c9a663244eb78101c50bd7561906c895a022ba8bfc5",
+        "session/trace-events.jsonl": "1a79d45512a377a3d4ba5e5a49da4e062768d13c7b19fe37d38a61f2beaebccd"
       },
       "comparison": {
         "missing": 0,
@@ -3261,19 +3261,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-06-knmon",
-      "controllerStartNs": "110853185825400",
-      "controllerEndNs": "110857266814600",
-      "processWallMs": 4080.9892,
+      "controllerStartNs": "112439471398700",
+      "controllerEndNs": "112448045010600",
+      "processWallMs": 8573.6119,
       "events": 450,
-      "workloadUs": 24818.7,
+      "workloadUs": 76617.7,
       "callLatencyUs": {
-        "median": 18.0,
-        "p95": 297.3,
-        "p99": 337.5
+        "median": 15.9,
+        "p95": 468.2,
+        "p99": 2156.6
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 18567168,
-      "peakWorkingSetBytes": 19914752
+      "workingSetBytes": 18579456,
+      "peakWorkingSetBytes": 19931136
     },
     {
       "architecture": "x86",
@@ -3289,7 +3289,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
-        "oracle.json": "9307f8762b644a48dcd3fafec874fc060c6d33a9e5ed6f1bd3b2623e71731baf"
+        "oracle.json": "a5d2acbfb1e4c531fcf342af1f6280fd1d1e7b42431de5add8a98dae8229e784"
       },
       "comparison": {
         "missing": 0,
@@ -3300,19 +3300,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-06-frida",
-      "controllerStartNs": "110857291362700",
-      "controllerEndNs": "110857378107200",
-      "processWallMs": 86.7445,
+      "controllerStartNs": "112448088483400",
+      "controllerEndNs": "112448276043800",
+      "processWallMs": 187.5604,
       "events": 450,
-      "workloadUs": 31584.0,
+      "workloadUs": 75315.5,
       "callLatencyUs": {
-        "median": 28.7,
-        "p95": 303.5,
-        "p99": 431.3
+        "median": 43.7,
+        "p95": 521.8,
+        "p99": 2514.2
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 14434304,
-      "peakWorkingSetBytes": 14434304
+      "cpu100ns": 468750,
+      "workingSetBytes": 14532608,
+      "peakWorkingSetBytes": 14532608
     },
     {
       "architecture": "x86",
@@ -3328,7 +3328,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
-        "oracle.json": "c948b4f04f04f30038a6b2ae122e5d68d1c6aea98277717328b4aedfe19c5e56"
+        "oracle.json": "e0a4557194bff9bc8175b260c7d19ec4e7a1b4a1693c1d66902346cae0e4bbad"
       },
       "comparison": {
         "missing": 0,
@@ -3339,19 +3339,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-06-frida-cmodule",
-      "controllerStartNs": "110857398521300",
-      "controllerEndNs": "110857477996600",
-      "processWallMs": 79.4753,
+      "controllerStartNs": "112448308811100",
+      "controllerEndNs": "112448530420900",
+      "processWallMs": 221.6098,
       "events": 450,
-      "workloadUs": 21227.1,
+      "workloadUs": 110866.6,
       "callLatencyUs": {
-        "median": 9.0,
-        "p95": 209.8,
-        "p99": 328.7
+        "median": 16.6,
+        "p95": 645.6,
+        "p99": 3764.9
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 14786560,
-      "peakWorkingSetBytes": 14786560
+      "cpu100ns": 312500,
+      "workingSetBytes": 14790656,
+      "peakWorkingSetBytes": 14790656
     },
     {
       "architecture": "x86",
@@ -3366,9 +3366,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "3eea3de9c8c471f24662efd55c566423c5569c6a20b40e024d7bc2cb04864f6d",
-        "etw.json": "0809bef6e201f365cd4b21d1c7eb6f2e3b7510c1b2b2c0bfb1a3e64721519764",
-        "oracle.json": "be634e584dcd34f8f7c1459e2f62977e2de351f649e2ae2cfba440e8644b9572"
+        "corpus.etl": "8db33e88bc7443e28005cf372f14f42a9209f9ba4f5280b987bdee4e97e03bab",
+        "etw.json": "34a16c2d5134e929b27d1706b8e5b93d2130c51d267790fc8eaf9d88b2e4cc89",
+        "oracle.json": "aaf0064dab6ec8abe6c6bdd57731ed1bed7db1df39e63ff222f45aee5bcd5c41"
       },
       "comparison": {
         "missing": 0,
@@ -3379,19 +3379,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-06-etw",
-      "controllerStartNs": "110857495477500",
-      "controllerEndNs": "110857847748900",
-      "processWallMs": 352.2714,
+      "controllerStartNs": "112448577880000",
+      "controllerEndNs": "112449008833200",
+      "processWallMs": 430.9532,
       "events": 450,
-      "workloadUs": 22029.2,
+      "workloadUs": 59230.1,
       "callLatencyUs": {
-        "median": 11.8,
-        "p95": 231.5,
-        "p99": 325.2
+        "median": 9.5,
+        "p95": 495.2,
+        "p99": 1576.6
       },
-      "cpu100ns": 0,
-      "workingSetBytes": 7311360,
-      "peakWorkingSetBytes": 7315456
+      "cpu100ns": 312500,
+      "workingSetBytes": 7438336,
+      "peakWorkingSetBytes": 7438336
     },
     {
       "architecture": "x86",
@@ -3406,7 +3406,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "5dd390e1d8606b455f864bbc65636fbe0c821626ebbd9290e08d87f33967a354"
+        "oracle.json": "b10c83eda2d04b5e299031ddc9b1aae4768cd0e20dd2e3422a0287d5ee644a09"
       },
       "comparison": {
         "missing": 0,
@@ -3417,19 +3417,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-06-original",
-      "controllerStartNs": "110857894946400",
-      "controllerEndNs": "110857938212600",
-      "processWallMs": 43.2662,
+      "controllerStartNs": "112449130299200",
+      "controllerEndNs": "112449277583100",
+      "processWallMs": 147.2839,
       "events": 450,
-      "workloadUs": 18224.7,
+      "workloadUs": 83994.9,
       "callLatencyUs": {
-        "median": 5.0,
-        "p95": 180.9,
-        "p99": 284.3
+        "median": 9.6,
+        "p95": 702.5,
+        "p99": 2787.8
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 7000064,
-      "peakWorkingSetBytes": 7000064
+      "cpu100ns": 312500,
+      "workingSetBytes": 7012352,
+      "peakWorkingSetBytes": 7012352
     },
     {
       "architecture": "x86",
@@ -3445,7 +3445,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
-        "oracle.json": "0a1dc094c67c8cdca9581fe36fb2a5c58128c7b7fc112730a9c38cad0b830fe4"
+        "oracle.json": "8e38ab9e6489b88987c770f4b46415c705697f49fdf06085e2c796b9742f38aa"
       },
       "comparison": {
         "missing": 0,
@@ -3456,19 +3456,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-07-frida",
-      "controllerStartNs": "110857954599200",
-      "controllerEndNs": "110858038260700",
-      "processWallMs": 83.6615,
+      "controllerStartNs": "112449315118900",
+      "controllerEndNs": "112449584864000",
+      "processWallMs": 269.7451,
       "events": 450,
-      "workloadUs": 27844.9,
+      "workloadUs": 124367.2,
       "callLatencyUs": {
-        "median": 25.9,
-        "p95": 280.2,
-        "p99": 328.7
+        "median": 48.8,
+        "p95": 671.3,
+        "p99": 4564.7
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 14422016,
-      "peakWorkingSetBytes": 14422016
+      "workingSetBytes": 14483456,
+      "peakWorkingSetBytes": 14483456
     },
     {
       "architecture": "x86",
@@ -3484,7 +3484,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
-        "oracle.json": "984a5714e8a816b8f5b74cf14d7cb0ab05a69a4598cd119da7980fcc18ccf722"
+        "oracle.json": "dbea1f491d98d7e7c952047c36d5167d0b422d55ae69ac61200f12a74e552a67"
       },
       "comparison": {
         "missing": 0,
@@ -3495,19 +3495,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-07-frida-cmodule",
-      "controllerStartNs": "110858052219300",
-      "controllerEndNs": "110858126514100",
-      "processWallMs": 74.2948,
+      "controllerStartNs": "112449627648100",
+      "controllerEndNs": "112449880965100",
+      "processWallMs": 253.317,
       "events": 450,
-      "workloadUs": 19351.0,
+      "workloadUs": 129916.9,
       "callLatencyUs": {
-        "median": 7.3,
-        "p95": 193.8,
-        "p99": 260.0
+        "median": 15.7,
+        "p95": 799.3,
+        "p99": 4196.9
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 14835712,
-      "peakWorkingSetBytes": 14835712
+      "workingSetBytes": 14913536,
+      "peakWorkingSetBytes": 14913536
     },
     {
       "architecture": "x86",
@@ -3522,9 +3522,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "9f405cf68d0b9225f3562921da0679396e7b271ab87b1199e216f2f8f7981e0e",
-        "etw.json": "37428fca86b9df249e3eb98ec5ee24a884498d937a4898553cccbbf6086e7cbe",
-        "oracle.json": "686f46a6b2a24c138729414f1b6b754cae9a4b0c71d10f68a9b1c13b61c58565"
+        "corpus.etl": "ff0c6460d2f6fd605dd4706bd353d1d98125e4c170bd053ce6aee644ea79c1a2",
+        "etw.json": "352fa390633dfe59ac13a66cb55b9a608045fdab4d1fe1f637f520c0b5eef455",
+        "oracle.json": "207c6ecfa119bc74861b3de5a4dfe15c04a883bf7aa265d671617cfaab8671ac"
       },
       "comparison": {
         "missing": 0,
@@ -3535,19 +3535,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-07-etw",
-      "controllerStartNs": "110858143883400",
-      "controllerEndNs": "110858498878300",
-      "processWallMs": 354.9949,
+      "controllerStartNs": "112449918818800",
+      "controllerEndNs": "112450333094300",
+      "processWallMs": 414.2755,
       "events": 450,
-      "workloadUs": 18613.2,
+      "workloadUs": 53231.7,
       "callLatencyUs": {
-        "median": 5.0,
-        "p95": 187.5,
-        "p99": 305.9
+        "median": 9.3,
+        "p95": 409.5,
+        "p99": 2108.7
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 7356416,
-      "peakWorkingSetBytes": 7356416
+      "cpu100ns": 156250,
+      "workingSetBytes": 7303168,
+      "peakWorkingSetBytes": 7303168
     },
     {
       "architecture": "x86",
@@ -3562,7 +3562,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "c95bfc8810bf03cab15bf5e08093d6dbfd7456fd5f37cc51077d358926c2533a"
+        "oracle.json": "bb429f1de20c3cdd946550ec3c6a7d5ea42d5d542b19480b7e5a7377bb0a16ff"
       },
       "comparison": {
         "missing": 0,
@@ -3573,19 +3573,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-07-original",
-      "controllerStartNs": "110858547324200",
-      "controllerEndNs": "110858589619700",
-      "processWallMs": 42.2955,
+      "controllerStartNs": "112450446295700",
+      "controllerEndNs": "112450554908200",
+      "processWallMs": 108.6125,
       "events": 450,
-      "workloadUs": 17179.4,
+      "workloadUs": 59908.6,
       "callLatencyUs": {
-        "median": 5.2,
-        "p95": 167.6,
-        "p99": 247.6
+        "median": 18.7,
+        "p95": 440.5,
+        "p99": 2526.4
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 7053312,
-      "peakWorkingSetBytes": 7053312
+      "cpu100ns": 312500,
+      "workingSetBytes": 6967296,
+      "peakWorkingSetBytes": 6967296
     },
     {
       "architecture": "x86",
@@ -3599,13 +3599,13 @@
         "knmon-agent32.dll": "3ec01c8b534d3be2b8aa46265bb3338097cbf7f6bcba967e33d8681c6f953299"
       },
       "artifacts": {
-        "capture.json": "27f88c4eb673699bd3c985e8da8600516c7d1044fef23519ff7a09ce988bf57f",
+        "capture.json": "dae5a57810a9714ac231f9ccf4e852b2bead08510aae7f50ea5a55ad43584c44",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "abfe13712270be16a76a28e57e7199c3fec8c56ff769b9d9330be5bb55fef939",
-        "session/agent-events.jsonl": "51a5538dbbe9b6b36f71a88fcbf0bf7f8e93ce3e7169f35ca516add2cf83403d",
-        "session/audit.jsonl": "395ca7c3110622fe2a54be6d482060e194fb9f4bfe5b8adb84019aa267dbc9eb",
-        "session/manifest.json": "a49dc2ffd5cfcaad0af053885db776408c6e5501969faa8645831445b86c98b8",
-        "session/trace-events.jsonl": "0a28fd7c01a193eb70bd9b24b12918c62ae428a7e5843cc0a5ef6e52fa757b73"
+        "oracle.json": "2ff0a3059abb7b0102ad1e600fdc1cea08276e1c0bede651b1a783c1dd81ca50",
+        "session/agent-events.jsonl": "6d4b20566a057e14b708f3033bba64eb9bba2c7f4159edecece8df613579566f",
+        "session/audit.jsonl": "e73e60ca01b1583b21c4c5884a048b304f7439ad39ce332c624bb578bbd5ccca",
+        "session/manifest.json": "062a2aeb25183bbfd4840b7c366a9be185b11940ac4848541e5de1da51484eed",
+        "session/trace-events.jsonl": "bdf02fe1f5ddd879bcb10d98a293e2e7f67463c118374ad55a161df6064afbac"
       },
       "comparison": {
         "missing": 0,
@@ -3616,19 +3616,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-07-knmon",
-      "controllerStartNs": "110858603675300",
-      "controllerEndNs": "110862816741200",
-      "processWallMs": 4213.0659,
+      "controllerStartNs": "112450591259000",
+      "controllerEndNs": "112459986075300",
+      "processWallMs": 9394.8163,
       "events": 450,
-      "workloadUs": 24852.4,
+      "workloadUs": 65663.1,
       "callLatencyUs": {
-        "median": 12.9,
-        "p95": 271.8,
-        "p99": 348.4
+        "median": 17.7,
+        "p95": 466.2,
+        "p99": 2431.8
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 18571264,
-      "peakWorkingSetBytes": 19922944
+      "workingSetBytes": 18575360,
+      "peakWorkingSetBytes": 19935232
     },
     {
       "architecture": "x86",
@@ -3644,7 +3644,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
-        "oracle.json": "83678c0377cee8c150bbb956555d9775f9e772a3aea1911a361212288a1e5708"
+        "oracle.json": "df218357f349430e7bb63c83f0792b379c374530be7fa48356f510c74e67aca5"
       },
       "comparison": {
         "missing": 0,
@@ -3655,19 +3655,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-08-frida-cmodule",
-      "controllerStartNs": "110862841877700",
-      "controllerEndNs": "110862918677100",
-      "processWallMs": 76.7994,
+      "controllerStartNs": "112460030388800",
+      "controllerEndNs": "112460279474300",
+      "processWallMs": 249.0855,
       "events": 450,
-      "workloadUs": 20788.8,
+      "workloadUs": 120286.6,
       "callLatencyUs": {
-        "median": 8.5,
-        "p95": 207.2,
-        "p99": 310.6
+        "median": 15.9,
+        "p95": 808.6,
+        "p99": 5270.1
       },
-      "cpu100ns": 0,
-      "workingSetBytes": 14815232,
-      "peakWorkingSetBytes": 14815232
+      "cpu100ns": 625000,
+      "workingSetBytes": 14786560,
+      "peakWorkingSetBytes": 14786560
     },
     {
       "architecture": "x86",
@@ -3682,9 +3682,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "c15b3457fcdefc999c6d84761a3c835cca5f8819ce4538cbe16eae0a295b2437",
-        "etw.json": "de9e85ed502ac183842523bfad10e5bfcf94d2ac3393b83ef3edc3861bd05dec",
-        "oracle.json": "f42fc2e1118ffa00d84f45dc7a1d537e241c97e46b92ed2e659ce0dbfc892cce"
+        "corpus.etl": "b45e096c1aa333ab18497a85feff1b0fda18d6944caf48a7f987e2ef5914709a",
+        "etw.json": "3e0eaa566969257e7b00a0be439901223c7194918b7c0c99a87dcf772524995f",
+        "oracle.json": "15015c9ee15735155e7fcc4c1c4291b542efb63b877e26042b0e377803cebad7"
       },
       "comparison": {
         "missing": 0,
@@ -3695,19 +3695,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-08-etw",
-      "controllerStartNs": "110862937684900",
-      "controllerEndNs": "110863333582800",
-      "processWallMs": 395.8979,
+      "controllerStartNs": "112460329242200",
+      "controllerEndNs": "112460932006900",
+      "processWallMs": 602.7647,
       "events": 450,
-      "workloadUs": 20865.7,
+      "workloadUs": 211145.6,
       "callLatencyUs": {
-        "median": 6.0,
-        "p95": 214.5,
-        "p99": 323.8
+        "median": 16.5,
+        "p95": 1686.6,
+        "p99": 6245.7
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 7249920,
-      "peakWorkingSetBytes": 7249920
+      "cpu100ns": 625000,
+      "workingSetBytes": 7303168,
+      "peakWorkingSetBytes": 7303168
     },
     {
       "architecture": "x86",
@@ -3722,7 +3722,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "65cd744d1795be369d8273b63d7e1031ffd7d3bb856b724fdaa5d451eb5c3f38"
+        "oracle.json": "bf033aacd8f95a83a86abbb60edd7a516a6dcda30a0d154deb66bfd64e453562"
       },
       "comparison": {
         "missing": 0,
@@ -3733,19 +3733,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-08-original",
-      "controllerStartNs": "110863382098800",
-      "controllerEndNs": "110863427304500",
-      "processWallMs": 45.2057,
+      "controllerStartNs": "112461036753700",
+      "controllerEndNs": "112461267365700",
+      "processWallMs": 230.612,
       "events": 450,
-      "workloadUs": 20254.6,
+      "workloadUs": 170526.7,
       "callLatencyUs": {
-        "median": 5.6,
-        "p95": 204.1,
-        "p99": 295.3
+        "median": 14.5,
+        "p95": 1174.8,
+        "p99": 6930.3
       },
       "cpu100ns": 156250,
-      "workingSetBytes": 7045120,
-      "peakWorkingSetBytes": 7045120
+      "workingSetBytes": 7004160,
+      "peakWorkingSetBytes": 7004160
     },
     {
       "architecture": "x86",
@@ -3759,13 +3759,13 @@
         "knmon-agent32.dll": "3ec01c8b534d3be2b8aa46265bb3338097cbf7f6bcba967e33d8681c6f953299"
       },
       "artifacts": {
-        "capture.json": "f669140249bd722ceacdd93762c168f9b83da7f77b0515230303ba4ef818a786",
+        "capture.json": "942ea30f33ff61c66f0c310122eca8641135cabb1e7f577794f4897fdc42853d",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "5699521ae5c56b9854b758988a07e2ed200313987d8717e13c5c279042f949ec",
-        "session/agent-events.jsonl": "74e9ad7f962289d576cd20a3a48dced00db90441e93b58a7d9445ae8d5356d1f",
-        "session/audit.jsonl": "90a5b697358a74df9c183f2cb242f67593d75a56c0d091f135198c3a7c436ed5",
-        "session/manifest.json": "c5fbbc96acd7a4b9a6f3da654997f35f377247e8297e5e4f6beb13297f626b7f",
-        "session/trace-events.jsonl": "289ddafffd457ef996df175648e0b5251cb78fe8a16119512360100012af2343"
+        "oracle.json": "0a3e688aea122d0b61ba3dac99d7bd3bc68c94e87680ebc31f0c2871a7ca4ed2",
+        "session/agent-events.jsonl": "e6444485d65e1e56f6634bbca96a6e44466d8377c24aebf702e326e3b22c6110",
+        "session/audit.jsonl": "06489afa0a3086e55f5a46d018f39758e98d04a4f1d73b67722acb71c33f2ffb",
+        "session/manifest.json": "4d2cd22b65d9ca53628891405cfb51041c89d9855595d03075e07ef9dd1277f1",
+        "session/trace-events.jsonl": "68463a243c095364342afef34d975d3657b9e28eb551d4c9698241101d527cdf"
       },
       "comparison": {
         "missing": 0,
@@ -3776,19 +3776,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-08-knmon",
-      "controllerStartNs": "110863442346400",
-      "controllerEndNs": "110867525972600",
-      "processWallMs": 4083.6262,
+      "controllerStartNs": "112461294791300",
+      "controllerEndNs": "112467967609300",
+      "processWallMs": 6672.818,
       "events": 450,
-      "workloadUs": 23399.3,
+      "workloadUs": 101914.1,
       "callLatencyUs": {
-        "median": 10.9,
-        "p95": 238.2,
-        "p99": 334.1
+        "median": 22.8,
+        "p95": 620.1,
+        "p99": 4079.2
       },
       "cpu100ns": 312500,
       "workingSetBytes": 18571264,
-      "peakWorkingSetBytes": 19914752
+      "peakWorkingSetBytes": 19918848
     },
     {
       "architecture": "x86",
@@ -3804,7 +3804,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
-        "oracle.json": "c544454b920e73a01e2094cc17e04654163272714951d38b187af8e9e45a3b61"
+        "oracle.json": "1dd049a77bc24f77df0d9b8ec5a454e6c328a01d6a62621fbd69710836adff52"
       },
       "comparison": {
         "missing": 0,
@@ -3815,19 +3815,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-08-frida",
-      "controllerStartNs": "110867547550600",
-      "controllerEndNs": "110867628302800",
-      "processWallMs": 80.7522,
+      "controllerStartNs": "112468007989600",
+      "controllerEndNs": "112468146988400",
+      "processWallMs": 138.9988,
       "events": 450,
-      "workloadUs": 28542.8,
+      "workloadUs": 62213.6,
       "callLatencyUs": {
-        "median": 26.2,
-        "p95": 286.8,
-        "p99": 357.3
+        "median": 42.1,
+        "p95": 424.0,
+        "p99": 953.9
       },
       "cpu100ns": 312500,
-      "workingSetBytes": 14413824,
-      "peakWorkingSetBytes": 14413824
+      "workingSetBytes": 14536704,
+      "peakWorkingSetBytes": 14536704
     },
     {
       "architecture": "x86",
@@ -3842,9 +3842,9 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "corpus.etl": "6c9b3690cc250c404f8e32a5ab55955e78bf5406b287b939d2d25d66b77ff46d",
-        "etw.json": "00a963fe631e26e3b2b8aaf802c53c0fdaea60d5ea8a08b99dc92dfc8b0144b7",
-        "oracle.json": "97acdbe7ada8fc51babfb62d5037d2fe0aa3b3c07a8f5439540adc1d28d04a6d"
+        "corpus.etl": "125e76b2937bbc9348afa916e87f645e362295354d83e78fea83e46f6d08a578",
+        "etw.json": "788415179794ba91f1ae4bc0663db435f89cc6c7c9952906c0965bdc410021b6",
+        "oracle.json": "53c3cbe551b367c41f20b0bfa17388713af7b7c4c9321ab066ccb57803c9ddcc"
       },
       "comparison": {
         "missing": 0,
@@ -3855,19 +3855,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-09-etw",
-      "controllerStartNs": "110867648685700",
-      "controllerEndNs": "110868002640900",
-      "processWallMs": 353.9552,
+      "controllerStartNs": "112468186930300",
+      "controllerEndNs": "112468568803800",
+      "processWallMs": 381.8735,
       "events": 450,
-      "workloadUs": 23025.8,
+      "workloadUs": 40588.5,
       "callLatencyUs": {
-        "median": 7.9,
-        "p95": 237.9,
-        "p99": 354.4
+        "median": 7.6,
+        "p95": 287.5,
+        "p99": 776.3
       },
-      "cpu100ns": 0,
-      "workingSetBytes": 7352320,
-      "peakWorkingSetBytes": 7352320
+      "cpu100ns": 312500,
+      "workingSetBytes": 7434240,
+      "peakWorkingSetBytes": 7434240
     },
     {
       "architecture": "x86",
@@ -3882,7 +3882,7 @@
       },
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "61893dfffc2053d12d93073f515a50bbfe9cbb6ebd94ab90f9f84f806458511e"
+        "oracle.json": "bf948eda8b4aa788dfaeb5e12e89e036b9b73e5c4c8fee16b4babba7392e9959"
       },
       "comparison": {
         "missing": 0,
@@ -3893,19 +3893,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-09-original",
-      "controllerStartNs": "110868055378800",
-      "controllerEndNs": "110868099742900",
-      "processWallMs": 44.3641,
+      "controllerStartNs": "112468631835400",
+      "controllerEndNs": "112468692393300",
+      "processWallMs": 60.5579,
       "events": 450,
-      "workloadUs": 19159.9,
+      "workloadUs": 25301.9,
       "callLatencyUs": {
-        "median": 5.9,
-        "p95": 180.3,
-        "p99": 287.7
+        "median": 6.8,
+        "p95": 266.9,
+        "p99": 392.2
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 6983680,
-      "peakWorkingSetBytes": 6983680
+      "cpu100ns": 0,
+      "workingSetBytes": 7032832,
+      "peakWorkingSetBytes": 7032832
     },
     {
       "architecture": "x86",
@@ -3919,13 +3919,13 @@
         "knmon-agent32.dll": "3ec01c8b534d3be2b8aa46265bb3338097cbf7f6bcba967e33d8681c6f953299"
       },
       "artifacts": {
-        "capture.json": "6be6a130551f6447da1877c1ec4269d1d97e0c7ab7b60fd9d0d06810375272f2",
+        "capture.json": "18778507a8ebd4b7d32d5e2279f71636e5500fd9f49dec77534dbc105ed6c88a",
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
-        "oracle.json": "2d718b7f3e01fd72bd4ee2cff036ae979899f53c329dfe66ebf7fa5f3d16a182",
-        "session/agent-events.jsonl": "f450417defd097da4f67b4d23249944f06f341537d4fbded97ff73ef33fc463b",
-        "session/audit.jsonl": "4da25c14b52e06e49a2986bf37cb4d5f1cc7b2d13868130687a6765f5c4b1f7f",
-        "session/manifest.json": "a9fcd02c614218935dfec305890f7dccb82a2505abdd8938c8ae5c607da276f3",
-        "session/trace-events.jsonl": "4ef3b4ce1951853c0f28140ba5cb5a3471d182b6fc5eed03edd1df7cfa76435a"
+        "oracle.json": "73b7563c1e294e78b2364a92fe526cd95a6ccb2caa01d1dae48d6fa00ddae1e4",
+        "session/agent-events.jsonl": "966fef6bd669ceb962b4e406c4d625ba623aa10e56d913cd0c070fb7eb3f483b",
+        "session/audit.jsonl": "e6ac26b3066bd90b9c4b88b720ca5fabf2d39afb9a22b07dfc31d5be3aee6c87",
+        "session/manifest.json": "9321fd2a3b686fc3c9af08394bac1a90642a5ecf062f54bf17cb1a70694bf95f",
+        "session/trace-events.jsonl": "15532c4b1ac579cc3cd8241bf9f3a237f52ac49acdef9c4dec42dbdd77cdfdf0"
       },
       "comparison": {
         "missing": 0,
@@ -3936,19 +3936,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-09-knmon",
-      "controllerStartNs": "110868115638200",
-      "controllerEndNs": "110872236468100",
-      "processWallMs": 4120.8299,
+      "controllerStartNs": "112468714434200",
+      "controllerEndNs": "112476800902700",
+      "processWallMs": 8086.4685,
       "events": 450,
-      "workloadUs": 24077.1,
+      "workloadUs": 30207.8,
       "callLatencyUs": {
-        "median": 12.9,
-        "p95": 245.6,
-        "p99": 336.4
+        "median": 14.6,
+        "p95": 270.9,
+        "p99": 377.3
       },
-      "cpu100ns": 312500,
-      "workingSetBytes": 18567168,
-      "peakWorkingSetBytes": 19910656
+      "cpu100ns": 156250,
+      "workingSetBytes": 18579456,
+      "peakWorkingSetBytes": 19922944
     },
     {
       "architecture": "x86",
@@ -3964,7 +3964,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "13942190a3e62ecbb55e211ccdcad77f4163ff6689690871f273125ef952e4ba",
-        "oracle.json": "564d2ad7e5eb4a598c83b8cea4354f8f235d91a64b48d9e460719aff5fe092ad"
+        "oracle.json": "94e6cc420a8bd14404b1feb0624a7e1d24859c440c94a37b54d6284060458a21"
       },
       "comparison": {
         "missing": 0,
@@ -3975,19 +3975,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-09-frida",
-      "controllerStartNs": "110872263147500",
-      "controllerEndNs": "110872347150700",
-      "processWallMs": 84.0032,
+      "controllerStartNs": "112476907610100",
+      "controllerEndNs": "112477124827500",
+      "processWallMs": 217.2174,
       "events": 450,
-      "workloadUs": 29096.4,
+      "workloadUs": 72635.9,
       "callLatencyUs": {
-        "median": 27.0,
-        "p95": 288.6,
-        "p99": 337.8
+        "median": 41.0,
+        "p95": 476.4,
+        "p99": 2130.3
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 14426112,
-      "peakWorkingSetBytes": 14426112
+      "cpu100ns": 625000,
+      "workingSetBytes": 14446592,
+      "peakWorkingSetBytes": 14446592
     },
     {
       "architecture": "x86",
@@ -4003,7 +4003,7 @@
       "artifacts": {
         "corpus.bin": "ae02e99bbdd3713ac87427589a48fc45818ef9a7ecd27941142d8f6f61afb7c1",
         "frida-messages.json": "98e249a19cd4f57d09ac53427f3af62e800589207d0bcfa6ae0810c56399b8a1",
-        "oracle.json": "c2823e45f79cff9234b7055be42b9978f7c54021f0c87902954ad7f9a348b8a6"
+        "oracle.json": "fd4c308b7f3a5f29934cb302fc2e2cbd21de5e1c7188592d9ccead5aa8a20867"
       },
       "comparison": {
         "missing": 0,
@@ -4014,19 +4014,19 @@
       },
       "targetExitCode": 0,
       "directory": "x86-09-frida-cmodule",
-      "controllerStartNs": "110872367888100",
-      "controllerEndNs": "110872449330000",
-      "processWallMs": 81.4419,
+      "controllerStartNs": "112477163946400",
+      "controllerEndNs": "112477510842100",
+      "processWallMs": 346.8957,
       "events": 450,
-      "workloadUs": 21781.8,
+      "workloadUs": 155014.3,
       "callLatencyUs": {
-        "median": 8.6,
-        "p95": 212.0,
-        "p99": 309.6
+        "median": 31.0,
+        "p95": 1251.0,
+        "p99": 5080.0
       },
-      "cpu100ns": 156250,
-      "workingSetBytes": 14815232,
-      "peakWorkingSetBytes": 14815232
+      "cpu100ns": 0,
+      "workingSetBytes": 15020032,
+      "peakWorkingSetBytes": 15020032
     }
   ],
   "status": "passed"

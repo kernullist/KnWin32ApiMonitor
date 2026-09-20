@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "observedAtUtc": "2026-09-20T07:58:35.254Z",
+  "observedAtUtc": "2026-09-20T08:20:44.596Z",
   "windowsRelease": "10.0.26200",
   "configuration": "Debug",
   "apiKeys": [
@@ -12,7 +12,7 @@
     "user32.dll!enumchildwindows"
   ],
   "source": {
-    "sha256": "a813f81b67f0ebd2dc8bebcace0708e9d15366d2c461eb787bc4e7728aa48e29",
+    "sha256": "493746c2d2c23b47a1aef2608a8ceae86624c0e142147ee7d7a2ea7bf2d85860",
     "files": [
       {
         "path": "apps/knmon-ui/src/traceConversion.ts",
@@ -556,7 +556,7 @@
       },
       {
         "path": "native/third-party/zstd/CMakeLists.txt",
-        "sha256": "5f312bb66b66161fd50451b04649a327b0e182d26170a1151ed04d3c984da9db"
+        "sha256": "886aef2f67fa28d33a0840fe1f50b3e817b5e0d53335dac7478252c2326bfaef"
       },
       {
         "path": "native/third-party/zstd/lib/common/allocations.h",
@@ -926,7 +926,7 @@
         "d2d1.dll": "78deb0fc7c3195a691864ee0638912ea3ef46e72d2ad6af258b7ac815798dcb1",
         "user32.dll": "fb15460c5a7068a9cb118cfdec0b60f2c715018c4af8f501b62825a6435421d1"
       },
-      "ctestLogSha256": "49fef03968e8c5010ba44d5df15f817b5ca5d3c5b545ea762587b0a1434cdb82",
+      "ctestLogSha256": "b0949f6020a8101c29a93a59d0da89c98de1410135c4269d2cce84137da0a040",
       "live": {
         "success": true,
         "apis": [
@@ -964,7 +964,7 @@
         "d2d1.dll": "6eaffafef20b3ff8ab828b210b09898d099ceaad630040be4488f265ce74ca7c",
         "user32.dll": "225f16bf0969e8f0869484791fd5764d879e2905de912a475ebdd63ad6763558"
       },
-      "ctestLogSha256": "cc2e47b6880b64b581a5b54053aac385f88ae213671bcbd1f4727102871d02a1",
+      "ctestLogSha256": "8daa9f18c6864e32ee51a05d656a00e6891600534324ce8f1872c4f9e15debd5",
       "live": {
         "success": true,
         "apis": [

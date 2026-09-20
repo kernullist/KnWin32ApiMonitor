@@ -7,6 +7,7 @@ tests/fixtures/session/**/*.jsonl text eol=lf
 native/third-party/nlohmann/json.hpp text eol=lf
 native/third-party/nlohmann/LICENSE.MIT text eol=lf whitespace=-blank-at-eol
 native/third-party/zstd/** text eol=lf whitespace=-blank-at-eol
+tools/security/cyclonedx/** text eol=lf whitespace=-blank-at-eol
 
 # Generated artifacts are byte-compared by validators. Keep them LF on Windows.
 generated/definition-ids.json text eol=lf
