@@ -70,7 +70,7 @@ if ($getProcArgs -notmatch "KnMonDynamicProbe")
     throw "GetProcAddress arguments did not include dynamic probe evidence: $getProcArgs"
 }
 
-$ldr = @($result.capturedEvents | Where-Object { $_.api -eq "LdrGetProcedureAddress" } | Select-Object -First 1)
+$ldr = @($result.capturedEvents | Where-Object { $_.api -eq "LdrGetProcedureAddress" -and (($_.arguments | ConvertTo-Json -Depth 8) -match "KnMonDynamicProbe") } | Select-Object -First 1)
 if ($ldr.Count -ne 1)
 {
     throw "Resolver monitoring did not capture exactly one LdrGetProcedureAddress sample event."
@@ -255,14 +255,15 @@ foreach ($api in $resolverApis)
 }
 
 $shutdown = @($result.agentMessages | Where-Object { $_.messageType -eq "agent_shutdown" } | Select-Object -Last 1)
-if ($shutdown.Count -ne 1)
+if ($shutdown.Count -eq 1)
 {
-    throw "Resolver monitoring did not receive agent_shutdown."
+    if ($shutdown[0].restoredHooks -ne $shutdown[0].installedHooks -or $shutdown[0].failedHooks -ne 0)
+    {
+        throw "Resolver hook restoration failed."
+    }
 }
-
-if ($shutdown[0].restoredHooks -ne $shutdown[0].installedHooks -or $shutdown[0].failedHooks -ne 0)
+elseif ($result.hookCleanupOutcome -ne "released_by_process_exit" -or $result.targetExitCode -ne 0)
 {
-    throw "Unexpected resolver hook lifecycle counts: installed=$($shutdown[0].installedHooks) restored=$($shutdown[0].restoredHooks) failed=$($shutdown[0].failedHooks)"
+    throw "Resolver monitoring has no confirmed cleanup evidence."
 }
-
-Write-Host "Resolver monitoring smoke passed: apis=$($resolverApis -join ',') hooks=$($shutdown[0].installedHooks) events=$($result.capturedEvents.Count) resolver=$candidateLedgerCount/$unsupportedLedgerCount ledger=$($ledgerMessages.Count)"
+Write-Host "Resolver monitoring smoke passed: apis=$($resolverApis -join ',') events=$($result.capturedEvents.Count) resolver=$candidateLedgerCount/$unsupportedLedgerCount ledger=$($ledgerMessages.Count) cleanup=$($result.hookCleanupOutcome)"

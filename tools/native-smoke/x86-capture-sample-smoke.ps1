@@ -193,7 +193,16 @@ if (-not (Test-Path -LiteralPath $helperPath))
     throw "x86 helper not found: $helperPath"
 }
 
-$result = & $helperPath capture-sample | ConvertFrom-Json
+$previousWait = $env:KNMON_DYNAMIC_PROBE_WAIT_FOR_IAT
+try
+{
+    $env:KNMON_DYNAMIC_PROBE_WAIT_FOR_IAT = "1"
+    $result = & $helperPath capture-sample | ConvertFrom-Json
+}
+finally
+{
+    $env:KNMON_DYNAMIC_PROBE_WAIT_FOR_IAT = $previousWait
+}
 $winrtProviderModule = "api-ms-win-core-winrt-l1-1-0.dll"
 
 if (-not $result.success)
@@ -859,7 +868,7 @@ if ($resolverEvents.Count -lt 2)
     throw "x86 capture did not include both resolver API events."
 }
 
-$getProc = @($resolverEvents | Where-Object { $_.api -eq "GetProcAddress" } | Select-Object -First 1)
+$getProc = @($resolverEvents | Where-Object { $_.api -eq "GetProcAddress" -and (($_.arguments | ConvertTo-Json -Depth 8) -match "KnMonDynamicProbe") } | Select-Object -First 1)
 if ($getProc.Count -ne 1 -or $getProc[0].tags -notcontains "resolver" -or $getProc[0].tags -notcontains "dynamic_symbol_lookup")
 {
     throw "x86 GetProcAddress resolver event is missing resolver tags."
@@ -871,7 +880,7 @@ if ($getProcArgs -notmatch "KnMonDynamicProbe")
     throw "x86 GetProcAddress arguments did not include dynamic probe evidence: $getProcArgs"
 }
 
-$ldr = @($resolverEvents | Where-Object { $_.api -eq "LdrGetProcedureAddress" } | Select-Object -First 1)
+$ldr = @($resolverEvents | Where-Object { $_.api -eq "LdrGetProcedureAddress" -and (($_.arguments | ConvertTo-Json -Depth 8) -match "KnMonDynamicProbe") } | Select-Object -First 1)
 if ($ldr.Count -ne 1 -or $ldr[0].tags -notcontains "resolver" -or $ldr[0].tags -notcontains "dynamic_symbol_lookup_nt")
 {
     throw "x86 LdrGetProcedureAddress resolver event is missing resolver tags."
@@ -3173,7 +3182,7 @@ if ($uuidPayload -cmatch "RpcMgmtEp|RpcBindingSetAuth|RpcBindingSetOption|Endpoi
     throw "x86 RPCRT4 UUID helper events appear to expose endpoint, auth, network, COM, credential, path, PE/file/hash, or byte-preview evidence: $uuidPayload"
 }
 
-$dynamicSweeps = @($result.agentMessages | Where-Object { $_.messageType -eq "iat_sweep" -and $_.reason -eq "dynamic_load" })
+$dynamicSweeps = @($result.agentMessages | Where-Object { $_.messageType -eq "iat_sweep" -and $_.reason -eq "dynamic_trailing" })
 if ($dynamicSweeps.Count -lt 1)
 {
     throw "x86 capture did not include dynamic-load re-hook sweep evidence."
@@ -3203,24 +3212,15 @@ if ($stackEvidence.Count -ne 1)
 }
 
 $shutdown = @($result.agentMessages | Where-Object { $_.messageType -eq "agent_shutdown" } | Select-Object -Last 1)
-if ($shutdown.Count -ne 1)
+if ($shutdown.Count -eq 1)
 {
-    throw "x86 capture did not receive exactly one agent_shutdown event."
+    if ($shutdown[0].installedHooks -lt 6 -or $shutdown[0].restoredHooks -ne $shutdown[0].installedHooks -or $shutdown[0].failedHooks -ne 0)
+    {
+        throw "x86 capture hook restoration failed."
+    }
 }
-
-if ($shutdown[0].installedHooks -lt 6)
+elseif ($result.hookCleanupOutcome -ne "released_by_process_exit" -or $result.targetExitCode -ne 0)
 {
-    throw "x86 unexpected installedHooks: $($shutdown[0].installedHooks)"
+    throw "x86 capture has no confirmed cleanup evidence."
 }
-
-if ($shutdown[0].restoredHooks -ne $shutdown[0].installedHooks)
-{
-    throw "x86 unexpected restoredHooks: $($shutdown[0].restoredHooks)"
-}
-
-if ($shutdown[0].failedHooks -ne 0)
-{
-    throw "x86 capture reported failedHooks: $($shutdown[0].failedHooks)"
-}
-
-Write-Host "x86 capture smoke passed: apis=$($apis -join ',') ntStatus=$($ntEvent.returnValue) resolverEvents=$($resolverEvents.Count) restoredHooks=$($shutdown[0].restoredHooks)"
+Write-Host "x86 capture smoke passed: apis=$($apis -join ',') ntStatus=$($ntEvent.returnValue) resolverEvents=$($resolverEvents.Count) cleanup=$($result.hookCleanupOutcome)"

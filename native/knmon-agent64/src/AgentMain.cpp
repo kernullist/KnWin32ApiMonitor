@@ -4,15 +4,20 @@
 #include <knmon/common/RuntimeSupport.h>
 #include <knmon/common/TransportWriter.h>
 #include <knmon/common/SessionLease.h>
+#include <knmon/common/ModuleGeneration.h>
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
 #include <knmon/common/ThreadErrorState.h>
 #ifndef PSAPI_VERSION
-#define PSAPI_VERSION 1
+#define PSAPI_VERSION 2
 #endif
 #include <psapi.h>
+#undef EnumProcessModules
+#undef GetModuleInformation
+#undef GetModuleBaseNameW
+#undef GetModuleFileNameExW
 #include <bcrypt.h>
 #include <rpc.h>
 #include <objbase.h>
@@ -53,6 +58,8 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <unordered_map>
+#include <vector>
 
 #ifdef GetAddrInfo
 #undef GetAddrInfo
@@ -92,36 +99,7 @@ constexpr std::size_t MaxRegistryStringChars = 256;
 constexpr int MaxGuidStringChars = 64;
 constexpr std::size_t MaxRegistryDataPreviewBytes = 128;
 
-struct KnMonPebLdrData
-{
-    ULONG Length;
-    BOOLEAN Initialized;
-    PVOID SsHandle;
-    LIST_ENTRY InLoadOrderModuleList;
-    LIST_ENTRY InMemoryOrderModuleList;
-    LIST_ENTRY InInitializationOrderModuleList;
-};
 
-struct KnMonLdrDataTableEntry
-{
-    LIST_ENTRY InLoadOrderLinks;
-    LIST_ENTRY InMemoryOrderLinks;
-    LIST_ENTRY InInitializationOrderLinks;
-    PVOID DllBase;
-    PVOID EntryPoint;
-    ULONG SizeOfImage;
-    UNICODE_STRING FullDllName;
-    UNICODE_STRING BaseDllName;
-};
-
-struct KnMonPeb
-{
-    BYTE Reserved1[2];
-    BYTE BeingDebugged;
-    BYTE Reserved2[1];
-    PVOID Reserved3[2];
-    KnMonPebLdrData* Ldr;
-};
 
 struct VersionTranslation
 {
@@ -839,6 +817,7 @@ struct HookRecord
     char ImportModuleName[64] = {};
     char OwnerModuleName[128] = {};
     HMODULE OwnerModule = nullptr;
+    std::uint64_t OwnerGeneration = 0;
     ULONG_PTR* ThunkAddress = nullptr;
     void* OriginalFunction = nullptr;
     void* ReplacementFunction = nullptr;
@@ -868,6 +847,7 @@ struct ModuleInfo
 {
     HMODULE Base = nullptr;
     std::uint32_t SizeOfImage = 0;
+    std::uint64_t Generation = 0;
     char Name[128] = {};
     char FullPath[512] = {};
     bool IsAgent = false;
@@ -909,6 +889,15 @@ struct SweepStats
     std::uint32_t PatchedSlots = 0;
     std::uint32_t DuplicateSlots = 0;
     std::uint32_t FailedSlots = 0;
+    std::uint32_t OriginalConflicts = 0;
+    std::uint32_t MissingNameTables = 0;
+    std::uint32_t AmbiguousAddressSlots = 0;
+    std::uint32_t DelayImportModules = 0;
+    std::uint32_t RetiredRecords = 0;
+    std::uint32_t ImportSlotsVisited = 0;
+    bool ImportBudgetExceeded = false;
+    bool SnapshotComplete = true;
+    std::uint64_t RequestedGeneration = 0;
 };
 
 struct HookDefinition
@@ -929,7 +918,7 @@ struct HookDefinition
 };
 
 constexpr std::size_t MaxHookRecords = 32768;
-constexpr std::size_t MaxModuleRecords = 512;
+constexpr std::size_t MaxModuleRecords = 4096;
 constexpr std::size_t ManualHookDefinitionCount = 314;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
@@ -941,6 +930,106 @@ volatile LONG g_failedHooks = 0;
 SRWLOCK g_controlLock = SRWLOCK_INIT;
 knmon::SessionLeaseGate g_sessionGate;
 thread_local std::uint32_t g_hookEpoch = 0;
+knmon::ModuleGenerationTable g_moduleGenerations;
+alignas(8) volatile LONG64 g_moduleDirtyGeneration = 0;
+alignas(8) volatile LONG64 g_moduleCompletedGeneration = 0;
+std::atomic<bool> g_moduleTrackingReady{false};
+void* g_moduleNotificationCookie = nullptr;
+HANDLE g_moduleSweepThread = nullptr;
+std::atomic<bool> g_moduleSweepStop{false};
+std::uint64_t g_initialUnscannedUnloads = 0;
+#if defined(KNMON_LIFECYCLE_TESTING)
+std::atomic<HANDLE> g_testSweepEntered{nullptr};
+std::atomic<HANDLE> g_testSweepResume{nullptr};
+#endif
+
+class ModuleReference
+{
+public:
+    explicit ModuleReference(const void* address)
+    {
+        if (address != nullptr)
+        {
+            GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, reinterpret_cast<LPCWSTR>(address), &m_module);
+        }
+    }
+
+    ModuleReference(const char* name, bool byName)
+    {
+        if (byName)
+        {
+            GetModuleHandleExA(0, name, &m_module);
+        }
+    }
+
+    ~ModuleReference()
+    {
+        const DWORD error = GetLastError();
+        if (m_module != nullptr)
+        {
+            FreeLibrary(m_module);
+        }
+        SetLastError(error);
+    }
+
+    HMODULE Get() const noexcept
+    {
+        return m_module;
+    }
+
+    std::uint64_t Generation() const noexcept
+    {
+        return g_moduleTrackingReady.load() ? g_moduleGenerations.Read(m_module) : 0;
+    }
+
+    ModuleReference(const ModuleReference&) = delete;
+    ModuleReference& operator=(const ModuleReference&) = delete;
+
+private:
+    HMODULE m_module = nullptr;
+};
+
+struct ModuleNotificationData
+{
+    ULONG Flags;
+    const UNICODE_STRING* FullDllName;
+    const UNICODE_STRING* BaseDllName;
+    void* DllBase;
+    ULONG SizeOfImage;
+};
+
+#pragma runtime_checks("", off)
+void CALLBACK ModuleNotification(ULONG reason, const ModuleNotificationData* data, void*) noexcept
+{
+    // No allocation, locks, logging, or calls into other DLLs under the loader lock.
+    if (data != nullptr && (reason == 1 || reason == 2))
+    {
+        g_moduleGenerations.Notify(data->DllBase, reason == 1);
+        knmon::ModuleCounterIncrement(&g_moduleDirtyGeneration);
+    }
+}
+#pragma runtime_checks("", restore)
+
+bool InitializeModuleTracking()
+{
+    if (!g_moduleTrackingReady.load())
+    {
+        using Register = NTSTATUS(NTAPI*)(ULONG, decltype(&ModuleNotification), void*, void**);
+        const HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+        const auto registerCallback = ntdll == nullptr ? nullptr : reinterpret_cast<Register>(GetProcAddress(ntdll, "LdrRegisterDllNotification"));
+        if (registerCallback != nullptr && NT_SUCCESS(registerCallback(0, ModuleNotification, nullptr, &g_moduleNotificationCookie)))
+        {
+            // The agent is pinned; the callback and generation history live for the process lifetime.
+            g_moduleTrackingReady.store(true);
+        }
+    }
+    return g_moduleTrackingReady.load();
+}
+
+void RequestModuleSweep() noexcept
+{
+    knmon::ModuleCounterIncrement(&g_moduleDirtyGeneration);
+}
 
 class AgentControlGuard
 {
@@ -1085,15 +1174,48 @@ std::uint32_t PublicLifecycleState(AgentLifecycleState state)
     return value;
 }
 
+#if defined(KNMON_LIFECYCLE_TESTING)
 std::atomic<knmon::ThreadErrorState::WinsockGet> g_errorWinsockGet{nullptr};
 std::atomic<knmon::ThreadErrorState::WinsockSet> g_errorWinsockSet{nullptr};
+#endif
 thread_local const knmon::ThreadErrorState* g_callErrorState = nullptr;
+
+class WinsockErrorAccessors
+{
+public:
+    explicit WinsockErrorAccessors(bool enabled)
+    {
+        const DWORD entryError = GetLastError();
+        if (enabled && GetModuleHandleExW(0, L"ws2_32.dll", &m_module))
+        {
+            Get = reinterpret_cast<knmon::ThreadErrorState::WinsockGet>(GetProcAddress(m_module, "WSAGetLastError"));
+            Set = reinterpret_cast<knmon::ThreadErrorState::WinsockSet>(GetProcAddress(m_module, "WSASetLastError"));
+        }
+        SetLastError(entryError);
+    }
+
+    ~WinsockErrorAccessors()
+    {
+        const DWORD exitError = GetLastError();
+        if (m_module != nullptr)
+        {
+            FreeLibrary(m_module);
+        }
+        SetLastError(exitError);
+    }
+
+    knmon::ThreadErrorState::WinsockGet Get = nullptr;
+    knmon::ThreadErrorState::WinsockSet Set = nullptr;
+
+private:
+    HMODULE m_module = nullptr;
+};
 
 class HookReentryGuard
 {
 public:
     explicit HookReentryGuard(bool winsock = false) :
-        m_errors(winsock ? g_errorWinsockGet.load() : nullptr, winsock ? g_errorWinsockSet.load() : nullptr),
+        m_winsock(winsock), m_errors(m_winsock.Get, m_winsock.Set),
         m_previous(g_inHook), m_previousEpoch(g_hookEpoch), m_lease(g_sessionGate), m_previousErrors(g_callErrorState)
     {
         g_inHook = true;
@@ -1118,6 +1240,7 @@ public:
     HookReentryGuard& operator=(const HookReentryGuard&) = delete;
 
 private:
+    WinsockErrorAccessors m_winsock;
     knmon::ThreadErrorState m_errors;
     bool m_previous;
     std::uint32_t m_previousEpoch;
@@ -2717,7 +2840,7 @@ void SendModuleInventoryStatus(const SweepStats& stats)
     stream << "\"scannedModules\":" << stats.ScannedModules << ",";
     stream << "\"eligibleModules\":" << stats.EligibleModules << ",";
     stream << "\"skippedModules\":" << stats.SkippedModules << ",";
-    stream << "\"message\":\"Module inventory captured from PEB loader list.\"";
+    stream << "\"message\":\"Module inventory captured with referenced module identities.\"";
     stream << "}";
     SendJson(stream.str());
 }
@@ -2735,6 +2858,22 @@ void SendIatSweepStatus(const char* reason, const SweepStats& stats)
     stream << "\"patchedSlots\":" << stats.PatchedSlots << ",";
     stream << "\"duplicateSlots\":" << stats.DuplicateSlots << ",";
     stream << "\"failedSlots\":" << stats.FailedSlots << ",";
+    stream << "\"originalConflicts\":" << stats.OriginalConflicts << ",";
+    stream << "\"missingNameTables\":" << stats.MissingNameTables << ",";
+    stream << "\"ambiguousAddressSlots\":" << stats.AmbiguousAddressSlots << ",";
+    stream << "\"delayImportModules\":" << stats.DelayImportModules << ",";
+    stream << "\"retiredHookRecords\":" << stats.RetiredRecords << ",";
+    stream << "\"importSlotsVisited\":" << stats.ImportSlotsVisited << ",";
+    stream << "\"importBudgetExceeded\":" << (stats.ImportBudgetExceeded ? "true" : "false") << ",";
+    stream << "\"coverageStatus\":" << Q(!stats.SnapshotComplete || stats.ImportBudgetExceeded || stats.FailedSlots != 0 ||
+        stats.OriginalConflicts != 0 || stats.AmbiguousAddressSlots != 0 ? "partial" :
+        (stats.PatchedSlots != 0 || stats.DuplicateSlots != 0 ? "observed" : "not_observed")) << ",";
+    stream << "\"snapshotComplete\":" << (stats.SnapshotComplete ? "true" : "false") << ",";
+    stream << "\"generationTableOverflow\":" << (g_moduleGenerations.Overflowed() ? "true" : "false") << ",";
+    stream << "\"unscannedModuleUnloads\":" << Q(std::to_string(g_moduleGenerations.UnscannedUnloads() - g_initialUnscannedUnloads)) << ",";
+    stream << "\"requestedGeneration\":" << Q(std::to_string(stats.RequestedGeneration)) << ",";
+    stream << "\"coverageTiming\":" << Q(reason != nullptr && std::strcmp(reason, "initial") == 0 ? "initial" : "eventual") << ",";
+    stream << "\"delayImportCoverage\":\"resolver_and_resolved_iat_first_call_not_guaranteed\",";
     stream << "\"message\":\"Loaded-module IAT sweep completed.\"";
     stream << "}";
     SendJson(stream.str());
@@ -10265,56 +10404,7 @@ void* ResolveExport(const char* moduleName, const char* name)
     return result;
 }
 
-KnMonPeb* CurrentPeb()
-{
-#if defined(_M_X64)
-    return reinterpret_cast<KnMonPeb*>(__readgsqword(0x60));
-#elif defined(_M_IX86)
-    return reinterpret_cast<KnMonPeb*>(__readfsdword(0x30));
-#else
-    return nullptr;
-#endif
-}
 
-// Serializes PEB loader-list walks against concurrent LoadLibrary/FreeLibrary.
-// LoaderLock offsets (0x110 x64 / 0xA0 x86) have been stable since Windows XP.
-// Critical sections are recursive, so re-entering from inside LdrLoadDll is safe.
-class ScopedLoaderLock
-{
-public:
-    ScopedLoaderLock()
-    {
-        KnMonPeb* peb = CurrentPeb();
-        if (peb == nullptr)
-        {
-            return;
-        }
-
-        void* lockPointer = nullptr;
-#if defined(_M_X64)
-        lockPointer = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(peb) + 0x110);
-#elif defined(_M_IX86)
-        lockPointer = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(peb) + 0xA0);
-#endif
-
-        if (lockPointer != nullptr)
-        {
-            m_lock = reinterpret_cast<RTL_CRITICAL_SECTION*>(lockPointer);
-            EnterCriticalSection(m_lock);
-        }
-    }
-
-    ~ScopedLoaderLock()
-    {
-        if (m_lock != nullptr)
-        {
-            LeaveCriticalSection(m_lock);
-        }
-    }
-
-private:
-    RTL_CRITICAL_SECTION* m_lock = nullptr;
-};
 
 bool ImageRangeContains(const std::uint8_t* base, std::uint32_t size, const void* address, std::size_t bytes)
 {
@@ -10327,13 +10417,14 @@ bool ImageRangeContains(const std::uint8_t* base, std::uint32_t size, const void
             break;
         }
 
-        const auto* current = static_cast<const std::uint8_t*>(address);
-        if (current < base)
+        const auto current = reinterpret_cast<std::uintptr_t>(address);
+        const auto first = reinterpret_cast<std::uintptr_t>(base);
+        if (current < first)
         {
             break;
         }
 
-        const std::uintptr_t offset = static_cast<std::uintptr_t>(current - base);
+        const std::uintptr_t offset = static_cast<std::uintptr_t>(current - reinterpret_cast<std::uintptr_t>(base));
         if (offset > size)
         {
             break;
@@ -10514,74 +10605,105 @@ bool ModuleHasImports(HMODULE module, std::uint32_t size)
     return ReadImageImportDirectory(module, size, &imports);
 }
 
+bool ReadReferencedModuleInfo(const ModuleReference& reference, ModuleInfo& module, bool evaluateEligibility = true)
+{
+    bool valid = false;
+    do
+    {
+        module = {};
+        if (reference.Get() == nullptr || reference.Generation() == 0)
+        {
+            break;
+        }
+        MODULEINFO native = {};
+        if (!K32GetModuleInformation(GetCurrentProcess(), reference.Get(), &native, sizeof(native)))
+        {
+            break;
+        }
+        const DWORD length = GetModuleFileNameA(reference.Get(), module.FullPath, sizeof(module.FullPath));
+        if (length == 0 || length >= sizeof(module.FullPath))
+        {
+            break;
+        }
+        const char* name = FileNameFromPathText(module.FullPath);
+        if (std::strlen(name) >= sizeof(module.Name))
+        {
+            break;
+        }
+        CopyAsciiText(module.Name, nullptr, sizeof(module.Name), name);
+        LowerAsciiInPlace(module.Name);
+        LowerAsciiInPlace(module.FullPath);
+        module.Base = reference.Get();
+        module.SizeOfImage = native.SizeOfImage;
+        module.Generation = reference.Generation();
+        module.IsAgent = module.Base == g_agentModule;
+        if (evaluateEligibility)
+        {
+            module.IsSystem = IsWindowsSystemModule(module);
+            module.HasImports = ModuleHasImports(module.Base, module.SizeOfImage);
+            module.Eligible = !module.IsAgent && !module.IsSystem && module.HasImports;
+        }
+        valid = true;
+    }
+    while (false);
+    return valid;
+}
+
 std::size_t CaptureModuleSnapshot(
     std::array<ModuleInfo, MaxModuleRecords>& modules,
     SweepStats* stats,
     bool evaluateEligibility = true)
 {
+    std::array<HMODULE, MaxModuleRecords> handles = {};
+    DWORD bytes = 0;
     std::size_t count = 0;
-
-    do
+    if (K32EnumProcessModules(GetCurrentProcess(), handles.data(), sizeof(handles), &bytes))
     {
-        KnMonPeb* peb = CurrentPeb();
-        if (peb == nullptr || peb->Ldr == nullptr)
+        if (stats != nullptr && bytes > sizeof(handles))
         {
-            break;
+            stats->SnapshotComplete = false;
         }
-
-        ScopedLoaderLock loaderLock;
-
-        LIST_ENTRY* head = &peb->Ldr->InMemoryOrderModuleList;
-        LIST_ENTRY* current = head->Flink;
-        while (current != nullptr && current != head && count < modules.size())
+        const std::size_t available = (std::min)(static_cast<std::size_t>(bytes) / sizeof(HMODULE), handles.size());
+        for (std::size_t index = 0; index < available; ++index)
         {
-            auto* entry = CONTAINING_RECORD(current, KnMonLdrDataTableEntry, InMemoryOrderLinks);
-            current = current->Flink;
-
-            if (entry == nullptr || entry->DllBase == nullptr)
+            ModuleReference reference(handles[index]);
+            try
             {
-                continue;
-            }
-
-            ModuleInfo& module = modules[count];
-            module = {};
-            module.Base = static_cast<HMODULE>(entry->DllBase);
-            module.SizeOfImage = entry->SizeOfImage;
-            CopyWideCountText(module.FullPath, sizeof(module.FullPath), entry->FullDllName.Buffer, entry->FullDllName.Length / sizeof(wchar_t));
-            CopyWideCountText(module.Name, sizeof(module.Name), entry->BaseDllName.Buffer, entry->BaseDllName.Length / sizeof(wchar_t));
-            if (module.Name[0] == '\0')
-            {
-                CopyAsciiText(module.Name, nullptr, sizeof(module.Name), FileNameFromPathText(module.FullPath));
-            }
-
-            LowerAsciiInPlace(module.Name);
-            LowerAsciiInPlace(module.FullPath);
-            module.IsAgent = module.Base == g_agentModule || std::strcmp(module.Name, KNMON_AGENT_DLL_NAME) == 0;
-            if (evaluateEligibility)
-            {
-                module.IsSystem = IsWindowsSystemModule(module);
-                module.HasImports = ModuleHasImports(module.Base, module.SizeOfImage);
-                module.Eligible = !module.IsAgent && !module.IsSystem && module.HasImports;
-            }
-
-            if (stats != nullptr)
-            {
-                ++stats->ScannedModules;
-                if (module.Eligible)
+                if (reference.Get() != handles[index] || !ReadReferencedModuleInfo(reference, modules[count], evaluateEligibility))
                 {
-                    ++stats->EligibleModules;
+                    if (stats != nullptr)
+                    {
+                        stats->SnapshotComplete = false;
+                    }
+                    continue;
                 }
-                else
+                if (stats != nullptr)
                 {
-                    ++stats->SkippedModules;
+                    ++stats->ScannedModules;
+                    if (modules[count].Eligible)
+                    {
+                        ++stats->EligibleModules;
+                    }
+                    else
+                    {
+                        ++stats->SkippedModules;
+                    }
+                }
+                ++count;
+            }
+            catch (...)
+            {
+                if (stats != nullptr)
+                {
+                    stats->SnapshotComplete = false;
                 }
             }
-
-            ++count;
         }
     }
-    while (false);
-
+    else if (stats != nullptr)
+    {
+        stats->SnapshotComplete = false;
+    }
     return count;
 }
 
@@ -10641,6 +10763,7 @@ bool AppendHookRecordNoLock(
         CopyAsciiText(record.ImportModuleName, nullptr, sizeof(record.ImportModuleName), importModuleName);
         CopyAsciiText(record.OwnerModuleName, nullptr, sizeof(record.OwnerModuleName), ownerModule.Name);
         record.OwnerModule = ownerModule.Base;
+        record.OwnerGeneration = ownerModule.Generation;
         record.ThunkAddress = thunkAddress;
         record.OriginalFunction = originalFunction;
         record.ReplacementFunction = replacementFunction;
@@ -11502,6 +11625,11 @@ bool ImportMatchesDefinition(std::uint8_t* base, std::uint32_t size, IMAGE_THUNK
             break;
         }
 
+        if (originalThunk->u1.AddressOfData > 0xffffffffULL)
+        {
+            break;
+        }
+
         auto* importByName = ImageRvaToPointer<IMAGE_IMPORT_BY_NAME>(
             base,
             size,
@@ -11522,238 +11650,314 @@ bool ImportMatchesDefinition(std::uint8_t* base, std::uint32_t size, IMAGE_THUNK
     return matches;
 }
 
-void PatchImportInModule(ModuleInfo& module, HookDefinition& definition, SweepStats& stats)
+struct OriginalBinding
 {
+    void** Slot = nullptr;
+    void* Address = nullptr;
+    HMODULE Owner = nullptr;
+    std::uint64_t Generation = 0;
+};
+std::array<OriginalBinding, HookDefinitionCount> g_originalBindings = {};
+
+OriginalBinding* FindOriginalBindingNoLock(void** slot)
+{
+    OriginalBinding* result = nullptr;
+    for (OriginalBinding& binding : g_originalBindings)
+    {
+        if (binding.Slot == slot)
+        {
+            result = &binding;
+            break;
+        }
+    }
+    return result;
+}
+
+bool BindOriginalNoLock(const HookDefinition& definition, void* address, const ModuleReference& owner)
+{
+    bool bound = false;
     do
     {
-        if (!module.Eligible || definition.ImportModuleName == nullptr || definition.ApiName == nullptr || definition.ReplacementFunction == nullptr)
+        const std::uint64_t generation = owner.Generation();
+        if (definition.OriginalFunction == nullptr || address == nullptr ||
+            address == definition.ReplacementFunction || owner.Get() == nullptr || generation == 0)
         {
             break;
         }
-
-        if (!HookDefinitionEnabled(definition))
+        OriginalBinding* binding = FindOriginalBindingNoLock(definition.OriginalFunction);
+        if (binding != nullptr)
+        {
+            bound = binding->Address == address && binding->Owner == owner.Get() && binding->Generation == generation;
+            break;
+        }
+        void* current = InterlockedCompareExchangePointer(
+            reinterpret_cast<void* volatile*>(definition.OriginalFunction), nullptr, nullptr);
+        if (current != nullptr && current != address)
         {
             break;
         }
-
-        if (definition.OriginalFunction == nullptr)
+        for (OriginalBinding& available : g_originalBindings)
         {
-            break;
-        }
-
-        auto* base = reinterpret_cast<std::uint8_t*>(module.Base);
-        IMAGE_IMPORT_DESCRIPTOR* importDescriptor = nullptr;
-        std::size_t importDescriptorCount = 0;
-        if (!ReadImageImportDirectory(module.Base, module.SizeOfImage, &importDescriptor, &importDescriptorCount))
-        {
-            break;
-        }
-
-        for (std::size_t importIndex = 0; importIndex < importDescriptorCount && importDescriptor[importIndex].Name != 0; ++importIndex)
-        {
-            const IMAGE_IMPORT_DESCRIPTOR& currentImport = importDescriptor[importIndex];
-            const char* importedModuleName = ImageRvaToPointer<char>(base, module.SizeOfImage, currentImport.Name, 1);
-            if (!ImageAsciiStringEquals(base, module.SizeOfImage, importedModuleName, definition.ImportModuleName, true))
+            if (available.Slot == nullptr)
             {
-                continue;
-            }
-
-            auto* firstThunk = ImageRvaToPointer<IMAGE_THUNK_DATA>(base, module.SizeOfImage, currentImport.FirstThunk);
-            if (firstThunk == nullptr)
-            {
-                continue;
-            }
-
-            auto* originalThunk = ImageRvaToPointer<IMAGE_THUNK_DATA>(base, module.SizeOfImage, currentImport.OriginalFirstThunk);
-            if (currentImport.OriginalFirstThunk == 0)
-            {
-                originalThunk = firstThunk;
-            }
-
-            if (originalThunk == nullptr)
-            {
-                continue;
-            }
-
-            for (
-                std::size_t thunkIndex = 0;
-                ImageRangeContains(base, module.SizeOfImage, &originalThunk[thunkIndex], sizeof(IMAGE_THUNK_DATA)) &&
-                    ImageRangeContains(base, module.SizeOfImage, &firstThunk[thunkIndex], sizeof(IMAGE_THUNK_DATA)) &&
-                    originalThunk[thunkIndex].u1.AddressOfData != 0;
-                ++thunkIndex)
-            {
-                if (!ImportMatchesDefinition(base, module.SizeOfImage, &originalThunk[thunkIndex], definition))
-                {
-                    continue;
-                }
-
-                auto* thunkAddress = reinterpret_cast<ULONG_PTR*>(&firstThunk[thunkIndex].u1.Function);
-                if (FindHookRecordByThunkNoLock(thunkAddress) != nullptr || *thunkAddress == reinterpret_cast<ULONG_PTR>(definition.ReplacementFunction))
-                {
-                    ++stats.DuplicateSlots;
-                    continue;
-                }
-
-                void* originalFunction = reinterpret_cast<void*>(*thunkAddress);
-                if (*definition.OriginalFunction == nullptr)
-                {
-                    *definition.OriginalFunction = originalFunction;
-                }
-
-                DWORD oldProtect = 0;
-                if (!VirtualProtect(thunkAddress, sizeof(void*), PAGE_READWRITE, &oldProtect))
-                {
-                    ++stats.FailedSlots;
-                    continue;
-                }
-
-                *thunkAddress = reinterpret_cast<ULONG_PTR>(definition.ReplacementFunction);
-                FlushInstructionCache(GetCurrentProcess(), thunkAddress, sizeof(void*));
-
-                DWORD ignored = 0;
-                VirtualProtect(thunkAddress, sizeof(void*), oldProtect, &ignored);
-
-                bool duplicate = false;
-                if (AppendHookRecordNoLock(module, definition.ImportModuleName, definition.ApiName, thunkAddress, originalFunction, definition.ReplacementFunction, &duplicate))
-                {
-                    ++definition.LastPatchedSlots;
-                    ++stats.PatchedSlots;
-                }
-                else
-                {
-                    if (VirtualProtect(thunkAddress, sizeof(void*), PAGE_READWRITE, &oldProtect))
-                    {
-                        *thunkAddress = reinterpret_cast<ULONG_PTR>(originalFunction);
-                        FlushInstructionCache(GetCurrentProcess(), thunkAddress, sizeof(void*));
-                        VirtualProtect(thunkAddress, sizeof(void*), oldProtect, &ignored);
-                    }
-
-                    if (duplicate)
-                    {
-                        ++stats.DuplicateSlots;
-                    }
-                    else
-                    {
-                        ++stats.FailedSlots;
-                        InterlockedIncrement(&g_failedHooks);
-                    }
-                }
+                available = {definition.OriginalFunction, address, owner.Get(), generation};
+                InterlockedExchangePointer(reinterpret_cast<void* volatile*>(definition.OriginalFunction), address);
+                bound = true;
+                break;
             }
         }
     }
     while (false);
+    return bound;
+}
+
+bool OriginalBindingMatchesNoLock(const HookDefinition& definition, void* address)
+{
+    const OriginalBinding* binding = FindOriginalBindingNoLock(definition.OriginalFunction);
+    return binding != nullptr && binding->Address == address && binding->Generation != 0 &&
+        g_moduleGenerations.Read(binding->Owner) == binding->Generation;
 }
 
 void ResolveHookDefinitions(std::array<HookDefinition, HookDefinitionCount>& definitions)
 {
-    if (g_errorWinsockGet == nullptr || g_errorWinsockSet == nullptr)
-    {
-        g_errorWinsockGet = reinterpret_cast<knmon::ThreadErrorState::WinsockGet>(ResolveExport("ws2_32.dll", "WSAGetLastError"));
-        g_errorWinsockSet = reinterpret_cast<knmon::ThreadErrorState::WinsockSet>(ResolveExport("ws2_32.dll", "WSASetLastError"));
-    }
     for (HookDefinition& definition : definitions)
     {
-        if (!HookDefinitionEnabled(definition))
+        if (!HookDefinitionEnabled(definition) || definition.OriginalFunction == nullptr)
         {
             continue;
         }
-
-        if (definition.OriginalFunction != nullptr && *definition.OriginalFunction == nullptr)
+        ModuleReference requested(definition.ImportModuleName, true);
+        if (requested.Get() != nullptr)
         {
-            *definition.OriginalFunction = ResolveExport(definition.ImportModuleName, definition.ApiName);
+            void* address = reinterpret_cast<void*>(GetProcAddress(requested.Get(), definition.ApiName));
+            ModuleReference owner(address);
+            // Never acquire or release loader references while holding the hook lock.
+            HookLockGuard lock;
+            BindOriginalNoLock(definition, address, owner);
         }
     }
 }
 
-void ReleaseAcquiredModule(HMODULE module)
+using HookModuleIndex = std::unordered_map<std::string, std::vector<HookDefinition*>>;
+
+bool ReadImageAscii(const ModuleInfo& module, DWORD rva, std::string& text)
 {
-    if (module != nullptr)
+    bool valid = false;
+    text.clear();
+    const auto* base = reinterpret_cast<const std::uint8_t*>(module.Base);
+    if (rva != 0 && rva < module.SizeOfImage)
     {
-        FreeLibrary(module);
+        const std::size_t available = (std::min)(static_cast<std::size_t>(module.SizeOfImage - rva), MaxResolverNameBytes);
+        for (std::size_t index = 0; index < available; ++index)
+        {
+            const char value = static_cast<char>(base[rva + index]);
+            if (value == 0)
+            {
+                valid = true;
+                break;
+            }
+            text.push_back(value);
+        }
     }
+    return valid;
 }
 
-bool AcquireLoadedModuleFromAddress(const void* address, HMODULE* module)
+void PatchImportSlot(ModuleInfo& module, HookDefinition& definition, ULONG_PTR* thunk, SweepStats& stats)
 {
-    bool loaded = false;
-    HMODULE localModule = nullptr;
-
-    if (address != nullptr)
-    {
-        loaded = GetModuleHandleExW(
-            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
-            reinterpret_cast<LPCWSTR>(address),
-            &localModule) != FALSE;
-    }
-
-    if (module != nullptr)
-    {
-        *module = loaded ? localModule : nullptr;
-    }
-    else
-    {
-        ReleaseAcquiredModule(localModule);
-    }
-
-    return loaded;
-}
-
-bool AcquireHookRecordOwner(const HookRecord& record, HMODULE* acquiredModule = nullptr)
-{
-    bool loaded = false;
-    HMODULE loadedModule = nullptr;
-
     do
     {
-        if (acquiredModule != nullptr)
+        if ((reinterpret_cast<std::uintptr_t>(thunk) % alignof(void*)) != 0)
         {
-            *acquiredModule = nullptr;
-        }
-
-        if (record.ThunkAddress == nullptr || record.OwnerModule == nullptr)
-        {
+            ++stats.FailedSlots;
             break;
         }
-
-        if (!AcquireLoadedModuleFromAddress(record.ThunkAddress, &loadedModule))
+        void* current = reinterpret_cast<void*>(std::atomic_ref<ULONG_PTR>(*thunk).load(std::memory_order_acquire));
+        HookRecord* existing = FindHookRecordByThunkNoLock(thunk);
+        if (existing != nullptr)
         {
-            break;
-        }
-
-        if (loadedModule != record.OwnerModule)
-        {
-            break;
-        }
-
-        if (record.OwnerModuleName[0] != '\0')
-        {
-            char loadedModulePath[512] = {};
-            const DWORD copied = GetModuleFileNameA(loadedModule, loadedModulePath, static_cast<DWORD>(sizeof(loadedModulePath)));
-            if (copied == 0)
+            if (existing->OwnerGeneration == module.Generation && existing->ReplacementFunction == current && !existing->Restored)
             {
+                ++stats.DuplicateSlots;
                 break;
             }
-
-            loadedModulePath[sizeof(loadedModulePath) - 1] = '\0';
-            LowerAsciiInPlace(loadedModulePath);
-            if (std::strcmp(FileNameFromPathText(loadedModulePath), record.OwnerModuleName) != 0)
+            // The owner may have reloaded at the same base, or a delay helper reset its IAT.
+            *existing = g_hookRecords[--g_hookRecordCount];
+            ++stats.RetiredRecords;
+        }
+        if (!OriginalBindingMatchesNoLock(definition, current))
+        {
+            ++stats.OriginalConflicts;
+            break;
+        }
+        if (g_hookRecordCount >= g_hookRecords.size())
+        {
+            ++stats.FailedSlots;
+            break;
+        }
+        DWORD oldProtect = 0;
+        if (!VirtualProtect(thunk, sizeof(void*), PAGE_READWRITE, &oldProtect))
+        {
+            ++stats.FailedSlots;
+            break;
+        }
+        void* observed = InterlockedCompareExchangePointer(reinterpret_cast<void* volatile*>(thunk), definition.ReplacementFunction, current);
+        bool appended = false;
+        if (observed == current)
+        {
+            bool duplicate = false;
+            appended = AppendHookRecordNoLock(module, definition.ImportModuleName, definition.ApiName, thunk,
+                current, definition.ReplacementFunction, &duplicate);
+            if (!appended)
             {
-                break;
+                InterlockedCompareExchangePointer(reinterpret_cast<void* volatile*>(thunk), current, definition.ReplacementFunction);
+                ++stats.FailedSlots;
             }
         }
-
-        if (acquiredModule != nullptr)
+        else
         {
-            *acquiredModule = loadedModule;
-            loadedModule = nullptr;
+            ++stats.OriginalConflicts;
         }
-
-        loaded = true;
+        DWORD ignored = 0;
+        if (!VirtualProtect(thunk, sizeof(void*), oldProtect, &ignored))
+        {
+            ++stats.FailedSlots;
+            InterlockedIncrement(&g_failedHooks);
+        }
+        if (appended)
+        {
+            ++definition.LastPatchedSlots;
+            ++stats.PatchedSlots;
+        }
     }
     while (false);
+}
 
-    ReleaseAcquiredModule(loadedModule);
-    return loaded;
+void PatchImportThunks(ModuleInfo& module, DWORD nameRva, DWORD iatRva, DWORD lookupRva,
+    const HookModuleIndex& index, SweepStats& stats, bool delay)
+{
+    auto* base = reinterpret_cast<std::uint8_t*>(module.Base);
+    std::string moduleName;
+    if (!ReadImageAscii(module, nameRva, moduleName))
+    {
+        ++stats.FailedSlots;
+        return;
+    }
+    const auto found = index.find(LowerAscii(moduleName));
+    if (found == index.end())
+    {
+        return;
+    }
+    auto* iat = ImageRvaToPointer<IMAGE_THUNK_DATA>(base, module.SizeOfImage, iatRva);
+    auto* names = ImageRvaToPointer<IMAGE_THUNK_DATA>(base, module.SizeOfImage, lookupRva);
+    if (iat == nullptr || (lookupRva != 0 && names == nullptr))
+    {
+        ++stats.FailedSlots;
+        return;
+    }
+    if (lookupRva == 0)
+    {
+        ++stats.MissingNameTables;
+    }
+    for (std::size_t slot = 0; ImageRangeContains(base, module.SizeOfImage, &iat[slot], sizeof(*iat)); ++slot)
+    {
+        if (slot >= 65536 || stats.ImportSlotsVisited >= 1048576)
+        {
+            stats.ImportBudgetExceeded = true;
+            break;
+        }
+        ++stats.ImportSlotsVisited;
+        if (iat[slot].u1.Function == 0)
+        {
+            break;
+        }
+        if (names != nullptr && (!ImageRangeContains(base, module.SizeOfImage, &names[slot], sizeof(*names)) || names[slot].u1.AddressOfData == 0))
+        {
+            break;
+        }
+        void* current = reinterpret_cast<void*>(iat[slot].u1.Function);
+        if (delay && ImageRangeContains(base, module.SizeOfImage, current, 1))
+        {
+            // Keep unresolved delay thunks intact. Loading eagerly changes application behavior.
+            continue;
+        }
+        HookDefinition* match = nullptr;
+        unsigned matches = 0;
+        for (HookDefinition* definition : found->second)
+        {
+            const bool matchesName = names != nullptr && ImportMatchesDefinition(base, module.SizeOfImage, &names[slot], *definition);
+            const bool matchesAddress = names == nullptr && OriginalBindingMatchesNoLock(*definition, current);
+            if (matchesName || matchesAddress)
+            {
+                match = definition;
+                ++matches;
+            }
+        }
+        if (matches == 1)
+        {
+            PatchImportSlot(module, *match, reinterpret_cast<ULONG_PTR*>(&iat[slot].u1.Function), stats);
+        }
+        else if (matches > 1)
+        {
+            ++stats.AmbiguousAddressSlots;
+        }
+    }
+}
+
+void PatchImportsInModule(ModuleInfo& module, const HookModuleIndex& index, SweepStats& stats)
+{
+    if (!module.Eligible)
+    {
+        return;
+    }
+    auto* base = reinterpret_cast<std::uint8_t*>(module.Base);
+    IMAGE_IMPORT_DESCRIPTOR* imports = nullptr;
+    std::size_t count = 0;
+    if (ReadImageImportDirectory(module.Base, module.SizeOfImage, &imports, &count))
+    {
+        for (std::size_t descriptor = 0; descriptor < count && imports[descriptor].Name != 0; ++descriptor)
+        {
+            if (descriptor >= 4096 || stats.ImportBudgetExceeded)
+            {
+                stats.ImportBudgetExceeded = true;
+                break;
+            }
+            const auto& entry = imports[descriptor];
+            PatchImportThunks(module, entry.Name, entry.FirstThunk, entry.OriginalFirstThunk, index, stats, false);
+        }
+    }
+    const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
+    const auto* nt = ImageRvaToPointer<IMAGE_NT_HEADERS>(base, module.SizeOfImage, static_cast<DWORD>(dos->e_lfanew));
+    if (nt == nullptr || nt->OptionalHeader.NumberOfRvaAndSizes <= IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT)
+    {
+        return;
+    }
+    struct DelayDescriptor
+    {
+        DWORD Attributes, Name, Module, Iat, Names, BoundIat, UnloadIat, TimeStamp;
+    };
+    const auto& directory = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT];
+    if (directory.VirtualAddress != 0)
+    {
+        ++stats.DelayImportModules;
+        const auto* entries = ImageRvaToPointer<DelayDescriptor>(base, module.SizeOfImage, directory.VirtualAddress);
+        const auto available = directory.VirtualAddress < module.SizeOfImage ? module.SizeOfImage - directory.VirtualAddress : 0;
+        const auto size = (std::min)(available, directory.Size);
+        for (std::size_t descriptor = 0; entries != nullptr && descriptor < size / sizeof(DelayDescriptor) && entries[descriptor].Name != 0; ++descriptor)
+        {
+            if (descriptor >= 4096 || stats.ImportBudgetExceeded)
+            {
+                stats.ImportBudgetExceeded = true;
+                break;
+            }
+            const auto& entry = entries[descriptor];
+            if (entry.Attributes != 1)
+            {
+                ++stats.FailedSlots;
+                continue;
+            }
+            PatchImportThunks(module, entry.Name, entry.Iat, entry.Names, index, stats, true);
+        }
+    }
 }
 
 std::string PointerText(const void* value)
@@ -11824,7 +12028,7 @@ const GeneratedAgentResolverMetadata* FindResolverDefinition(const char* moduleN
         {
             if (
                 StringViewEqualsAsciiNoCase(entry.ModuleName, moduleName) &&
-                StringViewEqualsAsciiNoCase(entry.Name, apiName))
+                std::strcmp(entry.Name, apiName) == 0)
             {
                 metadata = &entry;
                 break;
@@ -11834,67 +12038,6 @@ const GeneratedAgentResolverMetadata* FindResolverDefinition(const char* moduleN
     while (false);
 
     return metadata;
-}
-
-bool FindModuleByBase(
-    const std::array<ModuleInfo, MaxModuleRecords>& modules,
-    std::size_t moduleCount,
-    HMODULE base,
-    ModuleInfo* output)
-{
-    bool found = false;
-
-    do
-    {
-        if (base == nullptr || output == nullptr)
-        {
-            break;
-        }
-
-        for (std::size_t index = 0; index < moduleCount; ++index)
-        {
-            if (modules[index].Base == base)
-            {
-                *output = modules[index];
-                found = true;
-                break;
-            }
-        }
-    }
-    while (false);
-
-    return found;
-}
-
-bool FindModuleByAddress(
-    const std::array<ModuleInfo, MaxModuleRecords>& modules,
-    std::size_t moduleCount,
-    const void* address,
-    ModuleInfo* output)
-{
-    bool found = false;
-
-    do
-    {
-        if (address == nullptr || output == nullptr)
-        {
-            break;
-        }
-
-        for (std::size_t index = 0; index < moduleCount; ++index)
-        {
-            const ModuleInfo& module = modules[index];
-            if (ImageRangeContains(reinterpret_cast<const std::uint8_t*>(module.Base), module.SizeOfImage, address, 1))
-            {
-                *output = module;
-                found = true;
-                break;
-            }
-        }
-    }
-    while (false);
-
-    return found;
 }
 
 bool AddressInExecutableImageSection(const ModuleInfo& module, const void* address, std::uint32_t* rva)
@@ -12057,20 +12200,17 @@ ResolverPointerClassification ClassifyResolverPointer(
             break;
         }
 
-        std::array<ModuleInfo, MaxModuleRecords> modules = {};
-        const std::size_t moduleCount = CaptureModuleSnapshot(modules, nullptr, false);
-        classification.HasRequestedModule = FindModuleByBase(modules, moduleCount, requestedModule, &classification.RequestedModule);
-        if (classification.HasRequestedModule)
-        {
-            classification.RequestedModuleName = classification.RequestedModule.Name;
-        }
-        else
+        ModuleReference requested(requestedModule);
+        ModuleReference target(returnedPointer);
+        classification.HasRequestedModule = requested.Get() == requestedModule &&
+            ReadReferencedModuleInfo(requested, classification.RequestedModule, false);
+        if (!classification.HasRequestedModule)
         {
             classification.Reason = "unsupported_requested_module_unknown";
             break;
         }
-
-        classification.HasTargetModule = FindModuleByAddress(modules, moduleCount, returnedPointer, &classification.TargetModule);
+        classification.RequestedModuleName = classification.RequestedModule.Name;
+        classification.HasTargetModule = ReadReferencedModuleInfo(target, classification.TargetModule, false);
         if (!classification.HasTargetModule)
         {
             classification.Reason = "unsupported_pointer_module_unknown";
@@ -12091,8 +12231,20 @@ ResolverPointerClassification ClassifyResolverPointer(
 
         if (lookupByOrdinal)
         {
-            classification.Reason = "unsupported_ordinal_metadata_missing";
-            break;
+            for (const HookDefinition& definition : ResolverHookDefinitions())
+            {
+                if (definition.ImportOrdinal != 0 && definition.ImportOrdinal == ordinal &&
+                    classification.RequestedModuleName == definition.ImportModuleName)
+                {
+                    classification.RequestedName = definition.ApiName;
+                    break;
+                }
+            }
+            if (classification.RequestedName.empty())
+            {
+                classification.Reason = "unsupported_ordinal_metadata_missing";
+                break;
+            }
         }
 
         if (classification.RequestedName.empty())
@@ -12136,7 +12288,7 @@ bool ResolverHookDefinitionMatches(const ResolverPointerClassification& classifi
 
         matches =
             StringViewEqualsAsciiNoCase(classification.Metadata->ModuleName, definition.ImportModuleName) &&
-            StringViewEqualsAsciiNoCase(classification.Metadata->Name, definition.ApiName);
+            std::strcmp(classification.Metadata->Name, definition.ApiName) == 0;
     }
     while (false);
 
@@ -12197,27 +12349,29 @@ void* SelectResolverPointerReplacement(ResolverPointerClassification& classifica
                 break;
             }
 
-            void* currentOriginal = *definition.OriginalFunction;
-            if (currentOriginal == nullptr)
+            ModuleReference requested(classification.RequestedModule.Base);
+            ModuleReference owner(returnedPointer);
+            if (requested.Get() != classification.RequestedModule.Base ||
+                requested.Generation() != classification.RequestedModule.Generation ||
+                owner.Get() != classification.TargetModule.Base || owner.Generation() != classification.TargetModule.Generation)
             {
-                InterlockedCompareExchangePointer(
-                    reinterpret_cast<PVOID volatile*>(definition.OriginalFunction),
-                    returnedFunction,
-                    nullptr);
-                currentOriginal = *definition.OriginalFunction;
-            }
-
-            if (currentOriginal == nullptr)
-            {
-                classification.InstrumentationReason = "instrumentation_original_store_failed";
+                classification.InstrumentationReason = "module_generation_changed";
                 break;
             }
-
-            if (currentOriginal == definition.ReplacementFunction)
+            void* exported = reinterpret_cast<void*>(GetProcAddress(requested.Get(), definition.ApiName));
+            if (exported != returnedFunction)
             {
-                classification.InstrumentationReason = "instrumentation_original_is_replacement";
+                classification.InstrumentationReason = "export_identity_conflict";
                 break;
             }
+            HookLockGuard lock;
+            if (!BindOriginalNoLock(definition, returnedFunction, owner))
+            {
+                classification.OriginalFunction = *definition.OriginalFunction;
+                classification.InstrumentationReason = "original_conflict";
+                break;
+            }
+            void* currentOriginal = returnedFunction;
 
             classification.OriginalFunction = currentOriginal;
             classification.ReplacementFunction = definition.ReplacementFunction;
@@ -12299,6 +12453,14 @@ bool ShouldReportResolverPointerClassification(const ResolverPointerClassificati
 
     bool shouldReport = false;
     AcquireSRWLockExclusive(&reportedLock);
+    struct ReleaseReportLock
+    {
+        SRWLOCK* Lock;
+        ~ReleaseReportLock()
+        {
+            ReleaseSRWLockExclusive(Lock);
+        }
+    } release{&reportedLock};
     do
     {
         if (reportedKeys.size() >= 1024)
@@ -12311,7 +12473,6 @@ bool ShouldReportResolverPointerClassification(const ResolverPointerClassificati
         shouldReport = reportedKeys.insert(key).second;
     }
     while (false);
-    ReleaseSRWLockExclusive(&reportedLock);
     return shouldReport;
 }
 
@@ -12333,12 +12494,14 @@ void SendResolverPointerClassificationMessage(
     stream << "\"requestedOrdinal\":" << (lookupByOrdinal ? classification.Ordinal : 0) << ",";
     stream << "\"requestedModule\":" << Q(classification.RequestedModuleName) << ",";
     stream << "\"requestedModuleBase\":" << Q(PointerText(requestedModule)) << ",";
+    stream << "\"requestedModuleGeneration\":" << Q(std::to_string(classification.RequestedModule.Generation)) << ",";
     stream << "\"returnedPointer\":" << Q(PointerText(returnedPointer)) << ",";
     stream << "\"originalPointer\":" << Q(PointerText(classification.OriginalFunction)) << ",";
     stream << "\"replacementPointer\":" << Q(PointerText(classification.ReplacementFunction)) << ",";
     stream << "\"targetModule\":" << Q(classification.TargetModuleName) << ",";
     stream << "\"targetModulePath\":" << Q(classification.TargetModulePath) << ",";
     stream << "\"targetModuleBase\":" << Q(PointerText(classification.TargetModule.Base)) << ",";
+    stream << "\"targetModuleGeneration\":" << Q(std::to_string(classification.TargetModule.Generation)) << ",";
     stream << "\"targetRva\":" << classification.TargetRva << ",";
     stream << "\"targetRvaHex\":" << Q(RvaText(classification.TargetRva)) << ",";
     stream << "\"targetExecutable\":" << (classification.TargetExecutable ? "true" : "false") << ",";
@@ -12358,49 +12521,68 @@ void SendResolverPointerClassificationMessage(
 
 bool SweepLoadedModules(const char* reason, bool reportHookStatus, SweepStats* outStats)
 {
-    // DLL-churning targets would otherwise run a full-process sweep per
-    // LoadLibrary on their own thread; debounce re-sweeps.
-    if (reason != nullptr && std::strcmp(reason, "dynamic_load") == 0)
-    {
-        if (GetLifecycleState() != AgentLifecycleState::Running)
-        {
-            return false;
-        }
-        static std::atomic<ULONGLONG> lastDynamicSweepTick{0};
-        const ULONGLONG now = GetTickCount64();
-        const ULONGLONG last = lastDynamicSweepTick.load();
-        if (last != 0 && now - last < 250)
-        {
-            return true;
-        }
-        lastDynamicSweepTick.store(now);
-    }
-
     bool installedCoverage = false;
     SweepStats stats = {};
+    stats.RequestedGeneration = static_cast<std::uint64_t>(InterlockedCompareExchange64(&g_moduleDirtyGeneration, 0, 0));
     auto modules = std::make_unique<std::array<ModuleInfo, MaxModuleRecords>>();
     auto definitions = std::make_unique<std::array<HookDefinition, HookDefinitionCount>>();
     BuildHookDefinitions(definitions->data(), definitions->size());
     ResolveHookDefinitions(*definitions);
+    HookModuleIndex index;
+    for (HookDefinition& definition : *definitions)
+    {
+        if (HookDefinitionEnabled(definition))
+        {
+            index[definition.ImportModuleName].push_back(&definition);
+        }
+    }
     const std::size_t moduleCount = CaptureModuleSnapshot(*modules, &stats);
-
-    HookLockGuard hookLock;
     for (std::size_t moduleIndex = 0; moduleIndex < moduleCount; ++moduleIndex)
     {
         ModuleInfo& module = (*modules)[moduleIndex];
-        const std::uint32_t patchedBefore = stats.PatchedSlots;
-
-        for (HookDefinition& definition : *definitions)
+        ModuleReference owner(module.Base);
+        if (owner.Get() != module.Base || owner.Generation() != module.Generation)
         {
-            PatchImportInModule(module, definition, stats);
+            stats.SnapshotComplete = false;
+            continue;
         }
-
+        if (!module.Eligible)
+        {
+            g_moduleGenerations.MarkScanned(module.Base, module.Generation);
+            continue;
+        }
+        const std::uint32_t patchedBefore = stats.PatchedSlots;
+        try
+        {
+            HookLockGuard hookLock;
+            PatchImportsInModule(module, index, stats);
+            g_moduleGenerations.MarkScanned(module.Base, module.Generation);
+        }
+        catch (...)
+        {
+            ++stats.FailedSlots;
+        }
         if (stats.PatchedSlots > patchedBefore)
         {
             ++stats.ModulesWithPatches;
         }
     }
-    hookLock.Release();
+    {
+        HookLockGuard hookLock;
+        for (std::size_t record = 0; record < g_hookRecordCount;)
+        {
+            const HookRecord& current = g_hookRecords[record];
+            if (g_moduleGenerations.Changed(current.OwnerModule, current.OwnerGeneration))
+            {
+                g_hookRecords[record] = g_hookRecords[--g_hookRecordCount];
+                ++stats.RetiredRecords;
+            }
+            else
+            {
+                ++record;
+            }
+        }
+    }
 
     if (reportHookStatus)
     {
@@ -12432,7 +12614,61 @@ bool SweepLoadedModules(const char* reason, bool reportHookStatus, SweepStats* o
         *outStats = stats;
     }
 
+    InterlockedExchange64(&g_moduleCompletedGeneration, static_cast<LONG64>(stats.RequestedGeneration));
     return installedCoverage;
+}
+
+DWORD WINAPI ModuleSweepWorker(void*)
+{
+    DWORD retryDelay = 25;
+    while (!g_moduleSweepStop.load())
+    {
+        if (InterlockedCompareExchange64(&g_moduleDirtyGeneration, 0, 0) !=
+            InterlockedCompareExchange64(&g_moduleCompletedGeneration, 0, 0))
+        {
+            HookReentryGuard lease;
+            if (g_hookEpoch == 0)
+            {
+                break;
+            }
+            try
+            {
+#if defined(KNMON_LIFECYCLE_TESTING)
+                if (g_testSweepEntered.load() != nullptr)
+                {
+                    SetEvent(g_testSweepEntered.load());
+                    WaitForSingleObject(g_testSweepResume.load(), 10000);
+                }
+#endif
+                SweepStats stats;
+                SweepLoadedModules("dynamic_trailing", false, &stats);
+                if (!stats.SnapshotComplete)
+                {
+                    RequestModuleSweep();
+                    retryDelay = (std::min)(retryDelay * 2, 1000UL);
+                }
+                else
+                {
+                    retryDelay = 25;
+                }
+            }
+            catch (...)
+            {
+                InterlockedIncrement(&g_failedHooks);
+                // Leave the dirty generation pending for a bounded retry cadence.
+                retryDelay = 1000;
+            }
+        }
+        Sleep(retryDelay);
+    }
+    return 0;
+}
+
+bool StartModuleSweepWorker()
+{
+    g_moduleSweepStop.store(false);
+    g_moduleSweepThread = CreateThread(nullptr, 0, ModuleSweepWorker, nullptr, 0, nullptr);
+    return g_moduleSweepThread != nullptr;
 }
 
 HookLifecycleCounts UninstallHooks()
@@ -12440,7 +12676,6 @@ HookLifecycleCounts UninstallHooks()
     HookLifecycleCounts counts;
 
     InterlockedExchange(&g_hooksEnabled, 0);
-    HookLockGuard hookLock;
     for (std::size_t index = 0; index < g_hookRecordCount; ++index)
     {
         HookRecord& record = g_hookRecords[index];
@@ -12465,27 +12700,23 @@ HookLifecycleCounts UninstallHooks()
 
         ++counts.InstalledHooks;
 
-        HMODULE ownerModule = nullptr;
-        if (!AcquireHookRecordOwner(record, &ownerModule))
+        ModuleReference owner(record.ThunkAddress);
+        if (owner.Get() == nullptr || owner.Get() != record.OwnerModule ||
+            g_moduleGenerations.Changed(record.OwnerModule, record.OwnerGeneration))
         {
             record.Restored = true;
             ++counts.RestoredHooks;
             continue;
         }
-
+        if (owner.Generation() == 0 || owner.Generation() != record.OwnerGeneration)
+        {
+            record.Failed = true;
+            ++counts.FailedHooks;
+            continue;
+        }
         DWORD oldProtect = 0;
         if (!VirtualProtect(record.ThunkAddress, sizeof(void*), PAGE_READWRITE, &oldProtect))
         {
-            ReleaseAcquiredModule(ownerModule);
-            ownerModule = nullptr;
-
-            if (!AcquireHookRecordOwner(record))
-            {
-                record.Restored = true;
-                ++counts.RestoredHooks;
-                continue;
-            }
-
             record.Failed = true;
             ++counts.FailedHooks;
             continue;
@@ -12512,9 +12743,7 @@ HookLifecycleCounts UninstallHooks()
             ++counts.FailedHooks;
         }
 
-        ReleaseAcquiredModule(ownerModule);
     }
-    hookLock.Release();
 
     counts.FailedHooks += static_cast<int>(InterlockedCompareExchange(&g_failedHooks, 0, 0));
     return counts;
@@ -16821,36 +17050,9 @@ BOOL WINAPI HookedFreeLibrary(HMODULE module)
     const DWORD lastError = GetLastError();
     QueryPerformanceCounter(&end);
 
-    if (HooksEnabled() && result && module != nullptr)
+    if (HooksEnabled() && result)
     {
-        // If the free dropped the final reference, the module (and its patched
-        // IAT slots) is gone. Drop this owner's hook records so a later load at
-        // the same address is re-patched instead of classified as a duplicate.
-        HMODULE stillLoaded = nullptr;
-        if (!GetModuleHandleExW(
-                GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                reinterpret_cast<LPCWSTR>(module),
-                &stillLoaded))
-        {
-            HookLockGuard hookLock;
-            std::size_t writeIndex = 0;
-            for (std::size_t readIndex = 0; readIndex < g_hookRecordCount; ++readIndex)
-            {
-                if (g_hookRecords[readIndex].OwnerModule == module)
-                {
-                    continue;
-                }
-
-                if (writeIndex != readIndex)
-                {
-                    g_hookRecords[writeIndex] = g_hookRecords[readIndex];
-                }
-
-                ++writeIndex;
-            }
-            g_hookRecordCount = writeIndex;
-            hookLock.Release();
-        }
+        RequestModuleSweep();
     }
 
     const DWORD eventError = result ? 0 : lastError;
@@ -17443,7 +17645,7 @@ HMODULE WINAPI HookedLoadLibraryW(LPCWSTR fileName)
         EmitLoadLibraryWEvent(result, eventError, start, end, fileName);
         if (result != nullptr)
         {
-            SweepLoadedModules("dynamic_load", false, nullptr);
+            RequestModuleSweep();
         }
     }
 
@@ -17481,7 +17683,7 @@ HMODULE WINAPI HookedLoadLibraryA(LPCSTR fileName)
         EmitLoadLibraryAEvent(result, eventError, start, end, fileName);
         if (result != nullptr)
         {
-            SweepLoadedModules("dynamic_load", false, nullptr);
+            RequestModuleSweep();
         }
     }
 
@@ -17519,7 +17721,7 @@ HMODULE WINAPI HookedLoadLibraryExW(LPCWSTR fileName, HANDLE file, DWORD flags)
         EmitLoadLibraryExWEvent(result, eventError, start, end, fileName, file, flags);
         if (result != nullptr)
         {
-            SweepLoadedModules("dynamic_load", false, nullptr);
+            RequestModuleSweep();
         }
     }
 
@@ -17557,7 +17759,7 @@ HMODULE WINAPI HookedLoadLibraryExA(LPCSTR fileName, HANDLE file, DWORD flags)
         EmitLoadLibraryExAEvent(result, eventError, start, end, fileName, file, flags);
         if (result != nullptr)
         {
-            SweepLoadedModules("dynamic_load", false, nullptr);
+            RequestModuleSweep();
         }
     }
 
@@ -17591,43 +17793,50 @@ FARPROC WINAPI HookedGetProcAddress(HMODULE module, LPCSTR procName)
     QueryPerformanceCounter(&end);
 
     const DWORD eventError = result == nullptr ? lastError : 0;
-    if (HooksEnabled())
+    try
     {
-        EmitGetProcAddressEvent(result, eventError, start, end, module, procName);
-        if (result != nullptr)
+        if (HooksEnabled())
         {
-            const bool lookupByOrdinal = IsOrdinalProcName(procName);
-            const std::uint32_t ordinal = lookupByOrdinal ?
-                static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(procName) & 0xffffu) :
-                0;
-            ResolverPointerClassification classification = ClassifyResolverPointer(
-                module,
-                CaptureResolverProcName(procName, lookupByOrdinal),
-                lookupByOrdinal,
-                ordinal,
-                reinterpret_cast<const void*>(result));
-            void* replacement = SelectResolverPointerReplacement(
-                classification,
-                reinterpret_cast<const void*>(result));
-            if (replacement != nullptr)
+            EmitGetProcAddressEvent(result, eventError, start, end, module, procName);
+            if (result != nullptr)
             {
-                classification.Instrumented = true;
-                classification.InstrumentationReason = "instrumented_return_value_substituted";
-                result = reinterpret_cast<FARPROC>(replacement);
-            }
-
-            // GetProcAddress is a hot path: report actionable classifications
-            // immediately and deduplicate repeated unsupported lookups.
-            if (ShouldReportResolverPointerClassification(classification))
-            {
-                SendResolverPointerClassificationMessage(
-                    "GetProcAddress",
-                    classification,
-                    lookupByOrdinal,
+                const bool lookupByOrdinal = IsOrdinalProcName(procName);
+                const std::uint32_t ordinal = lookupByOrdinal ?
+                    static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(procName) & 0xffffu) :
+                    0;
+                ResolverPointerClassification classification = ClassifyResolverPointer(
                     module,
-                    reinterpret_cast<const void*>(resolvedResult));
+                    CaptureResolverProcName(procName, lookupByOrdinal),
+                    lookupByOrdinal,
+                    ordinal,
+                    reinterpret_cast<const void*>(result));
+                void* replacement = SelectResolverPointerReplacement(
+                    classification,
+                    reinterpret_cast<const void*>(result));
+                if (replacement != nullptr)
+                {
+                    classification.Instrumented = true;
+                    classification.InstrumentationReason = "instrumented_return_value_substituted";
+                    result = reinterpret_cast<FARPROC>(replacement);
+                }
+
+                // GetProcAddress is a hot path: report actionable classifications
+                // immediately and deduplicate repeated unsupported lookups.
+                if (ShouldReportResolverPointerClassification(classification))
+                {
+                    SendResolverPointerClassificationMessage(
+                        "GetProcAddress",
+                        classification,
+                        lookupByOrdinal,
+                        module,
+                        reinterpret_cast<const void*>(resolvedResult));
+                }
             }
         }
+    }
+    catch (...)
+    {
+        InterlockedIncrement64(&g_droppedEvents);
     }
 
     SetLastError(lastError);
@@ -17741,7 +17950,7 @@ NTSTATUS NTAPI HookedLdrLoadDll(PWSTR pathToFile, ULONG flags, PUNICODE_STRING m
         EmitLdrLoadDllEvent(status, eventError, start, end, pathToFile, flags, moduleFileName, moduleHandle);
         if (NT_SUCCESS(status))
         {
-            SweepLoadedModules("dynamic_load", false, nullptr);
+            RequestModuleSweep();
         }
     }
 
@@ -17771,47 +17980,54 @@ NTSTATUS NTAPI HookedLdrGetProcedureAddress(HMODULE module, PANSI_STRING functio
     QueryPerformanceCounter(&end);
 
     const DWORD eventError = NtStatusToDosError(status);
-    if (HooksEnabled())
+    try
     {
-        EmitLdrGetProcedureAddressEvent(status, eventError, start, end, module, functionName, ordinal, functionAddress);
-        PVOID resolvedAddress = nullptr;
-        if (NT_SUCCESS(status) && ReadCurrentProcessValue(functionAddress, &resolvedAddress) && resolvedAddress != nullptr)
+        if (HooksEnabled())
         {
-            const std::string requestedName = CaptureResolverAnsiStringName(functionName);
-            const bool lookupByOrdinal = requestedName.empty() && ordinal != 0;
-            ResolverPointerClassification classification = ClassifyResolverPointer(
-                module,
-                requestedName,
-                lookupByOrdinal,
-                lookupByOrdinal ? ordinal : 0,
-                resolvedAddress);
-            void* replacement = SelectResolverPointerReplacement(classification, resolvedAddress);
-            if (replacement != nullptr)
+            EmitLdrGetProcedureAddressEvent(status, eventError, start, end, module, functionName, ordinal, functionAddress);
+            PVOID resolvedAddress = nullptr;
+            if (NT_SUCCESS(status) && ReadCurrentProcessValue(functionAddress, &resolvedAddress) && resolvedAddress != nullptr)
             {
-                PVOID replacementAddress = replacement;
-                if (WriteCurrentProcessValue(functionAddress, replacementAddress))
-                {
-                    classification.Instrumented = true;
-                    classification.InstrumentationReason = "instrumented_output_pointer_substituted";
-                }
-                else
-                {
-                    classification.InstrumentationReason = "instrumentation_output_pointer_write_failed";
-                    classification.ReplacementFunction = nullptr;
-                }
-            }
-
-            // LdrGetProcedureAddress mirrors the GetProcAddress reporting policy.
-            if (ShouldReportResolverPointerClassification(classification))
-            {
-                SendResolverPointerClassificationMessage(
-                    "LdrGetProcedureAddress",
-                    classification,
-                    lookupByOrdinal,
+                const std::string requestedName = CaptureResolverAnsiStringName(functionName);
+                const bool lookupByOrdinal = requestedName.empty() && ordinal != 0;
+                ResolverPointerClassification classification = ClassifyResolverPointer(
                     module,
+                    requestedName,
+                    lookupByOrdinal,
+                    lookupByOrdinal ? ordinal : 0,
                     resolvedAddress);
+                void* replacement = SelectResolverPointerReplacement(classification, resolvedAddress);
+                if (replacement != nullptr)
+                {
+                    PVOID replacementAddress = replacement;
+                    if (WriteCurrentProcessValue(functionAddress, replacementAddress))
+                    {
+                        classification.Instrumented = true;
+                        classification.InstrumentationReason = "instrumented_output_pointer_substituted";
+                    }
+                    else
+                    {
+                        classification.InstrumentationReason = "instrumentation_output_pointer_write_failed";
+                        classification.ReplacementFunction = nullptr;
+                    }
+                }
+
+                // LdrGetProcedureAddress mirrors the GetProcAddress reporting policy.
+                if (ShouldReportResolverPointerClassification(classification))
+                {
+                    SendResolverPointerClassificationMessage(
+                        "LdrGetProcedureAddress",
+                        classification,
+                        lookupByOrdinal,
+                        module,
+                        resolvedAddress);
+                }
             }
         }
+    }
+    catch (...)
+    {
+        InterlockedIncrement64(&g_droppedEvents);
     }
 
     return status;
@@ -20323,6 +20539,11 @@ int WINAPI HookedWSAGetLastError()
 
 bool InstallHooks()
 {
+    if (!InitializeModuleTracking())
+    {
+        return false;
+    }
+    g_initialUnscannedUnloads = g_moduleGenerations.UnscannedUnloads();
     SweepStats stats = {};
     const bool installedCoverage = SweepLoadedModules("initial", true, &stats);
 
@@ -20338,6 +20559,10 @@ bool InstallHooks()
     {
         SetLifecycleState(AgentLifecycleState::Running);
         InterlockedExchange(&g_hooksEnabled, 1);
+        if (!StartModuleSweepWorker())
+        {
+            return false;
+        }
     }
     else
     {
@@ -20370,16 +20595,24 @@ HookLifecycleCounts ShutdownAgent(const char* reason, AgentLifecycleState finalS
     SetLifecycleState(AgentLifecycleState::Stopping);
     InterlockedExchange(&g_hooksEnabled, 0);
     g_sessionGate.Close();
+    g_moduleSweepStop.store(true);
     const ULONGLONG deadline = GetTickCount64() + 2000;
-    while (!g_sessionGate.Quiescent() && GetTickCount64() < deadline)
+    while ((!g_sessionGate.Quiescent() ||
+        (g_moduleSweepThread != nullptr && WaitForSingleObject(g_moduleSweepThread, 0) != WAIT_OBJECT_0)) && GetTickCount64() < deadline)
     {
         Sleep(1);
     }
-    if (!g_sessionGate.Quiescent())
+    if (!g_sessionGate.Quiescent() ||
+        (g_moduleSweepThread != nullptr && WaitForSingleObject(g_moduleSweepThread, 0) != WAIT_OBJECT_0))
     {
         // Keep the mapping, pipe, and session strings alive for admitted calls.
         counts.FailedHooks = 1;
         return counts;
+    }
+    if (g_moduleSweepThread != nullptr)
+    {
+        CloseHandle(g_moduleSweepThread);
+        g_moduleSweepThread = nullptr;
     }
     counts = UninstallHooks();
     CloseTransport();
@@ -20893,9 +21126,9 @@ DWORD WINAPI RunTestPausedEmitter(void* context)
     return 0;
 }
 
-bool CreateTestTransport()
+bool CreateTestTransport(std::uint32_t capacity = 2)
 {
-    const DWORD bytes = sizeof(knmon::KnMonTransportHeader) + 2 * sizeof(knmon::KnMonTransportRecord);
+    const DWORD bytes = sizeof(knmon::KnMonTransportHeader) + capacity * sizeof(knmon::KnMonTransportRecord);
     g_transportMapping = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, bytes, nullptr);
     if (g_transportMapping != nullptr)
     {
@@ -20904,10 +21137,10 @@ bool CreateTestTransport()
     if (g_transportHeader != nullptr)
     {
         new (g_transportHeader) knmon::KnMonTransportHeader();
-        g_transportHeader->Capacity = 2;
+        g_transportHeader->Capacity = capacity;
         g_transportRecords = reinterpret_cast<knmon::KnMonTransportRecord*>(g_transportHeader + 1);
-        g_transportCapacity = 2;
-        for (int index = 0; index < 2; ++index)
+        g_transportCapacity = capacity;
+        for (std::uint32_t index = 0; index < capacity; ++index)
         {
             new (&g_transportRecords[index]) knmon::KnMonTransportRecord();
         }
@@ -21149,6 +21382,8 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestErrorParity(void*)
     SetLifecycleState(AgentLifecycleState::Disabled);
     return failure;
 }
+
+#include "../../tests/AgentModuleLifecycleTests.inc"
 
 extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestHoldTeardownLocks(void* readyEvent)
 {

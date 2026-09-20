@@ -579,6 +579,17 @@ bool RunDynamicLoadProbe()
             break;
         }
 
+        wchar_t waitForIat[2] = {};
+        if (GetEnvironmentVariableW(L"KNMON_DYNAMIC_PROBE_WAIT_FOR_IAT", waitForIat, 2) == 1 && waitForIat[0] == L'1')
+        {
+            const auto wait = reinterpret_cast<ProbeFn>(GetProcAddress(module, "KnMonDynamicProbeWaitForIat"));
+            if (wait == nullptr || wait() != 0)
+            {
+                std::cout << "Dynamic probe IAT completion was not observed.\n";
+                break;
+            }
+        }
+
         const char ldrProbeName[] = "KnMonDynamicProbe";
         ANSI_STRING ldrName = {};
         ldrName.Buffer = const_cast<PSTR>(ldrProbeName);

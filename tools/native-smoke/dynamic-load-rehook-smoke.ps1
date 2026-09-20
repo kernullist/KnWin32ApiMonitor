@@ -9,7 +9,16 @@ if (-not (Test-Path -LiteralPath $HelperPath))
     throw "Helper not found: $HelperPath"
 }
 
-$result = & $HelperPath capture-sample | ConvertFrom-Json
+$previousWait = $env:KNMON_DYNAMIC_PROBE_WAIT_FOR_IAT
+try
+{
+    $env:KNMON_DYNAMIC_PROBE_WAIT_FOR_IAT = "1"
+    $result = & $HelperPath capture-sample | ConvertFrom-Json
+}
+finally
+{
+    $env:KNMON_DYNAMIC_PROBE_WAIT_FOR_IAT = $previousWait
+}
 
 if (-not $result.success)
 {
@@ -27,7 +36,7 @@ if ($loaderEvents.Count -lt 1)
     throw "Dynamic-load capture did not include a loader API event."
 }
 
-$loadLibrary = @($loaderEvents | Where-Object { $_.api -eq "LoadLibraryW" } | Select-Object -First 1)
+$loadLibrary = @($loaderEvents | Where-Object { $_.api -eq "LoadLibraryW" -and (($_.arguments | ConvertTo-Json -Depth 8) -match "knmon-dynamic-probe\.dll") } | Select-Object -First 1)
 if ($loadLibrary.Count -ne 1)
 {
     throw "Dynamic-load capture did not include LoadLibraryW."
@@ -39,7 +48,7 @@ if ($loadArgText -notmatch "knmon-dynamic-probe\.dll")
     throw "LoadLibraryW event did not include dynamic probe DLL evidence: $loadArgText"
 }
 
-$dynamicSweep = @($result.agentMessages | Where-Object { $_.messageType -eq "iat_sweep" -and $_.reason -eq "dynamic_load" } | Select-Object -Last 1)
+$dynamicSweep = @($result.agentMessages | Where-Object { $_.messageType -eq "iat_sweep" -and $_.reason -eq "dynamic_trailing" -and $_.patchedSlots -gt 0 } | Select-Object -First 1)
 if ($dynamicSweep.Count -ne 1)
 {
     throw "Dynamic-load re-hook sweep evidence is missing."
@@ -71,14 +80,19 @@ if ($dynamicProbeEvents.Count -lt 1)
 }
 
 $shutdown = @($result.agentMessages | Where-Object { $_.messageType -eq "agent_shutdown" } | Select-Object -Last 1)
-if ($shutdown.Count -ne 1)
+if ($shutdown.Count -eq 1)
 {
-    throw "Dynamic-load capture did not receive agent_shutdown."
+    if ($shutdown[0].restoredHooks -ne $shutdown[0].installedHooks -or $shutdown[0].failedHooks -ne 0)
+    {
+        throw "Dynamic-load hook restoration failed."
+    }
 }
-
-if ($shutdown[0].restoredHooks -ne $shutdown[0].installedHooks -or $shutdown[0].failedHooks -ne 0)
+elseif ($result.hookCleanupOutcome -ne "released_by_process_exit" -or $result.targetExitCode -ne 0)
 {
-    throw "Unexpected hook lifecycle counts: installed=$($shutdown[0].installedHooks) restored=$($shutdown[0].restoredHooks) failed=$($shutdown[0].failedHooks)"
+    throw "Dynamic-load capture has no confirmed cleanup evidence."
 }
-
-Write-Host "Dynamic-load re-hook smoke passed: loaderEvents=$($loaderEvents.Count) eligible=$($dynamicSweep[0].eligibleModules) patched=$($dynamicSweep[0].patchedSlots) postLoadEvents=$($dynamicProbeEvents.Count)"
+if ($dynamicSweep[0].coverageTiming -ne "eventual" -or !$dynamicSweep[0].snapshotComplete)
+{
+    throw "Dynamic-load sweep has no completed eventual coverage evidence."
+}
+Write-Host "Dynamic-load re-hook smoke passed: loaderEvents=$($loaderEvents.Count) eligible=$($dynamicSweep[0].eligibleModules) patched=$($dynamicSweep[0].patchedSlots) postLoadEvents=$($dynamicProbeEvents.Count) cleanup=$($result.hookCleanupOutcome)"

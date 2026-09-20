@@ -116,6 +116,8 @@ void CheckDelayedCollector(const wchar_t* agentTestPath)
         return true;
     };
     const auto captured = knmon::Controller().LaunchCapture(request, &callbacks);
+    std::cout << "Delayed capture evidence: batches=" << batches << " delayedEvents=" << delayedEvents
+        << " success=" << captured.Success << "\n";
     Check(captured.Success, captured.Message.c_str());
     Check(batches > 1 && delayedEvents > 0, "Collector delay did not exercise queued capture timestamps.");
     Check(captured.TransportDroppedEvents == 0, "Delayed collector lost events.");

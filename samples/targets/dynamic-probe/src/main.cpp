@@ -28,6 +28,30 @@ std::wstring BuildProbePath()
 }
 }
 
+extern "C" __declspec(dllexport) DWORD KnMonDynamicProbeWaitForIat()
+{
+    const HMODULE agent = GetModuleHandleW(sizeof(void*) == 8 ? L"knmon-agent64.dll" : L"knmon-agent32.dll");
+    const ULONGLONG deadline = GetTickCount64() + 5000;
+    bool observed = false;
+    do
+    {
+        HMODULE owner = nullptr;
+        if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+            reinterpret_cast<LPCWSTR>(&CreateFileW), &owner))
+        {
+            observed = agent != nullptr && owner == agent;
+            FreeLibrary(owner);
+        }
+        if (observed)
+        {
+            break;
+        }
+        Sleep(5);
+    }
+    while (GetTickCount64() < deadline);
+    return observed ? 0 : ERROR_TIMEOUT;
+}
+
 extern "C" __declspec(dllexport) DWORD KnMonDynamicProbe()
 {
     DWORD result = 1;
