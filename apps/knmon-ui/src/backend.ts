@@ -67,13 +67,14 @@ export async function replayLastSampleSession(): Promise<SessionReplayResult> {
   return invoke<SessionReplayResult>("replay_last_sample_session");
 }
 
-export async function replaySessionPath(sessionPath: string): Promise<SessionReplayResult> {
+export async function replaySessionPath(sessionPath: string, selectedEventId?: number): Promise<SessionReplayResult> {
   if (!isTauriRuntime()) {
     throw new Error("Session replay by path requires the Tauri desktop runtime.");
   }
 
   return invoke<SessionReplayResult>("replay_session_path", {
-    sessionPath
+    sessionPath,
+    selectedEventId
   });
 }
 

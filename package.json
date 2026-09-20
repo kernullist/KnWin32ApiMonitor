@@ -13,7 +13,7 @@
     "preview": "npm --workspace apps/knmon-ui run preview",
     "tauri:dev": "npm --workspace apps/knmon-ui run tauri:dev",
     "tauri:build": "npm --workspace apps/knmon-ui run tauri:build",
-    "native:configure": "cmake -S native -B build/native",
+    "native:configure": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/source/configure-native.ps1",
     "native:build": "cmake --build build/native --config Debug",
     "daemon-recovery-plan:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/daemon-recovery-plan-smoke.ps1",
     "daemon-recovery-apply:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/daemon-recovery-apply-smoke.ps1",
@@ -34,7 +34,7 @@
     "tier1-generic:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/tier1-generic-profile-smoke.ps1",
     "tier2-generic:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/tier2-generic-profile-smoke.ps1",
     "generated-generic-preview:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/native-smoke/generated-generic-preview-smoke.ps1",
-    "defs:generate": "node tools/def-validator/generate-definition-ids.mjs --write",
+    "defs:generate": "node tools/def-validator/generate-definition-ids.mjs --write && npm run ui:catalog:generate",
     "defs:phnt-prototypes": "node tools/def-validator/generate-phnt-ntdll-prototype-index.mjs --write",
     "defs:ntdll-sdk-prototypes": "node tools/def-validator/generate-ntdll-sdk-prototype-index.mjs --write",
     "defs:ntdll-supplemental-spec": "node tools/def-validator/generate-ntdll-supplemental-spec-index.mjs --write",
@@ -75,15 +75,20 @@
     "agent-hooks:check": "node tools/def-validator/generate-agent-hook-definitions.mjs --check",
     "runtime-policy:validate": "node --test tools/def-validator/runtime-monitoring-policy.test.mjs",
     "defs:validate": "node tools/def-validator/validate-definitions.mjs && npm run defs:decoder-tables && npm run defs:generic-rich-decoder && npm run defs:inventory:validate && npm run defs:tier1-plan:check && npm run defs:tier1-plan && npm run defs:tier2-plan:check && npm run defs:tier2-plan && npm run defs:tier2-profile-batch-plan:check && npm run defs:tier2-profile-batch-plan && npm run defs:tier2-profile-review:check && npm run defs:tier2-profile-review && npm run defs:tier3-plan:check && npm run defs:tier3-plan && npm run defs:dll-batch-plan:check && npm run defs:dll-batch-plan && npm run defs:manual-decoder-plan:check && npm run defs:manual-decoder-plan && npm run agent-hooks:check && node tools/rohitab-importer/test-importer.mjs && node tools/def-validator/report-definition-coverage.mjs --check",
-    "ui:validate": "node tools/ui-validator/validate-virtual-trace-window.mjs && node tools/ui-validator/validate-trace-query.mjs && node tools/ui-validator/validate-trace-views.mjs && node tools/ui-validator/validate-trace-highlights.mjs",
+    "ui:validate": "node tools/ui-validator/validate-virtual-trace-window.mjs && node tools/ui-validator/validate-trace-query.mjs && node tools/ui-validator/validate-trace-views.mjs && node tools/ui-validator/validate-trace-highlights.mjs && node tools/ui-validator/validate-trace-ingest.mjs && npm run ui:catalog:check",
     "sessions:validate": "node tools/session-validator/validate-session-fixtures.mjs",
     "collector:validate": "node tools/collector-validator/validate-collector-fixtures.mjs",
     "verify": "npm run runtime-policy:validate && npm run build && npm run ui:validate && npm run defs:validate && npm run sessions:validate && npm run collector:validate",
     "json:native:validate": "node tools/session-validator/validate-native-json.mjs",
-    "json:sessions:validate": "node tools/session-validator/validate-native-session-json.mjs"
+    "json:sessions:validate": "node tools/session-validator/validate-native-session-json.mjs",
+    "ui:catalog:generate": "node tools/def-validator/generate-ui-catalog.mjs --write",
+    "ui:catalog:check": "node tools/def-validator/generate-ui-catalog.mjs --check",
+    "source:check": "node tools/source/preflight.mjs",
+    "source:hydrate": "node tools/source/preflight.mjs --hydrate-lfs",
+    "source:package": "python tools/source/package-source.py"
   },
   "engines": {
-    "node": ">=20"
+    "node": "^22.18.0 || ^24.0.0 || ^26.0.0"
   },
   "devDependencies": {
     "ajv": "^8.20.0",

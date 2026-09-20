@@ -150,6 +150,24 @@ for (const [name, change] of [
         return JSON.stringify(value) + "\n";
     }));
 }
+
+for (const [name, overrides, accepted] of [
+    ["query-cleanup-valid", {}, true], ["query-cleanup-active", { active: true }, false],
+    ["query-cleanup-missing", { active: undefined }, false], ["query-cleanup-foreign", { operationId: "foreign" }, false],
+    ["query-cleanup-hooks", { restoredHooks: 0 }, false], ["query-cleanup-overflow", { installedHooks: 4294967296 }, false]
+])
+{
+    mutation(name, (directory) =>
+    {
+        editDocument(directory, "agent-events.jsonl", (text) => text.split(/\r?\n/).filter(Boolean)
+            .filter((line) => JSON.parse(line).messageType !== "agent_shutdown").join("\n") + "\n");
+        editManifest(directory, (value) => ({ ...value, eventCounts: { ...value.eventCounts, agentEvents: 2 },
+            cleanupState: { source: "controller_query", operationId: value.operationId, lifecycle: "disabled",
+                active: false, busy: false, hooksEnabled: 0, installedHooks: 10, restoredHooks: 10,
+                failedHooks: 0, droppedEvents: 0, ...overrides } }));
+    }, accepted);
+}
+
 mutation("trace-string-error-code", (directory) => editTrace(directory, (text) => JSON.stringify({ ...JSON.parse(text),
     error: { kind: "win32", code: "0x00000005", message: "Access is denied." } }) + "\n"), true);
 mutation("trace-numeric-error-code", (directory) => editTrace(directory, (text) => JSON.stringify({ ...JSON.parse(text),
@@ -175,5 +193,29 @@ assert.equal(registry.sessions.length, 2, JSON.stringify(registry));
 assert.equal(registry.mutationAttempted, false);
 assert.equal(registry.automaticRecoveryAllowed, false);
 checked += 2;
+const activeSession = path.join(root, "active-progress.knapm");
+fs.cpSync(path.join(fixtures, "valid-knapm.knapm"), activeSession, { recursive: true });
+editManifest(activeSession, (value) => ({ ...value, finalized: false, writerState: "streaming",
+    target: { ...value.target, pid: process.pid }, session: { ...value.session, sessionState: "running",
+        targetProcessId: process.pid, helperProcessId: process.pid, ownerProcessId: process.pid } }));
+const activeManifest = JSON.parse(fs.readFileSync(path.join(activeSession, "manifest.json")));
+fs.writeFileSync(path.join(runtime, "sessions", "active-progress.json"), JSON.stringify({
+    sessionId: activeManifest.sessionId, operationId: activeManifest.operationId, targetProcessId: process.pid,
+    daemonProcessId: process.pid, sessionProcessId: process.pid, knapmPath: activeSession }));
+// An active progress query cannot claim full integrity for files still being written.
+const activeIndex = JSON.parse(fs.readFileSync(path.join(activeSession, "index.json")));
+fs.writeFileSync(path.join(activeSession, activeIndex.chunks[0].file), "deliberately invalid pending trace");
+const progress = command(["daemon-list-sessions", "--runtime-dir", runtime]).sessions
+    .find((value) => value.sessionId === activeManifest.sessionId);
+assert.equal(progress.sessionState, "running");
+assert.equal(progress.knapmValid, false);
+assert.equal(progress.recoveryReason, "writer_active_integrity_pending");
+assert.equal(command(["validate-session", "--session", activeSession]).success, false);
+editManifest(activeSession, (value) => ({ ...value, operationId: "foreign" }));
+const foreign = command(["daemon-list-sessions", "--runtime-dir", runtime]).sessions
+    .find((value) => value.sessionId === activeManifest.sessionId);
+assert.equal(foreign.sessionState, "failed");
+assert.equal(foreign.recoveryReason, "manifest_invalid");
+checked += 3;
 fs.writeFileSync(path.join(root, "evidence.json"), JSON.stringify({ executable, checked, success: true }, null, 2));
 console.log(`Native JSON session fixtures passed: ${checked} cases; evidence ${root}`);

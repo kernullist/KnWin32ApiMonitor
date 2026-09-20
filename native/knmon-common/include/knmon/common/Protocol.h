@@ -356,6 +356,18 @@ struct KnMonAgentMessage
 
 struct KnMonCaptureResult
 {
+    bool StreamConsumerFailed = false;
+    std::string CleanupStateJson = "null";
+    bool HistoryBounded = false;
+    std::uint64_t CapturedEventsSeen = 0;
+    std::uint64_t CapturedEventsOmitted = 0;
+    std::uint64_t AgentMessagesOmitted = 0;
+    std::uint64_t ResolverCandidatesOmitted = 0;
+    std::uint64_t ResolverUnsupportedOmitted = 0;
+    std::uint64_t AuditEventsOmitted = 0;
+    std::size_t CapturedHistoryBytes = 0;
+    std::size_t AgentHistoryBytes = 0;
+    std::size_t AuditHistoryBytes = 0;
     CaptureClock Clock;
     std::string SchemaVersion = "0.1.0";
     std::string OperationId;

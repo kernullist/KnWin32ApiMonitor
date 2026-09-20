@@ -97,10 +97,10 @@ async fn replay_last_sample_session() -> Result<SessionReplayResult, String>
 }
 
 #[tauri::command]
-async fn replay_session_path(session_path: String) -> Result<SessionReplayResult, String>
+async fn replay_session_path(session_path: String, selected_event_id: Option<u64>) -> Result<SessionReplayResult, String>
 {
     // Blocking helper work runs on the async runtime so the UI thread stays responsive.
-    tauri::async_runtime::spawn_blocking(move || replay_session_path_backend(session_path))
+    tauri::async_runtime::spawn_blocking(move || replay_session_path_backend(session_path, selected_event_id))
         .await
         .map_err(|error| format!("replay_session_path task failed: {error}"))?
 }

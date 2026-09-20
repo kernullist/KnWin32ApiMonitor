@@ -1,0 +1,97 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import vm from "node:vm";
+import ts from "typescript";
+
+const cache = new Map();
+function load(name)
+{
+    if (!cache.has(name))
+    {
+        const filename = path.resolve("apps/knmon-ui/src", `${name}.ts`);
+        const code = ts.transpileModule(fs.readFileSync(filename, "utf8"), { compilerOptions: {
+            target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS
+        } }).outputText;
+        const module = { exports: {} };
+        vm.runInNewContext(code, { module, exports: module.exports, TextEncoder, setTimeout, clearTimeout,
+            require: (dependency) => load(dependency.replace(/^\.\//, "")) }, { filename });
+        cache.set(name, module.exports);
+    }
+    return cache.get(name);
+}
+const { TraceIngestState, TraceIngestClient, traceDisplayByteLimit } = load("traceIngestProtocol");
+const { createTraceEventFromAgentApiCall } = load("traceConversion");
+function source(sequence)
+{
+    return { schemaVersion: "0.1.0", operationId: "ingest", messageType: "api_call", sequence,
+        pid: 10, tid: 20, process: "sample.exe", module: "kernel32.dll", api: "GetCurrentProcessId",
+        arguments: [], returnValue: "10", lastErrorCode: 0, lastErrorMessage: "", stack: [], durationUs: 1, tags: [] };
+}
+let window = [];
+const state = new TraceIngestState();
+function apply(request)
+{
+    const delta = state.apply(request);
+    assert.ok(delta);
+    window = delta.replace ? Array.from(delta.events) : window.slice(delta.evictCount).concat(Array.from(delta.events));
+    assert.ok(window.length <= 5000);
+    assert.equal(delta.estimatedSessionBytes, window.reduce((sum, event) => sum + Buffer.byteLength(JSON.stringify(event)), 0));
+    return delta;
+}
+apply({ epoch: 1, sequence: 1, command: { type: "reset" } });
+let clonedEvents = 0;
+for (let batch = 0; batch < 200; ++batch)
+{
+    const events = Array.from({ length: 1000 }, (_, index) => source(batch * 1000 + index));
+    const delta = apply({ epoch: 1, sequence: batch + 2, command: { type: "enqueue-events", chunks: [{ events, contextTags: ["corpus"] }] } });
+    clonedEvents += delta.events.length;
+    assert.equal(window.at(-1).eventId, (batch + 1) * 1000);
+    assert.equal(delta.totalCapturedEvents, (batch + 1) * 1000);
+}
+assert.equal(clonedEvents, 200000);
+assert.equal(window[0].eventId, 195001);
+assert.equal(state.apply({ epoch: 1, sequence: 201, command: { type: "reset" } }), null);
+apply({ epoch: 2, sequence: 1, command: { type: "reset" } });
+assert.equal(state.apply({ epoch: 1, sequence: 202, command: { type: "enqueue-events", chunks: [] } }), null);
+const selected = createTraceEventFromAgentApiCall(source(0), 900, []);
+let delta = apply({ epoch: 3, sequence: 1, command: { type: "replace", events: [selected], selectedEventId: 900, totalCapturedEvents: 9000000 } });
+assert.equal(delta.selectedEventId, 900);
+assert.equal(delta.totalCapturedEvents, 9000000);
+delta = apply({ epoch: 3, sequence: 2, command: { type: "enqueue-events", chunks: [{ events: [source(1)], contextTags: [] }] } });
+assert.equal(window.at(-1).eventId, 901);
+const huge = Array.from({ length: 10 }, (_, index) => ({ ...selected, eventId: index + 1, result: "\uD83D\uDE80".repeat(500000) }));
+delta = apply({ epoch: 4, sequence: 1, command: { type: "replace", events: huge } });
+assert.ok(window.length < 10);
+assert.ok(delta.estimatedSessionBytes <= traceDisplayByteLimit);
+
+const messages = [];
+const patches = [];
+const errors = [];
+const worker = new TraceIngestState();
+const client = new TraceIngestClient((request) => messages.push(request), (patch) => patches.push(patch), (error) => errors.push(error));
+const first = client.submit({ type: "reset" });
+const oldEpoch = client.epoch;
+let latest;
+for (let i = 0; i < 100; ++i)
+{
+    latest = client.submit({ type: "replace", events: [{ ...selected, eventId: i + 1 }] });
+}
+assert.equal(messages.length, 1, "reset storms must coalesce behind the outstanding ACK");
+assert.equal(await first, false);
+assert.equal(await client.submit({ type: "enqueue-events", chunks: [] }), false);
+client.receive(worker.apply(messages.shift()));
+assert.equal(patches.length, 0, "old epoch must not reach the display");
+assert.equal(messages.length, 1);
+const finalRequest = messages.shift();
+const finalDelta = worker.apply(finalRequest);
+client.receive(finalDelta);
+assert.equal(await latest, true);
+assert.equal(patches.length, 1);
+assert.equal(patches[0].events[0].eventId, 100);
+client.receive(finalDelta);
+assert.equal(patches.length, 1, "duplicate ACK must not duplicate rows");
+assert.equal(await client.submit({ type: "enqueue-events", chunks: [] }, oldEpoch), false);
+client.abort();
+assert.deepEqual(errors, []);
+console.log("Trace ingest passed: 200000 rows, bounded delta/bytes, replacement, duplicate/stale ACK, coalesced reset storm.");

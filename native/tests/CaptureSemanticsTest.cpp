@@ -117,11 +117,70 @@ void CheckDelayedCollector(const wchar_t* agentTestPath)
     };
     const auto captured = knmon::Controller().LaunchCapture(request, &callbacks);
     std::cout << "Delayed capture evidence: batches=" << batches << " delayedEvents=" << delayedEvents
-        << " success=" << captured.Success << "\n";
+        << " success=" << captured.Success << " operation=" << captured.Operation
+        << " error=" << captured.Win32ErrorCode << " targetExit=" << captured.TargetExitCode << "\n";
     Check(captured.Success, captured.Message.c_str());
     Check(batches > 1 && delayedEvents > 0, "Collector delay did not exercise queued capture timestamps.");
     Check(captured.TransportDroppedEvents == 0, "Delayed collector lost events.");
+    Check(captured.TransportRecordsConsumed == captured.TransportRecordsProduced,
+        "Delayed collector discarded committed tail batches during shutdown.");
     std::cout << "Delayed collector passed: batches=" << batches << " delayedEvents=" << delayedEvents << "\n";
+}
+
+void CheckStreamRetention(const wchar_t* agentTestPath, bool reject)
+{
+    const auto directory = std::filesystem::path(agentTestPath).parent_path();
+    for (int pass = 0; pass < (reject ? 2 : 1); ++pass)
+    {
+        knmon::KnMonLaunchRequest request;
+        request.OperationId = "stream-test-" + std::to_string(GetCurrentProcessId()) + "-" + std::to_string(GetTickCount64());
+        request.SessionId = request.OperationId;
+        request.TargetPath = (directory / "knmon-sample-fileio.exe").string();
+        request.AgentPath = (directory / (sizeof(void*) == 8 ? "knmon-agent64.dll" : "knmon-agent32.dll")).string();
+        request.Architecture = sizeof(void*) == 8 ? knmon::KnMonAgentArchitecture::X64 : knmon::KnMonAgentArchitecture::X86;
+        request.ApiSelection = "kernel32.dll!CreateFileW;kernel32.dll!CreateFileA;kernel32.dll!ReadFile;kernel32.dll!WriteFile;kernel32.dll!CloseHandle";
+        request.CommandLineArguments = "--attach-loop --iterations 50 --delay-ms 10";
+        request.TimeoutMs = 10000;
+        request.DurationMs = 3000;
+        knmon::KnMonCaptureStreamCallbacks callbacks;
+        callbacks.MaxRecordsPerBatch = 100000;
+        std::uint64_t seen = 0;
+        std::uint64_t batches = 0;
+        callbacks.OnTraceBatch = [&](const knmon::KnMonTraceBatch& batch)
+        {
+            ++batches;
+            Check(batch.Events.size() <= 64, "Native batch record bound was exceeded.");
+            seen += batch.Events.size();
+            if (reject && pass == 1)
+            {
+                throw std::runtime_error("Injected consumer exception.");
+            }
+            return !reject;
+        };
+        const auto captured = knmon::Controller().LaunchCapture(request, &callbacks);
+        std::cout << "Stream evidence: delivered=" << seen << " retained=" << captured.CapturedEvents.size()
+            << " omitted=" << captured.CapturedEventsOmitted << " operation=" << captured.Operation << "\n";
+        if (reject)
+        {
+            Check(!captured.Success && captured.StreamConsumerFailed && batches == 1,
+                "Consumer rejection or exception must be sticky and suppress subsequent delivery.");
+            Check(captured.Operation == "stream_consumer_failed" && captured.OperationState == "failed",
+                "A consumer failure was reported as a successful capture.");
+            Check(captured.AgentCleanupSucceeded || captured.SessionShutdownEvidence == "released_by_process_exit",
+                "Consumer failure skipped agent cleanup.");
+        }
+        else
+        {
+            Check(captured.Success, captured.Message.c_str());
+            Check(seen > 128 && captured.CapturedEventsSeen == seen && captured.CapturedEvents.size() <= 128,
+                "Bounded history altered or truncated complete stream delivery.");
+            Check(captured.CapturedEvents.size() + captured.CapturedEventsOmitted == seen,
+                "Retained history counts do not reconcile.");
+            Check(captured.TransportDroppedEvents == 0, "Retention smoke lost transport events.");
+            Check(captured.TransportRecordsConsumed == captured.TransportRecordsProduced,
+                "Streaming capture discarded its final transport tail.");
+        }
+    }
 }
 }
 
@@ -148,7 +207,18 @@ int wmain(int argc, wchar_t** argv)
     {
         if (argc == 3)
         {
-            CheckDelayedCollector(argv[1]);
+            if (std::wcscmp(argv[2], L"--consumer-failure") == 0)
+            {
+                CheckStreamRetention(argv[1], true);
+            }
+            else if (std::wcscmp(argv[2], L"--retention") == 0)
+            {
+                CheckStreamRetention(argv[1], false);
+            }
+            else
+            {
+                CheckDelayedCollector(argv[1]);
+            }
             return 0;
         }
         std::uint64_t value = 0;

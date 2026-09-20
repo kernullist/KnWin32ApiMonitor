@@ -31,7 +31,7 @@ function Wait-Frames
         [string]$Path,
         [scriptblock]$Predicate,
         [string]$Label,
-        [int]$TimeoutMs = 10000
+        [int]$TimeoutMs = 20000
     )
 
     $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMs)
@@ -93,7 +93,7 @@ function Wait-DaemonRecords
         [string]$HelperPath,
         [string]$RuntimeDir,
         [string]$SessionId,
-        [int]$TimeoutMs = 8000
+        [int]$TimeoutMs = 15000
     )
 
     $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMs)
@@ -101,7 +101,7 @@ function Wait-DaemonRecords
     {
         $list = & $HelperPath daemon-list-sessions --runtime-dir $RuntimeDir | ConvertFrom-Json
         $session = @($list.sessions) | Where-Object { $_.sessionId -eq $SessionId } | Select-Object -First 1
-        if ($session -and $session.recordsStreamed -gt 0 -and $session.sessionState -eq "running")
+        if ($session -and $session.recordsStreamed -gt 256 -and $session.sessionState -eq "running")
         {
             return $session
         }
@@ -134,6 +134,11 @@ function Assert-ZstdSession
 
     $manifest = Get-Content -LiteralPath (Join-Path $KnapmPath "manifest.json") -Raw | ConvertFrom-Json
     $index = Get-Content -LiteralPath (Join-Path $KnapmPath "index.json") -Raw | ConvertFrom-Json
+    if (-not $manifest.retainedHistory.bounded -or $manifest.retainedHistory.omittedCapturedEvents -le 0 -or
+        $manifest.retainedHistory.capturedEventsTotal -ne @($replay.traceEvents).Count)
+    {
+        throw "Bounded summary counts did not preserve the complete saved stream."
+    }
     if ($manifest.compression -ne "zstd" -or @($manifest.compressionAlgorithms)[0] -ne "zstd")
     {
         throw "Manifest zstd compression metadata is missing."
@@ -193,12 +198,12 @@ try
     $attachHelper = Start-Process -FilePath $helperPath -ArgumentList @(
         "attach-session",
         "--pid", "$($sample.Id)",
-        "--duration-ms", "12000",
+        "--duration-ms", "30000",
         "--timeout-ms", "15000",
         "--operation-id", $attachOperationId,
         "--session-id", $attachSessionId,
         "--stream-batches",
-        "--batch-size", "4",
+        "--batch-size", "32",
         "--batch-interval-ms", "100",
         "--write-knapm", $attachKnapm,
         "--knapm-compression", "zstd"
@@ -209,9 +214,9 @@ try
         $frame.frameType -eq "session_started" -and $frame.session.sessionId -eq $attachSessionId
     } | Out-Null
 
-    Wait-Frames -Path $helperStdout -Label "non-empty trace_batch" -Predicate {
+    Wait-Frames -Path $helperStdout -Label "stream larger than retained history" -Predicate {
         param($frame)
-        $frame.frameType -eq "trace_batch" -and $frame.eventCount -gt 0
+        $frame.frameType -eq "trace_batch" -and $frame.recordsStreamed -gt 256
     } | Out-Null
 
     Invoke-CancelOperation -HelperPath $helperPath -OperationId $attachOperationId | Out-Null
@@ -266,7 +271,12 @@ try
         throw "catalog-query failed to find zstd sessions."
     }
 
-    Remove-Item -Recurse -Force -LiteralPath $catalogMissing
+    $resolvedCatalogMissing = (Resolve-Path -LiteralPath $catalogMissing).Path
+    if ($resolvedCatalogMissing -ne [System.IO.Path]::GetFullPath((Join-Path $root "catalog-missing.knapm")))
+    {
+        throw "Catalog fixture deletion escaped its expected temporary directory."
+    }
+    Remove-Item -Recurse -Force -LiteralPath $resolvedCatalogMissing
     $dryRun = & $helperPath catalog-remove-missing --catalog $catalogPath --dry-run | ConvertFrom-Json
     if (-not $dryRun.success -or @($dryRun.missingSessionPaths).Count -ne 1)
     {

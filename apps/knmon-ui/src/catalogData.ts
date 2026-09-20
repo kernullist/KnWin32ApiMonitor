@@ -1,4 +1,4 @@
-import decoderTables from "../../../generated/definition-decoder-tables.json";
+import compactCatalog from "../../../generated/ui-catalog.json";
 import runtimeSupport from "../../../generated/runtime-support.json";
 import type { ApiCatalogEntry, ApiNode, CaptureProfile } from "./types";
 
@@ -10,10 +10,6 @@ type DecoderApiRow = {
   risk?: string;
   hookPolicy?: string;
   coverageStatus?: string;
-};
-
-type DecoderTables = {
-  apis?: DecoderApiRow[];
 };
 
 const supportedApiKeys = new Set(runtimeSupport.supportedKeys);
@@ -40,7 +36,15 @@ function createSelectionKey(module: string, api: string): string {
 }
 
 function createApiCatalogEntries(): ApiCatalogEntry[] {
-  const rows = (decoderTables as DecoderTables).apis ?? [];
+  const rows: DecoderApiRow[] = compactCatalog.rows.map((row) => ({
+    name: row[0] as string,
+    module: compactCatalog.strings[row[1] as number],
+    family: compactCatalog.strings[row[2] as number],
+    category: compactCatalog.strings[row[3] as number],
+    risk: compactCatalog.strings[row[4] as number],
+    hookPolicy: compactCatalog.strings[row[5] as number],
+    coverageStatus: compactCatalog.strings[row[6] as number]
+  }));
   const entries = rows
     .map((row): ApiCatalogEntry | null => {
       const module = normalizeText(row.module, "");

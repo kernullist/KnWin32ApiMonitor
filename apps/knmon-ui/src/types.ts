@@ -385,6 +385,9 @@ export interface NativeTraceBatch {
 }
 
 export interface CaptureResult {
+  retainedHistory?: { bounded: boolean; capturedEventsTotal: number; omittedCapturedEvents: number;
+    omittedAgentMessages: number; omittedAuditEvents: number; omittedResolverPointerCandidates: number;
+    omittedResolverPointerUnsupported: number };
   schemaVersion: string;
   operationId: string;
   sessionId?: string;

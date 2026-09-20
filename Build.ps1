@@ -7,6 +7,8 @@ param(
 
     [switch]$Win32,
 
+    [switch]$BumpBuildVersion,
+
     [switch]$Clean
 )
 
@@ -32,7 +34,7 @@ function Assert-PathInsideRepo
     )
 
     $fullPath = Get-FullPath -Path $Path
-    $fullRepo = Get-FullPath -Path $repoRoot
+    $fullRepo = (Get-FullPath -Path $repoRoot).TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
 
     if (!$fullPath.StartsWith($fullRepo, [System.StringComparison]::OrdinalIgnoreCase))
     {
@@ -98,7 +100,7 @@ function Invoke-Checked
 }
 
 $configuration = if ($Release) { "Release" } else { "Debug" }
-$versionText = if ($Release) { Increment-KnMonBuildVersion } else { (Read-KnMonVersion).Text }
+$versionText = if ($BumpBuildVersion) { Increment-KnMonBuildVersion } else { (Read-KnMonVersion).Text }
 
 Write-Host "KN Win32 API Monitor build"
 Write-Host "Configuration: $configuration"
@@ -119,13 +121,12 @@ if ($Clean)
 Push-Location $repoRoot
 try
 {
+    Invoke-Checked -FilePath "node" -Arguments @("tools/source/preflight.mjs")
+    $toolchain = Get-Content -LiteralPath (Join-Path $repoRoot "toolchain.json") -Raw | ConvertFrom-Json
     if (!$SkipNative)
     {
-        $configureArgs = @("-S", "native", "-B", $nativeBuildDir)
-        if ($Win32)
-        {
-            $configureArgs += @("-A", "Win32")
-        }
+        $architecture = if ($Win32) { "Win32" } else { "x64" }
+        $configureArgs = @("-S", "native", "-B", $nativeBuildDir, "-G", $toolchain.generator, "-A", $architecture, "-T", $toolchain.toolset, "-DCMAKE_SYSTEM_VERSION=$($toolchain.windowsSdk)")
 
         Invoke-Checked -FilePath "cmake" -Arguments $configureArgs
         Invoke-Checked -FilePath "cmake" -Arguments @("--build", $nativeBuildDir, "--config", $configuration)

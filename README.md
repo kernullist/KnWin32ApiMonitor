@@ -102,7 +102,7 @@ are not callable APIs.
 ## Prerequisites
 
 - Windows 10/11
-- Node.js 20 or newer
+- Node.js 24.21.0 LTS for reproduction (supported: 22.18+, 24.x, 26.x)
 - Rust toolchain with Cargo
 - CMake 3.24 or newer
 - Visual Studio Build Tools with a C++20-capable MSVC toolchain
@@ -142,8 +142,8 @@ Or use the repository build script:
 .\Build.ps1
 ```
 
-For release builds, the script increments the fourth PE resource version
-component in `VERSION` before configuring and building native Release outputs:
+Release builds preserve `VERSION`. To deliberately increment its fourth component,
+pass `-BumpBuildVersion` alongside `-Release`:
 
 ```powershell
 .\Build.ps1 -Release
@@ -179,6 +179,12 @@ Use the root scripts when you want simple local app control:
 .\Start-App.ps1
 .\Stop-App.ps1
 ```
+
+Source archives must contain hydrated Git LFS payloads. Run `npm run source:check`
+before building; a verified checkout can use `npm run source:hydrate` to fetch them.
+Use `python tools/source/package-source.py --output dist/release/knmon-source.zip`
+from a clean tracked checkout to produce a complete source ZIP with per-file hashes.
+Build inputs and the toolchain baseline are documented in [the source build contract](docs/source-build-contract.md).
 
 ## Native Helper Examples
 

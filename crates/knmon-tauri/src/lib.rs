@@ -14,6 +14,10 @@ pub const PROTOCOL_MINOR: u16 = 1;
 pub const PROTOCOL_PATCH: u16 = 0;
 const STREAM_BATCH_QUEUE_LIMIT: usize = 128;
 const STREAM_BATCH_DRAIN_LIMIT: usize = 32;
+const STREAM_QUEUE_MAX_BYTES: usize = 32 * 1024 * 1024;
+const STREAM_GLOBAL_QUEUE_MAX_BYTES: usize = 64 * 1024 * 1024;
+const OPERATION_HISTORY_LIMIT: usize = 64;
+const STREAM_DRAIN_MAX_BYTES: usize = 8 * 1024 * 1024;
 const INTERACTIVE_TRANSPORT_CAPACITY: &str = "16384";
 const STREAM_CONTROL_TIMEOUT_MS: u32 = 7_000;
 const SESSION_STOP_COMPLETION_WAIT_MS: u64 = 15_000;
@@ -424,6 +428,8 @@ pub struct NativeTraceBatch {
     pub records_streamed: u64,
     pub host_dropped_batches: u64,
     pub events: Vec<AgentApiCallEvent>,
+    #[serde(skip)]
+    storage_bytes: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -634,7 +640,22 @@ pub struct AgentApiCallEvent {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct RetainedCaptureHistory
+{
+    pub bounded: bool,
+    pub captured_events_total: u64,
+    pub omitted_captured_events: u64,
+    pub omitted_agent_messages: u64,
+    pub omitted_audit_events: u64,
+    pub omitted_resolver_pointer_candidates: u64,
+    pub omitted_resolver_pointer_unsupported: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CaptureResult {
+    #[serde(default)]
+    pub retained_history: Option<RetainedCaptureHistory>,
     pub schema_version: String,
     pub operation_id: String,
     #[serde(default)]
@@ -1081,13 +1102,64 @@ fn session_view(record: &NativeOperationRecord) -> NativeSession {
     }
 }
 
+fn reserve_operation_slot(registry: &mut HashMap<String, NativeOperationRecord>) -> Result<(), String>
+{
+    while registry.len() >= OPERATION_HISTORY_LIMIT
+    {
+        let removable = registry.iter().filter(|(_, record)|
+            is_terminal_operation_state(&record.state) &&
+            !matches!(record.state.as_str(), "cleanup_failed" | "recovery_required") &&
+            (record.recovery_action.is_empty() || record.recovery_action == "none") &&
+            record.helper_handle.as_ref().is_none_or(|helper| !helper.alive()))
+            .min_by_key(|(_, record)| record.started_at).map(|(id, _)| id.clone());
+        if let Some(id) = removable
+        {
+            registry.remove(&id);
+        }
+        else
+        {
+            return Err("Native operation limit reached; stop an active operation before starting another.".to_string());
+        }
+    }
+    Ok(())
+}
+
+fn trim_global_trace_queues(registry: &mut HashMap<String, NativeOperationRecord>)
+{
+    let mut bytes: usize = registry.values().flat_map(|record| &record.trace_batches)
+        .map(|batch| batch.storage_bytes).sum();
+    while bytes > STREAM_GLOBAL_QUEUE_MAX_BYTES
+    {
+        let oldest = registry.values_mut().filter(|record| !record.trace_batches.is_empty())
+            .min_by_key(|record| record.started_at);
+        if let Some(record) = oldest
+        {
+            if let Some(batch) = record.trace_batches.pop_front()
+            {
+                bytes = bytes.saturating_sub(batch.storage_bytes);
+                record.host_dropped_batches = record.host_dropped_batches.saturating_add(1);
+            }
+        }
+        else
+        {
+            break;
+        }
+    }
+}
+
 fn register_native_operation(
     operation_id: &str,
     operation_kind: &str,
     target_process_id: u32,
     duration_ms: u32,
-) {
+) -> Result<(), String>
+{
     let mut registry = operation_registry().lock().unwrap();
+    if registry.contains_key(operation_id)
+    {
+        return Err("Native operation identity is already registered.".to_string());
+    }
+    reserve_operation_slot(&mut registry)?;
     registry.insert(
         operation_id.to_string(),
         NativeOperationRecord {
@@ -1122,6 +1194,7 @@ fn register_native_operation(
             last_error: String::new(),
         },
     );
+    Ok(())
 }
 
 fn finish_native_operation(operation_id: &str, state: &str) {
@@ -1224,9 +1297,26 @@ fn push_native_trace_batch(operation_id: &str, mut batch: NativeTraceBatch) {
         {
             return;
         }
-        while record.trace_batches.len() >= STREAM_BATCH_QUEUE_LIMIT {
-            record.trace_batches.pop_front();
+        // Reserve the maximum decimal growth of the host-drop counter after queuing.
+        batch.storage_bytes = serde_json::to_vec(&batch).map_or(STREAM_FRAME_MAX_BYTES + 1,
+            |bytes| bytes.len().saturating_add(20));
+        if batch.storage_bytes > STREAM_FRAME_MAX_BYTES
+        {
             record.host_dropped_batches = record.host_dropped_batches.saturating_add(1);
+            return;
+        }
+        let mut queued_bytes: usize = record.trace_batches.iter().map(|item| item.storage_bytes).sum();
+        while record.trace_batches.len() >= STREAM_BATCH_QUEUE_LIMIT || queued_bytes + batch.storage_bytes > STREAM_QUEUE_MAX_BYTES
+        {
+            if let Some(discarded) = record.trace_batches.pop_front()
+            {
+                queued_bytes = queued_bytes.saturating_sub(discarded.storage_bytes);
+                record.host_dropped_batches = record.host_dropped_batches.saturating_add(1);
+            }
+            else
+            {
+                break;
+            }
         }
 
         batch.host_dropped_batches = record.host_dropped_batches;
@@ -1236,6 +1326,7 @@ fn push_native_trace_batch(operation_id: &str, mut batch: NativeTraceBatch) {
         record.transport_dropped_events = batch.dropped_events;
         record.trace_batches.push_back(batch);
     }
+    trim_global_trace_queues(&mut registry);
 }
 
 #[derive(Debug, Deserialize)]
@@ -1308,6 +1399,7 @@ fn process_streaming_frame_line(operation_id: &str, line: &str) -> Result<(), St
         }
     }
     let expected_pid = record.target_process_id;
+    let previous_batch_sequence = record.last_batch_sequence;
     drop(registry);
     let header: StreamingFrameHeader = serde_json::from_str(line)
         .map_err(|error| format!("failed to parse streaming frame header: {error}"))?;
@@ -1317,6 +1409,10 @@ fn process_streaming_frame_line(operation_id: &str, line: &str) -> Result<(), St
             let batch: NativeTraceBatch = serde_json::from_str(line).map_err(|error| {
                 format!("failed to parse trace_batch frame: {error}")
             })?;
+            if batch.batch_sequence <= previous_batch_sequence || batch.last_record_sequence < batch.first_record_sequence
+            {
+                return Err("trace batch sequence is duplicate, reordered or invalid".to_string());
+            }
             if expected_pid == 0 || batch.event_count != batch.events.len() as u64 || batch.events.len() > 4096 ||
                 batch.events.iter().any(|event| event.operation_id != operation_id || event.pid != expected_pid ||
                     event.message_type != "api_call" || event.schema_version != "0.1.0")
@@ -1571,10 +1667,10 @@ struct OperationStart
 
 impl OperationStart
 {
-    fn new(operation_id: &str, kind: &str, pid: u32, duration: u32) -> Self
+    fn new(operation_id: &str, kind: &str, pid: u32, duration: u32) -> Result<Self, String>
     {
-        register_native_operation(operation_id, kind, pid, duration);
-        Self { operation_id: operation_id.to_string(), committed: false }
+        register_native_operation(operation_id, kind, pid, duration)?;
+        Ok(Self { operation_id: operation_id.to_string(), committed: false })
     }
 
     fn finish<T>(mut self, result: Result<T, String>) -> Result<T, String>
@@ -1865,7 +1961,7 @@ pub fn start_streaming_attach_session(
     let helper_timeout = STREAM_CONTROL_TIMEOUT_MS;
     let operation_id = new_operation_id("ui-stream", process_id);
     let session_id = new_session_id(&operation_id);
-    let start = OperationStart::new(&operation_id, "attach_capture_stream", process_id, duration);
+    let start = OperationStart::new(&operation_id, "attach_capture_stream", process_id, duration)?;
     let result = (||
     {
         if process_id == 0 || process_id == std::process::id()
@@ -1925,7 +2021,7 @@ pub fn start_launch_monitor_session(
     let helper_timeout = STREAM_CONTROL_TIMEOUT_MS;
     let operation_id = new_operation_id("ui-launch", 0);
     let session_id = new_session_id(&operation_id);
-    let start = OperationStart::new(&operation_id, "launch_capture_stream", 0, duration);
+    let start = OperationStart::new(&operation_id, "launch_capture_stream", 0, duration)?;
     let result = (||
     {
         let helper_path = find_helper_path().ok_or_else(|| {
@@ -2393,6 +2489,11 @@ pub fn drain_native_trace_batches(
         .find(|record| record.session_id == session_id)
         .ok_or_else(|| format!("session not found: {session_id}"))?;
 
+    if after_batch_sequence > record.last_batch_sequence
+    {
+        return Err("trace batch cursor exceeds the produced sequence".to_string());
+    }
+
     // The consumer confirmed every batch at or before the cursor; drop them so
     // queue-capacity eviction only ever counts genuinely undelivered batches.
     while record
@@ -2403,30 +2504,19 @@ pub fn drain_native_trace_batches(
         record.trace_batches.pop_front();
     }
 
-    // If more than one drain-limit of batches is pending, the truncation below
-    // would silently skip the oldest pending batches; drop them here and count
-    // them as host-dropped instead.
-    let overflow = record
-        .trace_batches
-        .len()
-        .saturating_sub(STREAM_BATCH_DRAIN_LIMIT);
-    for _ in 0..overflow {
-        if record.trace_batches.pop_front().is_none() {
+    let mut bytes = 0;
+    let mut batches = Vec::new();
+    for batch in record.trace_batches.iter().take(STREAM_BATCH_DRAIN_LIMIT)
+    {
+        if !batches.is_empty() && bytes + batch.storage_bytes > STREAM_DRAIN_MAX_BYTES
+        {
             break;
         }
+        bytes += batch.storage_bytes;
+        let mut copy = batch.clone();
+        copy.host_dropped_batches = record.host_dropped_batches;
+        batches.push(copy);
     }
-    if overflow > 0 {
-        record.host_dropped_batches = record
-            .host_dropped_batches
-            .saturating_add(overflow as u64);
-    }
-
-    let batches: Vec<NativeTraceBatch> = record
-        .trace_batches
-        .iter()
-        .filter(|batch| batch.batch_sequence > after_batch_sequence)
-        .cloned()
-        .collect();
 
     Ok(batches)
 }
@@ -2547,24 +2637,29 @@ pub fn replay_last_session() -> Result<SessionReplayResult, String> {
     replay_session_at_path(session_path)
 }
 
-pub fn replay_session_at_path(session_path: PathBuf) -> Result<SessionReplayResult, String> {
-    let helper_output = run_helper_args(&[
-        "replay-session".to_string(),
-        "--session".to_string(),
-        session_path.to_string_lossy().to_string(),
-    ])?;
-
-    serde_json::from_str(&helper_output).map_err(|error| {
-        format!("failed to parse session replay result: {error}; stdout={helper_output}")
-    })
+pub fn replay_session_at_path(session_path: PathBuf) -> Result<SessionReplayResult, String>
+{
+    replay_session_window(session_path, None)
 }
 
-pub fn replay_session_path(session_path: String) -> Result<SessionReplayResult, String> {
+fn replay_session_window(session_path: PathBuf, selected_event_id: Option<u64>) -> Result<SessionReplayResult, String>
+{
+    let mut args = vec!["replay-session".to_string(), "--session".to_string(),
+        session_path.to_string_lossy().to_string(), "--window-limit".to_string(), "5000".to_string()];
+    if let Some(event_id) = selected_event_id
+    {
+        args.extend(["--selected-event-id".to_string(), event_id.to_string()]);
+    }
+    let helper_output = run_helper_args(&args)?;
+    serde_json::from_str(&helper_output).map_err(|error| format!("failed to parse session replay result: {error}"))
+}
+
+pub fn replay_session_path(session_path: String, selected_event_id: Option<u64>) -> Result<SessionReplayResult, String> {
     if session_path.trim().is_empty() {
         return Err("session path is empty".to_string());
     }
 
-    replay_session_at_path(PathBuf::from(session_path))
+    replay_session_window(PathBuf::from(session_path), selected_event_id)
 }
 
 pub fn attach_target_process_capture(
@@ -2576,7 +2671,7 @@ pub fn attach_target_process_capture(
     let helper_timeout = helper_inner_timeout_ms(duration);
     let command_timeout = helper_process_timeout_ms(duration);
     let operation_id = new_operation_id("ui-attach", process_id);
-    let start = OperationStart::new(&operation_id, "attach_capture", process_id, duration);
+    let start = OperationStart::new(&operation_id, "attach_capture", process_id, duration)?;
     let outcome = (||
     {
         let mut args = vec![
@@ -2632,7 +2727,7 @@ pub fn supervise_process_tree(
     let helper_timeout = helper_inner_timeout_ms(duration);
     let command_timeout = helper_process_timeout_ms(duration);
     let operation_id = new_operation_id("ui-tree", root_process_id);
-    let start = OperationStart::new(&operation_id, "process_tree_supervision", root_process_id, duration);
+    let start = OperationStart::new(&operation_id, "process_tree_supervision", root_process_id, duration)?;
     let outcome = (||
     {
         let mut args = vec![
@@ -2680,7 +2775,7 @@ where
     T: DeserializeOwned,
 {
     serde_json::from_str(helper_output).map_err(|error| {
-        format!("failed to parse {command_name} result: {error}; stdout={helper_output}")
+        format!("failed to parse {command_name} result: {error}")
     })
 }
 
@@ -2689,38 +2784,33 @@ fn run_helper<const N: usize>(args: [&str; N]) -> Result<String, String> {
     run_helper_args(&owned_args)
 }
 
-fn run_helper_args(args: &[String]) -> Result<String, String> {
-    let helper_path = find_helper_path().ok_or_else(|| {
-        "knmon-native-helper.exe was not found. Run `npm run native:build` first.".to_string()
-    })?;
+fn run_helper_args(args: &[String]) -> Result<String, String>
+{
+    run_helper_args_with_timeout(args, 120_000, None)
+}
 
-    let output = Command::new(&helper_path)
-        .args(args)
-        .output()
-        .map_err(|error| format!("failed to run {}: {error}", helper_path.display()))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-
-    if !output.status.success() {
-        return Err(format!(
-            "{} exited with {:?}; stderr={}; stdout={}",
-            helper_path.display(),
-            output.status.code(),
-            stderr,
-            stdout
-        ));
+fn read_bounded_output(mut pipe: impl Read, limit: usize, stop: &std::sync::atomic::AtomicBool) -> Result<String, String>
+{
+    let mut saved = Vec::new();
+    let mut buffer = [0u8; 8192];
+    loop
+    {
+        if stop.load(std::sync::atomic::Ordering::Acquire)
+        {
+            return Err("helper output reader was cancelled before EOF".to_string());
+        }
+        let count = pipe.read(&mut buffer).map_err(|error| format!("helper output read failed: {error}"))?;
+        if count == 0
+        {
+            break;
+        }
+        if count > limit.saturating_sub(saved.len())
+        {
+            return Err("helper output exceeds byte budget".to_string());
+        }
+        saved.extend_from_slice(&buffer[..count]);
     }
-
-    if stdout.is_empty() {
-        return Err(format!(
-            "{} returned empty stdout; stderr={}",
-            helper_path.display(),
-            stderr
-        ));
-    }
-
-    Ok(stdout)
+    String::from_utf8(saved).map_err(|_| "helper output is not UTF-8".to_string())
 }
 
 fn signal_cancel_operation(operation_id: &str) -> Result<CancellationSignalResult, String>
@@ -2768,154 +2858,124 @@ fn run_helper_args_with_timeout(
     args: &[String],
     timeout_ms: u32,
     operation_id: Option<&str>,
-) -> Result<String, String> {
-    let helper_path = find_helper_path().ok_or_else(|| {
-        "knmon-native-helper.exe was not found. Run `npm run native:build` first.".to_string()
-    })?;
-
-    let mut child = OwnedChild(Command::new(&helper_path)
-        .args(args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
+) -> Result<String, String>
+{
+    use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+    let helper_path = find_helper_path().ok_or("knmon-native-helper.exe was not found")?;
+    let mut child = OwnedChild(Command::new(&helper_path).args(args)
+        .stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()
         .map_err(|error| format!("failed to run {}: {error}", helper_path.display()))?);
-
-    if let Some(id) = operation_id {
+    if let Some(id) = operation_id
+    {
         let retained = process_liveness::RetainedProcess::from_child(&child.0)?;
-        let mut registry = operation_registry().lock().unwrap();
-        if let Some(record) = registry.get_mut(id)
+        if let Some(record) = operation_registry().lock().unwrap().get_mut(id)
         {
             record.helper_process_id = retained.process_id;
             record.helper_handle = Some(retained);
         }
     }
-
-    // Drain both pipes on reader threads: the helper can emit more than the pipe
-    // buffer holds (full CaptureResult JSON), and nothing else reads it until
-    // after exit — the child would block in WriteFile and hit the process
-    // timeout even though the capture succeeded.
-    let stdout_pipe = child.0.stdout.take();
-    let stderr_pipe = child.0.stderr.take();
-    let stdout_reader = thread::spawn(move || {
-        let mut text = String::new();
-        if let Some(mut pipe) = stdout_pipe {
-            let _ = pipe.read_to_string(&mut text);
+    let stop = Arc::new(AtomicBool::new(false));
+    let failed = Arc::new(AtomicBool::new(false));
+    let stdout_pipe = child.0.stdout.take().ok_or("missing stdout pipe")?;
+    let stderr_pipe = child.0.stderr.take().ok_or("missing stderr pipe")?;
+    let output_stop = stop.clone();
+    let output_failed = failed.clone();
+    let stdout_reader = thread::Builder::new().name("knmon-output".to_string()).spawn(move ||
+    {
+        let result = read_bounded_output(stdout_pipe, 64 * 1024 * 1024, &output_stop);
+        if result.is_err()
+        {
+            output_failed.store(true, Ordering::Release);
         }
-        text
-    });
-    let stderr_reader = thread::spawn(move || {
-        let mut text = String::new();
-        if let Some(mut pipe) = stderr_pipe {
-            let _ = pipe.read_to_string(&mut text);
+        result
+    }).map_err(|error| error.to_string())?;
+    let error_stop = stop.clone();
+    let stderr_reader = match thread::Builder::new().name("knmon-error".to_string()).spawn(move ||
+        read_bounded_stderr(stderr_pipe, Some(&error_stop)))
+    {
+        Ok(reader) => reader,
+        Err(error) =>
+        {
+            stop.store(true, Ordering::Release);
+            let _ = child.0.kill();
+            let _ = child.0.wait();
+            let _ = stop_reader(stdout_reader);
+            return Err(error.to_string());
         }
-        text
-    });
-
-    let timeout = Duration::from_millis(timeout_ms as u64);
-    let start = Instant::now();
-    let mut timed_out = false;
-    let mut cancel_note = String::new();
-
-    loop {
-        match child.0.try_wait() {
+    };
+    let started = Instant::now();
+    let mut reason = None;
+    loop
+    {
+        match child.0.try_wait()
+        {
             Ok(Some(_)) => break,
-            Ok(None) => {}
-            Err(error) => {
-                let _ = child.0.kill();
-                let _ = child.0.wait();
-                return Err(format!("failed to poll {}: {error}", helper_path.display()));
+            Ok(None) => {},
+            Err(error) =>
+            {
+                reason = Some(format!("helper wait failed: {error}"));
+                break;
             }
         }
-
-        if start.elapsed() >= timeout {
-            timed_out = true;
-            if let Some(id) = operation_id {
-                match signal_cancel_operation(id) {
-                    Ok(signal) => {
-                        cancel_note = format!(
-                            " cancelSignal={} message={}",
-                            signal.success, signal.message
-                        );
+        if failed.load(Ordering::Acquire) || started.elapsed() >= Duration::from_millis(timeout_ms as u64)
+        {
+            reason = Some(if failed.load(Ordering::Acquire)
+            {
+                "helper output failed".to_string()
+            }
+            else
+            {
+                format!("helper timed out after {timeout_ms} ms")
+            });
+            if let Some(id) = operation_id
+            {
+                let _ = signal_cancel_operation(id);
+                let deadline = Instant::now() + Duration::from_secs(12);
+                while Instant::now() < deadline
+                {
+                    if child.0.try_wait().ok().flatten().is_some()
+                    {
+                        break;
                     }
-                    Err(error) => {
-                        cancel_note = format!(" cancelSignal=false message={error}");
-                    }
-                }
-
-                let grace_start = Instant::now();
-                let grace_timeout = Duration::from_millis(12_000);
-                while grace_start.elapsed() < grace_timeout {
-                    match child.0.try_wait() {
-                        Ok(Some(_)) => break,
-                        Ok(None) => {}
-                        Err(error) => {
-                            let _ = child.0.kill();
-                            let _ = child.0.wait();
-                            return Err(format!(
-                                "failed to poll {} after cancel: {error}",
-                                helper_path.display()
-                            ));
-                        }
-                    }
-
                     thread::sleep(Duration::from_millis(25));
                 }
-
-                if child.0
-                    .try_wait()
-                    .map(|state| state.is_some())
-                    .unwrap_or(false)
-                {
-                    break;
-                }
             }
-
-            let _ = child.0.kill();
             break;
         }
-
         thread::sleep(Duration::from_millis(25));
     }
-
-    let exit_status = child.0.wait().map_err(|error| {
-        format!(
-            "failed to collect {} exit status: {error}",
-            helper_path.display()
-        )
-    })?;
-
-    let stdout = stdout_reader.join().unwrap_or_default().trim().to_string();
-    let stderr = stderr_reader.join().unwrap_or_default().trim().to_string();
-
-    if timed_out {
-        return Err(format!(
-            "{} timed out after {} ms; stderr={}; stdout={};{}",
-            helper_path.display(),
-            timeout_ms,
-            stderr,
-            stdout,
-            cancel_note
-        ));
+    if child.0.try_wait().ok().flatten().is_none()
+    {
+        let _ = child.0.kill();
     }
-
-    if !exit_status.success() {
-        return Err(format!(
-            "{} exited with {:?}; stderr={}; stdout={}",
-            helper_path.display(),
-            exit_status.code(),
-            stderr,
-            stdout
-        ));
+    let status = child.0.wait();
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while (!stdout_reader.is_finished() || !stderr_reader.is_finished()) && Instant::now() < deadline
+    {
+        thread::sleep(Duration::from_millis(10));
     }
-
-    if stdout.is_empty() {
-        return Err(format!(
-            "{} returned empty stdout; stderr={}",
-            helper_path.display(),
-            stderr
-        ));
+    let readers_finished = stdout_reader.is_finished() && stderr_reader.is_finished();
+    stop.store(true, Ordering::Release);
+    let stdout = stop_reader(stdout_reader);
+    let stderr = stop_reader(stderr_reader).unwrap_or_default();
+    let stdout = stdout.ok_or("helper stdout reader did not stop")?;
+    if let Some(reason) = reason
+    {
+        return Err(format!("{reason}; stderr={stderr}"));
     }
-
+    if !readers_finished
+    {
+        return Err("helper pipes did not reach EOF after process exit".to_string());
+    }
+    if !status.map_err(|error| error.to_string())?.success()
+    {
+        return Err(format!("helper returned a failing exit status; stderr={stderr}"));
+    }
+    let stdout = stdout?;
+    if stdout.trim().is_empty()
+    {
+        return Err(format!("helper returned empty stdout; stderr={stderr}"));
+    }
     Ok(stdout)
 }
 
@@ -3057,7 +3117,7 @@ mod tests {
         }
     }
 
-    fn test_batch(operation_id: &str, session_id: &str, batch_sequence: u64) -> NativeTraceBatch {
+    pub(super) fn test_batch(operation_id: &str, session_id: &str, batch_sequence: u64) -> NativeTraceBatch {
         let mut event = test_event(operation_id, batch_sequence);
         event.pid = operation_registry().lock().unwrap().get(operation_id).unwrap().target_process_id;
         NativeTraceBatch {
@@ -3073,6 +3133,7 @@ mod tests {
             records_streamed: batch_sequence,
             host_dropped_batches: 0,
             events: vec![event],
+            storage_bytes: 0,
         }
     }
 
@@ -3080,7 +3141,7 @@ mod tests {
     fn streaming_trace_batch_cursor_returns_only_new_batches() {
         let operation_id = test_operation_id("cursor");
         let session_id = new_session_id(&operation_id);
-        register_native_operation(&operation_id, "attach_capture_stream", 1234, 1000);
+        register_native_operation(&operation_id, "attach_capture_stream", 1234, 1000).unwrap();
 
         let batch = test_batch(&operation_id, &session_id, 1);
         let line = serde_json::to_string(&batch).unwrap();
@@ -3098,7 +3159,7 @@ mod tests {
     fn streaming_trace_batch_queue_accounts_host_drops() {
         let operation_id = test_operation_id("overflow");
         let session_id = new_session_id(&operation_id);
-        register_native_operation(&operation_id, "attach_capture_stream", 5678, 1000);
+        register_native_operation(&operation_id, "attach_capture_stream", 5678, 1000).unwrap();
 
         for sequence in 1..=(STREAM_BATCH_QUEUE_LIMIT as u64 + 3) {
             push_native_trace_batch(
@@ -3111,11 +3172,11 @@ mod tests {
         assert_eq!(batches.len(), STREAM_BATCH_DRAIN_LIMIT);
         assert_eq!(
             batches[0].batch_sequence,
-            STREAM_BATCH_QUEUE_LIMIT as u64 + 4 - STREAM_BATCH_DRAIN_LIMIT as u64
+            4
         );
         assert_eq!(
             batches.last().unwrap().batch_sequence,
-            STREAM_BATCH_QUEUE_LIMIT as u64 + 3
+            STREAM_BATCH_DRAIN_LIMIT as u64 + 3
         );
         assert_eq!(batches.last().unwrap().host_dropped_batches, 3);
     }
@@ -3123,7 +3184,7 @@ mod tests {
     #[test]
     fn wait_for_native_session_terminal_returns_updated_terminal_session() {
         let operation_id = test_operation_id("stop-wait");
-        register_native_operation(&operation_id, "attach_capture_stream", 6789, 1000);
+        register_native_operation(&operation_id, "attach_capture_stream", 6789, 1000).unwrap();
 
         let updater_operation_id = operation_id.clone();
         let updater = thread::spawn(move || {
@@ -3142,7 +3203,7 @@ mod tests {
     fn streaming_capture_result_frame_updates_session_cleanup_state() {
         let operation_id = test_operation_id("capture-result");
         let session_id = new_session_id(&operation_id);
-        register_native_operation(&operation_id, "attach_capture_stream", 9012, 1000);
+        register_native_operation(&operation_id, "attach_capture_stream", 9012, 1000).unwrap();
 
         mark_native_operation_helper_pid(&operation_id, 2);
         let frame = serde_json::json!({

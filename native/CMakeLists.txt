@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(knmon_native LANGUAGES CXX)
+project(knmon_native LANGUAGES C CXX)
 
 include(CTest)
 
@@ -54,6 +54,10 @@ target_include_directories(knmon-common INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/knmon-common/include
 )
 
+add_subdirectory(third-party/zstd)
+add_library(knmon-session-codec STATIC knmon-common/src/SessionCodec.cpp)
+target_link_libraries(knmon-session-codec PUBLIC knmon-common PRIVATE knmon-zstd)
+
 add_library(knmon-ipc-security STATIC knmon-common/src/IpcSecurity.cpp)
 target_link_libraries(knmon-ipc-security PUBLIC knmon-common PRIVATE advapi32 bcrypt)
 target_compile_definitions(knmon-ipc-security PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
@@ -78,6 +82,13 @@ target_link_libraries(knmon-json PUBLIC knmon-common)
 target_include_directories(knmon-json SYSTEM PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third-party")
 
 if(BUILD_TESTING)
+    add_executable(knmon-capture-history-test tests/CaptureHistoryTest.cpp)
+    target_link_libraries(knmon-capture-history-test PRIVATE knmon-common)
+    add_test(NAME capture-history COMMAND knmon-capture-history-test)
+    add_executable(knmon-session-codec-test tests/SessionCodecTest.cpp)
+    target_link_libraries(knmon-session-codec-test PRIVATE knmon-session-codec)
+    add_test(NAME session-codec COMMAND knmon-session-codec-test)
+    set_tests_properties(session-codec PROPERTIES TIMEOUT 20)
     add_executable(knmon-ipc-security-test tests/IpcSecurityTest.cpp)
     target_link_libraries(knmon-ipc-security-test PRIVATE knmon-ipc-security knmon-json advapi32)
     target_compile_definitions(knmon-ipc-security-test PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
@@ -161,7 +172,7 @@ knmon_add_version_resource(knmon-collector "KN Win32 API Monitor Collector" "knm
 add_executable(knmon-native-helper
     knmon-native-helper/src/main.cpp
 )
-target_link_libraries(knmon-native-helper PRIVATE knmon-core bcrypt winsqlite3)
+target_link_libraries(knmon-native-helper PRIVATE knmon-core knmon-session-codec bcrypt winsqlite3)
 target_compile_definitions(knmon-native-helper PRIVATE
     WIN32_LEAN_AND_MEAN
     NOMINMAX
@@ -240,6 +251,9 @@ if(BUILD_TESTING)
     set_tests_properties(capture-semantics PROPERTIES TIMEOUT 20)
     add_test(NAME capture-delayed-collector COMMAND knmon-capture-semantics-test $<TARGET_FILE:knmon-lifecycle-test-agent> --capture)
     set_tests_properties(capture-delayed-collector PROPERTIES TIMEOUT 25)
+    add_test(NAME capture-stream-retention COMMAND knmon-capture-semantics-test $<TARGET_FILE:knmon-lifecycle-test-agent> --retention)
+    add_test(NAME capture-consumer-failure COMMAND knmon-capture-semantics-test $<TARGET_FILE:knmon-lifecycle-test-agent> --consumer-failure)
+    set_tests_properties(capture-stream-retention capture-consumer-failure PROPERTIES TIMEOUT 40)
     add_executable(knmon-module-lifecycle-test tests/ModuleLifecycleTest.cpp)
     target_link_libraries(knmon-module-lifecycle-test PRIVATE knmon-common)
     target_compile_definitions(knmon-module-lifecycle-test PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)

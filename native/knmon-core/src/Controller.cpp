@@ -1,3 +1,4 @@
+#include "knmon/common/CaptureHistory.h"
 #include <knmon/common/ApiResult.h>
 #include <knmon/common/BoundedJson.h>
 #include <knmon/core/Controller.h>
@@ -2564,7 +2565,7 @@ void AddAudit(
     event.Win32ErrorCode = errorCode;
     event.NtStatus = "0x00000000";
     event.Message = message;
-    result.AuditEvents.push_back(event);
+    RetainAuditEvent(result, event);
 }
 
 void AddAudit(
@@ -7009,7 +7010,7 @@ void UpdateTransportMetrics(KnMonCaptureResult& result, const SharedTransportSes
 
 void RecordHookOverhead(KnMonCaptureResult& result, std::uint64_t overheadUs)
 {
-    const std::uint64_t nextCount = static_cast<std::uint64_t>(result.CapturedEvents.size()) + 1;
+    const std::uint64_t nextCount = result.CapturedEventsSeen + 1;
 
     if (nextCount == 1)
     {
@@ -7059,7 +7060,8 @@ void DrainSharedTransport(
         return;
     }
 
-    const std::uint32_t maxRecordsPerDrain = streamCallbacks == nullptr ? 0 : streamCallbacks->MaxRecordsPerBatch;
+    const std::uint32_t maxRecordsPerDrain = streamCallbacks == nullptr ? 0 :
+        std::clamp(streamCallbacks->MaxRecordsPerBatch == 0 ? 64U : streamCallbacks->MaxRecordsPerBatch, 1U, 64U);
     std::vector<KnMonAgentMessage> batchEvents;
     std::uint64_t firstRecordSequence = 0;
     std::uint64_t lastRecordSequence = 0;
@@ -7084,8 +7086,8 @@ void DrainSharedTransport(
         {
             RecordHookOverhead(result, record.HookOverheadUs);
             KnMonAgentMessage message = BuildAgentMessage(result, payload);
-            result.AgentMessages.push_back(message);
-            result.CapturedEvents.push_back(message);
+            RetainAgentMessage(result, message);
+            RetainCapturedEvent(result, message);
             AddAudit(result, "api_call_received", "shared_memory_transport_read", ApiCallAuditMessage(result, message.RawPayload));
 
             if (batchEvents.empty())
@@ -7103,6 +7105,7 @@ void DrainSharedTransport(
     ApplyTransportMetrics(result, drainResult);
 
     if (
+        !result.StreamConsumerFailed &&
         streamCallbacks != nullptr &&
         streamCallbacks->OnTraceBatch &&
         batchSequence != nullptr &&
@@ -7122,13 +7125,70 @@ void DrainSharedTransport(
         batch.RecordsStreamed = result.RecordsStreamed;
         batch.HostDroppedBatches = 0;
         batch.Events = batchEvents;
-        (void)streamCallbacks->OnTraceBatch(batch);
+        bool accepted = false;
+        try
+        {
+            accepted = streamCallbacks->OnTraceBatch(batch);
+        }
+        catch (...)
+        {
+            // A consumer failure must still allow controller-owned cleanup.
+        }
+        if (!accepted)
+        {
+            result.StreamConsumerFailed = true;
+            AddAudit(result, "stream_consumer_failed", "trace_delivery", "Trace consumer rejected a batch; capture will stop after agent cleanup.");
+        }
     }
 }
 
 void DrainSharedTransport(KnMonCaptureResult& result, SharedTransportSession& transport)
 {
     DrainSharedTransport(result, transport, nullptr, nullptr);
+}
+
+void FinalizeStreamDelivery(KnMonCaptureResult& result)
+{
+    if (result.StreamConsumerFailed)
+    {
+        if (result.Success)
+        {
+            SetResultError(result, ERROR_WRITE_FAULT, "knmon-core", "stream_consumer_failed", "Trace consumer rejected a batch; capture is incomplete.");
+        }
+        result.Success = false;
+        if (result.OperationState != "cleanup_failed")
+        {
+            result.OperationState = "failed";
+        }
+        if (result.SessionState != "recovery_required")
+        {
+            result.SessionState = "failed";
+        }
+    }
+}
+
+void DrainFinalSharedTransport(KnMonCaptureResult& result, SharedTransportSession& transport,
+    const KnMonCaptureStreamCallbacks* callbacks, std::uint64_t* sequence)
+{
+    const auto firstConsumer = transport.ReaderState.NextConsumer;
+    while (!transport.ReaderState.Corrupted &&
+        transport.ReaderState.NextConsumer - firstConsumer < transport.Capacity)
+    {
+        const auto previous = transport.ReaderState.NextConsumer;
+        DrainSharedTransport(result, transport, callbacks, sequence);
+        if (transport.ReaderState.NextConsumer == previous)
+        {
+            break;
+        }
+    }
+    UpdateTransportMetrics(result, transport);
+    if (result.Success && result.TransportRecordsProduced != result.TransportRecordsConsumed)
+    {
+        SetResultError(result, ERROR_NO_DATA, "knmon-core", "transport_tail_incomplete",
+            "Capture ended with unconsumed transport reservations; the trace is incomplete.");
+        result.OperationState = "failed";
+        result.SessionState = "failed";
+    }
 }
 
 void EmitCaptureStreamSessionFrame(
@@ -8023,6 +8083,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request) 
 KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, const KnMonCaptureStreamCallbacks* streamCallbacks) const
 {
     KnMonCaptureResult result;
+    result.HistoryBounded = streamCallbacks != nullptr && static_cast<bool>(streamCallbacks->OnTraceBatch);
     result.Clock = SampleCaptureClock();
     std::string rejectedApi;
     if (!ValidateRuntimeApiSelection(request.ApiSelection, rejectedApi))
@@ -8082,10 +8143,35 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
     CancellationContext cancellationContext;
     std::uint64_t streamBatchSequence = 0;
 
+    bool targetExitRecorded = false;
+    auto observeTargetExit = [&](DWORD waitMs = 0) -> bool
+    {
+        bool observed = false;
+        if (processInfo.hProcess != nullptr && WaitForSingleObject(processInfo.hProcess, waitMs) == WAIT_OBJECT_0)
+        {
+            observed = true;
+            targetExited = true;
+            DWORD exitCode = 0;
+            result.TargetExitCode = GetExitCodeProcess(processInfo.hProcess, &exitCode) ? exitCode : ERROR_PROCESS_ABORTED;
+            if (!agentShutdownReceived)
+            {
+                result.HookCleanupOutcome = "released_by_process_exit";
+                result.SessionShutdownEvidence = "released_by_process_exit";
+                result.AgentCleanupSucceeded = false;
+            }
+            if (!targetExitRecorded)
+            {
+                AddAudit(result, "target_exit_observed", "process_handle", "Launch target exit was confirmed by its retained process handle.", result.TargetExitCode);
+                targetExitRecorded = true;
+            }
+        }
+        return observed;
+    };
+
     auto consumePayload = [&](const JsonDocument& payload)
     {
         KnMonAgentMessage message = BuildAgentMessage(result, payload);
-        result.AgentMessages.push_back(message);
+        RetainAgentMessage(result, message);
 
         if (message.MessageType == "agent_hello")
         {
@@ -8110,7 +8196,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         {
             if (PayloadMatchesApiSelection(payload, result.ApiSelection))
             {
-                result.CapturedEvents.push_back(message);
+                RetainCapturedEvent(result, message);
                 AddAudit(result, "api_call_received", "agent_event_read", ApiCallAuditMessage(result, message.RawPayload));
             }
         }
@@ -8428,7 +8514,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
         const bool continuousCapture = request.DurationMs == 0;
         const ULONGLONG captureDeadline = continuousCapture ? 0 : GetTickCount64() + static_cast<ULONGLONG>(request.DurationMs);
-        while (!transport.ReaderState.Corrupted && (continuousCapture || GetTickCount64() < captureDeadline))
+        while (!transport.ReaderState.Corrupted && !result.StreamConsumerFailed && (continuousCapture || GetTickCount64() < captureDeadline))
         {
             if (observeOwnerExit())
             {
@@ -8462,6 +8548,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
             if (pipeError == ERROR_BROKEN_PIPE || pipeError == ERROR_HANDLE_EOF || pipeError == ERROR_NO_DATA)
             {
+                observeTargetExit(250);
                 AddAudit(result, agentShutdownReceived ? "pipe_closed_after_shutdown" : "pipe_closed_without_shutdown", "agent_event_read", "Launch agent event pipe closed.", pipeError, "win32");
                 break;
             }
@@ -8490,7 +8577,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
         DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
         UpdateTransportMetrics(result, transport);
-        if (!launchWindowRevealCompleted && !targetExited && !result.CancelObserved)
+        if (!launchWindowRevealCompleted && !targetExited && !result.CancelObserved && !result.StreamConsumerFailed)
         {
             const ULONGLONG revealDeadline = GetTickCount64() + 3000ULL;
             while (!transport.ReaderState.Corrupted && GetTickCount64() < revealDeadline)
@@ -8540,13 +8627,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
         EmitCaptureStreamSessionFrame(streamCallbacks, "session_stopping", result);
 
-        if (!targetExited && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0)
-        {
-            targetExited = true;
-            result.HookCleanupOutcome = "released_by_process_exit";
-            result.SessionShutdownEvidence = "released_by_process_exit";
-            AddAudit(result, "target_exited", "launch_cleanup", "Target exited before explicit launch cleanup was requested.");
-        }
+        observeTargetExit();
 
         if (!targetExited)
         {
@@ -8562,7 +8643,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
                 Sleep(50);
             }
 
-            if (remoteAgentBase == 0)
+            if (remoteAgentBase == 0 && !observeTargetExit(250))
             {
                 SetResultError(result, moduleError == 0 ? ERROR_MOD_NOT_FOUND : moduleError, "win32", "remote_agent_missing", "Agent module was not visible in the target before launch cleanup.");
                 fatalError = true;
@@ -8578,30 +8659,35 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
                 break;
             }
 
-            remoteStopAddress = remoteAgentBase + stopRva;
-            DWORD remoteExitCode = 0;
-            AddAudit(result, "agent_stop_requested", "CreateRemoteThread", "Requesting launch agent self-disable.");
-            stopRequested = true;
-            if (!WaitRemoteThread(processInfo.hProcess, reinterpret_cast<void*>(remoteStopAddress), nullptr, request.TimeoutMs, &remoteExitCode, &remoteError))
+            if (!observeTargetExit())
             {
-                SetResultError(result, remoteError, "win32", "agent_stop_timeout", "Remote KnMonAgentStop thread failed or timed out.");
-                fatalError = true;
-                break;
-            }
+                remoteStopAddress = remoteAgentBase + stopRva;
+                DWORD remoteExitCode = 0;
+                AddAudit(result, "agent_stop_requested", "CreateRemoteThread", "Requesting launch agent self-disable.");
+                stopRequested = true;
+                const bool stopCompleted = WaitRemoteThread(processInfo.hProcess, reinterpret_cast<void*>(remoteStopAddress), nullptr,
+                    request.TimeoutMs, &remoteExitCode, &remoteError);
+                if (!stopCompleted && !observeTargetExit(250))
+                {
+                    SetResultError(result, remoteError, "win32", "agent_stop_timeout", "Remote KnMonAgentStop thread failed or timed out.");
+                    fatalError = true;
+                    break;
+                }
 
-            if (remoteExitCode != static_cast<DWORD>(KnMonAgentControlStatus::Success))
-            {
-                std::ostringstream stream;
-                stream << "KnMonAgentStop returned status " << remoteExitCode << ".";
-                SetResultError(result, remoteExitCode, "knmon-agent", "detach_incomplete", stream.str());
-                fatalError = true;
-                break;
+                if (stopCompleted && remoteExitCode != static_cast<DWORD>(KnMonAgentControlStatus::Success) && !observeTargetExit(250))
+                {
+                    std::ostringstream stream;
+                    stream << "KnMonAgentStop returned status " << remoteExitCode << ".";
+                    SetResultError(result, remoteExitCode, "knmon-agent", "detach_incomplete", stream.str());
+                    fatalError = true;
+                    break;
+                }
             }
 
             const ULONGLONG shutdownDeadline = GetTickCount64() + static_cast<ULONGLONG>(request.TimeoutMs);
             result.OperationState = "draining";
             result.SessionState = result.SessionId.empty() ? result.SessionState : "draining";
-            while (!agentShutdownReceived && GetTickCount64() < shutdownDeadline)
+            while (!targetExited && !agentShutdownReceived && GetTickCount64() < shutdownDeadline)
             {
                 DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
 
@@ -8617,6 +8703,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
                 DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
                 if (pipeError == ERROR_BROKEN_PIPE || pipeError == ERROR_HANDLE_EOF || pipeError == ERROR_NO_DATA)
                 {
+                    observeTargetExit(250);
                     AddAudit(result, agentShutdownReceived ? "pipe_closed_after_shutdown" : "pipe_closed_without_shutdown", "agent_event_read", "Launch agent event pipe closed.", pipeError, "win32");
                     break;
                 }
@@ -8669,6 +8756,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             AddAudit(result, "api_selection_filter_applied", "hook_install_count", "API selection filter is active; fixed File I/O hook-count gate was skipped.");
         }
 
+        observeTargetExit(agentShutdownReceived ? 0 : 250);
         if (!targetExited && !agentShutdownReceived)
         {
             SetResultError(result, WAIT_TIMEOUT, "knmon-core", "agent_shutdown_required", "Launch agent shutdown lifecycle event was not received.");
@@ -8689,7 +8777,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         }
 
         result.AgentCleanupAttempted = stopRequested;
-        result.AgentCleanupSucceeded = stopRequested ? agentShutdownReceived && shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0 : targetExited;
+        result.AgentCleanupSucceeded = stopRequested && agentShutdownReceived && shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0;
 
         if (result.CancelObserved)
         {
@@ -8713,6 +8801,12 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             break;
         }
 
+        if (targetExited && result.TargetExitCode != 0)
+        {
+            SetResultError(result, result.TargetExitCode, "knmon-core", "target_exit_failed", "Launch target exited with a nonzero or unknown exit status.");
+            fatalError = true;
+            break;
+        }
         result.Success = true;
         result.Win32ErrorCode = 0;
         result.Subsystem = "knmon-core";
@@ -8727,7 +8821,11 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
     if (remoteDllPath != nullptr && processInfo.hProcess != nullptr)
     {
-        if (processResumed && !result.Success && !targetExited && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_TIMEOUT)
+        if (targetExited)
+        {
+            AddAudit(result, "remote_buffers_released_by_process_exit", "process_handle", "Launch target exit released remote allocations.");
+        }
+        else if (processResumed && !result.Success && !targetExited && WaitForSingleObject(processInfo.hProcess, 0) == WAIT_TIMEOUT)
         {
             // The queued early-bird APC may not have run LoadLibraryW yet; freeing
             // the path buffer would crash the target when the APC later fires.
@@ -8779,8 +8877,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         CloseHandle(pipeHandle);
     }
 
-    DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
-    UpdateTransportMetrics(result, transport);
+    DrainFinalSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
     CloseSharedTransport(transport);
 
     if (processInfo.hThread != nullptr)
@@ -8790,6 +8887,11 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
     if (processInfo.hProcess != nullptr)
     {
+        if (observeTargetExit() && result.Success && result.TargetExitCode != 0)
+        {
+            SetResultError(result, result.TargetExitCode, "knmon-core", "target_exit_failed", "Launch target exited with a nonzero or unknown exit status.");
+            result.OperationState = "failed";
+        }
         CloseHandle(processInfo.hProcess);
     }
 
@@ -8800,6 +8902,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
     CloseCancellationContext(cancellationContext);
 
+    FinalizeStreamDelivery(result);
     if (result.Operation.empty())
     {
         result.Operation = fatalError ? "launch_capture_failed" : "launch_capture";
@@ -9037,7 +9140,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
             if (ReadPipeMessage(pipeHandle, 2500, &payload, &pipeError, channel))
             {
                 KnMonAgentMessage message = BuildAgentMessage(result, payload);
-                result.AgentMessages.push_back(message);
+                RetainAgentMessage(result, message);
 
                 if (message.MessageType == "agent_hello")
                 {
@@ -9062,7 +9165,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
                 {
                     if (PayloadMatchesApiSelection(payload, result.ApiSelection))
                     {
-                        result.CapturedEvents.push_back(message);
+                        RetainCapturedEvent(result, message);
                         AddAudit(result, "api_call_received", "agent_event_read", ApiCallAuditMessage(result, message.RawPayload));
                     }
                 }
@@ -9345,6 +9448,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request) 
 KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, const KnMonCaptureStreamCallbacks* streamCallbacks) const
 {
     KnMonCaptureResult result;
+    result.HistoryBounded = streamCallbacks != nullptr && static_cast<bool>(streamCallbacks->OnTraceBatch);
     result.Clock = request.ClockOverride.Frequency == 0 ? SampleCaptureClock() : request.ClockOverride;
     std::string rejectedApi;
     if (!ValidateRuntimeApiSelection(request.ApiSelection, rejectedApi))
@@ -9442,7 +9546,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
     auto consumePayload = [&](const JsonDocument& payload)
     {
         KnMonAgentMessage message = BuildAgentMessage(result, payload);
-        result.AgentMessages.push_back(message);
+        RetainAgentMessage(result, message);
 
         if (message.MessageType == "agent_hello")
         {
@@ -9466,7 +9570,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         {
             if (PayloadMatchesApiSelection(payload, result.ApiSelection))
             {
-                result.CapturedEvents.push_back(message);
+                RetainCapturedEvent(result, message);
                 AddAudit(result, "api_call_received", "agent_event_read", ApiCallAuditMessage(result, message.RawPayload));
             }
         }
@@ -9569,8 +9673,14 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
             result.AgentControlStatus = controlStatus;
             const std::string summary = AgentStateSummary(state);
             AddAudit(result, "agent_state_queried", "KnMonAgentQueryState", summary);
-            if (AgentStateProvesSelfDisabledCleanup(state))
+            if (AgentStateProvesSelfDisabledCleanup(state) && WideToUtf8(state.OperationId) == result.OperationId)
             {
+                std::ostringstream evidence;
+                evidence << "{\"source\":\"controller_query\",\"operationId\":" << Q(result.OperationId)
+                    << ",\"lifecycle\":\"disabled\",\"active\":false,\"busy\":false,\"hooksEnabled\":" << state.HooksEnabled
+                    << ",\"installedHooks\":" << state.InstalledHooks << ",\"restoredHooks\":" << state.RestoredHooks
+                    << ",\"failedHooks\":" << state.FailedHooks << ",\"droppedEvents\":" << state.DroppedEvents << "}";
+                result.CleanupStateJson = evidence.str();
                 agentStateCleanupProven = true;
                 result.HookCleanupOutcome = "restored_by_agent";
                 if (result.SessionShutdownEvidence.empty())
@@ -10106,7 +10216,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
         const bool continuousCapture = request.DurationMs == 0;
         const ULONGLONG captureDeadline = continuousCapture ? 0 : GetTickCount64() + static_cast<ULONGLONG>(request.DurationMs);
-        while (!transport.ReaderState.Corrupted && (continuousCapture || GetTickCount64() < captureDeadline))
+        while (!transport.ReaderState.Corrupted && !result.StreamConsumerFailed && (continuousCapture || GetTickCount64() < captureDeadline))
         {
             if (observeCancellation("attach_capture"))
             {
@@ -10394,8 +10504,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         CloseHandle(pipeHandle);
     }
 
-    DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
-    UpdateTransportMetrics(result, transport);
+    DrainFinalSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
     CloseSharedTransport(transport);
 
     if (processHandle != nullptr)
@@ -10406,6 +10515,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
     CloseCancellationContext(cancellationContext);
     AddAudit(result, "attach_cleanup_completed", "handle_cleanup", "Attach controller cleanup completed.");
 
+    FinalizeStreamDelivery(result);
     if (result.Operation.empty())
     {
         result.Operation = fatalError ? "attach_capture_failed" : "attach_capture";

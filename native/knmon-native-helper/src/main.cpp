@@ -1,3 +1,6 @@
+#include <functional>
+#include <deque>
+#include "knmon/common/SessionCodec.h"
 #include <knmon/core/Controller.h>
 #include <knmon/common/BoundedJson.h>
 #include <knmon/common/RuntimeSupport.h>
@@ -7,6 +10,7 @@
 #include <winsqlite/winsqlite3.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cerrno>
 #include <cstdlib>
 #include <filesystem>
@@ -512,11 +516,18 @@ std::string NormalizedPathKey(const std::filesystem::path& path)
 bool WriteTextFile(const std::filesystem::path& path, const std::string& text, std::string* error)
 {
     bool written = false;
+    HANDLE file = INVALID_HANDLE_VALUE;
+    std::wstring temporary;
+    bool ownsTemporary = false;
+    static std::atomic<std::uint64_t> sequence{0};
 
     do
     {
         std::error_code createError;
-        std::filesystem::create_directories(path.parent_path(), createError);
+        if (!path.parent_path().empty())
+        {
+            std::filesystem::create_directories(path.parent_path(), createError);
+        }
         if (createError)
         {
             if (error != nullptr)
@@ -526,40 +537,58 @@ bool WriteTextFile(const std::filesystem::path& path, const std::string& text, s
             break;
         }
 
-        const std::wstring tempPath = path.wstring() + L".tmp." + std::to_wstring(GetCurrentProcessId()) + L"." + std::to_wstring(GetTickCount64());
+        temporary = path.wstring() + L".tmp." + std::to_wstring(GetCurrentProcessId()) + L"." +
+            std::to_wstring(GetTickCount64()) + L"." + std::to_wstring(sequence.fetch_add(1));
+        file = CreateFileW(temporary.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (file == INVALID_HANDLE_VALUE)
         {
-            std::ofstream file(tempPath, std::ios::binary | std::ios::trunc);
-            if (!file)
+            if (error != nullptr)
             {
-                if (error != nullptr)
-                {
-                    *error = "open failed for " + PathToUtf8(std::filesystem::path(tempPath));
-                }
-                break;
+                *error = "Temporary file creation failed with " + std::to_string(GetLastError()) + ".";
             }
+            break;
+        }
+        ownsTemporary = true;
 
-            file << text;
-            if (!file)
+        std::size_t offset = 0;
+        DWORD writeError = 0;
+        while (offset < text.size())
+        {
+            DWORD bytes = 0;
+            const auto length = static_cast<DWORD>(std::min<std::size_t>(text.size() - offset, 1024 * 1024));
+            if (!WriteFile(file, text.data() + offset, length, &bytes, nullptr) || bytes == 0)
             {
-                if (error != nullptr)
-                {
-                    *error = "write failed for " + PathToUtf8(std::filesystem::path(tempPath));
-                }
+                writeError = GetLastError();
+                writeError = writeError == 0 ? ERROR_WRITE_FAULT : writeError;
                 break;
             }
+            offset += bytes;
+        }
+        if (writeError == 0 && !FlushFileBuffers(file))
+        {
+            writeError = GetLastError();
+        }
+        CloseHandle(file);
+        file = INVALID_HANDLE_VALUE;
+        if (writeError != 0)
+        {
+            if (error != nullptr)
+            {
+                *error = "Write or flush failed for " + PathToUtf8(path) + ": " + std::to_string(writeError);
+            }
+            break;
         }
 
         // Replace atomically so concurrent readers never observe the file missing
         // and concurrent writers cannot interleave into one shared temp file.
-        if (!MoveFileExW(tempPath.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING))
+        if (!MoveFileExW(temporary.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
         {
+            const DWORD moveError = GetLastError();
             if (error != nullptr)
             {
-                *error = "replace failed for " + PathToUtf8(path) + ": move failed with " + std::to_string(GetLastError());
+                *error = "replace failed for " + PathToUtf8(path) + ": move failed with " + std::to_string(moveError);
             }
 
-            std::error_code cleanupError;
-            std::filesystem::remove(tempPath, cleanupError);
             break;
         }
 
@@ -567,6 +596,14 @@ bool WriteTextFile(const std::filesystem::path& path, const std::string& text, s
     }
     while (false);
 
+    if (file != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(file);
+    }
+    if (ownsTemporary && !written)
+    {
+        DeleteFileW(temporary.c_str());
+    }
     return written;
 }
 
@@ -574,6 +611,7 @@ bool ReadTextFile(const std::filesystem::path& path, std::string* text, std::str
     std::size_t maxFileBytes = 64 * 1024 * 1024)
 {
     bool read = false;
+    HANDLE file = INVALID_HANDLE_VALUE;
 
     do
     {
@@ -582,8 +620,10 @@ bool ReadTextFile(const std::filesystem::path& path, std::string* text, std::str
             text->clear();
         }
 
-        std::ifstream file(path, std::ios::binary);
-        if (!file)
+        // Readers hold the previous immutable file version while a writer replaces it.
+        file = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
+        if (file == INVALID_HANDLE_VALUE)
         {
             if (error != nullptr)
             {
@@ -595,10 +635,19 @@ bool ReadTextFile(const std::filesystem::path& path, std::string* text, std::str
         std::string content;
         char block[8192];
         bool tooLarge = false;
-        while (file)
+        bool readFailed = false;
+        while (true)
         {
-            file.read(block, sizeof(block));
-            const auto bytes = static_cast<std::size_t>(file.gcount());
+            DWORD bytes = 0;
+            if (!ReadFile(file, block, sizeof(block), &bytes, nullptr))
+            {
+                readFailed = true;
+                break;
+            }
+            if (bytes == 0)
+            {
+                break;
+            }
             if (bytes > maxFileBytes - content.size())
             {
                 tooLarge = true;
@@ -606,7 +655,7 @@ bool ReadTextFile(const std::filesystem::path& path, std::string* text, std::str
             }
             content.append(block, bytes);
         }
-        if (tooLarge || file.bad() || (!file.good() && !file.eof()))
+        if (tooLarge || readFailed)
         {
             if (error != nullptr)
             {
@@ -623,6 +672,10 @@ bool ReadTextFile(const std::filesystem::path& path, std::string* text, std::str
     }
     while (false);
 
+    if (file != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(file);
+    }
     return read;
 }
 
@@ -1005,6 +1058,19 @@ std::string ToJson(const knmon::KnMonAgentMessage& message)
     return stream.str();
 }
 
+std::string CaptureHistoryJson(const knmon::KnMonCaptureResult& result)
+{
+    std::ostringstream stream;
+    stream << "{\"bounded\":" << (result.HistoryBounded ? "true" : "false")
+        << ",\"capturedEventsTotal\":" << result.CapturedEventsSeen
+        << ",\"omittedCapturedEvents\":" << result.CapturedEventsOmitted
+        << ",\"omittedAgentMessages\":" << result.AgentMessagesOmitted
+        << ",\"omittedResolverPointerCandidates\":" << result.ResolverCandidatesOmitted
+        << ",\"omittedResolverPointerUnsupported\":" << result.ResolverUnsupportedOmitted
+        << ",\"omittedAuditEvents\":" << result.AuditEventsOmitted << "}";
+    return stream.str();
+}
+
 std::string ToJson(const knmon::KnMonCaptureResult& result)
 {
     std::ostringstream stream;
@@ -1064,6 +1130,8 @@ std::string ToJson(const knmon::KnMonCaptureResult& result)
     stream << "\"transportCapacity\":" << result.TransportCapacity << ",";
     stream << "\"transportRecordsProduced\":" << result.TransportRecordsProduced << ",";
     stream << "\"transportRecordsConsumed\":" << result.TransportRecordsConsumed << ",";
+    stream << "\"retainedHistory\":" << CaptureHistoryJson(result) << ",";
+    stream << "\"cleanupState\":" << result.CleanupStateJson << ",";
     stream << "\"hookCleanupOutcome\":" << Q(result.HookCleanupOutcome) << ",";
     stream << "\"targetExitCode\":" << result.TargetExitCode << ",";
     stream << "\"transportAbortedRecords\":" << result.TransportAbortedRecords << ",";
@@ -1225,6 +1293,8 @@ std::string ToJson(const knmon::KnMonProcessTreeResult& result)
 
 struct SessionInfo
 {
+    std::string ReplayIndexSha256;
+    std::string ReplayTraceSha256;
     bool Success = false;
     std::string Format;
     std::string SessionId;
@@ -1452,6 +1522,18 @@ std::string TraceBatchFrameJson(const knmon::KnMonTraceBatch& batch)
     return stream.str();
 }
 
+bool WriteTraceBatchFrame(const knmon::KnMonTraceBatch& batch)
+{
+    const auto frame = TraceBatchFrameJson(batch);
+    bool written = false;
+    if (frame.size() < 8 * 1024 * 1024)
+    {
+        std::cout << frame << "\n" << std::flush;
+        written = static_cast<bool>(std::cout);
+    }
+    return written;
+}
+
 std::string CaptureResultWithSessionJson(const knmon::KnMonCaptureResult& result, const SessionInfo& session)
 {
     std::string json = ToJson(result);
@@ -1486,6 +1568,7 @@ std::string BuildManifestJson(
     stream << "\"sessionId\":" << Q(session.SessionId) << ",";
     stream << "\"createdUtc\":" << Q(session.CreatedUtc) << ",";
     stream << "\"shutdownEvidence\":" << Q(result.SessionShutdownEvidence) << ",";
+    stream << "\"cleanupState\":" << result.CleanupStateJson << ",";
     stream << "\"source\":" << Q(source) << ",";
     stream << "\"backendMode\":" << Q(result.BackendMode) << ",";
     stream << "\"captureMode\":" << Q(result.CaptureMode) << ",";
@@ -1802,210 +1885,6 @@ bool IsSafeKnapmChunkPath(const std::string& relativePath)
     return safe;
 }
 
-void AppendLe24(std::string& output, std::uint32_t value)
-{
-    output.push_back(static_cast<char>(value & 0xff));
-    output.push_back(static_cast<char>((value >> 8) & 0xff));
-    output.push_back(static_cast<char>((value >> 16) & 0xff));
-}
-
-void AppendLe32(std::string& output, std::uint32_t value)
-{
-    output.push_back(static_cast<char>(value & 0xff));
-    output.push_back(static_cast<char>((value >> 8) & 0xff));
-    output.push_back(static_cast<char>((value >> 16) & 0xff));
-    output.push_back(static_cast<char>((value >> 24) & 0xff));
-}
-
-std::uint32_t ReadLe24(const std::string& input, std::size_t offset)
-{
-    return
-        static_cast<std::uint32_t>(static_cast<unsigned char>(input[offset])) |
-        (static_cast<std::uint32_t>(static_cast<unsigned char>(input[offset + 1])) << 8) |
-        (static_cast<std::uint32_t>(static_cast<unsigned char>(input[offset + 2])) << 16);
-}
-
-std::uint32_t ReadLe32(const std::string& input, std::size_t offset)
-{
-    return
-        static_cast<std::uint32_t>(static_cast<unsigned char>(input[offset])) |
-        (static_cast<std::uint32_t>(static_cast<unsigned char>(input[offset + 1])) << 8) |
-        (static_cast<std::uint32_t>(static_cast<unsigned char>(input[offset + 2])) << 16) |
-        (static_cast<std::uint32_t>(static_cast<unsigned char>(input[offset + 3])) << 24);
-}
-
-bool EncodeZstdRawFrame(const std::string& input, std::string* output, std::string* error)
-{
-    bool encoded = false;
-
-    do
-    {
-        if (output == nullptr)
-        {
-            if (error != nullptr)
-            {
-                *error = "output is null.";
-            }
-            break;
-        }
-
-        if (input.size() > 0xffffffffULL)
-        {
-            if (error != nullptr)
-            {
-                *error = "zstd raw frame input is too large.";
-            }
-            break;
-        }
-
-        output->clear();
-        output->push_back(static_cast<char>(0x28));
-        output->push_back(static_cast<char>(0xb5));
-        output->push_back(static_cast<char>(0x2f));
-        output->push_back(static_cast<char>(0xfd));
-        output->push_back(static_cast<char>(0xa0));
-        AppendLe32(*output, static_cast<std::uint32_t>(input.size()));
-
-        constexpr std::size_t maxBlockSize = 128 * 1024;
-        std::size_t offset = 0;
-        do
-        {
-            const std::size_t remaining = input.size() - offset;
-            const std::size_t blockSize = remaining > maxBlockSize ? maxBlockSize : remaining;
-            const bool lastBlock = offset + blockSize >= input.size();
-            const std::uint32_t blockHeader = (static_cast<std::uint32_t>(blockSize) << 3) | (lastBlock ? 1U : 0U);
-            AppendLe24(*output, blockHeader);
-            output->append(input.data() + offset, blockSize);
-            offset += blockSize;
-        }
-        while (offset < input.size());
-
-        if (input.empty())
-        {
-            AppendLe24(*output, 1U);
-        }
-
-        encoded = true;
-    }
-    while (false);
-
-    return encoded;
-}
-
-bool DecodeZstdRawFrame(const std::string& input, std::string* output, std::string* error)
-{
-    bool decoded = false;
-
-    do
-    {
-        if (output == nullptr)
-        {
-            if (error != nullptr)
-            {
-                *error = "output is null.";
-            }
-            break;
-        }
-
-        output->clear();
-        if (input.size() < 12)
-        {
-            if (error != nullptr)
-            {
-                *error = "corrupt_zstd_frame";
-            }
-            break;
-        }
-
-        if (
-            static_cast<unsigned char>(input[0]) != 0x28 ||
-            static_cast<unsigned char>(input[1]) != 0xb5 ||
-            static_cast<unsigned char>(input[2]) != 0x2f ||
-            static_cast<unsigned char>(input[3]) != 0xfd)
-        {
-            if (error != nullptr)
-            {
-                *error = "corrupt_zstd_frame";
-            }
-            break;
-        }
-
-        const unsigned char descriptor = static_cast<unsigned char>(input[4]);
-        const bool singleSegment = (descriptor & 0x20) != 0;
-        const unsigned char frameContentSizeFlag = static_cast<unsigned char>(descriptor >> 6);
-        const bool checksumPresent = (descriptor & 0x04) != 0;
-        const unsigned char dictionaryIdFlag = static_cast<unsigned char>(descriptor & 0x03);
-        if (!singleSegment || frameContentSizeFlag != 2 || checksumPresent || dictionaryIdFlag != 0 || (descriptor & 0x18) != 0)
-        {
-            if (error != nullptr)
-            {
-                *error = "unsupported_zstd_frame";
-            }
-            break;
-        }
-
-        const std::uint32_t expectedSize = ReadLe32(input, 5);
-        std::size_t offset = 9;
-        bool sawLastBlock = false;
-        while (offset + 3 <= input.size())
-        {
-            const std::uint32_t blockHeader = ReadLe24(input, offset);
-            offset += 3;
-            const bool lastBlock = (blockHeader & 0x01) != 0;
-            const std::uint32_t blockType = (blockHeader >> 1) & 0x03;
-            const std::uint32_t blockSize = blockHeader >> 3;
-            if (blockType != 0)
-            {
-                if (error != nullptr)
-                {
-                    *error = "unsupported_zstd_block";
-                }
-                break;
-            }
-
-            if (offset + blockSize > input.size())
-            {
-                if (error != nullptr)
-                {
-                    *error = "corrupt_zstd_frame";
-                }
-                break;
-            }
-
-            output->append(input.data() + offset, blockSize);
-            offset += blockSize;
-            if (lastBlock)
-            {
-                sawLastBlock = true;
-                break;
-            }
-        }
-
-        if (!sawLastBlock)
-        {
-            if (error != nullptr && error->empty())
-            {
-                *error = "corrupt_zstd_frame";
-            }
-            break;
-        }
-
-        if (output->size() != expectedSize)
-        {
-            if (error != nullptr)
-            {
-                *error = "zstd_uncompressed_size_mismatch";
-            }
-            break;
-        }
-
-        decoded = true;
-    }
-    while (false);
-
-    return decoded;
-}
-
 std::string ToJson(const KnapmOwnerInfo& owner)
 {
     std::ostringstream stream;
@@ -2116,6 +1995,8 @@ struct KnapmSessionWriter
     std::uint64_t AgentEventCount = 0;
     std::uint64_t AuditEventCount = 0;
     std::uint64_t CapturedEventCount = 0;
+    std::string RetainedHistory = "{}";
+    std::string CleanupState = "null";
     std::uint64_t ResolverPointerCandidates = 0;
     std::uint64_t ResolverPointerUnsupported = 0;
     std::uint64_t LastBatchSequence = 0;
@@ -2297,6 +2178,13 @@ struct KnapmSessionWriter
                 break;
             }
 
+            // Keep the complete index within the bounded JSON reader contract.
+            if (Chunks.size() >= 8192)
+            {
+                MarkFailed("Session chunk limit reached; start a new session.");
+                break;
+            }
+
             std::vector<std::string> lines;
             std::uint64_t firstEventId = NextEventId;
             for (const auto& event : batch.Events)
@@ -2319,7 +2207,7 @@ struct KnapmSessionWriter
             if (Compression == "zstd")
             {
                 std::string compressionError;
-                if (!EncodeZstdRawFrame(chunkText, &storedChunk, &compressionError))
+                if (!knmon::EncodeSessionZstd(chunkText, &storedChunk, &compressionError))
                 {
                     MarkFailed(compressionError.empty() ? "zstd compression failed for " + chunkFile : compressionError);
                     break;
@@ -2411,7 +2299,9 @@ struct KnapmSessionWriter
         {
             LastRecordSequence = result.LastTransportSequence;
         }
-        CapturedEventCount = static_cast<std::uint64_t>(result.CapturedEvents.size());
+        CapturedEventCount = result.CapturedEventsSeen;
+        RetainedHistory = CaptureHistoryJson(result);
+        CleanupState = result.CleanupStateJson;
 
         std::vector<std::string> auditLines;
         for (const auto& event : result.AuditEvents)
@@ -2471,9 +2361,16 @@ struct KnapmSessionWriter
 
     void MarkFailed(const std::string& error)
     {
+        if (!Failed)
+        {
+            Error = error;
+        }
         Failed = true;
+        Finalized = false;
+        FinalizedUtc.clear();
         WriterState = "failed";
-        Error = error;
+        Session.SessionState = "failed";
+        Session.LastError = Error;
         SetRecoveryState("malformed", "writer_failed", "manual_inspection", false);
         TouchOwnership();
         Checkpoint.IndexConsistent = false;
@@ -2533,6 +2430,8 @@ struct KnapmSessionWriter
         stream << "\"version\":" << Q(AgentVersion);
         stream << "},";
         stream << "\"session\":" << ToJson(Session) << ",";
+        stream << "\"retainedHistory\":" << RetainedHistory << ",";
+        stream << "\"cleanupState\":" << CleanupState << ",";
         stream << "\"eventCounts\":{";
         stream << "\"audit\":" << AuditEventCount << ",";
         stream << "\"agentEvents\":" << AgentEventCount << ",";
@@ -2558,6 +2457,7 @@ struct KnapmSessionWriter
         stream << "\"storedBytes\":" << StoredBytes << ",";
         stream << "\"uncompressedBytes\":" << UncompressedBytes << ",";
         stream << "\"writerState\":" << Q(WriterState) << ",";
+        stream << "\"writerError\":" << Q(Error) << ",";
         stream << "\"owner\":" << ToJson(Owner) << ",";
         stream << "\"checkpoint\":" << ToJson(Checkpoint) << ",";
         stream << "\"recovery\":" << ToJson(Recovery) << ",";
@@ -2707,7 +2607,7 @@ bool ReadKnapmChunkDecoded(
         }
         else if (compression == "zstd")
         {
-            if (chunk.UncompressedByteLength == 0 || chunk.UncompressedSha256.empty())
+            if (chunk.UncompressedByteLength == 0 || chunk.UncompressedByteLength > knmon::SessionChunkByteLimit || chunk.UncompressedSha256.empty())
             {
                 if (error != nullptr)
                 {
@@ -2717,7 +2617,7 @@ bool ReadKnapmChunkDecoded(
             }
 
             std::string decodeError;
-            if (!DecodeZstdRawFrame(storedBytes, decodedText, &decodeError))
+            if (!knmon::DecodeSessionZstd(storedBytes, static_cast<std::size_t>(chunk.UncompressedByteLength), decodedText, &decodeError))
             {
                 if (error != nullptr)
                 {
@@ -2798,8 +2698,22 @@ void SetKnapmMalformedRecovery(SessionInfo& session, const std::string& reason)
 
 void ValidateManifestTypes(const JsonDocument& manifest, bool knapm)
 {
+    const auto cleanup = manifest.ObjectOrNull("cleanupState");
+    if (!cleanup.empty())
+    {
+        cleanup.String("source", true);
+        cleanup.String("operationId", true);
+        cleanup.String("lifecycle", true);
+        cleanup.Bool("active", true);
+        cleanup.Bool("busy", true);
+        for (const auto* key : { "hooksEnabled", "installedHooks", "restoredHooks", "failedHooks" })
+        {
+            cleanup.UInt32(key, true);
+        }
+        cleanup.UInt64("droppedEvents", true);
+    }
     for (const auto* key : {"schemaVersion", "sessionId", "operationId", "createdUtc", "updatedUtc", "finalizedUtc",
-        "format", "formatVersion", "source", "backendMode", "captureMode", "injectionMethod", "writerState", "compression", "shutdownEvidence"})
+        "format", "formatVersion", "source", "backendMode", "captureMode", "injectionMethod", "writerState", "writerError", "compression", "shutdownEvidence"})
     {
         manifest.String(key);
     }
@@ -2818,6 +2732,19 @@ void ValidateManifestTypes(const JsonDocument& manifest, bool knapm)
     agent.String("path");
     agent.String("architecture", true);
     agent.String("version");
+    if (manifest.Has("retainedHistory"))
+    {
+        const auto history = manifest.Object("retainedHistory", true);
+        if (!history.empty())
+        {
+            history.Bool("bounded");
+            for (const auto* key : { "capturedEventsTotal", "omittedCapturedEvents", "omittedAgentMessages", "omittedAuditEvents",
+                "omittedResolverPointerCandidates", "omittedResolverPointerUnsupported" })
+            {
+                history.UInt64(key);
+            }
+        }
+    }
     const auto counts = manifest.Object("eventCounts", true);
     for (const auto* key : {"audit", "agentEvents", "traceEvents", "capturedEvents", "resolverPointerCandidates", "resolverPointerUnsupported"})
     {
@@ -2866,6 +2793,16 @@ bool HasProcessExitEvidence(const JsonDocument& manifest)
 {
     return manifest.String("shutdownEvidence") == "released_by_process_exit" ||
         manifest.Object("session").String("shutdownEvidence") == "released_by_process_exit";
+}
+
+bool HasQueriedCleanupEvidence(const JsonDocument& manifest)
+{
+    const auto state = manifest.ObjectOrNull("cleanupState");
+    return !state.empty() && state.String("source") == "controller_query" &&
+        !manifest.String("operationId").empty() && state.String("operationId") == manifest.String("operationId") &&
+        state.String("lifecycle") == "disabled" && !state.Bool("active", true) && !state.Bool("busy", true) &&
+        state.UInt32("hooksEnabled", true) == 0 && state.UInt32("failedHooks", true) == 0 &&
+        state.UInt32("restoredHooks", true) >= state.UInt32("installedHooks", true);
 }
 
 void ClassifyKnapmSession(SessionInfo& session, const JsonDocument& manifest)
@@ -3200,7 +3137,8 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
 
                 if (eventCounts.Has("resolverPointerCandidates"))
                 {
-                    if (session.ResolverPointerCandidates != resolverPointerCandidates)
+                    if (session.ResolverPointerCandidates < resolverPointerCandidates ||
+                        session.ResolverPointerCandidates - resolverPointerCandidates != manifest.Object("retainedHistory").UInt64("omittedResolverPointerCandidates"))
                     {
                         session.ValidationErrors.push_back("agent-events.jsonl resolver_pointer_candidate count does not match manifest eventCounts.resolverPointerCandidates.");
                     }
@@ -3212,7 +3150,8 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
 
                 if (eventCounts.Has("resolverPointerUnsupported"))
                 {
-                    if (session.ResolverPointerUnsupported != resolverPointerUnsupported)
+                    if (session.ResolverPointerUnsupported < resolverPointerUnsupported ||
+                        session.ResolverPointerUnsupported - resolverPointerUnsupported != manifest.Object("retainedHistory").UInt64("omittedResolverPointerUnsupported"))
                     {
                         session.ValidationErrors.push_back("agent-events.jsonl resolver_pointer_unsupported count does not match manifest eventCounts.resolverPointerUnsupported.");
                     }
@@ -3264,7 +3203,7 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
                         session.ValidationErrors.push_back("finalized agent-events.jsonl does not contain dropped_events.");
                     }
 
-                    if (!hasShutdown && !HasProcessExitEvidence(manifest))
+                    if (!hasShutdown && !HasProcessExitEvidence(manifest) && !HasQueriedCleanupEvidence(manifest))
                     {
                         session.ValidationErrors.push_back("finalized agent-events.jsonl does not contain agent_shutdown.");
                     }
@@ -3293,6 +3232,7 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
                 session.ValidationErrors.push_back("index operationId must match manifest operationId.");
             }
 
+            session.ReplayIndexSha256 = Sha256Hex(indexText.Text());
             const auto chunkObjects = SplitJsonObjectArray(indexText.Array("chunks", true));
             const std::uint64_t indexChunkCount = static_cast<std::uint64_t>(chunkObjects.size());
             if (indexChunkCount != session.ChunkCount)
@@ -3510,9 +3450,64 @@ SessionInfo ValidateKnapmSession(const std::filesystem::path& sessionPath)
     return session;
 }
 
-std::vector<JsonDocument> ReadKnapmTraceLines(const std::filesystem::path& sessionPath, const SessionInfo& validation)
+class TraceReplayWindow
+{
+public:
+    TraceReplayWindow(std::size_t limit, std::uint64_t selectedEventId)
+        : Limit_(limit), SelectedEventId_(selectedEventId)
+    {
+    }
+
+    void Add(const JsonDocument& line)
+    {
+        ++Seen;
+        if (line.UInt64("eventId", true) > 9007199254740991ULL)
+        {
+            throw JsonInputError("Replay event ID exceeds the renderer integer range.");
+        }
+        if (!Found_)
+        {
+            const auto size = line.Text().size();
+            Lines_.emplace_back(line, size);
+            Bytes_ += size;
+            while (Lines_.size() > Limit_ || Bytes_ > 6 * 1024 * 1024)
+            {
+                Bytes_ -= Lines_.front().second;
+                Lines_.pop_front();
+            }
+            Found_ = SelectedEventId_ != 0 && line.UInt64("eventId", true) == SelectedEventId_;
+        }
+    }
+
+    std::vector<JsonDocument> Finish() const
+    {
+        if (SelectedEventId_ != 0 && !Found_)
+        {
+            throw JsonInputError("Requested replay event was not found.");
+        }
+        std::vector<JsonDocument> lines;
+        for (const auto& entry : Lines_)
+        {
+            lines.push_back(entry.first);
+        }
+        return lines;
+    }
+
+    std::uint64_t Seen = 0;
+
+private:
+    std::size_t Limit_;
+    std::uint64_t SelectedEventId_;
+    std::size_t Bytes_ = 0;
+    bool Found_ = false;
+    std::deque<std::pair<JsonDocument, std::size_t>> Lines_;
+};
+
+std::vector<JsonDocument> ReadKnapmTraceLines(const std::filesystem::path& sessionPath, const SessionInfo& validation,
+    std::size_t windowLimit = 0, std::uint64_t selectedEventId = 0)
 {
     std::vector<JsonDocument> traceLines;
+    TraceReplayWindow window(windowLimit, selectedEventId);
     std::size_t totalBytes = 0;
     std::size_t totalValues = 0;
 
@@ -3531,7 +3526,8 @@ std::vector<JsonDocument> ReadKnapmTraceLines(const std::filesystem::path& sessi
         }
 
         const auto chunkObjects = SplitJsonObjectArray(indexText.Array("chunks", true));
-        if (indexText.String("format", true) != "knapm-index" ||
+        if (validation.ReplayIndexSha256.empty() || Sha256Hex(indexText.Text()) != validation.ReplayIndexSha256 ||
+            indexText.String("format", true) != "knapm-index" ||
             indexText.String("sessionId", true) != validation.SessionId || chunkObjects.size() != validation.ChunkCount)
         {
             throw JsonInputError("Replay index identity or chunk count changed after validation.");
@@ -3552,11 +3548,14 @@ std::vector<JsonDocument> ReadKnapmTraceLines(const std::filesystem::path& sessi
                 throw JsonInputError(readError);
             }
 
-            if (chunkText.size() > 64 * 1024 * 1024 - totalBytes)
+            if (windowLimit == 0 && chunkText.size() > 64 * 1024 * 1024 - totalBytes)
             {
                 throw JsonInputError("Replay byte limit exceeded.");
             }
-            totalBytes += chunkText.size();
+            if (windowLimit == 0)
+            {
+                totalBytes += chunkText.size();
+            }
             const auto lines = ParseTraceJsonl(chunkText);
             if (lines.size() != chunk.EventCount)
             {
@@ -3564,22 +3563,32 @@ std::vector<JsonDocument> ReadKnapmTraceLines(const std::filesystem::path& sessi
             }
             for (const auto& line : lines)
             {
-                totalValues += line.ValueCount();
+                if (windowLimit == 0)
+                {
+                    totalValues += line.ValueCount();
+                }
+                else
+                {
+                    window.Add(line);
+                }
             }
-            if (lines.size() > 250000 - traceLines.size() || totalValues > 1000000)
+            if (windowLimit == 0 && (lines.size() > 250000 - traceLines.size() || totalValues > 1000000))
             {
                 throw JsonInputError("Replay record or value limit exceeded.");
             }
-            traceLines.insert(traceLines.end(), lines.begin(), lines.end());
+            if (windowLimit == 0)
+            {
+                traceLines.insert(traceLines.end(), lines.begin(), lines.end());
+            }
         }
-        if (traceLines.size() != validation.TraceEventCount)
+        if ((windowLimit == 0 ? traceLines.size() : window.Seen) != validation.TraceEventCount)
         {
             throw JsonInputError("Replay event count changed after validation.");
         }
     }
     while (false);
 
-    return traceLines;
+    return windowLimit == 0 ? traceLines : window.Finish();
 }
 
 bool IsKnapmSessionPath(const std::filesystem::path& sessionPath)
@@ -3796,14 +3805,15 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
                     session.ValidationErrors.push_back("agent-events.jsonl does not contain dropped_events.");
                 }
 
-                if (!hasShutdown && !HasProcessExitEvidence(manifest))
+                if (!hasShutdown && !HasProcessExitEvidence(manifest) && !HasQueriedCleanupEvidence(manifest))
                 {
                     session.ValidationErrors.push_back("agent-events.jsonl does not contain agent_shutdown.");
                 }
 
                 if (eventCounts.Has("resolverPointerCandidates"))
                 {
-                    if (session.ResolverPointerCandidates != resolverPointerCandidates)
+                    if (session.ResolverPointerCandidates < resolverPointerCandidates ||
+                        session.ResolverPointerCandidates - resolverPointerCandidates != manifest.Object("retainedHistory").UInt64("omittedResolverPointerCandidates"))
                     {
                         session.ValidationErrors.push_back("agent-events.jsonl resolver_pointer_candidate count does not match manifest eventCounts.resolverPointerCandidates.");
                     }
@@ -3815,7 +3825,8 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
 
                 if (eventCounts.Has("resolverPointerUnsupported"))
                 {
-                    if (session.ResolverPointerUnsupported != resolverPointerUnsupported)
+                    if (session.ResolverPointerUnsupported < resolverPointerUnsupported ||
+                        session.ResolverPointerUnsupported - resolverPointerUnsupported != manifest.Object("retainedHistory").UInt64("omittedResolverPointerUnsupported"))
                     {
                         session.ValidationErrors.push_back("agent-events.jsonl resolver_pointer_unsupported count does not match manifest eventCounts.resolverPointerUnsupported.");
                     }
@@ -3833,6 +3844,7 @@ SessionInfo ValidateSessionDirectory(const std::filesystem::path& sessionDirecto
             }
             else
             {
+                session.ReplayTraceSha256 = Sha256Hex(traceText);
                 const auto lines = ParseTraceJsonl(traceText);
                 session.TraceEventCount = lines.size();
                 session.CompressionSummary = "none";
@@ -3871,7 +3883,8 @@ SessionInfo ValidateSessionPath(const std::filesystem::path& sessionPath)
     return ValidateSessionDirectory(sessionPath);
 }
 
-std::string ReplaySessionJson(const std::filesystem::path& sessionDirectory)
+std::string ReplaySessionJson(const std::filesystem::path& sessionDirectory,
+    std::size_t windowLimit = 0, std::uint64_t selectedEventId = 0)
 {
     const SessionInfo validation = ValidateSessionPath(sessionDirectory);
     std::string traceText;
@@ -3882,20 +3895,34 @@ std::string ReplaySessionJson(const std::filesystem::path& sessionDirectory)
     {
         if (validation.Format == "knapm")
         {
-            traceLines = ReadKnapmTraceLines(sessionDirectory, validation);
+            traceLines = ReadKnapmTraceLines(sessionDirectory, validation, windowLimit, selectedEventId);
         }
         else if (ReadTextFile(sessionDirectory / L"trace-events.jsonl", &traceText, &readError))
         {
+            if (validation.ReplayTraceSha256.empty() || Sha256Hex(traceText) != validation.ReplayTraceSha256)
+            {
+                throw JsonInputError("Replay trace changed after validation.");
+            }
             traceLines = ParseTraceJsonl(traceText);
         }
         else
         {
             throw JsonInputError(readError);
         }
-        if (traceLines.size() != validation.TraceEventCount)
+        if ((windowLimit == 0 || validation.Format != "knapm") && traceLines.size() != validation.TraceEventCount)
         {
             throw JsonInputError("Replay event count changed after validation.");
         }
+    }
+
+    if (validation.Success && windowLimit != 0 && validation.Format != "knapm")
+    {
+        TraceReplayWindow window(windowLimit, selectedEventId);
+        for (const auto& line : traceLines)
+        {
+            window.Add(line);
+        }
+        traceLines = window.Finish();
     }
 
     std::ostringstream stream;
@@ -3909,6 +3936,10 @@ std::string ReplaySessionJson(const std::filesystem::path& sessionDirectory)
     if (!validation.Success)
     {
         stream << Q(validation.Message);
+    }
+    else if (windowLimit != 0)
+    {
+        stream << Q("Validated session replay loaded a bounded display window; use the trace index for older events.");
     }
     else if (validation.Format == "knapm")
     {
@@ -4022,6 +4053,7 @@ std::uint32_t GetUInt32Option(const std::vector<std::string>& args, const std::s
 
 struct KnapmCatalogRow
 {
+    std::string ReplayIndexSha256;
     std::string SessionPath;
     std::string Format;
     std::string SessionId;
@@ -4253,6 +4285,7 @@ KnapmCatalogRow BuildKnapmCatalogRow(const std::filesystem::path& sessionPath)
     row.RecoveryReason = validation.RecoveryReason;
     row.RecoveryAction = validation.RecoveryAction;
     row.ChunkCount = validation.ChunkCount;
+    row.ReplayIndexSha256 = validation.ReplayIndexSha256;
     row.TraceEventCount = validation.TraceEventCount;
     row.LastBatchSequence = validation.LastBatchSequence;
     row.LastRecordSequence = validation.LastRecordSequence;
@@ -5629,7 +5662,8 @@ KnapmTraceIndexEvent TraceIndexEventFromJson(
 bool ReadKnapmTraceIndexEvents(
     const std::filesystem::path& sessionPath,
     const KnapmCatalogRow& session,
-    std::vector<KnapmTraceIndexEvent>* events,
+    const std::function<bool(const KnapmTraceIndexEvent&)>& consume,
+    std::uint64_t* eventCount,
     std::string* error)
 {
     bool success = false;
@@ -5638,11 +5672,11 @@ bool ReadKnapmTraceIndexEvents(
     {
         do
         {
-            if (events == nullptr)
+            if (eventCount == nullptr || !consume)
             {
                 if (error != nullptr)
                 {
-                    *error = "trace index event output is null.";
+                    *error = "trace index event consumer is missing.";
                 }
                 break;
             }
@@ -5658,6 +5692,11 @@ bool ReadKnapmTraceIndexEvents(
                 break;
             }
 
+            if (session.ReplayIndexSha256.empty() || Sha256Hex(indexText.Text()) != session.ReplayIndexSha256)
+            {
+                throw JsonInputError("Trace index changed after validation.");
+            }
+            *eventCount = 0;
             const auto chunkObjects = SplitJsonObjectArray(indexText.Array("chunks", true));
             for (const auto& chunkJson : chunkObjects)
             {
@@ -5684,10 +5723,18 @@ bool ReadKnapmTraceIndexEvents(
                 }
 
                 const auto lines = ParseTraceJsonl(chunkText);
+                if (lines.size() != chunk.EventCount)
+                {
+                    throw JsonInputError("Trace index chunk row count changed.");
+                }
                 for (std::size_t lineIndex = 0; lineIndex < lines.size(); ++lineIndex)
                 {
                     const JsonDocument& line = lines[lineIndex];
-                    events->push_back(TraceIndexEventFromJson(session, chunk, static_cast<std::uint64_t>(lineIndex), line));
+                    if (!consume(TraceIndexEventFromJson(session, chunk, static_cast<std::uint64_t>(lineIndex), line)))
+                    {
+                        throw JsonInputError("Trace index row insertion failed.");
+                    }
+                    ++*eventCount;
                 }
 
                 if (error != nullptr && !error->empty())
@@ -5698,6 +5745,10 @@ bool ReadKnapmTraceIndexEvents(
 
             if (error == nullptr || error->empty())
             {
+                if (*eventCount != session.TraceEventCount)
+                {
+                    throw JsonInputError("Trace index total row count changed.");
+                }
                 success = true;
             }
         }
@@ -5706,10 +5757,6 @@ bool ReadKnapmTraceIndexEvents(
     catch (const std::exception& exception)
     {
         success = false;
-        if (events != nullptr)
-        {
-            events->clear();
-        }
         if (error != nullptr)
         {
             *error = exception.what();
@@ -6472,23 +6519,18 @@ std::string TraceIndexBuildJson(const std::vector<std::string>& args)
                     continue;
                 }
 
-                std::vector<KnapmTraceIndexEvent> events;
-                if (!ReadKnapmTraceIndexEvents(sessionPath, row, &events, &error))
-                {
-                    break;
-                }
-
                 if (!InsertTraceIndexSessionRow(database, row, &error))
                 {
                     break;
                 }
-
-                for (const KnapmTraceIndexEvent& event : events)
-                {
-                    if (!InsertTraceIndexEventRow(database, event, &error))
+                std::uint64_t insertedEvents = 0;
+                if (!ReadKnapmTraceIndexEvents(sessionPath, row,
+                    [&](const KnapmTraceIndexEvent& event)
                     {
-                        break;
-                    }
+                        return InsertTraceIndexEventRow(database, event, &error);
+                    }, &insertedEvents, &error))
+                {
+                    break;
                 }
                 if (!error.empty())
                 {
@@ -6496,7 +6538,7 @@ std::string TraceIndexBuildJson(const std::vector<std::string>& args)
                 }
 
                 ++indexedSessionCount;
-                eventCount += static_cast<std::uint64_t>(events.size());
+                eventCount += insertedEvents;
             }
             if (!error.empty())
             {
@@ -7220,8 +7262,7 @@ int LaunchSessionCommand(const std::vector<std::string>& args)
         session.TransportAbortedRecords = batch.AbortedRecords;
         session.HostDroppedBatches = batch.HostDroppedBatches;
         session.UpdatedUtc = NowUtc();
-        std::cout << TraceBatchFrameJson(batch) << "\n" << std::flush;
-        return true;
+        return WriteTraceBatchFrame(batch);
     };
     callbacks.OnSessionFrame = [&](const std::string& frameType, const knmon::KnMonCaptureResult& partialResult)
     {
@@ -7510,13 +7551,14 @@ int AttachSessionCommand(const std::vector<std::string>& args)
         session.TransportAbortedRecords = batch.AbortedRecords;
         session.HostDroppedBatches = batch.HostDroppedBatches;
         session.UpdatedUtc = NowUtc();
-        std::cout << TraceBatchFrameJson(batch) << "\n" << std::flush;
+        const bool outputWritten = WriteTraceBatchFrame(batch);
         knapmWriter.UpdateSession(session);
-        if (!knapmWriter.WriteBatch(batch) && !knapmWriter.Error.empty())
+        const bool stored = knapmWriter.WriteBatch(batch);
+        if (!stored && !knapmWriter.Error.empty())
         {
             std::cerr << "KNAPM writer failed: " << knapmWriter.Error << "\n";
         }
-        return true;
+        return outputWritten && stored;
     };
     callbacks.OnSessionFrame = [&](const std::string& frameType, const knmon::KnMonCaptureResult& partialResult)
     {
@@ -7534,12 +7576,30 @@ int AttachSessionCommand(const std::vector<std::string>& args)
     };
 
     const knmon::KnMonCaptureStreamCallbacks* callbackPtr = streamBatches ? &callbacks : nullptr;
-    knmon::KnMonCaptureResult result = controller.AttachCapture(request, callbackPtr);
+    knmon::KnMonCaptureResult result;
+    if (!knapmWriter.Failed)
+    {
+        result = controller.AttachCapture(request, callbackPtr);
+    }
+    else
+    {
+        result.OperationId = request.OperationId;
+        result.SessionId = request.SessionId;
+        result.TargetProcessId = request.ProcessId;
+    }
     session = BuildSessionInfoFromCapture(result, session);
     knapmWriter.Finalize(result, session);
     if (knapmWriter.Failed && !knapmWriter.Error.empty())
     {
         std::cerr << "KNAPM writer failed: " << knapmWriter.Error << "\n";
+        result.Success = false;
+        result.Win32ErrorCode = ERROR_WRITE_FAULT;
+        result.Operation = "session_storage_failed";
+        result.OperationState = "failed";
+        result.SessionState = "failed";
+        result.Message = knapmWriter.Error;
+        session.SessionState = "failed";
+        session.LastError = knapmWriter.Error;
     }
 
     const std::string finalFrame = session.SessionState == "failed" ? "session_failed" : "session_stopped";
@@ -7554,7 +7614,7 @@ int AttachSessionCommand(const std::vector<std::string>& args)
     stream << "}";
     std::cout << stream.str() << "\n";
 
-    return 0;
+    return knapmWriter.Failed ? 1 : 0;
 }
 
 std::string SuperviseTreeJson(const std::vector<std::string>& args)
@@ -7693,7 +7753,27 @@ std::string ReplaySessionCommandJson(const std::vector<std::string>& args)
         return stream.str();
     }
 
-    return ReplaySessionJson(PathFromUtf8(sessionPath));
+    const auto windowText = GetOption(args, "--window-limit");
+    if (!windowText.empty() && (windowText.size() > 4 || windowText.find_first_not_of("0123456789") != std::string::npos))
+    {
+        throw JsonInputError("Invalid replay window limit.");
+    }
+    const auto windowLimit = GetUInt32Option(args, "--window-limit", 0);
+    if (windowLimit > 5000)
+    {
+        throw JsonInputError("Replay window limit exceeds 5000 events.");
+    }
+    const auto selected = GetOption(args, "--selected-event-id");
+    std::uint64_t selectedEventId = 0;
+    if (!selected.empty())
+    {
+        if (windowLimit == 0 || selected.size() > 20 || selected.find_first_not_of("0123456789") != std::string::npos)
+        {
+            throw JsonInputError("Invalid selected replay event ID.");
+        }
+        selectedEventId = std::stoull(selected);
+    }
+    return ReplaySessionJson(PathFromUtf8(sessionPath), windowLimit, selectedEventId);
 }
 
 std::string ValidateSessionCommandJson(const std::vector<std::string>& args)
@@ -8181,6 +8261,11 @@ bool LaunchBackgroundHelper(
 {
     bool launched = false;
     PROCESS_INFORMATION processInfo = {};
+    HANDLE nullStream = INVALID_HANDLE_VALUE;
+    STARTUPINFOEXW startupInfo = {};
+    std::vector<unsigned char> attributeStorage;
+    bool attributesInitialized = false;
+    // Background sessions persist KNAPM directly; their console streams are sinks.
     (void)stdoutPath;
     (void)stderrPath;
 
@@ -8206,19 +8291,48 @@ bool LaunchBackgroundHelper(
         std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
         mutableCommandLine.push_back(L'\0');
 
-        STARTUPINFOW startupInfo = {};
-        startupInfo.cb = sizeof(startupInfo);
+        SECURITY_ATTRIBUTES security = { sizeof(security), nullptr, TRUE };
+        nullStream = CreateFileW(L"NUL", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+            &security, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        SIZE_T attributeBytes = 0;
+        InitializeProcThreadAttributeList(nullptr, 1, 0, &attributeBytes);
+        attributeStorage.resize(attributeBytes);
+        startupInfo.lpAttributeList = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(attributeStorage.data());
+        if (nullStream == INVALID_HANDLE_VALUE || attributeBytes == 0 ||
+            !InitializeProcThreadAttributeList(startupInfo.lpAttributeList, 1, 0, &attributeBytes))
+        {
+            if (error != nullptr)
+            {
+                *error = "Background standard-handle initialization failed.";
+            }
+            break;
+        }
+        attributesInitialized = true;
+        if (!UpdateProcThreadAttribute(startupInfo.lpAttributeList, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+            &nullStream, sizeof(nullStream), nullptr, nullptr))
+        {
+            if (error != nullptr)
+            {
+                *error = "Background handle inheritance restriction failed.";
+            }
+            break;
+        }
+        startupInfo.StartupInfo.cb = sizeof(startupInfo);
+        startupInfo.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+        startupInfo.StartupInfo.hStdInput = nullStream;
+        startupInfo.StartupInfo.hStdOutput = nullStream;
+        startupInfo.StartupInfo.hStdError = nullStream;
 
         const BOOL created = CreateProcessW(
             nullptr,
             mutableCommandLine.data(),
             nullptr,
             nullptr,
-            FALSE,
-            CREATE_NO_WINDOW | DETACHED_PROCESS,
+            TRUE,
+            CREATE_NO_WINDOW | EXTENDED_STARTUPINFO_PRESENT,
             nullptr,
             HelperDirectory().wstring().c_str(),
-            &startupInfo,
+            &startupInfo.StartupInfo,
             &processInfo);
         if (!created)
         {
@@ -8237,6 +8351,14 @@ bool LaunchBackgroundHelper(
     }
     while (false);
 
+    if (attributesInitialized)
+    {
+        DeleteProcThreadAttributeList(startupInfo.lpAttributeList);
+    }
+    if (nullStream != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(nullStream);
+    }
     if (processInfo.hThread != nullptr)
     {
         CloseHandle(processInfo.hThread);
@@ -8385,18 +8507,6 @@ NativeSessionInfo NativeSessionFromDaemonRecord(const DaemonSessionRecord& recor
             break;
         }
 
-        const SessionInfo validation = ValidateSessionPath(knapmPath);
-        session.KnapmValid = validation.Success;
-        finalized = validation.Finalized;
-        if (validation.Success)
-        {
-            session.LastTransportSequence = validation.LastRecordSequence;
-            session.RecordsStreamed = validation.TraceEventCount;
-            session.TransportDroppedEvents = validation.TransportDroppedEvents;
-        session.TransportAbortedRecords = validation.TransportAbortedRecords;
-            session.HostDroppedBatches = validation.HostDroppedBatches;
-        }
-
         JsonDocument manifest;
         std::string readError;
         if (!ReadTextFile(KnapmChildPath(knapmPath, "manifest.json"), &manifest, &readError))
@@ -8407,6 +8517,27 @@ NativeSessionInfo NativeSessionFromDaemonRecord(const DaemonSessionRecord& recor
         const JsonDocument sessionObject = ExtractJsonObject(manifest, "session");
         if (sessionObject.empty())
         {
+            break;
+        }
+        try
+        {
+            ValidateManifestTypes(manifest, true);
+            if (manifest.String("format", true) != "knapm" || manifest.String("sessionId", true) != record.SessionId ||
+                manifest.String("operationId", true) != record.OperationId ||
+                sessionObject.String("sessionId", true) != record.SessionId ||
+                sessionObject.String("operationId", true) != record.OperationId ||
+                sessionObject.UInt32("targetProcessId", true) != record.TargetProcessId)
+            {
+                throw JsonInputError("Daemon manifest identity differs from its registry record.");
+            }
+        }
+        catch (const std::exception& exception)
+        {
+            session.SessionState = "failed";
+            session.RecoveryState = "malformed";
+            session.RecoveryReason = "manifest_invalid";
+            session.RecoveryAction = "manual_inspection";
+            session.LastError = exception.what();
             break;
         }
 
@@ -8425,6 +8556,11 @@ NativeSessionInfo NativeSessionFromDaemonRecord(const DaemonSessionRecord& recor
         session.StopRequested = ExtractJsonBool(sessionObject, "stopRequested");
         session.AgentCleanupAttempted = ExtractJsonBool(sessionObject, "agentCleanupAttempted");
         session.AgentCleanupSucceeded = ExtractJsonBool(sessionObject, "agentCleanupSucceeded");
+        session.LastError = sessionObject.String("lastError");
+        if (session.LastError.empty())
+        {
+            session.LastError = manifest.String("writerError");
+        }
         session.ShutdownEvidence = ExtractJsonString(sessionObject, "shutdownEvidence");
         session.StoppedUtc = ExtractJsonString(sessionObject, "stoppedUtc");
         session.DaemonHeartbeatUtc = ExtractJsonString(sessionObject, "daemonHeartbeatUtc");
@@ -8433,6 +8569,23 @@ NativeSessionInfo NativeSessionFromDaemonRecord(const DaemonSessionRecord& recor
             session.DaemonHeartbeatUtc = NowUtc();
         }
 
+        finalized = manifest.Bool("finalized", true);
+        if (!finalized && session.DaemonAlive && session.SessionProcessAlive && session.TargetAlive &&
+            manifest.String("writerState") != "failed" &&
+            (session.SessionState == "running" || session.SessionState == "created" ||
+                session.SessionState == "stopping_agent" || session.SessionState == "draining"))
+        {
+            // Progress is a manifest snapshot, not a full replay-integrity claim.
+            session.KnapmValid = false;
+            session.RecoveryState = "healthy";
+            session.RecoveryReason = "writer_active_integrity_pending";
+            session.RecoveryAction = "wait";
+            break;
+        }
+
+        const SessionInfo validation = ValidateSessionPath(knapmPath);
+        session.KnapmValid = validation.Success;
+        finalized = validation.Finalized;
         if (!validation.Success)
         {
             session.SessionState = "failed";

@@ -6,9 +6,11 @@ tests/fixtures/session/**/*.jsonl text eol=lf
 # Preserve upstream checksums of pinned native dependencies on Windows.
 native/third-party/nlohmann/json.hpp text eol=lf
 native/third-party/nlohmann/LICENSE.MIT text eol=lf whitespace=-blank-at-eol
+native/third-party/zstd/** text eol=lf whitespace=-blank-at-eol
 
 # Generated artifacts are byte-compared by validators. Keep them LF on Windows.
 generated/definition-ids.json text eol=lf
+generated/ui-catalog.json text eol=lf
 generated/dll-batch-promotion-plan.json text eol=lf
 generated/manual-decoder-batch-plan.json text eol=lf
 generated/tier2-hook-plan.json text eol=lf

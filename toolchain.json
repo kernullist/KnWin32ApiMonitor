@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "node": "24.21.0",
+  "rust": "1.96.0",
+  "cmake": "4.3.3",
+  "generator": "Visual Studio 17 2022",
+  "toolset": "v143,version=14.44.35207",
+  "windowsSdk": "10.0.26100.0",
+  "architectures": ["x64", "Win32"]
+}

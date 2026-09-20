@@ -151,6 +151,18 @@ function hasProcessExitEvidence(manifest)
     manifest?.session?.shutdownEvidence === "released_by_process_exit";
 }
 
+function hasQueriedCleanupEvidence(manifest)
+{
+  const state = manifest.cleanupState;
+  return state?.source === "controller_query" && typeof manifest.operationId === "string" &&
+    manifest.operationId.length > 0 && state.operationId === manifest.operationId &&
+    state.lifecycle === "disabled" && state.active === false && state.busy === false &&
+    state.hooksEnabled === 0 && state.failedHooks === 0 &&
+    Number.isSafeInteger(state.installedHooks) && state.installedHooks >= 0 && state.installedHooks <= 0xffffffff &&
+    Number.isSafeInteger(state.restoredHooks) && state.restoredHooks >= state.installedHooks && state.restoredHooks <= 0xffffffff &&
+    Number.isSafeInteger(state.droppedEvents) && state.droppedEvents >= 0;
+}
+
 function validateAgentEvents(sessionPath, errors, manifest) {
   const rows = readJsonl(path.join(sessionPath, expectedFiles.agentEvents), errors);
   let helloCount = 0;
@@ -218,7 +230,7 @@ function validateAgentEvents(sessionPath, errors, manifest) {
     errors.push(`${expectedFiles.agentEvents}: dropped_events is missing`);
   }
 
-  if (!hasShutdown && !hasProcessExitEvidence(manifest)) {
+  if (!hasShutdown && !hasProcessExitEvidence(manifest) && !hasQueriedCleanupEvidence(manifest)) {
     errors.push(`${expectedFiles.agentEvents}: agent_shutdown is missing`);
   }
 
@@ -627,7 +639,7 @@ function validateKnapmFixture(name, expectedSuccess) {
         errors.push(`${manifestLabel}: finalized agent events must contain dropped_events`);
       }
 
-      if (!hasShutdown && !hasProcessExitEvidence(manifest)) {
+      if (!hasShutdown && !hasProcessExitEvidence(manifest) && !hasQueriedCleanupEvidence(manifest)) {
         errors.push(`${manifestLabel}: finalized agent events must contain agent_shutdown`);
       }
     }

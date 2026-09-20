@@ -185,18 +185,19 @@ std::wstring BuildSamplePath()
 {
     std::array<wchar_t, MAX_PATH> tempPath = {};
     std::wstring result;
+    const auto fileName = L"knmon-fileio-sample-" + std::to_wstring(GetCurrentProcessId()) + L".dat";
 
     do
     {
         const DWORD length = GetTempPathW(static_cast<DWORD>(tempPath.size()), tempPath.data());
         if (length == 0 || length >= tempPath.size())
         {
-            result = L".\\knmon-fileio-sample.dat";
+            result = L".\\" + fileName;
             break;
         }
 
         result.assign(tempPath.data(), length);
-        result += L"knmon-fileio-sample.dat";
+        result += fileName;
     }
     while (false);
 
@@ -3467,12 +3468,17 @@ bool RunAttachFileIoProbe(int iteration)
         const DWORD tempLength = GetTempPathA(static_cast<DWORD>(sizeof(tempPath)), tempPath);
         if (tempLength == 0 || tempLength >= sizeof(tempPath))
         {
-            strcpy_s(ansiPath, ".\\knmon-fileio-attach-sample-a.dat");
+            sprintf_s(ansiPath, ".\\knmon-fileio-attach-sample-a-%lu.dat", GetCurrentProcessId());
         }
         else
         {
-            strcpy_s(ansiPath, tempPath);
-            strcat_s(ansiPath, "knmon-fileio-attach-sample-a.dat");
+            const auto fullPath = std::string(tempPath) + "knmon-fileio-attach-sample-a-" +
+                std::to_string(GetCurrentProcessId()) + ".dat";
+            if (fullPath.size() >= sizeof(ansiPath))
+            {
+                break;
+            }
+            strcpy_s(ansiPath, fullPath.c_str());
         }
 
         ansiHandle = CreateFileA(
@@ -3543,17 +3549,19 @@ int RunAttachLoop(int iterations, int delayMs)
         std::cout << ProgramName << " attach-loop-ready pid=" << GetCurrentProcessId() << "\n" << std::flush;
         SleepResponsive(delayMs);
 
+        bool probesSucceeded = true;
         for (int iteration = 0; iteration < iterations && !g_stopRequested.load(); ++iteration)
         {
             if (!RunAttachFileIoProbe(iteration))
             {
+                probesSucceeded = false;
                 break;
             }
 
             SleepResponsive(delayMs);
         }
 
-        exitCode = 0;
+        exitCode = probesSucceeded ? 0 : 1;
     }
     while (false);
 

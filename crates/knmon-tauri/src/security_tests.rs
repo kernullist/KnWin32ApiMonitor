@@ -1,5 +1,84 @@
 use super::*;
 
+#[test]
+fn registry_and_global_trace_memory_remain_bounded()
+{
+    let id = operation_id("registry-bound");
+    register_native_operation(&id, "attach_capture_stream", 42, 0).unwrap();
+    assert!(register_native_operation(&id, "attach_capture_stream", 43, 0).is_err());
+    let template = operation_registry().lock().unwrap().get(&id).unwrap().clone();
+    let mut registry = HashMap::new();
+    for index in 0..OPERATION_HISTORY_LIMIT
+    {
+        registry.insert(index.to_string(), template.clone());
+    }
+    assert!(reserve_operation_slot(&mut registry).is_err());
+    assert_eq!(registry.len(), OPERATION_HISTORY_LIMIT);
+    registry.get_mut("0").unwrap().state = "recovery_required".to_string();
+    assert!(reserve_operation_slot(&mut registry).is_err());
+    registry.get_mut("0").unwrap().state = "completed".to_string();
+    reserve_operation_slot(&mut registry).unwrap();
+    assert!(!registry.contains_key("0"));
+    assert_eq!(registry.len(), OPERATION_HISTORY_LIMIT - 1);
+
+    registry.clear();
+    let mut batch = tests::test_batch(&id, &new_session_id(&id), 1);
+    batch.events[0].last_error_message = "M".repeat(1024 * 1024);
+    batch.storage_bytes = serde_json::to_vec(&batch).unwrap().len() + 20;
+    for index in 0..4
+    {
+        let mut record = template.clone();
+        record.started_at += Duration::from_millis(index);
+        for _ in 0..20
+        {
+            record.trace_batches.push_back(batch.clone());
+        }
+        registry.insert(index.to_string(), record);
+    }
+    trim_global_trace_queues(&mut registry);
+    let bytes: usize = registry.values().flat_map(|record| &record.trace_batches).map(|batch| batch.storage_bytes).sum();
+    assert!(bytes <= STREAM_GLOBAL_QUEUE_MAX_BYTES);
+    assert!(registry.get("0").unwrap().host_dropped_batches > 0);
+    assert_eq!(registry.get("3").unwrap().trace_batches.len(), 20);
+}
+
+#[test]
+fn bounded_command_output_refuses_invalid_or_incomplete_data()
+{
+    let stop = std::sync::atomic::AtomicBool::new(false);
+    assert_eq!(read_bounded_output(&b"abcd"[..], 4, &stop).unwrap(), "abcd");
+    assert!(read_bounded_output(&b"abcde"[..], 4, &stop).unwrap_err().contains("budget"));
+    assert!(read_bounded_output(&b"\xff"[..], 4, &stop).unwrap_err().contains("UTF-8"));
+    stop.store(true, std::sync::atomic::Ordering::Release);
+    assert!(read_bounded_output(&b"abcd"[..], 4, &stop).unwrap_err().contains("cancelled"));
+}
+
+#[test]
+fn batch_drain_is_replayable_until_ack_and_byte_bounded()
+{
+    let id = operation_id("byte-queue");
+    register_native_operation(&id, "attach_capture_stream", 42, 0).unwrap();
+    let session = new_session_id(&id);
+    for sequence in 1..=50
+    {
+        let mut batch = tests::test_batch(&id, &session, sequence);
+        batch.events[0].last_error_message = "A".repeat(1024 * 1024);
+        push_native_trace_batch(&id, batch);
+    }
+    let record = operation_registry().lock().unwrap().get(&id).unwrap().clone();
+    assert!(record.trace_batches.iter().map(|batch| batch.storage_bytes).sum::<usize>() <= STREAM_QUEUE_MAX_BYTES);
+    assert!(record.host_dropped_batches > 0);
+    let first = drain_native_trace_batches(session.clone(), 0).unwrap();
+    let repeat = drain_native_trace_batches(session.clone(), 0).unwrap();
+    assert_eq!(first.len(), repeat.len());
+    assert_eq!(first.first().unwrap().batch_sequence, repeat.first().unwrap().batch_sequence);
+    assert!(first.iter().map(|batch| batch.storage_bytes).sum::<usize>() <= STREAM_DRAIN_MAX_BYTES);
+    let ack = first.last().unwrap().batch_sequence;
+    let next = drain_native_trace_batches(session, ack).unwrap();
+    assert_eq!(next.first().unwrap().batch_sequence, ack + 1);
+    assert_eq!(operation_registry().lock().unwrap().get(&id).unwrap().host_dropped_batches, record.host_dropped_batches);
+}
+
 fn operation_id(prefix: &str) -> String
 {
     new_operation_id(prefix, std::process::id())
@@ -10,7 +89,7 @@ fn startup_failures_are_terminal_and_keep_the_reason()
 {
     let id = operation_id("rollback");
     {
-        let _start = OperationStart::new(&id, "attach_capture_stream", 42, 0);
+        let _start = OperationStart::new(&id, "attach_capture_stream", 42, 0).unwrap();
     }
     let record = operation_registry().lock().unwrap().get(&id).unwrap().clone();
     assert_eq!(record.state, "failed");
@@ -18,7 +97,7 @@ fn startup_failures_are_terminal_and_keep_the_reason()
     assert_eq!(record.last_error, "operation startup rolled back");
 
     let id = operation_id("spawn-failure");
-    let start = OperationStart::new(&id, "attach_capture_stream", 42, 0);
+    let start = OperationStart::new(&id, "attach_capture_stream", 42, 0).unwrap();
     let result = spawn_streaming_helper(Path::new("Z:/knmon-nonexistent/helper.exe"), &[], &id);
     assert!(start.finish(result).is_err());
     let record = operation_registry().lock().unwrap().get(&id).unwrap().clone();
@@ -45,7 +124,7 @@ fn stream_framing_has_a_bound_and_requires_a_complete_utf8_line()
 fn stream_rejects_foreign_identity_and_cannot_revive_after_failure()
 {
     let id = operation_id("foreign-frame");
-    register_native_operation(&id, "attach_capture_stream", 42, 0);
+    register_native_operation(&id, "attach_capture_stream", 42, 0).unwrap();
     let wrong = serde_json::json!({"schemaVersion":"0.1.0", "frameType":"trace_batch", "operationId":"other", "sessionId":new_session_id(&id)});
     assert!(process_streaming_frame_line(&id, &wrong.to_string()).unwrap_err().contains("identity mismatch"));
     update_streaming_error(&id, "failed", "foreign identity".to_string());
@@ -112,7 +191,7 @@ fn cancellation_waits_for_event_creation_without_losing_the_request()
         fn WaitForSingleObject(handle: *mut c_void, timeout: u32) -> u32;
     }
     let id = operation_id("early-cancel");
-    register_native_operation(&id, "attach_capture_stream", 42, 0);
+    register_native_operation(&id, "attach_capture_stream", 42, 0).unwrap();
     assert_eq!(signal_cancel_operation(&id).unwrap().win32_error_code, 2);
     let name = cancellation_event_name(&id);
     let worker = thread::spawn(move ||
@@ -137,7 +216,7 @@ fn actual_helper_stream_finishes_and_retains_launch_identity()
     let helper = PathBuf::from(std::env::var_os("KNMON_TEST_NATIVE_HELPER").expect("native helper path required"));
     let target = helper.parent().unwrap().join("knmon-sample-fileio.exe");
     let id = operation_id("native-stream");
-    let start = OperationStart::new(&id, "launch_capture_stream", 0, 0);
+    let start = OperationStart::new(&id, "launch_capture_stream", 0, 0).unwrap();
     let args = vec!["launch-session".to_string(), "--target".to_string(), target.to_string_lossy().into_owned(),
         "--own-launch-job".to_string(), "--owner-pid".to_string(), std::process::id().to_string(),
         "--owner-created".to_string(), process_liveness::current_creation_time().to_string(),
@@ -159,4 +238,18 @@ fn actual_helper_stream_finishes_and_retains_launch_identity()
         assert!(begin.elapsed() < Duration::from_secs(40), "{}", record.last_error);
         thread::sleep(Duration::from_millis(100));
     }
+}
+
+#[test]
+fn duplicate_batches_and_future_ack_are_rejected()
+{
+    let id = operation_id("duplicate-batch");
+    register_native_operation(&id, "attach_capture_stream", 42, 0).unwrap();
+    let session = new_session_id(&id);
+    let batch = tests::test_batch(&id, &session, 1);
+    let frame = serde_json::to_string(&batch).unwrap();
+    process_streaming_frame_line(&id, &frame).unwrap();
+    assert!(process_streaming_frame_line(&id, &frame).unwrap_err().contains("sequence"));
+    assert!(drain_native_trace_batches(session.clone(), 2).is_err());
+    assert_eq!(drain_native_trace_batches(session, 0).unwrap().len(), 1);
 }

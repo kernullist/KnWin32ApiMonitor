@@ -1,3 +1,4 @@
+import { TraceIngestClient, type TraceIngestCommand, type TraceIngestDelta, type CapturedEventChunk } from "./traceIngestProtocol";
 import {
   Activity,
   AlertTriangle,
@@ -119,26 +120,6 @@ const detailColumns: ColumnConfig[] = [
 
 type ReplaySource =
   | { kind: "catalog"; label: string; path: string; validationStatus: string };
-
-type CapturedEventChunk = {
-  events: AgentApiCallEvent[];
-  contextTags: string[];
-};
-
-type TraceIngestCommand =
-  | { type: "reset" }
-  | { type: "replace"; events: TraceEvent[]; selectedEventId?: number }
-  | { type: "enqueue-events"; chunks: CapturedEventChunk[] }
-  | { type: "enqueue-batches"; batches: NativeTraceBatch[] };
-
-type TraceIngestSnapshot = {
-  type: "snapshot";
-  events: TraceEvent[];
-  totalCapturedEvents: number;
-  selectedEventId: number;
-  processedEvents: number;
-  estimatedSessionBytes: number;
-};
 
 type ProcessExitNotice = {
   sessionId: string;
@@ -680,7 +661,10 @@ function App() {
   const traceScrollRef = useRef<HTMLDivElement | null>(null);
   const traceScrollRafRef = useRef<number | null>(null);
   const traceIngestWorker = useRef<Worker | null>(null);
-  const pendingTraceIngestCommands = useRef<TraceIngestCommand[]>([]);
+  const traceIngestClient = useRef<TraceIngestClient | null>(null);
+  const traceWindow = useRef<TraceEvent[]>([]);
+  const traceViewMode = useRef<"live" | "replay">("live");
+  const traceSessionId = useRef<string | null>(null);
   const traceAutoScrollRef = useRef(traceAutoScroll);
   const selectedEventIdRef = useRef(selectedEventId);
 
@@ -721,36 +705,34 @@ function App() {
   useEffect(() => {
     const worker = new Worker(new URL("./traceIngest.worker.ts", import.meta.url), { type: "module" });
 
-    worker.onmessage = (event: MessageEvent<TraceIngestSnapshot>) => {
-      if (event.data.type !== "snapshot") {
-        return;
-      }
-
-      setEvents(event.data.events);
-      setTotalCapturedEvents(event.data.totalCapturedEvents);
-      setEstimatedSessionBytes(event.data.estimatedSessionBytes);
-      if (traceAutoScrollRef.current || selectedEventIdRef.current === 0) {
-        selectedEventIdRef.current = event.data.selectedEventId;
-        setSelectedEventId(event.data.selectedEventId);
-      }
-    };
-
-    worker.onerror = (event) => {
-      setOutputEvents((current) => [
-        makeAuditEvent("trace_ingest_worker_failed", "trace_ingest_worker", event.message || "Trace ingest worker failed."),
-        ...current
-      ].slice(0, 80));
-    };
-
-    traceIngestWorker.current = worker;
-    const pendingCommands = pendingTraceIngestCommands.current.splice(0);
-    pendingCommands.forEach((command) => {
-      worker.postMessage(command);
+    const client = new TraceIngestClient((request) => worker.postMessage(request), (delta) =>
+    {
+      const next = delta.replace ? delta.events : [...traceWindow.current.slice(delta.evictCount), ...delta.events];
+      traceWindow.current = next;
+      setEvents(next);
+      setTotalCapturedEvents(delta.totalCapturedEvents);
+      setEstimatedSessionBytes(delta.estimatedSessionBytes);
+      const previous = selectedEventIdRef.current;
+      const selection = delta.replace || traceAutoScrollRef.current || previous === 0 || !next.some((event) => event.eventId === previous)
+        ? delta.selectedEventId : previous;
+      selectedEventIdRef.current = selection;
+      setSelectedEventId(selection);
+    }, (message) =>
+    {
+      setOutputEvents((current) => [makeAuditEvent("trace_ingest_worker_failed", "trace_ingest_worker", message), ...current].slice(0, 80));
+      worker.terminate();
     });
-
-    return () => {
+    worker.onmessage = (event: MessageEvent<TraceIngestDelta>) => client.receive(event.data);
+    worker.onerror = (event) => client.abort(event.message || "Trace ingest worker failed.");
+    worker.onmessageerror = () => client.abort("Trace ingest message could not be decoded.");
+    traceIngestWorker.current = worker;
+    traceIngestClient.current = client;
+    void client.submit({ type: "reset" });
+    return () =>
+    {
+      client.abort();
+      traceIngestClient.current = null;
       traceIngestWorker.current = null;
-      pendingTraceIngestCommands.current = [];
       worker.terminate();
     };
   }, []);
@@ -820,13 +802,9 @@ function App() {
     setOutputEvents((current) => [...eventsToAppend, ...current].slice(0, 80));
   }
 
-  function postTraceIngest(command: TraceIngestCommand) {
-    if (!traceIngestWorker.current) {
-      pendingTraceIngestCommands.current.push(command);
-      return;
-    }
-
-    traceIngestWorker.current.postMessage(command);
+  function postTraceIngest(command: TraceIngestCommand, epoch = traceIngestClient.current?.epoch): Promise<boolean>
+  {
+    return traceIngestClient.current?.submit(command, epoch) ?? Promise.resolve(false);
   }
 
   function observeTargetExitTransitions(sessions: NativeSession[]) {
@@ -1019,33 +997,36 @@ function App() {
     });
   }
 
-  function appendCapturedEventChunks(chunks: CapturedEventChunk[]) {
+  function appendCapturedEventChunks(chunks: CapturedEventChunk[], epoch: number) {
     const incomingCount = chunks.reduce((count, chunk) => count + chunk.events.length, 0);
     if (incomingCount === 0) {
       return;
     }
 
-    postTraceIngest({ type: "enqueue-events", chunks });
+    return postTraceIngest({ type: "enqueue-events", chunks }, epoch);
   }
 
-  function appendCapturedEvents(capturedEvents: AgentApiCallEvent[], contextTags: string[]) {
-    appendCapturedEventChunks([{ events: capturedEvents, contextTags }]);
+  function appendCapturedEvents(capturedEvents: AgentApiCallEvent[], contextTags: string[], epoch: number) {
+    return appendCapturedEventChunks([{ events: capturedEvents, contextTags }], epoch);
   }
 
-  function appendTraceBatches(batches: NativeTraceBatch[]) {
+  async function appendTraceBatches(batches: NativeTraceBatch[], epoch: number) {
     if (batches.length === 0) {
       return;
     }
 
-    postTraceIngest({ type: "enqueue-batches", batches });
+    if (!await postTraceIngest({ type: "enqueue-batches", batches }, epoch))
+    {
+      return;
+    }
 
     const latest = batches[batches.length - 1];
     setDroppedCount(latest.droppedEvents);
     streamBatchCursors.current[latest.sessionId] = latest.batchSequence;
   }
 
-  function replaceTraceEvents(nextEvents: TraceEvent[], selectedId?: number) {
-    postTraceIngest({ type: "replace", events: nextEvents, selectedEventId: selectedId });
+  function replaceTraceEvents(nextEvents: TraceEvent[], selectedId?: number, totalCapturedEvents?: number) {
+    postTraceIngest({ type: "replace", events: nextEvents, selectedEventId: selectedId, totalCapturedEvents });
   }
 
   async function handleLoadNativeTargets() {
@@ -1234,7 +1215,9 @@ function App() {
   // Byte estimate comes incrementally from the ingest worker; re-serializing the
   // whole window here would run multi-MB JSON.stringify on every snapshot.
   const sessionBytes = estimatedSessionBytes;
-  const totalTraceEventCount = Math.max(totalCapturedEvents, displayNativeSession?.recordsStreamed ?? 0);
+  const totalTraceEventCount = Math.max(totalCapturedEvents,
+    traceViewMode.current === "live" && displayNativeSession?.sessionId === traceSessionId.current
+      ? displayNativeSession?.recordsStreamed ?? 0 : 0);
   const trimmedTraceEventCount = Math.max(0, totalTraceEventCount - events.length);
   const selectedCatalogRow = sessionCatalog?.sessions.find((row) => row.path === selectedCatalogPath) ?? null;
   const selectedTraceIndexEvent = traceIndex?.events.find((event) => traceIndexEventKey(event) === selectedTraceIndexEventKey) ?? null;
@@ -1451,21 +1434,22 @@ function App() {
     const maxConsecutivePollFailures = 10;
 
     const refreshTraceBatches = async () => {
-      if (pollInFlight) {
+      if (pollInFlight || traceIngestClient.current?.busy || traceViewMode.current !== "live" || traceSessionId.current !== sessionId) {
         return;
       }
 
       pollInFlight = true;
+      const epoch = traceIngestClient.current?.epoch ?? -1;
       const cursor = streamBatchCursors.current[sessionId] ?? 0;
       try {
         const batches = await drainNativeTraceBatches(sessionId, cursor);
-        if (!active) {
+        if (!active || epoch !== traceIngestClient.current?.epoch || traceViewMode.current !== "live" || traceSessionId.current !== sessionId) {
           return;
         }
 
         consecutiveFailures = 0;
         if (batches.length > 0) {
-          appendTraceBatches(batches);
+          await appendTraceBatches(batches, epoch);
         }
 
         if (isNativeSessionTerminal(sessionSnapshot)) {
@@ -1519,7 +1503,9 @@ function App() {
   }, [drainNativeSession?.sessionId, drainNativeSession?.sessionState]);
 
   function handleClear() {
-    postTraceIngest({ type: "reset" });
+    traceViewMode.current = "live";
+    selectedEventIdRef.current = 0;
+    void postTraceIngest({ type: "reset" });
     setReplaySource(null);
     setProcessExitNotice(null);
     terminalDrainCompleted.current.clear();
@@ -1532,6 +1518,15 @@ function App() {
       return;
     }
 
+    traceViewMode.current = "live";
+    traceSessionId.current = null;
+    const reset = postTraceIngest({ type: "reset" });
+    const captureEpoch = traceIngestClient.current?.epoch ?? -1;
+    if (!await reset || captureEpoch !== traceIngestClient.current?.epoch)
+    {
+      return;
+    }
+    setReplaySource(null);
     setNativeBusy(true);
     setLaunchSession(null);
     setProcessExitNotice(null);
@@ -1556,6 +1551,7 @@ function App() {
       appendOutput([makeAuditEvent("launch_requested", "start_launch_monitor_session", `Early-bird launch monitor requested for ${targetPath}; scope=${apiSelectionSummary}.`)]);
       const session = await startLaunchMonitorSession(targetPath, workingDirectory, launchArguments.trim(), apiSelectionRequest);
       terminalDrainCompleted.current.delete(session.sessionId);
+      traceSessionId.current = session.sessionId;
       streamBatchCursors.current[session.sessionId] = 0;
       setLaunchSession(session);
       setBackendMode("native-capture");
@@ -1853,16 +1849,27 @@ function App() {
   }
 
   async function handleReplayTraceIndexEvent(event: NativeTraceIndexEvent) {
+    traceViewMode.current = "replay";
+    const reset = postTraceIngest({ type: "reset" });
+    const replayEpoch = traceIngestClient.current?.epoch;
+    if (!await reset || replayEpoch !== traceIngestClient.current?.epoch)
+    {
+      return;
+    }
     setNativeBusy(true);
     setSelectedTraceIndexEventKey(traceIndexEventKey(event));
 
     try {
       appendOutput([makeAuditEvent("trace_index_replay_requested", "replay_session_path", `Trace hit replay requested for ${event.api} event ${event.eventId} from ${event.sessionPath}.`)]);
-      const result = await replaySessionPath(event.sessionPath);
+      const result = await replaySessionPath(event.sessionPath, event.eventId);
+      if (replayEpoch !== traceIngestClient.current?.epoch)
+      {
+        return;
+      }
       setBackendMode(result.backendMode);
       setLastSession(result.session);
       setDroppedCount(result.session.droppedEvents);
-      replaceTraceEvents(result.traceEvents, event.eventId);
+      replaceTraceEvents(result.traceEvents, event.eventId, result.session.traceEventCount);
       setReplaySource({
         kind: "catalog",
         label: traceIndexEventLabel(event),
@@ -1888,16 +1895,27 @@ function App() {
   }
 
   async function handleReplayCatalogRow(row: NativeSessionCatalogRow) {
+    traceViewMode.current = "replay";
+    const reset = postTraceIngest({ type: "reset" });
+    const replayEpoch = traceIngestClient.current?.epoch;
+    if (!await reset || replayEpoch !== traceIngestClient.current?.epoch)
+    {
+      return;
+    }
     setNativeBusy(true);
     setSelectedCatalogPath(row.path);
 
     try {
       appendOutput([makeAuditEvent("session_catalog_replay_requested", "replay_session_path", `Catalog replay requested for ${row.path}.`)]);
       const result = await replaySessionPath(row.path);
+      if (replayEpoch !== traceIngestClient.current?.epoch)
+      {
+        return;
+      }
       setBackendMode(result.backendMode);
       setLastSession(result.session);
       setDroppedCount(result.session.droppedEvents);
-      replaceTraceEvents(result.traceEvents);
+      replaceTraceEvents(result.traceEvents, undefined, result.session.traceEventCount);
       setReplaySource({
         kind: "catalog",
         label: catalogRowLabel(row),
@@ -1937,6 +1955,15 @@ function App() {
       return;
     }
 
+    traceViewMode.current = "live";
+    traceSessionId.current = null;
+    const reset = postTraceIngest({ type: "reset" });
+    const captureEpoch = traceIngestClient.current?.epoch ?? -1;
+    if (!await reset || captureEpoch !== traceIngestClient.current?.epoch)
+    {
+      return;
+    }
+    setReplaySource(null);
     setNativeBusy(true);
     setAttachResult(null);
     setProcessExitNotice(null);
@@ -1944,12 +1971,16 @@ function App() {
     try {
       appendOutput([makeAuditEvent("attach_requested", "attach_target_process_capture", `Bounded attach requested for PID ${selectedTarget.pid}; scope=${apiSelectionSummary}.`)]);
       const result = await attachTargetProcessCapture(selectedTarget.pid, attachDurationMs, apiSelectionRequest);
+      if (captureEpoch !== traceIngestClient.current?.epoch)
+      {
+        return;
+      }
       setAttachResult(result);
       setCaptureResult(result);
       setBackendMode(result.backendMode);
       setDroppedCount(result.droppedEvents);
       appendOutput(captureResultOutputEvents(result, "attach_result"));
-      appendCapturedEvents(result.capturedEvents, ["ui-attach", `target:${result.targetProcessId}`]);
+      await appendCapturedEvents(result.capturedEvents, ["ui-attach", `target:${result.targetProcessId}`], captureEpoch);
       observeTargetExitFromCaptureResult(result);
       setInspectorTab("output");
     } catch (error) {
@@ -1974,6 +2005,15 @@ function App() {
       return;
     }
 
+    traceViewMode.current = "live";
+    traceSessionId.current = null;
+    const reset = postTraceIngest({ type: "reset" });
+    const captureEpoch = traceIngestClient.current?.epoch ?? -1;
+    if (!await reset || captureEpoch !== traceIngestClient.current?.epoch)
+    {
+      return;
+    }
+    setReplaySource(null);
     setNativeBusy(true);
     setProcessExitNotice(null);
 
@@ -1981,6 +2021,7 @@ function App() {
       appendOutput([makeAuditEvent("stream_attach_requested", "start_streaming_attach_session", `Streaming attach requested for PID ${selectedTarget.pid}; scope=${apiSelectionSummary}.`)]);
       const session = await startStreamingAttachSession(selectedTarget.pid, apiSelectionRequest);
       terminalDrainCompleted.current.delete(session.sessionId);
+      traceSessionId.current = session.sessionId;
       streamBatchCursors.current[session.sessionId] = 0;
       setNativeSessions((current) => {
         const remaining = current.filter((item) => item.sessionId !== session.sessionId);
@@ -2043,6 +2084,15 @@ function App() {
       return;
     }
 
+    traceViewMode.current = "live";
+    traceSessionId.current = null;
+    const reset = postTraceIngest({ type: "reset" });
+    const captureEpoch = traceIngestClient.current?.epoch ?? -1;
+    if (!await reset || captureEpoch !== traceIngestClient.current?.epoch)
+    {
+      return;
+    }
+    setReplaySource(null);
     setNativeBusy(true);
     setProcessTreeResult(null);
     setProcessExitNotice(null);
@@ -2050,6 +2100,10 @@ function App() {
     try {
       appendOutput([makeAuditEvent("process_tree_requested", "supervise_process_tree", `Supervision requested for PID ${selectedTarget.pid}; policy=${childPolicy}; scope=${apiSelectionSummary}.`)]);
       const result = await superviseProcessTree(selectedTarget.pid, treeDurationMs, childPolicy, apiSelectionRequest);
+      if (captureEpoch !== traceIngestClient.current?.epoch)
+      {
+        return;
+      }
       const childAuditEvents = result.childAttachResults.flatMap((capture) => capture.auditEvents);
       const childResolverEvents = result.childAttachResults.flatMap((capture) => resolverPointerOutputEvents(capture));
       const childDroppedEvents = result.childAttachResults.reduce((total, capture) => total + capture.droppedEvents, 0);
@@ -2063,10 +2117,10 @@ function App() {
           : [makeAuditEvent("process_tree_result", result.operation, result.message, result.win32ErrorCode)]
       );
 
-      result.childAttachResults.forEach((capture) => {
-        appendCapturedEvents(capture.capturedEvents, ["process-tree", `child:${capture.targetProcessId}`]);
+      for (const capture of result.childAttachResults) {
+        await appendCapturedEvents(capture.capturedEvents, ["process-tree", `child:${capture.targetProcessId}`], captureEpoch);
         observeTargetExitFromCaptureResult(capture);
-      });
+      }
 
       setInspectorTab("output");
     } catch (error) {
