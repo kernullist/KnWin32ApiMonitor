@@ -68,16 +68,19 @@ and export them, detach while the target survives, and exit normally. Raw Job
 samples include WebView children and separate target resources. The hidden-window
 scope and sampled working-set sums are not a foreground performance score.
 
-The clean source archive from `d1180bb` was extracted without Git metadata and
+The clean source archive from `4e5a9df` was extracted without Git metadata and
 rebuilt with the pinned Node/CMake/MSVC/SDK configuration. npm installation,
 frontend build/validation and both complete native Debug suites passed. The
 frozen reconstruction producer retained source, command, compiler and binary
-hashes. The archive contains 760 entries and has SHA-256
-`bbdf39d2f9a4090a79d6802dac28648286867007ff4c40bacfb6443dcddf0026`.
-Both architectures executed all 23 CTests; the extracted-source WOW64 UI
-regressions also passed. Revalidation rejects altered command, compiler, binary,
-test and frontend records. That archived revision passed six integrated evidence
-scopes and retained eleven incomplete scopes. Subsequent product changes require
-a fresh source reconstruction before that gate can pass again.
+hashes. The archive contains 763 entries and has SHA-256
+`76e86e5a680eea586b949c100a11ef1fa3ef2e29b602f4b79f1e54029a6bd29e`.
+Both architectures executed all 23 CTests, including the new failed-launch
+regression; the extracted-source WOW64 UI regressions also passed. Revalidation
+rejects altered command, compiler, binary, test and frontend records. The
+integrated report now passes seven evidence scopes and retains ten incomplete
+scopes, with current source reconstruction, Release backend execution, desktop
+interaction, dependency/advisory checks, typed ABI freshness and competitive
+semantics verified together. Subsequent product changes require a fresh source
+reconstruction before that gate can pass again.
 See `source-build-contract.md` for reproduction and
 `technical-readiness.md` for the fail-closed artifact verification policy.
