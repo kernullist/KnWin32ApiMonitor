@@ -57,5 +57,5 @@
     },
     "bufferPreview": { "type": "string" }
   },
-  "allOf": [{ "$ref": "stack-observation.schema.json" }]
+  "allOf": [{ "$ref": "stack-observation.schema.json" }, { "$ref": "capture-detail.schema.json" }]
 }

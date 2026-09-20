@@ -762,6 +762,91 @@ impl TryFrom<StackObservationWire> for StackObservation
     }
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase", try_from = "String")]
+pub enum CaptureDetail
+{
+    Metadata,
+    Arguments,
+    #[default]
+    Preview,
+}
+
+impl TryFrom<String> for CaptureDetail
+{
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error>
+    {
+        match value.as_str()
+        {
+            "metadata" => Ok(Self::Metadata),
+            "arguments" => Ok(Self::Arguments),
+            "preview" => Ok(Self::Preview),
+            _ => Err("Unknown capture detail.".to_string()),
+        }
+    }
+}
+
+impl CaptureDetail
+{
+    fn as_str(self) -> &'static str
+    {
+        match self
+        {
+            Self::Metadata => "metadata",
+            Self::Arguments => "arguments",
+            Self::Preview => "preview",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", try_from = "CapturedPayloadWire")]
+pub struct CapturedPayload
+{
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub capture_detail: Option<CaptureDetail>,
+    pub arguments: Vec<AgentApiArgument>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub buffer_preview: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CapturedPayloadWire
+{
+    #[serde(default, deserialize_with = "deserialize_present")]
+    capture_detail: Option<CaptureDetail>,
+    arguments: Vec<AgentApiArgument>,
+    #[serde(default)]
+    buffer_preview: Option<String>,
+}
+
+impl TryFrom<CapturedPayloadWire> for CapturedPayload
+{
+    type Error = String;
+
+    fn try_from(value: CapturedPayloadWire) -> Result<Self, Self::Error>
+    {
+        if let Some(detail) = value.capture_detail
+        {
+            if value.buffer_preview.is_none() ||
+                (detail == CaptureDetail::Metadata && !value.arguments.is_empty()) ||
+                (detail != CaptureDetail::Preview && value.buffer_preview.as_deref() != Some(""))
+            {
+                return Err("Inconsistent capture detail payload.".to_string());
+            }
+        }
+        Ok(Self
+        {
+            capture_detail: value.capture_detail,
+            arguments: value.arguments,
+            buffer_preview: value.buffer_preview,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentApiCallEvent {
@@ -795,12 +880,12 @@ pub struct AgentApiCallEvent {
     pub last_error_code: u32,
     pub last_error_message: String,
     pub duration_us: u64,
-    pub arguments: Vec<AgentApiArgument>,
+    #[serde(flatten)]
+    pub payload: CapturedPayload,
     pub tags: Vec<String>,
     #[serde(flatten)]
     pub stack_observation: StackObservation,
-    #[serde(default)]
-    pub buffer_preview: String,
+
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1088,15 +1173,15 @@ pub struct TraceEvent {
     pub process: String,
     pub module: String,
     pub api: String,
-    pub arguments: Vec<AgentApiArgument>,
+    #[serde(flatten)]
+    pub payload: CapturedPayload,
     pub return_value: String,
     pub error: Option<TraceError>,
     pub duration_us: u64,
     pub tags: Vec<String>,
     #[serde(flatten)]
     pub stack_observation: StackObservation,
-    #[serde(default)]
-    pub buffer_preview: Option<String>,
+
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -2135,6 +2220,7 @@ pub fn start_streaming_attach_session(
     process_id: u32,
     selected_apis: Vec<String>,
     stack_frames: u32,
+    capture_detail: CaptureDetail,
 ) -> Result<NativeSession, String> {
     let duration = 0;
     let helper_timeout = STREAM_CONTROL_TIMEOUT_MS;
@@ -2169,6 +2255,7 @@ pub fn start_streaming_attach_session(
         ];
         append_api_selection_arg(&mut args, &selected_apis)?;
         append_stack_capture_arg(&mut args, stack_frames)?;
+        args.extend(["--capture-detail".to_string(), capture_detail.as_str().to_string()]);
 
         spawn_streaming_helper(&helper_path, &args, &operation_id)
     })();
@@ -2181,6 +2268,7 @@ pub fn start_launch_monitor_session(
     launch_arguments: String,
     selected_apis: Vec<String>,
     stack_frames: u32,
+    capture_detail: CaptureDetail,
 ) -> Result<NativeSession, String> {
     let target = target_path.trim();
     if target.is_empty() {
@@ -2242,6 +2330,7 @@ pub fn start_launch_monitor_session(
         }
         append_api_selection_arg(&mut args, &selected_apis)?;
         append_stack_capture_arg(&mut args, stack_frames)?;
+        args.extend(["--capture-detail".to_string(), capture_detail.as_str().to_string()]);
 
         spawn_streaming_helper(&helper_path, &args, &operation_id)
     })();
@@ -2278,6 +2367,7 @@ pub fn start_daemon_supervised_session(
     process_id: u32,
     selected_apis: Vec<String>,
     stack_frames: u32,
+    capture_detail: CaptureDetail,
 ) -> Result<NativeSession, String> {
     let helper_timeout = STREAM_CONTROL_TIMEOUT_MS;
     let operation_id = new_operation_id("ui-daemon", process_id);
@@ -2301,6 +2391,7 @@ pub fn start_daemon_supervised_session(
     ];
     append_api_selection_arg(&mut args, &selected_apis)?;
     append_stack_capture_arg(&mut args, stack_frames)?;
+    args.extend(["--capture-detail".to_string(), capture_detail.as_str().to_string()]);
 
     let helper_output = run_helper_args(&args)?;
 
@@ -2851,6 +2942,7 @@ pub fn attach_target_process_capture(
     duration_ms: u32,
     selected_apis: Vec<String>,
     stack_frames: u32,
+    capture_detail: CaptureDetail,
 ) -> Result<CaptureResult, String> {
     let duration = normalize_duration_ms(duration_ms);
     let helper_timeout = helper_inner_timeout_ms(duration);
@@ -2872,6 +2964,7 @@ pub fn attach_target_process_capture(
         ];
         append_api_selection_arg(&mut args, &selected_apis)?;
         append_stack_capture_arg(&mut args, stack_frames)?;
+        args.extend(["--capture-detail".to_string(), capture_detail.as_str().to_string()]);
 
         let helper_output =
             match run_helper_args_with_timeout(&args, command_timeout, Some(&operation_id)) {
@@ -2904,6 +2997,7 @@ pub fn supervise_process_tree(
     child_policy: String,
     selected_apis: Vec<String>,
     stack_frames: u32,
+    capture_detail: CaptureDetail,
 ) -> Result<ProcessTreeResult, String> {
     let normalized_policy = child_policy.trim().to_string();
     if normalized_policy != "observe" && normalized_policy != "attach-supported" {
@@ -2932,6 +3026,7 @@ pub fn supervise_process_tree(
         ];
         append_api_selection_arg(&mut args, &selected_apis)?;
         append_stack_capture_arg(&mut args, stack_frames)?;
+        args.extend(["--capture-detail".to_string(), capture_detail.as_str().to_string()]);
 
         let helper_output =
             match run_helper_args_with_timeout(&args, command_timeout, Some(&operation_id)) {
@@ -3284,7 +3379,7 @@ mod tests {
                 "truncationReason": "none" }
         });
         let mut event = test_event("preserve-observation", 9007199254740993);
-        event.arguments.push(serde_json::from_value(argument.clone()).unwrap());
+        event.payload.arguments.push(serde_json::from_value(argument.clone()).unwrap());
         event.semantics.observation = Some(serde_json::json!({ "eventPhase": "return", "nestedCalls": "suppressed",
             "exceptionEvents": "not_emitted", "completionCorrelation": "not_tracked" }));
         event.semantics.call_id = Some("9007199254740993".to_string());
@@ -3356,6 +3451,48 @@ mod tests {
         }
     }
 
+    #[test]
+    fn capture_detail_preserves_policy_and_rejects_contradictory_payloads()
+    {
+        let cases: Vec<(String, serde_json::Value, bool)> =
+            serde_json::from_str(include_str!("../../../tests/fixtures/capture-detail.json")).unwrap();
+        for (name, fields, accepted) in cases
+        {
+            let mut agent = serde_json::to_value(test_event("detail-contract", 1)).unwrap();
+            let mut trace = serde_json::json!(
+            {
+                "schemaVersion": "0.1.0", "eventId": 1, "relativeTimeMs": 0,
+                "pid": 100, "tid": 200, "process": "sample.exe", "module": "kernel32.dll",
+                "api": "ReadFile", "returnValue": "1", "error": null,
+                "durationUs": 1, "tags": [], "stack": []
+            });
+            for key in ["arguments", "bufferPreview"]
+            {
+                agent.as_object_mut().unwrap().remove(key);
+            }
+            for (key, value) in fields.as_object().unwrap()
+            {
+                agent[key] = value.clone();
+                trace[key] = value.clone();
+            }
+            let parsed_agent = serde_json::from_value::<AgentApiCallEvent>(agent);
+            let parsed_trace = serde_json::from_value::<TraceEvent>(trace);
+            assert_eq!(parsed_agent.is_ok(), accepted, "agent: {name}");
+            assert_eq!(parsed_trace.is_ok(), accepted, "trace: {name}");
+            if accepted
+            {
+                for payload in [serde_json::to_value(parsed_agent.unwrap()).unwrap(),
+                    serde_json::to_value(parsed_trace.unwrap()).unwrap()]
+                {
+                    for key in ["captureDetail", "arguments", "bufferPreview"]
+                    {
+                        assert_eq!(payload.get(key), fields.get(key), "roundtrip: {name}/{key}");
+                    }
+                }
+            }
+        }
+    }
+
     fn test_event(operation_id: &str, sequence: u64) -> AgentApiCallEvent {
         AgentApiCallEvent {
             semantics: CapturedSemantics::default(),
@@ -3380,10 +3517,9 @@ mod tests {
             last_error_code: 0,
             last_error_message: String::new(),
             duration_us: 10,
-            arguments: Vec::new(),
+            payload: CapturedPayload { buffer_preview: Some(String::new()), ..Default::default() },
             tags: vec!["fileio".to_string()],
             stack_observation: StackObservation::default(),
-            buffer_preview: String::new(),
         }
     }
 

@@ -1,3 +1,4 @@
+import detailCases from "../../tests/fixtures/capture-detail.json" with { type: "json" };
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -132,6 +133,30 @@ for (const [name, fields, accepted] of stackCases)
     }
     assert.equal(nodeAccepted, accepted, name);
     add(`stack ${name}`, wire, "agent");
+}
+
+for (const [name, fields, accepted] of detailCases)
+{
+    const message = { ...apiMessage, ...fields };
+    for (const key of ["arguments", "bufferPreview"])
+    {
+        if (!Object.hasOwn(fields, key))
+        {
+            delete message[key];
+        }
+    }
+    const wire = JSON.stringify(message);
+    let nodeAccepted = true;
+    try
+    {
+        validateAgentJson(inspectStrictJson(Buffer.from(wire)));
+    }
+    catch
+    {
+        nodeAccepted = false;
+    }
+    assert.equal(nodeAccepted, accepted, name);
+    add(`detail ${name}`, wire, "agent");
 }
 
 const nativeStack = stackCases.find(([name]) => name === "native captured x64")[1];

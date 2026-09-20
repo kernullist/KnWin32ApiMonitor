@@ -84,7 +84,7 @@ function isMissingOrUnknown(value: string): boolean {
 function decodeFailureStatuses(event: TraceEvent): string[] {
   return Array.from(new Set(event.arguments
     .map((argument) => argument.decodeStatus)
-    .filter((status) => status !== "decoded")))
+    .filter((status) => status !== "decoded" && status !== "not_captured")))
     .sort((left, right) => left.localeCompare(right));
 }
 

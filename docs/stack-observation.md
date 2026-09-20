@@ -77,7 +77,7 @@ original return value, Win32/Winsock errors and original exception behavior.
 The existing session lease protects capture through transport commit and stop.
 The collector checks the architecture, storage bounds, failure state and exact
 requested limit against the controller's trusted session configuration.
-Transport ABI 9 and attach configuration ABI 5 require matching binaries.
+Transport ABI 10 and attach configuration ABI 6 require matching binaries.
 Frame/storage bounds do not promise a hard execution-time bound for the OS
 unwinder, especially with arbitrary target unwind metadata.
 

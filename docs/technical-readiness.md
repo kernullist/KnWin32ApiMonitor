@@ -66,9 +66,11 @@ binary-distribution gates. Desktop evidence retains the requested stack limit
 and compares the actual stack inspector with exported native addresses. A run
 with optional stack capture enabled verifies that mode's observation path; it
 does not establish the separate capture-profile cost gate.
+The requested metadata, arguments or preview detail also remains bound to the
+actual UI controls, parameter inspector and exported events.
 
 The [Release backend consumer](backend-release-evidence.md) checks Cargo's
-optimized test artifacts, both actual PE architectures and all 19 named backend
+optimized test artifacts, both actual PE architectures and all 20 named backend
 tests, including the real-helper success and failed-target paths. It retains
 matching Debug native binaries and does not clear the native Release gate.
 

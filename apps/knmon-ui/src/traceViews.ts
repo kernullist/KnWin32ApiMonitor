@@ -58,7 +58,7 @@ export interface TraceTimelineView {
 }
 
 function hasDecodeFailure(event: TraceEvent): boolean {
-  return event.arguments.some((argument) => argument.decodeStatus !== "decoded");
+  return event.arguments.some((argument) => argument.decodeStatus !== "decoded" && argument.decodeStatus !== "not_captured");
 }
 
 function sampleForEvent(event: TraceEvent): TraceViewSample {

@@ -12,12 +12,12 @@ Windows 10/11 release or every API input.
 | Desktop security tests | prior 3/3 passed | prior 3/3 passed | 6/6 passed | 6/6 passed |
 | Desktop attach/filter/stop/export and Job resources | native tools used | native tools used | passed with Debug native tools | passed with Debug native tools |
 | Desktop PE hardening | passed | passed | passed | passed |
-| Rust backend with real helper | prior 18/18 passed | prior 18/18 passed | 19/19 with Debug helper | 19/19 with Debug helper; Release helper remains blocked |
-| All-supported sample live/replay | 376 events, 16 errors; Off/8/32 | 376 events, 16 errors; Off/8/32 | prior 376 events, 16 errors | blocked before launch |
+| Rust backend with real helper | prior 18/18 passed | prior 18/18 passed | 20/20 with Debug helper | 20/20 with Debug helper; Release helper remains blocked |
+| All-supported sample live/replay | 376 events, 16 errors; five detail/stack configurations | 376 events, 16 errors; five detail/stack configurations | prior 376 events, 16 errors | blocked before launch |
 | Standalone native stack component | passed | passed | passed | passed |
 | Comparative six-API corpus | 50 runs passed | 50 runs passed | not run | not run |
 | Sustained overload, original/observed | 5 s and 15 s passed | 5 s and 15 s passed | default 5 s CTest passed | blocked before launch |
-| Clean source ZIP native reconstruction | 24/24 passed | 24/24 passed | not run | not run |
+| Clean source ZIP native reconstruction | prior 24/24 passed | prior 24/24 passed | not run | not run |
 
 The Debug comparison uses ten fresh-process repetitions of each of five modes.
 Each run has 450 expected calls, with zero missing, unexpected or reordered
@@ -31,7 +31,7 @@ Release desktop builds/security suites, and real attach/filter/stop/export on
 both architectures. Those UI runs exported 250/230 events, retained native
 record totals through terminal draining and left both targets alive after stop.
 
-The latest [stack capture implementation](stack-observation.md) collects optional
+The [stack capture implementation](stack-observation.md) collects optional
 raw post-call addresses, with capture disabled by default and a maximum of 32
 frames. Both native Debug suites pass 24/24, with 2,404 native/Node JSON cases,
 196 session cases and 24 stack-option cases per architecture. Actual Off, 8 and
@@ -50,8 +50,32 @@ Adversarial review corrected interpretation of opaque target arguments as helper
 options, stale published schema constraints, a twice-run ABI fixture resetting
 call IDs, and a 52px UI select that clipped the requested limit. Failed attempts
 and their raw logs remain distinct from the final evidence. The previous hook
-metadata/provenance and ingestion/trimming corrections remain covered. Full
+metadata/provenance and ingestion/trimming corrections remain covered. These
+counts describe the preceding stack stage. Full
 native Release results in the table predate these native changes.
+
+The current [capture detail implementation](capture-detail.md) adds real
+metadata, arguments and preview policies with transport ABI 10 and attach ABI 6.
+Both Debug suites pass 24/24, including controlled-original tests that require
+zero, one and two observation reads respectively for file I/O. Each architecture
+also passes 2,435 native/Node JSON cases, 227 session cases, 97 actual detail-option
+cases and the existing 24 stack-option cases. Five real capture/replay settings
+pass per architecture: metadata/arguments/preview with stacks Off, metadata with
+eight frames, and preview with 32 frames. Each contains 376 events from 308 API
+names, 16 classified errors and one resolved API-set host. Frontend checks now
+execute 21 named regressions plus the 200,000-row worker/count check.
+
+Review reproduced option-like target operands being parsed as helper flags and
+four RPC string duplicates violating the arguments-mode preview contract. The
+parser now respects valued-option boundaries. RPC strings remain decoded in
+arguments while their duplicate top-level preview is omitted. Corrected runs
+passed the complete targeted matrix; the failed captures and replay logs remain.
+An actual arguments-mode export then reproduced 48 false decode-failure warnings
+for intentionally uncaptured data. Highlights, issue groups, thread totals and
+timeline buckets now exclude `not_captured` from failure counts while preserving
+status queries and actual decoder/API errors. The same 48 events produce zero
+false failures after the correction. The desktop consumer also checks the final
+displayed warning count against exported events.
 
 After the failure-state correction in `4e5a9df`, both native Release builds
 completed again. x64 executed all 23 CTests. x86 passed 17; six cases could not
@@ -87,23 +111,33 @@ After the URLPattern backport, both Release suites execute six tests, adding
 Unicode identifier, URL component and remote-fixture authority regressions.
 The Debug desktop entries describe the earlier three-test dependency baseline;
 they are not a validation of the new backport.
-The final desktop Off runs export 250/240 native events on x64/x86; the 32-frame
-runs export 250/250. All retain exact terminal totals with no recorded loss,
-leave the targets alive after stop, and close normally with all owned Jobs
-drained. Each run retains 200 process-tree samples. The largest gaps are
-312/297 ms in Off mode and 313/359 ms in 32-frame mode. Actual Call Stack
-addresses, provenance and hook context match the exported selected event.
-The corrected 292px select displays the entire requested limit and remains
-locked during capture. Desktop consumers reject 64 Off-mode and 72 enabled-mode
-mutations and pass three positive groups each; backend controls reject 45.
+The final desktop capture-detail matrix exports these native event totals:
+
+| Detail | Stack limit | x64 | x86 |
+|---|---:|---:|---:|
+| preview | Off | 260 | 240 |
+| arguments | Off | 250 | 250 |
+| metadata | Off | 250 | 240 |
+| metadata | 32 | 240 | 250 |
+
+All retain exact terminal totals with no recorded loss, leave the targets alive
+after stop, and close normally with all owned Jobs drained. Each run retains
+200-208 process-tree samples; the largest sampling gap is 344 ms. Parameters
+captions, argument rows, final decode-warning counts, Call Stack addresses,
+provenance and hook context agree with the exported events. Both controls fit
+their requested labels and remain locked during capture. Desktop consumers
+reject 73 Off-mode and 81 enabled-mode mutations and pass three positive groups
+each; backend controls reject 45. An earlier detail-mode attempt recorded idle
+before startup enumeration finished and failed its readiness check. Its evidence
+is retained; the final driver waits for the actual controls to become ready.
 
 The [Release backend suite](backend-release-evidence.md) now includes the actual
 failed-target path. Missing the target's dynamic probe DLL previously left a
 failed capture in `stopping_agent`, causing the backend to wait until its test
 deadline. Native launch/attach finalization and backend result validation now
 preserve a terminal failure and its error message. Both Release architectures
-execute all 19 tests, including the two normally ignored real-helper cases and
-the new stack-observation roundtrip/rejection test. None are ignored or filtered.
+execute all 20 tests, including the two normally ignored real-helper cases and
+the stack/detail roundtrip and rejection tests. None are ignored or filtered.
 
 The sustained fixture measures native controller and target CPU/memory/handles,
 and reconciles every attempted call against delivered records and explicit
@@ -122,7 +156,7 @@ and export them, detach while the target survives, and exit normally. Raw Job
 samples include WebView children and separate target resources. The hidden-window
 scope and sampled working-set sums are not a foreground performance score.
 
-The current clean source archive from `ae26920` was extracted without Git metadata and
+The retained clean source archive from `ae26920` was extracted without Git metadata and
 rebuilt with the pinned Node/CMake/MSVC/SDK configuration. npm installation,
 frontend build/validation and both complete native Debug suites passed. The
 frozen reconstruction producer retained source, command, compiler and binary
@@ -135,6 +169,9 @@ polling, terminal-tail, WOW64, stack, command and schema regressions, plus the
 200,000-row worker/count check. The archive includes the optional native stack
 implementation, shared observation schema, 92-case corpus and CLI validator.
 All cases actually ran; none were skipped or disabled.
+This archive predates capture-detail policies, so it is historical evidence for
+the current product. A fresh archive must reconstruct those changes before the
+source gate can pass again.
 Revalidation rejects 31 malformed or altered readiness/source-evidence cases,
 including command, compiler, binary, test and frontend records.
 
@@ -161,10 +198,13 @@ The dependency graph and advisory evidence now remove the five reachable UNIC
 warnings while
 retaining two warnings outside the Windows graphs. Native Release, broader
 platform and performance claims remain subject to the separate limits above.
-The current integrated report has eight passed scopes, zero failed scopes and
-nine unverified scopes. Source reconstruction, dependency maintenance, Release
-backend and actual desktop paths pass together with the current advisory,
-inventory, typed-ABI and competitive-semantics evidence. All failed
+The current integrated report has seven passed scopes, zero failed scopes and
+ten unverified scopes. Dependency maintenance, Release backend and actual desktop
+paths pass together with the current advisory, inventory, typed-ABI and
+competitive-semantics evidence. Fresh capture-detail source reconstruction and
+the complete profile-cost gate remain unverified. The report returns code 2
+for incomplete scope. Current readiness controls reject 17 malformed cases;
+the 31-case source-control result above belongs to the preceding archive. All failed
 attempts and their raw logs remain distinct from the successful evidence sets.
 See `source-build-contract.md` for reproduction and
 `technical-readiness.md` for the fail-closed artifact verification policy.

@@ -51,6 +51,8 @@ def event_count(observation, allow_inflight=False):
 
 def verify_interaction(execution, driver, events):
     pid = execution["targetPid"]
+    capture_detail = execution["configuration"].get("captureDetail")
+    require(capture_detail in ("metadata", "arguments", "preview"), "Desktop capture detail request is invalid.")
     stack_frames = execution["configuration"].get("stackFrames")
     require(type(stack_frames) is int and stack_frames in (0, 8, 16, 32), "Desktop stack request is invalid.")
     require(type(driver["schemaVersion"]) is int and driver["schemaVersion"] == 1 and driver["status"] == "passed" and
@@ -64,6 +66,14 @@ def verify_interaction(execution, driver, events):
                 for output in outputs), "Healthy desktop probe contains a polling failure.")
     by_name = dict(zip(names, observations))
     for name, row in by_name.items():
+        detail = row.get("detailSetting")
+        requested_detail = "preview" if name == "idle" else capture_detail
+        labels = {"metadata": "Metadata only", "arguments": "Arguments", "preview": "Arguments + buffers"}
+        require(type(detail) is dict and type(detail.get("disabled")) is bool and detail.get("value") == requested_detail and
+                detail["disabled"] == (name in ("capture", "filtered")), "Desktop capture detail control differs from the request.")
+        require(detail.get("label") == labels[requested_detail] and type(detail.get("clientWidth")) is int and 0 < detail["clientWidth"] <= 4096 and
+                all(type(detail.get(key)) in (int, float) and 0 <= detail[key] <= 1000 for key in ("textWidth", "inlinePadding")) and
+                detail["clientWidth"] >= detail["textWidth"] + detail["inlinePadding"] + 24, "Desktop capture detail control label is clipped.")
         setting = row.get("stackSetting")
         require(type(setting) is dict and type(setting.get("disabled")) is bool and setting.get("value") == str(0 if name == "idle" else stack_frames) and
                 (name == "idle" or setting["disabled"] == (name in ("capture", "filtered"))),
@@ -85,6 +95,8 @@ def verify_interaction(execution, driver, events):
     for name in ("stopped", "settled"):
         row = by_name[name]
         require(row["status"].startswith("State: idle\n") and row["session"] == "", "Native stop was not observed in the UI.")
+        expected_failures = sum(any(argument["decodeStatus"] not in ("decoded", "not_captured") for argument in event["arguments"]) for event in events)
+        require(row.get("decodeFailureCount") == str(expected_failures), "Desktop decode failure count differs from exported observations.")
     require(event_count(by_name["stopped"]) == event_count(by_name["settled"]) == len(events) and 40 < len(events) <= 5000,
             "UI counters and settled JSONL export differ.")
     require(all(row["filter"] == "WriteFile" and row["rows"] and all(cells[5] == "WriteFile" for cells in row["rows"])
@@ -101,6 +113,9 @@ def verify_interaction(execution, driver, events):
         require(event["timeSource"] == "qpc" and int(event["timing"]["qpcFrequency"]) > 0 and
                 int(event["timing"]["endQpc"]) >= int(event["timing"]["startQpc"]) > 0, "Exported native timing is invalid.")
         require(event["outcome"] == "success" and event["error"] is None, "Native target operation failed.")
+        require(event.get("captureDetail") == capture_detail and type(event.get("arguments")) is list and
+                type(event.get("bufferPreview")) is str and (capture_detail != "metadata" or event["arguments"] == []) and
+                (capture_detail == "preview" or event["bufferPreview"] == ""), "Exported capture detail or buffer payload differs.")
         context = event.get("hookContext")
         frames, capture = event.get("stack"), event.get("stackCapture")
         if stack_frames == 0:
@@ -121,12 +136,27 @@ def verify_interaction(execution, driver, events):
         tags = [tag for tag in event["tags"] if tag.startswith("session:")]
         require(len(tags) == 1, "Native event session identity is missing or ambiguous.")
         session_tags.update(tags)
-        if event["api"] in ("WriteFile", "ReadFile"):
+        if capture_detail == "preview" and event["api"] in ("WriteFile", "ReadFile"):
             arguments = {argument["name"]: argument for argument in event["arguments"]}
             require(event["bufferPreview"] == "4b 4e 4d 6f 6e 20 61 74 74 61 63 68 20 46 69 6c" and
                     arguments["lpBuffer"]["capture"]["capturedBytes"] == 16 and event["rawReturnValue"] == "1", "Native buffer payload differs from the target fixture.")
+        if capture_detail == "arguments" and event["api"] in ("WriteFile", "ReadFile"):
+            arguments = {argument["name"]: argument for argument in event["arguments"]}
+            buffer = arguments.get("lpBuffer", {})
+            observed = buffer.get("capture", {})
+            require(len(arguments) == 5 and buffer.get("decodeStatus") == "not_captured" and buffer.get("decodedValue") == "" and
+                    observed.get("phase") == "none" and observed.get("capturedBytes") == 0 and observed.get("truncationReason") == "capture_detail",
+                    "Disabled native buffer payload was presented as captured.")
     require(len(session_tags) == 1, "Desktop export mixes native sessions.")
     lookup = {str(event["eventId"]): event for event in events}
+    detail_view = driver.get("detailInspector")
+    messages = {"metadata": "Metadata only. Arguments and buffers were not captured.",
+                "arguments": "Arguments captured. Byte-buffer previews were disabled.",
+                "preview": "Arguments and byte-buffer previews enabled. Availability depends on the API and call result."}
+    require(type(detail_view) is dict and detail_view.get("eventId") in lookup and
+            detail_view.get("detail") == capture_detail and detail_view.get("message") == messages[capture_detail] and
+            type(detail_view.get("argumentRows")) is int and detail_view["argumentRows"] == len(lookup[detail_view["eventId"]]["arguments"]),
+            "Capture detail inspector differs from the export.")
     for row in observations[2:]:
         stack = row.get("stack")
         require(type(stack) is dict and stack.get("eventId") in lookup, "Stack inspector selection is absent from the export.")
@@ -147,7 +177,7 @@ def verify_interaction(execution, driver, events):
             event = lookup[cells[0]]
             require(cells[2:6] == [str(pid), str(event["tid"]), event["module"], event["api"]] and cells[7] == event["returnValue"],
                     "Rendered trace row differs from the exported event.")
-    return {"exportedEvents": len(events), "stackFrames": stack_frames, "renderedRows": {name: len(row["rows"]) for name, row in by_name.items()}, "apis": sorted({event["api"] for event in events})}
+    return {"exportedEvents": len(events), "stackFrames": stack_frames, "captureDetail": capture_detail, "renderedRows": {name: len(row["rows"]) for name, row in by_name.items()}, "apis": sorted({event["api"] for event in events})}
 
 
 def natural(value):
@@ -257,7 +287,7 @@ def verify_architecture(directory, architecture, expected_artifacts=None):
     require(type(execution["schemaVersion"]) is int and execution["schemaVersion"] == 1 and execution["status"] == "passed" and
             execution["architecture"] == architecture and execution["configuration"] ==
             {"desktop": "Release", "native": "Debug", "presentation": "hidden", "samplingIntervalMs": 200,
-             "stackFrames": execution["configuration"].get("stackFrames")}, "Desktop execution scope or status differs.")
+             "stackFrames": execution["configuration"].get("stackFrames"), "captureDetail": execution["configuration"].get("captureDetail")}, "Desktop execution scope or status differs.")
     require(all(type(execution[key]) is int and execution[key] == 0 for key in ("appExit", "targetExit", "driverExit")), "Desktop scenario did not exit normally.")
     require(execution["targetAliveAfterDriver"] is True, "Target did not survive native stop and UI export.")
     require(execution["closeWindows"] == [{"postedClose": True}] and set(execution["cleanup"]) == {"application", "target", "driver"} and
@@ -272,11 +302,13 @@ def verify_architecture(directory, architecture, expected_artifacts=None):
     validate_endpoint(execution["cdp"])
     require(request == {"endpoint": execution["cdp"]["endpoint"], "targetPid": execution["targetPid"],
                         "targetPath": execution["binaries"]["knmon-sample-fileio.exe"]["path"],
-                        "stackFrames": execution["configuration"]["stackFrames"]}, "Desktop driver request identity differs.")
+                        "stackFrames": execution["configuration"]["stackFrames"], "captureDetail": execution["configuration"]["captureDetail"]}, "Desktop driver request identity differs.")
     require(re.fullmatch(r"downloads/knmon-session-[0-9TZ-]+\.jsonl", Path(driver["exportFile"]).as_posix()) is not None, "Unexpected desktop export filename.")
     events = json_lines_data(payload(driver["exportFile"], 32 * 1024 * 1024))
     interaction = verify_interaction(execution, driver, events)
     resources = resource_summary(json_lines_data(payload("resources.jsonl", 32 * 1024 * 1024)), execution)
+    detail_png = payload("detail.png", 8 * 1024 * 1024)
+    require(detail_png.startswith(b"\x89PNG\r\n\x1a\n") and len(detail_png) > 1024, "Capture detail screenshot is absent or invalid.")
     png = payload("capture.png", 8 * 1024 * 1024)
     require(png.startswith(b"\x89PNG\r\n\x1a\n") and len(png) > 1024, "Desktop screenshot is absent or invalid.")
     return {"architecture": architecture, "interaction": interaction, "resources": resources,

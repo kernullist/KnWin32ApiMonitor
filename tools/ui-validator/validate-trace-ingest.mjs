@@ -70,7 +70,7 @@ const stackState = new TraceIngestState();
 stackState.apply({ epoch: 1, sequence: 1, command: { type: "reset" } });
 const uncaptured = { ...source(1), stackSource: "not_captured", hookContext: { agent: "knmon-agent64.dll", resolvedHostModule: "kernelbase.dll" } };
 const oldStack = { ...source(2), stack: ["old-agent!IatHook", "module!Api"] };
-const capturedStack = { ...source(3), stack: ["0x0000000012345678"], stackSource: "native_backtrace", stackCapture: {
+const capturedStack = { ...source(3), captureDetail: "metadata", arguments: [], bufferPreview: "", stack: ["0x0000000012345678"], stackSource: "native_backtrace", stackCapture: {
     method: "rtl_capture_stack_back_trace", phase: "post_call", addressBits: 64, requestedFrames: 8,
     status: "captured", limitReached: false, exceptionCode: 0
 } };
@@ -82,6 +82,7 @@ for (const [index, original] of [uncaptured, oldStack, capturedStack].entries())
     assert.equal(exported.stackSource, original.stackSource ?? "legacy_unverified");
     assert.deepEqual(exported.hookContext, original.hookContext);
     assert.deepEqual(exported.stackCapture, original.stackCapture);
+    assert.equal(exported.captureDetail, original.captureDetail);
 }
 let delta = apply({ epoch: 3, sequence: 1, command: { type: "replace", events: [selected], selectedEventId: 900, totalCapturedEvents: 9000000 } });
 assert.equal(delta.selectedEventId, 900);

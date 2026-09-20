@@ -36,7 +36,11 @@ auto InvokeTypedApi(Function original, const Arguments&... arguments) -> std::in
         return original(arguments...);
     }
     HookReentryGuard guard;
-    const std::array<std::uint64_t, sizeof...(Arguments)> values{TypedArgumentBits(arguments)...};
+    std::array<std::uint64_t, sizeof...(Arguments)> values = {};
+    if (CaptureArguments())
+    {
+        values = {TypedArgumentBits(arguments)...};
+    }
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
@@ -53,6 +57,10 @@ auto InvokeTypedApi(Function original, const Arguments&... arguments) -> std::in
                 FillTransportCommon(record, static_cast<knmon::KnMonTransportApiId>(Id), metadata->Module, start, end, 0);
                 record->Flags = knmon::KnMonTransportRecordFlagTypedAbi;
                 record->ReturnValue = record->RawReturnValue;
+                if (!CaptureArguments())
+                {
+                    return;
+                }
                 record->Values32[0] = static_cast<std::uint32_t>(values.size());
                 std::copy(values.begin(), values.end(), record->Values64);
             });

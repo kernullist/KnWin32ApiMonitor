@@ -74,6 +74,25 @@ void CheckResult(const char* name, std::uint64_t value, std::uint32_t error, con
 void CheckStackRequestBounds()
 {
     const knmon::Controller controller;
+    for (const auto detail : {3u, UINT32_MAX})
+    {
+        knmon::KnMonLaunchRequest launch;
+        knmon::KnMonAttachRequest attach;
+        knmon::KnMonProcessTreeRequest tree;
+        launch.Detail = static_cast<knmon::CaptureDetail>(detail);
+        attach.Detail = launch.Detail;
+        tree.Detail = launch.Detail;
+        const auto rejected = [](const auto& result)
+        {
+            Check(!result.Success && result.Win32ErrorCode == ERROR_INVALID_PARAMETER &&
+                result.Operation == "invalid_capture_detail", "Invalid capture detail reached process setup.");
+        };
+        rejected(controller.LaunchWithEarlyBirdApc(launch));
+        rejected(controller.LaunchCapture(launch));
+        rejected(controller.CaptureSampleFileIo(launch));
+        rejected(controller.AttachCapture(attach));
+        rejected(controller.SuperviseProcessTree(tree));
+    }
     for (const auto limit : {33u, UINT32_MAX})
     {
         knmon::KnMonLaunchRequest launch;
@@ -365,6 +384,8 @@ int wmain(int argc, wchar_t** argv)
         }
         Check(parityResult == 0, "Actual Agent wrapper error parity failed.");
         Check(parity(reinterpret_cast<void*>(1)) == 0, "Stack-enabled Agent wrapper error parity failed.");
+        const auto profiles = reinterpret_cast<LPTHREAD_START_ROUTINE>(GetProcAddress(agent, "KnMonTestCaptureDetail"));
+        Check(profiles != nullptr && profiles(nullptr) == 0, "Actual Agent capture detail suppression failed.");
         FreeLibrary(agent);
         std::cout << "QPC, result semantics, error preservation, SEH and actual Agent parity passed.\n";
     }

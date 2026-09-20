@@ -350,7 +350,8 @@ export function buildTraceIssueGroups(events: TraceEvent[], durationThresholdUs:
     }
 
     for (const argument of event.arguments) {
-      if (argument.decodeStatus !== "decoded") {
+      if (argument.decodeStatus !== "decoded" && argument.decodeStatus !== "not_captured")
+      {
         upsertIssueGroup(
           groups,
           {

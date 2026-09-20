@@ -862,6 +862,17 @@ std::wstring g_operationId;
 std::wstring g_channelNonce;
 std::string g_selectedApiSelection;
 std::uint32_t g_stackFrameLimit = 0;
+knmon::CaptureDetail g_captureDetail = knmon::CaptureDetail::Preview;
+
+bool CaptureArguments() noexcept
+{
+    return g_captureDetail != knmon::CaptureDetail::Metadata;
+}
+
+bool CaptureBufferPreviews() noexcept
+{
+    return g_captureDetail == knmon::CaptureDetail::Preview;
+}
 volatile LONG g_workerStarted = 0;
 HANDLE g_controllerWatchThread = nullptr;
 HANDLE g_controllerWatchStop = nullptr;
@@ -902,6 +913,7 @@ struct HookLifecycleCounts
 struct AgentWorkerConfig
 {
     std::uint32_t StackFrames = 0;
+    knmon::CaptureDetail Detail = knmon::CaptureDetail::Preview;
     std::wstring PipeName;
     std::wstring TransportName;
     std::wstring OperationId;
@@ -1606,7 +1618,8 @@ knmon::KnMonAgentControlStatus CopyAttachConfig(
         }
 
         if (config->AttachMode != static_cast<std::uint32_t>(knmon::KnMonAttachMode::RunningProcess) ||
-            config->StackFrames > knmon::NativeStackFrameLimit)
+            config->StackFrames > knmon::NativeStackFrameLimit || !knmon::IsValidCaptureDetail(config->Detail) ||
+            config->ReservedDetail != 0)
         {
             break;
         }
@@ -1622,6 +1635,7 @@ knmon::KnMonAgentControlStatus CopyAttachConfig(
 
         AgentWorkerConfig copied;
         copied.StackFrames = config->StackFrames;
+        copied.Detail = config->Detail;
         copied.OperationId = WideBufferToString(config->OperationId);
         copied.PipeName = WideBufferToString(config->PipeName);
         copied.TransportName = WideBufferToString(config->TransportName);
@@ -1928,7 +1942,7 @@ void CopyBufferPreviewText(char* destination, std::uint32_t* length, std::size_t
         }
 
         destination[0] = '\0';
-        if (buffer == nullptr || bytes == 0)
+        if (!CaptureBufferPreviews() || buffer == nullptr || bytes == 0)
         {
             break;
         }
@@ -1938,7 +1952,7 @@ void CopyBufferPreviewText(char* destination, std::uint32_t* length, std::size_t
         unsigned char probed[MaxBufferPreviewBytes] = {};
         SIZE_T probedBytes = 0;
         const DWORD requested = bytes < MaxBufferPreviewBytes ? bytes : static_cast<DWORD>(MaxBufferPreviewBytes);
-        if (!ReadProcessMemory(GetCurrentProcess(), buffer, probed, requested, &probedBytes) || probedBytes == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), buffer, probed, requested, &probedBytes) || probedBytes == 0)
         {
             break;
         }
@@ -1997,7 +2011,7 @@ std::uint32_t CopyWidePointerText(char* destination, std::uint32_t* length, std:
         {
             wchar_t ch = L'\0';
             SIZE_T bytesRead = 0;
-            if (!ReadProcessMemory(GetCurrentProcess(), source + copiedChars, &ch, sizeof(ch), &bytesRead) || bytesRead != sizeof(ch))
+            if (!knmon::ReadObservationMemory(GetCurrentProcess(), source + copiedChars, &ch, sizeof(ch), &bytesRead) || bytesRead != sizeof(ch))
             {
                 status = copiedChars == 0 ?
                     static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory) :
@@ -2069,7 +2083,7 @@ std::uint32_t CopyWideResultText(char* destination, std::uint32_t* length, std::
         {
             wchar_t ch = L'\0';
             SIZE_T bytesRead = 0;
-            if (!ReadProcessMemory(GetCurrentProcess(), source + copiedChars, &ch, sizeof(ch), &bytesRead) || bytesRead != sizeof(ch))
+            if (!knmon::ReadObservationMemory(GetCurrentProcess(), source + copiedChars, &ch, sizeof(ch), &bytesRead) || bytesRead != sizeof(ch))
             {
                 status = copiedChars == 0 ?
                     static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory) :
@@ -2106,7 +2120,7 @@ void CopyLocalHexPreviewText(char* destination, std::uint32_t* length, std::size
         }
 
         destination[0] = '\0';
-        if (buffer == nullptr || bytes == 0)
+        if (!CaptureBufferPreviews() || buffer == nullptr || bytes == 0)
         {
             break;
         }
@@ -2149,6 +2163,18 @@ std::uint32_t CopyRegistryDataPreviewText(
     const BYTE* data,
     DWORD bytes)
 {
+    if (!CaptureBufferPreviews())
+    {
+        if (destination != nullptr && capacity != 0)
+        {
+            destination[0] = '\0';
+        }
+        if (length != nullptr)
+        {
+            *length = 0;
+        }
+        return static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::NotCaptured);
+    }
     std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
 
     do
@@ -2181,7 +2207,7 @@ std::uint32_t CopyRegistryDataPreviewText(
 
             std::array<wchar_t, (MaxRegistryDataPreviewBytes / sizeof(wchar_t)) + 1> localWide = {};
             SIZE_T bytesRead = 0;
-            if (!ReadProcessMemory(GetCurrentProcess(), data, localWide.data(), capturedBytes, &bytesRead) || bytesRead == 0)
+            if (!knmon::ReadObservationMemory(GetCurrentProcess(), data, localWide.data(), capturedBytes, &bytesRead) || bytesRead == 0)
             {
                 CopyHexPointerText(destination, length, capacity, data);
                 status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
@@ -2212,7 +2238,7 @@ std::uint32_t CopyRegistryDataPreviewText(
         {
             DWORD localDword = 0;
             SIZE_T bytesRead = 0;
-            if (!ReadProcessMemory(GetCurrentProcess(), data, &localDword, sizeof(localDword), &bytesRead) || bytesRead != sizeof(localDword))
+            if (!knmon::ReadObservationMemory(GetCurrentProcess(), data, &localDword, sizeof(localDword), &bytesRead) || bytesRead != sizeof(localDword))
             {
                 CopyHexPointerText(destination, length, capacity, data);
                 status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
@@ -2227,7 +2253,7 @@ std::uint32_t CopyRegistryDataPreviewText(
 
         std::array<unsigned char, MaxRegistryDataPreviewBytes> localBytes = {};
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), data, localBytes.data(), capturedBytes, &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), data, localBytes.data(), capturedBytes, &bytesRead) || bytesRead == 0)
         {
             CopyHexPointerText(destination, length, capacity, data);
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
@@ -2287,7 +2313,7 @@ std::uint32_t CopyAnsiPointerText(char* destination, std::uint32_t* length, std:
         {
             char ch = '\0';
             SIZE_T bytesRead = 0;
-            if (!ReadProcessMemory(GetCurrentProcess(), source + copied, &ch, sizeof(ch), &bytesRead) || bytesRead != sizeof(ch))
+            if (!knmon::ReadObservationMemory(GetCurrentProcess(), source + copied, &ch, sizeof(ch), &bytesRead) || bytesRead != sizeof(ch))
             {
                 status = copied == 0 ?
                     static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory) :
@@ -2420,7 +2446,7 @@ std::uint32_t CopyAnsiStringText(char* destination, std::uint32_t* length, std::
 
         std::array<char, MaxResolverNameBytes + 1> localBuffer = {};
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), local.Buffer, localBuffer.data(), capturedBytes, &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), local.Buffer, localBuffer.data(), capturedBytes, &bytesRead) || bytesRead == 0)
         {
             CopyHexPointerText(destination, length, capacity, local.Buffer);
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
@@ -2496,7 +2522,7 @@ std::uint32_t CopyUnicodeStringText(char* destination, std::uint32_t* length, st
 
         std::array<wchar_t, (MaxNtObjectNameBytes / sizeof(wchar_t)) + 1> localBuffer = {};
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), local.Buffer, localBuffer.data(), capturedBytes, &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), local.Buffer, localBuffer.data(), capturedBytes, &bytesRead) || bytesRead == 0)
         {
             CopyHexPointerText(destination, length, capacity, local.Buffer);
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
@@ -2585,6 +2611,7 @@ void EmitTransportRecord(const LARGE_INTEGER& overheadStart, Callback&& callback
     knmon::WriteTransportRecord(g_transportHeader, g_transportRecords, g_transportCapacity, &g_droppedEvents,
         [&](knmon::KnMonTransportRecord* record)
         {
+            record->Detail = g_captureDetail;
             callback(record);
             if (g_stackFrameLimit != 0)
             {
@@ -2768,7 +2795,7 @@ bool ReadCurrentProcessValue(const T* address, T* value)
         }
 
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), address, value, sizeof(T), &bytesRead))
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), address, value, sizeof(T), &bytesRead))
         {
             break;
         }
@@ -3057,6 +3084,7 @@ void FillTransportCommon(
     if (record != nullptr)
     {
         record->ApiId = static_cast<std::uint16_t>(apiId);
+        record->Detail = g_captureDetail;
         record->ModuleId = ModuleId(moduleName);
         record->StartQpc = static_cast<std::uint64_t>(start.QuadPart);
         record->EndQpc = static_cast<std::uint64_t>(end.QuadPart);
@@ -3069,6 +3097,10 @@ void FillTransportCommon(
             record->RawWinsockErrorCode = static_cast<std::uint32_t>(g_callErrorState->Winsock());
             record->HasWinsockError = g_callErrorState->HasWinsock() ? 1 : 0;
             record->RawReturnValue = g_callErrorState->ReturnValue();
+            if (!CaptureArguments())
+            {
+                record->ReturnValue = record->RawReturnValue;
+            }
             record->RawReturnBits = g_callErrorState->ReturnBits();
             std::memcpy(record->RawReturnBytes, g_callErrorState->ReturnBytes().data(), sizeof(record->RawReturnBytes));
         }
@@ -3120,8 +3152,8 @@ void EmitGenericSingleArgumentEvent(
         FillTransportCommon(record, knmon::KnMonTransportApiId::Unknown, moduleName, start, end, errorCode);
         record->Flags |= knmon::KnMonTransportRecordFlagGenericInventory;
         record->ReturnValue = returnValue;
-        record->Values64[0] = argumentValue;
-        record->Values32[0] = 1;
+        record->Values64[0] = CaptureArguments() ? argumentValue : 0;
+        record->Values32[0] = CaptureArguments() ? 1 : 0;
         record->Values32[1] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::DefinitionMissing);
         record->Values32[2] = static_cast<std::uint32_t>(returnFormat);
 
@@ -3154,7 +3186,7 @@ void EmitGenericSingleArgumentEvent(
         }
 
         CopyAsciiText(record->Text0, &record->Text0Length, sizeof(record->Text0), apiName);
-        CopyAsciiText(record->Text2, &record->Text2Length, sizeof(record->Text2), argumentSchema);
+        CopyAsciiText(record->Text2, &record->Text2Length, sizeof(record->Text2), CaptureArguments() ? argumentSchema : "");
     });
 }
 
@@ -4746,7 +4778,7 @@ bool TryReadGeneratedLengthPointer(
 
         std::uint64_t value = 0;
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(
+        if (!knmon::ReadObservationMemory(
                 GetCurrentProcess(),
                 reinterpret_cast<const void*>(static_cast<std::uintptr_t>(pointerValue)),
                 &value,
@@ -4856,7 +4888,7 @@ std::uint32_t CopyGeneratedUtf16PreviewText(char* destination, std::uint32_t* le
         {
             wchar_t ch = L'\0';
             SIZE_T bytesRead = 0;
-            if (!ReadProcessMemory(GetCurrentProcess(), source + copiedChars, &ch, sizeof(ch), &bytesRead) || bytesRead != sizeof(ch))
+            if (!knmon::ReadObservationMemory(GetCurrentProcess(), source + copiedChars, &ch, sizeof(ch), &bytesRead) || bytesRead != sizeof(ch))
             {
                 status = copiedChars == 0 ?
                     static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory) :
@@ -4962,7 +4994,7 @@ std::uint32_t CopyGeneratedWideCharCountPreviewText(
         copiedChars = static_cast<std::uint32_t>(std::min<std::size_t>(charCount, MaxPreviewWideChars));
         const SIZE_T requestedBytes = static_cast<SIZE_T>(copiedChars * sizeof(wchar_t));
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), source, localBuffer.data(), requestedBytes, &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), source, localBuffer.data(), requestedBytes, &bytesRead) || bytesRead == 0)
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
             copiedChars = 0;
@@ -5058,7 +5090,7 @@ std::uint32_t CopyGeneratedBstrPreviewText(char* destination, std::uint32_t* len
 
         SIZE_T bytesRead = 0;
         const void* lengthAddress = reinterpret_cast<const void*>(sourceAddress - sizeof(byteLength));
-        if (!ReadProcessMemory(GetCurrentProcess(), lengthAddress, &byteLength, sizeof(byteLength), &bytesRead) || bytesRead != sizeof(byteLength))
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), lengthAddress, &byteLength, sizeof(byteLength), &bytesRead) || bytesRead != sizeof(byteLength))
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
             break;
@@ -5228,7 +5260,7 @@ std::uint32_t CopyGeneratedByteStringCountPreviewText(
 
         const std::uint32_t requestedBytes = static_cast<std::uint32_t>(std::min<std::size_t>(byteCount, MaxPreviewBytes));
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), source, localBuffer.data(), requestedBytes, &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), source, localBuffer.data(), requestedBytes, &bytesRead) || bytesRead == 0)
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
             break;
@@ -5289,7 +5321,7 @@ std::uint32_t CopyGeneratedWsStringPreviewText(char* destination, std::uint32_t*
         }
 
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
             break;
@@ -5343,7 +5375,7 @@ std::uint32_t CopyGeneratedWsXmlStringPreviewText(char* destination, std::uint32
         }
 
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
             break;
@@ -5382,6 +5414,18 @@ std::uint32_t CopyGeneratedBufferPreviewText(
     const void* source,
     std::uint64_t requestedBytes)
 {
+    if (!CaptureBufferPreviews())
+    {
+        if (destination != nullptr && capacity != 0)
+        {
+            destination[0] = '\0';
+        }
+        if (length != nullptr)
+        {
+            *length = 0;
+        }
+        return static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::NotCaptured);
+    }
     std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
     std::uint32_t copied = 0;
     std::array<unsigned char, GeneratedGenericPreviewMaxRawBytes> localBytes = {};
@@ -5409,7 +5453,7 @@ std::uint32_t CopyGeneratedBufferPreviewText(
         const std::uint32_t previewBytes = static_cast<std::uint32_t>(
             std::min<std::uint64_t>(requestedBytes, GeneratedGenericPreviewMaxRawBytes));
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), source, localBytes.data(), previewBytes, &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), source, localBytes.data(), previewBytes, &bytesRead) || bytesRead == 0)
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
             break;
@@ -5446,6 +5490,18 @@ std::uint32_t CopyGeneratedBufferPreviewText(
 
 std::uint32_t CopyGeneratedCryptoBlobPreviewText(char* destination, std::uint32_t* length, std::size_t capacity, const void* source)
 {
+    if (!CaptureBufferPreviews())
+    {
+        if (destination != nullptr && capacity != 0)
+        {
+            destination[0] = '\0';
+        }
+        if (length != nullptr)
+        {
+            *length = 0;
+        }
+        return static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::NotCaptured);
+    }
     std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
     std::uint32_t copied = 0;
     GeneratedCryptoBlob value = {};
@@ -5466,7 +5522,7 @@ std::uint32_t CopyGeneratedCryptoBlobPreviewText(char* destination, std::uint32_
         }
 
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
             break;
@@ -5524,7 +5580,7 @@ std::uint32_t CopyGeneratedGuidPreviewText(
         }
 
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), source, &guid, sizeof(guid), &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), source, &guid, sizeof(guid), &bytesRead) || bytesRead == 0)
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
             break;
@@ -5590,7 +5646,7 @@ std::uint32_t CopyGeneratedScalarPointerPreviewText(
         }
 
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, byteSize, &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), source, &value, byteSize, &bytesRead) || bytesRead == 0)
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
             break;
@@ -5657,7 +5713,7 @@ std::uint32_t CopyGeneratedPointerIndirectPreviewText(
         }
 
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
             break;
@@ -5708,7 +5764,7 @@ std::uint32_t CopyGeneratedLargeIntegerPreviewText(char* destination, std::uint3
         }
 
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
             break;
@@ -5760,7 +5816,7 @@ std::uint32_t CopyGeneratedFileTimePreviewText(char* destination, std::uint32_t*
         }
 
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
             break;
@@ -5811,7 +5867,7 @@ std::uint32_t CopyGeneratedSystemTimePreviewText(char* destination, std::uint32_
         }
 
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
             break;
@@ -5868,7 +5924,7 @@ std::uint32_t CopyGeneratedPointPreviewText(char* destination, std::uint32_t* le
         }
 
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
             break;
@@ -5920,7 +5976,7 @@ std::uint32_t CopyGeneratedRectPreviewText(char* destination, std::uint32_t* len
         }
 
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), source, &value, sizeof(value), &bytesRead) || bytesRead == 0)
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
             break;
@@ -6008,6 +6064,7 @@ void CaptureGeneratedGenericPreview(
             const GeneratedGenericPreviewKind previewKind = GeneratedParameterPreviewKind(apiMetadata, parameter);
             if (
                 previewKind == GeneratedGenericPreviewKind::None ||
+                (!CaptureBufferPreviews() && previewKind == GeneratedGenericPreviewKind::BufferBytes) ||
                 !GeneratedParameterAllowsPreview(parameter, previewKind) ||
                 arguments[index] == 0)
             {
@@ -6295,7 +6352,8 @@ void EmitGeneratedGenericEvent(
         record->Flags |= knmon::KnMonTransportRecordFlagGenericInventory;
         record->ReturnValue = returnValue;
 
-        const std::size_t cappedArgumentCount = std::min<std::size_t>(argumentCount, knmon::KnMonTransportSlotCount64);
+        const std::size_t cappedArgumentCount = CaptureArguments() ?
+            std::min<std::size_t>(argumentCount, knmon::KnMonTransportSlotCount64) : 0;
         for (std::size_t index = 0; index < cappedArgumentCount; ++index)
         {
             record->Values64[index] = arguments == nullptr ? 0 : arguments[index];
@@ -6552,6 +6610,10 @@ void EmitCreateFileWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CreateFileW, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(securityAttributes));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(templateFile));
@@ -6581,6 +6643,10 @@ void EmitCreateFileAEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CreateFileA, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(securityAttributes));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(templateFile));
@@ -6613,6 +6679,10 @@ void EmitFileIoEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, apiId, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = reinterpret_cast<std::uintptr_t>(file);
         record->Values64[1] = reinterpret_cast<std::uintptr_t>(buffer);
@@ -6642,6 +6712,10 @@ void EmitCloseHandleEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CloseHandle, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(handle));
     });
@@ -6662,6 +6736,10 @@ void EmitVirtualAllocEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::VirtualAlloc, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(address));
         record->Values64[1] = static_cast<std::uint64_t>(size);
@@ -6684,6 +6762,10 @@ void EmitVirtualFreeEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::VirtualFree, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(address));
         record->Values64[1] = static_cast<std::uint64_t>(size);
@@ -6725,6 +6807,10 @@ void EmitVirtualProtectEvent(
         }
 
         FillTransportCommon(record, knmon::KnMonTransportApiId::VirtualProtect, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(address));
         record->Values64[1] = static_cast<std::uint64_t>(size);
@@ -6768,6 +6854,10 @@ void EmitVirtualQueryEvent(
         }
 
         FillTransportCommon(record, knmon::KnMonTransportApiId::VirtualQuery, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(result);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(address));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(buffer));
@@ -6800,6 +6890,10 @@ void EmitCreateFileMappingWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CreateFileMappingW, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(mappingAttributes));
@@ -6824,6 +6918,10 @@ void EmitOpenFileMappingWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::OpenFileMappingW, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(name));
         record->Values32[0] = desiredAccess;
@@ -6847,6 +6945,10 @@ void EmitMapViewOfFileEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::MapViewOfFile, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(mapping));
         record->Values64[1] = static_cast<std::uint64_t>(bytesToMap);
@@ -6868,6 +6970,10 @@ void EmitUnmapViewOfFileEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::UnmapViewOfFile, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(baseAddress));
     });
@@ -6884,6 +6990,10 @@ void EmitGetCurrentProcessEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetCurrentProcess, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
     });
 }
@@ -6899,6 +7009,10 @@ void EmitGetCurrentProcessIdEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetCurrentProcessId, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result;
     });
 }
@@ -6914,6 +7028,10 @@ void EmitGetCurrentThreadEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetCurrentThread, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
     });
 }
@@ -6929,6 +7047,10 @@ void EmitGetCurrentThreadIdEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetCurrentThreadId, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result;
     });
 }
@@ -6945,6 +7067,10 @@ void EmitGetProcessIdEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetProcessId, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(process));
     });
@@ -6962,6 +7088,10 @@ void EmitGetThreadIdEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetThreadId, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(thread));
     });
@@ -6979,6 +7109,10 @@ void EmitGetStdHandleEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetStdHandle, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values32[0] = stdHandle;
     });
@@ -6996,6 +7130,10 @@ void EmitGetFileTypeEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetFileType, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
     });
@@ -7033,6 +7171,10 @@ void EmitGetHandleInformationEvent(
         }
 
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetHandleInformation, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(object));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(flags));
@@ -7055,6 +7197,10 @@ void EmitSetHandleInformationEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::SetHandleInformation, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(object));
         record->Values32[0] = mask;
@@ -7137,6 +7283,10 @@ void EmitGetFileSizeExEvent(
         }
 
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetFileSizeEx, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(fileSize));
@@ -7168,6 +7318,10 @@ void EmitGetFileTimeEvent(
         const std::uint32_t lastWriteStatus = CaptureFileTimeValue(result, lastWriteTime, &lastWriteTimeValue);
 
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetFileTime, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(creationTime));
@@ -7217,6 +7371,10 @@ void EmitGetFileInformationByHandleEvent(
         }
 
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetFileInformationByHandle, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(fileInformation));
@@ -7244,6 +7402,10 @@ void EmitGetModuleHandleWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetModuleHandleW, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(moduleName));
         record->Values32[0] = CopyWidePointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), moduleName);
@@ -7267,6 +7429,10 @@ void EmitGetModuleHandleExWEvent(
         HMODULE localModule = nullptr;
 
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetModuleHandleExW, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values32[0] = flags;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(moduleName));
@@ -7318,6 +7484,10 @@ void EmitGetModuleFileNameWEvent(
         std::uint32_t fileNameStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
 
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetModuleFileNameW, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(module));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(fileName));
@@ -7343,6 +7513,10 @@ void EmitFreeLibraryEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::FreeLibrary, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(module));
     });
@@ -7384,6 +7558,10 @@ void EmitCreateThreadEvent(
         }
 
         FillTransportCommon(record, knmon::KnMonTransportApiId::CreateThread, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(threadAttributes));
         record->Values64[1] = static_cast<std::uint64_t>(stackSize);
@@ -7410,6 +7588,10 @@ void EmitOpenThreadEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::OpenThread, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values32[0] = desiredAccess;
         record->Values32[1] = inheritHandle ? 1U : 0U;
@@ -7430,6 +7612,10 @@ void EmitWaitForSingleObjectEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::WaitForSingleObject, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(handle));
         record->Values32[0] = milliseconds;
@@ -7468,6 +7654,10 @@ void EmitGetExitCodeThreadEvent(
         }
 
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetExitCodeThread, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(thread));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(exitCode));
@@ -7491,6 +7681,10 @@ void EmitCreateEventWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CreateEventW, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(eventAttributes));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(name));
@@ -7513,6 +7707,10 @@ void EmitOpenEventWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::OpenEventW, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(name));
         record->Values32[0] = desiredAccess;
@@ -7532,6 +7730,10 @@ void EmitSetEventEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::SetEvent, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(eventHandle));
     });
@@ -7549,6 +7751,10 @@ void EmitResetEventEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::ResetEvent, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(eventHandle));
     });
@@ -7568,6 +7774,10 @@ void EmitWaitForSingleObjectExEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::WaitForSingleObjectEx, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(handle));
         record->Values32[0] = milliseconds;
@@ -7589,6 +7799,10 @@ void EmitCreateMutexWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CreateMutexW, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(mutexAttributes));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(name));
@@ -7610,6 +7824,10 @@ void EmitOpenMutexWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::OpenMutexW, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(name));
         record->Values32[0] = desiredAccess;
@@ -7629,6 +7847,10 @@ void EmitReleaseMutexEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::ReleaseMutex, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(mutexHandle));
     });
@@ -7649,6 +7871,10 @@ void EmitCreateSemaphoreWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CreateSemaphoreW, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(semaphoreAttributes));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(name));
@@ -7671,6 +7897,10 @@ void EmitOpenSemaphoreWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::OpenSemaphoreW, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(name));
         record->Values32[0] = desiredAccess;
@@ -7711,6 +7941,10 @@ void EmitReleaseSemaphoreEvent(
         }
 
         FillTransportCommon(record, knmon::KnMonTransportApiId::ReleaseSemaphore, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result ? 1 : 0;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(semaphoreHandle));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(previousCount));
@@ -7736,6 +7970,10 @@ void EmitWaitForMultipleObjectsExEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::WaitForMultipleObjectsEx, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = result;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(handles));
         record->Values32[0] = count;
@@ -7767,6 +8005,10 @@ void EmitNtCreateFileEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::NtCreateFile, "ntdll.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnCode = static_cast<std::uint32_t>(status);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(fileHandle));
         HANDLE localHandle = nullptr;
@@ -7805,6 +8047,10 @@ void EmitLoadLibraryWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::LoadLibraryW, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         CopyWideText(record->Text0, &record->Text0Length, sizeof(record->Text0), fileName);
     });
@@ -7822,6 +8068,10 @@ void EmitLoadLibraryAEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::LoadLibraryA, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         CopyAsciiText(record->Text0, &record->Text0Length, sizeof(record->Text0), fileName);
     });
@@ -7841,6 +8091,10 @@ void EmitLoadLibraryExWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::LoadLibraryExW, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
         record->Values32[0] = flags;
@@ -7862,6 +8116,10 @@ void EmitLoadLibraryExAEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::LoadLibraryExA, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(file));
         record->Values32[0] = flags;
@@ -7884,6 +8142,10 @@ void EmitLdrLoadDllEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::LdrLoadDll, "ntdll.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnCode = static_cast<std::uint32_t>(status);
         record->Values64[2] = reinterpret_cast<std::uintptr_t>(flags);
         record->Values64[3] = reinterpret_cast<std::uintptr_t>(pathToFile);
@@ -7915,6 +8177,10 @@ void EmitGetProcAddressEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetProcAddress, "kernel32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(module));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(procName));
@@ -7952,6 +8218,10 @@ void EmitLdrGetProcedureAddressEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::LdrGetProcedureAddress, "ntdll.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnCode = static_cast<std::uint32_t>(status);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(module));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(functionName));
@@ -7983,6 +8253,10 @@ void EmitRegOpenKeyExWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::RegOpenKeyExW, "advapi32.dll", start, end, result == ERROR_SUCCESS ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(key));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(resultKey));
@@ -8018,6 +8292,10 @@ void EmitRegCreateKeyExWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::RegCreateKeyExW, "advapi32.dll", start, end, result == ERROR_SUCCESS ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(key));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(securityAttributes));
@@ -8060,6 +8338,10 @@ void EmitRegQueryValueExWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::RegQueryValueExW, "advapi32.dll", start, end, result == ERROR_SUCCESS ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(key));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(reserved));
@@ -8104,6 +8386,10 @@ void EmitRegSetValueExWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::RegSetValueExW, "advapi32.dll", start, end, result == ERROR_SUCCESS ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(key));
         record->Values64[1] = reserved;
@@ -8127,6 +8413,10 @@ void EmitRegDeleteValueWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::RegDeleteValueW, "advapi32.dll", start, end, result == ERROR_SUCCESS ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(key));
         record->Values32[0] = CopyWidePointerText(record->Text0, &record->Text0Length, sizeof(record->Text0), valueName);
@@ -8144,6 +8434,10 @@ void EmitRegCloseKeyEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::RegCloseKey, "advapi32.dll", start, end, result == ERROR_SUCCESS ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(key));
     });
@@ -8163,6 +8457,10 @@ void EmitOpenProcessTokenEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::OpenProcessToken, "advapi32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(process));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(token));
@@ -8191,6 +8489,10 @@ void EmitLookupPrivilegeValueWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::LookupPrivilegeValueW, "advapi32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(systemName));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(name));
@@ -8223,6 +8525,10 @@ void EmitBCryptOpenAlgorithmProviderEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::BCryptOpenAlgorithmProvider, "bcrypt.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnCode = static_cast<std::uint32_t>(status);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(algorithm));
         record->Values64[2] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(algorithmId));
@@ -8253,6 +8559,10 @@ void EmitBCryptCloseAlgorithmProviderEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::BCryptCloseAlgorithmProvider, "bcrypt.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnCode = static_cast<std::uint32_t>(status);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(algorithm));
         record->Values32[0] = flags;
@@ -8276,6 +8586,10 @@ void EmitBCryptGetPropertyEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::BCryptGetProperty, "bcrypt.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnCode = static_cast<std::uint32_t>(status);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(object));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(property));
@@ -8315,6 +8629,10 @@ void EmitBCryptGenRandomEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::BCryptGenRandom, "bcrypt.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnCode = static_cast<std::uint32_t>(status);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(algorithm));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(buffer));
@@ -8335,6 +8653,10 @@ void EmitBCryptDestroyKeyEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::BCryptDestroyKey, "bcrypt.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnCode = static_cast<std::uint32_t>(status);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(key));
     });
@@ -8356,6 +8678,10 @@ void EmitCertOpenStoreEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CertOpenStore, "crypt32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(provider));
         record->Values64[1] = static_cast<std::uint64_t>(static_cast<std::uintptr_t>(cryptProvider));
@@ -8379,6 +8705,10 @@ void EmitCertCloseStoreEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CertCloseStore, "crypt32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(store));
         record->Values32[0] = flags;
@@ -8402,6 +8732,10 @@ void EmitCryptMsgOpenToDecodeEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CryptMsgOpenToDecode, "crypt32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(static_cast<std::uintptr_t>(cryptProvider));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(recipientInfo));
@@ -8424,6 +8758,10 @@ void EmitCryptMsgCloseEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CryptMsgClose, "crypt32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(message));
     });
@@ -8445,6 +8783,10 @@ void EmitInternetOpenWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::InternetOpenW, "wininet.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(agent));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(proxy));
@@ -8469,6 +8811,10 @@ void EmitInternetCloseHandleEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::InternetCloseHandle, "wininet.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(internet));
     });
@@ -8490,6 +8836,10 @@ void EmitWinHttpOpenEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::WinHttpOpen, "winhttp.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(agent));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(proxy));
@@ -8514,6 +8864,10 @@ void EmitWinHttpCloseHandleEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::WinHttpCloseHandle, "winhttp.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(internet));
     });
@@ -8612,6 +8966,10 @@ void EmitWinHttpSetOptionEvent(
         std::uint64_t optionValue = 0;
         const std::uint32_t optionValueStatus = CaptureWinHttpOptionDwordValue(result, option, buffer, bufferLength, &optionValue);
         FillTransportCommon(record, knmon::KnMonTransportApiId::WinHttpSetOption, "winhttp.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(internet));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(buffer));
@@ -8633,6 +8991,10 @@ void EmitGetSystemMetricsEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetSystemMetrics, "user32.dll", start, end, 0);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values32[0] = static_cast<std::uint32_t>(index);
     });
@@ -8648,6 +9010,10 @@ void EmitGetDesktopWindowEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetDesktopWindow, "user32.dll", start, end, 0);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
     });
 }
@@ -8662,6 +9028,10 @@ void EmitGetForegroundWindowEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetForegroundWindow, "user32.dll", start, end, 0);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
     });
 }
@@ -8678,6 +9048,10 @@ void EmitGetWindowThreadProcessIdEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetWindowThreadProcessId, "user32.dll", start, end, 0);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(result);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(window));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(processId));
@@ -8702,6 +9076,10 @@ void EmitCreateCompatibleDCEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CreateCompatibleDC, "gdi32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(dc));
     });
@@ -8719,6 +9097,10 @@ void EmitGetDeviceCapsEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetDeviceCaps, "gdi32.dll", start, end, 0);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(dc));
         record->Values32[0] = static_cast<std::uint32_t>(index);
@@ -8737,6 +9119,10 @@ void EmitDeleteDCEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::DeleteDC, "gdi32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(dc));
     });
@@ -8757,6 +9143,10 @@ void EmitEnumProcessModulesEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::EnumProcessModules, "psapi.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(process));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(modules));
@@ -8795,6 +9185,10 @@ void EmitGetModuleInformationEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetModuleInformation, "psapi.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(process));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(module));
@@ -8828,6 +9222,10 @@ void EmitGetModuleBaseNameWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetModuleBaseNameW, "psapi.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(result);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(process));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(module));
@@ -8856,6 +9254,10 @@ void EmitGetModuleFileNameExWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetModuleFileNameExW, "psapi.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(result);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(process));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(module));
@@ -9280,6 +9682,10 @@ void EmitGetFileVersionInfoSizeWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetFileVersionInfoSizeW, "version.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(result);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(fileName));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(handle));
@@ -9310,6 +9716,10 @@ void EmitGetFileVersionInfoWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetFileVersionInfoW, "version.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(fileName));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(data));
@@ -9334,6 +9744,10 @@ void EmitVerQueryValueWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::VerQueryValueW, "version.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(block));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(subBlock));
@@ -9399,6 +9813,10 @@ void EmitSHGetKnownFolderPathEvent(
     {
         const KnownFolderIdentity identity = ClassifyKnownFolderId(knownFolderId);
         FillTransportCommon(record, knmon::KnMonTransportApiId::SHGetKnownFolderPath, "shell32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->ReturnCode = static_cast<std::uint32_t>(result);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(&knownFolderId));
@@ -9449,6 +9867,10 @@ void EmitSHGetSpecialFolderPathWEvent(
     {
         const KnownFolderIdentity identity = ClassifyCsidlValue(csidl);
         FillTransportCommon(record, knmon::KnMonTransportApiId::SHGetSpecialFolderPathW, "shell32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(window));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(path));
@@ -9489,6 +9911,10 @@ void EmitCoInitializeExEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CoInitializeEx, "ole32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->ReturnCode = static_cast<std::uint32_t>(result);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(reserved));
@@ -9505,6 +9931,10 @@ void EmitCoUninitializeEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CoUninitialize, "ole32.dll", start, end, 0);
+        if (!CaptureArguments())
+        {
+            return;
+        }
     });
 }
 
@@ -9520,6 +9950,10 @@ void EmitCoCreateGuidEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::CoCreateGuid, "ole32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->ReturnCode = static_cast<std::uint32_t>(result);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(guid));
@@ -9557,6 +9991,10 @@ void EmitStringFromGUID2Event(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::StringFromGUID2, "ole32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(&guid));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(string));
@@ -9585,6 +10023,10 @@ void EmitRoInitializeEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::RoInitialize, "api-ms-win-core-winrt-l1-1-0.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->ReturnCode = static_cast<std::uint32_t>(result);
         record->Values32[0] = static_cast<std::uint32_t>(initType);
@@ -9600,6 +10042,10 @@ void EmitRoUninitializeEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::RoUninitialize, "api-ms-win-core-winrt-l1-1-0.dll", start, end, 0);
+        if (!CaptureArguments())
+        {
+            return;
+        }
     });
 }
 
@@ -9615,6 +10061,10 @@ void EmitRoGetApartmentIdentifierEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::RoGetApartmentIdentifier, "api-ms-win-core-winrt-l1-1-0.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->ReturnCode = static_cast<std::uint32_t>(result);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(apartmentIdentifier));
@@ -9651,6 +10101,10 @@ void EmitVariantClearEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::VariantClear, "oleaut32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->ReturnCode = static_cast<std::uint32_t>(result);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(variant));
@@ -9669,6 +10123,10 @@ void EmitSafeArrayDestroyEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::SafeArrayDestroy, "oleaut32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->ReturnCode = static_cast<std::uint32_t>(result);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(safeArray));
@@ -9685,6 +10143,10 @@ void EmitSysFreeStringEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::SysFreeString, "oleaut32.dll", start, end, 0);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(value));
     });
 }
@@ -9700,6 +10162,10 @@ void EmitFreeCredentialsHandleEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::FreeCredentialsHandle, "secur32.dll", start, end, status == SEC_E_OK ? 0 : static_cast<DWORD>(status));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(status));
         record->ReturnCode = static_cast<std::uint32_t>(status);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(credential));
@@ -9717,6 +10183,10 @@ void EmitDeleteSecurityContextEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::DeleteSecurityContext, "secur32.dll", start, end, status == SEC_E_OK ? 0 : static_cast<DWORD>(status));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(status));
         record->ReturnCode = static_cast<std::uint32_t>(status);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(context));
@@ -9734,6 +10204,10 @@ void EmitDnsRecordListFreeEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::DnsRecordListFree, "dnsapi.dll", start, end, 0);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(recordList));
         record->Values32[0] = static_cast<std::uint32_t>(freeType);
     });
@@ -9751,6 +10225,10 @@ void EmitSetupDiDestroyDeviceInfoListEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::SetupDiDestroyDeviceInfoList, "setupapi.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(deviceInfoSet));
     });
@@ -9768,6 +10246,10 @@ void EmitDestroyEnvironmentBlockEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::DestroyEnvironmentBlock, "userenv.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(environment));
     });
@@ -9805,6 +10287,10 @@ void EmitGetAdaptersAddressesEvent(
         }
 
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetAdaptersAddresses, "iphlpapi.dll", start, end, result == ERROR_SUCCESS ? 0 : result);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnCode = static_cast<std::uint32_t>(result);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(reserved));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(adapterAddresses));
@@ -9828,6 +10314,10 @@ void EmitGetIfEntry2Event(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetIfEntry2, "iphlpapi.dll", start, end, status == NO_ERROR ? 0 : static_cast<DWORD>(status));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnCode = static_cast<std::uint32_t>(status);
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(row));
     });
@@ -9845,6 +10335,10 @@ void EmitPathFileExistsWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::PathFileExistsW, "shlwapi.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(path));
     });
@@ -9861,6 +10355,10 @@ void EmitWTHelperProvDataFromStateDataEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::WTHelperProvDataFromStateData, "wintrust.dll", start, end, 0);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(providerData));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(stateData));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(providerData));
@@ -9881,6 +10379,10 @@ void EmitSymInitializeWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::SymInitializeW, "dbghelp.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(process));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(userSearchPath));
@@ -9900,6 +10402,10 @@ void EmitSymCleanupEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::SymCleanup, "dbghelp.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(process));
     });
@@ -9931,6 +10437,10 @@ void EmitRpcStringBindingComposeWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::RpcStringBindingComposeW, "rpcrt4.dll", start, end, result == RPC_S_OK ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(objUuid));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(protSeq));
@@ -9963,6 +10473,10 @@ void EmitRpcBindingFromStringBindingWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::RpcBindingFromStringBindingW, "rpcrt4.dll", start, end, result == RPC_S_OK ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(stringBinding));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(binding));
@@ -9992,6 +10506,10 @@ void EmitRpcStringFreeWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::RpcStringFreeW, "rpcrt4.dll", start, end, result == RPC_S_OK ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(string));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(preString));
@@ -10014,6 +10532,10 @@ void EmitRpcBindingFreeEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::RpcBindingFree, "rpcrt4.dll", start, end, result == RPC_S_OK ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(binding));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(preBinding));
@@ -10034,6 +10556,10 @@ void EmitRpcBindingSetOptionEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::RpcBindingSetOption, "rpcrt4.dll", start, end, result == RPC_S_OK ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(binding));
         record->Values64[1] = static_cast<std::uint64_t>(optionValue);
@@ -10054,6 +10580,10 @@ void EmitRpcMgmtEpEltInqDoneEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::RpcMgmtEpEltInqDone, "rpcrt4.dll", start, end, result == RPC_S_OK ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(inquiryContext));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(preInquiryContext));
@@ -10072,6 +10602,10 @@ void EmitUuidCreateEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::UuidCreate, "rpcrt4.dll", start, end, RpcStatusProducedUuid(result) ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(uuid));
         record->Values32[0] = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Partial);
@@ -10107,6 +10641,10 @@ void EmitUuidToStringWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::UuidToStringW, "rpcrt4.dll", start, end, result == RPC_S_OK ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(uuid));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(stringUuid));
@@ -10153,6 +10691,10 @@ void EmitUuidFromStringWEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::UuidFromStringW, "rpcrt4.dll", start, end, result == RPC_S_OK ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(stringUuid));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(uuid));
@@ -10190,6 +10732,10 @@ void EmitWSAStartupEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::WSAStartup, "ws2_32.dll", start, end, result == 0 ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values32[0] = versionRequested;
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(data));
@@ -10215,6 +10761,10 @@ void EmitWSACleanupEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::WSACleanup, "ws2_32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
     });
 }
@@ -10233,6 +10783,10 @@ void EmitSocketEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::Socket, "ws2_32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uintptr_t>(result));
         record->Values32[0] = static_cast<std::uint32_t>(af);
         record->Values32[1] = static_cast<std::uint32_t>(type);
@@ -10302,7 +10856,7 @@ std::uint32_t CopyConnectEndpointText(
         }
 
         SIZE_T bytesRead = 0;
-        if (!ReadProcessMemory(GetCurrentProcess(), address, &localAddress, bytesToRead, &bytesRead) || bytesRead < sizeof(ADDRESS_FAMILY))
+        if (!knmon::ReadObservationMemory(GetCurrentProcess(), address, &localAddress, bytesToRead, &bytesRead) || bytesRead < sizeof(ADDRESS_FAMILY))
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::UnreadableMemory);
             break;
@@ -10381,6 +10935,10 @@ void EmitConnectEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::Connect, "ws2_32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(static_cast<std::uintptr_t>(socketValue));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(address));
@@ -10409,6 +10967,10 @@ void EmitClosesocketEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::Closesocket, "ws2_32.dll", start, end, errorCode);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(static_cast<std::uintptr_t>(socketValue));
     });
@@ -10428,6 +10990,10 @@ void EmitGetAddrInfoEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::GetAddrInfo, "ws2_32.dll", start, end, result == 0 ? 0 : static_cast<DWORD>(result));
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(hints));
         record->Values64[1] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(resolved));
@@ -10461,6 +11027,10 @@ void EmitFreeAddrInfoEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::FreeAddrInfo, "ws2_32.dll", start, end, 0);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->Values64[0] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(addrInfo));
     });
 }
@@ -10475,6 +11045,10 @@ void EmitWSAGetLastErrorEvent(
     EmitTransportRecord(overheadStart, [&](knmon::KnMonTransportRecord* record)
     {
         FillTransportCommon(record, knmon::KnMonTransportApiId::WSAGetLastError, "ws2_32.dll", start, end, 0);
+        if (!CaptureArguments())
+        {
+            return;
+        }
         record->ReturnValue = static_cast<std::uint64_t>(static_cast<std::uint32_t>(result));
     });
 }
@@ -12854,15 +13428,15 @@ BOOL WINAPI HookedReadFile(HANDLE file, LPVOID buffer, DWORD bytesToRead, LPDWOR
     QueryPerformanceCounter(&end);
 
     DWORD actualBytes = 0;
-    const bool countCaptured = result && overlapped == nullptr &&
+    const bool countCaptured = CaptureArguments() && result && overlapped == nullptr &&
         ReadCurrentProcessValue(bytesRead, &actualBytes) && actualBytes <= bytesToRead;
-    const auto observation = countCaptured ? knmon::CaptureIoBuffer(buffer, actualBytes) : knmon::IoObservation{};
+    const auto observation = CaptureBufferPreviews() && countCaptured ? knmon::CaptureIoBuffer(buffer, actualBytes) : knmon::IoObservation{};
     const DWORD eventError = result ? 0 : lastError;
     if (HooksEnabled())
     {
         EmitFileIoEvent(knmon::KnMonTransportApiId::ReadFile, result, eventError, start, end,
             file, buffer, bytesToRead, bytesRead, overlapped, countCaptured ? actualBytes : 0,
-            countCaptured, observation, countCaptured ? 2 : 0);
+            countCaptured, observation, CaptureBufferPreviews() && countCaptured ? 2 : 0);
     }
 
     SetLastError(lastError);
@@ -12883,7 +13457,7 @@ BOOL WINAPI HookedWriteFile(HANDLE file, LPCVOID buffer, DWORD bytesToWrite, LPD
     }
 
     HookReentryGuard guard;
-    const auto observation = knmon::CaptureIoBuffer(buffer, bytesToWrite);
+    const auto observation = CaptureBufferPreviews() ? knmon::CaptureIoBuffer(buffer, bytesToWrite) : knmon::IoObservation{};
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
     QueryPerformanceCounter(&start);
@@ -12895,14 +13469,14 @@ BOOL WINAPI HookedWriteFile(HANDLE file, LPCVOID buffer, DWORD bytesToWrite, LPD
     QueryPerformanceCounter(&end);
 
     DWORD actualBytes = 0;
-    const bool countCaptured = result && overlapped == nullptr &&
+    const bool countCaptured = CaptureArguments() && result && overlapped == nullptr &&
         ReadCurrentProcessValue(bytesWritten, &actualBytes) && actualBytes <= bytesToWrite;
     const DWORD eventError = result ? 0 : lastError;
     if (HooksEnabled())
     {
         EmitFileIoEvent(knmon::KnMonTransportApiId::WriteFile, result, eventError, start, end,
             file, buffer, bytesToWrite, bytesWritten, overlapped, countCaptured ? actualBytes : 0,
-            countCaptured, observation, 1);
+            countCaptured, observation, CaptureBufferPreviews() ? 1 : 0);
     }
 
     SetLastError(lastError);
@@ -19784,7 +20358,7 @@ ULONG WINAPI HookedGetAdaptersAddresses(
 
     HookReentryGuard guard;
     ULONG preSize = 0;
-    if (sizePointer != nullptr)
+    if (CaptureArguments() && sizePointer != nullptr)
     {
         ULONG localSize = 0;
         if (ReadCurrentProcessValue(sizePointer, &localSize))
@@ -20049,7 +20623,7 @@ RPC_STATUS RPC_ENTRY HookedRpcStringFreeW(RPC_WSTR* string)
     char preStringText[knmon::KnMonTransportText0Bytes] = {};
     std::uint32_t preStringTextStatus = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
 
-    if (ReadCurrentProcessValue(string, &preString))
+    if (CaptureArguments() && ReadCurrentProcessValue(string, &preString))
     {
         preStringTextStatus = CopyRpcWideStringText(preStringText, nullptr, sizeof(preStringText), preString);
     }
@@ -20070,7 +20644,10 @@ RPC_STATUS RPC_ENTRY HookedRpcStringFreeW(RPC_WSTR* string)
     QueryPerformanceCounter(&end);
 
     RPC_WSTR postString = nullptr;
-    ReadCurrentProcessValue(string, &postString);
+    if (CaptureArguments())
+    {
+        ReadCurrentProcessValue(string, &postString);
+    }
 
     if (HooksEnabled())
     {
@@ -20094,7 +20671,10 @@ RPC_STATUS RPC_ENTRY HookedRpcBindingFree(RPC_BINDING_HANDLE* binding)
 
     HookReentryGuard guard;
     RPC_BINDING_HANDLE preBinding = nullptr;
-    ReadCurrentProcessValue(binding, &preBinding);
+    if (CaptureArguments())
+    {
+        ReadCurrentProcessValue(binding, &preBinding);
+    }
 
     LARGE_INTEGER start = {};
     LARGE_INTEGER end = {};
@@ -20106,7 +20686,10 @@ RPC_STATUS RPC_ENTRY HookedRpcBindingFree(RPC_BINDING_HANDLE* binding)
     QueryPerformanceCounter(&end);
 
     RPC_BINDING_HANDLE postBinding = nullptr;
-    ReadCurrentProcessValue(binding, &postBinding);
+    if (CaptureArguments())
+    {
+        ReadCurrentProcessValue(binding, &postBinding);
+    }
 
     if (HooksEnabled())
     {
@@ -20162,7 +20745,10 @@ RPC_STATUS RPC_ENTRY HookedRpcMgmtEpEltInqDone(RPC_EP_INQ_HANDLE* inquiryContext
     RPC_EP_INQ_HANDLE preInquiryContext = nullptr;
     if (inquiryContext != nullptr)
     {
-        ReadCurrentProcessValue(inquiryContext, &preInquiryContext);
+        if (CaptureArguments())
+        {
+            ReadCurrentProcessValue(inquiryContext, &preInquiryContext);
+        }
     }
 
     LARGE_INTEGER start = {};
@@ -20177,7 +20763,10 @@ RPC_STATUS RPC_ENTRY HookedRpcMgmtEpEltInqDone(RPC_EP_INQ_HANDLE* inquiryContext
     RPC_EP_INQ_HANDLE postInquiryContext = nullptr;
     if (inquiryContext != nullptr)
     {
-        ReadCurrentProcessValue(inquiryContext, &postInquiryContext);
+        if (CaptureArguments())
+        {
+            ReadCurrentProcessValue(inquiryContext, &postInquiryContext);
+        }
     }
 
     if (HooksEnabled())
@@ -20762,6 +21351,7 @@ bool ResetDisabledAgentForReinitialize()
         g_operationId.clear();
         g_selectedApiSelection.clear();
         g_stackFrameLimit = 0;
+        g_captureDetail = knmon::CaptureDetail::Preview;
         InterlockedExchange(&g_workerStarted, 0);
         SetLifecycleState(AgentLifecycleState::Starting);
         reset = true;
@@ -20826,17 +21416,23 @@ DWORD WINAPI AgentWorker(void* context)
             const auto parsedFrames = ReadEnvUInt64(L"KNMON_STACK_FRAMES");
             const bool validFrames = stackFrames == std::to_wstring(parsedFrames) && parsedFrames <= knmon::NativeStackFrameLimit;
             runtimeConfig.StackFrames = validFrames ? static_cast<std::uint32_t>(parsedFrames) : UINT32_MAX;
+            const auto detail = ReadEnv(L"KNMON_CAPTURE_DETAIL");
+            if (!knmon::ParseCaptureDetail(WideToUtf8(detail.c_str()), runtimeConfig.Detail))
+            {
+                runtimeConfig.Detail = static_cast<knmon::CaptureDetail>(UINT32_MAX);
+            }
         }
 
         g_operationId = runtimeConfig.OperationId;
         g_channelNonce = knmon::ChannelNonce(runtimeConfig.PipeName);
         g_selectedApiSelection = LowerAscii(WideToUtf8(runtimeConfig.SelectedApis.c_str()));
         g_stackFrameLimit = runtimeConfig.StackFrames;
+        g_captureDetail = runtimeConfig.Detail;
 
         do
         {
             if (g_channelNonce.empty() || runtimeConfig.ControllerProcessId == 0 || runtimeConfig.ControllerCreationTime == 0 ||
-                runtimeConfig.StackFrames > knmon::NativeStackFrameLimit)
+                runtimeConfig.StackFrames > knmon::NativeStackFrameLimit || !knmon::IsValidCaptureDetail(runtimeConfig.Detail))
             {
                 break;
             }
@@ -21549,4 +22145,5 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestHoldTeardownLocks(void* r
 #pragma comment(linker, "/EXPORT:KnMonTestErrorParity=_KnMonTestErrorParity@4")
 #endif
 #include "AbiDifferentialTests.inc"
+#include "CaptureDetailTests.inc"
 #endif

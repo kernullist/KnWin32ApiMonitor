@@ -37,6 +37,7 @@ TESTS = tuple(sorted([
     "security_tests::synchronous_reader_cancellation_does_not_require_the_writer_to_exit",
     "tests::argument_observation_survives_host_roundtrip",
     "tests::captured_semantics_preserve_exact_clock_and_error_fields",
+    "tests::capture_detail_preserves_policy_and_rejects_contradictory_payloads",
     "tests::stack_observation_preserves_legacy_and_rejects_false_capture",
     "tests::streaming_capture_result_frame_updates_session_cleanup_state",
     "tests::streaming_trace_batch_cursor_returns_only_new_batches",

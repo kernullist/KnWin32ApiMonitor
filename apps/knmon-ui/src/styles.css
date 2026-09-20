@@ -1537,6 +1537,12 @@ button:disabled {
   background: #ffffff;
 }
 
+.detail-table caption
+{
+  padding: 8px;
+  text-align: left;
+}
+
 .trace-table,
 .detail-table {
   width: 100%;

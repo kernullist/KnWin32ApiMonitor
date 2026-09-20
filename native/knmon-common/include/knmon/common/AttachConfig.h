@@ -1,11 +1,12 @@
 #pragma once
 
 #include <cstdint>
+#include <knmon/common/CaptureDetail.h>
 
 namespace knmon
 {
 inline constexpr std::uint32_t KnMonAttachConfigMagic = 0x31434e4b;
-inline constexpr std::uint16_t KnMonAttachConfigAbiVersion = 5;
+inline constexpr std::uint16_t KnMonAttachConfigAbiVersion = 6;
 inline constexpr std::uint32_t KnMonAttachConfigOperationIdChars = 64;
 inline constexpr std::uint32_t KnMonAttachConfigPipeNameChars = 260;
 inline constexpr std::uint32_t KnMonAttachConfigTransportNameChars = 128;
@@ -63,7 +64,9 @@ struct KnMonAttachConfigV1
     std::uint32_t StackFrames = 0;
     std::uint64_t ControllerCreationTime = 0;
     std::uint64_t TransportSize = 0;
-    std::uint64_t Reserved[5] = {};
+    CaptureDetail Detail = CaptureDetail::Preview;
+    std::uint32_t ReservedDetail = 0;
+    std::uint64_t Reserved[4] = {};
 };
 
 struct KnMonAgentStateV1

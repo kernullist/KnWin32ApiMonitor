@@ -21,7 +21,7 @@ The verifier also checks the executable's actual PE architecture. Builds and
 tests run in owned Jobs with deadlines and bounded logs. Test runs explicitly
 use [--include-ignored](https://doc.rust-lang.org/rustc/tests/), one test thread
 and uncolored pretty output. Both real-helper tests are ignored by ordinary
-`cargo test`; this producer requires all 19 named tests to execute and pass.
+`cargo test`; this producer requires all 20 named tests to execute and pass.
 Missing, filtered, ignored, duplicate or failed test results are rejected.
 
 The stack observation regression exercises the shared malformed/legacy corpus
@@ -29,6 +29,11 @@ through both agent and trace DTOs. It rejects object-encoded enum values, nulls,
 unknown provenance and contradictory uncaptured frames, and verifies lossless
 legacy string and hook-context roundtrips. See the
 [stack observation contract](stack-observation.md).
+
+The capture-detail regression runs 31 shared cases through both DTOs. It
+preserves explicit metadata, arguments and preview policies, retains unspecified
+legacy events, and rejects unknown policies and contradictory argument/buffer
+payloads. See the [capture detail contract](capture-detail.md).
 
 The positive integration test requires a completed capture, nonempty trace
 batches, no reported native or host loss, retained launch identity and helper

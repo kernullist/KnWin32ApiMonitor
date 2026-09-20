@@ -1,3 +1,4 @@
+import detailCases from "../../tests/fixtures/capture-detail.json" with { type: "json" };
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -45,7 +46,7 @@ function mutation(name, mutate, accepted = false)
         assert.equal(replay.success, true, JSON.stringify(replay));
         assert.equal(replay.traceEvents[0].api, "CreateFileW");
         const stored = JSON.parse(fs.readFileSync(path.join(target, "chunks/trace-000001.jsonl"), "utf8"));
-        for (const key of ["stack", "stackSource", "stackCapture", "hookContext"])
+        for (const key of ["stack", "stackSource", "stackCapture", "hookContext", "captureDetail", "arguments", "bufferPreview"])
         {
             assert.deepEqual(replay.traceEvents[0][key], stored[key], `Replay changed ${key}.`);
         }
@@ -147,6 +148,21 @@ for (const [name, fields, accepted] of stackCases)
         if (!Object.hasOwn(fields, "stack"))
         {
             delete value.stack;
+        }
+        return JSON.stringify(value) + "\n";
+    }), accepted);
+}
+for (const [index, [name, fields, accepted]] of detailCases.entries())
+{
+    mutation(`capture-detail-${index}`, (directory) => editTrace(directory, (text) =>
+    {
+        const value = { ...JSON.parse(text), ...fields };
+        for (const key of ["arguments", "bufferPreview"])
+        {
+            if (!Object.hasOwn(fields, key))
+            {
+                delete value[key];
+            }
         }
         return JSON.stringify(value) + "\n";
     }), accepted);

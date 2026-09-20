@@ -8,6 +8,8 @@ import { validateStackObservation } from "./strict-json.mjs";
 const directory = process.argv[2];
 assert.ok(directory, "Saved live capture directory required.");
 const stackFrames = Number(process.argv[3] ?? 0);
+const captureDetail = process.argv[4] ?? "preview";
+assert.ok(["metadata", "arguments", "preview"].includes(captureDetail));
 assert.ok(Number.isInteger(stackFrames) && stackFrames >= 0 && stackFrames <= 32);
 const read = (name) => JSON.parse(fs.readFileSync(path.join(directory, name), "utf8").replace(/^\uFEFF/, ""));
 const capture = read("capture-result.json");
@@ -38,6 +40,24 @@ for (let index = 0; index < capture.capturedEvents.length; ++index)
     const saved = replay.traceEvents[index];
     const timing = event.timing;
     validateStackObservation(event);
+    assert.equal(event.captureDetail, captureDetail);
+    if (captureDetail === "metadata")
+    {
+        assert.deepEqual(event.arguments, []);
+    }
+    if (captureDetail !== "preview")
+    {
+        assert.equal(event.bufferPreview, "");
+    }
+    if (captureDetail === "arguments" && ["ReadFile", "WriteFile"].includes(event.api))
+    {
+        const buffer = event.arguments.find((argument) => argument.name === "lpBuffer");
+        assert.equal(buffer.decodeStatus, "not_captured");
+        assert.equal(buffer.decodedValue, "");
+        assert.equal(buffer.capture.phase, "none");
+        assert.equal(buffer.capture.capturedBytes, 0);
+        assert.equal(buffer.capture.truncationReason, "capture_detail");
+    }
     assert.equal(event.stackSource, stackFrames === 0 ? "not_captured" : "native_backtrace");
     if (stackFrames === 0)
     {
@@ -73,7 +93,7 @@ for (let index = 0; index < capture.capturedEvents.length; ++index)
     for (const key of ["recordSequence", "observation", "arguments", "callId", "parentCallId", "callDepth", "rawReturnBytes", "rawReturnEncoding",
         "relativeTimeMs", "durationUs", "timeSource", "timing", "timestampUtc", "collectedAtUtc",
         "rawReturnValue", "rawReturnBits", "rawLastErrorCode", "rawWinsockErrorCode", "errorDomain", "outcome",
-        "errorValidity", "successPredicate", "winsockErrorSampled", "error", "stack", "stackSource", "stackCapture", "hookContext"])
+        "errorValidity", "successPredicate", "winsockErrorSampled", "error", "stack", "stackSource", "stackCapture", "hookContext", "captureDetail", "bufferPreview"])
     {
         assert.deepEqual(live[key], saved[key], `${event.api}: live/replay ${key}`);
     }
@@ -117,4 +137,13 @@ for (const api of ["PSRefreshPropertySchema", "WscQueryAntiMalwareUri", "RatingE
     assert.equal(event?.errorDomain, "hresult", api);
 }
 assert.equal(capture.capturedEvents.find((entry) => entry.api === "BCryptDestroyKey")?.errorDomain, "ntstatus");
+if (captureDetail === "arguments")
+{
+    for (const api of ["RpcStringBindingComposeW", "RpcBindingFromStringBindingW", "RpcStringFreeW"])
+    {
+        const events = capture.capturedEvents.filter((entry) => entry.api === api);
+        assert.ok(events.some((event) => event.arguments.some((argument) => argument.decodedValue.includes("KNMonRpcSample"))),
+            `${api}: disabling byte buffers lost decoded string arguments`);
+    }
+}
 console.log(`Capture semantics passed: ${capture.capturedEvents.length} events; ${fractional} fractional timestamps; ${errors} errors; ${resolvedHosts} resolved hosts.`);

@@ -510,6 +510,16 @@ void ValidateArgumentCapture(const JsonDocument& value)
 
 void ValidateStackObservation(const JsonDocument& value)
 {
+    if (value.Has("captureDetail"))
+    {
+        const auto detail = value.String("captureDetail", true);
+        if ((detail != "metadata" && detail != "arguments" && detail != "preview") ||
+            (detail == "metadata" && !value.Array("arguments", true).empty()) ||
+            (detail != "preview" && !value.String("bufferPreview", true).empty()))
+        {
+            throw JsonInputError("Inconsistent capture detail payload.");
+        }
+    }
     const auto stack = value.Array("stack", true);
     stack.RequireStringArray();
     const auto source = value.Has("stackSource") ? value.String("stackSource", true) : "legacy_unverified";

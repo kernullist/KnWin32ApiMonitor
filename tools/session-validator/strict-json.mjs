@@ -153,6 +153,14 @@ export function typedJsonValue(parsed, key, kind, required = false)
 
 export function validateStackObservation(value, parsed)
 {
+    if (Object.hasOwn(value, "captureDetail") &&
+        (!["metadata", "arguments", "preview"].includes(value.captureDetail) ||
+         !Array.isArray(value.arguments) || typeof value.bufferPreview !== "string" ||
+         (value.captureDetail === "metadata" && value.arguments.length !== 0) ||
+         (value.captureDetail !== "preview" && value.bufferPreview !== "")))
+    {
+        throw new Error("Inconsistent capture detail payload.");
+    }
     if (!Array.isArray(value.stack) || value.stack.some((entry) => typeof entry !== "string") ||
         (Object.hasOwn(value, "stackSource") && !["not_captured", "legacy_unverified", "native_backtrace"].includes(value.stackSource)) ||
         (value.stackSource === "not_captured" && value.stack.length !== 0))

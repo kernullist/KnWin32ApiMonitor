@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <algorithm>
 #include <cstdint>
+#include <knmon/common/ObservationMemory.h>
 
 namespace knmon
 {
@@ -43,7 +44,7 @@ inline IoObservation CaptureIoBuffer(const void* buffer, DWORD bytes) noexcept
         unsigned char captured[IoObservation::Limit] = {};
         SIZE_T copied = 0;
         const DWORD requested = (std::min)(bytes, IoObservation::Limit);
-        const BOOL read = ReadProcessMemory(GetCurrentProcess(), buffer, captured, requested, &copied);
+        const BOOL read = ReadObservationMemory(GetCurrentProcess(), buffer, captured, requested, &copied);
         result.Captured = static_cast<DWORD>((std::min)(copied, static_cast<SIZE_T>(requested)));
         result.Status = read && copied == requested ? IoReadStatus::Complete :
             (result.Captured == 0 ? IoReadStatus::Unreadable : IoReadStatus::Partial);

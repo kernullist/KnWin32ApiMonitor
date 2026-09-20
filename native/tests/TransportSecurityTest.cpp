@@ -121,6 +121,41 @@ int main()
 {
     try
     {
+        ExpectCorruption("unknown capture detail", [](auto& f)
+        {
+            f.Records[0].Detail = static_cast<knmon::CaptureDetail>(UINT32_MAX);
+        });
+        ExpectCorruption("metadata argument value", [](auto& f)
+        {
+            f.Records[0].Detail = knmon::CaptureDetail::Metadata;
+            f.Records[0].Values64[0] = 1;
+        });
+        ExpectCorruption("metadata argument count", [](auto& f)
+        {
+            f.Records[0].Detail = knmon::CaptureDetail::Metadata;
+            f.Records[0].Values32[0] = 1;
+        });
+        ExpectCorruption("metadata text payload", [](auto& f)
+        {
+            f.Records[0].Detail = knmon::CaptureDetail::Metadata;
+            f.Records[0].Text0Length = 1;
+            f.Records[0].Text0[0] = 'x';
+        });
+        ExpectCorruption("metadata generic argument schema", [](auto& f)
+        {
+            f.Records[0].Detail = knmon::CaptureDetail::Metadata;
+            f.Records[0].Flags = knmon::KnMonTransportRecordFlagGenericInventory;
+            f.Records[0].Text2Length = 1;
+            f.Records[0].Text2[0] = 'x';
+        });
+        ExpectCorruption("capture detail differs from trusted request", [](auto& f)
+        {
+            f.Records[0].Detail = knmon::CaptureDetail::Arguments;
+            f.Config.ValidateRecordIdentity = [](const auto& record)
+            {
+                return record.Detail == knmon::CaptureDetail::Metadata;
+            };
+        });
         ExpectCorruption("aggregate bytes on a scalar record", [](auto& f)
         {
             f.Records[0].RawReturnBytes[0] = 1;

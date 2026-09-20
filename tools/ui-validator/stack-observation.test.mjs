@@ -98,7 +98,7 @@ test("all capture commands forward the selected stack limit and default to disab
 test("published stack schemas match native observation and frame-limit contracts", () =>
 {
   const ajv = new Ajv({ strict: false, allErrors: false, validateFormats: false });
-  for (const name of ["argument", "stack-observation", "event", "agent-event", "launch-request"])
+  for (const name of ["argument", "stack-observation", "capture-detail", "event", "agent-event", "launch-request"])
   {
     ajv.addSchema(JSON.parse(fs.readFileSync(new URL(`../../contracts/${name}.schema.json`, import.meta.url), "utf8")));
   }

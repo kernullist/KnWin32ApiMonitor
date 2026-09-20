@@ -938,6 +938,10 @@ std::string BuildTraceEventJson(const knmon::KnMonAgentMessage& message, std::ui
     stream << "\"tags\":" << ExtractJsonArray(payload, "tags") << ",";
     stream << "\"stack\":" << ExtractJsonArray(payload, "stack") << ",";
     stream << "\"stackSource\":" << Q(payload.Has("stackSource") ? payload.String("stackSource") : "legacy_unverified") << ",";
+    if (payload.Has("captureDetail"))
+    {
+        stream << "\"captureDetail\":" << Q(payload.String("captureDetail", true)) << ",";
+    }
     if (payload.Has("stackCapture"))
     {
         stream << "\"stackCapture\":" << payload.Object("stackCapture", true) << ",";
@@ -4042,6 +4046,22 @@ std::string ListTargetsJson()
     return stream.str();
 }
 
+bool OptionHasValue(std::string_view option)
+{
+    static constexpr std::string_view Names[] =
+    {
+        "--agent", "--api", "--api-selection", "--args", "--batch-interval-ms", "--batch-size",
+        "--cancel-event", "--capture-detail", "--catalog", "--child-policy", "--cwd",
+        "--daemon-control-endpoint", "--daemon-instance-id", "--daemon-process-id", "--daemon-started-utc",
+        "--database", "--duration-ms", "--knapm-compression", "--limit", "--module", "--operation-id",
+        "--owner-created", "--owner-kind", "--owner-pid", "--pid", "--poll-ms", "--root", "--runtime-dir",
+        "--selected-event-id", "--session", "--session-id", "--session-record", "--stack-frames", "--state",
+        "--target", "--target-args", "--target-startup-delay-ms", "--text", "--timeout-ms", "--window-limit",
+        "--write-knapm", "--write-session"
+    };
+    return std::find(std::begin(Names), std::end(Names), option) != std::end(Names);
+}
+
 std::string GetOption(const std::vector<std::string>& args, const std::string& name)
 {
     std::string value;
@@ -4053,6 +4073,10 @@ std::string GetOption(const std::vector<std::string>& args, const std::string& n
             value = args[index + 1];
             break;
         }
+        if (OptionHasValue(args[index]))
+        {
+            ++index;
+        }
     }
 
     return value;
@@ -4062,12 +4086,16 @@ bool HasOption(const std::vector<std::string>& args, const std::string& name)
 {
     bool found = false;
 
-    for (const std::string& arg : args)
+    for (std::size_t index = 0; index < args.size(); ++index)
     {
-        if (arg == name)
+        if (args[index] == name)
         {
             found = true;
             break;
+        }
+        if (OptionHasValue(args[index]))
+        {
+            ++index;
         }
     }
 
@@ -4080,7 +4108,7 @@ std::uint32_t StackFrameOption(const std::vector<std::string>& args)
     bool found = false;
     for (std::size_t index = 1; index < args.size(); ++index)
     {
-        if (args[index] == "--args")
+        if (args[index] != "--stack-frames" && OptionHasValue(args[index]))
         {
             ++index;
             continue;
@@ -4111,6 +4139,34 @@ std::uint32_t StackFrameOption(const std::vector<std::string>& args)
         }
     }
     return frames;
+}
+
+knmon::CaptureDetail CaptureDetailOption(const std::vector<std::string>& args)
+{
+    knmon::CaptureDetail detail = knmon::CaptureDetail::Preview;
+    bool found = false;
+    for (std::size_t index = 1; index < args.size(); ++index)
+    {
+        if (args[index] != "--capture-detail" && OptionHasValue(args[index]))
+        {
+            ++index;
+            continue;
+        }
+        if (args[index].starts_with("--capture-detail="))
+        {
+            throw std::invalid_argument("Use --capture-detail followed by metadata, arguments, or preview.");
+        }
+        if (args[index] != "--capture-detail")
+        {
+            continue;
+        }
+        if (found || ++index == args.size() || !knmon::ParseCaptureDetail(args[index], detail))
+        {
+            throw std::invalid_argument("Capture detail must be metadata, arguments, or preview, specified once.");
+        }
+        found = true;
+    }
+    return detail;
 }
 
 std::uint32_t GetUInt32Option(const std::vector<std::string>& args, const std::string& name, std::uint32_t fallback)
@@ -7399,6 +7455,7 @@ int LaunchSessionCommand(const std::vector<std::string>& args)
     request.CommandLineArguments = GetOption(args, "--args");
     request.ApiSelection = GetOption(args, "--api-selection");
     request.StackFrames = StackFrameOption(args);
+    request.Detail = CaptureDetailOption(args);
     request.OwnerProcessId = ownerProcessId;
     request.OwnLaunchJob = HasOption(args, "--own-launch-job");
     const std::string ownerCreated = GetOption(args, "--owner-created");
@@ -7541,6 +7598,7 @@ std::string CaptureSampleJson(const std::vector<std::string>& args)
     }
     request.ApiSelection = GetOption(args, "--api-selection");
     request.StackFrames = StackFrameOption(args);
+    request.Detail = CaptureDetailOption(args);
     request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 9000);
     request.Architecture = NativeHelperArchitecture();
     request.InjectionMethod = knmon::KnMonInjectionMethod::EarlyBirdApc;
@@ -7590,6 +7648,7 @@ std::string AttachCaptureJson(const std::vector<std::string>& args)
     request.CancellationEventName = CancellationEventNameFromArgs(args, request.OperationId);
     request.ApiSelection = GetOption(args, "--api-selection");
     request.StackFrames = StackFrameOption(args);
+    request.Detail = CaptureDetailOption(args);
     request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
     request.DurationMs = GetUInt32Option(args, "--duration-ms", 3000);
     request.Architecture = NativeHelperArchitecture();
@@ -7677,6 +7736,7 @@ int AttachSessionCommand(const std::vector<std::string>& args)
     request.CancellationEventName = cancellationEventName;
     request.ApiSelection = GetOption(args, "--api-selection");
     request.StackFrames = StackFrameOption(args);
+    request.Detail = CaptureDetailOption(args);
     request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
     request.DurationMs = GetUInt32Option(args, "--duration-ms", 0);
     request.Architecture = NativeHelperArchitecture();
@@ -7809,6 +7869,7 @@ std::string SuperviseTreeJson(const std::vector<std::string>& args)
     request.CancellationEventName = CancellationEventNameFromArgs(args, request.OperationId);
     request.ApiSelection = GetOption(args, "--api-selection");
     request.StackFrames = StackFrameOption(args);
+    request.Detail = CaptureDetailOption(args);
     request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
     request.DurationMs = GetUInt32Option(args, "--duration-ms", 3000);
     request.PollIntervalMs = GetUInt32Option(args, "--poll-ms", 100);
@@ -9635,6 +9696,8 @@ std::string DaemonStartSessionJson(const std::vector<std::string>& args)
             childArgs.push_back(apiSelection);
         }
 
+        childArgs.push_back("--capture-detail");
+        childArgs.push_back(knmon::CaptureDetailName(CaptureDetailOption(args)));
         childArgs.push_back("--stack-frames");
         childArgs.push_back(std::to_string(StackFrameOption(args)));
 
@@ -9925,6 +9988,16 @@ int DispatchCommand(const std::vector<std::string>& args)
     catch (const std::invalid_argument& error)
     {
         std::cout << "{\"schemaVersion\":\"0.1.0\",\"success\":false,\"operation\":\"validate_stack_capture\","
+            << "\"win32ErrorCode\":" << ERROR_INVALID_PARAMETER << ",\"message\":" << Q(error.what()) << "}\n";
+        return 1;
+    }
+    try
+    {
+        CaptureDetailOption(args);
+    }
+    catch (const std::invalid_argument& error)
+    {
+        std::cout << "{\"schemaVersion\":\"0.1.0\",\"success\":false,\"operation\":\"validate_capture_detail\","
             << "\"win32ErrorCode\":" << ERROR_INVALID_PARAMETER << ",\"message\":" << Q(error.what()) << "}\n";
         return 1;
     }

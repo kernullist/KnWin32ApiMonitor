@@ -17,6 +17,8 @@ Run from the repository root after building both desktop and Debug native target
 node --test tools/ui-validator/target-architecture.test.mjs
 python -X utf8 tools/readiness/desktop_evidence.py
 python -X utf8 tools/readiness/desktop_evidence.py --stack-frames 32
+python -X utf8 tools/readiness/desktop_evidence.py --capture-detail arguments
+python -X utf8 tools/readiness/desktop_evidence.py --capture-detail metadata --stack-frames 32
 python -X utf8 tools/readiness/desktop_evidence.py --check build/desktop-evidence-<id>
 python -X utf8 tools/readiness/verify_desktop_evidence.py --evidence build/desktop-evidence-<id>/x64
 ```
@@ -32,6 +34,16 @@ selected and cannot be changed while capture is active. It also compares the
 selected option text with its measured text/padding and actual control width,
 reserving space for the native arrow so a clipped limit cannot pass. Run Off and an enabled
 mode separately when validating the optional stack path.
+
+`--capture-detail metadata|arguments|preview` selects the actual collection
+policy, with preview as the default. The same input, locking and label-width
+checks apply. Metadata exports must have empty arguments and buffers; arguments
+exports keep decoded parameters while file-buffer observations explicitly report
+`not_captured` with reason `capture_detail`. The Parameters caption and row count
+must agree with the exported selected event. Stack capture remains independent.
+After terminal draining, the displayed decode-failure count must equal the
+exported events with actual decoder problems. Intentionally uncaptured arguments
+are excluded from that count and remain available to explicit status filters.
 
 Each run uses fresh portable, temporary and WebView2 profile directories under
 `build`. Child-only environment settings enable an ephemeral loopback debugging
@@ -49,7 +61,10 @@ Before refreshing targets, the driver waits for the real button to become
 enabled within its deadline. A fixed startup delay alone was insufficient on
 an observed x86 run while initial native enumeration was still active. The
 driver retains button readiness in its observations and never force-enables
-or bypasses an unavailable control.
+or bypasses an unavailable control. It also waits for the detail, stack and
+refresh controls to become enabled before recording the initial idle phase.
+The first detail-mode run observed them during startup enumeration; its failed
+consumer result is retained separately from subsequent executions.
 
 The evidence retains:
 
@@ -57,7 +72,8 @@ The evidence retains:
   architecture checks, WebView runtime and observed process image hashes.
 - Raw samples at a nominal 200 ms interval, including PID plus creation time,
   image path, working set, private bytes, handles and cumulative Job CPU.
-- UI observations, the downloaded JSONL and a rendered screenshot. Revalidation
+- UI observations, the downloaded JSONL and rendered Parameters/Call Stack
+  screenshots. Revalidation
   reconciles event counts, sequences, target identity, native file-buffer bytes,
   filtered rows and the terminal UI state.
   The driver also opens the Call Stack tab with an actual mouse action. Its

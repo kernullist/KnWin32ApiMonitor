@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/capture-detail.schema.json",
+  "title": "Capture detail provenance",
+  "type": "object",
+  "properties": {
+    "captureDetail": { "enum": ["metadata", "arguments", "preview"] }
+  },
+  "allOf": [
+    {
+      "if": { "required": ["captureDetail"] },
+      "then": {
+        "required": ["arguments", "bufferPreview"],
+        "properties": {
+          "arguments": { "type": "array" },
+          "bufferPreview": { "type": "string" }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["captureDetail"],
+        "properties": { "captureDetail": { "const": "metadata" } }
+      },
+      "then": { "properties": { "arguments": { "maxItems": 0 } } }
+    },
+    {
+      "if": {
+        "required": ["captureDetail"],
+        "properties": { "captureDetail": { "enum": ["metadata", "arguments"] } }
+      },
+      "then": { "properties": { "bufferPreview": { "const": "" } } }
+    }
+  ]
+}

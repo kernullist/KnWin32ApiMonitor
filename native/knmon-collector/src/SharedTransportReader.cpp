@@ -155,7 +155,7 @@ bool SharedTransportReader::ValidateRecord(const KnMonTransportRecord& record, S
     bool valid = false;
     do
     {
-        if (record.RecordSize != sizeof(KnMonTransportRecord) ||
+        if (record.RecordSize != sizeof(KnMonTransportRecord) || !IsValidCaptureDetail(record.Detail) ||
             !ValidateNativeStackRecord(record.Stack,
                 m_config.ExpectedArchitecture == static_cast<std::uint32_t>(KnMonAgentArchitecture::X86) ? 32 : 64) ||
             record.HasWinsockError > 1 ||
@@ -171,6 +171,28 @@ bool SharedTransportReader::ValidateRecord(const KnMonTransportRecord& record, S
         {
             Fail(result, "Shared transport record layout, flags, or text length is invalid.");
             break;
+        }
+        if (record.Detail == CaptureDetail::Metadata)
+        {
+            const bool generic = record.Flags == KnMonTransportRecordFlagGenericInventory;
+            bool payloadEmpty = std::all_of(std::begin(record.Values64), std::end(record.Values64),
+                [](std::uint64_t value)
+                {
+                    return value == 0;
+                });
+            for (std::size_t index = 0; index < std::size(record.Values32); ++index)
+            {
+                if ((!generic || (index != 1 && index != 2)) && record.Values32[index] != 0)
+                {
+                    payloadEmpty = false;
+                }
+            }
+            if (!payloadEmpty || record.Text2Length != 0 ||
+                (!generic && (record.Text0Length != 0 || record.Text1Length != 0)))
+            {
+                Fail(result, "Metadata-only record contains argument payload.");
+                break;
+            }
         }
         const auto* typed = FindTypedAbi(record.ApiId);
         const bool aggregate = record.RawReturnBits == 128;
@@ -189,7 +211,7 @@ bool SharedTransportReader::ValidateRecord(const KnMonTransportRecord& record, S
         {
             const std::uint32_t expectedBits = typed == nullptr ? 0 : typed->ReturnKind == TypedValueKind::Void ? 0 :
                 typed->ReturnKind == TypedValueKind::Color4F ? 128 : 32;
-            if (typed == nullptr || record.Values32[0] != typed->ArgumentCount || record.RawReturnBits != expectedBits)
+            if (typed == nullptr || record.Values32[0] != (record.Detail == CaptureDetail::Metadata ? 0u : typed->ArgumentCount) || record.RawReturnBits != expectedBits)
             {
                 Fail(result, "Shared transport typed ABI contract is invalid.");
                 break;

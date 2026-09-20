@@ -1,3 +1,5 @@
+import { describeCaptureDetail } from "./traceConversion";
+import type { CaptureDetail } from "./types";
 import { TraceIngestClient, type TraceIngestCommand, type TraceIngestDelta, type CapturedEventChunk } from "./traceIngestProtocol";
 import {
   Activity,
@@ -610,6 +612,7 @@ function App() {
   const [detailColumnWidths, setDetailColumnWidths] = useState(() => detailColumns.map((column) => column.width));
   const [selectedApiKeys, setSelectedApiKeys] = useState<Set<string>>(() => new Set(collectApiLeafKeys(apiTree)));
   const [stackFrames, setStackFrames] = useState(0);
+  const [captureDetail, setCaptureDetail] = useState<CaptureDetail>("preview");
   const [expandedApiNodes, setExpandedApiNodes] = useState<Set<string>>(() => new Set(apiTree.map((node) => node.id)));
   const [outputEvents, setOutputEvents] = useState<AuditEvent[]>([
     makeAuditEvent("backend_ready", "native_init", "Native desktop backend ready. Launch a target or attach to a running process.")
@@ -1518,7 +1521,7 @@ function App() {
       }
 
       appendOutput([makeAuditEvent("launch_requested", "start_launch_monitor_session", `Early-bird launch monitor requested for ${targetPath}; scope=${apiSelectionSummary}.`)]);
-      const session = await startLaunchMonitorSession(targetPath, workingDirectory, launchArguments.trim(), apiSelectionRequest, stackFrames);
+      const session = await startLaunchMonitorSession(targetPath, workingDirectory, launchArguments.trim(), apiSelectionRequest, stackFrames, captureDetail);
       traceSessionId.current = session.sessionId;
       streamBatchCursors.current[session.sessionId] = 0;
       setLaunchSession(session);
@@ -1935,7 +1938,7 @@ function App() {
 
     try {
       appendOutput([makeAuditEvent("attach_requested", "attach_target_process_capture", `Bounded attach requested for PID ${selectedTarget.pid}; scope=${apiSelectionSummary}.`)]);
-      const result = await attachTargetProcessCapture(selectedTarget.pid, attachDurationMs, apiSelectionRequest, stackFrames);
+      const result = await attachTargetProcessCapture(selectedTarget.pid, attachDurationMs, apiSelectionRequest, stackFrames, captureDetail);
       if (captureEpoch !== traceIngestClient.current?.epoch)
       {
         return;
@@ -1984,7 +1987,7 @@ function App() {
 
     try {
       appendOutput([makeAuditEvent("stream_attach_requested", "start_streaming_attach_session", `Streaming attach requested for PID ${selectedTarget.pid}; scope=${apiSelectionSummary}.`)]);
-      const session = await startStreamingAttachSession(selectedTarget.pid, apiSelectionRequest, stackFrames);
+      const session = await startStreamingAttachSession(selectedTarget.pid, apiSelectionRequest, stackFrames, captureDetail);
       traceSessionId.current = session.sessionId;
       streamBatchCursors.current[session.sessionId] = 0;
       rememberNativeSession(session);
@@ -2016,7 +2019,7 @@ function App() {
 
     try {
       appendOutput([makeAuditEvent("daemon_session_requested", "start_daemon_supervised_session", `Daemon-supervised attach requested for PID ${selectedTarget.pid}; scope=${apiSelectionSummary}.`)]);
-      const session = await startDaemonSupervisedSession(selectedTarget.pid, apiSelectionRequest, stackFrames);
+      const session = await startDaemonSupervisedSession(selectedTarget.pid, apiSelectionRequest, stackFrames, captureDetail);
       rememberNativeSession(session);
       setInspectorTab("output");
     } catch (error) {
@@ -2056,7 +2059,7 @@ function App() {
 
     try {
       appendOutput([makeAuditEvent("process_tree_requested", "supervise_process_tree", `Supervision requested for PID ${selectedTarget.pid}; policy=${childPolicy}; scope=${apiSelectionSummary}.`)]);
-      const result = await superviseProcessTree(selectedTarget.pid, treeDurationMs, childPolicy, apiSelectionRequest, stackFrames);
+      const result = await superviseProcessTree(selectedTarget.pid, treeDurationMs, childPolicy, apiSelectionRequest, stackFrames, captureDetail);
       if (captureEpoch !== traceIngestClient.current?.epoch)
       {
         return;
@@ -2247,6 +2250,21 @@ function App() {
                     {captureProfiles.map((profile) => (
                       <option value={profile.id} key={profile.id}>{profile.name}</option>
                     ))}
+                  </select>
+                </div>
+                <div className="api-scope-actions stack-capture-setting">
+                  <label htmlFor="capture-detail">Capture detail</label>
+                  <select
+                    id="capture-detail"
+                    aria-label="Capture detail"
+                    value={captureDetail}
+                    onChange={(event) => setCaptureDetail(event.target.value as CaptureDetail)}
+                    disabled={nativeBusy || launchDialogOpen || activeNativeOperation !== null || activeNativeSession !== null || traceTailDraining}
+                    title="Metadata skips argument reads. Arguments includes strings and structures. Preview also captures byte buffers."
+                  >
+                    <option value="metadata">Metadata only</option>
+                    <option value="arguments">Arguments</option>
+                    <option value="preview">Arguments + buffers</option>
                   </select>
                 </div>
                 <div className="api-scope-actions stack-capture-setting">
@@ -3255,6 +3273,7 @@ function App() {
                   ) : null}
                   {selectedEvent && inspectorTab === "parameters" ? (
                     <table className="detail-table" style={{ minWidth: detailTableWidth, width: detailTableWidth }}>
+                      <caption data-capture-detail={describeCaptureDetail(selectedEvent).detail} data-capture-event-id={selectedEvent.eventId}>{describeCaptureDetail(selectedEvent).message}</caption>
                       <colgroup>
                         {detailColumns.map((column, index) => (
                           <col key={column.id} style={{ width: detailColumnWidths[index] }} />

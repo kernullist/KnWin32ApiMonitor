@@ -1,0 +1,312 @@
+[
+  [
+    "legacy unspecified",
+    {
+      "arguments": [],
+      "bufferPreview": ""
+    },
+    true
+  ],
+  [
+    "metadata empty",
+    {
+      "captureDetail": "metadata",
+      "arguments": [],
+      "bufferPreview": ""
+    },
+    true
+  ],
+  [
+    "metadata with argument",
+    {
+      "captureDetail": "metadata",
+      "arguments": [
+        {
+          "index": 0,
+          "name": "value",
+          "type": "DWORD",
+          "direction": "in",
+          "rawValue": "1",
+          "preCallValue": "1",
+          "postCallValue": "1",
+          "decodedValue": "1",
+          "decodeStatus": "decoded"
+        }
+      ],
+      "bufferPreview": ""
+    },
+    false
+  ],
+  [
+    "metadata with buffer",
+    {
+      "captureDetail": "metadata",
+      "arguments": [],
+      "bufferPreview": "01 02"
+    },
+    false
+  ],
+  [
+    "metadata missing arguments",
+    {
+      "captureDetail": "metadata",
+      "bufferPreview": ""
+    },
+    false
+  ],
+  [
+    "metadata null arguments",
+    {
+      "captureDetail": "metadata",
+      "arguments": null,
+      "bufferPreview": ""
+    },
+    false
+  ],
+  [
+    "metadata missing bufferPreview",
+    {
+      "captureDetail": "metadata",
+      "arguments": []
+    },
+    false
+  ],
+  [
+    "metadata null bufferPreview",
+    {
+      "captureDetail": "metadata",
+      "arguments": [],
+      "bufferPreview": null
+    },
+    false
+  ],
+  [
+    "arguments empty",
+    {
+      "captureDetail": "arguments",
+      "arguments": [],
+      "bufferPreview": ""
+    },
+    true
+  ],
+  [
+    "arguments with argument",
+    {
+      "captureDetail": "arguments",
+      "arguments": [
+        {
+          "index": 0,
+          "name": "value",
+          "type": "DWORD",
+          "direction": "in",
+          "rawValue": "1",
+          "preCallValue": "1",
+          "postCallValue": "1",
+          "decodedValue": "1",
+          "decodeStatus": "decoded"
+        }
+      ],
+      "bufferPreview": ""
+    },
+    true
+  ],
+  [
+    "arguments with buffer",
+    {
+      "captureDetail": "arguments",
+      "arguments": [],
+      "bufferPreview": "01 02"
+    },
+    false
+  ],
+  [
+    "arguments missing arguments",
+    {
+      "captureDetail": "arguments",
+      "bufferPreview": ""
+    },
+    false
+  ],
+  [
+    "arguments null arguments",
+    {
+      "captureDetail": "arguments",
+      "arguments": null,
+      "bufferPreview": ""
+    },
+    false
+  ],
+  [
+    "arguments missing bufferPreview",
+    {
+      "captureDetail": "arguments",
+      "arguments": []
+    },
+    false
+  ],
+  [
+    "arguments null bufferPreview",
+    {
+      "captureDetail": "arguments",
+      "arguments": [],
+      "bufferPreview": null
+    },
+    false
+  ],
+  [
+    "preview empty",
+    {
+      "captureDetail": "preview",
+      "arguments": [],
+      "bufferPreview": ""
+    },
+    true
+  ],
+  [
+    "preview with argument",
+    {
+      "captureDetail": "preview",
+      "arguments": [
+        {
+          "index": 0,
+          "name": "value",
+          "type": "DWORD",
+          "direction": "in",
+          "rawValue": "1",
+          "preCallValue": "1",
+          "postCallValue": "1",
+          "decodedValue": "1",
+          "decodeStatus": "decoded"
+        }
+      ],
+      "bufferPreview": ""
+    },
+    true
+  ],
+  [
+    "preview with buffer",
+    {
+      "captureDetail": "preview",
+      "arguments": [],
+      "bufferPreview": "01 02"
+    },
+    true
+  ],
+  [
+    "preview missing arguments",
+    {
+      "captureDetail": "preview",
+      "bufferPreview": ""
+    },
+    false
+  ],
+  [
+    "preview null arguments",
+    {
+      "captureDetail": "preview",
+      "arguments": null,
+      "bufferPreview": ""
+    },
+    false
+  ],
+  [
+    "preview missing bufferPreview",
+    {
+      "captureDetail": "preview",
+      "arguments": []
+    },
+    false
+  ],
+  [
+    "preview null bufferPreview",
+    {
+      "captureDetail": "preview",
+      "arguments": [],
+      "bufferPreview": null
+    },
+    false
+  ],
+  [
+    "invalid detail null",
+    {
+      "captureDetail": null,
+      "arguments": [],
+      "bufferPreview": ""
+    },
+    false
+  ],
+  [
+    "invalid detail 0",
+    {
+      "captureDetail": 0,
+      "arguments": [],
+      "bufferPreview": ""
+    },
+    false
+  ],
+  [
+    "invalid detail true",
+    {
+      "captureDetail": true,
+      "arguments": [],
+      "bufferPreview": ""
+    },
+    false
+  ],
+  [
+    "invalid detail {}",
+    {
+      "captureDetail": {},
+      "arguments": [],
+      "bufferPreview": ""
+    },
+    false
+  ],
+  [
+    "invalid detail []",
+    {
+      "captureDetail": [],
+      "arguments": [],
+      "bufferPreview": ""
+    },
+    false
+  ],
+  [
+    "invalid detail {\"preview\": null}",
+    {
+      "captureDetail": {
+        "preview": null
+      },
+      "arguments": [],
+      "bufferPreview": ""
+    },
+    false
+  ],
+  [
+    "invalid detail \"\"",
+    {
+      "captureDetail": "",
+      "arguments": [],
+      "bufferPreview": ""
+    },
+    false
+  ],
+  [
+    "invalid detail \"Metadata\"",
+    {
+      "captureDetail": "Metadata",
+      "arguments": [],
+      "bufferPreview": ""
+    },
+    false
+  ],
+  [
+    "invalid detail \"unknown\"",
+    {
+      "captureDetail": "unknown",
+      "arguments": [],
+      "bufferPreview": ""
+    },
+    false
+  ]
+]

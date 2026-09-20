@@ -62,7 +62,7 @@ def page_endpoint(profile, job):
     return {"endpoint": endpoint, "listener": owner, "port": port, "discovery": data}
 
 
-def execute_architecture(directory, architecture, node, stack_frames):
+def execute_architecture(directory, architecture, node, stack_frames, capture_detail):
     directory.mkdir()
     portable, profile, temporary = (directory / name for name in ("portable", "profile", "tmp"))
     for child in (portable, profile, temporary):
@@ -79,7 +79,7 @@ def execute_architecture(directory, architecture, node, stack_frames):
         require(digest_file(destination) == digest and digest_file(source) == digest, "Desktop binary changed during staging.")
         binaries[source.name] = {"source": str(source), "path": str(destination), "sha256": digest}
     report = {"schemaVersion": 1, "architecture": architecture, "status": "failed", "binaries": binaries,
-              "configuration": {"desktop": "Release", "native": "Debug", "presentation": "hidden", "samplingIntervalMs": 200, "stackFrames": stack_frames}}
+              "configuration": {"desktop": "Release", "native": "Debug", "presentation": "hidden", "samplingIntervalMs": 200, "stackFrames": stack_frames, "captureDetail": capture_detail}}
     environment = {key: value for key, value in os.environ.items() if not key.upper().startswith(("WEBVIEW2_", "KNMON_", "TAURI_"))}
     environment.update(TEMP=str(temporary), TMP=str(temporary))
     app_environment = {**environment, "WEBVIEW2_USER_DATA_FOLDER": str(profile),
@@ -112,7 +112,7 @@ def execute_architecture(directory, architecture, node, stack_frames):
                             report["targetPid"], report["targetCommand"] = target["pid"], target["command"]
                             report["targetIdentity"] = target_job.sample_process(target["pid"])
                             report["cdp"] = endpoint
-                            request = {"endpoint": endpoint["endpoint"], "targetPid": target["pid"], "targetPath": str(portable / "knmon-sample-fileio.exe"), "stackFrames": stack_frames}
+                            request = {"endpoint": endpoint["endpoint"], "targetPid": target["pid"], "targetPath": str(portable / "knmon-sample-fileio.exe"), "stackFrames": stack_frames, "captureDetail": capture_detail}
                             write_json(directory / "request.json", request)
                             driver_environment = {key: value for key, value in environment.items() if key.upper() not in ("NODE_OPTIONS", "NODE_PATH", "NODE_V8_COVERAGE")}
                             driver = driver_job.spawn([node, ROOT / "tools/readiness/desktop_driver.mjs", directory / "request.json"], directory, driver_environment)
@@ -164,7 +164,7 @@ def artifacts(directory, runs):
     result = {}
     for architecture in runs:
         driver = read_json(contained(directory, architecture + "/driver.json"))
-        for name in ("execution.json", "driver.json", "resources.jsonl", "capture.png", "request.json", driver["exportFile"]):
+        for name in ("execution.json", "driver.json", "resources.jsonl", "capture.png", "detail.png", "request.json", driver["exportFile"]):
             path = contained(directory / architecture, name)
             result[path.relative_to(directory).as_posix()] = digest_file(path)
     return result
@@ -195,6 +195,7 @@ def verify(directory):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--architecture", choices=("x64", "x86", "both"), default="both")
+    parser.add_argument("--capture-detail", choices=("metadata", "arguments", "preview"), default="preview")
     parser.add_argument("--stack-frames", type=int, choices=(0, 8, 16, 32), default=0)
     parser.add_argument("--check", type=Path)
     parser.add_argument("--node", type=Path, default=ROOT / "build/deps/node-v24.21.0-win-x64/node.exe")
@@ -211,7 +212,7 @@ def main():
               "node": {"path": str(args.node.resolve()), "sha256": digest_file(args.node.resolve())}, "runs": [], "summary": {}}
     try:
         for architecture in (("x64", "x86") if args.architecture == "both" else (args.architecture,)):
-            execute_architecture(directory / architecture, architecture, args.node.resolve(), args.stack_frames)
+            execute_architecture(directory / architecture, architecture, args.node.resolve(), args.stack_frames, args.capture_detail)
             report["summary"][architecture] = verify_architecture(directory / architecture, architecture)
             report["runs"].append(architecture)
         require(source_hashes() == sources, "Desktop product sources changed during execution.")

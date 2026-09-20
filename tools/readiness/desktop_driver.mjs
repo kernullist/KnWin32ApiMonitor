@@ -109,23 +109,30 @@ async function observe(name)
   {
     const text = selector => document.querySelector(selector)?.innerText ?? "";
     const stack = document.querySelector(".stack-list");
-    const stackSelect = document.querySelector("#stack-frames");
-    const stackStyle = stackSelect ? getComputedStyle(stackSelect) : null;
-    const stackText = stackSelect?.selectedOptions[0]?.label ?? "";
-    const stackMeasure = document.createElement("canvas").getContext("2d");
-    if (stackMeasure && stackStyle)
+    const decode = [...document.querySelectorAll(".highlight-rule-card")].find(element => element.querySelector("strong")?.textContent === "Decode failure");
+    const setting = selector =>
     {
-      stackMeasure.font = stackStyle.font;
-    }
+      const select = document.querySelector(selector);
+      if (!select)
+      {
+        return null;
+      }
+      const style = getComputedStyle(select);
+      const label = select.selectedOptions[0]?.label ?? "";
+      const measure = document.createElement("canvas").getContext("2d");
+      measure.font = style.font;
+      return { value: select.value, disabled: select.disabled, label, clientWidth: select.clientWidth,
+        textWidth: measure.measureText(label).width,
+        inlinePadding: Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.paddingRight) };
+    };
     return { url: location.href, readyState: document.readyState,
       status: text(".statusbar"), stats: text(".trace-stats"), session: text(".session-strip"),
       selectedTarget: text(".process-row.selected"), output: text(".output-log"),
       eligibility: text(".eligibility-badge"), helperArchitecture: text(".target-action-grid"),
       refreshEnabled: document.querySelector('button[title="Refresh process list"]')?.disabled === false,
-      stackSetting: stackSelect ? {
-        value: stackSelect.value, disabled: stackSelect.disabled, label: stackText,
-        clientWidth: stackSelect.clientWidth, textWidth: stackMeasure?.measureText(stackText).width ?? null,
-        inlinePadding: Number.parseFloat(stackStyle.paddingLeft) + Number.parseFloat(stackStyle.paddingRight) } : null,
+      stackSetting: setting("#stack-frames"),
+      detailSetting: setting("#capture-detail"),
+      decodeFailureCount: decode?.querySelector("em")?.textContent ?? null,
       stack: stack ? { source: stack.dataset.stackSource, eventId: stack.dataset.stackEventId,
         message: text(".stack-status"), context: [...stack.querySelectorAll(".stack-hook-context code")].map(element => element.textContent),
         entries: stack.querySelectorAll(".stack-row").length,
@@ -158,6 +165,7 @@ try
   ]);
   await call("Runtime.enable");
   await waitFor(`location.href === "http://tauri.localhost/" && document.querySelector(".statusbar")`, "bundled desktop page");
+  await waitFor('document.querySelector("#capture-detail")?.disabled === false && document.querySelector("#stack-frames")?.disabled === false && document.querySelector(\'button[title="Refresh process list"]\')?.disabled === false', "initial native controls ready", 25000);
   await observe("idle");
   phase("idle");
   await delay(3000);
@@ -171,6 +179,20 @@ try
   await click(target);
   const attach = 'button[title="Attach to the selected running process"]';
   await waitFor(`document.querySelector(${JSON.stringify(attach)})?.disabled === false`, "attach enabled");
+  requireValue(["metadata", "arguments", "preview"].includes(request.captureDetail), "Unsupported capture detail request.");
+  await waitFor('document.querySelector("#capture-detail")?.value === "preview" && document.querySelector("#capture-detail")?.disabled === false', "preview capture by default");
+  if (request.captureDetail !== "preview")
+  {
+    await click(button("#capture-detail"));
+    for (let index = 0; index < 2 - ["metadata", "arguments", "preview"].indexOf(request.captureDetail); ++index)
+    {
+      await call("Input.dispatchKeyEvent", { type: "keyDown", key: "ArrowUp", code: "ArrowUp", windowsVirtualKeyCode: 38 });
+      await call("Input.dispatchKeyEvent", { type: "keyUp", key: "ArrowUp", code: "ArrowUp", windowsVirtualKeyCode: 38 });
+    }
+    await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+    await call("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+    await waitFor(`document.querySelector("#capture-detail")?.value === ${JSON.stringify(request.captureDetail)}`, "requested capture detail");
+  }
   requireValue([0, 8, 16, 32].includes(request.stackFrames), "Unsupported stack frame request.");
   await waitFor('document.querySelector("#stack-frames")?.value === "0" && document.querySelector("#stack-frames")?.disabled === false', "stack capture disabled by default");
   if (request.stackFrames !== 0)
@@ -192,6 +214,16 @@ try
   phase("capture");
   await waitFor('document.querySelectorAll(".trace-virtual-row").length > 0', "native trace rows");
   await delay(6000);
+  await click(`[...document.querySelectorAll(".inspector-tabs button")].find(element => element.textContent === "Parameters")`);
+  await waitFor('document.querySelector(".detail-table caption")', "capture detail inspector");
+  report.detailInspector = await evaluate(`(() =>
+  {
+    const caption = document.querySelector(".detail-table caption");
+    return { detail: caption.dataset.captureDetail, eventId: caption.dataset.captureEventId, message: caption.innerText,
+      argumentRows: document.querySelectorAll(".detail-table tbody tr").length };
+  })()`);
+  const detailScreenshot = await call("Page.captureScreenshot", { format: "png" });
+  fs.writeFileSync(path.join(output, "detail.png"), Buffer.from(detailScreenshot.data, "base64"));
   await openStackInspector();
   await observe("capture");
   await click(button("#quick-api-filter"));

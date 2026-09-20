@@ -90,7 +90,7 @@
         "properties": { "messageType": { "const": "api_call" } },
         "required": ["messageType"]
       },
-      "then": { "$ref": "stack-observation.schema.json" }
+      "then": { "allOf": [{ "$ref": "stack-observation.schema.json" }, { "$ref": "capture-detail.schema.json" }] }
     }
   ]
 }

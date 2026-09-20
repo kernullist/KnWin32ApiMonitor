@@ -144,6 +144,13 @@ def evidence_controls(directory):
         ("wrong stack selection label", lambda value: value["observations"][2]["stackSetting"].update(label="Unknown"), "stack control label"),
         ("missing stack selection", lambda value: value["observations"][2]["stack"].update(eventId="0"), "Stack inspector"),
         ("wrong UI hook agent", lambda value: value["observations"][2]["stack"].update(context=["wrong.dll"]), "hook context"),
+        ("wrong detail mode", lambda value: value["observations"][2]["detailSetting"].update(value="invalid"), "capture detail control"),
+        ("editable detail during capture", lambda value: value["observations"][2]["detailSetting"].update(disabled=False), "capture detail control"),
+        ("clipped detail selection", lambda value: value["observations"][2]["detailSetting"].update(clientWidth=1), "capture detail control label"),
+        ("wrong detail inspector", lambda value: value["detailInspector"].update(detail="invalid"), "Capture detail inspector"),
+        ("wrong detail message", lambda value: value["detailInspector"].update(message="unknown"), "Capture detail inspector"),
+        ("fabricated detail arguments", lambda value: value["detailInspector"].update(argumentRows=999), "Capture detail inspector"),
+        ("false decode failure count", lambda value: value["observations"][5].update(decodeFailureCount=str(int(value["observations"][5]["decodeFailureCount"]) + 1)), "decode failure count"),
     ):
         changed = copy.deepcopy(driver)
         edit(changed)
@@ -159,6 +166,8 @@ def evidence_controls(directory):
         ("missing stack provenance", lambda value: value[0].pop("stackSource"), "stack provenance"),
         ("wrong hook agent", lambda value: value[0]["hookContext"].update(agent="wrong.dll"), "hook context"),
         ("wrong memory preview", lambda value: next(row for row in value if row["api"] == "WriteFile").update(bufferPreview="00"), "buffer payload"),
+        ("lost detail provenance", lambda value: value[0].pop("captureDetail"), "capture detail"),
+        ("false detail provenance", lambda value: value[0].update(captureDetail="unknown"), "capture detail"),
     ):
         changed = copy.deepcopy(events)
         edit(changed)

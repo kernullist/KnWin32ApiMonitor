@@ -1,3 +1,5 @@
+export type CaptureDetail = "metadata" | "arguments" | "preview";
+
 export type BackendMode = "native-enum" | "native-capture";
 
 export type InspectorTab =
@@ -373,6 +375,7 @@ export interface StackObservation
 }
 
 export interface AgentApiCallEvent extends StackObservation {
+  captureDetail?: CaptureDetail;
   rawReturnBytes?: string;
   rawReturnEncoding?: string;
   callId?: string;
@@ -624,6 +627,7 @@ export interface TraceError {
 }
 
 export interface TraceEvent extends StackObservation {
+  captureDetail?: CaptureDetail;
   rawReturnBytes?: string;
   rawReturnEncoding?: string;
   callId?: string;

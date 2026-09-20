@@ -56,12 +56,12 @@ std::string TypedValueText(TypedValueKind kind, std::uint64_t bits, const std::s
 std::string TypedTransportApiPayload(const KnMonCaptureResult& result, const KnMonTransportRecord& record)
 {
     const auto* contract = FindTypedAbi(record.ApiId);
-    if (contract == nullptr || contract->ArgumentCount != record.Values32[0])
+    if (contract == nullptr || (record.Detail == CaptureDetail::Metadata ? 0u : contract->ArgumentCount) != record.Values32[0])
     {
         throw JsonInputError("Unknown typed ABI record.");
     }
     std::ostringstream arguments;
-    for (std::uint32_t index = 0; index < contract->ArgumentCount; ++index)
+    for (std::uint32_t index = 0; index < record.Values32[0]; ++index)
     {
         const auto* parameter = FindGeneratedParameterMetadata(record.ApiId, static_cast<std::uint16_t>(index));
         if (parameter == nullptr)

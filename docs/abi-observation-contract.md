@@ -47,7 +47,7 @@ two little-endian binary32 values. Pointer arguments record the address with
 `targetMemoryRead: false`; these six wrappers do not sample pointees. The 16-byte
 color result uses `rawReturnBytes`, `rawReturnBits: 128` and
 `rawReturnEncoding: little_endian_object_bytes`, without a truncated scalar
-`rawReturnValue`. Transport ABI 9 and attach configuration ABI 5 reject older
+`rawReturnValue`. Transport ABI 10 and attach configuration ABI 6 reject older
 incompatible layouts.
 
 Optional [native stack capture](stack-observation.md) adds a bounded raw-address

@@ -4040,6 +4040,9 @@ std::string DecodeStatusName(std::uint32_t value)
     case KnMonDecodeStatus::Truncated:
         result = "truncated";
         break;
+    case KnMonDecodeStatus::NotCaptured:
+        result = "not_captured";
+        break;
     default:
         result = "decoded";
         break;
@@ -5066,9 +5069,10 @@ std::string ApiCallPayload(
         stream << "," << Q("file");
     }
     stream << ",\"hook\",\"shared-memory\"],";
+    stream << "\"captureDetail\":" << Q(CaptureDetailName(record.Detail)) << ",";
     stream << StackObservationJson(result, record);
     stream << "\"hookContext\":{\"agent\":" << Q(agentName) << "},";
-    stream << "\"bufferPreview\":" << Q(bufferPreview);
+    stream << "\"bufferPreview\":" << Q(record.Detail == CaptureDetail::Preview ? bufferPreview : "");
     stream << "}";
     return stream.str();
 }
@@ -5591,6 +5595,7 @@ std::string GenericTransportApiPayload(
     stream << "\"durationUs\":" << record.DurationUs << ",";
     stream << "\"arguments\":[" << args.str() << "],";
     stream << "\"tags\":[\"native-capture\"," << Q(tier) << ",\"generic\"," << Q(profile) << "," << Q(apiFamily) << ",\"hook\",\"shared-memory\"],";
+    stream << "\"captureDetail\":" << Q(CaptureDetailName(record.Detail)) << ",";
     stream << StackObservationJson(result, record);
     stream << "\"hookContext\":{\"agent\":" << Q(agentName);
     if (!resolvedHostModule.empty())
@@ -5613,7 +5618,7 @@ std::string FileIoObservationJson(const KnMonTransportRecord& record, bool count
     const std::uint32_t status = count ? (capturedCount ? 1 : 0) : record.Values32[5];
     const char* readStatus = status == 1 ? "complete" : status == 2 ? "null_pointer" :
         status == 3 ? "unreadable" : status == 4 ? "partial" : "not_captured";
-    const char* reason = phase == 0 ? (record.Values64[3] != 0 ? "overlapped_completion_untracked" :
+    const char* reason = !count && record.Detail != CaptureDetail::Preview ? "capture_detail" : phase == 0 ? (record.Values64[3] != 0 ? "overlapped_completion_untracked" :
         record.ReturnValue == 0 ? "original_failed" : "output_count_unavailable") :
         status == 2 ? "null_pointer" : status == 3 ? "unreadable" : status == 4 ? "partial_read" :
         requested > captured ? "capture_limit" : "none";
@@ -5645,6 +5650,12 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
     if (IsGenericInventoryRecord(record))
     {
         return GenericTransportApiPayload(result, record, text0, text1, text2);
+    }
+
+    if (record.Detail == CaptureDetail::Metadata)
+    {
+        return ApiCallPayload(result, record, record.RawReturnBits == 0 ? "void" :
+            HexFixed(record.RawReturnValue, record.RawReturnBits / 4), "", "");
     }
 
     switch (static_cast<KnMonTransportApiId>(record.ApiId))
@@ -6930,6 +6941,7 @@ std::uint32_t TransportCapacityFromEnvironment()
 struct SharedTransportSession
 {
     std::uint32_t StackFrames = 0;
+    CaptureDetail Detail = CaptureDetail::Preview;
     CaptureClock Clock;
     HANDLE MappingHandle = nullptr;
     KnMonTransportHeader* Header = nullptr;
@@ -6959,6 +6971,7 @@ void CloseSharedTransport(SharedTransportSession& transport)
 
     transport.Capacity = 0;
     transport.StackFrames = 0;
+    transport.Detail = CaptureDetail::Preview;
     transport.MappingSize = 0;
     transport.MappingName.clear();
     transport.OperationId.clear();
@@ -6972,6 +6985,7 @@ bool CreateSharedTransport(
     KnMonAgentArchitecture architecture,
     const CaptureClock& clock,
     std::uint32_t stackFrames,
+    CaptureDetail detail,
     DWORD* errorCode)
 {
     bool created = false;
@@ -6983,6 +6997,7 @@ bool CreateSharedTransport(
         transport.OperationId = operationId;
         transport.Clock = clock;
         transport.StackFrames = stackFrames;
+        transport.Detail = detail;
         transport.Architecture = architecture;
         LocalIpcSecurity security;
         if (!security.Initialize(TransportAclAccess) || !RandomIpcName(L"Local\\KNMonTransport_", transport.MappingName))
@@ -7073,7 +7088,7 @@ SharedTransportReader MakeSharedTransportReader(const SharedTransportSession& tr
     config.TrustedRecordBytes = transport.MappingSize >= sizeof(KnMonTransportHeader)
         ? transport.MappingSize - sizeof(KnMonTransportHeader) : 0;
     config.State = &transport.ReaderState;
-    config.ValidateRecordIdentity = [clock = transport.Clock, stackFrames = transport.StackFrames](const KnMonTransportRecord& record)
+    config.ValidateRecordIdentity = [clock = transport.Clock, stackFrames = transport.StackFrames, detail = transport.Detail](const KnMonTransportRecord& record)
     {
         const KnMonGeneratedApiMetadata* api = FindGeneratedApiMetadata(record.ApiId);
         CaptureTime time;
@@ -7081,7 +7096,7 @@ SharedTransportReader MakeSharedTransportReader(const SharedTransportSession& tr
         QueryPerformanceCounter(&observed);
         const bool validTime = observed.QuadPart > 0 && record.EndQpc <= static_cast<std::uint64_t>(observed.QuadPart) + 1 &&
             ConvertCaptureTime(clock, record.StartQpc, record.EndQpc, time) && time.DurationUs == record.DurationUs;
-        return validTime && record.Stack.RequestedFrames == stackFrames &&
+        return validTime && record.Stack.RequestedFrames == stackFrames && record.Detail == detail &&
             FindGeneratedModuleMetadata(record.ModuleId) != nullptr &&
             ((record.ApiId == 0 && (record.Flags & KnMonTransportRecordFlagGenericInventory) != 0) ||
                 (api != nullptr && api->ModuleId == record.ModuleId));
@@ -7430,7 +7445,7 @@ struct EnvironmentKeyLess
 
 std::vector<wchar_t> AgentEnvironment(const std::wstring& pipeName, const std::string& operationId,
     const std::wstring& mappingName, std::uint64_t mappingSize, const std::string& selectedApis, const wchar_t* mode,
-    std::uint32_t stackFrames)
+    std::uint32_t stackFrames, CaptureDetail detail)
 {
     std::map<std::wstring, std::wstring, EnvironmentKeyLess> entries;
     LPWCH inherited = GetEnvironmentStringsW();
@@ -7466,6 +7481,7 @@ std::vector<wchar_t> AgentEnvironment(const std::wstring& pipeName, const std::s
     entries[L"KNMON_SELECTED_APIS"] = Utf8ToWide(selectedApis);
     entries[L"KNMON_CAPTURE_MODE"] = mode;
     entries[L"KNMON_STACK_FRAMES"] = std::to_wstring(stackFrames);
+    entries[L"KNMON_CAPTURE_DETAIL"] = Utf8ToWide(CaptureDetailName(detail));
     std::vector<wchar_t> block;
     for (const auto& [name, value] : entries)
     {
@@ -7994,6 +8010,11 @@ std::vector<KnMonTargetProcess> Controller::EnumerateTargets(KnMonError* error) 
 KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& request) const
 {
     KnMonLaunchResult result;
+    if (!IsValidCaptureDetail(request.Detail))
+    {
+        SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "invalid_capture_detail", "Unknown capture detail.");
+        return result;
+    }
     if (request.StackFrames > NativeStackFrameLimit)
     {
         SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "invalid_stack_frames", "Stack frame limit exceeds 32.");
@@ -8078,7 +8099,7 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
         std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
         mutableCommandLine.push_back(L'\0');
 
-        auto environment = AgentEnvironment(pipeName, result.OperationId, L"", 0, request.ApiSelection, L"hello", request.StackFrames);
+        auto environment = AgentEnvironment(pipeName, result.OperationId, L"", 0, request.ApiSelection, L"hello", request.StackFrames, request.Detail);
 
         if (!CreateProcessW(
             targetPath.c_str(),
@@ -8239,6 +8260,11 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
     KnMonCaptureResult result;
     result.HistoryBounded = streamCallbacks != nullptr && static_cast<bool>(streamCallbacks->OnTraceBatch);
     result.Clock = SampleCaptureClock();
+    if (!IsValidCaptureDetail(request.Detail))
+    {
+        SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "invalid_capture_detail", "Unknown capture detail.");
+        return result;
+    }
     if (request.StackFrames > NativeStackFrameLimit)
     {
         SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "invalid_stack_frames", "Stack frame limit exceeds 32.");
@@ -8501,7 +8527,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         AddAudit(result, "event_pipe_created", "CreateNamedPipeW", WideToUtf8(pipeName.c_str()));
 
         DWORD transportError = 0;
-        if (!CreateSharedTransport(transport, result.OperationId, requestedArchitecture, result.Clock, request.StackFrames, &transportError))
+        if (!CreateSharedTransport(transport, result.OperationId, requestedArchitecture, result.Clock, request.StackFrames, request.Detail, &transportError))
         {
             SetResultError(result, transportError, "win32", "shared_memory_transport_create", "Failed to create launch shared-memory event transport.");
             AddAudit(result, "transport_setup_failed", "shared_memory_transport_create", "Launch shared-memory event transport setup failed.", transportError, "win32");
@@ -8525,7 +8551,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
         mutableCommandLine.push_back(L'\0');
 
-        auto environment = AgentEnvironment(pipeName, result.OperationId, transport.MappingName, transport.MappingSize, request.ApiSelection, L"launch", request.StackFrames);
+        auto environment = AgentEnvironment(pipeName, result.OperationId, transport.MappingName, transport.MappingSize, request.ApiSelection, L"launch", request.StackFrames, request.Detail);
 
         startupInfo.dwFlags |= STARTF_USESHOWWINDOW;
         startupInfo.wShowWindow = SW_SHOWNORMAL;
@@ -9080,6 +9106,11 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
 {
     KnMonCaptureResult result;
     result.Clock = SampleCaptureClock();
+    if (!IsValidCaptureDetail(request.Detail))
+    {
+        SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "invalid_capture_detail", "Unknown capture detail.");
+        return result;
+    }
     if (request.StackFrames > NativeStackFrameLimit)
     {
         SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "invalid_stack_frames", "Stack frame limit exceeds 32.");
@@ -9152,7 +9183,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         AddAudit(result, "event_pipe_created", "CreateNamedPipeW", WideToUtf8(pipeName.c_str()));
 
         DWORD transportError = 0;
-        if (!CreateSharedTransport(transport, result.OperationId, requestedArchitecture, result.Clock, request.StackFrames, &transportError))
+        if (!CreateSharedTransport(transport, result.OperationId, requestedArchitecture, result.Clock, request.StackFrames, request.Detail, &transportError))
         {
             SetResultError(result, transportError, "win32", "shared_memory_transport_create", "Failed to create shared-memory event transport.");
             AddAudit(result, "transport_setup_failed", "shared_memory_transport_create", "Shared-memory event transport setup failed.", transportError, "win32");
@@ -9179,7 +9210,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
         mutableCommandLine.push_back(L'\0');
 
-        auto environment = AgentEnvironment(pipeName, result.OperationId, transport.MappingName, transport.MappingSize, request.ApiSelection, L"fileio", request.StackFrames);
+        auto environment = AgentEnvironment(pipeName, result.OperationId, transport.MappingName, transport.MappingSize, request.ApiSelection, L"fileio", request.StackFrames, request.Detail);
 
         if (!CreateProcessW(
             targetPath.c_str(),
@@ -9596,6 +9627,11 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
     KnMonCaptureResult result;
     result.HistoryBounded = streamCallbacks != nullptr && static_cast<bool>(streamCallbacks->OnTraceBatch);
     result.Clock = request.ClockOverride.Frequency == 0 ? SampleCaptureClock() : request.ClockOverride;
+    if (!IsValidCaptureDetail(request.Detail))
+    {
+        SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "invalid_capture_detail", "Unknown capture detail.");
+        return result;
+    }
     if (request.StackFrames > NativeStackFrameLimit)
     {
         SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "invalid_stack_frames", "Stack frame limit exceeds 32.");
@@ -10133,7 +10169,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         AddAudit(result, "event_pipe_created", "CreateNamedPipeW", WideToUtf8(pipeName.c_str()));
 
         DWORD transportError = 0;
-        if (!CreateSharedTransport(transport, result.OperationId, requestedArchitecture, result.Clock, request.StackFrames, &transportError))
+        if (!CreateSharedTransport(transport, result.OperationId, requestedArchitecture, result.Clock, request.StackFrames, request.Detail, &transportError))
         {
             SetResultError(result, transportError, "win32", "shared_memory_transport_create", "Failed to create attach shared-memory event transport.");
             AddAudit(result, "transport_setup_failed", "shared_memory_transport_create", "Attach shared-memory event transport setup failed.", transportError, "win32");
@@ -10170,6 +10206,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
         KnMonAttachConfigV1 attachConfig;
         attachConfig.StackFrames = request.StackFrames;
+        attachConfig.Detail = request.Detail;
         attachConfig.StructSize = static_cast<std::uint16_t>(sizeof(attachConfig));
         attachConfig.ControllerProcessId = GetCurrentProcessId();
         attachConfig.ControllerCreationTime = ProcessCreationTime(GetCurrentProcess());
@@ -10686,6 +10723,11 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
 {
     const CaptureClock treeClock = SampleCaptureClock();
     KnMonProcessTreeResult result;
+    if (!IsValidCaptureDetail(request.Detail))
+    {
+        SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "invalid_capture_detail", "Unknown capture detail.");
+        return result;
+    }
     if (request.StackFrames > NativeStackFrameLimit)
     {
         SetResultError(result, ERROR_INVALID_PARAMETER, "knmon-core", "invalid_stack_frames", "Stack frame limit exceeds 32.");
@@ -10826,6 +10868,7 @@ KnMonProcessTreeResult Controller::SuperviseProcessTree(const KnMonProcessTreeRe
                 attachRequest.CancellationEventName = request.CancellationEventName;
                 attachRequest.ApiSelection = request.ApiSelection;
                 attachRequest.StackFrames = request.StackFrames;
+                attachRequest.Detail = request.Detail;
 
                 KnMonCaptureResult attachResult = AttachCapture(attachRequest);
                 if (attachResult.CancelObserved)
