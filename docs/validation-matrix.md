@@ -15,6 +15,7 @@ Windows 10/11 release or every API input.
 | All-supported sample live/replay | 376 events, 16 errors | 376 events, 16 errors | 376 events, 16 errors | blocked before launch |
 | Comparative six-API corpus | 50 runs passed | 50 runs passed | not run | not run |
 | Sustained overload, original/observed | 5 s and 15 s passed | 5 s and 15 s passed | not run | not run |
+| Clean source ZIP native reconstruction | 23/23 passed | 23/23 passed | not run | not run |
 
 The Debug comparison uses ten fresh-process repetitions of each of five modes.
 Each run has 450 expected calls, with zero missing, unexpected or reordered
@@ -48,7 +49,14 @@ transport drops. See `sustained-capture.md` for its bounds and reproduction
 commands. This does not measure the complete desktop WebView process tree.
 
 Other Windows builds, cross-user/elevated IPC, hardware CET enforcement,
-whole desktop resource measurements and complete source/binary package
-reproduction still need their own evidence. Kernel ETW session creation on this
+whole desktop resource measurements and complete desktop Release binary
+distribution reconstruction still need their own evidence. Kernel ETW session creation on this
 medium-integrity host returns access denied (5). User evaluation is excluded
 from the technical acceptance criteria.
+
+The clean source archive from `50bf0e7` was extracted without Git metadata and
+rebuilt with the pinned Node/CMake/MSVC/SDK configuration. npm installation,
+frontend build/validation and both complete native Debug suites passed. The
+frozen reconstruction producer retained source, command, compiler and binary
+hashes. See `source-build-contract.md` for reproduction and
+`technical-readiness.md` for the fail-closed artifact verification policy.

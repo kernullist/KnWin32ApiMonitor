@@ -1,0 +1,67 @@
+# Technical readiness evidence gate
+
+Run the verifier with the retained directories produced by the source,
+dependency and comparison commands:
+
+```powershell
+python tools/readiness/technical_gate.py `
+  --source-build build/source-rebuild-ID --archive build/knmon-source.zip `
+  --dependencies build/dependency-evidence-ID --comparison build/comparison-ID
+```
+
+The report lives in `build/technical-readiness-ID/report.json`. Exit code 0
+requires every required gate to pass. Code 2 means that inspected evidence was
+consistent but required scopes remain unverified. Code 1 means evidence failed
+validation or the verifier failed. Missing inputs, skipped checks and unknown
+gate overrides cannot yield success. The command does not take a supplied
+readiness status or accept an incomplete-result override.
+
+`--node` selects the Node interpreter. `--comparison-python` selects the
+isolated interpreter with the recorded Frida version; its default is
+`build/deps/frida-venv/Scripts/python.exe`. Competitive replay runs in an owned
+job with bounded output and a deadline. The ordinary Python installation does
+not need Frida. A missing or mismatched comparison environment fails its gate.
+
+The source reconstruction check binds the clean ZIP to its original manifest,
+the current reconstruction producers and current input files. It rechecks the
+eight ordered commands, owned command requests, exit codes, log bytes/hashes,
+both complete CTest reports, compiler metadata, native binaries and frontend
+artifacts. Documentation and this reporting tool are outside the reconstruction
+input comparison; reporting producers have separate hashes. New or missing
+product input files invalidate the earlier rebuild. Ignored source files in the
+native, frontend, backend, generation and tool source trees are also rejected;
+Git ignore rules cannot hide an extra compiled source or asset from this check.
+Only Python bytecode cache entries are exempt in those trees. Build artifact
+paths are checked against the source root, including directory junction targets.
+Bound inputs, reconstruction source files, verifier files and the checkout
+revision are checked again before the report is finalized. The archive revision remains
+visible even when only reporting tools or documentation have since changed.
+
+The dependency check reruns the existing offline schema and locked Windows
+resolution verifier. The comparison check replays raw oracle/capture artifacts
+and requires the full current corpus matrix and source fingerprints. Its cost
+row compares median call time, the median of per-run p99 times and median target
+RSS with both recorded Frida adapters. These are point estimates from that
+corpus, without a statistical-significance or general ranking claim. The typed
+ABI row verifies source freshness and proof structure; it is explicitly not a
+new runtime execution or a replay of its retained session.
+
+Required scopes without an implemented evidence consumer remain `not_verified`:
+the current full native Release matrix, Release backend runtime, other Windows
+builds, elevated/cross-user IPC, hardware CET, complete desktop resources,
+separate capture profiles, a current source-bound advisory scan, complete binary
+distribution reconstruction and broader competitive coverage. Kernel ETW session
+availability is evaluated separately from private application ETW. User
+evaluation is excluded from this policy.
+
+These checks establish consistency of retained local artifacts with the source
+and declared execution scope. They cannot authenticate a malicious producer that
+rewrites all artifacts consistently. Reports are unsigned and do not claim a
+SLSA level. The policy follows the distinction between artifact provenance and
+verification decisions described in [SLSA 1.2 provenance](https://slsa.dev/spec/v1.2/provenance)
+and the [verification summary model](https://slsa.dev/spec/v1.2/verification_summary).
+
+Run the adversarial checks with `python tools/readiness/verify_technical_gate.py`.
+Adding the same `--source-build` and `--archive` arguments also checks mutations
+against a completed actual reconstruction. Synthetic controls are labeled as
+fixtures and do not count as product runtime evidence.
