@@ -151,13 +151,51 @@ int wmain(int argc, wchar_t** argv)
         {
             HANDLE pipe = CreateFileW(argv[2], knmon::AgentPipeClientAccess, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
             Require(pipe != INVALID_HANDLE_VALUE, "Client opens with minimal rights");
-            const bool valid = knmon::AuthenticatePipeServer(pipe, wcstoul(argv[3], nullptr, 10), _wcstoui64(argv[4], nullptr, 10));
+            HANDLE retained = nullptr;
+            const DWORD expectedPid = wcstoul(argv[3], nullptr, 10);
+            const std::uint64_t expectedCreation = _wcstoui64(argv[4], nullptr, 10);
+            const bool valid = knmon::AuthenticatePipeServer(pipe, expectedPid, expectedCreation, &retained);
             Require(valid == (wcscmp(argv[5], L"1") == 0), "Server creation time authentication");
+            Require(valid == (retained != nullptr), "Only an authenticated server handle is retained");
+            if (valid)
+            {
+                Require(GetProcessId(retained) == expectedPid && knmon::ProcessCreationTime(retained) == expectedCreation &&
+                    WaitForSingleObject(retained, 0) == WAIT_TIMEOUT, "Retained server identity and synchronization rights");
+                CloseHandle(retained);
+                Require(knmon::ConfigureAgentPipeWriter(pipe), "Configure a nonblocking message writer with minimum rights");
+                const std::string message(4096, 'a');
+                const auto started = GetTickCount64();
+                unsigned sent = 0;
+                unsigned rejected = 0;
+                for (unsigned index = 0; index < 256; ++index)
+                {
+                    if (knmon::TryWriteAgentMessage(pipe, message))
+                    {
+                        ++sent;
+                    }
+                    else
+                    {
+                        ++rejected;
+                    }
+                }
+                Require(sent != 0 && rejected != 0 && GetTickCount64() - started < 2000,
+                    "A connected controller that never reads cannot block the writer");
+                Require(!knmon::TryWriteAgentMessage(pipe, {}) &&
+                    !knmon::TryWriteAgentMessage(pipe, std::string(knmon::MaxAgentMessageBytes + 1, 'a')),
+                    "Empty and oversized control messages are rejected");
+            }
             Sleep(300);
             CloseHandle(pipe);
         }
         else
         {
+            HANDLE byteReader = nullptr;
+            HANDLE byteWriter = nullptr;
+            Require(CreatePipe(&byteReader, &byteWriter, nullptr, 4096) != FALSE, "Create byte-pipe negative control");
+            const bool acceptedBytePipe = knmon::ConfigureAgentPipeWriter(byteWriter);
+            CloseHandle(byteWriter);
+            CloseHandle(byteReader);
+            Require(!acceptedBytePipe, "Byte pipes cannot provide atomic nonblocking control messages");
             const std::string nonce(64, 'a');
             const std::string hello = "{\"schemaVersion\":\"0.1.0\",\"messageType\":\"agent_hello\",\"operationId\":\"test\",\"pid\":42,\"tid\":1,\"timestampUtc\":\"2026-09-20T00:00:00Z\",\"sequence\":1,\"architecture\":\"x64\",\"agentVersion\":\"0.3.0\",\"channelNonce\":\"" + nonce + "\"}";
             const auto expectFailure = [&](knmon::AgentChannel& channel, const std::string& text)

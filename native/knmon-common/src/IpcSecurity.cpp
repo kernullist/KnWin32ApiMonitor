@@ -219,11 +219,15 @@ bool AuthenticatePipeClient(HANDLE pipe, HANDLE expectedProcess)
     return valid;
 }
 
-bool AuthenticatePipeServer(HANDLE pipe, DWORD expectedPid, std::uint64_t expectedCreationTime)
+bool AuthenticatePipeServer(HANDLE pipe, DWORD expectedPid, std::uint64_t expectedCreationTime, HANDLE* retainedProcess)
 {
     bool valid = false;
     HANDLE server = nullptr;
     HandleScope serverScope(server);
+    if (retainedProcess != nullptr)
+    {
+        *retainedProcess = nullptr;
+    }
     do
     {
         ULONG connectedPid = 0;
@@ -241,9 +245,38 @@ bool AuthenticatePipeServer(HANDLE pipe, DWORD expectedPid, std::uint64_t expect
             break;
         }
         valid = true;
+        if (retainedProcess != nullptr)
+        {
+            *retainedProcess = server;
+            server = nullptr;
+        }
     }
     while (false);
     SetLastError(valid ? ERROR_SUCCESS : ERROR_ACCESS_DENIED);
     return valid;
+}
+
+bool ConfigureAgentPipeWriter(HANDLE pipe)
+{
+    DWORD mode = PIPE_READMODE_MESSAGE | PIPE_NOWAIT;
+    return SetNamedPipeHandleState(pipe, &mode, nullptr, nullptr) != FALSE;
+}
+
+bool TryWriteAgentMessage(HANDLE pipe, std::string_view message)
+{
+    bool sent = false;
+    do
+    {
+        if (message.empty() || message.size() > MaxAgentMessageBytes)
+        {
+            SetLastError(ERROR_INVALID_PARAMETER);
+            break;
+        }
+        DWORD written = 0;
+        sent = WriteFile(pipe, message.data(), static_cast<DWORD>(message.size()), &written, nullptr) != FALSE &&
+            written == message.size();
+    }
+    while (false);
+    return sent;
 }
 }

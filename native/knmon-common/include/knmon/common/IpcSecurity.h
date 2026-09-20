@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace knmon
@@ -45,5 +46,10 @@ inline constexpr DWORD TransportAclAccess = SECTION_MAP_READ | SECTION_MAP_WRITE
 
 HANDLE CreateLocalAgentPipe(std::wstring& name, DWORD timeoutMs);
 bool AuthenticatePipeClient(HANDLE pipe, HANDLE expectedProcess);
-bool AuthenticatePipeServer(HANDLE pipe, DWORD expectedPid, std::uint64_t expectedCreationTime);
+// On success, an optional retained handle belongs to the caller.
+bool AuthenticatePipeServer(HANDLE pipe, DWORD expectedPid, std::uint64_t expectedCreationTime, HANDLE* retainedProcess = nullptr);
+inline constexpr std::size_t MaxAgentMessageBytes = 65536;
+// Only message pipes are accepted; writes never wait for the controller to read.
+bool ConfigureAgentPipeWriter(HANDLE pipe);
+bool TryWriteAgentMessage(HANDLE pipe, std::string_view message);
 }

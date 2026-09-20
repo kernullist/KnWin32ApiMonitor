@@ -861,6 +861,9 @@ std::wstring g_operationId;
 std::wstring g_channelNonce;
 std::string g_selectedApiSelection;
 volatile LONG g_workerStarted = 0;
+HANDLE g_controllerWatchThread = nullptr;
+HANDLE g_controllerWatchStop = nullptr;
+DWORD g_controllerWatchThreadId = 0;
 
 enum class AgentLifecycleState : LONG
 {
@@ -1097,13 +1100,13 @@ void RequestModuleSweep() noexcept
 class AgentControlGuard
 {
 public:
-    AgentControlGuard()
+    explicit AgentControlGuard(bool wait = true)
     {
         const ULONGLONG deadline = GetTickCount64() + 1500;
         do
         {
             m_acquired = TryAcquireSRWLockExclusive(&g_controlLock) != FALSE;
-            if (m_acquired)
+            if (m_acquired || !wait)
             {
                 break;
             }
@@ -2865,24 +2868,21 @@ bool SendJson(const std::string& payload)
 {
     bool sent = false;
 
-    AcquireSRWLockExclusive(&g_pipeLock);
+    const bool acquired = TryAcquireSRWLockExclusive(&g_pipeLock) != FALSE;
     do
     {
-        if (g_pipeHandle == INVALID_HANDLE_VALUE)
+        if (!acquired || g_pipeHandle == INVALID_HANDLE_VALUE)
         {
             break;
         }
 
-        DWORD bytesWritten = 0;
-        if (!WriteFile(g_pipeHandle, payload.data(), static_cast<DWORD>(payload.size()), &bytesWritten, nullptr))
-        {
-            break;
-        }
-
-        sent = bytesWritten == payload.size();
+        sent = knmon::TryWriteAgentMessage(g_pipeHandle, payload);
     }
     while (false);
-    ReleaseSRWLockExclusive(&g_pipeLock);
+    if (acquired)
+    {
+        ReleaseSRWLockExclusive(&g_pipeLock);
+    }
 
     if (!sent)
     {
@@ -2892,7 +2892,7 @@ bool SendJson(const std::string& payload)
     return sent;
 }
 
-void SendHello()
+bool SendHello()
 {
     const LONG64 sequence = NextSequence();
     std::ostringstream stream;
@@ -2901,7 +2901,7 @@ void SendHello()
     stream << "\"agentVersion\":" << Q(WideToUtf8(AgentVersion)) << ",";
     stream << "\"message\":" << Q(KNMON_AGENT_HELLO_MESSAGE);
     stream << "}";
-    SendJson(stream.str());
+    return SendJson(stream.str());
 }
 
 void SendHookStatus(const char* moduleName, const char* apiName, bool installed, const std::string& message)
@@ -5104,15 +5104,7 @@ WindowsGetStringRawBufferFn ResolveWindowsGetStringRawBuffer()
                 continue;
             }
 
-            FARPROC procedure = nullptr;
-            if (g_originalGetProcAddress != nullptr)
-            {
-                procedure = g_originalGetProcAddress(module, "WindowsGetStringRawBuffer");
-            }
-            else
-            {
-                procedure = GetProcAddress(module, "WindowsGetStringRawBuffer");
-            }
+            const FARPROC procedure = GetProcAddress(module, "WindowsGetStringRawBuffer");
 
             if (procedure != nullptr)
             {
@@ -11651,6 +11643,12 @@ bool BindOriginalNoLock(const HookDefinition& definition, void* address, const M
         {
             break;
         }
+        // GetProcAddress is guard-suppressed on Windows. Its wrapper uses our IAT.
+        if (definition.OriginalFunction == reinterpret_cast<void**>(&g_originalGetProcAddress) &&
+            address != reinterpret_cast<void*>(::GetProcAddress))
+        {
+            break;
+        }
         OriginalBinding* binding = FindOriginalBindingNoLock(definition.OriginalFunction);
         if (binding != nullptr)
         {
@@ -17752,7 +17750,7 @@ FARPROC WINAPI HookedGetProcAddress(HMODULE module, LPCSTR procName)
             return nullptr;
         }
 
-        return g_originalGetProcAddress(module, procName);
+        return ::GetProcAddress(module, procName);
     }
 
     HookReentryGuard guard;
@@ -17761,7 +17759,8 @@ FARPROC WINAPI HookedGetProcAddress(HMODULE module, LPCSTR procName)
     QueryPerformanceCounter(&start);
     FARPROC result = guard.Call([&]()
     {
-        return g_originalGetProcAddress(module, procName);
+        // Our own IAT is excluded from patching and supports CFG-suppressed exports.
+        return ::GetProcAddress(module, procName);
     });
     FARPROC resolvedResult = result;
     const DWORD lastError = GetLastError();
@@ -20571,18 +20570,38 @@ HookLifecycleCounts ShutdownAgent(const char* reason, AgentLifecycleState finalS
     InterlockedExchange(&g_hooksEnabled, 0);
     g_sessionGate.Close();
     g_moduleSweepStop.store(true);
+    if (g_controllerWatchStop != nullptr)
+    {
+        SetEvent(g_controllerWatchStop);
+    }
+    const auto watchQuiescent = []()
+    {
+        return g_controllerWatchThread == nullptr || g_controllerWatchThreadId == GetCurrentThreadId() ||
+            WaitForSingleObject(g_controllerWatchThread, 0) == WAIT_OBJECT_0;
+    };
     const ULONGLONG deadline = GetTickCount64() + 2000;
-    while ((!g_sessionGate.Quiescent() ||
+    while ((!g_sessionGate.Quiescent() || !watchQuiescent() ||
         (g_moduleSweepThread != nullptr && WaitForSingleObject(g_moduleSweepThread, 0) != WAIT_OBJECT_0)) && GetTickCount64() < deadline)
     {
         Sleep(1);
     }
-    if (!g_sessionGate.Quiescent() ||
+    if (!g_sessionGate.Quiescent() || !watchQuiescent() ||
         (g_moduleSweepThread != nullptr && WaitForSingleObject(g_moduleSweepThread, 0) != WAIT_OBJECT_0))
     {
         // Keep the mapping, pipe, and session strings alive for admitted calls.
         counts.FailedHooks = 1;
         return counts;
+    }
+    if (g_controllerWatchThread != nullptr)
+    {
+        CloseHandle(g_controllerWatchThread);
+        g_controllerWatchThread = nullptr;
+        g_controllerWatchThreadId = 0;
+    }
+    if (g_controllerWatchStop != nullptr)
+    {
+        CloseHandle(g_controllerWatchStop);
+        g_controllerWatchStop = nullptr;
     }
     if (g_moduleSweepThread != nullptr)
     {
@@ -20607,6 +20626,90 @@ HookLifecycleCounts ShutdownAgent(const char* reason, AgentLifecycleState finalS
     }
     CloseAgentPipe();
     return counts;
+}
+
+struct ControllerWatchContext
+{
+    HANDLE Controller = nullptr;
+    HANDLE Stop = nullptr;
+
+    ~ControllerWatchContext()
+    {
+        if (Controller != nullptr)
+        {
+            CloseHandle(Controller);
+        }
+    }
+};
+
+struct AgentHandleScope
+{
+    HANDLE& Handle;
+
+    ~AgentHandleScope()
+    {
+        if (Handle != nullptr && Handle != INVALID_HANDLE_VALUE)
+        {
+            CloseHandle(Handle);
+        }
+    }
+};
+
+DWORD WINAPI ControllerWatchWorker(void* value)
+{
+    std::unique_ptr<ControllerWatchContext> context(static_cast<ControllerWatchContext*>(value));
+    const HANDLE handles[] = { context->Stop, context->Controller };
+    const DWORD waited = WaitForMultipleObjects(2, handles, FALSE, INFINITE);
+    if (waited != WAIT_OBJECT_0)
+    {
+        // A concurrent stop owns the control lock and must be able to join us.
+        while (WaitForSingleObject(context->Stop, 0) == WAIT_TIMEOUT)
+        {
+            AgentControlGuard control(false);
+            if (control.Acquired())
+            {
+                if (WaitForSingleObject(context->Stop, 0) == WAIT_TIMEOUT)
+                {
+                    try
+                    {
+                        ShutdownAgent(waited == WAIT_OBJECT_0 + 1 ? "controller_exited" : "controller_wait_failed",
+                            waited == WAIT_OBJECT_0 + 1 ? AgentLifecycleState::Disabled : AgentLifecycleState::Failed);
+                    }
+                    catch (...)
+                    {
+                        InterlockedExchange(&g_hooksEnabled, 0);
+                        g_sessionGate.Close();
+                        SetLifecycleState(AgentLifecycleState::Stopping);
+                    }
+                }
+                // Shutdown may have closed Stop and allowed a future session.
+                break;
+            }
+            WaitForSingleObject(context->Stop, 25);
+        }
+    }
+    return 0;
+}
+
+bool StartControllerWatch(std::unique_ptr<ControllerWatchContext> context)
+{
+    bool started = false;
+    g_controllerWatchStop = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    if (g_controllerWatchStop != nullptr)
+    {
+        context->Stop = g_controllerWatchStop;
+        auto* transferred = context.release();
+        g_controllerWatchThread = CreateThread(nullptr, 0, ControllerWatchWorker, transferred, 0, &g_controllerWatchThreadId);
+        started = g_controllerWatchThread != nullptr;
+        if (!started)
+        {
+            delete transferred;
+            CloseHandle(g_controllerWatchStop);
+            g_controllerWatchStop = nullptr;
+            g_controllerWatchThreadId = 0;
+        }
+    }
+    return started;
 }
 
 bool DisabledAgentCanReinitialize(const HookLifecycleCounts& counts)
@@ -20723,6 +20826,7 @@ DWORD WINAPI AgentWorker(void* context)
             }
 
             HANDLE pipeHandle = INVALID_HANDLE_VALUE;
+            AgentHandleScope pipeScope { pipeHandle };
             for (int attempt = 0; attempt < 50; ++attempt)
             {
                 pipeHandle = CreateFileW(
@@ -20754,16 +20858,28 @@ DWORD WINAPI AgentWorker(void* context)
                 break;
             }
 
-            if (!knmon::AuthenticatePipeServer(pipeHandle, runtimeConfig.ControllerProcessId, runtimeConfig.ControllerCreationTime))
+            auto controller = std::make_unique<ControllerWatchContext>();
+            if (!knmon::AuthenticatePipeServer(pipeHandle, runtimeConfig.ControllerProcessId, runtimeConfig.ControllerCreationTime,
+                &controller->Controller) || !knmon::ConfigureAgentPipeWriter(pipeHandle))
             {
-                CloseHandle(pipeHandle);
                 break;
             }
             AcquireSRWLockExclusive(&g_pipeLock);
             g_pipeHandle = pipeHandle;
+            pipeHandle = INVALID_HANDLE_VALUE;
             ReleaseSRWLockExclusive(&g_pipeLock);
 
-            SendHello();
+            if (!StartControllerWatch(std::move(controller)))
+            {
+                ShutdownAgent("controller_watch_failed", AgentLifecycleState::Failed);
+                break;
+            }
+
+            if (!SendHello())
+            {
+                ShutdownAgent("hello_write_failed", AgentLifecycleState::Failed);
+                break;
+            }
 
             // A stop that raced us while the pipe connection was retrying must win:
             // bail out before installing any hooks so the agent cannot resurrect
