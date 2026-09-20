@@ -915,14 +915,15 @@ std::string BuildTraceEventJson(const knmon::KnMonAgentMessage& message, std::ui
         stream << "}";
     }
     stream << ",";
-    for (const auto* key : {"rawReturnValue", "errorDomain", "outcome", "errorValidity", "successPredicate"})
+    for (const auto* key : {"rawReturnValue", "rawReturnBytes", "rawReturnEncoding", "callId", "parentCallId",
+        "errorDomain", "outcome", "errorValidity", "successPredicate"})
     {
         if (payload.Has(key))
         {
             stream << Q(key) << ":" << Q(payload.String(key)) << ",";
         }
     }
-    for (const auto* key : {"rawReturnBits", "rawLastErrorCode", "rawWinsockErrorCode"})
+    for (const auto* key : {"rawReturnBits", "rawLastErrorCode", "rawWinsockErrorCode", "callDepth"})
     {
         if (payload.Has(key))
         {

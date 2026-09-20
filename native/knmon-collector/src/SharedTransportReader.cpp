@@ -1,4 +1,5 @@
 #include <knmon/collector/SharedTransportReader.h>
+#include <knmon/common/GeneratedTypedAbi.h>
 
 #include <Windows.h>
 
@@ -157,16 +158,58 @@ bool SharedTransportReader::ValidateRecord(const KnMonTransportRecord& record, S
         if (record.RecordSize != sizeof(KnMonTransportRecord) ||
             record.HasWinsockError > 1 ||
             (record.RawReturnBits != 0 && record.RawReturnBits != 8 && record.RawReturnBits != 16 &&
-                record.RawReturnBits != 32 && record.RawReturnBits != 64) ||
+                record.RawReturnBits != 32 && record.RawReturnBits != 64 && record.RawReturnBits != 128) ||
             (record.RawReturnBits == 0 && record.RawReturnValue != 0) ||
             (record.RawReturnBits != 0 && record.RawReturnBits < 64 && (record.RawReturnValue >> record.RawReturnBits) != 0) ||
             record.EndQpc < record.StartQpc ||
             record.Text0Length > sizeof(record.Text0) || record.Text1Length > sizeof(record.Text1) ||
             record.Text2Length > sizeof(record.Text2) ||
-            (record.Flags & ~KnMonTransportRecordFlagGenericInventory) != 0)
+            record.CallId > static_cast<std::uint64_t>(INT64_MAX) || record.ParentCallId != 0 || record.CallDepth != 0 ||
+            (record.Flags != 0 && record.Flags != KnMonTransportRecordFlagGenericInventory && record.Flags != KnMonTransportRecordFlagTypedAbi))
         {
             Fail(result, "Shared transport record layout, flags, or text length is invalid.");
             break;
+        }
+        const auto* typed = FindTypedAbi(record.ApiId);
+        const bool aggregate = record.RawReturnBits == 128;
+        if ((aggregate && (record.Flags != KnMonTransportRecordFlagTypedAbi || typed == nullptr ||
+                typed->ReturnKind != TypedValueKind::Color4F || record.RawReturnValue != 0)) ||
+            (!aggregate && std::any_of(std::begin(record.RawReturnBytes), std::end(record.RawReturnBytes),
+                [](std::uint8_t value)
+                {
+                    return value != 0;
+                })))
+        {
+            Fail(result, "Shared transport aggregate return encoding is invalid.");
+            break;
+        }
+        if (record.Flags == KnMonTransportRecordFlagTypedAbi)
+        {
+            const std::uint32_t expectedBits = typed == nullptr ? 0 : typed->ReturnKind == TypedValueKind::Void ? 0 :
+                typed->ReturnKind == TypedValueKind::Color4F ? 128 : 32;
+            if (typed == nullptr || record.Values32[0] != typed->ArgumentCount || record.RawReturnBits != expectedBits)
+            {
+                Fail(result, "Shared transport typed ABI contract is invalid.");
+                break;
+            }
+            bool argumentsValid = true;
+            for (std::uint32_t index = 0; index < typed->ArgumentCount; ++index)
+            {
+                const auto kind = typed->Arguments[index];
+                const bool wide = kind == TypedValueKind::Float64 || kind == TypedValueKind::Point2F ||
+                    ((kind == TypedValueKind::Pointer || kind == TypedValueKind::SignedPointer) &&
+                        m_config.ExpectedArchitecture == static_cast<std::uint32_t>(KnMonAgentArchitecture::X64));
+                if (!wide && (record.Values64[index] >> 32) != 0)
+                {
+                    argumentsValid = false;
+                    break;
+                }
+            }
+            if (!argumentsValid)
+            {
+                Fail(result, "Shared transport typed argument exceeds its ABI width.");
+                break;
+            }
         }
         if (record.EventKind == static_cast<std::uint16_t>(KnMonTransportEventKind::Unknown))
         {

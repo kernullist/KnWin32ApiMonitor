@@ -343,6 +343,27 @@ JsonDocument ParseAgentJson(std::string_view text)
 
 void ValidateCapturedResult(const JsonDocument& value)
 {
+    if (value.Has("rawReturnBits") && !value.Has("rawReturnValue") && !value.Has("rawReturnBytes"))
+    {
+        throw JsonInputError("Raw return width requires a value or aggregate bytes.");
+    }
+    if (value.Has("rawReturnBytes"))
+    {
+        const auto bytes = value.String("rawReturnBytes", true);
+        if (value.Has("rawReturnValue") || value.UInt32("rawReturnBits", true) != 128 ||
+            value.String("rawReturnEncoding", true) != "little_endian_object_bytes" || bytes.size() != 32 ||
+            !std::all_of(bytes.begin(), bytes.end(), [](char ch)
+            {
+                return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f');
+            }))
+        {
+            throw JsonInputError("Invalid aggregate return encoding.");
+        }
+    }
+    else if (value.Has("rawReturnEncoding") || (value.Has("rawReturnBits") && value.UInt32("rawReturnBits") == 128))
+    {
+        throw JsonInputError("Aggregate return bytes are missing.");
+    }
     if (value.Has("rawReturnValue"))
     {
         const auto raw = value.DecimalUInt64("rawReturnValue");
@@ -397,6 +418,15 @@ void ValidateCapturedResult(const JsonDocument& value)
 void ValidateCaptureTiming(const JsonDocument& value)
 {
     ValidateCapturedResult(value);
+    if (value.Has("callId") || value.Has("parentCallId") || value.Has("callDepth"))
+    {
+        const auto id = value.DecimalUInt64("callId");
+        if (id == 0 || id > static_cast<std::uint64_t>(INT64_MAX) ||
+            value.DecimalUInt64("parentCallId") != 0 || value.UInt32("callDepth", true) != 0)
+        {
+            throw JsonInputError("Invalid root-call identity.");
+        }
+    }
     if (value.Has("observation"))
     {
         const auto observation = value.Object("observation", true);

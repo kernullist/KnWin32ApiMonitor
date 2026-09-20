@@ -84,12 +84,16 @@
 #undef ASN_PRIMITIVE
 #undef ASN_CONSTRUCTOR
 #include <WinSnmp.h>
+#include <d2d1_1.h>
+#include <knmon/common/GeneratedTypedAbi.h>
 
 #include <algorithm>
 #include <array>
 #include <cctype>
 #include <cstdio>
 #include <cstdint>
+#include <cfenv>
+#include <limits>
 #include <cstring>
 #include <iomanip>
 #include <atomic>
@@ -98,6 +102,9 @@
 #include <new>
 #include <sstream>
 #include <string>
+#if defined(KNMON_LIFECYCLE_TESTING)
+#include <thread>
+#endif
 #include <unordered_set>
 #include <string>
 #include <string_view>
@@ -133,10 +140,18 @@
 #define KNMON_AGENT_HELLO_MESSAGE "KNMon agent loaded by controlled early-bird APC"
 #endif
 
+namespace knmon
+{
+template <>
+inline constexpr bool CaptureAggregateReturn<D2D1_COLOR_F> = true;
+static_assert(sizeof(D2D1_COLOR_F) == 16 && offsetof(D2D1_COLOR_F, a) == 12);
+static_assert(sizeof(D2D1_POINT_2F) == 8 && offsetof(D2D1_POINT_2F, y) == 4);
+}
+
 namespace
 {
-constexpr const wchar_t* AgentVersion = L"0.4.0";
-constexpr DWORD AgentVersionPacked = 0x00040000;
+constexpr const wchar_t* AgentVersion = L"0.5.0";
+constexpr DWORD AgentVersionPacked = 0x00050000;
 constexpr std::size_t MaxBufferPreviewBytes = 16;
 constexpr std::size_t MaxNtObjectNameBytes = 512;
 constexpr std::size_t MaxRegistryStringChars = 256;
@@ -967,7 +982,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 32768;
 constexpr std::size_t MaxModuleRecords = 4096;
-constexpr std::size_t ManualHookDefinitionCount = 314;
+constexpr std::size_t ManualHookDefinitionCount = 320;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1227,6 +1242,23 @@ std::atomic<knmon::ThreadErrorState::WinsockGet> g_errorWinsockGet{nullptr};
 std::atomic<knmon::ThreadErrorState::WinsockSet> g_errorWinsockSet{nullptr};
 #endif
 thread_local const knmon::ThreadErrorState* g_callErrorState = nullptr;
+alignas(8) std::atomic<std::uint64_t> g_nextCallId{0};
+thread_local std::uint64_t g_currentCallId = 0;
+
+std::uint64_t NextCallId() noexcept
+{
+    std::uint64_t previous = g_nextCallId.load(std::memory_order_relaxed);
+    std::uint64_t result = 0;
+    while (previous < static_cast<std::uint64_t>(INT64_MAX))
+    {
+        if (g_nextCallId.compare_exchange_weak(previous, previous + 1, std::memory_order_relaxed))
+        {
+            result = previous + 1;
+            break;
+        }
+    }
+    return result;
+}
 
 class WinsockErrorAccessors
 {
@@ -1264,11 +1296,13 @@ class HookReentryGuard
 public:
     explicit HookReentryGuard(bool winsock = false) :
         m_winsock(winsock), m_errors(m_winsock.Get, m_winsock.Set),
-        m_previous(g_inHook), m_previousEpoch(g_hookEpoch), m_lease(g_sessionGate), m_previousErrors(g_callErrorState)
+        m_previous(g_inHook), m_previousEpoch(g_hookEpoch), m_lease(g_sessionGate), m_previousErrors(g_callErrorState),
+        m_previousCallId(g_currentCallId)
     {
         g_inHook = true;
         g_hookEpoch = m_lease.Epoch();
         g_callErrorState = &m_errors;
+        g_currentCallId = NextCallId();
     }
 
     ~HookReentryGuard()
@@ -1276,6 +1310,7 @@ public:
         g_hookEpoch = m_previousEpoch;
         g_inHook = m_previous;
         g_callErrorState = m_previousErrors;
+        g_currentCallId = m_previousCallId;
     }
 
     template <typename Function>
@@ -1294,6 +1329,7 @@ private:
     std::uint32_t m_previousEpoch;
     knmon::SessionLease m_lease;
     const knmon::ThreadErrorState* m_previousErrors;
+    std::uint64_t m_previousCallId;
 };
 
 std::string WideToUtf8(const wchar_t* value)
@@ -3017,6 +3053,7 @@ void FillTransportCommon(
         record->EndQpc = static_cast<std::uint64_t>(end.QuadPart);
         record->DurationUs = DurationUs(start, end);
         record->LastErrorCode = errorCode;
+        record->CallId = g_currentCallId;
         if (g_callErrorState != nullptr)
         {
             record->RawLastErrorCode = g_callErrorState->Win32();
@@ -3024,6 +3061,7 @@ void FillTransportCommon(
             record->HasWinsockError = g_callErrorState->HasWinsock() ? 1 : 0;
             record->RawReturnValue = g_callErrorState->ReturnValue();
             record->RawReturnBits = g_callErrorState->ReturnBits();
+            std::memcpy(record->RawReturnBytes, g_callErrorState->ReturnBytes().data(), sizeof(record->RawReturnBytes));
         }
     }
 }
@@ -11147,6 +11185,7 @@ NTSTATUS NTAPI HookedNtCreateFile(PHANDLE fileHandle, ACCESS_MASK desiredAccess,
 NTSTATUS NTAPI HookedLdrLoadDll(PCWSTR pathToFile, PULONG flags, const UNICODE_STRING* moduleFileName, PHANDLE moduleHandle);
 NTSTATUS NTAPI HookedLdrGetProcedureAddress(PVOID module, const ANSI_STRING* functionName, ULONG ordinal, PVOID* functionAddress);
 
+#include "TypedAbiHooks.inc"
 #include "GeneratedAgentHooks.inc"
 #include "GeneratedSdkAbiChecks.inc"
 
@@ -11319,6 +11358,12 @@ static_assert(GeneratedAgentHookDefinitionCount == 0, "unverified generic wrappe
 std::array<HookDefinition, ManualHookDefinitionCount> BuildManualHookDefinitions()
 {
     return {
+        HookDefinition { "oleaut32.dll", "VarR8FromR4", reinterpret_cast<void*>(HookedTypedVarR8FromR4), reinterpret_cast<void**>(&g_originalTypedVarR8FromR4), false, true, false, 81, 0 },
+        HookDefinition { "oleaut32.dll", "VarR4FromR8", reinterpret_cast<void*>(HookedTypedVarR4FromR8), reinterpret_cast<void**>(&g_originalTypedVarR4FromR8), false, true, false, 71, 0 },
+        HookDefinition { "d2d1.dll", "D2D1ConvertColorSpace", reinterpret_cast<void*>(HookedTypedD2D1ConvertColorSpace), reinterpret_cast<void**>(&g_originalTypedD2D1ConvertColorSpace), false, true, false, 6, 0 },
+        HookDefinition { "d2d1.dll", "D2D1MakeRotateMatrix", reinterpret_cast<void*>(HookedTypedD2D1MakeRotateMatrix), reinterpret_cast<void**>(&g_originalTypedD2D1MakeRotateMatrix), false, true, false, 2, 0 },
+        HookDefinition { "d2d1.dll", "D2D1Vec3Length", reinterpret_cast<void*>(HookedTypedD2D1Vec3Length), reinterpret_cast<void**>(&g_originalTypedD2D1Vec3Length), false, true, false, 11, 0 },
+        HookDefinition { "user32.dll", "EnumChildWindows", reinterpret_cast<void*>(HookedTypedEnumChildWindows), reinterpret_cast<void**>(&g_originalTypedEnumChildWindows), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "CreateFileW", reinterpret_cast<void*>(HookedCreateFileW), reinterpret_cast<void**>(&g_originalCreateFileW), true, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "CreateFileA", reinterpret_cast<void*>(HookedCreateFileA), reinterpret_cast<void**>(&g_originalCreateFileA), true, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "ReadFile", reinterpret_cast<void*>(HookedReadFile), reinterpret_cast<void**>(&g_originalReadFile), true, true, false, 0, 0 },

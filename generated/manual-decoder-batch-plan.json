@@ -40017,53 +40017,6 @@
       "apis": [
         {
           "allowedEvidence": [
-            "D2D1ConvertColorSpace scalar arguments",
-            "D2D1ConvertColorSpace pointer or handle values",
-            "D2D1ConvertColorSpace return value",
-            "duration and hook lifecycle metadata"
-          ],
-          "apiName": "D2D1ConvertColorSpace",
-          "callingConvention": "winapi",
-          "category": "graphics/direct2-d",
-          "classification": "manual_decoder_required",
-          "designStatus": "review_required",
-          "family": "graphics",
-          "forbiddenEvidence": [
-            "target_memory_bulk_copy",
-            "strings_or_buffer_payloads",
-            "credentials_or_secret_material",
-            "byte_previews",
-            "stack_or_injection_payloads"
-          ],
-          "id": 10404,
-          "key": "d2d1.dll!D2D1ConvertColorSpace",
-          "module": "d2d1.dll",
-          "originalRecommendation": "design_dll_batch_decoder_before_runtime_promotion",
-          "parameterCount": 3,
-          "payloadSensitiveParameters": [],
-          "pointerOnlyParameters": [
-            "color"
-          ],
-          "reasons": [
-            "manual_output_boundary_review"
-          ],
-          "requiredEvidence": [
-            "x64_native_smoke",
-            "x86_native_smoke",
-            "zero_healthy_path_drops",
-            "payload_absence_assertions",
-            "hook_overhead_gate",
-            "same_dll_batch_review"
-          ],
-          "returnType": "D2D1_COLOR_F",
-          "reviewNotes": [
-            "A concrete family-specific boundary must be added before runtime promotion."
-          ],
-          "risk": "medium",
-          "runtimeHookPolicy": "blocked_by_default"
-        },
-        {
-          "allowedEvidence": [
             "D2D1CreateFactory scalar arguments",
             "D2D1CreateFactory pointer or handle values",
             "D2D1CreateFactory return value",
@@ -40366,7 +40319,7 @@
           "runtimeHookPolicy": "blocked_by_default"
         }
       ],
-      "manualDecoderRequired": 7,
+      "manualDecoderRequired": 6,
       "module": "d2d1.dll",
       "payloadBlockedApis": [],
       "payloadBlockedInSameDll": 0,
@@ -40374,9 +40327,10 @@
       "runtimeHooksEnabledByDefault": false,
       "sourceFiles": [
         "definitions/win32/generated-system32-exports-bulk.json",
-        "definitions/win32/generated-win32metadata-bulk.json"
+        "definitions/win32/generated-win32metadata-bulk.json",
+        "definitions/win32/typed-abi.json"
       ],
-      "totalApis": 7
+      "totalApis": 6
     },
     {
       "apis": [
@@ -303890,33 +303844,11 @@
           "risk": "high"
         },
         {
-          "apiName": "VarR4FromR8",
-          "category": "system32-exports/com-rpc/oleaut32",
-          "family": "com-rpc",
-          "id": 26647,
-          "key": "oleaut32.dll!VarR4FromR8",
-          "reasons": [
-            "payload_risk_policy"
-          ],
-          "risk": "high"
-        },
-        {
           "apiName": "VarR8FromDate",
           "category": "system32-exports/com-rpc/oleaut32",
           "family": "com-rpc",
           "id": 26648,
           "key": "oleaut32.dll!VarR8FromDate",
-          "reasons": [
-            "payload_risk_policy"
-          ],
-          "risk": "high"
-        },
-        {
-          "apiName": "VarR8FromR4",
-          "category": "system32-exports/com-rpc/oleaut32",
-          "family": "com-rpc",
-          "id": 26649,
-          "key": "oleaut32.dll!VarR8FromR4",
           "reasons": [
             "payload_risk_policy"
           ],
@@ -304088,13 +304020,14 @@
           "risk": "high"
         }
       ],
-      "payloadBlockedInSameDll": 146,
+      "payloadBlockedInSameDll": 144,
       "recommendation": "design_manual_decoder_batch_before_runtime_promotion",
       "runtimeHooksEnabledByDefault": false,
       "sourceFiles": [
         "definitions/win32/generated-system32-exports-bulk.json",
         "definitions/win32/generated-win32metadata-bulk.json",
-        "definitions/win32/oleaut32.json"
+        "definitions/win32/oleaut32.json",
+        "definitions/win32/typed-abi.json"
       ],
       "totalApis": 260
     },
@@ -406788,6 +406721,7 @@
       "sourceFiles": [
         "definitions/win32/generated-system32-exports-bulk.json",
         "definitions/win32/generated-win32metadata-bulk.json",
+        "definitions/win32/typed-abi.json",
         "definitions/win32/user32.json"
       ],
       "totalApis": 143
@@ -452652,10 +452586,10 @@
     "policyInput": "classification == manual_decoder_required"
   },
   "summary": {
-    "manualDecoderRequired": 7309,
-    "payloadBlockedInManualDlls": 8258,
+    "manualDecoderRequired": 7308,
+    "payloadBlockedInManualDlls": 8256,
     "runtimeHooksEnabledByDefault": 0,
-    "totalApis": 7309,
+    "totalApis": 7308,
     "totalDlls": 243
   }
 }

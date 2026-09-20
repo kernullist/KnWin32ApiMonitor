@@ -348,6 +348,11 @@ export interface CaptureTiming {
 }
 
 export interface AgentApiCallEvent {
+  rawReturnBytes?: string;
+  rawReturnEncoding?: string;
+  callId?: string;
+  parentCallId?: string;
+  callDepth?: number;
   observation?: CaptureObservation;
   rawReturnValue?: string;
   rawReturnBits?: number;
@@ -595,6 +600,11 @@ export interface TraceError {
 }
 
 export interface TraceEvent {
+  rawReturnBytes?: string;
+  rawReturnEncoding?: string;
+  callId?: string;
+  parentCallId?: string;
+  callDepth?: number;
   observation?: CaptureObservation;
   recordSequence?: string;
   rawReturnValue?: string;

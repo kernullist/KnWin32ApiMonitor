@@ -5,9 +5,14 @@
 #include <type_traits>
 #include <cstdint>
 #include <bit>
+#include <array>
+#include <cstring>
 
 namespace knmon
 {
+template <typename T>
+inline constexpr bool CaptureAggregateReturn = false;
+
 class ThreadErrorState
 {
 public:
@@ -33,6 +38,9 @@ public:
     decltype(auto) Call(Function&& function)
     {
         Restore();
+        m_return = 0;
+        m_returnBits = 0;
+        m_returnBytes.fill(0);
         struct CaptureOnExit
         {
             ThreadErrorState& State;
@@ -69,6 +77,11 @@ public:
             {
                 m_return = result ? 1 : 0;
             }
+            else if constexpr (CaptureAggregateReturn<Result>)
+            {
+                static_assert(std::is_trivially_copyable_v<Result> && sizeof(Result) == 16);
+                std::memcpy(m_returnBytes.data(), &result, sizeof(result));
+            }
             else
             {
                 m_return = static_cast<std::make_unsigned_t<Result>>(result);
@@ -102,6 +115,11 @@ public:
         return m_returnBits;
     }
 
+    const std::array<std::uint8_t, 16>& ReturnBytes() const noexcept
+    {
+        return m_returnBytes;
+    }
+
     ThreadErrorState(const ThreadErrorState&) = delete;
     ThreadErrorState& operator=(const ThreadErrorState&) = delete;
 
@@ -131,5 +149,6 @@ private:
     int m_winsock = 0;
     std::uint64_t m_return = 0;
     std::uint32_t m_returnBits = 0;
+    std::array<std::uint8_t, 16> m_returnBytes = {};
 };
 }

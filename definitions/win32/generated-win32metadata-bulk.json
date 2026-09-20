@@ -76759,42 +76759,6 @@
         "x64"
       ],
       "callingConvention": "winapi",
-      "category": "ui/windows-and-messaging",
-      "coverageStatus": "defined",
-      "errorSource": "none",
-      "family": "ui",
-      "hookPolicy": "iat",
-      "minWindowsVersion": "windows5.0",
-      "module": "user32.dll",
-      "name": "EnumChildWindows",
-      "parameters": [
-        {
-          "decode": "handle",
-          "direction": "in",
-          "name": "hWndParent",
-          "type": "HWND"
-        },
-        {
-          "decode": "dword_value",
-          "direction": "in",
-          "name": "lpEnumFunc",
-          "type": "WNDENUMPROC"
-        },
-        {
-          "decode": "dword_value",
-          "direction": "in",
-          "name": "lParam",
-          "type": "LPARAM"
-        }
-      ],
-      "returnType": "BOOL",
-      "risk": "medium"
-    },
-    {
-      "architectures": [
-        "x64"
-      ],
-      "callingConvention": "winapi",
       "category": "system/data-exchange",
       "coverageStatus": "defined",
       "errorSource": "GetLastError",
@@ -281637,41 +281601,6 @@
         }
       ],
       "returnType": "UINT",
-      "risk": "medium"
-    },
-    {
-      "architectures": [
-        "x64"
-      ],
-      "callingConvention": "winapi",
-      "category": "graphics/direct2-d",
-      "coverageStatus": "defined",
-      "errorSource": "none",
-      "family": "graphics",
-      "hookPolicy": "iat",
-      "module": "d2d1.dll",
-      "name": "D2D1ConvertColorSpace",
-      "parameters": [
-        {
-          "decode": "dword_value",
-          "direction": "in",
-          "name": "sourceColorSpace",
-          "type": "D2D1_COLOR_SPACE"
-        },
-        {
-          "decode": "dword_value",
-          "direction": "in",
-          "name": "destinationColorSpace",
-          "type": "D2D1_COLOR_SPACE"
-        },
-        {
-          "decode": "pointer",
-          "direction": "inout",
-          "name": "color",
-          "type": "D2D1_COLOR_F*"
-        }
-      ],
-      "returnType": "D2D1_COLOR_F",
       "risk": "medium"
     },
     {

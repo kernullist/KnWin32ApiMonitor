@@ -4,7 +4,7 @@
 #include <string_view>
 namespace knmon
 {
-inline constexpr std::array<std::string_view, 314> RuntimeSupportedApiKeys =
+inline constexpr std::array<std::string_view, 320> RuntimeSupportedApiKeys =
 {{
     "advapi32.dll!lookupprivilegevaluew",
     "advapi32.dll!openprocesstoken",
@@ -35,6 +35,9 @@ inline constexpr std::array<std::string_view, 314> RuntimeSupportedApiKeys =
     "crypt32.dll!certopenstore",
     "crypt32.dll!cryptmsgclose",
     "crypt32.dll!cryptmsgopentodecode",
+    "d2d1.dll!d2d1convertcolorspace",
+    "d2d1.dll!d2d1makerotatematrix",
+    "d2d1.dll!d2d1vec3length",
     "d3d9.dll!d3dperf_endevent",
     "d3d9.dll!d3dperf_getstatus",
     "d3d9.dll!d3dperf_queryrepeatframe",
@@ -184,6 +187,8 @@ inline constexpr std::array<std::string_view, 314> RuntimeSupportedApiKeys =
     "oleaut32.dll!safearraydestroy",
     "oleaut32.dll!sysfreestring",
     "oleaut32.dll!variantclear",
+    "oleaut32.dll!varr4fromr8",
+    "oleaut32.dll!varr8fromr4",
     "opengl32.dll!glend",
     "opengl32.dll!glendlist",
     "opengl32.dll!glfinish",
@@ -248,6 +253,7 @@ inline constexpr std::array<std::string_view, 314> RuntimeSupportedApiKeys =
     "user32.dll!countclipboardformats",
     "user32.dll!createmenu",
     "user32.dll!createpopupmenu",
+    "user32.dll!enumchildwindows",
     "user32.dll!getactivewindow",
     "user32.dll!getcapture",
     "user32.dll!getcaretblinktime",

@@ -4,6 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import { generatedGenericAbiSafetyReasons, unsafeGeneratedGenericAbiType } from "./runtime-monitoring-policy.mjs";
+import { typedAbiSpecs, validateTypedAbiSpec } from "./typed-abi-spec.mjs";
 
 test("unverified prototypes cannot enable the integer dispatcher", () =>
 {
@@ -30,17 +31,29 @@ test("unknown aggregate typedefs do not become pointers by name", () =>
   assert.equal(unsafeGeneratedGenericAbiType("POINT*"), false);
 });
 
-test("runtime artifacts exclude the review counterexamples on every architecture", () =>
+test("runtime artifacts admit exact typed contracts and still refuse the integer counterexamples", () =>
 {
   const manifest = JSON.parse(fs.readFileSync(new URL("../../generated/runtime-support.json", import.meta.url)));
-  assert.equal(manifest.generatedWrappers, 0);
-  assert.equal(manifest.differentialVerifiedCount, 0);
+  assert.equal(manifest.generatedGenericWrappers, 0);
+  assert.equal(manifest.typedWrappers, 6);
+  assert.equal(manifest.differentialVerifiedCount, 6);
+  assert.equal(manifest.differentialProof.status, "verified");
   for (const keys of Object.values(manifest.architectures))
   {
     assert.ok(keys.includes("kernel32.dll!createfilew"));
-    for (const key of ["user32.dll!wsprintfw", "d2d1.dll!d2d1convertcolorspace", "oleaut32.dll!varr8fromr4"])
+    for (const key of ["user32.dll!wsprintfw", "d2d1.dll!d2d1sincos", "oleaut32.dll!vari4fromr8"])
     {
       assert.equal(keys.includes(key), false, key);
+    }
+    for (const spec of typedAbiSpecs)
+    {
+      assert.ok(keys.includes(`${spec.module}!${spec.name.toLowerCase()}`));
+      validateTypedAbiSpec(spec);
+      assert.throws(() => validateTypedAbiSpec({ ...spec, variadic: true }));
+      assert.throws(() => validateTypedAbiSpec({ ...spec, returnType: "uintptr_t" }));
+      assert.throws(() => validateTypedAbiSpec({ ...spec, callingConvention: "cdecl" }));
+      assert.throws(() => validateTypedAbiSpec({ ...spec, ordinal: (spec.ordinal ?? 0) + 1 }));
+      assert.throws(() => validateTypedAbiSpec({ ...spec, parameters: spec.parameters.map((value) => ({ ...value, type: "uintptr_t" })) }));
     }
     assert.equal(new Set(keys).size, keys.length);
   }
@@ -75,7 +88,9 @@ test("every compact selection of the supported subset fits the attach contract",
       .slice(0, keys.length - 1).reduce((sum, length) => sum + length, 0);
     maximumLength += Math.max(module.length + 3, largestPartial);
   }
-  assert.ok(maximumLength <= 8191, `Compact selection bound exceeds attach capacity: ${maximumLength}`);
+  const header = fs.readFileSync(new URL("../../native/knmon-common/include/knmon/common/AttachConfig.h", import.meta.url), "utf8");
+  const capacity = Number(header.match(/KnMonAttachConfigSelectedApisChars = (\d+)/u)[1]);
+  assert.ok(maximumLength < capacity, `Compact selection bound exceeds attach capacity: ${maximumLength}/${capacity}`);
 });
 
 test("the UI retains blocked definitions but excludes them from every capture profile", () =>
@@ -90,8 +105,8 @@ test("the UI retains blocked definitions but excludes them from every capture pr
     { module: "kernel32.dll", name: "CreateFileW", family: "file-io" },
     { module: "kernel32.dll", name: "ReadFile", family: "file-io" },
     { module: "user32.dll", name: "wsprintfW", family: "file-io" },
-    { module: "d2d1.dll", name: "D2D1ConvertColorSpace", family: "network" },
-    { module: "oleaut32.dll", name: "VarR8FromR4", family: "memory" }
+    { module: "d2d1.dll", name: "D2D1SinCos", family: "network" },
+    { module: "oleaut32.dll", name: "VarI4FromR8", family: "memory" }
   ];
   vm.runInNewContext(compiled, {
     exports,
@@ -101,9 +116,11 @@ test("the UI retains blocked definitions but excludes them from every capture pr
       {
         return manifest;
       }
-      if (name.endsWith("definition-decoder-tables.json"))
+      if (name.endsWith("ui-catalog.json"))
       {
-        return { apis };
+        const strings = [...new Set(apis.flatMap((api) => [api.module, api.family, ""]))];
+        return { strings, rows: apis.map((api) => [api.name, strings.indexOf(api.module),
+          strings.indexOf(api.family), strings.indexOf(""), strings.indexOf(""), strings.indexOf(""), strings.indexOf("")]) };
       }
       throw new Error(`Unexpected UI dependency: ${name}`);
     }

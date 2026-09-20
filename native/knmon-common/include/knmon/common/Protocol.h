@@ -85,7 +85,7 @@ enum class KnMonTransportEventKind : std::uint16_t
 };
 
 inline constexpr std::uint32_t KnMonTransportMagic = 0x4d54534b;
-inline constexpr std::uint16_t KnMonTransportAbiVersion = 7;
+inline constexpr std::uint16_t KnMonTransportAbiVersion = 8;
 inline constexpr std::uint32_t KnMonTransportDefaultCapacity = 1024;
 inline constexpr std::uint32_t KnMonTransportMinCapacity = 2;
 inline constexpr std::uint32_t KnMonTransportMaxCapacity = 65536;
@@ -96,6 +96,7 @@ inline constexpr std::uint32_t KnMonTransportText2Bytes = 1024;
 inline constexpr std::uint32_t KnMonTransportSlotCount64 = 16;
 inline constexpr std::uint32_t KnMonTransportSlotCount32 = 20;
 inline constexpr std::uint32_t KnMonTransportRecordFlagGenericInventory = 0x00000001;
+inline constexpr std::uint32_t KnMonTransportRecordFlagTypedAbi = 0x00000002;
 
 enum class KnMonTransportRecordState : std::int32_t
 {
@@ -143,6 +144,10 @@ struct KnMonTransportRecord
     std::uint32_t HasWinsockError = 0;
     std::uint64_t RawReturnValue = 0;
     std::uint32_t RawReturnBits = 0;
+    std::uint8_t RawReturnBytes[16] = {};
+    std::uint64_t CallId = 0;
+    std::uint64_t ParentCallId = 0;
+    std::uint32_t CallDepth = 0;
     std::uint64_t Values64[KnMonTransportSlotCount64] = {};
     std::uint32_t Values32[KnMonTransportSlotCount32] = {};
     std::uint32_t Text0Length = 0;

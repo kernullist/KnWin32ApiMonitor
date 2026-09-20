@@ -8,7 +8,9 @@ const fixturePath = path.join(repoRoot, "tests", "fixtures", "collector", "drop-
 const helperArgument = process.argv.indexOf("--helper");
 const helperPath = helperArgument >= 0
   ? path.resolve(process.argv[helperArgument + 1])
-  : path.join(repoRoot, "build", "native", "Debug", "knmon-collector.exe");
+  : process.env.KNMON_COLLECTOR_HELPER
+    ? path.resolve(process.env.KNMON_COLLECTOR_HELPER)
+    : path.join(repoRoot, "build", "native", "Debug", "knmon-collector.exe");
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));

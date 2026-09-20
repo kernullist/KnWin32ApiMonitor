@@ -1,0 +1,216 @@
+{
+  "schemaVersion": "0.1.0",
+  "module": "typed_abi",
+  "description": "Compiler-bound SDK ABI contracts. Pointer pointees are not sampled by these wrappers.",
+  "apis": [
+    {
+      "module": "oleaut32.dll",
+      "name": "VarR8FromR4",
+      "ordinal": 81,
+      "family": "typed_abi",
+      "category": "abi_verified_call",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "hooked",
+      "architectures": [
+        "x86",
+        "x64"
+      ],
+      "callingConvention": "winapi",
+      "returnType": "HRESULT",
+      "errorSource": "HRESULT",
+      "parameters": [
+        {
+          "type": "FLOAT",
+          "name": "fltIn",
+          "direction": "in",
+          "decode": "abi_value_bits"
+        },
+        {
+          "type": "DOUBLE*",
+          "name": "pdblOut",
+          "direction": "out",
+          "decode": "pointer"
+        }
+      ]
+    },
+    {
+      "module": "oleaut32.dll",
+      "name": "VarR4FromR8",
+      "ordinal": 71,
+      "family": "typed_abi",
+      "category": "abi_verified_call",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "hooked",
+      "architectures": [
+        "x86",
+        "x64"
+      ],
+      "callingConvention": "winapi",
+      "returnType": "HRESULT",
+      "errorSource": "HRESULT",
+      "parameters": [
+        {
+          "type": "DOUBLE",
+          "name": "dblIn",
+          "direction": "in",
+          "decode": "abi_value_bits"
+        },
+        {
+          "type": "FLOAT*",
+          "name": "pfltOut",
+          "direction": "out",
+          "decode": "pointer"
+        }
+      ]
+    },
+    {
+      "module": "d2d1.dll",
+      "name": "D2D1ConvertColorSpace",
+      "ordinal": 6,
+      "family": "typed_abi",
+      "category": "abi_verified_call",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "hooked",
+      "architectures": [
+        "x86",
+        "x64"
+      ],
+      "callingConvention": "winapi",
+      "returnType": "D2D1_COLOR_F",
+      "errorSource": "none",
+      "parameters": [
+        {
+          "type": "D2D1_COLOR_SPACE",
+          "name": "sourceColorSpace",
+          "direction": "in",
+          "decode": "abi_value_bits"
+        },
+        {
+          "type": "D2D1_COLOR_SPACE",
+          "name": "destinationColorSpace",
+          "direction": "in",
+          "decode": "abi_value_bits"
+        },
+        {
+          "type": "const D2D1_COLOR_F*",
+          "name": "color",
+          "direction": "in",
+          "decode": "pointer"
+        }
+      ]
+    },
+    {
+      "module": "d2d1.dll",
+      "name": "D2D1MakeRotateMatrix",
+      "ordinal": 2,
+      "family": "typed_abi",
+      "category": "abi_verified_call",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "hooked",
+      "architectures": [
+        "x86",
+        "x64"
+      ],
+      "callingConvention": "winapi",
+      "returnType": "void",
+      "errorSource": "none",
+      "parameters": [
+        {
+          "type": "FLOAT",
+          "name": "angle",
+          "direction": "in",
+          "decode": "abi_value_bits"
+        },
+        {
+          "type": "D2D1_POINT_2F",
+          "name": "center",
+          "direction": "in",
+          "decode": "abi_value_bits"
+        },
+        {
+          "type": "D2D1_MATRIX_3X2_F*",
+          "name": "matrix",
+          "direction": "out",
+          "decode": "pointer"
+        }
+      ]
+    },
+    {
+      "module": "d2d1.dll",
+      "name": "D2D1Vec3Length",
+      "ordinal": 11,
+      "family": "typed_abi",
+      "category": "abi_verified_call",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "hooked",
+      "architectures": [
+        "x86",
+        "x64"
+      ],
+      "callingConvention": "winapi",
+      "returnType": "FLOAT",
+      "errorSource": "none",
+      "parameters": [
+        {
+          "type": "FLOAT",
+          "name": "x",
+          "direction": "in",
+          "decode": "abi_value_bits"
+        },
+        {
+          "type": "FLOAT",
+          "name": "y",
+          "direction": "in",
+          "decode": "abi_value_bits"
+        },
+        {
+          "type": "FLOAT",
+          "name": "z",
+          "direction": "in",
+          "decode": "abi_value_bits"
+        }
+      ]
+    },
+    {
+      "module": "user32.dll",
+      "name": "EnumChildWindows",
+      "family": "typed_abi",
+      "category": "abi_verified_call",
+      "risk": "low",
+      "hookPolicy": "iat",
+      "coverageStatus": "hooked",
+      "architectures": [
+        "x86",
+        "x64"
+      ],
+      "callingConvention": "winapi",
+      "returnType": "BOOL",
+      "errorSource": "none",
+      "parameters": [
+        {
+          "type": "HWND",
+          "name": "hWndParent",
+          "direction": "in",
+          "decode": "pointer"
+        },
+        {
+          "type": "WNDENUMPROC",
+          "name": "lpEnumFunc",
+          "direction": "in",
+          "decode": "pointer"
+        },
+        {
+          "type": "LPARAM",
+          "name": "lParam",
+          "direction": "in",
+          "decode": "abi_value_bits"
+        }
+      ]
+    }
+  ]
+}

@@ -1266,18 +1266,23 @@ export function checkGeneratedArtifacts(apiDocuments, metadataIndex) {
   return errors;
 }
 
-export function writeGeneratedArtifacts(apiDocuments, metadataIndex) {
+function writeGeneratedText(filePath, text)
+{
+  if (!fs.existsSync(filePath) || fs.readFileSync(filePath, "utf8") !== text)
+  {
+    ensureDirectoryForFile(filePath);
+    fs.writeFileSync(filePath, text, "utf8");
+  }
+}
+
+export function writeGeneratedArtifacts(apiDocuments, metadataIndex)
+{
   const expected = expectedGeneratedArtifacts(apiDocuments, metadataIndex);
-  ensureDirectoryForFile(generatedIdJsonPath);
-  fs.writeFileSync(generatedIdJsonPath, expected.json, "utf8");
-  ensureDirectoryForFile(generatedApiHeaderPath);
-  fs.writeFileSync(generatedApiHeaderPath, expected.header, "utf8");
-  ensureDirectoryForFile(generatedDecoderJsonPath);
-  fs.writeFileSync(generatedDecoderJsonPath, expected.decoderJson, "utf8");
-  ensureDirectoryForFile(generatedApiMetadataHeaderPath);
-  fs.writeFileSync(generatedApiMetadataHeaderPath, expected.metadataHeader, "utf8");
-  ensureDirectoryForFile(generatedApiMetadataSourcePath);
-  fs.writeFileSync(generatedApiMetadataSourcePath, expected.metadataSource, "utf8");
+  writeGeneratedText(generatedIdJsonPath, expected.json);
+  writeGeneratedText(generatedApiHeaderPath, expected.header);
+  writeGeneratedText(generatedDecoderJsonPath, expected.decoderJson);
+  writeGeneratedText(generatedApiMetadataHeaderPath, expected.metadataHeader);
+  writeGeneratedText(generatedApiMetadataSourcePath, expected.metadataSource);
   const expectedParameterSourcePaths = new Set(expected.metadataParameterSources.keys());
   for (const filePath of listGeneratedApiMetadataParameterChunkFiles()) {
     if (!expectedParameterSourcePaths.has(filePath)) {
@@ -1286,8 +1291,7 @@ export function writeGeneratedArtifacts(apiDocuments, metadataIndex) {
   }
 
   for (const [filePath, expectedText] of expected.metadataParameterSources) {
-    ensureDirectoryForFile(filePath);
-    fs.writeFileSync(filePath, expectedText, "utf8");
+    writeGeneratedText(filePath, expectedText);
   }
 }
 

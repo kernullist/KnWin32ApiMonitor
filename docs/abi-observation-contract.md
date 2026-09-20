@@ -2,8 +2,8 @@
 
 The native agent supports Windows x86 and x64. `toolchain.json` pins the compiler
 and SDK used for the reference build. A successful build checks every installed
-manual wrapper against its original-function slot and an independent declaration:
-312 public SDK declarations and two native loader declarations from pinned PHNT.
+wrapper against its original-function slot and an independent declaration:
+318 public SDK declarations and two native loader declarations from pinned PHNT.
 The assertions are in `GeneratedSdkAbiChecks.inc`. PSAPI export aliases are checked
 against their corresponding K32 SDK declarations. The GDI+ flat export uses its
 SDK namespace, not a hand-written pointer typedef.
@@ -28,6 +28,36 @@ for the unverified catalog. The current
 [Win32Metadata 71.0.26 preview](https://www.nuget.org/packages/Microsoft.Windows.SDK.Win32Metadata/71.0.26-preview)
 is a useful declaration source, but its presence does not prove wrapper safety.
 
+## Typed floating-point, aggregate and callback wrappers
+
+Six reviewed contracts use generated, SDK-typed C++ wrappers: VarR8FromR4,
+VarR4FromR8, D2D1ConvertColorSpace, D2D1MakeRotateMatrix, D2D1Vec3Length and
+EnumChildWindows. The compiler supplies the x86/x64 calling convention, floating
+registers and hidden aggregate-return buffer. The argument pack retains its
+actual types. Unknown signatures and variadic functions remain blocked.
+
+The five Automation/Direct2D SDK imports use ordinals in the reference target.
+Their reviewed ordinals are included in the hook definition; the existing IAT
+address and module-generation checks still have to match the named export.
+Production injection tests exercise these imports as well as the named callback
+API. An original/wrapper direct call alone would not detect a missing IAT hook.
+
+Arguments include exact entry bits, width and encoding. A by-value point contains
+two little-endian binary32 values. Pointer arguments record the address with
+`targetMemoryRead: false`; these six wrappers do not sample pointees. The 16-byte
+color result uses `rawReturnBytes`, `rawReturnBits: 128` and
+`rawReturnEncoding: little_endian_object_bytes`, without a truncated scalar
+`rawReturnValue`. Transport ABI 8 and attach configuration ABI 4 reject older
+incompatible layouts.
+
+`generated/typed-abi-proof.json` records executed x86/x64 Debug differential and
+production-injection/replay results on Windows 10.0.26200, with source, binary and
+system-DLL hashes. Only these six APIs are marked `differential_verified` in the
+runtime manifest. That means the recorded corpus passed on the recorded build;
+it does not imply exhaustive inputs, Release behavior or another Windows build.
+The proof checker invalidates promotion after relevant source changes. Source
+hashes normalize CRLF to LF so checkout line endings do not change the claim.
+
 ## Record identity
 
 `eventId` identifies the retained/session presentation event. It is not the
@@ -36,6 +66,14 @@ string through native output, Rust, UI, JSONL export, KNAPM replay and SQLite se
 Strings preserve values beyond JavaScript's exact integer range. Tombstones and
 filtered records can leave gaps; readers must not reconstruct sequence numbers
 from the chunk start and line offset.
+
+New normal-return events also carry a process-local `callId` allocated at hook
+entry. It is independent of return-order `recordSequence`, stays unique across
+threads and agent session restarts in that process, and is a decimal string.
+Only root calls are observed: `parentCallId` is `"0"` and `callDepth` is zero.
+These fields do not imply a captured callback tree. At INT64_MAX, ID allocation
+stops and identity fields are omitted instead of wrapping or reusing an ID.
+Process identity remains necessary when comparing events from different targets.
 
 A chunk with sequence identities must have a strictly increasing sequence within
 its declared first/last bounds, with matching endpoint identities. Legacy chunks
@@ -104,12 +142,18 @@ Run from the repository root:
 
 ```powershell
 npm run abi:check
+npm run abi:typed:check
 npm run abi:sdk:verify
 cmake --build build/native-msvc --config Debug --parallel 4
 cmake --build build/native-msvc-x86 --config Debug --parallel 4
 ctest --test-dir build/native-msvc -C Debug --output-on-failure
 ctest --test-dir build/native-msvc-x86 -C Debug --output-on-failure
 node tools/session-validator/validate-record-identity.mjs build/native-msvc/Debug/knmon-native-helper.exe
+npm run abi:proof:generate
+npm run agent-hooks:generate
+npm run abi:proof:check
+$env:KNMON_COLLECTOR_HELPER = "$PWD/build/native-msvc/Debug/knmon-collector.exe"
+npm run verify
 ```
 
 The ABI differential CTest calls production wrapper bodies inside a test-only
@@ -120,3 +164,8 @@ Guarded pages and pointer-width/entry-phase negative controls exercise failures
 that smoke success alone cannot detect. Production-agent capture/replay tests
 separately check the transport, helper and saved-session paths. This scoped corpus
 does not imply differential coverage for every SDK-checked API.
+The typed corpus additionally compares floating-point status, signed zero,
+subnormals, infinities, quiet/signaling NaNs, conversion failure, complete
+aggregate bytes, callback context/early termination, original C++/SEH propagation
+and suppressed reentry. Concurrent and saturated call-ID tests check identity
+allocation. The proof runner rebuilds both architectures before executing tests.

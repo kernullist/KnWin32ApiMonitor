@@ -1,0 +1,950 @@
+{
+  "schemaVersion": 1,
+  "observedAtUtc": "2026-09-20T05:25:22.458Z",
+  "windowsRelease": "10.0.26200",
+  "configuration": "Debug",
+  "apiKeys": [
+    "d2d1.dll!d2d1convertcolorspace",
+    "d2d1.dll!d2d1makerotatematrix",
+    "d2d1.dll!d2d1vec3length",
+    "oleaut32.dll!varr4fromr8",
+    "oleaut32.dll!varr8fromr4",
+    "user32.dll!enumchildwindows"
+  ],
+  "source": {
+    "sha256": "cb5cf8558546fed21b09622a2a12fc6d62df9921cbdebfc61929b096bc3900e2",
+    "files": [
+      {
+        "path": "apps/knmon-ui/src/traceConversion.ts",
+        "sha256": "dc5302b8ec12673fe0dc4eaf69654802b820ae5263c7c16d5afb0f0e23d08934"
+      },
+      {
+        "path": "apps/knmon-ui/src/types.ts",
+        "sha256": "664a44e74a6a2f7cd266a1e81ce7f6a7efaafc9c013b93d7a8d2159b5244d217"
+      },
+      {
+        "path": "crates/knmon-tauri/src/lib.rs",
+        "sha256": "14f748c8ff8a4310b75577abed0563f982910f79d750774e2859226f84b4fcab"
+      },
+      {
+        "path": "definitions/win32/typed-abi.json",
+        "sha256": "39d47adefa794b335c159b4799f6cc6851fd13b6dbeef46faacfa75b34ad277c"
+      },
+      {
+        "path": "generated/definition-decoder-tables.json",
+        "sha256": "d13468d068ca47ccddfc376e9a12257253ea6b2bd0ee136e0e05194527c98512"
+      },
+      {
+        "path": "generated/sdk-abi-ir.json",
+        "sha256": "85e24eeda9f6ad40a1f7b68759d47a46bbbb0b73a573104ce1a6816d82ec43c5"
+      },
+      {
+        "path": "generated/sdk-abi-sources.json",
+        "sha256": "50a19e2c2c0d214463dcaa835c31ecd37c6ef0f6ca2ea30e92cd9774aa13174b"
+      },
+      {
+        "path": "native/CMakeLists.txt",
+        "sha256": "bfbef434f316308a712b7375637ba4795ee3419ed9754d24b4b4b75c2c22852a"
+      },
+      {
+        "path": "native/knmon-agent64/src/AbiDifferentialTests.inc",
+        "sha256": "0b59d3138ee85b8b85bdc19e397236aa7030b01dcfc77e488061b1575ebd5188"
+      },
+      {
+        "path": "native/knmon-agent64/src/AgentMain.cpp",
+        "sha256": "0c79dcebce5a54ef7fe848c82c174865f94fd2c16ab5ffc47ff62e45f29b968d"
+      },
+      {
+        "path": "native/knmon-agent64/src/GeneratedAgentHooks.inc",
+        "sha256": "0d193add5a7cfada2f35aadaa5aa6b3b357fe9181babdeb8e901efddfe386fea"
+      },
+      {
+        "path": "native/knmon-agent64/src/GeneratedSdkAbiChecks.inc",
+        "sha256": "913704d4ec262c54e117f5e5a1bf7a7529d891bea9be8ffad1550fae1b04be09"
+      },
+      {
+        "path": "native/knmon-agent64/src/GeneratedTypedHooks.inc",
+        "sha256": "fef84243482213d386e2debbc655282c45edda17def76ed77d4f1e31799496e8"
+      },
+      {
+        "path": "native/knmon-agent64/src/TypedAbiDifferentialTests.inc",
+        "sha256": "c9bb37a7b68c8ab0b56de0ab85bce25a222ff49bc7c8e5d92cd4116697c9c1e6"
+      },
+      {
+        "path": "native/knmon-agent64/src/TypedAbiHooks.inc",
+        "sha256": "6bbfb7c5f9b9e90da9ec95f894891b011ec0ade46c2e5eeb7ad716807000085e"
+      },
+      {
+        "path": "native/knmon-collector/include/knmon/collector/Collector.h",
+        "sha256": "fdf846655bab273d71cdc6f30c52df559c8c55584783061d52476ac81e950509"
+      },
+      {
+        "path": "native/knmon-collector/include/knmon/collector/SharedTransportReader.h",
+        "sha256": "f12cd7a038ec061288d828befb8365d5654ff3aad1855e29a5d7e114e4d35132"
+      },
+      {
+        "path": "native/knmon-collector/include/knmon/collector/ThreadedSharedTransportReader.h",
+        "sha256": "e1a205fde034d29e4475666631a5af27aa8cfb0f0ef86098e3eed1ae5e780e92"
+      },
+      {
+        "path": "native/knmon-collector/src/Collector.cpp",
+        "sha256": "36a8e2158f203f52f6c727c220bf06bb5b49bb519bef000fba53e4ce4afdb27d"
+      },
+      {
+        "path": "native/knmon-collector/src/SharedTransportReader.cpp",
+        "sha256": "1b33ec1d2d3788043fa9aa76e55b0b2bf5e1ca011b307e0ca115fb84b1e3054c"
+      },
+      {
+        "path": "native/knmon-collector/src/ThreadedSharedTransportReader.cpp",
+        "sha256": "7dd49ba0a06ac9130381a95098d72b5b10c5a14d9ab00441d0f1933193a0acc0"
+      },
+      {
+        "path": "native/knmon-collector/src/main.cpp",
+        "sha256": "39c6a4d9685584a671f65d2446afc9392b8c13b16ff594b3be25df6f3b7e0607"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/AgentChannel.h",
+        "sha256": "0bede96a94a7d67be6600da1bb3ac8e02646d88384a347aa0f63e229175effc3"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/ApiResult.h",
+        "sha256": "5cf628a3c4936b3d103b6dd9dd50d8e2271ded3fbca82917b3a5a58ec458cdaa"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/AttachConfig.h",
+        "sha256": "2b0fa8617a8a699bec6353ce367fad2de5e4bc99020cc38b816e5eaacb3d4736"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/BoundedJson.h",
+        "sha256": "95251d25c518aaa5ae67f2d7c0ef92edf3cba9dbc8b931735081bcf9165efa83"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/CaptureClock.h",
+        "sha256": "cafceab87035975e9333008eab3b8d77edf9c8642dc74718c9d594bb63740031"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/CaptureHistory.h",
+        "sha256": "8fddf764e534e67fd9c36a7f31a3202428e9db9c6f11694d0137e4a53ba4325b"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/GeneratedApiIds.h",
+        "sha256": "2657103d6c297d1deb789e9796ab57b1df72ec1f34b316629abe34b9effeceba"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/GeneratedApiMetadata.h",
+        "sha256": "2fe713853d9e17899897a08b42198e168a58103c9d47f23df8618acc1fb934d8"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/GeneratedRuntimeSupport.h",
+        "sha256": "bad1dcbf91eb371990635a935532ea40b9dc32f8bd7ae3fe54dfa44db877ae7d"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/GeneratedTypedAbi.h",
+        "sha256": "30dc24d8307174d81a613c09a2567a4b2189db0633bbeb1cb5da52bbdba7c344"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/IoObservation.h",
+        "sha256": "1fe3a06d6e3a16b7be193e8e71d4f90553d037fbb2a4b1c9de1bd8e3a58a7e6b"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/IpcSecurity.h",
+        "sha256": "8d598126f6bf35da06ae412a48269d5ff086e8a99247fe04cecf19ca0c4d35cf"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/ModuleGeneration.h",
+        "sha256": "4257fec40f5cd3fc1acd9fd00fb0caba93ea3ecc4c88be103adf8abfa8785bfc"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/NativeApiAbi.h",
+        "sha256": "717b6f3df08668de0a0fe10bab060e3bf3db1fe538379318c6059c1ca32a7814"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/Protocol.h",
+        "sha256": "8ada8b3ba3b84ef66e428cb5509c41a0e1bcff7a10114d4eaf323f76ad65515a"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/RuntimeSupport.h",
+        "sha256": "a8c92c27820a6e23ad852a230113fc3920bc4c44a4cfb2b18e28454be620ea8d"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/SessionCodec.h",
+        "sha256": "deec5bf7474950b6e75603b82e1934ba66d866b3e55ce30969f91ca44ad6f754"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/SessionLease.h",
+        "sha256": "e5d3a52d66e82d3e955860eba930f22cb0e75d620c1d2598159f312161548e4c"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/ThreadErrorState.h",
+        "sha256": "6c03b4a22d2db021befeab7d74552ee955da437089f7d9459dd05baf82ea42cf"
+      },
+      {
+        "path": "native/knmon-common/include/knmon/common/TransportWriter.h",
+        "sha256": "d9963e28bb85d69cc4b03f1cc177803bc22cc554d7c138ee2687793095cf4e0e"
+      },
+      {
+        "path": "native/knmon-common/src/BoundedJson.cpp",
+        "sha256": "516bd5c5787dea096ea2d6596c493b89fc63a44b7eaa9128d32816a5d7126fbd"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadata.cpp",
+        "sha256": "fadfce3810b3b8a12dc5e9044a2578f53b91d74fe34070bed8f0f07687e456d1"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk0.cpp",
+        "sha256": "5c6cf921556935876be6800cf5d923b786d9a169f0d37267c60abd86adac156f"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk1.cpp",
+        "sha256": "a8d6de5d25c46e876b901a0a9c06dde193b197883478bbf1c44597524b017da3"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk10.cpp",
+        "sha256": "745338c8836ed30a2ca00a3f8ce86e648fa5c173dc778300d73d579d45266f84"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk11.cpp",
+        "sha256": "6557204bb56c0833ba9269427f75f74379c79d2d8f6ec3d698d05755a20e9cdb"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk12.cpp",
+        "sha256": "a65e585b6f5b84d32486f1e254f5ce108a9368a9a646be13c43aa07d0adb62d1"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk13.cpp",
+        "sha256": "2a0464bcf7dba411822d2bd6f27b5914810744b0157f96920bd69ebe20f1336d"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk14.cpp",
+        "sha256": "b33a1de60d2fdf52fce3467ca9ee5f6e9d1dc822e6ab31d79b0c52fdb4b6c04f"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk15.cpp",
+        "sha256": "a71872e5023300a65061d643ef064447e67998307c0a9202bd7c2e34796d3d31"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk16.cpp",
+        "sha256": "7a63898dfe9e690ba7c503b81e5971e6e737e7625b1eb363ac1122a731821306"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk17.cpp",
+        "sha256": "3cf9e785cc114c99a211bd6fa34db8ff5d01dbc0029409e36a5a9eddc88517ef"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk18.cpp",
+        "sha256": "100dacbd260676182a32e2eeee7587f4362b57e5aca4b626a6640240dbbd00c3"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk19.cpp",
+        "sha256": "1e424ea762f3bca155c2f201e372c63291abead9d43a9ba1f1a025519534ac48"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk2.cpp",
+        "sha256": "c3a01c244ab5de21126ba1c34c5c97f1a0d475bd5dc349a2423c63e551666a2d"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk20.cpp",
+        "sha256": "dd623a459742d6a94f79fff8fae52dfec148c8917edad18f00734626a4065173"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk21.cpp",
+        "sha256": "fbe40b9919531de5b25213aa6b09911b1e808a4ea67961f145055ebb9f9f19b0"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk22.cpp",
+        "sha256": "52f5b2105353583ba1a29c713d98fdd6bb4de803139ea04c679dda3be84d41c6"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk23.cpp",
+        "sha256": "bb0af49023932ef64d0b934b414636519758c30903114b6560bf489b08be2f59"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk24.cpp",
+        "sha256": "36df1e442322701eb79176394057c0d7ac308b20e7b04b2c983f1719bfb025ac"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk25.cpp",
+        "sha256": "581e1af7d555bd9b12135b858b5b8c765a893a3c4364e9c9b62119760e51de14"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk26.cpp",
+        "sha256": "64c7d93e4ce6af542d9bb9e7db7f0550c7f859440187c19813fe5bd22f13577b"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk27.cpp",
+        "sha256": "8278728268b60eea60c636b8504665be303f1528c83a695a6c86c5724c3b9e10"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk28.cpp",
+        "sha256": "285d4481e0eab861aeb25db6d57855cb8b8a5c8c040cde13a3d650c8571ff6b6"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk29.cpp",
+        "sha256": "259fcebfb7e5f49c938c085a5ae9f0ca1b7fab7c37b487e21706959e71d425fe"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk3.cpp",
+        "sha256": "3af6656bf26e7089d675ba2bda4a4c8af2af6658a1142c8a8d06fad7cf1752a7"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk30.cpp",
+        "sha256": "519fd7bac36754305c67acb6f2136b86a9d3981c60b07937ec42abde5c6b2e2f"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk31.cpp",
+        "sha256": "8a64ee50cfc79c7ba14e4b9acf84796a0b207909657d5de1d63b12a6300a8b00"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk32.cpp",
+        "sha256": "4323b5fafbed7e170cbe980534c8a561e76573a1887c822ef4c629bdbb467c13"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk33.cpp",
+        "sha256": "8aa2b807dd4b19dc731936c8330ac1c5d8a78e62b0cb466ea61a9a70cfb69536"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk34.cpp",
+        "sha256": "00d5b83085005dcbf2956108f980478d554928211cd867faa03b81080d811cfc"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk35.cpp",
+        "sha256": "bdabf11f4c2943e868376385a3697052d76906f2034ed76827fc5c63aad75a5a"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk36.cpp",
+        "sha256": "5d84bd72a9838a5d69e72200816f65c982394e672ba535742acd65c0332609c3"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk37.cpp",
+        "sha256": "cd5a23dc67537b1a823034e2b1252981d9ca2203260c9ed43de15e5e63bdfce3"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk38.cpp",
+        "sha256": "4c343d872097b83059053372240f60898698ab505a61efbed594ad564132c880"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk39.cpp",
+        "sha256": "f12bd4eab399488b5ce724f54041daeabf32d7c0a4d30b757e38e62c185dfcaf"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk4.cpp",
+        "sha256": "27eb9458f0f57652afc6d5efb1a4f6427488423bf608e29db8c2ffbc04649b07"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk40.cpp",
+        "sha256": "2910899d29757950bab53b3c9840d28b0c0b8add4487316cc6e6eb37712514e3"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk41.cpp",
+        "sha256": "57de974c9a25a24cc3f89e494a8a554a9dea15348af3c2f75008ba2ffe0cb788"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk42.cpp",
+        "sha256": "8da0c88f732b07c51f922aac4ba33d7ba9b7f7bcbab46ce304884def73aa23ae"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk43.cpp",
+        "sha256": "08e63032fc07ea50031164dc174f652208cccd9cacb5dc7d68b7ea758fa88a42"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk44.cpp",
+        "sha256": "698aeb918ab56de4bd0114c5ce8a37d6ae36cfc7119f38a4abe11a980bc89227"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk45.cpp",
+        "sha256": "0542e8d05f3808fd280c7837559b05f0b607d823e5dda6aa21acbf202cccfcf9"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk46.cpp",
+        "sha256": "b0d470065b98cb600ce8ee72c94f2e5dacde929fa04c6a9ab7a2b07f168539dc"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk47.cpp",
+        "sha256": "34a8a179eaec58dd2b893f7257cc043e9e8a6809c48b4aa0fbcbbab2d4599e58"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk48.cpp",
+        "sha256": "b9dd22a7e4fff12bc1485f468506e96fa30ad1960d4e0532d29eef06f1d40ad8"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk49.cpp",
+        "sha256": "7720a7f52293c70a770f12527d9e67ea47ef92f7af6b9afe7843300f5b5ba73d"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk5.cpp",
+        "sha256": "8262c2a59f48a352481454727e4870ad6cd9c3853169afb5c682a885e9ff757a"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk50.cpp",
+        "sha256": "76e627b3b482c4d33c68ca7cc63bd1fcdc80614be092bc2db3693898e23f3907"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk51.cpp",
+        "sha256": "ec41c360d00321a4a6384bfa6851e6093d425763dff6967a3043dd46829dbba0"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk52.cpp",
+        "sha256": "7a7fc1838984ecf08a21a7d18862434008aeddbbe199a5818d1c3a024a5dce58"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk53.cpp",
+        "sha256": "bf72d658e95b2d935cd14d7ba12af019349ba4ea15a0faa0af9dba41c376b752"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk54.cpp",
+        "sha256": "99f7f5e8de047f43188d2562da1bb4021079cc50f24bddcd8326bf7711be4b29"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk55.cpp",
+        "sha256": "1a16628ed117155e7104e053c5652a6f6034f07e47a33b9574bab8cb0a418d5a"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk6.cpp",
+        "sha256": "6579db3532b2751f7586b57ebd2157c4c1a117155bcaa4f473add7e13dd41f9c"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk7.cpp",
+        "sha256": "198616b721df44a509340f7982ece65444303ad41c9fdd98307d71a619c02d5a"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk8.cpp",
+        "sha256": "093ec3249158f069a481e89aa222a2254080137ffd4593b06d89187d6c285391"
+      },
+      {
+        "path": "native/knmon-common/src/GeneratedApiMetadataParametersChunk9.cpp",
+        "sha256": "aed975447714bed535b72baf73aab631fce283e644bd39a113bca0226e005f65"
+      },
+      {
+        "path": "native/knmon-common/src/IpcSecurity.cpp",
+        "sha256": "1fa05b649cf0422c11746b47a26c30598c646043deac5d3ad46c129346b60f84"
+      },
+      {
+        "path": "native/knmon-common/src/SessionCodec.cpp",
+        "sha256": "91e637ef8dda538f2035a6d2db2e1d59fbb962da23b29d8a4ca3b888c62a5f72"
+      },
+      {
+        "path": "native/knmon-common/src/TransportWriter.cpp",
+        "sha256": "c7bd615f5987e402ed2d23a350836eb354478006bca6263fa5bb162d55b9dc7b"
+      },
+      {
+        "path": "native/knmon-core/include/knmon/core/Controller.h",
+        "sha256": "150698e090f024f6a66d6d4335726f248a5647b93b9e513c4817b21826268018"
+      },
+      {
+        "path": "native/knmon-core/src/Controller.cpp",
+        "sha256": "f425d0b36e6d184e2488370cd05ae6a4e1aa6adac36487477b7a345298e1d8d3"
+      },
+      {
+        "path": "native/knmon-core/src/TypedAbiPayload.inc",
+        "sha256": "a7310e8d0f242cbaca09551ad6782aa12c911791788b670fbaa7c30a07b82c56"
+      },
+      {
+        "path": "native/knmon-native-helper/src/main.cpp",
+        "sha256": "6afa6d211c5b6911a3f5b70b82607f220d0b059f7c5d9b7d57f5392974de8da1"
+      },
+      {
+        "path": "native/samples/TypedAbiTarget.cpp",
+        "sha256": "441a28ae93c5df956ade20638ae604d8b0f6bc2b8974def8d01170f5767010f3"
+      },
+      {
+        "path": "native/tests/AbiDifferentialTest.cpp",
+        "sha256": "dd9edd38c27a63751d0525fa1ef6af8b40af42fff4d665b16fa7116442d9b141"
+      },
+      {
+        "path": "native/tests/AgentModuleLifecycleTests.inc",
+        "sha256": "70775bf8f6c9350b8bbe0c17c67eae35133e038073a6485cac198fdb8e1c36e3"
+      },
+      {
+        "path": "native/tests/BoundedJsonTest.cpp",
+        "sha256": "b7a3e7f5acbe2b998b00d8b0ffdca3fb5bc3b77f03714eac52bd5aef61994ba7"
+      },
+      {
+        "path": "native/tests/CaptureHistoryTest.cpp",
+        "sha256": "b4df3847d120e7b44876f3082ed2385f2f41abac6b7eaada87486a9c9b4d3a4d"
+      },
+      {
+        "path": "native/tests/CaptureSemanticsTest.cpp",
+        "sha256": "0cbb0c22749cd0ca8bd7c468c957016eb10028b01b8b051e24842628d6d61711"
+      },
+      {
+        "path": "native/tests/IpcSecurityTest.cpp",
+        "sha256": "36fdb9a1d67f6931aa2e4d81fe5ef2afd9833f8dc6e14ce24e526f296f0ed9ba"
+      },
+      {
+        "path": "native/tests/LifecycleExitTarget.cpp",
+        "sha256": "20b5bcbd23450f6ac9839c88d181593d362e357d1fe70dfdfdc604e6a649d8c2"
+      },
+      {
+        "path": "native/tests/ModuleLifecycleTest.cpp",
+        "sha256": "96b6a37afe0974394e8ab744505b808a264fe0a0b49b3dc953a62b4ab594532e"
+      },
+      {
+        "path": "native/tests/ModuleProbe.cpp",
+        "sha256": "5181b344a331772d08eee9cd6d74a550e15b725d43a545798f6239a38bd92bfd"
+      },
+      {
+        "path": "native/tests/ModuleTestPaths.h",
+        "sha256": "111d96553f6627dbffa677e2d09ae3550e26ed037c273f525d1af8a431b95ec3"
+      },
+      {
+        "path": "native/tests/ModuleTwin.cpp",
+        "sha256": "2e594fe92c62331a8448b2d198c3311ebb58503f1c17dc8fc6511c9853dccdee"
+      },
+      {
+        "path": "native/tests/RuntimeSupportTest.cpp",
+        "sha256": "384d58f3c127832afea2e8789940d3c5dcaab8c3ab37a038fb34ddc35520582b"
+      },
+      {
+        "path": "native/tests/SessionCodecTest.cpp",
+        "sha256": "990e17e25a634c9f484ec01de3d2661f437d6cd9f8e02b28b05da63cf99c0b2c"
+      },
+      {
+        "path": "native/tests/SessionLeaseTest.cpp",
+        "sha256": "28dc6cbd31be84e6b10f3bd525a3ed172c33d23e1b519b3d3da0874a193d2c05"
+      },
+      {
+        "path": "native/tests/TransportSecurityTest.cpp",
+        "sha256": "cca0fdae6254663fa488bccccab4e5cb010475235a76b4e836ca2d94e01d0e63"
+      },
+      {
+        "path": "native/tests/TransportTamperTarget.cpp",
+        "sha256": "f9eb5e1845ba11b69f13dc72d685db31afe1caab40d04fcaa804cb8ea32b7369"
+      },
+      {
+        "path": "native/tests/TransportWriterTest.cpp",
+        "sha256": "39d5a9db57ee5f22e0009e5a329d55c342c421b4287b12a4f7ad203af3fc875c"
+      },
+      {
+        "path": "native/third-party/nlohmann/json.hpp",
+        "sha256": "aaf127c04cb31c406e5b04a63f1ae89369fccde6d8fa7cdda1ed4f32dfc5de63"
+      },
+      {
+        "path": "native/third-party/zstd/CMakeLists.txt",
+        "sha256": "5f312bb66b66161fd50451b04649a327b0e182d26170a1151ed04d3c984da9db"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/allocations.h",
+        "sha256": "6a718e8edaca112abdc0bdfa7de67edefaa44c8d9e514b79672ab58ab3a9118a"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/bits.h",
+        "sha256": "5bb7693a35d7ce03f8715c0b1e237062285e052250fdd34f72f38e7e92365090"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/bitstream.h",
+        "sha256": "a9461685c9add6f609078acc950a08db4c02e6e6a849d550f45182ba2ae38556"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/compiler.h",
+        "sha256": "d19829705d8039437ffba873df2b58d20d7b876d58da479121d2e515df55cbf7"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/cpu.h",
+        "sha256": "23d520b536a6f23114e66549d03a967b1f24b15560c5b1ebd47ee392ccee4a1c"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/debug.c",
+        "sha256": "7ab1ea104acf3243fc1cd4e6d2514046f1dfc1101c7c676145c8da080e8c24ca"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/debug.h",
+        "sha256": "8260cd5087b8309679c61b772b535688993c61a675a30481b8ae55b45740ba15"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/entropy_common.c",
+        "sha256": "7dfce29c6bc807645b1f0c373dad94bbb49603b175a84e72d1739bf9df65feb8"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/error_private.c",
+        "sha256": "3f5873b2626ca1cdf554b7ec7b04ea0ef296fd0f6882d7fad42448b7e2dbb41c"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/error_private.h",
+        "sha256": "ae077bb433eb150ee247410a0357f910b9c07be839c6a9abe0b2e6b18ceb716d"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/fse.h",
+        "sha256": "5235ce1e512bf80204d013b1f4cecd776fdaa9effddb48308bce08f6d0b84499"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/fse_decompress.c",
+        "sha256": "84eba7030a036b36363a5108e760428ce549f1a833bec6464dc755f6ed51a6fb"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/huf.h",
+        "sha256": "9a83d899c8c9bf03389d482562090ec2443bc0f87f27864a2b891b180333f2d4"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/mem.h",
+        "sha256": "4dd5fe76fa30a020cd4b3af3134ae143920300a1fe54baac1a5da73297e66783"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/pool.c",
+        "sha256": "9431e26cf7ca46ffb878f17df31198046664d592ae208dfbe3715e82b87af79d"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/pool.h",
+        "sha256": "bca19a2408e85f31bad3a13f205de92ac26ecda0c5af96fdd7f213ce03d9fc78"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/portability_macros.h",
+        "sha256": "75e2b43968b70decc6bd17876833be04894035594ddc1e745cd6b70be8265637"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/threading.c",
+        "sha256": "50448323b46a8e1bde042ee88ec44fcfc646f3d4aeba8a06be54d26a710ed78d"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/threading.h",
+        "sha256": "9ca63027ea64046acacccbe056a414d37ea7ea428ce299fe08abe53c204c5c65"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/xxhash.c",
+        "sha256": "8444d064922f434b67b708a987981aa21dfeece735b48c82d31f7027d0ccef03"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/xxhash.h",
+        "sha256": "8cb837b21a8fe9a6b9dbcd0961ab16e733bfcbfa9e003f3a496ce07ae80aa8ee"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/zstd_common.c",
+        "sha256": "f49eb8023a90d3de925373bd9ee0d36ed46b26c529840b64220397446cd73795"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/zstd_deps.h",
+        "sha256": "9c77ea7d0afa8d5c868a7839e178a446a82d88eb75fd56f2fd7d9d96c5ab7c11"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/zstd_internal.h",
+        "sha256": "ad3d95ce2b81a8c5c6b00cfe6323d8e80cacb690d3b5883725cd0d939f4f576f"
+      },
+      {
+        "path": "native/third-party/zstd/lib/common/zstd_trace.h",
+        "sha256": "17f6daa4c7e97055cd1ed7bcf4d9241a4e79b465f083c5d732fda1df2f0be11e"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/clevels.h",
+        "sha256": "d764daa89b7a636d26fe96ff3536c5075e9867fb5dddbf8c9d57023a8ff4a155"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/fse_compress.c",
+        "sha256": "5070807a489757b87c1e1f50332b099e8ffe22971228218111eef64d3321ae82"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/hist.c",
+        "sha256": "1a613082642b9cabdeecd3b5929f7230cbb2f8344a28f5010f3aec12cb647ab8"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/hist.h",
+        "sha256": "9e3363e69d5fa35c1f6e8d2970c6c2453c06fd8a8ab3cc516a14c77d07cdea35"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/huf_compress.c",
+        "sha256": "0be78471f5175e49bbacb898d8b107bb8f7e13adc84780e0625be5861f016086"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_compress.c",
+        "sha256": "10c315ae609d49b2fc431521aa95908086e69fd917991c5ed9a875af3d1208e8"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_compress_internal.h",
+        "sha256": "ab7754413cef565da559bda7eb738bc2b3708c48877cb9ec37aff767d32c57d1"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_compress_literals.c",
+        "sha256": "a8f25f1bd4c0d2d9dda3355d2103c9dfbd0b7056bfd373e29e923662bfea5596"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_compress_literals.h",
+        "sha256": "02270cd6bc060279217861776a53adb67f8d7e54f47f59d2a4ddcef2e705fe2d"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_compress_sequences.c",
+        "sha256": "3f4334c19ed770c4007bc12df4098026d4eb1a6fbebfbf36df58054e7babc3e9"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_compress_sequences.h",
+        "sha256": "361d108d7d452ed26f0ae4b39964f8e62166ed91d03347a5229e5d228734efc8"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_compress_superblock.c",
+        "sha256": "dd62ed79ee1feec78b2e5bfc63417ccbdcda426f4220d112b0fcd8a9d0c7e667"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_compress_superblock.h",
+        "sha256": "6b097999ea1d91776ca5a12e5ee02c1ed15edfcd31ba07b9ada94b0955195677"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_cwksp.h",
+        "sha256": "ed77c2739b18b9800b97785262526a1dd4f385311ca5c2caa20b6f2a35f3735d"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_double_fast.c",
+        "sha256": "9f6d003c2fe1208737bec685910324220424ba47d0323fa30d9d5f53c50e91da"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_double_fast.h",
+        "sha256": "d9c29c9c004f572532265e12af78d5949c0908f4ef0bb0158977bcf80e1cf92b"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_fast.c",
+        "sha256": "8037320f321836652e73ab6cbf7b8f1f4c97cef38835ac6b4aaf0af716aa398d"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_fast.h",
+        "sha256": "dffdf43fae7ee10a2acc04e6a5eaaf03f7d3572898117a06c330d647eed5591d"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_lazy.c",
+        "sha256": "dd6ccf357165dc8cb574ea56a34ff1db57b7b31728b32103d0c6b72319fd45b1"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_lazy.h",
+        "sha256": "6f13007fbd6824058a73b097960446defe265e33b22c7c6dc2304dcf53998bbf"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_ldm.c",
+        "sha256": "4a2bef3612ae4a9e15a78a55541a152091fa8ba160410db24d495bd6dd57249e"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_ldm.h",
+        "sha256": "bd0cb86041d3a72fd7846e141a41aadae229c8e331a2117df7f6b70a1b4cb08c"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_ldm_geartab.h",
+        "sha256": "7285ac8ba1f0fa57a8cd8158bd427ded4e70e32a58e73b57c420b83a76e5e6e3"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_opt.c",
+        "sha256": "625936ee3fb02d789abb894c1fbc2918ee47582434094c963b630da13532c876"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_opt.h",
+        "sha256": "9b677efbae28909034d3c24f37dc5c4295d267cf477bf04e14653579f90d8b6e"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_preSplit.c",
+        "sha256": "8d7da15de31318ebb7dfe2f2e2c79f05b0d0563dcb92d4525814d05a279d0d64"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstd_preSplit.h",
+        "sha256": "910facb2e3442e42a6952c514223c4502d95ed957bf7dc73982b3b03785b361b"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstdmt_compress.c",
+        "sha256": "c83db699b4041bf4db89c5558db490dd295635f1eeefd60b643fbc862bbac7b5"
+      },
+      {
+        "path": "native/third-party/zstd/lib/compress/zstdmt_compress.h",
+        "sha256": "033fb25d96b4295c3d0158edf4d1bd4067f42aac39427706754e6c034b20f80f"
+      },
+      {
+        "path": "native/third-party/zstd/lib/decompress/huf_decompress.c",
+        "sha256": "710a88d877d5dc5c83a4f839392996f337ec81cf38006c4a5be6042de5b54828"
+      },
+      {
+        "path": "native/third-party/zstd/lib/decompress/zstd_ddict.c",
+        "sha256": "38bf812283d61f4cd1f6aea30f84b43317418257c4e6fc198b09b436bd484397"
+      },
+      {
+        "path": "native/third-party/zstd/lib/decompress/zstd_ddict.h",
+        "sha256": "a97a250fd2f956e3ae419ddde68ae1f9fe4025bc0373254058d31bbd352fa71c"
+      },
+      {
+        "path": "native/third-party/zstd/lib/decompress/zstd_decompress.c",
+        "sha256": "029580818b7e9cd38d9d07c63516b00ceaa943ffcfbd099fc5ccbe3628fa362f"
+      },
+      {
+        "path": "native/third-party/zstd/lib/decompress/zstd_decompress_block.c",
+        "sha256": "9cb8bcb07aeb87e4717a9c8a86d20832dc525dde2c1b72efdaaab7c937f43b87"
+      },
+      {
+        "path": "native/third-party/zstd/lib/decompress/zstd_decompress_block.h",
+        "sha256": "62ee0c6ae3f7353020538397f436b59743da8acb922068841b346f480f7078ac"
+      },
+      {
+        "path": "native/third-party/zstd/lib/decompress/zstd_decompress_internal.h",
+        "sha256": "73217b49a644c0fcf567b70677cae31449ba9f50a235ef3b681001c3f36dc56d"
+      },
+      {
+        "path": "native/third-party/zstd/lib/zdict.h",
+        "sha256": "abacadb94e3f79e591f4b1648e839b0160fbf4291211fd01bdba1380269b245c"
+      },
+      {
+        "path": "native/third-party/zstd/lib/zstd.h",
+        "sha256": "9b4bc8245565c98ccfc61c07749928b57e7c0f6fddb0530c4f6aa1971893d88b"
+      },
+      {
+        "path": "native/third-party/zstd/lib/zstd_errors.h",
+        "sha256": "66a8c3f71d12ea6e797e4f622f31f3f8f81c41b36f48cad4f5de7d8bfb6aac0a"
+      },
+      {
+        "path": "package.json",
+        "sha256": "65e329d7d36b54a9bd87e4dfa041d93590a6ec72e9ec7c2f9b0ba796c586556f"
+      },
+      {
+        "path": "samples/targets/dynamic-probe/src/main.cpp",
+        "sha256": "d8ffb174fdb51592d33f5ba5edcef6f119e382460abd69ba3a509ce76b38ce8b"
+      },
+      {
+        "path": "samples/targets/fileio-sample/src/main.cpp",
+        "sha256": "e23b2365610aa1944bad77718506bd97007dd94290cc2c58488cb1fd13631856"
+      },
+      {
+        "path": "toolchain.json",
+        "sha256": "d2863f76ee3d9ab40ec18c6c10c649e2369c3d2b90c1d521886c92ad85f16775"
+      },
+      {
+        "path": "tools/abi-proof/check-proof.mjs",
+        "sha256": "6db25e99236afce31aa0b0da5a71a086c36fde20355a8910ed9508a66ad8397f"
+      },
+      {
+        "path": "tools/abi-proof/generate-proof.mjs",
+        "sha256": "8564ea09483df8ac5c4cdfc3997d4c8a0f3368f82c8ce434df76fba53b9512b4"
+      },
+      {
+        "path": "tools/abi-proof/proof.mjs",
+        "sha256": "dccf777c4e3887e0cb30f23c35dbf89d2d662f064e447a824fc2efa35281ac77"
+      },
+      {
+        "path": "tools/abi-proof/proof.test.mjs",
+        "sha256": "21cfe7e70cd13be73e11f63bcf4debf319d0eb4c1b489b230e2fb44b0c836d20"
+      },
+      {
+        "path": "tools/def-validator/generate-agent-hook-definitions.mjs",
+        "sha256": "1d88e5fc1fa62be7354cffb6bbb879751a38a9931a3372e54ea440ee2e804354"
+      },
+      {
+        "path": "tools/def-validator/generate-sdk-abi.mjs",
+        "sha256": "e9897c22c5ed9c2594876153c9c71e2d186b95f5b2f1818d3f47fdc447f1b201"
+      },
+      {
+        "path": "tools/def-validator/generate-typed-abi.mjs",
+        "sha256": "5f4161e7d1d3e61b76ab849681f36c8054d8a23e04df9548e391bda793465462"
+      },
+      {
+        "path": "tools/def-validator/typed-abi-spec.mjs",
+        "sha256": "9e289613769d324e4e3ee9b46a3e69744ed59abb8228721ef9b9c27e8521d686"
+      },
+      {
+        "path": "tools/session-validator/strict-json.mjs",
+        "sha256": "85c11777f7dedeb4f707ac83cbdb20ddf4c0b7bd54983cea033bcf1ec91f82b6"
+      },
+      {
+        "path": "tools/session-validator/validate-capture-clock.mjs",
+        "sha256": "6f0d45a5a45f75073ce80b29f888b33c80b8b125da516b10d8ad6850011ca00e"
+      },
+      {
+        "path": "tools/session-validator/validate-capture-semantics.mjs",
+        "sha256": "731103cea5c206364c9c871a12f2ddd7fb3ce496654f8e6fe05bd100e4f0b7ee"
+      },
+      {
+        "path": "tools/session-validator/validate-large-replay.mjs",
+        "sha256": "fc0f073784e1e3cb3341330fd529555051dba66f9ee9c78d8dbdcac54502b275"
+      },
+      {
+        "path": "tools/session-validator/validate-native-json.mjs",
+        "sha256": "cc51070adcee67ab93aab14d694cecc7f5a9d2f355faa20c0315d5874be4ec07"
+      },
+      {
+        "path": "tools/session-validator/validate-native-session-json.mjs",
+        "sha256": "551532c6d57784b9a1a8a5811f372687eaad622cdf37bd70e10c05ead8abef57"
+      },
+      {
+        "path": "tools/session-validator/validate-record-identity.mjs",
+        "sha256": "4258a3204a3642d8d28689bbff59e6bf7c7b3798538a71d01acb24e26ae54c13"
+      },
+      {
+        "path": "tools/session-validator/validate-session-fixtures.mjs",
+        "sha256": "45233d86092d2ef678d1c1a712478d29385cdfff8f06c722ec3c9c9959315360"
+      },
+      {
+        "path": "tools/session-validator/validate-typed-abi-live.mjs",
+        "sha256": "b9d453f0afb2059168abbc5987966c84d3493bb3da5c89a2f063b6ffc5ba95b5"
+      },
+      {
+        "path": "tools/session-validator/validate-zstd-codec.mjs",
+        "sha256": "7d215f90e81a40432c1ebfa054c006ea71e98d37f030866cb6f7133fb6368dd8"
+      }
+    ]
+  },
+  "runs": [
+    {
+      "architecture": "x64",
+      "compiler": {
+        "id": "MSVC",
+        "version": "19.44.35227.0",
+        "cmake": "4.3.3"
+      },
+      "abiDifferential": "passed",
+      "liveInjectionReplay": "passed",
+      "binaries": {
+        "knmon-native-helper.exe": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "knmon-agent64.dll": "d9fa03af13fe755978d3fde8dca08e6fa2a60c412d3be11cd3503854912d3b20",
+        "knmon-lifecycle-test-agent.dll": "bcd5552186b073d4ee6580c9bb1a3955a7bdd697185082a5520115e8931bfe50",
+        "knmon-abi-differential-test.exe": "9bf1c11fc27db1612de9a5aa679e06c416f9e7a7edd6b04bf3a3ccc83ff2b481",
+        "knmon-typed-abi-target.exe": "98dec174aafc36e1f527ebed1afe8141c47e2f84f07ba3e84c05ebbead6fe811"
+      },
+      "systemDlls": {
+        "oleaut32.dll": "d640055fe14afa8681415b80d7d185f5345867b430613355d27b7356ed564285",
+        "d2d1.dll": "78deb0fc7c3195a691864ee0638912ea3ef46e72d2ad6af258b7ac815798dcb1",
+        "user32.dll": "fb15460c5a7068a9cb118cfdec0b60f2c715018c4af8f501b62825a6435421d1"
+      },
+      "ctestLogSha256": "1acb5f350a2f2b6555bf914070aaaabb6ab1bf16399d1dc9df7d7e545f5605b3",
+      "live": {
+        "success": true,
+        "apis": [
+          "VarR8FromR4",
+          "VarR4FromR8",
+          "D2D1ConvertColorSpace",
+          "D2D1MakeRotateMatrix",
+          "D2D1Vec3Length",
+          "EnumChildWindows"
+        ],
+        "helperSha256": "b5b936cf9072d09d0b633e7fe6588f266da0245ad9232e6170fbd25dce83b03c",
+        "targetSha256": "98dec174aafc36e1f527ebed1afe8141c47e2f84f07ba3e84c05ebbead6fe811",
+        "reportSha256": "87df97bfa710c1e84fed1b1e14c3d2103cf88b7ec70a4cd568e2a81a8ce2c323",
+        "capturedEvents": 6
+      }
+    },
+    {
+      "architecture": "x86",
+      "compiler": {
+        "id": "MSVC",
+        "version": "19.44.35227.0",
+        "cmake": "4.3.3"
+      },
+      "abiDifferential": "passed",
+      "liveInjectionReplay": "passed",
+      "binaries": {
+        "knmon-native-helper.exe": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "knmon-agent32.dll": "981d00c3fb578c8f5efe02358f3218ff18fc7b98602e5f12ee6ab63d775826d4",
+        "knmon-lifecycle-test-agent.dll": "01cdb2f2edd20dc50816c897cfbaa7ca0afdd3dfeb5fe37746c7bc93cc283d4c",
+        "knmon-abi-differential-test.exe": "0bde941ace3bdd4ff3770a012081f026dca47208d1660c620d1f0dbb7c68091e",
+        "knmon-typed-abi-target.exe": "9c5805d50377e02bfc3b8fc6279685134e7fccd8aee0da812f7fea740660c75e"
+      },
+      "systemDlls": {
+        "oleaut32.dll": "cfb03900b5ee2739bfa1918519f16d65fd720326ce3004b8ec5e0221b46f5f83",
+        "d2d1.dll": "6eaffafef20b3ff8ab828b210b09898d099ceaad630040be4488f265ce74ca7c",
+        "user32.dll": "225f16bf0969e8f0869484791fd5764d879e2905de912a475ebdd63ad6763558"
+      },
+      "ctestLogSha256": "7d257473dca7510848738c96c157c53a6ac24b07469d311f5c4319727920f241",
+      "live": {
+        "success": true,
+        "apis": [
+          "VarR8FromR4",
+          "VarR4FromR8",
+          "D2D1ConvertColorSpace",
+          "D2D1MakeRotateMatrix",
+          "D2D1Vec3Length",
+          "EnumChildWindows"
+        ],
+        "helperSha256": "b477f166d0a1df850288dc98495f97da29e320cd870f119d23b3db5049f7e60b",
+        "targetSha256": "9c5805d50377e02bfc3b8fc6279685134e7fccd8aee0da812f7fea740660c75e",
+        "reportSha256": "87df97bfa710c1e84fed1b1e14c3d2103cf88b7ec70a4cd568e2a81a8ce2c323",
+        "capturedEvents": 6
+      }
+    }
+  ],
+  "scope": "Executed corpus on this Windows build. No Release, other OS, exhaustive input, or nested-call coverage claim."
+}

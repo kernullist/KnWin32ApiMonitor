@@ -9,6 +9,7 @@
 #include <map>
 #include <mutex>
 #include <knmon/common/GeneratedApiMetadata.h>
+#include <knmon/common/GeneratedTypedAbi.h>
 #include <knmon/common/RuntimeSupport.h>
 #include <knmon/collector/SharedTransportReader.h>
 
@@ -4941,8 +4942,25 @@ std::string ApiResultJson(const KnMonTransportRecord& record, const KnMonGenerat
         }
     }
     std::ostringstream stream;
-    stream << "\"rawReturnValue\":" << Q(std::to_string(record.RawReturnValue)) << ","
-        << "\"rawReturnBits\":" << record.RawReturnBits << ","
+    if (record.RawReturnBits == 128)
+    {
+        std::ostringstream bytes;
+        bytes << std::hex << std::setfill('0');
+        for (const auto byte : record.RawReturnBytes)
+        {
+            bytes << std::setw(2) << static_cast<unsigned int>(byte);
+        }
+        stream << "\"rawReturnBytes\":" << Q(bytes.str()) << ",\"rawReturnEncoding\":\"little_endian_object_bytes\",";
+    }
+    else
+    {
+        stream << "\"rawReturnValue\":" << Q(std::to_string(record.RawReturnValue)) << ",";
+    }
+    if (record.CallId != 0)
+    {
+        stream << "\"callId\":" << Q(std::to_string(record.CallId)) << ",\"parentCallId\":\"0\",\"callDepth\":0,";
+    }
+    stream << "\"rawReturnBits\":" << record.RawReturnBits << ","
         << "\"rawLastErrorCode\":" << record.RawLastErrorCode << ","
         << "\"rawWinsockErrorCode\":" << record.RawWinsockErrorCode << ","
         << "\"winsockErrorSampled\":" << (record.HasWinsockError != 0 ? "true" : "false") << ","
@@ -5570,6 +5588,8 @@ std::string FileIoObservationJson(const KnMonTransportRecord& record, bool count
     return stream.str();
 }
 
+#include "TypedAbiPayload.inc"
+
 std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnMonTransportRecord& record)
 {
     std::string payload;
@@ -5577,6 +5597,11 @@ std::string BuildTransportApiPayload(const KnMonCaptureResult& result, const KnM
     const std::string text1 = TransportText(record.Text1, record.Text1Length, sizeof(record.Text1));
     const std::string text2 = TransportText(record.Text2, record.Text2Length, sizeof(record.Text2));
     std::ostringstream args;
+
+    if (record.Flags == KnMonTransportRecordFlagTypedAbi)
+    {
+        return TypedTransportApiPayload(result, record);
+    }
 
     if (IsGenericInventoryRecord(record))
     {

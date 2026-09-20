@@ -85,6 +85,60 @@
   ],
   "bindings": [
     {
+      "module": "oleaut32.dll",
+      "name": "VarR8FromR4",
+      "wrapper": "HookedTypedVarR8FromR4",
+      "original": "g_originalTypedVarR8FromR4",
+      "authority": "windows_sdk",
+      "sdkSymbol": "VarR8FromR4",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "oleaut32.dll",
+      "name": "VarR4FromR8",
+      "wrapper": "HookedTypedVarR4FromR8",
+      "original": "g_originalTypedVarR4FromR8",
+      "authority": "windows_sdk",
+      "sdkSymbol": "VarR4FromR8",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "d2d1.dll",
+      "name": "D2D1ConvertColorSpace",
+      "wrapper": "HookedTypedD2D1ConvertColorSpace",
+      "original": "g_originalTypedD2D1ConvertColorSpace",
+      "authority": "windows_sdk",
+      "sdkSymbol": "D2D1ConvertColorSpace",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "d2d1.dll",
+      "name": "D2D1MakeRotateMatrix",
+      "wrapper": "HookedTypedD2D1MakeRotateMatrix",
+      "original": "g_originalTypedD2D1MakeRotateMatrix",
+      "authority": "windows_sdk",
+      "sdkSymbol": "D2D1MakeRotateMatrix",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "d2d1.dll",
+      "name": "D2D1Vec3Length",
+      "wrapper": "HookedTypedD2D1Vec3Length",
+      "original": "g_originalTypedD2D1Vec3Length",
+      "authority": "windows_sdk",
+      "sdkSymbol": "D2D1Vec3Length",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "EnumChildWindows",
+      "wrapper": "HookedTypedEnumChildWindows",
+      "original": "g_originalTypedEnumChildWindows",
+      "authority": "windows_sdk",
+      "sdkSymbol": "EnumChildWindows",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
       "module": "kernel32.dll",
       "name": "CreateFileW",
       "wrapper": "HookedCreateFileW",

@@ -120,6 +120,30 @@ function editTrace(directory, transform)
     editManifest(directory, (value) => ({ ...value, storedBytes: bytes, uncompressedBytes: bytes }));
 }
 mutation("trace-null-error", (directory) => editTrace(directory, (text) => text), true);
+const typedTrace = (text) => ({ ...JSON.parse(text), callId: "9007199254740993", parentCallId: "0", callDepth: 0,
+    rawReturnBits: 128, rawReturnEncoding: "little_endian_object_bytes", rawReturnBytes: "0000003e0000003f0000603f0000403f" });
+mutation("typed-aggregate-valid", (directory) => editTrace(directory, (text) => JSON.stringify(typedTrace(text)) + "\n"), true);
+for (const [name, change] of [
+    ["call-zero", (value) => { value.callId = "0"; }],
+    ["call-numeric", (value) => { value.callId = 1; }],
+    ["call-overflow", (value) => { value.callId = "9223372036854775808"; }],
+    ["call-parent", (value) => { value.parentCallId = "1"; }],
+    ["call-depth", (value) => { value.callDepth = 1; }],
+    ["aggregate-truncated", (value) => { value.rawReturnBytes = value.rawReturnBytes.slice(0, 16); }],
+    ["aggregate-nonhex", (value) => { value.rawReturnBytes = "z".repeat(32); }],
+    ["aggregate-endian", (value) => { value.rawReturnEncoding = "big_endian"; }],
+    ["aggregate-dual", (value) => { value.rawReturnValue = "0"; }],
+    ["aggregate-width", (value) => { value.rawReturnBits = 64; }],
+    ["aggregate-missing", (value) => { delete value.rawReturnBytes; }]
+])
+{
+    mutation(name, (directory) => editTrace(directory, (text) =>
+    {
+        const value = typedTrace(text);
+        change(value);
+        return JSON.stringify(value) + "\n";
+    }));
+}
 const observedTrace = (text) => ({ ...JSON.parse(text), observation: { eventPhase: "return", nestedCalls: "suppressed",
     exceptionEvents: "not_emitted", completionCorrelation: "not_tracked" }, arguments: [{ index: 1,
         name: "lpBuffer", type: "LPVOID", direction: "out", rawValue: "0x1234", preCallValue: "0x1234",

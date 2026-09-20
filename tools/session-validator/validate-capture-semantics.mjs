@@ -47,13 +47,22 @@ for (let index = 0; index < capture.capturedEvents.length; ++index)
     const parsedUtc = BigInt(Date.parse(event.timestampUtc)) * 10000n + 116444736000000000n + BigInt(fraction.slice(3));
     assert.equal(parsedUtc, utc);
     const live = plain(convert(event, saved.eventId, []));
-    for (const key of ["recordSequence", "observation", "arguments", "relativeTimeMs", "durationUs", "timeSource", "timing", "timestampUtc", "collectedAtUtc",
+    for (const key of ["recordSequence", "observation", "arguments", "callId", "parentCallId", "callDepth", "rawReturnBytes", "rawReturnEncoding",
+        "relativeTimeMs", "durationUs", "timeSource", "timing", "timestampUtc", "collectedAtUtc",
         "rawReturnValue", "rawReturnBits", "rawLastErrorCode", "rawWinsockErrorCode", "errorDomain", "outcome",
         "errorValidity", "successPredicate", "winsockErrorSampled", "error"])
     {
         assert.deepEqual(live[key], saved[key], `${event.api}: live/replay ${key}`);
     }
-    decimal(event.rawReturnValue);
+    if (event.rawReturnBytes !== undefined)
+    {
+        assert.match(event.rawReturnBytes, /^[0-9a-f]{32}$/u);
+        assert.equal(event.rawReturnValue, undefined);
+    }
+    else
+    {
+        decimal(event.rawReturnValue);
+    }
     const delayed = plain(convert({ ...event, collectedAtUtc: "2099-01-01T00:00:00Z" }, saved.eventId, []));
     assert.equal(delayed.relativeTimeMs, live.relativeTimeMs);
     assert.equal(delayed.timestampUtc, live.timestampUtc);

@@ -5,12 +5,12 @@
 namespace knmon
 {
 inline constexpr std::uint32_t KnMonAttachConfigMagic = 0x31434e4b;
-inline constexpr std::uint16_t KnMonAttachConfigAbiVersion = 3;
+inline constexpr std::uint16_t KnMonAttachConfigAbiVersion = 4;
 inline constexpr std::uint32_t KnMonAttachConfigOperationIdChars = 64;
 inline constexpr std::uint32_t KnMonAttachConfigPipeNameChars = 260;
 inline constexpr std::uint32_t KnMonAttachConfigTransportNameChars = 128;
 inline constexpr std::uint32_t KnMonAttachConfigControlNameChars = 128;
-inline constexpr std::uint32_t KnMonAttachConfigSelectedApisChars = 8192;
+inline constexpr std::uint32_t KnMonAttachConfigSelectedApisChars = 16384;
 inline constexpr std::uint32_t KnMonAgentStateMagic = 0x31534e4b;
 inline constexpr std::uint16_t KnMonAgentStateAbiVersion = 1;
 inline constexpr std::uint32_t KnMonAgentStateOperationIdChars = 64;
@@ -86,5 +86,6 @@ struct KnMonAgentStateV1
 };
 
 static_assert(sizeof(KnMonAttachConfigV1) % 8 == 0, "attach config must remain 8-byte aligned");
+static_assert(sizeof(KnMonAttachConfigV1) <= UINT16_MAX, "attach config size must fit the wire size field");
 static_assert(sizeof(KnMonAgentStateV1) % 8 == 0, "agent state must remain 8-byte aligned");
 }

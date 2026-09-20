@@ -16,7 +16,7 @@ int main()
             ++failures;
         }
     }
-    for (const std::string selection : {"user32.dll!wsprintfW", "d2d1.dll!D2D1ConvertColorSpace", "oleaut32.dll!VarR8FromR4", "unknown.dll!*", "kernel32.dll!ReadFile;user32.dll!wsprintfW", " ; ", "kernel32.dll!!*"})
+    for (const std::string selection : {"user32.dll!wsprintfW", "d2d1.dll!D2D1SinCos", "oleaut32.dll!VarI4FromR8", "unknown.dll!*", "kernel32.dll!ReadFile;user32.dll!wsprintfW", " ; ", "kernel32.dll!!*"})
     {
         if (knmon::ValidateRuntimeApiSelection(selection, rejected) || rejected.empty())
         {

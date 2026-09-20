@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createHash } from "node:crypto";
+import { typedAbiSpecs } from "./typed-abi-spec.mjs";
+import { verifiedTypedProof } from "../abi-proof/proof.mjs";
 
 import {
   generatedErrorSource,
@@ -28,6 +30,14 @@ const runtimeSupportHeaderPath = path.join(repoRoot, "native", "knmon-common", "
 function readJson(filePath)
 {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+function writeChanged(filePath, text)
+{
+  if (!fs.existsSync(filePath) || fs.readFileSync(filePath, "utf8") !== text)
+  {
+    fs.writeFileSync(filePath, text, "utf8");
+  }
 }
 
 function cppString(value)
@@ -436,13 +446,18 @@ function main()
   const expected = buildHookFile(hooks, coverage, modules, resolverApis);
   const expectedChunks = buildHookChunkFiles(hooks);
   const supportedKeys = manualApis.map((api) => lowerKey(api.module, api.name)).sort();
+  const differentialProof = verifiedTypedProof();
   const manifest = {
     schemaVersion: 1,
-    policy: "manual-typed-only",
+    policy: "compiler-bound-typed",
     definitionSha256: createHash("sha256").update(fs.readFileSync(decoderTablePath)).digest("hex"),
     catalogCount: tables.apis.length,
-    generatedWrappers: hooks.length,
-    differentialVerifiedCount: 0,
+    generatedWrappers: hooks.length + typedAbiSpecs.length,
+    generatedGenericWrappers: hooks.length,
+    typedWrappers: typedAbiSpecs.length,
+    manualWrappers: manualCovered - typedAbiSpecs.length,
+    differentialVerifiedCount: differentialProof.apiKeys.length,
+    differentialProof,
     defaultBlockedReason: "unverified_generated_abi",
     architectures: { x86: supportedKeys, x64: supportedKeys },
     unsupportedArchitectures: ["arm64", "arm64ec"],
@@ -463,9 +478,9 @@ function main()
   {
     for (const output of supportOutputs)
     {
-      fs.writeFileSync(output.filePath, output.text, "utf8");
+      writeChanged(output.filePath, output.text);
     }
-    fs.writeFileSync(generatedHookPath, expected, "utf8");
+    writeChanged(generatedHookPath, expected);
     const expectedChunkPaths = new Set(expectedChunks.map((chunk) => chunk.filePath));
     for (const filePath of listExistingHookChunkFiles())
     {
@@ -477,7 +492,7 @@ function main()
 
     for (const chunk of expectedChunks)
     {
-      fs.writeFileSync(chunk.filePath, chunk.text, "utf8");
+      writeChanged(chunk.filePath, chunk.text);
     }
   }
 
@@ -525,7 +540,7 @@ function main()
     }
   }
 
-  console.log(`Generated agent hook definitions. required=${coverage.required} manual=${coverage.manualCovered} generated=${hooks.length} covered=${coverage.covered} chunks=${expectedChunks.length}`);
+  console.log(`Generated agent hook definitions. required=${coverage.required} manual=${manifest.manualWrappers} typed=${manifest.typedWrappers} generated_generic=${hooks.length} covered=${coverage.covered} chunks=${expectedChunks.length}`);
 }
 
 main();

@@ -545,6 +545,66 @@
       "sha256": "0a00bf6ca901d0d980fe8c2b9bb91a39fb84c3a99e9c87498149a04cf7cf5925"
     },
     {
+      "file": "um/d2d1_1.h",
+      "sha256": "b4f0d073563cd8f46673ca3091967a57fcd9b255fc564e6274c3f1bb66d1db7b"
+    },
+    {
+      "file": "um/d2d1_1helper.h",
+      "sha256": "d55912df1c5867d14d714f1fc7e4dec79e6ae6c8ac51b505f77de1f9e9fad4bc"
+    },
+    {
+      "file": "um/d2d1.h",
+      "sha256": "fcf7f870acf11e1509b4cec31d433602502b77d0a236e417304948a1ce7486a5"
+    },
+    {
+      "file": "um/d2d1effects.h",
+      "sha256": "1d9145408e67c7c522e6cc7ebea0e1e03c6fee525f2eba3e57ae2f3b959cd4ce"
+    },
+    {
+      "file": "um/d2d1helper.h",
+      "sha256": "d66d5675cebf2c082542e292d2c6fd1d50d0fbc35a26fdcd291c925c794f1b01"
+    },
+    {
+      "file": "um/D2DBaseTypes.h",
+      "sha256": "da7bd5173db06cd5abb924518c5b3d756b18c84f3908ebb1d1a23b578438afab"
+    },
+    {
+      "file": "um/D2DErr.h",
+      "sha256": "4f7ed7e65438f4af783d843858a9266550c7632bcc04038b42de3339e4bed707"
+    },
+    {
+      "file": "um/d3d10_1.h",
+      "sha256": "3396254b8ccede56bc818b1ce45ac2a8ecfb2088baae9581cbd8bd6e14f916fd"
+    },
+    {
+      "file": "um/d3d10_1shader.h",
+      "sha256": "626c38bf5241987078979c5e5ff22a48918aeaadf854546e9d89e5211e3f218c"
+    },
+    {
+      "file": "um/d3d10.h",
+      "sha256": "f9dcc6bff7dd27d1f09218357c55fdc67817e232b2eba8a4ab7c4c0b13d4f8cc"
+    },
+    {
+      "file": "um/d3d10effect.h",
+      "sha256": "d06d472c22ebd3b359f5dbf837d1f6d60f27726d1261d3ea1d9bcda581cd6dfe"
+    },
+    {
+      "file": "um/d3d10misc.h",
+      "sha256": "eee2a28b9ff8407a56d6a174b7c1d7d30cbef58144ed86237d90a51dda3981ef"
+    },
+    {
+      "file": "um/d3d10sdklayers.h",
+      "sha256": "021024155ea5481eb1cc238ceb6c94d77ba53e07cc93dbd153e0b397143a4749"
+    },
+    {
+      "file": "um/d3d10shader.h",
+      "sha256": "e80066f050a3fb5c4108b2a73f7cbfbcff00830d120fa63219276b35647fcb3a"
+    },
+    {
+      "file": "um/d3dcommon.h",
+      "sha256": "1eae450a81bc357709f07feb724ca5813dde3c3fd8bb44f603f2172ae9e43b04"
+    },
+    {
       "file": "um/datetimeapi.h",
       "sha256": "a4325c76b9bc900c22ef3d766c739ccd3a71894e81833ad637d50f9e45417117"
     },

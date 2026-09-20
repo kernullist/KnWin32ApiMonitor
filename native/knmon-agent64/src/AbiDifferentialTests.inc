@@ -40,6 +40,8 @@ const knmon::KnMonTransportRecord& AbiLastRecord()
     return g_transportRecords[(g_transportHeader->ProducerSequence - 1) % g_transportCapacity];
 }
 
+#include "TypedAbiDifferentialTests.inc"
+
 extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestAbiDifferential(void*)
 {
     DWORD failure = 1;
@@ -48,7 +50,7 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestAbiDifferential(void*)
     void* pages = nullptr;
     try
     {
-        AbiCheck(control.Acquired() && CreateTestTransport(128) && g_sessionGate.Open(), "Test transport setup failed.");
+        AbiCheck(control.Acquired() && CreateTestTransport(1024) && g_sessionGate.Open(), "Test transport setup failed.");
         SetLifecycleState(AgentLifecycleState::Running);
         InterlockedExchange(&g_hooksEnabled, 1);
         g_originalReadFile = &::ReadFile;
@@ -175,6 +177,7 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestAbiDifferential(void*)
         const auto resolveErrorB = GetLastError();
         AbiCheck(resolveA == resolveB && NT_SUCCESS(resolveB) && addressA == addressB && resolveErrorA == resolveErrorB,
             "LdrGetProcedureAddress A/B result/output/error mismatch.");
+        CheckTypedAbiDifferential();
         AbiCheck(!g_inHook && g_hookEpoch == 0 && g_callErrorState == nullptr, "Hook scope leaked into the caller.");
         std::printf("ABI A/B PASS: file I/O, entry mutation, pending, overlapped, guard pages, native loader, negative controls.\n");
         failure = 0;

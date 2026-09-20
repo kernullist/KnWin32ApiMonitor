@@ -575,6 +575,16 @@ pub struct CaptureTiming
 pub struct CapturedSemantics
 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_return_bytes: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_return_encoding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub call_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_call_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub call_depth: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub observation: Option<serde_json::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub raw_return_value: Option<String>,
@@ -3105,6 +3115,13 @@ mod tests {
         event.arguments.push(serde_json::from_value(argument.clone()).unwrap());
         event.semantics.observation = Some(serde_json::json!({ "eventPhase": "return", "nestedCalls": "suppressed",
             "exceptionEvents": "not_emitted", "completionCorrelation": "not_tracked" }));
+        event.semantics.call_id = Some("9007199254740993".to_string());
+        event.semantics.parent_call_id = Some("0".to_string());
+        event.semantics.call_depth = Some(0);
+        event.semantics.raw_return_value = None;
+        event.semantics.raw_return_bits = Some(128);
+        event.semantics.raw_return_bytes = Some("0000003e0000003f0000603f0000403f".to_string());
+        event.semantics.raw_return_encoding = Some("little_endian_object_bytes".to_string());
         let encoded = serde_json::to_value(&event).unwrap();
         assert_eq!(encoded["arguments"][0], argument);
         assert_eq!(encoded["recordSequence"], "9007199254740993");

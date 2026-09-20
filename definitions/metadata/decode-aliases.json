@@ -2,6 +2,7 @@
   "schemaVersion": "0.1.0",
   "metadataType": "decode_aliases",
   "aliases": [
+    { "name": "abi_value_bits", "kind": "raw", "preview": "abi_bits", "readsTargetMemory": false, "maxPreviewBytes": 0 },
     { "name": "ansi_string", "kind": "string", "preview": "ansi", "readsTargetMemory": true, "maxPreviewBytes": 512 },
     { "name": "ansi_string_struct", "kind": "object", "preview": "ansi_string_struct", "readsTargetMemory": true, "maxPreviewBytes": 512 },
     { "name": "buffer", "kind": "buffer", "preview": "hex_ascii", "readsTargetMemory": true, "maxPreviewBytes": 4096 },

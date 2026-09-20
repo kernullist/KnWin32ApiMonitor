@@ -121,6 +121,58 @@ int main()
 {
     try
     {
+        ExpectCorruption("aggregate bytes on a scalar record", [](auto& f)
+        {
+            f.Records[0].RawReturnBytes[0] = 1;
+        });
+        ExpectCorruption("aggregate result without a typed contract", [](auto& f)
+        {
+            f.Records[0].RawReturnBits = 128;
+        });
+        ExpectCorruption("call identity overflow", [](auto& f)
+        {
+            f.Records[0].CallId = UINT64_MAX;
+        });
+        ExpectCorruption("unsupported observed call nesting", [](auto& f)
+        {
+            f.Records[0].ParentCallId = 1;
+            f.Records[0].CallDepth = 1;
+        });
+        ExpectCorruption("typed float argument width overflow", [](auto& f)
+        {
+            auto& record = f.Records[0];
+            record.Flags = knmon::KnMonTransportRecordFlagTypedAbi;
+            record.ApiId = static_cast<std::uint16_t>(knmon::KnMonTransportApiId::Api_Oleaut32_VarR8FromR4);
+            record.Values32[0] = 2;
+            record.RawReturnBits = 32;
+            record.Values64[0] = UINT64_MAX;
+            f.Config.ValidateRecordIdentity = [](const auto&)
+            {
+                return true;
+            };
+        });
+        {
+            Fixture fixture;
+            fixture.Commit(0);
+            auto& record = fixture.Records[0];
+            record.Flags = knmon::KnMonTransportRecordFlagTypedAbi;
+            record.ApiId = static_cast<std::uint16_t>(knmon::KnMonTransportApiId::Api_D2d1_D2D1ConvertColorSpace);
+            record.Values32[0] = 3;
+            record.RawReturnBits = 128;
+            record.RawReturnBytes[15] = 0x7f;
+            record.CallId = 9007199254740993ULL;
+            fixture.Config.ValidateRecordIdentity = [](const auto&)
+            {
+                return true;
+            };
+            bool observed = false;
+            const auto result = fixture.Reader().DrainAvailable([&](const auto& copy)
+            {
+                observed = copy.RawReturnBytes[15] == 0x7f && copy.CallId == 9007199254740993ULL;
+                return true;
+            });
+            Check(!result.TransportCorrupted && observed, "Full aggregate bytes and large call identity reach the consumer");
+        }
         ExpectCorruption("reversed QPC interval", [](auto& f)
         {
             f.Records[0].StartQpc = 2;

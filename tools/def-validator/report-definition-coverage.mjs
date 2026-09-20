@@ -57,7 +57,8 @@ const manualDecoderBatchPlan = loadManualDecoderBatchPlan();
 
 if (args.has("--check")) {
   if (runtimeSupport.catalogCount !== report.summary.totalApis ||
-      runtimeSupport.supportedKeys.length === 0 || runtimeSupport.generatedWrappers !== 0) {
+      runtimeSupport.supportedKeys.length === 0 || runtimeSupport.generatedGenericWrappers !== 0 ||
+      runtimeSupport.generatedWrappers !== runtimeSupport.typedWrappers) {
     console.error("Runtime support policy and definition catalog disagree.");
     process.exit(1);
   }

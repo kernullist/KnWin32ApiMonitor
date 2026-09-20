@@ -3,8 +3,8 @@
 
 #if defined(_WIN64)
 inline constexpr std::size_t GeneratedAgentHookDefinitionCount = 0;
-inline constexpr std::size_t GeneratedAgentHookCoveredApiCount = 314;
-inline constexpr std::size_t GeneratedAgentHookRequiredApiCount = 314;
+inline constexpr std::size_t GeneratedAgentHookCoveredApiCount = 320;
+inline constexpr std::size_t GeneratedAgentHookRequiredApiCount = 320;
 void* g_generatedAgentOriginalFunctions[1] = {};
 
 using GeneratedAgentValueFunction_0 = std::uintptr_t(WINAPI*)();
@@ -462,7 +462,7 @@ inline const std::array<GeneratedAgentModuleMetadata, 399> GeneratedAgentModules
     { 399, "d3dx10_33.dll" },
 }};
 
-inline const std::array<GeneratedAgentResolverMetadata, 314> GeneratedAgentResolverMetadataTable =
+inline const std::array<GeneratedAgentResolverMetadata, 320> GeneratedAgentResolverMetadataTable =
 {{
     { 1, "kernel32.dll", "CreateFileW", "iat", "smoke_verified" },
     { 2, "kernel32.dll", "CreateFileA", "iat", "smoke_verified" },
@@ -595,10 +595,12 @@ inline const std::array<GeneratedAgentResolverMetadata, 314> GeneratedAgentResol
     { 179, "dbghelp.dll", "SymCleanup", "iat", "smoke_verified" },
     { 1868, "ntdll.dll", "RtlGetReturnAddressHijackTarget", "iat", "generated_generic" },
     { 3242, "kernel32.dll", "GetSystemTime", "iat", "generated_generic" },
+    { 4709, "user32.dll", "EnumChildWindows", "iat", "hooked" },
     { 4769, "user32.dll", "GetCursorPos", "iat", "generated_generic" },
     { 5397, "gdi32.dll", "GetStockObject", "iat", "generated_generic" },
     { 7728, "setupapi.dll", "SetupDiClassNameFromGuidW", "iat", "generated_generic" },
     { 8045, "iphlpapi.dll", "GetIpStatistics", "iat", "generated_generic" },
+    { 10404, "d2d1.dll", "D2D1ConvertColorSpace", "iat", "hooked" },
     { 10710, "dnsapi.dll", "DnsFree", "iat", "generated_generic" },
     { 18456, "kernel32.dll", "AreFileApisANSI", "iat", "generated_generic" },
     { 18459, "kernel32.dll", "CreateThreadpoolCleanupGroup", "iat", "generated_generic" },
@@ -778,6 +780,10 @@ inline const std::array<GeneratedAgentResolverMetadata, 314> GeneratedAgentResol
     { 19106, "winmm.dll", "waveInGetNumDevs", "iat", "generated_generic" },
     { 19107, "winmm.dll", "waveOutGetNumDevs", "iat", "generated_generic" },
     { 26476, "combase.dll", "WindowsGetStringLen", "iat", "generated_generic" },
+    { 26647, "oleaut32.dll", "VarR4FromR8", "iat", "hooked" },
+    { 26649, "oleaut32.dll", "VarR8FromR4", "iat", "hooked" },
+    { 29664, "d2d1.dll", "D2D1MakeRotateMatrix", "iat", "hooked" },
+    { 29668, "d2d1.dll", "D2D1Vec3Length", "iat", "hooked" },
 }};
 
 
@@ -796,8 +802,8 @@ void AppendGeneratedHookDefinitions(HookDefinition* output, std::size_t capacity
 }
 #else
 inline constexpr std::size_t GeneratedAgentHookDefinitionCount = 0;
-inline constexpr std::size_t GeneratedAgentHookCoveredApiCount = 314;
-inline constexpr std::size_t GeneratedAgentHookRequiredApiCount = 314;
+inline constexpr std::size_t GeneratedAgentHookCoveredApiCount = 320;
+inline constexpr std::size_t GeneratedAgentHookRequiredApiCount = 320;
 struct GeneratedAgentModuleMetadata
 {
     std::uint16_t Id = 0;
@@ -1215,7 +1221,7 @@ inline const std::array<GeneratedAgentModuleMetadata, 399> GeneratedAgentModules
     { 398, "d3dscache.dll" },
     { 399, "d3dx10_33.dll" },
 }};
-inline const std::array<GeneratedAgentResolverMetadata, 314> GeneratedAgentResolverMetadataTable =
+inline const std::array<GeneratedAgentResolverMetadata, 320> GeneratedAgentResolverMetadataTable =
 {{
     { 1, "kernel32.dll", "CreateFileW", "iat", "smoke_verified" },
     { 2, "kernel32.dll", "CreateFileA", "iat", "smoke_verified" },
@@ -1348,10 +1354,12 @@ inline const std::array<GeneratedAgentResolverMetadata, 314> GeneratedAgentResol
     { 179, "dbghelp.dll", "SymCleanup", "iat", "smoke_verified" },
     { 1868, "ntdll.dll", "RtlGetReturnAddressHijackTarget", "iat", "generated_generic" },
     { 3242, "kernel32.dll", "GetSystemTime", "iat", "generated_generic" },
+    { 4709, "user32.dll", "EnumChildWindows", "iat", "hooked" },
     { 4769, "user32.dll", "GetCursorPos", "iat", "generated_generic" },
     { 5397, "gdi32.dll", "GetStockObject", "iat", "generated_generic" },
     { 7728, "setupapi.dll", "SetupDiClassNameFromGuidW", "iat", "generated_generic" },
     { 8045, "iphlpapi.dll", "GetIpStatistics", "iat", "generated_generic" },
+    { 10404, "d2d1.dll", "D2D1ConvertColorSpace", "iat", "hooked" },
     { 10710, "dnsapi.dll", "DnsFree", "iat", "generated_generic" },
     { 18456, "kernel32.dll", "AreFileApisANSI", "iat", "generated_generic" },
     { 18459, "kernel32.dll", "CreateThreadpoolCleanupGroup", "iat", "generated_generic" },
@@ -1531,6 +1539,10 @@ inline const std::array<GeneratedAgentResolverMetadata, 314> GeneratedAgentResol
     { 19106, "winmm.dll", "waveInGetNumDevs", "iat", "generated_generic" },
     { 19107, "winmm.dll", "waveOutGetNumDevs", "iat", "generated_generic" },
     { 26476, "combase.dll", "WindowsGetStringLen", "iat", "generated_generic" },
+    { 26647, "oleaut32.dll", "VarR4FromR8", "iat", "hooked" },
+    { 26649, "oleaut32.dll", "VarR8FromR4", "iat", "hooked" },
+    { 29664, "d2d1.dll", "D2D1MakeRotateMatrix", "iat", "hooked" },
+    { 29668, "d2d1.dll", "D2D1Vec3Length", "iat", "hooked" },
 }};
 
 void AppendGeneratedHookDefinitions(HookDefinition* output, std::size_t capacity)
