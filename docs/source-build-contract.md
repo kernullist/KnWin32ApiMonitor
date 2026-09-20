@@ -37,11 +37,51 @@ archive bytes. `AGENTS.md`, local planning files, untracked files and build outp
 are excluded. `--allow-dirty` is for pre-commit verification only and marks the
 archive as a dirty snapshot. It is not release provenance.
 
+Clean packaging also compares every payload with its Git index object through
+Git's configured clean filters. An `assume-unchanged` flag cannot hide modified
+source content. Index, revision, tracked status and collected file hashes are
+checked again before writing the archive. Dirty snapshots retain their explicit
+candidate status. Individual source files are limited to 128 MiB and aggregate
+source payloads to 1 GiB.
+
 Extracted source packages need no Git metadata or LFS network requests. Source
 preflight verifies their complete hash manifest. npm/Cargo dependency installation
 still requires registry access or populated caches. These steps demonstrate a
 reproducible source build; byte-identical PE binaries across machines are not
 claimed without a separately validated deterministic-linking environment.
+
+With Python 3.12+ and the baseline Node selected, the automated reconstruction command is:
+
+```powershell
+python tools/source/rebuild_source.py build/knmon-source.zip
+```
+
+Use `--node` and `--npm-cli` to select side-by-side installations. The producer
+extracts into a fresh directory, validates exact manifest membership and every
+payload hash, and proves that Git cannot resolve a worktree from that directory.
+It runs npm installation, the frontend build/validators, and both native Debug
+builds through `Build.ps1`, followed by all 23 CTests per architecture. Failed,
+skipped or unexecuted test cases cannot pass the evidence check. Final source
+hashes must still match the archive. Unexpected source files and directory
+reparse points outside the declared build output locations are rejected. ZIP
+central-directory limits are checked before parsing its entries; the accepted
+format is a single-disk ZIP32 archive without an archive comment, as emitted by
+the package producer. Compressed size is limited to 512 MiB and the central
+directory to 4 MiB.
+
+Commands run in owned Windows jobs. A startup gate establishes job ownership
+before a command can spawn descendants; output has a byte limit and each command
+has a deadline. Failure, timeout or producer exit terminates only that owned
+process tree. Logs, JUnit reports, compiler information, binary hashes and command
+outcomes remain in `build/source-rebuild-<id>/evidence.json`. A failed run retains
+`status: failed`. This producer covers the frontend and native Debug source
+rebuild; it does not claim a Rust desktop Release rebuild, another OS, or
+byte-identical PE outputs.
+
+`python tools/source/verify_source_archive.py` exercises malformed archives,
+Windows path boundaries, skipped test rejection and owned process cleanup.
+`python tools/source/verify_source_package.py` verifies deterministic clean
+packages, hidden index changes and explicit dirty candidates in isolated repos.
 
 The upstream native JSON and zstd sources and licenses are vendored and verified
 by CMake hashes. They require no configure-time network fetch and are absent from
