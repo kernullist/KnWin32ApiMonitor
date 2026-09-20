@@ -6,7 +6,8 @@ dependency and comparison commands:
 ```powershell
 python tools/readiness/technical_gate.py `
   --source-build build/source-rebuild-ID --archive build/knmon-source.zip `
-  --dependencies build/dependency-evidence-ID --comparison build/comparison-ID
+  --dependencies build/dependency-evidence-ID --comparison build/comparison-ID `
+  --advisory build/advisory-evidence-ID
 ```
 
 The report lives in `build/technical-readiness-ID/report.json`. Exit code 0
@@ -46,10 +47,15 @@ corpus, without a statistical-significance or general ranking claim. The typed
 ABI row verifies source freshness and proof structure; it is explicitly not a
 new runtime execution or a replay of its retained session.
 
+The [advisory consumer](advisory-evidence.md) checks current lockfiles, retained
+unfiltered npm/Cargo scans, tool identities, a bounded report age and the current
+official RustSec database contents. Windows-reachable warning packages remain a
+separate maintenance gate; advisories outside those graphs are still retained.
+
 Required scopes without an implemented evidence consumer remain `not_verified`:
 the current full native Release matrix, Release backend runtime, other Windows
 builds, elevated/cross-user IPC, hardware CET, complete desktop resources,
-separate capture profiles, a current source-bound advisory scan, complete binary
+separate capture profiles, complete binary
 distribution reconstruction and broader competitive coverage. Kernel ETW session
 availability is evaluated separately from private application ETW. User
 evaluation is excluded from this policy.

@@ -21,15 +21,15 @@ PENDING = {
     "hardware_cet_enforcement": "PE compatibility metadata does not establish hardware CET enforcement.",
     "whole_desktop_resources": "Complete WebView process-tree resources and end-to-end desktop interaction remain unmeasured.",
     "capture_profile_costs": "Separate metadata, arguments, preview and stack capture costs are not established.",
-    "current_advisory_scan": "Existing audit snapshots are not yet bound to an independently rechecked current advisory database by this gate.",
+    "dependency_maintenance": "Windows-reachable dependency warnings require verified current graph and advisory evidence.",
     "binary_distribution_reconstruction": "Native Debug/frontend source reconstruction does not establish a complete desktop binary distribution rebuild.",
     "competitive_generality": "The six-API Debug corpus does not establish a universal performance or coverage ranking.",
 }
-VALIDATED = ("source_reconstruction", "dependency_inventory", "typed_abi_source_freshness", "competitive_semantics", "competitive_cost", "kernel_etw_availability")
+VALIDATED = ("source_reconstruction", "dependency_inventory", "typed_abi_source_freshness", "competitive_semantics", "competitive_cost", "kernel_etw_availability", "current_advisory_scan")
 PRODUCERS = ("tools/readiness/source_evidence.py", "tools/readiness/technical_gate.py", "tools/readiness/replay_evidence.py", "tools/source/source_archive.py",
              "tools/source/rebuild_source.py", "tools/source/owned_command.py", "tools/security/dependency_inventory.py",
              "tools/security/validate-sbom-schema.mjs", "tools/abi-proof/proof.mjs", "tools/abi-proof/check-proof.mjs",
-             "tools/comparison/check_proof.py", "tools/comparison/replay_comparison.py", "tools/comparison/run_comparison.py")
+             "tools/comparison/check_proof.py", "tools/comparison/replay_comparison.py", "tools/comparison/run_comparison.py", "tools/readiness/advisory_audit.py")
 
 
 def outcome(rows):
@@ -70,6 +70,8 @@ def main():
     parser.add_argument("--dependencies", type=Path)
     parser.add_argument("--comparison", type=Path)
     parser.add_argument("--comparison-python", type=Path, default=ROOT / "build/deps/frida-venv/Scripts/python.exe")
+    parser.add_argument("--advisory", type=Path)
+    parser.add_argument("--rustsec-db", type=Path, default=ROOT / "build/deps/rustsec-advisory-db")
     parser.add_argument("--node", type=Path, default=ROOT / "build/deps/node-v24.21.0-win-x64/node.exe")
     args = parser.parse_args()
     (ROOT / "build").mkdir(exist_ok=True)
@@ -134,6 +136,25 @@ def main():
         return {"runs": result["runs"], "windowsVersion": result["windowsVersion"], "command": execution,
                 "scope": "Raw oracle/capture replay, exact matrix and current source fingerprints."}
 
+    def advisory():
+        from advisory_audit import verify
+        directory = args.advisory.resolve()
+        bind("advisory", directory / "evidence.json")
+        result = verify(directory, args.rustsec_db.resolve(), output)
+        if rows["dependency_inventory"]["status"] == "passed":
+            graph_path = args.dependencies.resolve() / "cargo-targets.json"
+            bind("advisoryWindowsGraph", graph_path)
+            graphs = read_json(graph_path)
+            warnings = []
+            for warning in result["warnings"]:
+                ref = "cargo:" + warning["package"] + "@" + warning["version"]
+                targets = sorted(target for target, graph in graphs.items() if any(node["ref"] == ref for node in graph["nodes"]))
+                if targets:
+                    warnings.append({**warning, "targets": targets})
+            rows["dependency_maintenance"] = {"status": "not_verified" if warnings else "passed", "windowsWarnings": warnings,
+                                               "scope": "Warnings remain visible; absence from a Windows graph is not an upstream fix."}
+        return {**result, "scope": "Known advisory scan, unchanged lockfiles, at most 24 hours old and current RustSec contents; not an absence-of-unknown-defects claim."}
+
     try:
         report["checkoutRevision"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, timeout=10).strip()
         report["trackedDirty"] = bool(subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT, timeout=30))
@@ -144,6 +165,8 @@ def main():
         checked("typed_abi_source_freshness", typed)
         if args.comparison is not None:
             checked("competitive_semantics", comparison)
+        if args.advisory is not None:
+            checked("current_advisory_scan", advisory)
         if rows["source_reconstruction"]["status"] == "passed":
             verify_current_sources(retained["sourceManifest"])
         verify_bound_inputs(report["inputs"])

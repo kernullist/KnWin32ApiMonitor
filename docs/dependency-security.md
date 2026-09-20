@@ -44,3 +44,11 @@ rewritten graph evidence. A fresh 2026-09-20 audit still reports zero npm/Cargo
 vulnerabilities. RustSec upstream `main` and the audited local database both
 resolve to `d5c17953a895cf19e8d3ce66eaa42b6fcfe1fb16`; the five Windows-reachable
 unmaintained UNIC warnings remain unchanged.
+
+The [source-bound advisory producer](advisory-evidence.md) now records actual
+unfiltered npm/Cargo runs, checks every RustSec worktree blob and collection
+entry against the current official revision, and reconciles the 1,251 loaded
+advisories and 451 lockfile packages on this baseline. Its readiness consumer
+preserves all seven warning rows and identifies the five Windows-reachable
+UNIC warnings as an unresolved maintenance gate. A clean vulnerability count
+does not clear that separate gate.
