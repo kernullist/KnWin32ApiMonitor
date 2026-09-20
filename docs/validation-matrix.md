@@ -16,7 +16,7 @@ Windows 10/11 release or every API input.
 | All-supported sample live/replay | 376 events, 16 errors | 376 events, 16 errors | prior 376 events, 16 errors | blocked before launch |
 | Comparative six-API corpus | 50 runs passed | 50 runs passed | not run | not run |
 | Sustained overload, original/observed | 5 s and 15 s passed | 5 s and 15 s passed | default 5 s CTest passed | blocked before launch |
-| Clean source ZIP native reconstruction | prior 23/23 passed; refresh required | prior 23/23 passed; refresh required | not run | not run |
+| Clean source ZIP native reconstruction | 23/23 passed | 23/23 passed | not run | not run |
 
 The Debug comparison uses ten fresh-process repetitions of each of five modes.
 Each run has 450 expected calls, with zero missing, unexpected or reordered
@@ -111,39 +111,46 @@ and export them, detach while the target survives, and exit normally. Raw Job
 samples include WebView children and separate target resources. The hidden-window
 scope and sampled working-set sums are not a foreground performance score.
 
-The previous clean source archive from `7e290fc` was extracted without Git metadata and
+The current clean source archive from `2e7d85b` was extracted without Git metadata and
 rebuilt with the pinned Node/CMake/MSVC/SDK configuration. npm installation,
 frontend build/validation and both complete native Debug suites passed. The
 frozen reconstruction producer retained source, command, compiler and binary
-hashes. The archive contains 805 source files plus its manifest (806 ZIP entries)
+hashes. The archive contains 810 source files plus its manifest (811 ZIP entries)
 and has SHA-256
-`39e9a770fbadf8dba4bdfb923b93cac261efd7da467ecbf553abeda766d90c9a`.
+`2109be756ea8e820c3e30c84921aca9f03677c2a80049dd435fce2b2d5f7cbba`.
 Both architectures executed all 23 CTests, including the new failed-launch
-regression; the extracted-source UI suite includes all 14 polling, terminal-tail
-and WOW64 regressions. All cases actually ran; none were skipped or disabled.
+regression; the extracted-source UI suite executes all 16 polling, terminal-tail,
+WOW64 and stack-observation regressions, plus the 200,000-row worker/count check.
+The archive includes both observation/count modules and the shared stack corpus.
+All cases actually ran; none were skipped or disabled.
 Revalidation rejects 31 malformed or altered readiness/source-evidence cases,
 including command, compiler, binary, test and frontend records.
 
-An earlier attempt passed both test suites but failed final source closure:
+During the previous `7e290fc` reconstruction, an earlier attempt passed both test
+suites but failed final source closure:
 an independently executed dependency inventory had generated a Python cache
 file in the extracted source. The inventory now disables bytecode writes before
 local imports. Its BOM also uses locked package names instead of checkout and
 workspace directory labels. The failed attempt remains recorded as failed.
 
-The corrected archive passed in a fresh directory. Running the extracted
+That corrected archive passed in a fresh directory. Running its extracted
 inventory afterward produced a byte-identical 339-component BOM, including
 metadata, with SHA-256
 `137ed5dccff850b027640f13a157af5957769705b15608a5c681628587348179`.
 The direct CLI created no source cache; complete source closure and every
-retained reconstruction artifact revalidated afterward.
+retained reconstruction artifact revalidated afterward. This BOM comparison is
+evidence from that previous reconstruction. The current reconstruction's first
+local attempt began before packaging finished and failed on the missing archive,
+before any build command. After packaging exited successfully and its contents
+and hash were checked, the untouched archive passed all eight ordered commands
+in a fresh directory. Both failed attempts retain their original status and logs.
 
 The dependency graph and advisory evidence now remove the five reachable UNIC
 warnings while
 retaining two warnings outside the Windows graphs. Native Release, broader
 platform and performance claims remain subject to the separate limits above.
-The current integrated report has seven passed scopes, zero failed scopes and
-ten unverified scopes. The source archive above predates the observation
-correction and must be refreshed. Dependency maintenance, Release backend and
+The current integrated report has eight passed scopes, zero failed scopes and
+nine unverified scopes. Source reconstruction, dependency maintenance, Release backend and
 actual desktop paths pass together with the current advisory, inventory,
 typed-ABI and competitive-semantics evidence. All failed
 attempts and their raw logs remain distinct from the successful evidence sets.
