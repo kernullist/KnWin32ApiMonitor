@@ -45,7 +45,7 @@ function mutation(name, mutate, accepted = false)
         assert.equal(replay.success, true, JSON.stringify(replay));
         assert.equal(replay.traceEvents[0].api, "CreateFileW");
         const stored = JSON.parse(fs.readFileSync(path.join(target, "chunks/trace-000001.jsonl"), "utf8"));
-        for (const key of ["stack", "stackSource", "hookContext"])
+        for (const key of ["stack", "stackSource", "stackCapture", "hookContext"])
         {
             assert.deepEqual(replay.traceEvents[0][key], stored[key], `Replay changed ${key}.`);
         }

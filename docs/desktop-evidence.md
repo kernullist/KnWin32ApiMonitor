@@ -16,6 +16,7 @@ Run from the repository root after building both desktop and Debug native target
 ```powershell
 node --test tools/ui-validator/target-architecture.test.mjs
 python -X utf8 tools/readiness/desktop_evidence.py
+python -X utf8 tools/readiness/desktop_evidence.py --stack-frames 32
 python -X utf8 tools/readiness/desktop_evidence.py --check build/desktop-evidence-<id>
 python -X utf8 tools/readiness/verify_desktop_evidence.py --evidence build/desktop-evidence-<id>/x64
 ```
@@ -24,6 +25,13 @@ The default Node executable is the pinned Node 24 installation under `build/deps
 `--architecture x64` or `x86` is useful while diagnosing a failure, but readiness
 requires one successful evidence set containing both architectures. Supply it to
 `technical_gate.py --desktop <directory>` with the other evidence inputs.
+The default run keeps stack capture Off. `--stack-frames 8`, `16` or `32` changes
+the actual UI select through mouse and keyboard input before attachment. The
+driver checks that the initial setting is Off and that the selected limit stays
+selected and cannot be changed while capture is active. It also compares the
+selected option text with its measured text/padding and actual control width,
+reserving space for the native arrow so a clipped limit cannot pass. Run Off and an enabled
+mode separately when validating the optional stack path.
 
 Each run uses fresh portable, temporary and WebView2 profile directories under
 `build`. Child-only environment settings enable an ephemeral loopback debugging
@@ -53,9 +61,12 @@ The evidence retains:
   reconciles event counts, sequences, target identity, native file-buffer bytes,
   filtered rows and the terminal UI state.
   The driver also opens the Call Stack tab with an actual mouse action. Its
-  selected event ID, explicit uncaptured state, zero frame rows and hook context
-  must agree with the exported event and the staged agent architecture. Hook
-  metadata is never accepted as captured frames; see the
+  selected event ID, capture provenance, frame rows, exact addresses and hook
+  context must agree with the exported event and the staged agent architecture.
+  Off requires an explicit uncaptured state with no frames or capture metadata.
+  An enabled run requires actual raw post-call addresses within the requested
+  limit and matching native capture metadata. Hook metadata is never accepted
+  as captured frames; see the
   [stack observation contract](stack-observation.md).
 - Live native totals can lead UI ingestion. `Not ingested` reports that gap;
   `Trimmed` counts only ingested rows removed from the retained window. The

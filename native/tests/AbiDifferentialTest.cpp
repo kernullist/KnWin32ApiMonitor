@@ -20,6 +20,10 @@ int wmain(int argc, wchar_t** argv)
             break;
         }
         result = static_cast<int>(run(nullptr));
+        if (result == 0)
+        {
+            result = static_cast<int>(run(reinterpret_cast<void*>(1)));
+        }
     }
     while (false);
     if (module != nullptr)

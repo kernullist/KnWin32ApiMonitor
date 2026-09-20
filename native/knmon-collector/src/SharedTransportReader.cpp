@@ -156,6 +156,8 @@ bool SharedTransportReader::ValidateRecord(const KnMonTransportRecord& record, S
     do
     {
         if (record.RecordSize != sizeof(KnMonTransportRecord) ||
+            !ValidateNativeStackRecord(record.Stack,
+                m_config.ExpectedArchitecture == static_cast<std::uint32_t>(KnMonAgentArchitecture::X86) ? 32 : 64) ||
             record.HasWinsockError > 1 ||
             (record.RawReturnBits != 0 && record.RawReturnBits != 8 && record.RawReturnBits != 16 &&
                 record.RawReturnBits != 32 && record.RawReturnBits != 64 && record.RawReturnBits != 128) ||

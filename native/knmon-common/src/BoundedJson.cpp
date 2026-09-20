@@ -273,6 +273,17 @@ void JsonDocument::RequireStringArray() const
     }
 }
 
+std::vector<std::string> JsonDocument::Strings(std::size_t maximum) const
+{
+    RequireStringArray();
+    const auto& value = *static_cast<const Json*>(Value_);
+    if (value.size() > maximum)
+    {
+        throw JsonInputError("JSON string array exceeds its limit.");
+    }
+    return value.get<std::vector<std::string>>();
+}
+
 std::vector<JsonDocument> JsonDocument::Objects() const
 {
     const auto& value = *static_cast<const Json*>(Value_);
@@ -501,13 +512,47 @@ void ValidateStackObservation(const JsonDocument& value)
 {
     const auto stack = value.Array("stack", true);
     stack.RequireStringArray();
+    const auto source = value.Has("stackSource") ? value.String("stackSource", true) : "legacy_unverified";
     if (value.Has("stackSource"))
     {
-        const auto source = value.String("stackSource", true);
-        if ((source != "not_captured" && source != "legacy_unverified") ||
+        if ((source != "not_captured" && source != "legacy_unverified" && source != "native_backtrace") ||
             (source == "not_captured" && !stack.empty()))
         {
             throw JsonInputError("Invalid stack observation provenance.");
+        }
+    }
+    if ((source == "native_backtrace") != value.Has("stackCapture"))
+    {
+        throw JsonInputError("Native stack metadata and provenance must agree.");
+    }
+    if (source == "native_backtrace")
+    {
+        const auto capture = value.Object("stackCapture", true);
+        const auto frames = stack.Strings(32);
+        const auto requested = capture.UInt32("requestedFrames", true);
+        const auto bits = capture.UInt32("addressBits", true);
+        const auto status = capture.String("status", true);
+        const auto exception = capture.UInt32("exceptionCode", true);
+        if (capture.String("method", true) != "rtl_capture_stack_back_trace" ||
+            capture.String("phase", true) != "post_call" || (bits != 32 && bits != 64) ||
+            requested == 0 || requested > 32 || frames.size() > requested ||
+            capture.Bool("limitReached", true) != (frames.size() == requested) ||
+            (status != "captured" && status != "empty" && status != "memory_fault" &&
+                status != "cpp_exception" && status != "unavailable" && status != "invalid_result") ||
+            ((status == "captured") != !frames.empty()) ||
+            (status == "memory_fault" ?
+                (exception != 0xc0000005 && exception != 0xc0000006 && exception != 0x80000002) : exception != 0))
+        {
+            throw JsonInputError("Inconsistent native stack capture.");
+        }
+        for (const auto& address : frames)
+        {
+            if (address.size() != 2 + bits / 4 || address.substr(0, 2) != "0x" ||
+                address.find_first_not_of("0123456789abcdef", 2) != std::string::npos ||
+                address.find_first_not_of('0', 2) == std::string::npos)
+            {
+                throw JsonInputError("Invalid native stack address.");
+            }
         }
     }
     if (value.Has("hookContext"))

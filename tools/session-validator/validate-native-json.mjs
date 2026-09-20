@@ -134,6 +134,17 @@ for (const [name, fields, accepted] of stackCases)
     add(`stack ${name}`, wire, "agent");
 }
 
+const nativeStack = stackCases.find(([name]) => name === "native captured x64")[1];
+for (const key of ["addressBits", "requestedFrames", "exceptionCode"])
+{
+    const message = JSON.stringify({ ...apiMessage, ...nativeStack });
+    const original = nativeStack.stackCapture[key];
+    for (const token of [`${original}.0`, `${original}e0`, "-0"])
+    {
+        add(`native stack noncanonical ${key} ${token}`, message.replace(`"${key}":${original}`, `"${key}":${token}`), "agent");
+    }
+}
+
 const expected = cases.map((entry) =>
 {
     try

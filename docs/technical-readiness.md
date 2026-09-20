@@ -62,7 +62,10 @@ The [desktop consumer](desktop-evidence.md) verifies both architectures of the
 actual attach/filter/stop/export path and recomputes process-tree resource
 summaries from raw Job samples. The configuration is a hidden Release desktop
 with Debug native tools; this does not clear the native Release or complete
-binary-distribution gates.
+binary-distribution gates. Desktop evidence retains the requested stack limit
+and compares the actual stack inspector with exported native addresses. A run
+with optional stack capture enabled verifies that mode's observation path; it
+does not establish the separate capture-profile cost gate.
 
 The [Release backend consumer](backend-release-evidence.md) checks Cargo's
 optimized test artifacts, both actual PE architectures and all 19 named backend

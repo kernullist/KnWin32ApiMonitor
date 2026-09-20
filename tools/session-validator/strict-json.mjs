@@ -151,13 +151,42 @@ export function typedJsonValue(parsed, key, kind, required = false)
     throw new Error("JSON field type or integer range mismatch.");
 }
 
-export function validateStackObservation(value)
+export function validateStackObservation(value, parsed)
 {
     if (!Array.isArray(value.stack) || value.stack.some((entry) => typeof entry !== "string") ||
-        (Object.hasOwn(value, "stackSource") && !["not_captured", "legacy_unverified"].includes(value.stackSource)) ||
+        (Object.hasOwn(value, "stackSource") && !["not_captured", "legacy_unverified", "native_backtrace"].includes(value.stackSource)) ||
         (value.stackSource === "not_captured" && value.stack.length !== 0))
     {
         throw new Error("Invalid stack observation provenance.");
+    }
+    if ((value.stackSource === "native_backtrace") !== Object.hasOwn(value, "stackCapture"))
+    {
+        throw new Error("Native stack metadata and provenance must agree.");
+    }
+    if (value.stackSource === "native_backtrace")
+    {
+        const capture = value.stackCapture;
+        if (capture === null || typeof capture !== "object" || Array.isArray(capture) ||
+            capture.method !== "rtl_capture_stack_back_trace" || capture.phase !== "post_call" ||
+            ![32, 64].includes(capture.addressBits) || !Number.isInteger(capture.requestedFrames) ||
+            capture.requestedFrames < 1 || capture.requestedFrames > 32 || value.stack.length > capture.requestedFrames ||
+            !["captured", "empty", "memory_fault", "cpp_exception", "unavailable", "invalid_result"].includes(capture.status) ||
+            ((capture.status === "captured") !== (value.stack.length > 0)) ||
+            capture.limitReached !== (value.stack.length === capture.requestedFrames) ||
+            (capture.status === "memory_fault" ? ![0xc0000005, 0xc0000006, 0x80000002].includes(capture.exceptionCode) : capture.exceptionCode !== 0) ||
+            value.stack.some((address) => !new RegExp(`^0x[0-9a-f]{${capture.addressBits / 4}}$`, "u").test(address) ||
+                !/[1-9a-f]/u.test(address.slice(2))))
+        {
+            throw new Error("Inconsistent native stack capture.");
+        }
+        if (parsed !== undefined)
+        {
+            const root = parsed.root.children.find((entry) => entry.children[0].value === "stackCapture").children[1];
+            for (const key of ["addressBits", "requestedFrames", "exceptionCode"])
+            {
+                typedJsonValue({ document: capture, root, text: parsed.text }, key, "u32", true);
+            }
+        }
     }
     if (Object.hasOwn(value, "hookContext"))
     {
@@ -208,7 +237,7 @@ export function validateAgentJson(parsed)
     }
     else if (type === "api_call")
     {
-        validateStackObservation(parsed.document);
+        validateStackObservation(parsed.document, parsed);
         for (const key of ["module", "api", "process", "returnValue", "lastErrorMessage", "bufferPreview"])
         {
             field(key, "string");

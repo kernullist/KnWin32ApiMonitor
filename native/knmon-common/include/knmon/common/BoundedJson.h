@@ -50,6 +50,7 @@ public:
     std::vector<JsonDocument> Objects() const;
     void RequireObject() const;
     void RequireStringArray() const;
+    std::vector<std::string> Strings(std::size_t maximum) const;
 
 private:
     JsonDocument(std::shared_ptr<const JsonStorage> storage, const void* value);

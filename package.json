@@ -86,6 +86,7 @@
     "verify": "npm run abi:typed:check && npm run abi:check && npm run abi:proof:check && npm run runtime-policy:validate && npm run build && npm run ui:validate && npm run defs:validate && npm run sessions:validate && npm run collector:validate",
     "json:native:validate": "node tools/session-validator/validate-native-json.mjs",
     "json:sessions:validate": "node tools/session-validator/validate-native-session-json.mjs",
+    "stack:options:validate": "node tools/session-validator/validate-stack-options.mjs",
     "ui:catalog:generate": "node tools/def-validator/generate-ui-catalog.mjs --write",
     "ui:catalog:check": "node tools/def-validator/generate-ui-catalog.mjs --check",
     "source:check": "node tools/source/preflight.mjs",

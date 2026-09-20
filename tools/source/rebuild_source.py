@@ -16,7 +16,7 @@ from owned_command import run
 from source_archive import digest_file, extract_archive, require, verify_tree
 
 ROOT = Path(__file__).resolve().parents[2]
-COMMON_TESTS = {"capture-history", "session-codec", "ipc-security", "bounded-json", "runtime-support", "transport-security",
+COMMON_TESTS = {"stack-capture", "capture-history", "session-codec", "ipc-security", "bounded-json", "runtime-support", "transport-security",
                 "transport-writer", "session-lease", "agent-footprint", "pe-hardening-knmon-native-helper", "pe-hardening-knmon-collector",
                 "cfg-enforcement", "lifecycle-process-exit", "lifecycle-stop-reserved", "lifecycle-stop-commit", "sustained-capture",
                 "abi-differential", "capture-semantics", "capture-delayed-collector", "capture-stream-retention", "capture-consumer-failure", "module-lifecycle"}

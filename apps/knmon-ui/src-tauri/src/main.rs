@@ -110,10 +110,11 @@ async fn attach_target_process_capture(
     pid: u32,
     duration_ms: u32,
     selected_apis: Vec<String>,
+    stack_frames: Option<u32>,
 ) -> Result<CaptureResult, String>
 {
     // Blocking helper work runs on the async runtime so the UI thread stays responsive.
-    tauri::async_runtime::spawn_blocking(move || attach_target_process_capture_backend(pid, duration_ms, selected_apis))
+    tauri::async_runtime::spawn_blocking(move || attach_target_process_capture_backend(pid, duration_ms, selected_apis, stack_frames.unwrap_or(0)))
         .await
         .map_err(|error| format!("attach_target_process_capture task failed: {error}"))?
 }
@@ -124,10 +125,11 @@ async fn supervise_process_tree(
     duration_ms: u32,
     child_policy: String,
     selected_apis: Vec<String>,
+    stack_frames: Option<u32>,
 ) -> Result<ProcessTreeResult, String>
 {
     // Blocking helper work runs on the async runtime so the UI thread stays responsive.
-    tauri::async_runtime::spawn_blocking(move || supervise_process_tree_backend(root_pid, duration_ms, child_policy, selected_apis))
+    tauri::async_runtime::spawn_blocking(move || supervise_process_tree_backend(root_pid, duration_ms, child_policy, selected_apis, stack_frames.unwrap_or(0)))
         .await
         .map_err(|error| format!("supervise_process_tree task failed: {error}"))?
 }
@@ -166,9 +168,10 @@ async fn stop_native_session(session_id: String) -> Result<NativeSession, String
 fn start_streaming_attach_session(
     pid: u32,
     selected_apis: Vec<String>,
+    stack_frames: Option<u32>,
 ) -> Result<NativeSession, String>
 {
-    start_streaming_attach_session_backend(pid, selected_apis)
+    start_streaming_attach_session_backend(pid, selected_apis, stack_frames.unwrap_or(0))
 }
 
 #[tauri::command]
@@ -177,6 +180,7 @@ fn start_launch_monitor_session(
     working_directory: String,
     launch_arguments: String,
     selected_apis: Vec<String>,
+    stack_frames: Option<u32>,
 ) -> Result<NativeSession, String>
 {
     start_launch_monitor_session_backend(
@@ -184,6 +188,7 @@ fn start_launch_monitor_session(
         working_directory,
         launch_arguments,
         selected_apis,
+        stack_frames.unwrap_or(0),
     )
 }
 
@@ -354,10 +359,11 @@ async fn remove_missing_native_trace_index_entries(
 async fn start_daemon_supervised_session(
     pid: u32,
     selected_apis: Vec<String>,
+    stack_frames: Option<u32>,
 ) -> Result<NativeSession, String>
 {
     // Blocking helper work runs on the async runtime so the UI thread stays responsive.
-    tauri::async_runtime::spawn_blocking(move || start_daemon_supervised_session_backend(pid, selected_apis))
+    tauri::async_runtime::spawn_blocking(move || start_daemon_supervised_session_backend(pid, selected_apis, stack_frames.unwrap_or(0)))
         .await
         .map_err(|error| format!("start_daemon_supervised_session task failed: {error}"))?
 }

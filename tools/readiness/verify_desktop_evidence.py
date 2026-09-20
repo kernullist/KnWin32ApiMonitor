@@ -135,8 +135,13 @@ def evidence_controls(directory):
         ("retained ownership poll failure", lambda value: value.update(stopOutput=value["stopOutput"] + "\nnative_ownership_poll_failed: failure"), "polling failure"),
         ("retained trace poll failure", lambda value: value.update(stopOutput=value["stopOutput"] + "\nstream_batch_poll_failed: failure"), "polling failure"),
         ("wrong rendered TID", lambda value: value["observations"][2]["rows"][0].__setitem__(3, "0"), "differs from the exported"),
-        ("false UI stack capture", lambda value: value["observations"][2]["stack"].update(source="native_backtrace"), "Stack inspector"),
-        ("fabricated UI frames", lambda value: value["observations"][3]["stack"].update(entries=2), "Stack inspector"),
+        ("false UI stack capture", lambda value: value["observations"][2]["stack"].update(source="legacy_unverified"), "Stack inspector"),
+        ("fabricated UI frames", lambda value: value["observations"][3]["stack"].update(entries=999), "Stack inspector"),
+        ("wrong UI frame addresses", lambda value: value["observations"][2]["stack"].update(addresses=["0xdeadbeef"]), "Stack inspector"),
+        ("stack mode changed during capture", lambda value: value["observations"][2]["stackSetting"].update(value="1"), "stack control"),
+        ("editable stack mode during capture", lambda value: value["observations"][2]["stackSetting"].update(disabled=False), "stack control"),
+        ("clipped stack selection", lambda value: value["observations"][2]["stackSetting"].update(clientWidth=1), "stack control label"),
+        ("wrong stack selection label", lambda value: value["observations"][2]["stackSetting"].update(label="Unknown"), "stack control label"),
         ("missing stack selection", lambda value: value["observations"][2]["stack"].update(eventId="0"), "Stack inspector"),
         ("wrong UI hook agent", lambda value: value["observations"][2]["stack"].update(context=["wrong.dll"]), "hook context"),
     ):
@@ -158,6 +163,20 @@ def evidence_controls(directory):
         changed = copy.deepcopy(events)
         edit(changed)
         rejected(lambda: verify_interaction(execution, driver, changed), label, message)
+    if execution["configuration"]["stackFrames"] != 0:
+        for label, edit in (
+            ("missing native stack metadata", lambda value: value[0].pop("stackCapture")),
+            ("false native stack method", lambda value: value[0]["stackCapture"].update(method="synthetic")),
+            ("false native stack phase", lambda value: value[0]["stackCapture"].update(phase="entry")),
+            ("wrong requested stack limit", lambda value: value[0]["stackCapture"].update(requestedFrames=1)),
+            ("failed capture with frames", lambda value: value[0]["stackCapture"].update(status="empty")),
+            ("boolean capture error", lambda value: value[0]["stackCapture"].update(exceptionCode=False)),
+            ("numeric capacity flag", lambda value: value[0]["stackCapture"].update(limitReached=int(value[0]["stackCapture"]["limitReached"]))),
+            ("null frame address", lambda value: value[0]["stack"].__setitem__(0, "0x" + "0" * (16 if execution["architecture"] == "x64" else 8))),
+        ):
+            changed = copy.deepcopy(events)
+            edit(changed)
+            rejected(lambda: verify_interaction(execution, driver, changed), label, "stack provenance")
     index = next(index for index, row in enumerate(samples) if row["application"]["processes"] and row["phase"] == "capture")
     for label, edit, message in (
         ("too few resource samples", lambda value: value.__delitem__(slice(40, None)), "sample count"),

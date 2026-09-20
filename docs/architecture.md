@@ -4,6 +4,12 @@
 
 ## Scope
 
+Optional [current-thread stack capture](stack-observation.md) collects raw
+post-call addresses across supported hooks. The per-API payload restrictions
+below describe default argument decoding; they do not disable this separate,
+explicitly selected observation. Remote-thread stack walking and symbol/module
+attribution are outside the current stack contract.
+
 This document describes the current Phase 0/Phase 1 foundation and the controlled native-capture paths for `KN Win32 API Monitor`.
 
 The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, same-bitness running-process attach for non-protected sample targets, helper-side process-tree supervision for deterministic sample children, cancellation-safe operation ownership, durable `.knapm` chunk writing and indexed replay, `.knapm` restart/recovery ownership classification, host-side persistent daemon supervision, daemon audit/stale-registry hardening, zstd `.knapm` chunks, JSON replay catalogs, database-backed replay catalog indexing, event-level trace indexing and full-text replay search, catalog-backed replay UX, virtualized trace rendering, UI-side query/error/thread/timeline/highlight analysis, generated metadata for `30,112` defined APIs, `320` runtime-supported manual/typed hook entries, generic Tier 1/Tier 2 runtime profile gates, selected low-payload Tier 0 smoke-verified hooks, broad API exerciser launch/attach validation, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay.

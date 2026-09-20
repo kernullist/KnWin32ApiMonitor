@@ -71,6 +71,30 @@ void CheckResult(const char* name, std::uint64_t value, std::uint32_t error, con
     }
 }
 
+void CheckStackRequestBounds()
+{
+    const knmon::Controller controller;
+    for (const auto limit : {33u, UINT32_MAX})
+    {
+        knmon::KnMonLaunchRequest launch;
+        knmon::KnMonAttachRequest attach;
+        knmon::KnMonProcessTreeRequest tree;
+        launch.StackFrames = limit;
+        attach.StackFrames = limit;
+        tree.StackFrames = limit;
+        const auto rejected = [](const auto& result)
+        {
+            Check(!result.Success && result.Win32ErrorCode == ERROR_INVALID_PARAMETER &&
+                result.Operation == "invalid_stack_frames", "Invalid stack limit reached process setup.");
+        };
+        rejected(controller.LaunchWithEarlyBirdApc(launch));
+        rejected(controller.LaunchCapture(launch));
+        rejected(controller.CaptureSampleFileIo(launch));
+        rejected(controller.AttachCapture(attach));
+        rejected(controller.SuperviseProcessTree(tree));
+    }
+}
+
 void CheckDelayedCollector(const wchar_t* agentTestPath)
 {
     const auto directory = std::filesystem::path(agentTestPath).parent_path();
@@ -247,6 +271,7 @@ int wmain(int argc, wchar_t** argv)
             }
             return 0;
         }
+        CheckStackRequestBounds();
         std::uint64_t value = 0;
         Check(knmon::ScaleQpcTicks(0xffffffffffffffffULL, 10000000, 1000000, value) && value == 1844674407370955161ULL,
             "Long-uptime QPC scaling overflowed.");
@@ -339,6 +364,7 @@ int wmain(int argc, wchar_t** argv)
             std::cerr << "Agent parity result: " << parityResult << "\n";
         }
         Check(parityResult == 0, "Actual Agent wrapper error parity failed.");
+        Check(parity(reinterpret_cast<void*>(1)) == 0, "Stack-enabled Agent wrapper error parity failed.");
         FreeLibrary(agent);
         std::cout << "QPC, result semantics, error preservation, SEH and actual Agent parity passed.\n";
     }

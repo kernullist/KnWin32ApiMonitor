@@ -51,6 +51,8 @@ def event_count(observation, allow_inflight=False):
 
 def verify_interaction(execution, driver, events):
     pid = execution["targetPid"]
+    stack_frames = execution["configuration"].get("stackFrames")
+    require(type(stack_frames) is int and stack_frames in (0, 8, 16, 32), "Desktop stack request is invalid.")
     require(type(driver["schemaVersion"]) is int and driver["schemaVersion"] == 1 and driver["status"] == "passed" and
             driver["errors"] == [] and driver["targetPid"] == pid, "Desktop interaction failed or target identity differs.")
     observations = driver["observations"]
@@ -61,6 +63,16 @@ def verify_interaction(execution, driver, events):
     require(all("native_ownership_poll_failed:" not in output and "stream_batch_poll_failed:" not in output
                 for output in outputs), "Healthy desktop probe contains a polling failure.")
     by_name = dict(zip(names, observations))
+    for name, row in by_name.items():
+        setting = row.get("stackSetting")
+        require(type(setting) is dict and type(setting.get("disabled")) is bool and setting.get("value") == str(0 if name == "idle" else stack_frames) and
+                (name == "idle" or setting["disabled"] == (name in ("capture", "filtered"))),
+                "Desktop stack control state differs from the capture request.")
+        expected_label = "Off" if name == "idle" or stack_frames == 0 else f"Up to {stack_frames} frames"
+        require(setting.get("label") == expected_label and type(setting.get("clientWidth")) is int and 0 < setting["clientWidth"] <= 4096 and
+                all(type(setting.get(key)) in (int, float) and 0 <= setting[key] <= 1000 for key in ("textWidth", "inlinePadding")) and
+                setting["clientWidth"] >= setting["textWidth"] + setting["inlinePadding"] + 24,
+                "Desktop stack control label is missing or clipped.")
     require(event_count(by_name["idle"]) == 0 and not by_name["idle"]["rows"], "Desktop started with preexisting events.")
     require(execution["binaries"]["knmon-sample-fileio.exe"]["path"].lower() in by_name["selected"]["selectedTarget"].lower() and
             str(pid) in by_name["selected"]["selectedTarget"].splitlines(), "The UI did not select the owned target.")
@@ -90,8 +102,20 @@ def verify_interaction(execution, driver, events):
                 int(event["timing"]["endQpc"]) >= int(event["timing"]["startQpc"]) > 0, "Exported native timing is invalid.")
         require(event["outcome"] == "success" and event["error"] is None, "Native target operation failed.")
         context = event.get("hookContext")
-        require(event.get("stackSource") == "not_captured" and event.get("stack") == [] and
-                type(context) is dict and context.get("agent") == agent and
+        frames, capture = event.get("stack"), event.get("stackCapture")
+        if stack_frames == 0:
+            require(event.get("stackSource") == "not_captured" and frames == [] and "stackCapture" not in event,
+                    "Exported stack provenance differs from the disabled request.")
+        else:
+            bits = 32 if execution["architecture"] == "x86" else 64
+            require(event.get("stackSource") == "native_backtrace" and type(frames) is list and 0 < len(frames) <= stack_frames and
+                    all(type(address) is str and re.fullmatch(r"0x[0-9a-f]{" + str(bits // 4) + "}", address) and int(address, 16) > 0 for address in frames) and
+                    type(capture) is dict and type(capture.get("addressBits")) is int and type(capture.get("requestedFrames")) is int and
+                    type(capture.get("exceptionCode")) is int and type(capture.get("limitReached")) is bool and
+                    capture == {"method": "rtl_capture_stack_back_trace", "phase": "post_call", "addressBits": bits,
+                                "requestedFrames": stack_frames, "status": "captured", "limitReached": len(frames) == stack_frames, "exceptionCode": 0},
+                    "Exported stack provenance or native capture bounds differ.")
+        require(type(context) is dict and context.get("agent") == agent and
                 ("resolvedHostModule" not in context or (type(context["resolvedHostModule"]) is str and context["resolvedHostModule"])),
                 "Exported stack provenance or hook context differs.")
         tags = [tag for tag in event["tags"] if tag.startswith("session:")]
@@ -105,10 +129,16 @@ def verify_interaction(execution, driver, events):
     lookup = {str(event["eventId"]): event for event in events}
     for row in observations[2:]:
         stack = row.get("stack")
-        require(type(stack) is dict and stack.get("eventId") in lookup and stack.get("source") == "not_captured" and
-                stack.get("message") == "Call stack was not captured." and type(stack.get("entries")) is int and stack["entries"] == 0,
-                "Stack inspector does not report the uncaptured state.")
-        context = lookup[stack["eventId"]]["hookContext"]
+        require(type(stack) is dict and stack.get("eventId") in lookup, "Stack inspector selection is absent from the export.")
+        event = lookup[stack["eventId"]]
+        expected_message = "Call stack was not captured."
+        if stack_frames != 0:
+            expected_message = f'Raw post-call backtrace ({event["stackCapture"]["addressBits"]}-bit). Agent frames may be included.' + (
+                " Frame limit reached; trace may be incomplete." if event["stackCapture"]["limitReached"] else " Unwind completeness is not established.")
+        require(stack.get("source") == event["stackSource"] and stack.get("message") == expected_message and
+                type(stack.get("entries")) is int and stack["entries"] == len(event["stack"]) and stack.get("addresses") == event["stack"],
+                "Stack inspector provenance or addresses differ from the export.")
+        context = event["hookContext"]
         require(stack.get("context") == [context["agent"]] + ([context["resolvedHostModule"]] if "resolvedHostModule" in context else []),
                 "Stack inspector hook context differs from the export.")
         require(re.search(r"(?:^|\n)DOM (\d+)(?:\n|$)", row["stats"])[1] == str(len(row["rows"])), "Rendered row accounting differs.")
@@ -117,7 +147,7 @@ def verify_interaction(execution, driver, events):
             event = lookup[cells[0]]
             require(cells[2:6] == [str(pid), str(event["tid"]), event["module"], event["api"]] and cells[7] == event["returnValue"],
                     "Rendered trace row differs from the exported event.")
-    return {"exportedEvents": len(events), "renderedRows": {name: len(row["rows"]) for name, row in by_name.items()}, "apis": sorted({event["api"] for event in events})}
+    return {"exportedEvents": len(events), "stackFrames": stack_frames, "renderedRows": {name: len(row["rows"]) for name, row in by_name.items()}, "apis": sorted({event["api"] for event in events})}
 
 
 def natural(value):
@@ -226,7 +256,8 @@ def verify_architecture(directory, architecture, expected_artifacts=None):
     execution, driver = json_value(payload("execution.json")), json_value(payload("driver.json"))
     require(type(execution["schemaVersion"]) is int and execution["schemaVersion"] == 1 and execution["status"] == "passed" and
             execution["architecture"] == architecture and execution["configuration"] ==
-            {"desktop": "Release", "native": "Debug", "presentation": "hidden", "samplingIntervalMs": 200}, "Desktop execution scope or status differs.")
+            {"desktop": "Release", "native": "Debug", "presentation": "hidden", "samplingIntervalMs": 200,
+             "stackFrames": execution["configuration"].get("stackFrames")}, "Desktop execution scope or status differs.")
     require(all(type(execution[key]) is int and execution[key] == 0 for key in ("appExit", "targetExit", "driverExit")), "Desktop scenario did not exit normally.")
     require(execution["targetAliveAfterDriver"] is True, "Target did not survive native stop and UI export.")
     require(execution["closeWindows"] == [{"postedClose": True}] and set(execution["cleanup"]) == {"application", "target", "driver"} and
@@ -240,7 +271,8 @@ def verify_architecture(directory, architecture, expected_artifacts=None):
     request = json_value(payload("request.json"))
     validate_endpoint(execution["cdp"])
     require(request == {"endpoint": execution["cdp"]["endpoint"], "targetPid": execution["targetPid"],
-                        "targetPath": execution["binaries"]["knmon-sample-fileio.exe"]["path"]}, "Desktop driver request identity differs.")
+                        "targetPath": execution["binaries"]["knmon-sample-fileio.exe"]["path"],
+                        "stackFrames": execution["configuration"]["stackFrames"]}, "Desktop driver request identity differs.")
     require(re.fullmatch(r"downloads/knmon-session-[0-9TZ-]+\.jsonl", Path(driver["exportFile"]).as_posix()) is not None, "Unexpected desktop export filename.")
     events = json_lines_data(payload(driver["exportFile"], 32 * 1024 * 1024))
     interaction = verify_interaction(execution, driver, events)

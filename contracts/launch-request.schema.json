@@ -20,6 +20,7 @@
     "workingDirectory": { "type": "string" },
     "architecture": { "enum": ["x86", "x64"] },
     "injectionMethod": { "enum": ["early-bird APC"] },
-    "timeoutMs": { "type": "integer", "minimum": 1 }
+    "timeoutMs": { "type": "integer", "minimum": 1 },
+    "stackFrames": { "type": "integer", "minimum": 0, "maximum": 32, "default": 0 }
   }
 }

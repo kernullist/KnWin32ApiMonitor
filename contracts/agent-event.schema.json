@@ -39,8 +39,8 @@
     "apiFamily": { "type": "string" },
     "apiCategory": { "type": "string" },
     "apiRisk": { "enum": ["low", "medium", "high", "critical"] },
-    "hookPolicy": { "enum": ["iat", "inline_review_required", "definition_only", "unsupported", "deferred", "unknown"] },
-    "coverageStatus": { "enum": ["defined", "id_generated", "hooked", "smoke_verified", "definition_only", "unsupported", "unknown"] },
+    "hookPolicy": { "type": "string", "description": "Definition-supplied policy label; runtime availability is recorded separately." },
+    "coverageStatus": { "type": "string", "description": "Recorded coverage label, not a runtime validation guarantee." },
     "hookMethod": { "enum": ["iat"] },
     "process": { "type": "string" },
     "returnValue": { "type": "string" },
@@ -84,6 +84,13 @@
       "then": {
         "required": ["architecture", "agentVersion", "message"]
       }
+    },
+    {
+      "if": {
+        "properties": { "messageType": { "const": "api_call" } },
+        "required": ["messageType"]
+      },
+      "then": { "$ref": "stack-observation.schema.json" }
     }
   ]
 }

@@ -239,6 +239,37 @@ int main()
         {
             f.Records[0].EventKind = 65535;
         });
+        ExpectCorruption("disabled stack with hidden address", [](auto& f)
+        {
+            f.Records[0].Stack.Frames[31] = 1;
+        });
+        ExpectCorruption("stack count exceeds storage", [](auto& f)
+        {
+            f.Records[0].Stack.Status = knmon::NativeStackCaptureStatus::Captured;
+            f.Records[0].Stack.FrameCount = UINT32_MAX;
+            f.Records[0].Stack.RequestedFrames = 32;
+        });
+        ExpectCorruption("invalid stack request", [](auto& f)
+        {
+            f.Records[0].Stack.Status = knmon::NativeStackCaptureStatus::InvalidRequest;
+            f.Records[0].Stack.RequestedFrames = 33;
+        });
+        ExpectCorruption("stack failure contains frames", [](auto& f)
+        {
+            f.Records[0].Stack.Status = knmon::NativeStackCaptureStatus::Empty;
+            f.Records[0].Stack.RequestedFrames = 8;
+            f.Records[0].Stack.FrameCount = 1;
+            f.Records[0].Stack.Frames[0] = 1;
+        });
+        ExpectCorruption("x86 stack address exceeds pointer width", [](auto& f)
+        {
+            f.Header.Architecture = static_cast<std::uint32_t>(knmon::KnMonAgentArchitecture::X86);
+            f.Config.ExpectedArchitecture = f.Header.Architecture;
+            f.Records[0].Stack.Status = knmon::NativeStackCaptureStatus::Captured;
+            f.Records[0].Stack.RequestedFrames = 8;
+            f.Records[0].Stack.FrameCount = 1;
+            f.Records[0].Stack.Frames[0] = 0x100000000;
+        });
         ExpectCorruption("unknown API", [](auto& f)
         {
             f.Records[0].ApiId = 65535;

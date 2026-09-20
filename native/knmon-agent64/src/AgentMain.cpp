@@ -8,6 +8,7 @@
 #include <knmon/common/ModuleGeneration.h>
 #include <knmon/common/NativeApiAbi.h>
 #include <knmon/common/IoObservation.h>
+#include <knmon/common/NativeStackCapture.h>
 
 #include <WinSock2.h>
 #include <mstcpip.h>
@@ -860,6 +861,7 @@ LdrGetProcedureAddressFn g_originalLdrGetProcedureAddress = nullptr;
 std::wstring g_operationId;
 std::wstring g_channelNonce;
 std::string g_selectedApiSelection;
+std::uint32_t g_stackFrameLimit = 0;
 volatile LONG g_workerStarted = 0;
 HANDLE g_controllerWatchThread = nullptr;
 HANDLE g_controllerWatchStop = nullptr;
@@ -899,6 +901,7 @@ struct HookLifecycleCounts
 
 struct AgentWorkerConfig
 {
+    std::uint32_t StackFrames = 0;
     std::wstring PipeName;
     std::wstring TransportName;
     std::wstring OperationId;
@@ -1602,7 +1605,8 @@ knmon::KnMonAgentControlStatus CopyAttachConfig(
             break;
         }
 
-        if (config->AttachMode != static_cast<std::uint32_t>(knmon::KnMonAttachMode::RunningProcess))
+        if (config->AttachMode != static_cast<std::uint32_t>(knmon::KnMonAttachMode::RunningProcess) ||
+            config->StackFrames > knmon::NativeStackFrameLimit)
         {
             break;
         }
@@ -1617,6 +1621,7 @@ knmon::KnMonAgentControlStatus CopyAttachConfig(
         }
 
         AgentWorkerConfig copied;
+        copied.StackFrames = config->StackFrames;
         copied.OperationId = WideBufferToString(config->OperationId);
         copied.PipeName = WideBufferToString(config->PipeName);
         copied.TransportName = WideBufferToString(config->TransportName);
@@ -2581,6 +2586,10 @@ void EmitTransportRecord(const LARGE_INTEGER& overheadStart, Callback&& callback
         [&](knmon::KnMonTransportRecord* record)
         {
             callback(record);
+            if (g_stackFrameLimit != 0)
+            {
+                record->Stack = knmon::CaptureNativeStack(g_stackFrameLimit);
+            }
             LARGE_INTEGER overheadEnd = {};
             QueryPerformanceCounter(&overheadEnd);
             record->HookOverheadUs = DurationUs(overheadStart, overheadEnd);
@@ -20752,6 +20761,7 @@ bool ResetDisabledAgentForReinitialize()
         InterlockedExchange64(&g_sequence, 0);
         g_operationId.clear();
         g_selectedApiSelection.clear();
+        g_stackFrameLimit = 0;
         InterlockedExchange(&g_workerStarted, 0);
         SetLifecycleState(AgentLifecycleState::Starting);
         reset = true;
@@ -20812,15 +20822,21 @@ DWORD WINAPI AgentWorker(void* context)
             runtimeConfig.ControllerProcessId = static_cast<DWORD>(ReadEnvUInt64(L"KNMON_CONTROLLER_PID"));
             runtimeConfig.ControllerCreationTime = ReadEnvUInt64(L"KNMON_CONTROLLER_CREATION_TIME");
             runtimeConfig.TransportSize = ReadEnvUInt64(L"KNMON_TRANSPORT_SIZE");
+            const auto stackFrames = ReadEnv(L"KNMON_STACK_FRAMES");
+            const auto parsedFrames = ReadEnvUInt64(L"KNMON_STACK_FRAMES");
+            const bool validFrames = stackFrames == std::to_wstring(parsedFrames) && parsedFrames <= knmon::NativeStackFrameLimit;
+            runtimeConfig.StackFrames = validFrames ? static_cast<std::uint32_t>(parsedFrames) : UINT32_MAX;
         }
 
         g_operationId = runtimeConfig.OperationId;
         g_channelNonce = knmon::ChannelNonce(runtimeConfig.PipeName);
         g_selectedApiSelection = LowerAscii(WideToUtf8(runtimeConfig.SelectedApis.c_str()));
+        g_stackFrameLimit = runtimeConfig.StackFrames;
 
         do
         {
-            if (g_channelNonce.empty() || runtimeConfig.ControllerProcessId == 0 || runtimeConfig.ControllerCreationTime == 0)
+            if (g_channelNonce.empty() || runtimeConfig.ControllerProcessId == 0 || runtimeConfig.ControllerCreationTime == 0 ||
+                runtimeConfig.StackFrames > knmon::NativeStackFrameLimit)
             {
                 break;
             }
@@ -21284,6 +21300,7 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestStopRace(void* stage)
                 break;
             }
             g_operationId = L"lease-old";
+            g_stackFrameLimit = knmon::NativeStackFrameLimit;
             SetLifecycleState(AgentLifecycleState::Running);
             InterlockedExchange(&g_hooksEnabled, 1);
         }
@@ -21405,7 +21422,7 @@ DWORD WINAPI TestOriginalCppException()
     throw std::bad_alloc();
 }
 
-extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestErrorParity(void*)
+extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestErrorParity(void* captureStack)
 {
     DWORD failure = 1;
     AgentControlGuard control;
@@ -21418,11 +21435,20 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestErrorParity(void*)
         SetLifecycleState(AgentLifecycleState::Running);
         InterlockedExchange(&g_hooksEnabled, 1);
         g_originalCloseHandle = TestNoncanonicalBool;
+        g_stackFrameLimit = captureStack == nullptr ? 0 : knmon::NativeStackFrameLimit;
         SetLastError(1234);
         const BOOL unusual = HookedCloseHandle(nullptr);
         failure = 2;
         if (unusual != 2 || GetLastError() != 7654 || g_transportRecords[0].RawReturnValue != 2 ||
             g_transportRecords[0].RawLastErrorCode != 7654 || g_hookEpoch != 0 || g_callErrorState != nullptr)
+        {
+            break;
+        }
+        failure = 12;
+        const auto& trace = g_transportRecords[0].Stack;
+        if (!knmon::ValidateNativeStackRecord(trace, sizeof(void*) * 8) ||
+            trace.RequestedFrames != g_stackFrameLimit ||
+            (g_stackFrameLimit != 0 && trace.Status != knmon::NativeStackCaptureStatus::Captured))
         {
             break;
         }

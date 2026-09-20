@@ -313,6 +313,17 @@ button:disabled {
   gap: 5px;
 }
 
+.api-scope-actions.stack-capture-setting
+{
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+}
+
+.stack-capture-setting label
+{
+  white-space: nowrap;
+}
+
 .api-scope-actions button,
 .api-scope-actions select {
   min-width: 0;

@@ -109,14 +109,27 @@ async function observe(name)
   {
     const text = selector => document.querySelector(selector)?.innerText ?? "";
     const stack = document.querySelector(".stack-list");
+    const stackSelect = document.querySelector("#stack-frames");
+    const stackStyle = stackSelect ? getComputedStyle(stackSelect) : null;
+    const stackText = stackSelect?.selectedOptions[0]?.label ?? "";
+    const stackMeasure = document.createElement("canvas").getContext("2d");
+    if (stackMeasure && stackStyle)
+    {
+      stackMeasure.font = stackStyle.font;
+    }
     return { url: location.href, readyState: document.readyState,
       status: text(".statusbar"), stats: text(".trace-stats"), session: text(".session-strip"),
       selectedTarget: text(".process-row.selected"), output: text(".output-log"),
       eligibility: text(".eligibility-badge"), helperArchitecture: text(".target-action-grid"),
       refreshEnabled: document.querySelector('button[title="Refresh process list"]')?.disabled === false,
+      stackSetting: stackSelect ? {
+        value: stackSelect.value, disabled: stackSelect.disabled, label: stackText,
+        clientWidth: stackSelect.clientWidth, textWidth: stackMeasure?.measureText(stackText).width ?? null,
+        inlinePadding: Number.parseFloat(stackStyle.paddingLeft) + Number.parseFloat(stackStyle.paddingRight) } : null,
       stack: stack ? { source: stack.dataset.stackSource, eventId: stack.dataset.stackEventId,
         message: text(".stack-status"), context: [...stack.querySelectorAll(".stack-hook-context code")].map(element => element.textContent),
-        entries: stack.querySelectorAll(".stack-row").length } : null,
+        entries: stack.querySelectorAll(".stack-row").length,
+        addresses: [...stack.querySelectorAll(".stack-row code")].map(element => element.textContent) } : null,
       rows: [...document.querySelectorAll(".trace-virtual-row")].map(element =>
         [...element.querySelectorAll(":scope > span")].map(cell => cell.innerText)),
       filter: document.querySelector("#quick-api-filter")?.value ?? "" };
@@ -158,6 +171,20 @@ try
   await click(target);
   const attach = 'button[title="Attach to the selected running process"]';
   await waitFor(`document.querySelector(${JSON.stringify(attach)})?.disabled === false`, "attach enabled");
+  requireValue([0, 8, 16, 32].includes(request.stackFrames), "Unsupported stack frame request.");
+  await waitFor('document.querySelector("#stack-frames")?.value === "0" && document.querySelector("#stack-frames")?.disabled === false', "stack capture disabled by default");
+  if (request.stackFrames !== 0)
+  {
+    await click(button("#stack-frames"));
+    for (let index = 0; index < [0, 8, 16, 32].indexOf(request.stackFrames); ++index)
+    {
+      await call("Input.dispatchKeyEvent", { type: "keyDown", key: "ArrowDown", code: "ArrowDown", windowsVirtualKeyCode: 40 });
+      await call("Input.dispatchKeyEvent", { type: "keyUp", key: "ArrowDown", code: "ArrowDown", windowsVirtualKeyCode: 40 });
+    }
+    await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+    await call("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+    await waitFor(`document.querySelector("#stack-frames")?.value === ${JSON.stringify(String(request.stackFrames))}`, "requested stack frame limit");
+  }
   await observe("selected");
   phase("attach");
   await click(button(attach));

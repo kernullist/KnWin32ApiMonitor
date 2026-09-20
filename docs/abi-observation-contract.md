@@ -47,8 +47,13 @@ two little-endian binary32 values. Pointer arguments record the address with
 `targetMemoryRead: false`; these six wrappers do not sample pointees. The 16-byte
 color result uses `rawReturnBytes`, `rawReturnBits: 128` and
 `rawReturnEncoding: little_endian_object_bytes`, without a truncated scalar
-`rawReturnValue`. Transport ABI 8 and attach configuration ABI 4 reject older
+`rawReturnValue`. Transport ABI 9 and attach configuration ABI 5 reject older
 incompatible layouts.
+
+Optional [native stack capture](stack-observation.md) adds a bounded raw-address
+observation after the API returns. It does not change argument/result encoding
+or establish API-entry frames. The ABI differential corpus runs with capture
+disabled and with a 32-frame limit.
 
 `generated/typed-abi-proof.json` records executed x86/x64 Debug differential and
 production-injection/replay results on Windows 10.0.26200, with source, binary and

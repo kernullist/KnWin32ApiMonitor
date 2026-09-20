@@ -6,6 +6,7 @@
 
 #include <knmon/common/GeneratedApiIds.h>
 #include <knmon/common/CaptureClock.h>
+#include <knmon/common/NativeStackTrace.h>
 
 namespace knmon
 {
@@ -85,7 +86,7 @@ enum class KnMonTransportEventKind : std::uint16_t
 };
 
 inline constexpr std::uint32_t KnMonTransportMagic = 0x4d54534b;
-inline constexpr std::uint16_t KnMonTransportAbiVersion = 8;
+inline constexpr std::uint16_t KnMonTransportAbiVersion = 9;
 inline constexpr std::uint32_t KnMonTransportDefaultCapacity = 1024;
 inline constexpr std::uint32_t KnMonTransportMinCapacity = 2;
 inline constexpr std::uint32_t KnMonTransportMaxCapacity = 65536;
@@ -148,6 +149,7 @@ struct KnMonTransportRecord
     std::uint64_t CallId = 0;
     std::uint64_t ParentCallId = 0;
     std::uint32_t CallDepth = 0;
+    NativeStackTrace Stack;
     std::uint64_t Values64[KnMonTransportSlotCount64] = {};
     std::uint32_t Values32[KnMonTransportSlotCount32] = {};
     std::uint32_t Text0Length = 0;
@@ -268,6 +270,7 @@ struct KnMonAgentHandshake
 
 struct KnMonLaunchRequest
 {
+    std::uint32_t StackFrames = 0;
     std::string OperationId;
     std::string SessionId;
     std::string SessionKind;
@@ -290,6 +293,7 @@ struct KnMonLaunchRequest
 
 struct KnMonAttachRequest
 {
+    std::uint32_t StackFrames = 0;
     CaptureClock ClockOverride;
     std::string OperationId;
     std::string SessionId;
@@ -309,6 +313,7 @@ struct KnMonAttachRequest
 
 struct KnMonProcessTreeRequest
 {
+    std::uint32_t StackFrames = 0;
     std::string OperationId;
     std::string SessionId;
     std::string SessionKind;

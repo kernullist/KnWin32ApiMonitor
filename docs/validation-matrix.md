@@ -7,21 +7,22 @@ Windows 10/11 release or every API input.
 | Component | x64 Debug | x86 Debug | x64 Release | x86 Release |
 |---|---|---|---|---|
 | Native compile/link | passed | passed | prior build passed | prior build passed |
-| Native CTest | 23/23 passed | 23/23 passed | prior 23/23 passed | prior 17 passed, 6 not started |
+| Native CTest | 24/24 passed | 24/24 passed | prior 23/23 passed | prior 17 passed, 6 not started |
 | Desktop compile/link | prior test executable passed | prior test executable passed | application passed | application passed |
 | Desktop security tests | prior 3/3 passed | prior 3/3 passed | 6/6 passed | 6/6 passed |
 | Desktop attach/filter/stop/export and Job resources | native tools used | native tools used | passed with Debug native tools | passed with Debug native tools |
 | Desktop PE hardening | passed | passed | passed | passed |
 | Rust backend with real helper | prior 18/18 passed | prior 18/18 passed | 19/19 with Debug helper | 19/19 with Debug helper; Release helper remains blocked |
-| All-supported sample live/replay | 376 events, 16 errors | 376 events, 16 errors | prior 376 events, 16 errors | blocked before launch |
+| All-supported sample live/replay | 376 events, 16 errors; Off/8/32 | 376 events, 16 errors; Off/8/32 | prior 376 events, 16 errors | blocked before launch |
+| Standalone native stack component | passed | passed | passed | passed |
 | Comparative six-API corpus | 50 runs passed | 50 runs passed | not run | not run |
 | Sustained overload, original/observed | 5 s and 15 s passed | 5 s and 15 s passed | default 5 s CTest passed | blocked before launch |
-| Clean source ZIP native reconstruction | 23/23 passed | 23/23 passed | not run | not run |
+| Clean source ZIP native reconstruction | prior 23/23 passed | prior 23/23 passed | not run | not run |
 
 The Debug comparison uses ten fresh-process repetitions of each of five modes.
 Each run has 450 expected calls, with zero missing, unexpected or reordered
-events and matching outputs/errors. Frida CModule is faster and uses less
-target RSS than KNMon on this corpus. This evidence does not support a World
+events and matching outputs/errors. Frida CModule has lower median call latency
+and target RSS than KNMon on this corpus. This evidence does not support a World
 No.1 or lowest-overhead claim.
 
 The [desktop polling change](desktop-control-polling.md) passes 14 deterministic
@@ -30,21 +31,27 @@ Release desktop builds/security suites, and real attach/filter/stop/export on
 both architectures. Those UI runs exported 250/230 events, retained native
 record totals through terminal draining and left both targets alive after stop.
 
-The latest [observation correction](stack-observation.md) separates hook metadata
-from stack frames and UI ingestion gaps from actual trimming. Both native Debug
-suites pass 23/23, with 2,329 native/Node JSON cases and 130 session cases per
-architecture. Each actual sample preserves all 376 events, including one
-resolved API-set host, through capture, UI conversion and saved replay. The
-six-API typed proof is freshly executed on both architectures. Frontend checks
-include two stack regressions and the 200,000-row worker/count regression.
+The latest [stack capture implementation](stack-observation.md) collects optional
+raw post-call addresses, with capture disabled by default and a maximum of 32
+frames. Both native Debug suites pass 24/24, with 2,404 native/Node JSON cases,
+196 session cases and 24 stack-option cases per architecture. Actual Off, 8 and
+32-frame samples each preserve all 376 events, including one resolved API-set
+host, through capture, UI conversion and saved replay. The six-API typed proof
+executes with capture both disabled and enabled. The standalone stack component
+also passes in optimized Release on both architectures, including actual caller
+addresses, recursion, 4,000 concurrent captures and injected fault controls.
+That component test does not clear the separate full native Release gate.
 
-Adversarial review reproduced and fixed Rust accepting object-encoded provenance
-enums and the UI falsely labeling native/UI snapshot lag as trimming. Real
-desktop testing also corrected tab-selection assumptions and stop-audit capture
-in the driver. The final consumer rejects 59 adversarial cases and passes three
-positive groups; the backend consumer rejects 45. Earlier failed attempts remain
-failed. Native Release results in the table predate this correction and do not
-validate its native code.
+The common 92-case observation corpus exercises native, Rust, Node, UI and both
+published event schemas. Contract revalidation accepts 2,256 actual trace events
+and 2,256 agent API events across the six captures. Frontend checks include four
+stack/command/schema regressions and the 200,000-row worker/count regression.
+Adversarial review corrected interpretation of opaque target arguments as helper
+options, stale published schema constraints, a twice-run ABI fixture resetting
+call IDs, and a 52px UI select that clipped the requested limit. Failed attempts
+and their raw logs remain distinct from the final evidence. The previous hook
+metadata/provenance and ingestion/trimming corrections remain covered. Full
+native Release results in the table predate these native changes.
 
 After the failure-state correction in `4e5a9df`, both native Release builds
 completed again. x64 executed all 23 CTests. x86 passed 17; six cases could not
@@ -63,8 +70,8 @@ retained separately. No exclusion, policy change or renaming workaround was appl
 The x86 Release runtime gate remains incomplete. A successful desktop build
 does not clear the separate native-helper gate.
 
-The current CTest XML consumer accepts the x64 report and rejects the actual
-x86 report as failed or unexecuted. The x64 Release backend additionally ran
+At that stage, the CTest XML consumer accepted the x64 report and rejected the
+actual x86 report as failed or unexecuted. The x64 Release backend additionally ran
 all 18 tests against the Release helper, with matching native binary hashes
 before and after execution. These direct probes retain commands and raw logs;
 they are not a complete source-bound, two-architecture Release evidence pack.
@@ -80,11 +87,15 @@ After the URLPattern backport, both Release suites execute six tests, adding
 Unicode identifier, URL component and remote-fixture authority regressions.
 The Debug desktop entries describe the earlier three-test dependency baseline;
 they are not a validation of the new backport.
-The latest desktop runs export 240/250 native events, retain exact
-terminal totals with no recorded loss, leave the targets alive after stop,
-and close normally with all owned Jobs drained. Both retain 199 process-tree
-samples; the largest observed gaps are 313 ms (x64) and 297 ms (x86). Actual
-Call Stack observations match the exported uncaptured state and agent identity.
+The final desktop Off runs export 250/240 native events on x64/x86; the 32-frame
+runs export 250/250. All retain exact terminal totals with no recorded loss,
+leave the targets alive after stop, and close normally with all owned Jobs
+drained. Each run retains 200 process-tree samples. The largest gaps are
+312/297 ms in Off mode and 313/359 ms in 32-frame mode. Actual Call Stack
+addresses, provenance and hook context match the exported selected event.
+The corrected 292px select displays the entire requested limit and remains
+locked during capture. Desktop consumers reject 64 Off-mode and 72 enabled-mode
+mutations and pass three positive groups each; backend controls reject 45.
 
 The [Release backend suite](backend-release-evidence.md) now includes the actual
 failed-target path. Missing the target's dynamic probe DLL previously left a
@@ -111,7 +122,7 @@ and export them, detach while the target survives, and exit normally. Raw Job
 samples include WebView children and separate target resources. The hidden-window
 scope and sampled working-set sums are not a foreground performance score.
 
-The current clean source archive from `2e7d85b` was extracted without Git metadata and
+The preceding clean source archive from `2e7d85b` was extracted without Git metadata and
 rebuilt with the pinned Node/CMake/MSVC/SDK configuration. npm installation,
 frontend build/validation and both complete native Debug suites passed. The
 frozen reconstruction producer retained source, command, compiler and binary
@@ -122,7 +133,9 @@ Both architectures executed all 23 CTests, including the new failed-launch
 regression; the extracted-source UI suite executes all 16 polling, terminal-tail,
 WOW64 and stack-observation regressions, plus the 200,000-row worker/count check.
 The archive includes both observation/count modules and the shared stack corpus.
-All cases actually ran; none were skipped or disabled.
+All cases actually ran; none were skipped or disabled. This archive predates the
+optional native stack path and its 24th CTest. It is historical evidence until a
+fresh clean archive is reconstructed after the new implementation ships.
 Revalidation rejects 31 malformed or altered readiness/source-evidence cases,
 including command, compiler, binary, test and frontend records.
 
@@ -139,7 +152,7 @@ metadata, with SHA-256
 `137ed5dccff850b027640f13a157af5957769705b15608a5c681628587348179`.
 The direct CLI created no source cache; complete source closure and every
 retained reconstruction artifact revalidated afterward. This BOM comparison is
-evidence from that previous reconstruction. The current reconstruction's first
+evidence from that previous reconstruction. The `2e7d85b` reconstruction's first
 local attempt began before packaging finished and failed on the missing archive,
 before any build command. After packaging exited successfully and its contents
 and hash were checked, the untouched archive passed all eight ordered commands
@@ -149,10 +162,11 @@ The dependency graph and advisory evidence now remove the five reachable UNIC
 warnings while
 retaining two warnings outside the Windows graphs. Native Release, broader
 platform and performance claims remain subject to the separate limits above.
-The current integrated report has eight passed scopes, zero failed scopes and
-nine unverified scopes. Source reconstruction, dependency maintenance, Release backend and
-actual desktop paths pass together with the current advisory, inventory,
-typed-ABI and competitive-semantics evidence. All failed
+The current integrated report has seven passed scopes, zero failed scopes and
+ten unverified scopes. Dependency maintenance, Release backend and actual
+desktop paths pass together with the current advisory, inventory, typed-ABI
+and competitive-semantics evidence. Source reconstruction is historical until
+the stack implementation is included in a new clean archive. All failed
 attempts and their raw logs remain distinct from the successful evidence sets.
 See `source-build-contract.md` for reproduction and
 `technical-readiness.md` for the fail-closed artifact verification policy.

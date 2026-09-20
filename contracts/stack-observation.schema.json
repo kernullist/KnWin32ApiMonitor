@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kernullist.local/knmon/stack-observation.schema.json",
+  "title": "KnMonStackObservation",
+  "description": "Raw post-call addresses or explicit uncaptured/legacy data. Frame limits do not establish complete unwinding or module identity.",
+  "type": "object",
+  "required": [
+    "stack"
+  ],
+  "properties": {
+    "stack": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "stackSource": {
+      "enum": [
+        "not_captured",
+        "legacy_unverified",
+        "native_backtrace"
+      ]
+    },
+    "stackCapture": {
+      "$ref": "#/$defs/nativeCapture"
+    },
+    "hookContext": {
+      "type": "object",
+      "required": [
+        "agent"
+      ],
+      "properties": {
+        "agent": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolvedHostModule": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "stackSource"
+        ],
+        "properties": {
+          "stackSource": {
+            "const": "not_captured"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stack": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "stackSource"
+        ],
+        "properties": {
+          "stackSource": {
+            "const": "native_backtrace"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "stackCapture"
+        ],
+        "allOf": [
+          {
+            "$ref": "#/$defs/frameBounds"
+          },
+          {
+            "if": {
+              "properties": {
+                "stackCapture": {
+                  "properties": {
+                    "status": {
+                      "const": "captured"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "stack": {
+                  "minItems": 1
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "stack": {
+                  "maxItems": 0
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stackCapture": {
+                  "properties": {
+                    "addressBits": {
+                      "const": 32
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "stack": {
+                  "items": {
+                    "pattern": "^0x[0-9a-f]{8}$",
+                    "minLength": 10,
+                    "maxLength": 10,
+                    "not": {
+                      "const": "0x00000000"
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "stack": {
+                  "items": {
+                    "pattern": "^0x[0-9a-f]{16}$",
+                    "minLength": 18,
+                    "maxLength": 18,
+                    "not": {
+                      "const": "0x0000000000000000"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stackCapture": {
+                  "properties": {
+                    "status": {
+                      "const": "memory_fault"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "stackCapture": {
+                  "properties": {
+                    "exceptionCode": {
+                      "enum": [
+                        3221225477,
+                        3221225478,
+                        2147483650
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "stackCapture": {
+                  "properties": {
+                    "exceptionCode": {
+                      "const": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "stackCapture"
+          ]
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "nativeCapture": {
+      "type": "object",
+      "required": [
+        "method",
+        "phase",
+        "addressBits",
+        "requestedFrames",
+        "status",
+        "limitReached",
+        "exceptionCode"
+      ],
+      "properties": {
+        "method": {
+          "const": "rtl_capture_stack_back_trace"
+        },
+        "phase": {
+          "const": "post_call"
+        },
+        "addressBits": {
+          "enum": [
+            32,
+            64
+          ]
+        },
+        "requestedFrames": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "status": {
+          "enum": [
+            "captured",
+            "empty",
+            "memory_fault",
+            "cpp_exception",
+            "unavailable",
+            "invalid_result"
+          ]
+        },
+        "limitReached": {
+          "type": "boolean"
+        },
+        "exceptionCode": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        }
+      }
+    },
+    "frameBounds": {
+      "anyOf": [
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 1}}},"stack": {"maxItems": 1}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 1}}},"else": {"properties": {"stack": {"maxItems": 0}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 2}}},"stack": {"maxItems": 2}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 2}}},"else": {"properties": {"stack": {"maxItems": 1}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 3}}},"stack": {"maxItems": 3}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 3}}},"else": {"properties": {"stack": {"maxItems": 2}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 4}}},"stack": {"maxItems": 4}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 4}}},"else": {"properties": {"stack": {"maxItems": 3}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 5}}},"stack": {"maxItems": 5}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 5}}},"else": {"properties": {"stack": {"maxItems": 4}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 6}}},"stack": {"maxItems": 6}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 6}}},"else": {"properties": {"stack": {"maxItems": 5}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 7}}},"stack": {"maxItems": 7}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 7}}},"else": {"properties": {"stack": {"maxItems": 6}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 8}}},"stack": {"maxItems": 8}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 8}}},"else": {"properties": {"stack": {"maxItems": 7}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 9}}},"stack": {"maxItems": 9}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 9}}},"else": {"properties": {"stack": {"maxItems": 8}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 10}}},"stack": {"maxItems": 10}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 10}}},"else": {"properties": {"stack": {"maxItems": 9}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 11}}},"stack": {"maxItems": 11}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 11}}},"else": {"properties": {"stack": {"maxItems": 10}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 12}}},"stack": {"maxItems": 12}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 12}}},"else": {"properties": {"stack": {"maxItems": 11}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 13}}},"stack": {"maxItems": 13}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 13}}},"else": {"properties": {"stack": {"maxItems": 12}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 14}}},"stack": {"maxItems": 14}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 14}}},"else": {"properties": {"stack": {"maxItems": 13}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 15}}},"stack": {"maxItems": 15}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 15}}},"else": {"properties": {"stack": {"maxItems": 14}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 16}}},"stack": {"maxItems": 16}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 16}}},"else": {"properties": {"stack": {"maxItems": 15}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 17}}},"stack": {"maxItems": 17}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 17}}},"else": {"properties": {"stack": {"maxItems": 16}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 18}}},"stack": {"maxItems": 18}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 18}}},"else": {"properties": {"stack": {"maxItems": 17}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 19}}},"stack": {"maxItems": 19}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 19}}},"else": {"properties": {"stack": {"maxItems": 18}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 20}}},"stack": {"maxItems": 20}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 20}}},"else": {"properties": {"stack": {"maxItems": 19}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 21}}},"stack": {"maxItems": 21}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 21}}},"else": {"properties": {"stack": {"maxItems": 20}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 22}}},"stack": {"maxItems": 22}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 22}}},"else": {"properties": {"stack": {"maxItems": 21}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 23}}},"stack": {"maxItems": 23}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 23}}},"else": {"properties": {"stack": {"maxItems": 22}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 24}}},"stack": {"maxItems": 24}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 24}}},"else": {"properties": {"stack": {"maxItems": 23}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 25}}},"stack": {"maxItems": 25}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 25}}},"else": {"properties": {"stack": {"maxItems": 24}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 26}}},"stack": {"maxItems": 26}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 26}}},"else": {"properties": {"stack": {"maxItems": 25}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 27}}},"stack": {"maxItems": 27}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 27}}},"else": {"properties": {"stack": {"maxItems": 26}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 28}}},"stack": {"maxItems": 28}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 28}}},"else": {"properties": {"stack": {"maxItems": 27}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 29}}},"stack": {"maxItems": 29}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 29}}},"else": {"properties": {"stack": {"maxItems": 28}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 30}}},"stack": {"maxItems": 30}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 30}}},"else": {"properties": {"stack": {"maxItems": 29}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 31}}},"stack": {"maxItems": 31}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 31}}},"else": {"properties": {"stack": {"maxItems": 30}}}},
+        {"properties": {"stackCapture": {"properties": {"requestedFrames": {"const": 32}}},"stack": {"maxItems": 32}},"if": {"properties": {"stackCapture": {"properties": {"limitReached": {"const": true}}}}},"then": {"properties": {"stack": {"minItems": 32}}},"else": {"properties": {"stack": {"maxItems": 31}}}}
+      ]
+    }
+  }
+}

@@ -1,11 +1,71 @@
 [
-  ["object unit source", {"stack": [], "stackSource": {"not_captured": null}}, false],
-  ["object legacy source", {"stack": ["module!Api"], "stackSource": {"legacy_unverified": null}}, false],
-  ["empty source", {"stack": [], "stackSource": ""}, false],
-  ["boolean source", {"stack": [], "stackSource": false}, false],
-  ["string context", {"stack": [], "hookContext": "agent.dll"}, false],
-  ["numeric host", {"stack": [], "hookContext": {"agent": "agent.dll", "resolvedHostModule": 1}}, false],
-  ["repeated legacy strings", {"stack": ["module!Api", "module!Api"]}, true],
+  [
+    "object unit source",
+    {
+      "stack": [],
+      "stackSource": {
+        "not_captured": null
+      }
+    },
+    false
+  ],
+  [
+    "object legacy source",
+    {
+      "stack": [
+        "module!Api"
+      ],
+      "stackSource": {
+        "legacy_unverified": null
+      }
+    },
+    false
+  ],
+  [
+    "empty source",
+    {
+      "stack": [],
+      "stackSource": ""
+    },
+    false
+  ],
+  [
+    "boolean source",
+    {
+      "stack": [],
+      "stackSource": false
+    },
+    false
+  ],
+  [
+    "string context",
+    {
+      "stack": [],
+      "hookContext": "agent.dll"
+    },
+    false
+  ],
+  [
+    "numeric host",
+    {
+      "stack": [],
+      "hookContext": {
+        "agent": "agent.dll",
+        "resolvedHostModule": 1
+      }
+    },
+    false
+  ],
+  [
+    "repeated legacy strings",
+    {
+      "stack": [
+        "module!Api",
+        "module!Api"
+      ]
+    },
+    true
+  ],
   [
     "missing provenance",
     {
@@ -176,6 +236,1251 @@
         "agent": "agent.dll",
         "resolvedHostModule": null
       }
+    },
+    false
+  ],
+  [
+    "native captured x64",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    true
+  ],
+  [
+    "native captured x86",
+    {
+      "stack": [
+        "0x12345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 32,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    true
+  ],
+  [
+    "native limit reached",
+    {
+      "stack": [
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": true,
+        "exceptionCode": 0
+      }
+    },
+    true
+  ],
+  [
+    "native empty",
+    {
+      "stack": [],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "empty",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    true
+  ],
+  [
+    "native memory_fault",
+    {
+      "stack": [],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "memory_fault",
+        "limitReached": false,
+        "exceptionCode": 3221225477
+      }
+    },
+    true
+  ],
+  [
+    "native cpp_exception",
+    {
+      "stack": [],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "cpp_exception",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    true
+  ],
+  [
+    "native unavailable",
+    {
+      "stack": [],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "unavailable",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    true
+  ],
+  [
+    "native invalid_result",
+    {
+      "stack": [],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "invalid_result",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    true
+  ],
+  [
+    "missing capture method",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "null capture method",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": null,
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "missing capture phase",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "null capture phase",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": null,
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "missing capture addressBits",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "null capture addressBits",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": null,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "missing capture requestedFrames",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "null capture requestedFrames",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": null,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "missing capture status",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "null capture status",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": null,
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "missing capture limitReached",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "null capture limitReached",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": null,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "missing capture exceptionCode",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false
+      }
+    },
+    false
+  ],
+  [
+    "null capture exceptionCode",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": null
+      }
+    },
+    false
+  ],
+  [
+    "bad capture method 0",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "dbghelp",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture method 1",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": false,
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture method 2",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": {},
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture phase 0",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "entry",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture phase 1",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": 0,
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture addressBits 0",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 48,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture addressBits 1",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": true,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture addressBits 2",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": "64",
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture requestedFrames 0",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 0,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture requestedFrames 1",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 33,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture requestedFrames 2",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": -1,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture requestedFrames 3",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 0.5,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture requestedFrames 4",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": true,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture requestedFrames 5",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": "8",
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture status 0",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "unknown",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture status 1",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": {
+          "captured": null
+        },
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture limitReached 0",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": true,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture limitReached 1",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": 0,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture exceptionCode 0",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 1
+      }
+    },
+    false
+  ],
+  [
+    "bad capture exceptionCode 1",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": -1
+      }
+    },
+    false
+  ],
+  [
+    "bad capture exceptionCode 2",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0.5
+      }
+    },
+    false
+  ],
+  [
+    "bad capture exceptionCode 3",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": true
+      }
+    },
+    false
+  ],
+  [
+    "bad capture exceptionCode 4",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 4294967296
+      }
+    },
+    false
+  ],
+  [
+    "bad raw frame 0",
+    {
+      "stack": [
+        "0x0000000000000000"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad raw frame 1",
+    {
+      "stack": [
+        "0x12345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad raw frame 2",
+    {
+      "stack": [
+        "0X0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad raw frame 3",
+    {
+      "stack": [
+        "0x000000001234ABCD"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad raw frame 4",
+    {
+      "stack": [
+        "0x000000000000xyz1"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad raw frame 5",
+    {
+      "stack": [
+        "module!Symbol"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad raw frame 6",
+    {
+      "stack": [
+        "0x0000000012345678\n"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad raw frame 7",
+    {
+      "stack": [
+        "0x0000000012345678\u0000"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "captured without frames",
+    {
+      "stack": [],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "empty with frames",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "empty",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "fault without exception",
+    {
+      "stack": [],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "memory_fault",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "unknown fault code",
+    {
+      "stack": [],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "memory_fault",
+        "limitReached": false,
+        "exceptionCode": 123
+      }
+    },
+    false
+  ],
+  [
+    "over requested frames",
+    {
+      "stack": [
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "over maximum frames",
+    {
+      "stack": [
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678",
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 33,
+        "status": "captured",
+        "limitReached": true,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "metadata on legacy",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "legacy_unverified",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "metadata without source",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "metadata on disabled",
+    {
+      "stack": [],
+      "stackSource": "not_captured",
+      "stackCapture": {
+        "method": "rtl_capture_stack_back_trace",
+        "phase": "post_call",
+        "addressBits": 64,
+        "requestedFrames": 8,
+        "status": "captured",
+        "limitReached": false,
+        "exceptionCode": 0
+      }
+    },
+    false
+  ],
+  [
+    "bad capture object 0",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": null
+    },
+    false
+  ],
+  [
+    "bad capture object 1",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": []
+    },
+    false
+  ],
+  [
+    "bad capture object 2",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": false
+    },
+    false
+  ],
+  [
+    "bad capture object 3",
+    {
+      "stack": [
+        "0x0000000012345678"
+      ],
+      "stackSource": "native_backtrace",
+      "stackCapture": "captured"
     },
     false
   ]

@@ -3,9 +3,12 @@ import path from "node:path";
 import assert from "node:assert/strict";
 import vm from "node:vm";
 import ts from "typescript";
+import { validateStackObservation } from "./strict-json.mjs";
 
 const directory = process.argv[2];
 assert.ok(directory, "Saved live capture directory required.");
+const stackFrames = Number(process.argv[3] ?? 0);
+assert.ok(Number.isInteger(stackFrames) && stackFrames >= 0 && stackFrames <= 32);
 const read = (name) => JSON.parse(fs.readFileSync(path.join(directory, name), "utf8").replace(/^\uFEFF/, ""));
 const capture = read("capture-result.json");
 const replay = read("replay-result.json");
@@ -34,8 +37,19 @@ for (let index = 0; index < capture.capturedEvents.length; ++index)
     const event = capture.capturedEvents[index];
     const saved = replay.traceEvents[index];
     const timing = event.timing;
-    assert.equal(event.stackSource, "not_captured");
-    assert.deepEqual(event.stack, []);
+    validateStackObservation(event);
+    assert.equal(event.stackSource, stackFrames === 0 ? "not_captured" : "native_backtrace");
+    if (stackFrames === 0)
+    {
+        assert.deepEqual(event.stack, []);
+    }
+    else
+    {
+        assert.equal(event.stackCapture.requestedFrames, stackFrames);
+        assert.equal(event.stackCapture.addressBits, capture.architecture === "x86" ? 32 : 64);
+        assert.equal(event.stackCapture.status, "captured");
+        assert.ok(event.stack.length > 0 && event.stack.length <= stackFrames);
+    }
     assert.match(event.hookContext.agent, /^knmon-agent(32|64)\.dll$/u);
     if (event.resolvedHostModule)
     {
@@ -59,7 +73,7 @@ for (let index = 0; index < capture.capturedEvents.length; ++index)
     for (const key of ["recordSequence", "observation", "arguments", "callId", "parentCallId", "callDepth", "rawReturnBytes", "rawReturnEncoding",
         "relativeTimeMs", "durationUs", "timeSource", "timing", "timestampUtc", "collectedAtUtc",
         "rawReturnValue", "rawReturnBits", "rawLastErrorCode", "rawWinsockErrorCode", "errorDomain", "outcome",
-        "errorValidity", "successPredicate", "winsockErrorSampled", "error", "stack", "stackSource", "hookContext"])
+        "errorValidity", "successPredicate", "winsockErrorSampled", "error", "stack", "stackSource", "stackCapture", "hookContext"])
     {
         assert.deepEqual(live[key], saved[key], `${event.api}: live/replay ${key}`);
     }

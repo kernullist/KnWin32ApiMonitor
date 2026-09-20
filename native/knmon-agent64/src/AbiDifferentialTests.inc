@@ -42,7 +42,7 @@ const knmon::KnMonTransportRecord& AbiLastRecord()
 
 #include "TypedAbiDifferentialTests.inc"
 
-extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestAbiDifferential(void*)
+extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestAbiDifferential(void* captureStack)
 {
     DWORD failure = 1;
     AgentControlGuard control;
@@ -51,6 +51,7 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestAbiDifferential(void*)
     try
     {
         AbiCheck(control.Acquired() && CreateTestTransport(1024) && g_sessionGate.Open(), "Test transport setup failed.");
+        g_stackFrameLimit = captureStack == nullptr ? 0 : knmon::NativeStackFrameLimit;
         SetLifecycleState(AgentLifecycleState::Running);
         InterlockedExchange(&g_hooksEnabled, 1);
         g_originalReadFile = &::ReadFile;
@@ -178,6 +179,10 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestAbiDifferential(void*)
         AbiCheck(resolveA == resolveB && NT_SUCCESS(resolveB) && addressA == addressB && resolveErrorA == resolveErrorB,
             "LdrGetProcedureAddress A/B result/output/error mismatch.");
         CheckTypedAbiDifferential();
+        const auto& stack = g_transportRecords[0].Stack;
+        AbiCheck(knmon::ValidateNativeStackRecord(stack, sizeof(void*) * 8) && stack.RequestedFrames == g_stackFrameLimit &&
+            (g_stackFrameLimit == 0 || stack.Status == knmon::NativeStackCaptureStatus::Captured),
+            "Actual ABI callback did not preserve the requested stack mode.");
         AbiCheck(!g_inHook && g_hookEpoch == 0 && g_callErrorState == nullptr, "Hook scope leaked into the caller.");
         std::printf("ABI A/B PASS: file I/O, entry mutation, pending, overlapped, guard pages, native loader, negative controls.\n");
         failure = 0;

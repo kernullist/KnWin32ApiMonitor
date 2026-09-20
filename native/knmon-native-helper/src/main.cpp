@@ -938,6 +938,10 @@ std::string BuildTraceEventJson(const knmon::KnMonAgentMessage& message, std::ui
     stream << "\"tags\":" << ExtractJsonArray(payload, "tags") << ",";
     stream << "\"stack\":" << ExtractJsonArray(payload, "stack") << ",";
     stream << "\"stackSource\":" << Q(payload.Has("stackSource") ? payload.String("stackSource") : "legacy_unverified") << ",";
+    if (payload.Has("stackCapture"))
+    {
+        stream << "\"stackCapture\":" << payload.Object("stackCapture", true) << ",";
+    }
     if (payload.Has("hookContext"))
     {
         stream << "\"hookContext\":" << payload.Object("hookContext") << ",";
@@ -4068,6 +4072,45 @@ bool HasOption(const std::vector<std::string>& args, const std::string& name)
     }
 
     return found;
+}
+
+std::uint32_t StackFrameOption(const std::vector<std::string>& args)
+{
+    std::uint32_t frames = 0;
+    bool found = false;
+    for (std::size_t index = 1; index < args.size(); ++index)
+    {
+        if (args[index] == "--args")
+        {
+            ++index;
+            continue;
+        }
+        if (args[index].starts_with("--stack-frames="))
+        {
+            throw std::invalid_argument("Use --stack-frames followed by an integer from 0 to 32.");
+        }
+        if (args[index] != "--stack-frames")
+        {
+            continue;
+        }
+        if (found || ++index == args.size())
+        {
+            throw std::invalid_argument("Stack frame limit must be specified once with a value.");
+        }
+        found = true;
+        const auto& text = args[index];
+        if (text.empty() || text.size() > 2 || text.find_first_not_of("0123456789") != std::string::npos ||
+            (text.size() > 1 && text.front() == '0'))
+        {
+            throw std::invalid_argument("Stack frame limit must be an integer from 0 to 32, specified once.");
+        }
+        frames = static_cast<std::uint32_t>(std::stoul(text));
+        if (frames > knmon::NativeStackFrameLimit)
+        {
+            throw std::invalid_argument("Stack frame limit exceeds 32.");
+        }
+    }
+    return frames;
 }
 
 std::uint32_t GetUInt32Option(const std::vector<std::string>& args, const std::string& name, std::uint32_t fallback)
@@ -7355,6 +7398,7 @@ int LaunchSessionCommand(const std::vector<std::string>& args)
     request.WorkingDirectory = GetOption(args, "--cwd");
     request.CommandLineArguments = GetOption(args, "--args");
     request.ApiSelection = GetOption(args, "--api-selection");
+    request.StackFrames = StackFrameOption(args);
     request.OwnerProcessId = ownerProcessId;
     request.OwnLaunchJob = HasOption(args, "--own-launch-job");
     const std::string ownerCreated = GetOption(args, "--owner-created");
@@ -7496,6 +7540,7 @@ std::string CaptureSampleJson(const std::vector<std::string>& args)
         request.CommandLineArguments += targetStartupDelay;
     }
     request.ApiSelection = GetOption(args, "--api-selection");
+    request.StackFrames = StackFrameOption(args);
     request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 9000);
     request.Architecture = NativeHelperArchitecture();
     request.InjectionMethod = knmon::KnMonInjectionMethod::EarlyBirdApc;
@@ -7544,6 +7589,7 @@ std::string AttachCaptureJson(const std::vector<std::string>& args)
     request.AgentPath = GetOption(args, "--agent");
     request.CancellationEventName = CancellationEventNameFromArgs(args, request.OperationId);
     request.ApiSelection = GetOption(args, "--api-selection");
+    request.StackFrames = StackFrameOption(args);
     request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
     request.DurationMs = GetUInt32Option(args, "--duration-ms", 3000);
     request.Architecture = NativeHelperArchitecture();
@@ -7630,6 +7676,7 @@ int AttachSessionCommand(const std::vector<std::string>& args)
     request.AgentPath = GetOption(args, "--agent");
     request.CancellationEventName = cancellationEventName;
     request.ApiSelection = GetOption(args, "--api-selection");
+    request.StackFrames = StackFrameOption(args);
     request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
     request.DurationMs = GetUInt32Option(args, "--duration-ms", 0);
     request.Architecture = NativeHelperArchitecture();
@@ -7761,6 +7808,7 @@ std::string SuperviseTreeJson(const std::vector<std::string>& args)
     request.AgentPath = GetOption(args, "--agent");
     request.CancellationEventName = CancellationEventNameFromArgs(args, request.OperationId);
     request.ApiSelection = GetOption(args, "--api-selection");
+    request.StackFrames = StackFrameOption(args);
     request.TimeoutMs = GetUInt32Option(args, "--timeout-ms", 7000);
     request.DurationMs = GetUInt32Option(args, "--duration-ms", 3000);
     request.PollIntervalMs = GetUInt32Option(args, "--poll-ms", 100);
@@ -9587,6 +9635,9 @@ std::string DaemonStartSessionJson(const std::vector<std::string>& args)
             childArgs.push_back(apiSelection);
         }
 
+        childArgs.push_back("--stack-frames");
+        childArgs.push_back(std::to_string(StackFrameOption(args)));
+
         if (durationMs != 0)
         {
             // Forward the requested bounded duration; otherwise the attach child
@@ -9867,6 +9918,16 @@ int wmain(int argc, wchar_t** argv)
 
 int DispatchCommand(const std::vector<std::string>& args)
 {
+    try
+    {
+        StackFrameOption(args);
+    }
+    catch (const std::invalid_argument& error)
+    {
+        std::cout << "{\"schemaVersion\":\"0.1.0\",\"success\":false,\"operation\":\"validate_stack_capture\","
+            << "\"win32ErrorCode\":" << ERROR_INVALID_PARAMETER << ",\"message\":" << Q(error.what()) << "}\n";
+        return 1;
+    }
     std::string rejectedApi;
     if (!knmon::ValidateRuntimeApiSelection(GetOption(args, "--api-selection"), rejectedApi))
     {

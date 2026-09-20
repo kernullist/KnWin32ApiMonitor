@@ -33,7 +33,8 @@
         "invalid_pointer",
         "unreadable_memory",
         "definition_missing",
-        "truncated"
+        "truncated",
+        "not_captured"
       ]
     }
   }

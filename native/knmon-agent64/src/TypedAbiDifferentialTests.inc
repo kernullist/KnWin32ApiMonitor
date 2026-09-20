@@ -123,7 +123,10 @@ void CheckTypedAbiDifferential()
 #endif
     std::fenv_t savedEnvironment;
     std::fegetenv(&savedEnvironment);
-    g_nextCallId.store(9007199254740992ULL);
+    if (g_nextCallId.load() < 9007199254740992ULL)
+    {
+        g_nextCallId.store(9007199254740992ULL);
+    }
     for (const std::uint32_t bits : {0U, 0x80000000U, 1U, 0x00800000U, 0x3fa00000U, 0xc1234000U,
         0x7f7fffffU, 0x7f800000U, 0xff800000U, 0x7fc12345U, 0x7f812345U})
     {

@@ -353,10 +353,22 @@ export interface HookContext
   resolvedHostModule?: string;
 }
 
+export interface NativeStackCapture
+{
+  method: "rtl_capture_stack_back_trace";
+  phase: "post_call";
+  addressBits: 32 | 64;
+  requestedFrames: number;
+  status: "captured" | "empty" | "memory_fault" | "cpp_exception" | "unavailable" | "invalid_result";
+  limitReached: boolean;
+  exceptionCode: number;
+}
+
 export interface StackObservation
 {
   stack: string[];
-  stackSource?: "not_captured" | "legacy_unverified";
+  stackSource?: "not_captured" | "legacy_unverified" | "native_backtrace";
+  stackCapture?: NativeStackCapture;
   hookContext?: HookContext;
 }
 

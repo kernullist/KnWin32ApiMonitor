@@ -609,6 +609,7 @@ function App() {
   const [traceColumnWidths, setTraceColumnWidths] = useState(() => traceColumns.map((column) => column.width));
   const [detailColumnWidths, setDetailColumnWidths] = useState(() => detailColumns.map((column) => column.width));
   const [selectedApiKeys, setSelectedApiKeys] = useState<Set<string>>(() => new Set(collectApiLeafKeys(apiTree)));
+  const [stackFrames, setStackFrames] = useState(0);
   const [expandedApiNodes, setExpandedApiNodes] = useState<Set<string>>(() => new Set(apiTree.map((node) => node.id)));
   const [outputEvents, setOutputEvents] = useState<AuditEvent[]>([
     makeAuditEvent("backend_ready", "native_init", "Native desktop backend ready. Launch a target or attach to a running process.")
@@ -1517,7 +1518,7 @@ function App() {
       }
 
       appendOutput([makeAuditEvent("launch_requested", "start_launch_monitor_session", `Early-bird launch monitor requested for ${targetPath}; scope=${apiSelectionSummary}.`)]);
-      const session = await startLaunchMonitorSession(targetPath, workingDirectory, launchArguments.trim(), apiSelectionRequest);
+      const session = await startLaunchMonitorSession(targetPath, workingDirectory, launchArguments.trim(), apiSelectionRequest, stackFrames);
       traceSessionId.current = session.sessionId;
       streamBatchCursors.current[session.sessionId] = 0;
       setLaunchSession(session);
@@ -1934,7 +1935,7 @@ function App() {
 
     try {
       appendOutput([makeAuditEvent("attach_requested", "attach_target_process_capture", `Bounded attach requested for PID ${selectedTarget.pid}; scope=${apiSelectionSummary}.`)]);
-      const result = await attachTargetProcessCapture(selectedTarget.pid, attachDurationMs, apiSelectionRequest);
+      const result = await attachTargetProcessCapture(selectedTarget.pid, attachDurationMs, apiSelectionRequest, stackFrames);
       if (captureEpoch !== traceIngestClient.current?.epoch)
       {
         return;
@@ -1983,7 +1984,7 @@ function App() {
 
     try {
       appendOutput([makeAuditEvent("stream_attach_requested", "start_streaming_attach_session", `Streaming attach requested for PID ${selectedTarget.pid}; scope=${apiSelectionSummary}.`)]);
-      const session = await startStreamingAttachSession(selectedTarget.pid, apiSelectionRequest);
+      const session = await startStreamingAttachSession(selectedTarget.pid, apiSelectionRequest, stackFrames);
       traceSessionId.current = session.sessionId;
       streamBatchCursors.current[session.sessionId] = 0;
       rememberNativeSession(session);
@@ -2015,7 +2016,7 @@ function App() {
 
     try {
       appendOutput([makeAuditEvent("daemon_session_requested", "start_daemon_supervised_session", `Daemon-supervised attach requested for PID ${selectedTarget.pid}; scope=${apiSelectionSummary}.`)]);
-      const session = await startDaemonSupervisedSession(selectedTarget.pid, apiSelectionRequest);
+      const session = await startDaemonSupervisedSession(selectedTarget.pid, apiSelectionRequest, stackFrames);
       rememberNativeSession(session);
       setInspectorTab("output");
     } catch (error) {
@@ -2055,7 +2056,7 @@ function App() {
 
     try {
       appendOutput([makeAuditEvent("process_tree_requested", "supervise_process_tree", `Supervision requested for PID ${selectedTarget.pid}; policy=${childPolicy}; scope=${apiSelectionSummary}.`)]);
-      const result = await superviseProcessTree(selectedTarget.pid, treeDurationMs, childPolicy, apiSelectionRequest);
+      const result = await superviseProcessTree(selectedTarget.pid, treeDurationMs, childPolicy, apiSelectionRequest, stackFrames);
       if (captureEpoch !== traceIngestClient.current?.epoch)
       {
         return;
@@ -2246,6 +2247,22 @@ function App() {
                     {captureProfiles.map((profile) => (
                       <option value={profile.id} key={profile.id}>{profile.name}</option>
                     ))}
+                  </select>
+                </div>
+                <div className="api-scope-actions stack-capture-setting">
+                  <label htmlFor="stack-frames">Call stack</label>
+                  <select
+                    id="stack-frames"
+                    aria-label="Stack frame limit"
+                    value={stackFrames}
+                    onChange={(event) => setStackFrames(Number(event.target.value))}
+                    disabled={nativeBusy || launchDialogOpen || activeNativeOperation !== null || activeNativeSession !== null || traceTailDraining}
+                    title="Collect raw addresses after each observed API returns. This adds target overhead."
+                  >
+                    <option value={0}>Off</option>
+                    <option value={8}>Up to 8 frames</option>
+                    <option value={16}>Up to 16 frames</option>
+                    <option value={32}>Up to 32 frames</option>
                   </select>
                 </div>
                 <div className="api-scope-tree compact" aria-label="Monitoring API selection">
@@ -3312,7 +3329,7 @@ function App() {
                       ) : null}
                       {stackObservation.entries.map((frame, index) => (
                         <div className="stack-row" key={`${index}-${frame}`}>
-                          <span>Unverified {index + 1}</span>
+                          <span>{stackObservation.source === "native_backtrace" ? "Address" : "Unverified"} {index + 1}</span>
                           <code>{frame}</code>
                         </div>
                       ))}

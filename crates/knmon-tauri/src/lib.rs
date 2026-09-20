@@ -59,6 +59,16 @@ fn normalize_api_selection(selected_apis: &[String]) -> Result<String, String> {
     Ok(selection)
 }
 
+fn append_stack_capture_arg(args: &mut Vec<String>, stack_frames: u32) -> Result<(), String>
+{
+    if stack_frames > 32
+    {
+        return Err("Stack frame limit exceeds 32.".to_string());
+    }
+    args.extend(["--stack-frames".to_string(), stack_frames.to_string()]);
+    Ok(())
+}
+
 fn append_api_selection_arg(
     args: &mut Vec<String>,
     selected_apis: &[String],
@@ -628,6 +638,7 @@ pub enum StackSource
 {
     NotCaptured,
     LegacyUnverified,
+    NativeBacktrace,
 }
 
 impl TryFrom<String> for StackSource
@@ -640,6 +651,7 @@ impl TryFrom<String> for StackSource
         {
             "not_captured" => Ok(Self::NotCaptured),
             "legacy_unverified" => Ok(Self::LegacyUnverified),
+            "native_backtrace" => Ok(Self::NativeBacktrace),
             _ => Err("Unknown stack observation provenance.".to_string()),
         }
     }
@@ -654,6 +666,19 @@ pub struct HookContext
     pub resolved_host_module: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeStackCapture
+{
+    pub method: String,
+    pub phase: String,
+    pub address_bits: u32,
+    pub requested_frames: u32,
+    pub status: String,
+    pub limit_reached: bool,
+    pub exception_code: u32,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", try_from = "StackObservationWire")]
 pub struct StackObservation
@@ -661,6 +686,8 @@ pub struct StackObservation
     pub stack: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stack_source: Option<StackSource>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stack_capture: Option<NativeStackCapture>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hook_context: Option<HookContext>,
 }
@@ -672,6 +699,8 @@ struct StackObservationWire
     stack: Vec<String>,
     #[serde(default, deserialize_with = "deserialize_present")]
     stack_source: Option<StackSource>,
+    #[serde(default, deserialize_with = "deserialize_present")]
+    stack_capture: Option<NativeStackCapture>,
     #[serde(default, deserialize_with = "deserialize_present")]
     hook_context: Option<HookContext>,
 }
@@ -686,6 +715,36 @@ impl TryFrom<StackObservationWire> for StackObservation
         {
             return Err("Uncaptured stack contains frames.".to_string());
         }
+        if (value.stack_source == Some(StackSource::NativeBacktrace)) != value.stack_capture.is_some()
+        {
+            return Err("Native stack metadata and provenance must agree.".to_string());
+        }
+        if let Some(capture) = &value.stack_capture
+        {
+            let exception_valid = if capture.status == "memory_fault"
+            {
+                [0xc0000005, 0xc0000006, 0x80000002].contains(&capture.exception_code)
+            }
+            else
+            {
+                capture.exception_code == 0
+            };
+            if capture.method != "rtl_capture_stack_back_trace" || capture.phase != "post_call" ||
+                ![32, 64].contains(&capture.address_bits) || !(1..=32).contains(&capture.requested_frames) ||
+                value.stack.len() > capture.requested_frames as usize ||
+                capture.limit_reached != (value.stack.len() == capture.requested_frames as usize) ||
+                !["captured", "empty", "memory_fault", "cpp_exception", "unavailable", "invalid_result"].contains(&capture.status.as_str()) ||
+                (capture.status == "captured") != !value.stack.is_empty() || !exception_valid ||
+                value.stack.iter().any(|address|
+                {
+                    address.len() != 2 + capture.address_bits as usize / 4 || !address.starts_with("0x") ||
+                        !address.as_bytes()[2..].iter().all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(byte)) ||
+                        address.as_bytes()[2..].iter().all(|byte| *byte == b'0')
+                })
+            {
+                return Err("Inconsistent native stack capture.".to_string());
+            }
+        }
         if let Some(context) = &value.hook_context
         {
             if context.agent.is_empty() || context.resolved_host_module.as_ref().is_some_and(String::is_empty)
@@ -697,6 +756,7 @@ impl TryFrom<StackObservationWire> for StackObservation
         {
             stack: value.stack,
             stack_source: value.stack_source,
+            stack_capture: value.stack_capture,
             hook_context: value.hook_context,
         })
     }
@@ -2074,6 +2134,7 @@ fn spawn_streaming_helper(helper_path: &Path, args: &[String], operation_id: &st
 pub fn start_streaming_attach_session(
     process_id: u32,
     selected_apis: Vec<String>,
+    stack_frames: u32,
 ) -> Result<NativeSession, String> {
     let duration = 0;
     let helper_timeout = STREAM_CONTROL_TIMEOUT_MS;
@@ -2107,6 +2168,7 @@ pub fn start_streaming_attach_session(
             "100".to_string(),
         ];
         append_api_selection_arg(&mut args, &selected_apis)?;
+        append_stack_capture_arg(&mut args, stack_frames)?;
 
         spawn_streaming_helper(&helper_path, &args, &operation_id)
     })();
@@ -2118,6 +2180,7 @@ pub fn start_launch_monitor_session(
     working_directory: String,
     launch_arguments: String,
     selected_apis: Vec<String>,
+    stack_frames: u32,
 ) -> Result<NativeSession, String> {
     let target = target_path.trim();
     if target.is_empty() {
@@ -2178,6 +2241,7 @@ pub fn start_launch_monitor_session(
             args.push(command_line_arguments.to_string());
         }
         append_api_selection_arg(&mut args, &selected_apis)?;
+        append_stack_capture_arg(&mut args, stack_frames)?;
 
         spawn_streaming_helper(&helper_path, &args, &operation_id)
     })();
@@ -2213,6 +2277,7 @@ pub fn native_daemon_status() -> Result<NativeDaemonStatus, String> {
 pub fn start_daemon_supervised_session(
     process_id: u32,
     selected_apis: Vec<String>,
+    stack_frames: u32,
 ) -> Result<NativeSession, String> {
     let helper_timeout = STREAM_CONTROL_TIMEOUT_MS;
     let operation_id = new_operation_id("ui-daemon", process_id);
@@ -2235,6 +2300,7 @@ pub fn start_daemon_supervised_session(
         session_path.to_string_lossy().to_string(),
     ];
     append_api_selection_arg(&mut args, &selected_apis)?;
+    append_stack_capture_arg(&mut args, stack_frames)?;
 
     let helper_output = run_helper_args(&args)?;
 
@@ -2784,6 +2850,7 @@ pub fn attach_target_process_capture(
     process_id: u32,
     duration_ms: u32,
     selected_apis: Vec<String>,
+    stack_frames: u32,
 ) -> Result<CaptureResult, String> {
     let duration = normalize_duration_ms(duration_ms);
     let helper_timeout = helper_inner_timeout_ms(duration);
@@ -2804,6 +2871,7 @@ pub fn attach_target_process_capture(
             operation_id.clone(),
         ];
         append_api_selection_arg(&mut args, &selected_apis)?;
+        append_stack_capture_arg(&mut args, stack_frames)?;
 
         let helper_output =
             match run_helper_args_with_timeout(&args, command_timeout, Some(&operation_id)) {
@@ -2835,6 +2903,7 @@ pub fn supervise_process_tree(
     duration_ms: u32,
     child_policy: String,
     selected_apis: Vec<String>,
+    stack_frames: u32,
 ) -> Result<ProcessTreeResult, String> {
     let normalized_policy = child_policy.trim().to_string();
     if normalized_policy != "observe" && normalized_policy != "attach-supported" {
@@ -2862,6 +2931,7 @@ pub fn supervise_process_tree(
             operation_id.clone(),
         ];
         append_api_selection_arg(&mut args, &selected_apis)?;
+        append_stack_capture_arg(&mut args, stack_frames)?;
 
         let helper_output =
             match run_helper_args_with_timeout(&args, command_timeout, Some(&operation_id)) {
@@ -3238,6 +3308,18 @@ mod tests {
     #[test]
     fn stack_observation_preserves_legacy_and_rejects_false_capture()
     {
+        for frames in [0, 1, 8, 16, 32]
+        {
+            let mut args = vec!["capture".to_string()];
+            append_stack_capture_arg(&mut args, frames).unwrap();
+            assert_eq!(args, ["capture", "--stack-frames", &frames.to_string()]);
+        }
+        for frames in [33, u32::MAX]
+        {
+            let mut args = vec!["capture".to_string()];
+            assert!(append_stack_capture_arg(&mut args, frames).is_err());
+            assert_eq!(args, ["capture"]);
+        }
         let cases: Vec<(String, serde_json::Value, bool)> =
             serde_json::from_str(include_str!("../../../tests/fixtures/stack-observation.json")).unwrap();
         for (name, fields, accepted) in cases
@@ -3265,7 +3347,7 @@ mod tests {
                 for encoded in [serde_json::to_value(agent_result.unwrap()).unwrap(),
                     serde_json::to_value(trace_result.unwrap()).unwrap()]
                 {
-                    for key in ["stack", "stackSource", "hookContext"]
+                    for key in ["stack", "stackSource", "stackCapture", "hookContext"]
                     {
                         assert_eq!(encoded.get(key), fields.get(key), "roundtrip: {name}/{key}");
                     }
