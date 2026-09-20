@@ -12,7 +12,7 @@ Windows 10/11 release or every API input.
 | Desktop security tests | 3/3 passed | 3/3 passed | 3/3 passed | 3/3 passed |
 | Desktop attach/filter/stop/export and Job resources | native tools used | native tools used | passed with Debug native tools | passed with Debug native tools |
 | Desktop PE hardening | passed | passed | passed | passed |
-| Rust backend with real helper | 17/17 passed | 17/17 passed | not separately run | not separately run |
+| Rust backend with real helper | 18/18 passed | 18/18 passed | 18/18 with Debug helper | 18/18 with Debug helper |
 | All-supported sample live/replay | 376 events, 16 errors | 376 events, 16 errors | 376 events, 16 errors | blocked before launch |
 | Comparative six-API corpus | 50 runs passed | 50 runs passed | not run | not run |
 | Sustained overload, original/observed | 5 s and 15 s passed | 5 s and 15 s passed | not run | not run |
@@ -44,6 +44,13 @@ separately with CMake. The desktop release security tests used `cargo test
 This validates the bundled-protocol build configuration, CFG policy and command
 authority/navigation checks; it is not an end-to-end WebView interaction test.
 
+The [Release backend suite](backend-release-evidence.md) now includes the actual
+failed-target path. Missing the target's dynamic probe DLL previously left a
+failed capture in `stopping_agent`, causing the backend to wait until its test
+deadline. Native launch/attach finalization and backend result validation now
+preserve a terminal failure and its error message. Both Release architectures
+execute all 18 tests, including the two normally ignored real-helper cases.
+
 The sustained fixture measures native controller and target CPU/memory/handles,
 and reconciles every attempted call against delivered records and explicit
 transport drops. See `sustained-capture.md` for its bounds and reproduction
@@ -69,6 +76,8 @@ hashes. The archive contains 760 entries and has SHA-256
 `bbdf39d2f9a4090a79d6802dac28648286867007ff4c40bacfb6443dcddf0026`.
 Both architectures executed all 23 CTests; the extracted-source WOW64 UI
 regressions also passed. Revalidation rejects altered command, compiler, binary,
-test and frontend records. The integrated report passes six evidence scopes
-and retains eleven incomplete scopes. See `source-build-contract.md` for reproduction and
+test and frontend records. That archived revision passed six integrated evidence
+scopes and retained eleven incomplete scopes. Subsequent product changes require
+a fresh source reconstruction before that gate can pass again.
+See `source-build-contract.md` for reproduction and
 `technical-readiness.md` for the fail-closed artifact verification policy.

@@ -1493,6 +1493,14 @@ fn process_streaming_frame_line(operation_id: &str, line: &str) -> Result<(), St
             } else {
                 frame.capture_result.operation_state.clone()
             };
+            if !matches!(operation_state.as_str(), "completed" | "cancelled" | "cleanup_failed" | "failed")
+            {
+                return Err("capture_result operation state must be terminal".to_string());
+            }
+            if frame.capture_result.success != (operation_state == "completed")
+            {
+                return Err("capture_result success conflicts with its operation state".to_string());
+            }
 
             let mut registry = operation_registry().lock().unwrap();
             if let Some(record) = registry.get_mut(operation_id) {
@@ -1517,6 +1525,10 @@ fn process_streaming_frame_line(operation_id: &str, line: &str) -> Result<(), St
                 update_native_record_from_session(record, &frame.session);
                 record.stream_result_received = true;
                 record.state = operation_state;
+                if matches!(record.state.as_str(), "failed" | "cleanup_failed")
+                {
+                    record.last_error = frame.capture_result.message;
+                }
                 record.finished_at_ms = now_epoch_ms();
                 record.last_transport_sequence = frame.capture_result.last_transport_sequence;
                 record.records_streamed = frame.capture_result.records_streamed;
@@ -3346,7 +3358,23 @@ mod tests {
             }
         });
 
+        for state in ["starting", "running", "stopping_agent", "draining", "unknown", "stopped", "recovery_required"]
+        {
+            let mut invalid = frame.clone();
+            invalid["captureResult"]["operationState"] = serde_json::json!(state);
+            assert!(process_streaming_frame_line(&operation_id, &invalid.to_string()).unwrap_err().contains("must be terminal"));
+            assert!(!operation_registry().lock().unwrap().get(&operation_id).unwrap().stream_result_received);
+        }
+        for (success, state) in [(true, "failed"), (false, "completed"), (true, "cancelled"), (true, "cleanup_failed")]
+        {
+            let mut invalid = frame.clone();
+            invalid["captureResult"]["success"] = serde_json::json!(success);
+            invalid["captureResult"]["operationState"] = serde_json::json!(state);
+            assert!(process_streaming_frame_line(&operation_id, &invalid.to_string()).unwrap_err().contains("success conflicts"));
+            assert!(!operation_registry().lock().unwrap().get(&operation_id).unwrap().stream_result_received);
+        }
         process_streaming_frame_line(&operation_id, &frame.to_string()).unwrap();
+        assert!(operation_registry().lock().unwrap().get(&operation_id).unwrap().last_error.is_empty());
         let sessions = native_session_states();
         let session = sessions
             .iter()

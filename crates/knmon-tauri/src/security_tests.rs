@@ -209,19 +209,16 @@ fn cancellation_waits_for_event_creation_without_losing_the_request()
 }
 
 #[cfg(windows)]
-#[test]
-#[ignore = "requires KNMON_TEST_NATIVE_HELPER pointing to the built native helper"]
-fn actual_helper_stream_finishes_and_retains_launch_identity()
+fn actual_helper_result(helper: &std::path::Path, target: &std::path::Path, label: &str) -> NativeOperationRecord
 {
-    let helper = PathBuf::from(std::env::var_os("KNMON_TEST_NATIVE_HELPER").expect("native helper path required"));
-    let target = helper.parent().unwrap().join("knmon-sample-fileio.exe");
-    let id = operation_id("native-stream");
+    let id = operation_id(label);
     let start = OperationStart::new(&id, "launch_capture_stream", 0, 0).unwrap();
     let args = vec!["launch-session".to_string(), "--target".to_string(), target.to_string_lossy().into_owned(),
+        "--cwd".to_string(), target.parent().unwrap().to_string_lossy().into_owned(),
         "--own-launch-job".to_string(), "--owner-pid".to_string(), std::process::id().to_string(),
         "--owner-created".to_string(), process_liveness::current_creation_time().to_string(),
         "--operation-id".to_string(), id.clone(), "--session-id".to_string(), new_session_id(&id), "--stream-batches".to_string()];
-    start.finish(spawn_streaming_helper(&helper, &args, &id)).unwrap();
+    start.finish(spawn_streaming_helper(helper, &args, &id)).unwrap();
     let begin = Instant::now();
     loop
     {
@@ -233,11 +230,48 @@ fn actual_helper_stream_finishes_and_retains_launch_identity()
             assert!(record.stream_result_received);
             assert_ne!(record.target_process_creation_time, "0");
             assert!(record.owned_target.is_some());
-            break;
+            break record;
         }
         assert!(begin.elapsed() < Duration::from_secs(40), "{}", record.last_error);
         thread::sleep(Duration::from_millis(100));
     }
+}
+
+#[cfg(windows)]
+#[test]
+#[ignore = "requires KNMON_TEST_NATIVE_HELPER pointing to the built native helper"]
+fn actual_helper_stream_finishes_and_retains_launch_identity()
+{
+    let helper = PathBuf::from(std::env::var_os("KNMON_TEST_NATIVE_HELPER").expect("native helper path required"));
+    let target = helper.parent().unwrap().join("knmon-sample-fileio.exe");
+    let record = actual_helper_result(&helper, &target, "native-stream");
+    assert_eq!(record.state, "completed", "{}", record.last_error);
+    assert!(record.records_streamed > 0);
+    assert!(!record.trace_batches.is_empty());
+    assert_eq!(record.transport_dropped_events, 0);
+    assert_eq!(record.host_dropped_batches, 0);
+}
+
+#[cfg(windows)]
+#[test]
+#[ignore = "requires KNMON_TEST_NATIVE_HELPER pointing to the built native helper"]
+fn actual_helper_failed_target_is_terminal_and_keeps_error()
+{
+    let helper = PathBuf::from(std::env::var_os("KNMON_TEST_NATIVE_HELPER").expect("native helper path required"));
+    let directory = std::env::temp_dir().join(operation_id("missing-probe"));
+    std::fs::create_dir(&directory).unwrap();
+    let target = directory.join("knmon-sample-fileio.exe");
+    std::fs::copy(helper.parent().unwrap().join("knmon-sample-fileio.exe"), &target).unwrap();
+    assert!(!directory.join("knmon-dynamic-probe.dll").exists());
+    let begin = Instant::now();
+    let record = actual_helper_result(&helper, &target, "native-failure");
+    assert!(begin.elapsed() < Duration::from_secs(15));
+    assert_eq!(record.state, "failed");
+    assert!(record.last_error.contains("nonzero or unknown exit status"), "{}", record.last_error);
+    assert_eq!(record.shutdown_evidence, "released_by_process_exit");
+    assert!(record.owned_target.as_ref().is_some_and(|process| !process.alive()));
+    std::fs::remove_file(target).unwrap();
+    std::fs::remove_dir(directory).unwrap();
 }
 
 #[test]

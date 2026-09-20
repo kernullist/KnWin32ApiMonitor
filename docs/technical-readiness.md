@@ -7,7 +7,8 @@ dependency and comparison commands:
 python tools/readiness/technical_gate.py `
   --source-build build/source-rebuild-ID --archive build/knmon-source.zip `
   --dependencies build/dependency-evidence-ID --comparison build/comparison-ID `
-  --advisory build/advisory-evidence-ID --desktop build/desktop-evidence-ID
+  --advisory build/advisory-evidence-ID --desktop build/desktop-evidence-ID `
+  --backend-release build/backend-release-ID
 ```
 
 The report lives in `build/technical-readiness-ID/report.json`. Exit code 0
@@ -58,8 +59,13 @@ summaries from raw Job samples. The configuration is a hidden Release desktop
 with Debug native tools; this does not clear the native Release or complete
 binary-distribution gates.
 
+The [Release backend consumer](backend-release-evidence.md) checks Cargo's
+optimized test artifacts, both actual PE architectures and all 18 named backend
+tests, including the real-helper success and failed-target paths. It retains
+matching Debug native binaries and does not clear the native Release gate.
+
 Required scopes without an implemented evidence consumer remain `not_verified`:
-the current full native Release matrix, Release backend runtime, other Windows
+the current full native Release matrix, other Windows
 builds, elevated/cross-user IPC, hardware CET,
 separate capture profiles, complete binary
 distribution reconstruction and broader competitive coverage. Kernel ETW session

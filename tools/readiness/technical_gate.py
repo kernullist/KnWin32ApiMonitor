@@ -30,7 +30,8 @@ PRODUCERS = ("tools/readiness/source_evidence.py", "tools/readiness/technical_ga
              "tools/source/rebuild_source.py", "tools/source/owned_command.py", "tools/security/dependency_inventory.py",
              "tools/security/validate-sbom-schema.mjs", "tools/abi-proof/proof.mjs", "tools/abi-proof/check-proof.mjs",
              "tools/comparison/check_proof.py", "tools/comparison/replay_comparison.py", "tools/comparison/run_comparison.py", "tools/readiness/advisory_audit.py",
-             "tools/readiness/desktop_evidence.py", "tools/readiness/desktop_processes.py", "tools/readiness/desktop_driver.mjs", "tools/readiness/desktop_check.py")
+             "tools/readiness/desktop_evidence.py", "tools/readiness/desktop_processes.py", "tools/readiness/desktop_driver.mjs", "tools/readiness/desktop_check.py",
+             "tools/readiness/backend_release.py")
 
 
 def outcome(rows):
@@ -73,6 +74,7 @@ def main():
     parser.add_argument("--comparison-python", type=Path, default=ROOT / "build/deps/frida-venv/Scripts/python.exe")
     parser.add_argument("--advisory", type=Path)
     parser.add_argument("--desktop", type=Path)
+    parser.add_argument("--backend-release", type=Path)
     parser.add_argument("--rustsec-db", type=Path, default=ROOT / "build/deps/rustsec-advisory-db")
     parser.add_argument("--node", type=Path, default=ROOT / "build/deps/node-v24.21.0-win-x64/node.exe")
     args = parser.parse_args()
@@ -163,6 +165,12 @@ def main():
         bind("desktop", directory / "evidence.json")
         return verify(directory)
 
+    def backend_release():
+        from backend_release import verify
+        directory = args.backend_release.resolve()
+        bind("backendRelease", directory / "evidence.json")
+        return verify(directory)
+
     try:
         report["checkoutRevision"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, timeout=10).strip()
         report["trackedDirty"] = bool(subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT, timeout=30))
@@ -177,6 +185,8 @@ def main():
             checked("current_advisory_scan", advisory)
         if args.desktop is not None:
             checked("whole_desktop_resources", desktop)
+        if args.backend_release is not None:
+            checked("release_backend_runtime", backend_release)
         if rows["source_reconstruction"]["status"] == "passed":
             verify_current_sources(retained["sourceManifest"])
         verify_bound_inputs(report["inputs"])

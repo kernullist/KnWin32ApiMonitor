@@ -20,7 +20,7 @@
     "status": "verified",
     "configuration": "Debug",
     "windowsRelease": "10.0.26200",
-    "sourceSha256": "493746c2d2c23b47a1aef2608a8ceae86624c0e142147ee7d7a2ea7bf2d85860"
+    "sourceSha256": "24e3b3975842dd67af478a57d58ec9ea81f57f80bf29eb3a8b5ea39a333daa1c"
   },
   "defaultBlockedReason": "unverified_generated_abi",
   "architectures": {

@@ -7247,6 +7247,29 @@ void FinalizeStreamDelivery(KnMonCaptureResult& result)
     }
 }
 
+void FinalizeCaptureState(KnMonCaptureResult& result)
+{
+    if (result.Success)
+    {
+        result.OperationState = "completed";
+    }
+    else if (result.OperationState != "cleanup_failed")
+    {
+        result.OperationState = result.Operation == "operation_cancelled" && result.CancelObserved && !result.StreamConsumerFailed ? "cancelled" : "failed";
+    }
+
+    if (!result.SessionId.empty())
+    {
+        result.UpdatedUtc = NowUtc();
+        result.SessionState = result.Success || result.OperationState == "cancelled" ? "stopped" :
+            result.OperationState == "cleanup_failed" ? "recovery_required" : "failed";
+        if (result.StoppedUtc.empty())
+        {
+            result.StoppedUtc = result.UpdatedUtc;
+        }
+    }
+}
+
 void DrainFinalSharedTransport(KnMonCaptureResult& result, SharedTransportSession& transport,
     const KnMonCaptureStreamCallbacks* callbacks, std::uint64_t* sequence)
 {
@@ -8993,25 +9016,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         result.Message = fatalError ? "Controlled early-bird launch capture failed." : "Controlled early-bird launch capture finished.";
     }
 
-    if (result.OperationState.empty() || (result.OperationState == "running" && !result.Success))
-    {
-        result.OperationState = fatalError ? "failed" : "completed";
-    }
-
-    if (!result.SessionId.empty())
-    {
-        result.UpdatedUtc = NowUtc();
-        if (result.SessionState.empty() || result.SessionState == "running" || result.SessionState == "stopping_agent" || result.SessionState == "draining")
-        {
-            result.SessionState = result.Success ? "stopped" : "failed";
-        }
-
-        if (result.StoppedUtc.empty() && (result.SessionState == "stopped" || result.SessionState == "failed"))
-        {
-            result.StoppedUtc = result.UpdatedUtc;
-        }
-    }
-
+    FinalizeCaptureState(result);
     return result;
 }
 
@@ -10606,25 +10611,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         result.Message = fatalError ? "Controlled running-process attach capture failed." : "Controlled running-process attach capture finished.";
     }
 
-    if (result.OperationState.empty() || (result.OperationState == "running" && !result.Success))
-    {
-        result.OperationState = fatalError ? "failed" : "completed";
-    }
-
-    if (!result.SessionId.empty())
-    {
-        result.UpdatedUtc = NowUtc();
-        if (result.SessionState.empty() || result.SessionState == "running")
-        {
-            result.SessionState = result.Success ? "stopped" : "failed";
-        }
-
-        if (result.StoppedUtc.empty() && (result.SessionState == "stopped" || result.SessionState == "failed"))
-        {
-            result.StoppedUtc = result.UpdatedUtc;
-        }
-    }
-
+    FinalizeCaptureState(result);
     return result;
 }
 

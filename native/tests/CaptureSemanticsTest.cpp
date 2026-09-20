@@ -127,6 +127,27 @@ void CheckDelayedCollector(const wchar_t* agentTestPath)
     std::cout << "Delayed collector passed: batches=" << batches << " delayedEvents=" << delayedEvents << "\n";
 }
 
+void CheckFailedLaunch(const wchar_t* agentTestPath)
+{
+    const auto directory = std::filesystem::path(agentTestPath).parent_path();
+    knmon::KnMonLaunchRequest request;
+    request.OperationId = "failed-launch-" + std::to_string(GetCurrentProcessId()) + "-" + std::to_string(GetTickCount64());
+    request.SessionId = request.OperationId;
+    request.TargetPath = (directory / "knmon-lifecycle-exit-target.exe").string();
+    request.AgentPath = (directory / (sizeof(void*) == 8 ? "knmon-agent64.dll" : "knmon-agent32.dll")).string();
+    request.Architecture = sizeof(void*) == 8 ? knmon::KnMonAgentArchitecture::X64 : knmon::KnMonAgentArchitecture::X86;
+    request.ApiSelection = "kernel32.dll!CloseHandle";
+    request.TimeoutMs = 7000;
+    request.DurationMs = 2000;
+    const auto captured = knmon::Controller().LaunchCapture(request);
+    Check(!captured.Success && captured.TargetExitCode == 1 && captured.Operation == "target_exit_failed",
+        "Nonzero launch target exit was not preserved.");
+    Check(captured.OperationState == "failed" && captured.SessionState == "failed" && !captured.StoppedUtc.empty(),
+        "Failed launch result retained a nonterminal state.");
+    Check(captured.SessionShutdownEvidence == "released_by_process_exit", "Failed target exit lost address-space cleanup evidence.");
+    std::cout << "Failed launch is terminal with target exit code 1.\n";
+}
+
 void CheckStreamRetention(const wchar_t* agentTestPath, bool reject)
 {
     const auto directory = std::filesystem::path(agentTestPath).parent_path();
@@ -214,6 +235,7 @@ int wmain(int argc, wchar_t** argv)
             else if (std::wcscmp(argv[2], L"--retention") == 0)
             {
                 CheckStreamRetention(argv[1], false);
+                CheckFailedLaunch(argv[1]);
             }
             else
             {
