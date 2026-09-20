@@ -310,6 +310,13 @@ assert.equal(progress.sessionState, "running");
 assert.equal(progress.knapmValid, false);
 assert.equal(progress.recoveryReason, "writer_active_integrity_pending");
 assert.equal(command(["validate-session", "--session", activeSession]).success, false);
+editManifest(activeSession, (value) => ({ ...value, session: { ...value.session, sessionState: "starting" } }));
+const starting = command(["daemon-list-sessions", "--runtime-dir", runtime]).sessions
+    .find((value) => value.sessionId === activeManifest.sessionId);
+assert.equal(starting.sessionState, "starting");
+assert.equal(starting.knapmValid, false);
+assert.equal(starting.recoveryReason, "writer_active_integrity_pending");
+++checked;
 editManifest(activeSession, (value) => ({ ...value, operationId: "foreign" }));
 const foreign = command(["daemon-list-sessions", "--runtime-dir", runtime]).sessions
     .find((value) => value.sessionId === activeManifest.sessionId);

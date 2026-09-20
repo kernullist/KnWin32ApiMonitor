@@ -32,7 +32,7 @@ int main()
             knmon::RetainAgentMessage(result, message);
         }
         const auto diagnostics = result.AgentMessages.size();
-        for (const auto* type : { "agent_hello", "dropped_events", "agent_shutdown" })
+        for (const auto* type : { "agent_hello", "agent_ready", "dropped_events", "agent_shutdown" })
         {
             message.MessageType = type;
             message.RawPayload.assign(256 * 1024, 'B');
@@ -41,7 +41,7 @@ int main()
                 knmon::RetainAgentMessage(result, message);
             }
         }
-        if (result.AgentMessages.size() != diagnostics + 3 || result.AgentHistoryBytes > 256 * 1024)
+        if (result.AgentMessages.size() != diagnostics + 4 || result.AgentHistoryBytes > 256 * 1024)
         {
             throw std::runtime_error("Lifecycle retention must survive a full diagnostic budget without unbounded duplicates.");
         }

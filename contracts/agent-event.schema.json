@@ -17,6 +17,7 @@
     "messageType": {
       "enum": [
         "agent_hello",
+        "agent_ready",
         "hook_installed",
         "hook_install_failed",
         "hook_deferred",
@@ -34,6 +35,8 @@
     "sequence": { "type": "integer", "minimum": 0 },
     "architecture": { "enum": ["x86", "x64", "unknown"] },
     "agentVersion": { "type": "string" },
+    "captureDetail": { "enum": ["metadata", "arguments", "preview"] },
+    "stackFrames": { "type": "integer", "minimum": 0, "maximum": 32 },
     "api": { "type": "string" },
     "module": { "type": "string" },
     "apiFamily": { "type": "string" },
@@ -76,6 +79,13 @@
     "message": { "type": "string" }
   },
   "allOf": [
+    {
+      "if": {
+        "properties": { "messageType": { "const": "agent_ready" } },
+        "required": ["messageType"]
+      },
+      "then": { "required": ["captureDetail", "stackFrames"] }
+    },
     {
       "if": {
         "properties": { "messageType": { "const": "agent_hello" } },

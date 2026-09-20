@@ -2940,6 +2940,17 @@ bool SendHello()
     return SendJson(stream.str());
 }
 
+bool SendReady()
+{
+    const LONG64 sequence = NextSequence();
+    std::ostringstream stream;
+    stream << MessagePrefix("agent_ready", sequence) << ",";
+    stream << "\"captureDetail\":" << Q(knmon::CaptureDetailName(g_captureDetail)) << ",";
+    stream << "\"stackFrames\":" << g_stackFrameLimit;
+    stream << "}";
+    return SendJson(stream.str());
+}
+
 void SendHookStatus(const char* moduleName, const char* apiName, bool installed, const std::string& message)
 {
     const LONG64 sequence = NextSequence();
@@ -21514,6 +21525,12 @@ DWORD WINAPI AgentWorker(void* context)
             {
                 SendDroppedEvents();
                 ShutdownAgent("hook_install_failed", AgentLifecycleState::Failed);
+                break;
+            }
+
+            if (!SendReady())
+            {
+                ShutdownAgent("ready_write_failed", AgentLifecycleState::Failed);
                 break;
             }
 

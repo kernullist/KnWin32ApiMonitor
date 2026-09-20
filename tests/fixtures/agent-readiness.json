@@ -1,0 +1,22 @@
+[
+  ["preview without stacks", {"captureDetail":"preview","stackFrames":0}, true],
+  ["arguments with stacks", {"captureDetail":"arguments","stackFrames":8}, true],
+  ["metadata with maximum stacks", {"captureDetail":"metadata","stackFrames":32}, true],
+  ["missing detail", {"stackFrames":0}, false],
+  ["missing stack limit", {"captureDetail":"preview"}, false],
+  ["null detail", {"captureDetail":null,"stackFrames":0}, false],
+  ["unknown detail", {"captureDetail":"all","stackFrames":0}, false],
+  ["detail case", {"captureDetail":"Preview","stackFrames":0}, false],
+  ["numeric detail", {"captureDetail":0,"stackFrames":0}, false],
+  ["boolean detail", {"captureDetail":true,"stackFrames":0}, false],
+  ["array detail", {"captureDetail":[],"stackFrames":0}, false],
+  ["object detail", {"captureDetail":{},"stackFrames":0}, false],
+  ["excessive stack limit", {"captureDetail":"preview","stackFrames":33}, false],
+  ["negative stack limit", {"captureDetail":"preview","stackFrames":-1}, false],
+  ["fractional stack limit", {"captureDetail":"preview","stackFrames":0.5}, false],
+  ["string stack limit", {"captureDetail":"preview","stackFrames":"0"}, false],
+  ["boolean stack limit", {"captureDetail":"preview","stackFrames":false}, false],
+  ["null stack limit", {"captureDetail":"preview","stackFrames":null}, false],
+  ["array stack limit", {"captureDetail":"preview","stackFrames":[]}, false],
+  ["object stack limit", {"captureDetail":"preview","stackFrames":{}}, false]
+]

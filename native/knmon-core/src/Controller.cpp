@@ -7365,6 +7365,35 @@ void EmitCaptureStreamSessionFrame(
     }
 }
 
+bool ObserveCaptureReady(
+    KnMonCaptureResult& result,
+    const JsonDocument& payload,
+    KnMonAgentArchitecture architecture,
+    CaptureDetail detail,
+    std::uint32_t stackFrames,
+    bool& received,
+    const KnMonCaptureStreamCallbacks* callbacks)
+{
+    const bool valid = !received && result.Handshake.Received &&
+        payload.String("captureDetail", true) == CaptureDetailName(detail) &&
+        payload.UInt32("stackFrames", true) == stackFrames && ValidateHandshakeEvidence(result, architecture);
+    if (valid)
+    {
+        received = true;
+        AddAudit(result, "agent_ready_received", "agent_event_read", "Agent initial hook installation completed with the requested capture policy.");
+        if (result.OperationState == "running" && !result.CancelObserved)
+        {
+            result.SessionState = result.SessionId.empty() ? "" : "running";
+            EmitCaptureStreamSessionFrame(callbacks, "session_state", result);
+        }
+    }
+    else
+    {
+        SetResultError(result, ERROR_INVALID_DATA, "knmon-core", "agent_ready_invalid", "Agent readiness is duplicated, precedes HELLO or differs from the capture request.");
+    }
+    return valid;
+}
+
 std::wstring QuoteArgument(const std::wstring& value)
 {
     // Windows command-line rules: wrap in quotes and double embedded quotes.
@@ -8153,7 +8182,7 @@ KnMonLaunchResult Controller::LaunchWithEarlyBirdApc(const KnMonLaunchRequest& r
         processResumed = true;
         AddAudit(result, "primary_thread_resumed", "ResumeThread", "Target primary thread resumed.");
 
-        AgentChannel channel(result.OperationId, result.TargetProcessId, channelNonce);
+        AgentChannel channel(result.OperationId, result.TargetProcessId, channelNonce, request.Detail, request.StackFrames);
         DWORD pipeError = 0;
         if (!WaitForPipeConnection(pipeHandle, processInfo.hProcess, request.TimeoutMs, &pipeError))
         {
@@ -8284,7 +8313,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         return result;
     }
     result.SessionId = request.SessionId;
-    result.SessionState = request.SessionId.empty() ? "" : "running";
+    result.SessionState = request.SessionId.empty() ? "" : "starting";
     result.SessionKind = request.SessionKind.empty() ? "launch_capture" : request.SessionKind;
     result.OwnerProcessId = request.OwnerProcessId;
     result.HelperProcessId = request.HelperProcessId;
@@ -8317,6 +8346,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
     bool hookInstallFailed = false;
     bool stopRequested = false;
     bool agentShutdownReceived = false;
+    bool agentReadyReceived = false;
     bool cancellationLogged = false;
     bool ownerExitLogged = false;
     bool ownerExited = false;
@@ -8362,6 +8392,10 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         {
             result.Handshake = BuildHandshake(result, payload);
             AddAudit(result, "agent_hello_received", "agent_event_read", payload.Text());
+        }
+        else if (message.MessageType == "agent_ready")
+        {
+            fatalError = !ObserveCaptureReady(result, payload, requestedArchitecture, request.Detail, request.StackFrames, agentReadyReceived, streamCallbacks);
         }
         else if (message.MessageType == "hook_installed")
         {
@@ -8645,7 +8679,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         processResumed = true;
         AddAudit(result, "primary_thread_resumed", "ResumeThread", "Target primary thread resumed.");
 
-        AgentChannel channel(result.OperationId, result.TargetProcessId, channelNonce);
+        AgentChannel channel(result.OperationId, result.TargetProcessId, channelNonce, request.Detail, request.StackFrames);
         DWORD pipeError = 0;
         if (!WaitForPipeConnection(pipeHandle, processInfo.hProcess, request.TimeoutMs, &pipeError))
         {
@@ -8697,6 +8731,7 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             return revealed;
         };
 
+        const ULONGLONG readyDeadline = GetTickCount64() + static_cast<ULONGLONG>(request.TimeoutMs);
         const bool continuousCapture = request.DurationMs == 0;
         const ULONGLONG captureDeadline = continuousCapture ? 0 : GetTickCount64() + static_cast<ULONGLONG>(request.DurationMs);
         while (!transport.ReaderState.Corrupted && !result.StreamConsumerFailed && (continuousCapture || GetTickCount64() < captureDeadline))
@@ -8708,6 +8743,13 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
             if (observeCancellation("launch_capture"))
             {
+                break;
+            }
+
+            if (!agentReadyReceived && GetTickCount64() >= readyDeadline)
+            {
+                SetResultError(result, WAIT_TIMEOUT, "knmon-core", "agent_ready_timeout", "Agent initial hook readiness exceeded the initialization timeout.");
+                fatalError = true;
                 break;
             }
 
@@ -8726,6 +8768,10 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError, channel))
             {
                 consumePayload(payload);
+                if (fatalError)
+                {
+                    break;
+                }
                 DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
                 continue;
             }
@@ -8881,6 +8927,10 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
                 if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError, channel))
                 {
                     consumePayload(payload);
+                    if (fatalError)
+                    {
+                        break;
+                    }
                     DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
                     continue;
                 }
@@ -8913,6 +8963,13 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
         if (!result.Handshake.Received)
         {
             SetResultError(result, WAIT_TIMEOUT, "knmon-core", "agent_hello_required", "Launch agent HELLO was not received.");
+            fatalError = true;
+            break;
+        }
+
+        if (!agentReadyReceived)
+        {
+            SetResultError(result, WAIT_TIMEOUT, "knmon-core", "agent_ready_required", "Agent initial hook readiness was not received.");
             fatalError = true;
             break;
         }
@@ -9269,7 +9326,7 @@ KnMonCaptureResult Controller::CaptureSampleFileIo(const KnMonLaunchRequest& req
         processResumed = true;
         AddAudit(result, "primary_thread_resumed", "ResumeThread", "Target primary thread resumed.");
 
-        AgentChannel channel(result.OperationId, result.TargetProcessId, channelNonce);
+        AgentChannel channel(result.OperationId, result.TargetProcessId, channelNonce, request.Detail, request.StackFrames);
         DWORD pipeError = 0;
         if (!WaitForPipeConnection(pipeHandle, processInfo.hProcess, request.TimeoutMs, &pipeError))
         {
@@ -9651,7 +9708,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         return result;
     }
     result.SessionId = request.SessionId;
-    result.SessionState = request.SessionId.empty() ? "" : "running";
+    result.SessionState = request.SessionId.empty() ? "" : "starting";
     result.SessionKind = request.SessionKind.empty() ? "attach_capture" : request.SessionKind;
     result.OwnerProcessId = request.OwnerProcessId;
     result.HelperProcessId = request.HelperProcessId;
@@ -9685,6 +9742,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
     bool remoteControlOwnedByThisAttach = false;
     bool stopRequested = false;
     bool agentShutdownReceived = false;
+    bool agentReadyReceived = false;
     bool agentStateCleanupProven = false;
     bool cancellationLogged = false;
     std::uint64_t hookInstalledCount = 0;
@@ -9697,7 +9755,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
     auto finalizeTargetExit = [&]() -> bool
     {
-        if (result.Operation == "agent_protocol_invalid" || processHandle == nullptr || WaitForSingleObject(processHandle, 0) != WAIT_OBJECT_0)
+        if (fatalError || processHandle == nullptr || WaitForSingleObject(processHandle, 0) != WAIT_OBJECT_0)
         {
             return false;
         }
@@ -9708,7 +9766,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         result.SessionShutdownEvidence = "released_by_process_exit";
         result.AgentCleanupAttempted = false;
         result.AgentCleanupSucceeded = false;
-        result.Success = exitKnown && exitCode == 0 && result.Handshake.Received &&
+        result.Success = exitKnown && exitCode == 0 && result.Handshake.Received && agentReadyReceived &&
             ValidateHandshakeEvidence(result, requestedArchitecture) && !transport.ReaderState.Corrupted;
         result.Operation = "target_exited";
         result.OperationState = result.Success ? "completed" : "failed";
@@ -9739,6 +9797,10 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         {
             result.Handshake = BuildHandshake(result, payload);
             AddAudit(result, "agent_hello_received", "agent_event_read", payload.Text());
+        }
+        else if (message.MessageType == "agent_ready")
+        {
+            fatalError = !ObserveCaptureReady(result, payload, requestedArchitecture, request.Detail, request.StackFrames, agentReadyReceived, streamCallbacks);
         }
         else if (message.MessageType == "hook_installed")
         {
@@ -9825,7 +9887,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
 
     auto agentCleanupProven = [&]() -> bool
     {
-        return agentStateCleanupProven || (agentShutdownReceived && shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0);
+        return agentStateCleanupProven || (!fatalError && agentShutdownReceived && shutdownRestoredHooks >= shutdownInstalledHooks && shutdownFailedHooks == 0);
     };
 
     auto queryAgentStateCleanupEvidence = [&](const std::string& stage) -> bool
@@ -10379,7 +10441,7 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         AddAudit(result, "remote_agent_initialize_completed", "CreateRemoteThread", "Remote KnMonAgentInitialize completed.");
         (void)observeCancellation("attach_after_initialize");
 
-        AgentChannel channel(result.OperationId, result.TargetProcessId, channelNonce);
+        AgentChannel channel(result.OperationId, result.TargetProcessId, channelNonce, request.Detail, request.StackFrames);
         DWORD pipeError = 0;
         if (!WaitForPipeConnection(pipeHandle, processHandle, request.TimeoutMs, &pipeError))
         {
@@ -10403,12 +10465,20 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         AddAudit(result, "agent_pipe_connected", "agent_pipe_connect", "Attach agent event pipe connected.");
         AddAudit(result, "attach_capture_started", "attach_capture", request.DurationMs == 0 ? "Continuous attach monitor started." : "Bounded attach capture started.");
 
+        const ULONGLONG readyDeadline = GetTickCount64() + static_cast<ULONGLONG>(request.TimeoutMs);
         const bool continuousCapture = request.DurationMs == 0;
         const ULONGLONG captureDeadline = continuousCapture ? 0 : GetTickCount64() + static_cast<ULONGLONG>(request.DurationMs);
         while (!transport.ReaderState.Corrupted && !result.StreamConsumerFailed && (continuousCapture || GetTickCount64() < captureDeadline))
         {
             if (observeCancellation("attach_capture"))
             {
+                break;
+            }
+
+            if (!agentReadyReceived && GetTickCount64() >= readyDeadline)
+            {
+                SetResultError(result, WAIT_TIMEOUT, "knmon-core", "agent_ready_timeout", "Agent initial hook readiness exceeded the initialization timeout.");
+                fatalError = true;
                 break;
             }
 
@@ -10419,6 +10489,10 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
             if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError, channel))
             {
                 consumePayload(payload);
+                if (fatalError)
+                {
+                    break;
+                }
                 DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
                 continue;
             }
@@ -10496,6 +10570,10 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
             if (ReadPipeMessage(pipeHandle, 100, &payload, &pipeError, channel))
             {
                 consumePayload(payload);
+                if (fatalError)
+                {
+                    break;
+                }
                 DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
                 continue;
             }
@@ -10555,6 +10633,13 @@ KnMonCaptureResult Controller::AttachCapture(const KnMonAttachRequest& request, 
         if (!result.Handshake.Received)
         {
             SetResultError(result, WAIT_TIMEOUT, "knmon-core", "agent_hello_required", "Attach agent HELLO was not received.");
+            fatalError = true;
+            break;
+        }
+
+        if (!agentReadyReceived)
+        {
+            SetResultError(result, WAIT_TIMEOUT, "knmon-core", "agent_ready_required", "Agent initial hook readiness was not received.");
             fatalError = true;
             break;
         }

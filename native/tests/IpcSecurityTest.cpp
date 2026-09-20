@@ -225,6 +225,31 @@ int wmain(int argc, wchar_t** argv)
             beforeHello.replace(beforeHello.find("agent_hello"), 11, "module_inventory");
             expectFailure(wrongOrder, beforeHello);
             expectFailure(wrongOrder, hello);
+            const std::string ready = "{\"schemaVersion\":\"0.1.0\",\"messageType\":\"agent_ready\",\"operationId\":\"test\",\"pid\":42,\"tid\":1,\"timestampUtc\":\"2026-09-20T00:00:00Z\",\"sequence\":2,\"captureDetail\":\"preview\",\"stackFrames\":0,\"channelNonce\":\"" + nonce + "\"}";
+            knmon::AgentChannel readyBeforeHello("test", 42, nonce);
+            expectFailure(readyBeforeHello, ready);
+            expectFailure(readyBeforeHello, hello);
+            knmon::AgentChannel duplicateReady("test", 42, nonce);
+            duplicateReady.Accept(knmon::JsonDocument(hello));
+            duplicateReady.Accept(knmon::JsonDocument(ready));
+            expectFailure(duplicateReady, ready);
+            for (const auto detail : {knmon::CaptureDetail::Metadata, knmon::CaptureDetail::Arguments})
+            {
+                knmon::AgentChannel wrongDetail("test", 42, nonce, detail, 0);
+                wrongDetail.Accept(knmon::JsonDocument(hello));
+                expectFailure(wrongDetail, ready);
+                auto repaired = ready;
+                repaired.replace(repaired.find("preview"), 7, knmon::CaptureDetailName(detail));
+                expectFailure(wrongDetail, repaired);
+            }
+            knmon::AgentChannel wrongStack("test", 42, nonce, knmon::CaptureDetail::Preview, 32);
+            wrongStack.Accept(knmon::JsonDocument(hello));
+            expectFailure(wrongStack, ready);
+            const std::string shutdown = "{\"schemaVersion\":\"0.1.0\",\"messageType\":\"agent_shutdown\",\"operationId\":\"test\",\"pid\":42,\"tid\":1,\"timestampUtc\":\"2026-09-20T00:00:00Z\",\"sequence\":2,\"reason\":\"failed\",\"installedHooks\":0,\"restoredHooks\":0,\"failedHooks\":0,\"droppedCount\":0,\"channelNonce\":\"" + nonce + "\"}";
+            knmon::AgentChannel readyAfterShutdown("test", 42, nonce);
+            readyAfterShutdown.Accept(knmon::JsonDocument(hello));
+            readyAfterShutdown.Accept(knmon::JsonDocument(shutdown));
+            expectFailure(readyAfterShutdown, ready);
             knmon::ProcessIdentity identity;
             Require(knmon::ReadProcessIdentity(GetCurrentProcess(), identity), "Read current identity");
             auto changed = identity;

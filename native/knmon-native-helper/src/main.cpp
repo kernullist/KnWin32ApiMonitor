@@ -7480,7 +7480,6 @@ int LaunchSessionCommand(const std::vector<std::string>& args)
     }
 
     std::cout << SessionFrameJson("session_started", session) << "\n" << std::flush;
-    session.SessionState = "running";
     session.UpdatedUtc = NowUtc();
     std::cout << SessionFrameJson("session_state", session) << "\n" << std::flush;
 
@@ -7504,7 +7503,11 @@ int LaunchSessionCommand(const std::vector<std::string>& args)
         std::cout << SessionFrameJson(frameType, session) << "\n" << std::flush;
     };
 
-    const knmon::KnMonCaptureStreamCallbacks* callbackPtr = streamBatches ? &callbacks : nullptr;
+    if (!streamBatches)
+    {
+        callbacks.OnTraceBatch = {};
+    }
+    const knmon::KnMonCaptureStreamCallbacks* callbackPtr = &callbacks;
     knmon::KnMonCaptureResult result = controller.LaunchCapture(request, callbackPtr);
     session = BuildSessionInfoFromCapture(result, session);
 
@@ -7765,7 +7768,6 @@ int AttachSessionCommand(const std::vector<std::string>& args)
     session.KnapmPath = knapmPath;
 
     std::cout << SessionFrameJson("session_started", session) << "\n" << std::flush;
-    session.SessionState = "running";
     session.UpdatedUtc = NowUtc();
     std::cout << SessionFrameJson("session_state", session) << "\n" << std::flush;
 
@@ -7814,7 +7816,11 @@ int AttachSessionCommand(const std::vector<std::string>& args)
         std::cout << SessionFrameJson(frameType, session) << "\n" << std::flush;
     };
 
-    const knmon::KnMonCaptureStreamCallbacks* callbackPtr = streamBatches ? &callbacks : nullptr;
+    if (!streamBatches)
+    {
+        callbacks.OnTraceBatch = {};
+    }
+    const knmon::KnMonCaptureStreamCallbacks* callbackPtr = &callbacks;
     knmon::KnMonCaptureResult result;
     if (!knapmWriter.Failed)
     {
@@ -8813,7 +8819,7 @@ NativeSessionInfo NativeSessionFromDaemonRecord(const DaemonSessionRecord& recor
         finalized = manifest.Bool("finalized", true);
         if (!finalized && session.DaemonAlive && session.SessionProcessAlive && session.TargetAlive &&
             manifest.String("writerState") != "failed" &&
-            (session.SessionState == "running" || session.SessionState == "created" ||
+            (session.SessionState == "running" || session.SessionState == "created" || session.SessionState == "starting" ||
                 session.SessionState == "stopping_agent" || session.SessionState == "draining"))
         {
             // Progress is a manifest snapshot, not a full replay-integrity claim.
@@ -8864,7 +8870,6 @@ NativeSessionInfo NativeSessionFromDaemonRecord(const DaemonSessionRecord& recor
         }
         else if (!session.DaemonAlive && session.SessionProcessAlive)
         {
-            session.SessionState = "running";
             session.StaleReason = "daemon_process_exited";
             session.RecoveryState = "daemon_crashed";
             session.RecoveryReason = "daemon_dead_writer_alive";
@@ -8882,7 +8887,6 @@ NativeSessionInfo NativeSessionFromDaemonRecord(const DaemonSessionRecord& recor
         }
         else if (session.DaemonAlive && session.SessionProcessAlive && session.TargetAlive && session.KnapmValid)
         {
-            session.SessionState = "running";
             session.RecoveryState = "healthy";
             session.RecoveryReason = "owned";
             session.RecoveryAction = "wait";

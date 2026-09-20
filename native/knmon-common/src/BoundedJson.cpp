@@ -1,5 +1,6 @@
 #include <knmon/common/BoundedJson.h>
 #include <knmon/common/CaptureClock.h>
+#include <knmon/common/CaptureDetail.h>
 #include <charconv>
 #include <algorithm>
 #include <cmath>
@@ -594,6 +595,14 @@ void ValidateAgentJson(const JsonDocument& value)
         if ((architecture != "x86" && architecture != "x64") || value.String("agentVersion", true).empty())
         {
             throw JsonInputError("Invalid agent HELLO architecture or version.");
+        }
+    }
+    else if (type == "agent_ready")
+    {
+        CaptureDetail detail = CaptureDetail::Preview;
+        if (!ParseCaptureDetail(value.String("captureDetail", true), detail) || value.UInt32("stackFrames", true) > 32)
+        {
+            throw JsonInputError("Invalid agent readiness policy.");
         }
     }
     else if (type == "agent_shutdown")

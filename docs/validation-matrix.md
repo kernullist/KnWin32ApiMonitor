@@ -7,20 +7,20 @@ Windows 10/11 release or every API input.
 | Component | x64 Debug | x86 Debug | x64 Release | x86 Release |
 |---|---|---|---|---|
 | Native compile/link | passed | passed | prior build passed | prior build passed |
-| Native CTest | 24/24 passed | 24/24 passed | prior 23/23 passed | prior 17 passed, 6 not started |
+| Native CTest | 25/25 passed | 25/25 passed | prior 23/23 passed | prior 17 passed, 6 not started |
 | Desktop compile/link | prior test executable passed | prior test executable passed | application passed | application passed |
 | Desktop security tests | prior 3/3 passed | prior 3/3 passed | 6/6 passed | 6/6 passed |
 | Desktop attach/filter/stop/export and Job resources | native tools used | native tools used | passed with Debug native tools | passed with Debug native tools |
 | Desktop PE hardening | passed | passed | passed | passed |
 | Rust backend with real helper | prior 18/18 passed | prior 18/18 passed | 20/20 with Debug helper | 20/20 with Debug helper; Release helper remains blocked |
-| All-supported sample live/replay | 376 events, 16 errors; five detail/stack configurations | 376 events, 16 errors; five detail/stack configurations | prior 376 events, 16 errors | blocked before launch |
+| All-supported sample live/replay | prior 376 events, 16 errors; five detail/stack configurations | prior 376 events, 16 errors; five detail/stack configurations | prior 376 events, 16 errors | blocked before launch |
 | Standalone native stack component | passed | passed | passed | passed |
-| Comparative six-API corpus | 50 runs passed | 50 runs passed | not run | not run |
-| Native capture-detail/stack costs | 60 runs passed | 60 runs passed | not run | not run |
+| Comparative six-API corpus | prior 50 runs passed | prior 50 runs passed | not run | not run |
+| Native capture-detail/stack costs | prior 60 runs passed | prior 60 runs passed | not run | not run |
 | Sustained overload, original/observed | 5 s and 15 s passed | 5 s and 15 s passed | default 5 s CTest passed | blocked before launch |
 | Clean source ZIP native reconstruction | prior 24/24 passed | prior 24/24 passed | not run | not run |
 
-The Debug comparison uses ten fresh-process repetitions of each of five modes.
+The preceding Debug comparison uses ten fresh-process repetitions of each of five modes.
 Each run has 450 expected calls, with zero missing, unexpected or reordered
 events and matching outputs/errors. Frida CModule has lower median call latency
 and target RSS than KNMon on this corpus. This evidence does not support a World
@@ -206,13 +206,47 @@ The dependency graph and advisory evidence now remove the five reachable UNIC
 warnings while
 retaining two warnings outside the Windows graphs. Native Release, broader
 platform and performance claims remain subject to the separate limits above.
-The current integrated report has seven passed scopes, zero failed scopes and
-ten unverified scopes. Dependency maintenance, Release backend and actual desktop
-paths pass together with the current advisory, inventory, typed-ABI and
-competitive-semantics evidence. Fresh capture-detail source reconstruction and
-the complete profile-cost gate remain unverified. The report returns code 2
-for incomplete scope. Current readiness controls reject 17 malformed cases;
+The preceding integrated report has seven passed scopes, zero failed scopes and
+ten unverified scopes. The readiness/corpus source changes make its source-bound
+inputs historical; it is not a current-source verification result. That report
+combined dependency maintenance, Release backend, actual desktop, advisory,
+inventory, typed-ABI and competitive-semantics evidence. Fresh source
+reconstruction and the complete profile-cost gate remained unverified, so it
+returned code 2. Its readiness controls rejected 17 malformed cases;
 the 31-case source-control result above belongs to the preceding archive. All failed
 attempts and their raw logs remain distinct from the successful evidence sets.
 See `source-build-contract.md` for reproduction and
 `technical-readiness.md` for the fail-closed artifact verification policy.
+
+## Capture readiness and coordinated caller
+
+The readiness change passes 25/25 native Debug CTests on each architecture,
+including the new corpus-control test. The production attach captures exactly
+58 independent calls and restores its hooks while the caller remains alive.
+Eight test-Agent fault flows cover missing readiness in bounded and continuous
+mode, policy mismatches, duplicate readiness, pre-HELLO readiness, initialization
+failure and readiness after shutdown. The fixture installs no hooks.
+
+Native/Node JSON validation passes 2,544 cases per architecture. Native session
+validation passes 228 cases, including active daemon discovery in `starting`.
+Actual retained, streamed and failed launch checks pass on both architectures;
+failed startup never announces running and retained capture emits no trace
+batches. Twenty shared cases also check the published readiness schema.
+See [capture-readiness.md](capture-readiness.md) for the protocol, bounded waits,
+compatibility requirement and reproduction tools.
+
+These changes prepare comparable paced desktop cost measurements. The prior
+native profile and competitive packs remain historical until rerun against the
+new source fingerprint. They do not pass the full profile-cost gate.
+
+The final readiness revision also passes complete `npm run verify`, including
+22 frontend regressions, the 200,000-event worker check and the real collector
+fixture. Both Release Rust backends pass 20/20 with the current Debug helpers.
+Typed ABI evidence and its runtime-support source fingerprint were regenerated
+after the lifecycle-retention fix.
+
+Actual Release desktop checks with the updated Debug native tools pass on both
+architectures using default preview with stacks Off. Each exports 240 events,
+with zero loss, complete terminal drain, target survival after detach and normal
+owned-process cleanup. This validates startup-state integration; it is not the
+planned comparable profile-cost matrix.

@@ -1,4 +1,5 @@
 #include "CorpusProtocol.h"
+#include "CorpusRunControl.h"
 #include <psapi.h>
 #include <algorithm>
 #include <array>
@@ -6,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 
 volatile LONG g_corpusMarker = 0;
 extern "C" __declspec(dllexport) __declspec(noinline) void __cdecl KnMonCorpusBegin()
@@ -27,7 +29,7 @@ int wmain(int argc, wchar_t** argv)
     int exitCode = 1;
     do
     {
-        if (argc < 3 || argc > 4)
+        if (argc != 3 && argc != 4 && argc != 7)
         {
             break;
         }
@@ -45,10 +47,17 @@ int wmain(int argc, wchar_t** argv)
             break;
         }
         CorpusEtw etw;
+        knmon::corpus::RunControl control;
         const bool trace = argc == 4 && std::wstring(argv[3]) == L"--etw-private";
         const bool failExit = argc == 4 && std::wstring(argv[3]) == L"--nonzero-exit";
-        if (argc == 4 && !trace && !failExit)
+        const bool coordinated = argc == 7 && std::wstring(argv[3]) == L"--coordinated";
+        if ((argc == 4 && !trace && !failExit) || (argc == 7 && !coordinated))
         {
+            break;
+        }
+        if (coordinated && !control.Open(argv[4], argv[5], argv[6], iterations))
+        {
+            std::cerr << "Corpus control setup failed: " << control.Status << "\n";
             break;
         }
         if (trace && !etw.Start((directory / L"corpus.etl").wstring()))
@@ -90,6 +99,11 @@ int wmain(int argc, wchar_t** argv)
             etw.Write(event);
         };
         bool correct = true;
+        if (!control.Begin())
+        {
+            std::cerr << "Corpus start gate failed: " << control.Status << "\n";
+            break;
+        }
         KnMonCorpusBegin();
         correct = GetProcessTimes(GetCurrentProcess(), &created, &exited, &kernelBefore, &userBefore) != FALSE;
         QueryPerformanceCounter(&begin);
@@ -140,7 +154,7 @@ int wmain(int argc, wchar_t** argv)
             const BOOL freed = VirtualFree(memory, 0, MEM_RELEASE);
             record(5, freed != FALSE);
             correct = correct && freed;
-            Sleep(0);
+            Sleep(control.DelayMs);
         }
         std::array<unsigned char, 16> output = {};
         DWORD count = 0;
@@ -172,7 +186,19 @@ int wmain(int argc, wchar_t** argv)
             << "\",\"workingSetBytes\":" << memory.WorkingSetSize << ",\"peakWorkingSetBytes\":" << memory.PeakWorkingSetSize
             << ",\"etwEnabled\":" << (trace ? "true" : "false") << ",\"etwStatus\":" << etw.Status
             << ",\"etwWriteFailures\":" << etw.WriteFailures << ",\"etwEventsLost\":" << etw.EventsLost
-            << ",\"etwBuffersLost\":" << etw.BuffersLost << ",\"events\":[";
+            << ",\"etwBuffersLost\":" << etw.BuffersLost;
+        if (coordinated)
+        {
+            std::string controlId;
+            for (const wchar_t ch : control.Id)
+            {
+                controlId.push_back(static_cast<char>(ch));
+            }
+            stream << ",\"coordination\":{\"id\":\"" << controlId
+                << "\",\"delayMs\":" << control.DelayMs << ",\"waitTimeoutMs\":" << control.WaitTimeoutMs
+                << ",\"readyQpc\":\"" << control.ReadyQpc << "\",\"startGateQpc\":\"" << control.StartGateQpc << "\"}";
+        }
+        stream << ",\"events\":[";
         for (const auto& event : events)
         {
             stream << (event.Sequence == 0 ? "" : ",") << "{\"sequence\":" << event.Sequence
@@ -186,6 +212,11 @@ int wmain(int argc, wchar_t** argv)
         }
         stream << "]}";
         stream.close();
+        if (stream && !control.Complete())
+        {
+            std::cerr << "Corpus release gate failed: " << control.Status << "\n";
+            break;
+        }
         if (correct && stream && (!trace || (etw.Status == 0 && etw.WriteFailures == 0 && etw.EventsLost == 0 && etw.BuffersLost == 0)))
         {
             exitCode = failExit ? 7 : 0;

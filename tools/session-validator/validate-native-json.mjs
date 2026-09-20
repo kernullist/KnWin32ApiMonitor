@@ -5,6 +5,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { inspectStrictJson, typedJsonValue, validateAgentJson } from "./strict-json.mjs";
 import stackCases from "../../tests/fixtures/stack-observation.json" with { type: "json" };
+import readyCases from "../../tests/fixtures/agent-readiness.json" with { type: "json" };
 
 const argument = process.argv.indexOf("--probe");
 assert(argument >= 0, "Pass --probe <knmon-bounded-json-test.exe>.");
@@ -78,7 +79,8 @@ const envelope = {
     schemaVersion: "0.1.0", messageType: "agent_hello", operationId: "test", pid: 1234, tid: 1235,
     timestampUtc: "2026-09-20T00:00:00Z", sequence: 1, architecture: "x64", agentVersion: "0.3.0"
 };
-for (const message of [envelope, { ...envelope, messageType: "agent_shutdown", reason: "stopped", installedHooks: 3,
+for (const message of [envelope, { ...envelope, messageType: "agent_ready", captureDetail: "preview", stackFrames: 0 },
+    { ...envelope, messageType: "agent_shutdown", reason: "stopped", installedHooks: 3,
     restoredHooks: 3, failedHooks: 0, droppedCount: 0 }, { ...envelope, messageType: "dropped_events", droppedCount: 0 },
     { ...envelope, messageType: "api_call", module: "kernel32.dll", api: "ReadFile", process: "test.exe", returnValue: "1",
         lastErrorCode: 0, lastErrorMessage: "", durationUs: 1, arguments: [], tags: [], stack: [], bufferPreview: "" }])
@@ -94,6 +96,22 @@ for (const message of [envelope, { ...envelope, messageType: "agent_shutdown", r
             add(`agent type ${key}`, JSON.stringify({ ...message, [key]: value }), "agent");
         }
     }
+}
+
+for (const [name, fields, accepted] of readyCases)
+{
+    const wire = JSON.stringify({ ...envelope, messageType: "agent_ready", ...fields });
+    let nodeAccepted = true;
+    try
+    {
+        validateAgentJson(inspectStrictJson(Buffer.from(wire)));
+    }
+    catch
+    {
+        nodeAccepted = false;
+    }
+    assert.equal(nodeAccepted, accepted, name);
+    add(`ready ${name}`, wire, "agent");
 }
 
 const apiArgument = { index: 0, name: "value", type: "DWORD", direction: "in", rawValue: "0", preCallValue: "0",

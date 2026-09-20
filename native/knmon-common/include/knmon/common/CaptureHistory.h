@@ -25,7 +25,7 @@ namespace knmon
 
     inline void RetainAgentMessage(KnMonCaptureResult& result, const KnMonAgentMessage& event)
     {
-        const bool lifecycle = event.MessageType == "agent_hello" || event.MessageType == "dropped_events" ||
+        const bool lifecycle = event.MessageType == "agent_hello" || event.MessageType == "agent_ready" || event.MessageType == "dropped_events" ||
             event.MessageType == "agent_shutdown";
         if (!result.HistoryBounded)
         {

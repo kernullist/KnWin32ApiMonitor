@@ -231,6 +231,13 @@ export function validateAgentJson(parsed)
             throw new Error("Invalid agent HELLO.");
         }
     }
+    else if (type === "agent_ready")
+    {
+        if (!["metadata", "arguments", "preview"].includes(field("captureDetail", "string")) || BigInt(field("stackFrames", "u32")) > 32n)
+        {
+            throw new Error("Invalid agent readiness policy.");
+        }
+    }
     else if (type === "agent_shutdown")
     {
         field("reason", "string");
