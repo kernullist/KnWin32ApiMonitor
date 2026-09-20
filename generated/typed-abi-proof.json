@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "observedAtUtc": "2026-09-20T07:18:43.099Z",
+  "observedAtUtc": "2026-09-20T07:58:35.254Z",
   "windowsRelease": "10.0.26200",
   "configuration": "Debug",
   "apiKeys": [
@@ -12,7 +12,7 @@
     "user32.dll!enumchildwindows"
   ],
   "source": {
-    "sha256": "aae836950059e49727b254405358758a98591e9538e0a05abc1576ef67f0f40b",
+    "sha256": "a813f81b67f0ebd2dc8bebcace0708e9d15366d2c461eb787bc4e7728aa48e29",
     "files": [
       {
         "path": "apps/knmon-ui/src/traceConversion.ts",
@@ -44,7 +44,7 @@
       },
       {
         "path": "native/CMakeLists.txt",
-        "sha256": "b67865c196998be2fd6dd369bb232d3ea494bbea42434916768f992e5f1d12e0"
+        "sha256": "e5d860163a662920a9a69dbc45ddd522745a21e552e55d9d318b9ad058f2d23c"
       },
       {
         "path": "native/cmake/CheckAgentFootprint.cmake",
@@ -463,6 +463,10 @@
         "sha256": "be705df478f7efdc5d437233845bf2cdd67847a2de6c1b4f34bb96168bfbcbfa"
       },
       {
+        "path": "native/samples/PressureTarget.cpp",
+        "sha256": "cd3217558e2d2ccd8fdd59c6aeae32477c5564bd3bf9c830d9469fbf953c16d4"
+      },
+      {
         "path": "native/samples/TypedAbiTarget.cpp",
         "sha256": "441a28ae93c5df956ade20638ae604d8b0f6bc2b8974def8d01170f5767010f3"
       },
@@ -515,6 +519,10 @@
         "sha256": "2e594fe92c62331a8448b2d198c3311ebb58503f1c17dc8fc6511c9853dccdee"
       },
       {
+        "path": "native/tests/ProcessResourceSamples.h",
+        "sha256": "3e3abe54fb29998ed4b7a4a6c0141184987a12abb859e2b48eaa9b539001cb72"
+      },
+      {
         "path": "native/tests/RuntimeSupportTest.cpp",
         "sha256": "384d58f3c127832afea2e8789940d3c5dcaab8c3ab37a038fb34ddc35520582b"
       },
@@ -525,6 +533,10 @@
       {
         "path": "native/tests/SessionLeaseTest.cpp",
         "sha256": "28dc6cbd31be84e6b10f3bd525a3ed172c33d23e1b519b3d3da0874a193d2c05"
+      },
+      {
+        "path": "native/tests/SustainedCaptureTest.cpp",
+        "sha256": "95b361eabd0f3fadbd62db69b7b1a2191ed2f1b71217aeb753f8ee40a01f7436"
       },
       {
         "path": "native/tests/TransportSecurityTest.cpp",
@@ -914,7 +926,7 @@
         "d2d1.dll": "78deb0fc7c3195a691864ee0638912ea3ef46e72d2ad6af258b7ac815798dcb1",
         "user32.dll": "fb15460c5a7068a9cb118cfdec0b60f2c715018c4af8f501b62825a6435421d1"
       },
-      "ctestLogSha256": "8732561cc2c666e798eea3814cfd536c980479d1f69d2c13960ea5190ba74e47",
+      "ctestLogSha256": "49fef03968e8c5010ba44d5df15f817b5ca5d3c5b545ea762587b0a1434cdb82",
       "live": {
         "success": true,
         "apis": [
@@ -952,7 +964,7 @@
         "d2d1.dll": "6eaffafef20b3ff8ab828b210b09898d099ceaad630040be4488f265ce74ca7c",
         "user32.dll": "225f16bf0969e8f0869484791fd5764d879e2905de912a475ebdd63ad6763558"
       },
-      "ctestLogSha256": "d9f6ca3b2335dffa96e5c33e87c5d117862cc8c9ef24557868f3f540a152dd70",
+      "ctestLogSha256": "cc2e47b6880b64b581a5b54053aac385f88ae213671bcbd1f4727102871d02a1",
       "live": {
         "success": true,
         "apis": [
