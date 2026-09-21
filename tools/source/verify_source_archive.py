@@ -97,7 +97,17 @@ def main():
             ET.SubElement(report, "testcase", name=name, status="run")
         test_file = root / "ctest.xml"
         ET.ElementTree(report).write(test_file)
-        require(len(validate_tests(test_file, "x64")) == 23, "Valid CTest fixture failed.")
+        require(validate_tests(test_file, "x64") == sorted(expected), "Valid CTest fixture failed.")
+        rejected(lambda: validate_tests(test_file, "x86"), "CTest wrong architecture")
+        changed = copy.deepcopy(report)
+        changed.remove(next(case for case in changed if case.get("name") == "readiness-delivery"))
+        changed.set("tests", str(len(changed)))
+        ET.ElementTree(changed).write(test_file)
+        rejected(lambda: validate_tests(test_file, "x64"), "CTest omitted required test with matching count")
+        changed = copy.deepcopy(report)
+        changed[-1].set("name", changed[0].get("name"))
+        ET.ElementTree(changed).write(test_file)
+        rejected(lambda: validate_tests(test_file, "x64"), "CTest duplicate name with matching count")
         for status in ("notrun", "skipped", "failure"):
             changed = copy.deepcopy(report)
             if status == "notrun":
