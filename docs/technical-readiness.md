@@ -9,7 +9,7 @@ python tools/readiness/technical_gate.py `
   --dependencies build/dependency-evidence-ID --comparison build/comparison-ID `
   --advisory build/advisory-evidence-ID --desktop build/desktop-evidence-ID `
   --backend-release build/backend-release-ID --native-profiles build/native-profile-ID `
-  --desktop-profiles build/desktop-corpus-ID
+  --desktop-profiles build/desktop-corpus-ID --cet build/cet-evidence-ID
 ```
 
 The report lives in `build/technical-readiness-ID/report.json`. Exit code 0
@@ -94,11 +94,18 @@ matching Debug native binaries and does not clear the native Release gate.
 
 Required scopes without an implemented evidence consumer remain `not_verified`:
 the current full native Release matrix, other Windows
-builds, elevated/cross-user IPC, hardware CET,
+builds, elevated/cross-user IPC,
 separate capture profiles, complete binary
 distribution reconstruction and broader competitive coverage. Kernel ETW session
 availability is evaluated separately from private application ETW. User
 evaluation is excluded from this policy.
+
+`--cet` runs the [local hardware CET consumer](cet-evidence.md). It rechecks the
+actual off/strict return-fault controls, cleanup failure paths and all 13 native
+compatibility trials. A passed `hardware_cet_enforcement` row retains the exact
+Windows build and x64 Debug scope. Unsupported strict policy stays
+`not_verified`; malformed, stale or contradictory supplied evidence fails.
+This row does not clear other-Windows, native Release or general coverage gates.
 
 These checks establish consistency of retained local artifacts with the source
 and declared execution scope. They cannot authenticate a malicious producer that

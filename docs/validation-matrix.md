@@ -328,3 +328,33 @@ bound to `eb8a4f1`; the validator-only change makes its general source binding
 historical. No current desktop-profile scope or complete performance claim is
 inferred from that older pack. Native Release, other platform/privilege scopes,
 hardware CET, complete costs and distribution/competitive evidence remain open.
+
+## Local hardware CET and strict-target capture, 2026-09-21
+
+`build/cet-evidence-ti6sd_2_` executes the independent x64 hardware CET probe,
+its actual timeout/output-flood cleanup controls and 13 fresh caller targets.
+Both policy-off return controls and strict valid return succeed. Strict
+mismatched return produces the recorded second-chance `0xc0000409` exception
+with invalid-return-address reason 57. The parent and child agree on policy;
+normal controls require no forced cleanup.
+
+The off/strict original and five capture configurations plus explicit strict
+cancel execute 5,850 caller operations. All 4,950 monitored calls match the
+independent semantics with zero recorded loss. Target policy remains strict
+through capture and detach; hooks restore and each target exits normally after
+release. The final consumer passes 270 rejection controls and nine positive
+controls in `build/cet-negative-jitqylyh`, including actual failed Job assignment
+cleanup, output bounds and a junction in the excluded build directory.
+
+Repeated review reproduced and fixed delayed Job-accounting misclassification,
+lost overflow diagnostics, missing lifecycle-frame handling, reordered readiness,
+omitted history accounting, mismatched selection/HELLO and divergent retained
+Agent/capture streams. Failed records remain retained. No further scoped
+reproducible finding remained after the final raw and process/path controls.
+
+`build/technical-readiness-z6atbi7a/report.json` rechecks the current source,
+dependency/advisory, backend, desktop and CET evidence: eight passed scopes,
+zero failed and nine unverified. The source/readiness controls pass again in
+`build/readiness-negative-p28as81w`. CET coverage is the recorded Windows build,
+x64 process policy and native Debug six-API corpus; other platforms, Release,
+complete costs and broad competitive coverage retain their separate gates.

@@ -8,6 +8,12 @@ processes: an allowed indirect call succeeds and a guard-suppressed call must
 terminate with `0xc0000409`. CET compatibility metadata does not prove hardware
 shadow-stack enforcement on every host.
 
+The separate [hardware CET evidence producer](cet-evidence.md) executes actual
+off/strict mismatched-return controls and the independent six-API caller under
+strict process policy. Its consumer requires observed enforcement, complete
+capture semantics, hook restoration and target survival after detach. A passed
+pack proves its recorded local x64 Debug scope only.
+
 The Rust desktop uses `.cargo/config.toml` target-specific MSVC flags, including
 `-C control-flow-guard=yes` for LLVM instrumentation. Rust's
 [documented default is disabled](https://doc.rust-lang.org/rustc/codegen-options/index.html#control-flow-guard).
@@ -66,6 +72,6 @@ cleanup belong to processes created by the test. No machine policy changes or
 Defender exclusions are needed.
 
 These checks establish the executed build/OS scope. Other Windows versions,
-elevated or cross-user peers, and runtime CET enforcement need separate matrix
+elevated or cross-user peers, and runtime CET on other hosts need separate matrix
 evidence. A successful mitigation denial is not monitoring coverage of that
 protected target.

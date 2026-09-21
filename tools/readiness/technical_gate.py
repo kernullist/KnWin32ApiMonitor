@@ -18,7 +18,7 @@ PENDING = {
     "release_backend_runtime": "Separate Release backend execution with both real helpers is not established.",
     "windows_build_matrix": "Only Windows 10.0.26200 has executed evidence; other supported Windows builds need their own runs.",
     "elevated_cross_user_ipc": "Elevated and cross-user IPC contexts lack executed evidence.",
-    "hardware_cet_enforcement": "PE compatibility metadata does not establish hardware CET enforcement.",
+    "hardware_cet_enforcement": "Actual local shadow-stack fault controls and strict-policy native capture compatibility require executed evidence.",
     "whole_desktop_resources": "Owned x64/x86 desktop interaction and complete sampled WebView Job membership require executed evidence.",
     "capture_profile_costs": "Comparable caller, collector, desktop, disk and UI costs for each capture policy are not fully established.",
     "dependency_maintenance": "Windows-reachable dependency warnings require verified current graph and advisory evidence.",
@@ -34,7 +34,10 @@ PRODUCERS = ("tools/readiness/source_evidence.py", "tools/readiness/technical_ga
              "tools/readiness/backend_release.py", "tools/security/tauri_backport.py",
              "tools/readiness/native_profile_costs.py", "tools/readiness/verify_native_profile_costs.py",
              "tools/readiness/corpus_desktop.py", "tools/readiness/corpus_desktop_driver.mjs", "tools/readiness/corpus_desktop_check.py",
-             "tools/readiness/corpus_desktop_pack.py", "tools/readiness/verify_corpus_desktop.py")
+             "tools/readiness/corpus_desktop_pack.py", "tools/readiness/verify_corpus_desktop.py",
+             "tools/readiness/cet_evidence.py", "tools/readiness/cet_check.py", "tools/readiness/cet_process.py",
+             "tools/readiness/verify_cet_evidence.py", "tools/readiness/cet_probe/CMakeLists.txt",
+             "tools/readiness/cet_probe/Probe.cpp", "tools/readiness/cet_probe/Returns.asm")
 
 
 def outcome(rows):
@@ -80,6 +83,7 @@ def main():
     parser.add_argument("--backend-release", type=Path)
     parser.add_argument("--native-profiles", type=Path)
     parser.add_argument("--desktop-profiles", type=Path)
+    parser.add_argument("--cet", type=Path)
     parser.add_argument("--rustsec-db", type=Path, default=ROOT / "build/deps/rustsec-advisory-db")
     parser.add_argument("--node", type=Path, default=ROOT / "build/deps/node-v24.21.0-win-x64/node.exe")
     args = parser.parse_args()
@@ -199,6 +203,17 @@ def main():
                           reason="Paced desktop corpus passed; separate collector, disk and serialization attribution and visible presentation costs remain required.")
         return result
 
+    def cet():
+        from cet_evidence import verify as verify_cet
+        directory = args.cet.resolve()
+        before = bind("cet", directory / "evidence.json")
+        evidence = verify_cet(directory)
+        require(digest_file(directory / "evidence.json") == before, "CET evidence changed during readiness verification.")
+        return {"status": evidence["status"], "scope": evidence["scope"], "assurance": evidence["assurance"],
+                "windowsVersion": evidence["windowsVersion"], "enforcement": evidence["enforcement"], "compatibilityRuns": len(evidence["runs"]),
+                "reason": "Actual local x64 shadow-stack enforcement and Debug native capture/detach passed." if evidence["status"] == "passed" else
+                          "The recorded host could not establish strict shadow-stack enforcement; no compatibility claim."}
+
     try:
         report["checkoutRevision"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, timeout=10).strip()
         report["trackedDirty"] = bool(subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT, timeout=30))
@@ -217,6 +232,8 @@ def main():
             checked("release_backend_runtime", backend_release)
         if args.native_profiles is not None or args.desktop_profiles is not None:
             checked("capture_profile_costs", profile_costs)
+        if args.cet is not None:
+            checked("hardware_cet_enforcement", cet)
         if rows["source_reconstruction"]["status"] == "passed":
             verify_current_sources(retained["sourceManifest"])
         verify_bound_inputs(report["inputs"])
