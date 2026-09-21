@@ -1418,7 +1418,14 @@ fn register_native_operation(
             operation_id: operation_id.to_string(),
             operation_kind: operation_kind.to_string(),
             target_process_id,
-            state: "running".to_string(),
+            state: if matches!(operation_kind, "attach_capture_stream" | "launch_capture_stream")
+            {
+                "starting".to_string()
+            }
+            else
+            {
+                "running".to_string()
+            },
             cancel_requested: false,
             started_at: Instant::now(),
             finished_at_ms: 0,

@@ -1,6 +1,63 @@
 use super::*;
 
 #[test]
+fn streaming_registration_waits_for_helper_readiness()
+{
+    for kind in ["attach_capture_stream", "launch_capture_stream"]
+    {
+        let id = operation_id(kind);
+        register_native_operation(&id, kind, 42, 0).unwrap();
+        let snapshot = ||
+        {
+            let registry = operation_registry().lock().unwrap();
+            session_view(registry.get(&id).unwrap())
+        };
+        assert_eq!(snapshot().session_state, "starting");
+        mark_native_operation_helper_pid(&id, 123);
+        assert_eq!(snapshot().session_state, "starting");
+        for state in ["starting", "running"]
+        {
+            let mut session = snapshot();
+            session.session_state = state.to_string();
+            session.target_process_creation_time = "1".to_string();
+            let frame = serde_json::json!({"schemaVersion": "0.1.0", "frameType": "session_state", "session": session});
+            process_streaming_frame_line(&id, &frame.to_string()).unwrap();
+            assert_eq!(snapshot().session_state, state);
+        }
+        finish_native_operation(&id, "cancelled");
+
+        let cancelled_id = operation_id(&format!("cancel-{kind}"));
+        register_native_operation(&cancelled_id, kind, 42, 0).unwrap();
+        {
+            let mut registry = operation_registry().lock().unwrap();
+            let record = registry.get_mut(&cancelled_id).unwrap();
+            record.cancel_requested = true;
+            record.state = "cancel_requested".to_string();
+        }
+        mark_native_operation_helper_pid(&cancelled_id, 123);
+        let mut cancelled =
+        {
+            let registry = operation_registry().lock().unwrap();
+            session_view(registry.get(&cancelled_id).unwrap())
+        };
+        assert_eq!(cancelled.session_state, "stop_requested");
+        cancelled.session_state = "running".to_string();
+        cancelled.target_process_creation_time = "1".to_string();
+        let frame = serde_json::json!({"schemaVersion": "0.1.0", "frameType": "session_state", "session": cancelled});
+        process_streaming_frame_line(&cancelled_id, &frame.to_string()).unwrap();
+        let registry = operation_registry().lock().unwrap();
+        assert_eq!(session_view(registry.get(&cancelled_id).unwrap()).session_state, "stop_requested");
+    }
+    for kind in ["attach_capture", "process_tree_supervision"]
+    {
+        let id = operation_id(kind);
+        register_native_operation(&id, kind, 42, 100).unwrap();
+        let registry = operation_registry().lock().unwrap();
+        assert_eq!(operation_view(registry.get(&id).unwrap()).state, "running");
+    }
+}
+
+#[test]
 fn registry_and_global_trace_memory_remain_bounded()
 {
     let id = operation_id("registry-bound");

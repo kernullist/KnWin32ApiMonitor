@@ -1,5 +1,35 @@
 import type { NativeOperation, NativeSession } from "./types";
 
+export function isNativeOperationActive(operation: NativeOperation): boolean
+{
+  return ["queued", "starting", "running", "cancel_requested", "stopping_agent", "draining"].includes(operation.state);
+}
+
+export function createNativeSessionFailureObserver()
+{
+  let previous = new Map<string, string>();
+  return (sessions: NativeSession[]): NativeSession[] =>
+  {
+    const next = new Map<string, string>();
+    const failures: NativeSession[] = [];
+    for (const session of sessions)
+    {
+      if (isDaemonSession(session) || !["failed", "cleanup_failed", "recovery_required"].includes(session.sessionState))
+      {
+        continue;
+      }
+      const signature = JSON.stringify([session.sessionState, session.lastError, session.recoveryAction]);
+      next.set(session.sessionId, signature);
+      if (previous.get(session.sessionId) !== signature)
+      {
+        failures.push(session);
+      }
+    }
+    previous = next;
+    return failures;
+  };
+}
+
 export interface PollClock
 {
   schedule: (callback: () => void, delayMs: number) => number;

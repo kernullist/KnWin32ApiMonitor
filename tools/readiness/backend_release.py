@@ -34,6 +34,7 @@ TESTS = tuple(sorted([
     "security_tests::startup_failures_are_terminal_and_keep_the_reason",
     "security_tests::stream_framing_has_a_bound_and_requires_a_complete_utf8_line",
     "security_tests::stream_rejects_foreign_identity_and_cannot_revive_after_failure",
+    "security_tests::streaming_registration_waits_for_helper_readiness",
     "security_tests::synchronous_reader_cancellation_does_not_require_the_writer_to_exit",
     "tests::argument_observation_survives_host_roundtrip",
     "tests::captured_semantics_preserve_exact_clock_and_error_fields",

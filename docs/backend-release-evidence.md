@@ -21,8 +21,13 @@ The verifier also checks the executable's actual PE architecture. Builds and
 tests run in owned Jobs with deadlines and bounded logs. Test runs explicitly
 use [--include-ignored](https://doc.rust-lang.org/rustc/tests/), one test thread
 and uncolored pretty output. Both real-helper tests are ignored by ordinary
-`cargo test`; this producer requires all 20 named tests to execute and pass.
+`cargo test`; this producer requires all 21 named tests to execute and pass.
 Missing, filtered, ignored, duplicate or failed test results are rejected.
+
+Streaming registration must remain `starting` until a matching helper state
+announces readiness. Obtaining a helper PID is insufficient. The regression
+covers both launch and attach, pending cancellation and unchanged nonstream
+operation states; the desktop corpus checks the resulting real capture path.
 
 The stack observation regression exercises the shared malformed/legacy corpus
 through both agent and trace DTOs. It rejects object-encoded enum values, nulls,

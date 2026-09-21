@@ -108,6 +108,8 @@ def main():
     partial_profiles = {name: {"status": "passed"} for name in (*VALIDATED, *PENDING)}
     partial_profiles["capture_profile_costs"] = {"status": "not_verified", "nativeStatus": "passed"}
     require(outcome(partial_profiles) == "incomplete", "Native profile evidence incorrectly cleared the complete cost gate.")
+    partial_profiles["capture_profile_costs"]["desktopStatus"] = "passed"
+    require(outcome(partial_profiles) == "incomplete", "Desktop corpus evidence incorrectly cleared the complete cost gate.")
     rows["source_reconstruction"]["status"] = "failed"
     require(outcome(rows) == "failed", "Failed evidence was counted as incomplete or passed.")
     missing = copy.deepcopy(rows)
@@ -135,6 +137,11 @@ def main():
     (output / "invalid-native-profile-cli.log").write_bytes(profile_cli.stdout + profile_cli.stderr)
     require(profile_cli.returncode == 1 and b"capture_profile_costs: failed" in profile_cli.stdout,
             "Incomplete supplied native profile evidence did not fail the technical gate.")
+    desktop_cli = subprocess.run([sys.executable, "-B", "-X", "utf8", ROOT / "tools/readiness/technical_gate.py",
+                                  "--desktop-profiles", invalid_profile], cwd=ROOT, capture_output=True, timeout=120)
+    (output / "invalid-desktop-profile-cli.log").write_bytes(desktop_cli.stdout + desktop_cli.stderr)
+    require(desktop_cli.returncode == 1 and b"capture_profile_costs: failed" in desktop_cli.stdout,
+            "Incomplete supplied desktop corpus evidence did not fail the technical gate.")
     optimized = subprocess.run([sys.executable, "-O", ROOT / "tools/readiness/technical_gate.py"], cwd=ROOT, capture_output=True, timeout=20)
     (output / "optimized-cli.log").write_bytes(optimized.stdout + optimized.stderr)
     require(optimized.returncode != 0 and b"assertions to remain enabled" in optimized.stderr, "Optimized Python disabled evidence checks.")

@@ -10,6 +10,13 @@ int wmain(int argc, wchar_t** argv)
         return 1;
     }
     HMODULE agent = LoadLibraryW(argv[1]);
+    if (argc == 3 && std::wcscmp(argv[2], L"ready") == 0)
+    {
+        auto ready = agent == nullptr ? nullptr : reinterpret_cast<LPTHREAD_START_ROUTINE>(GetProcAddress(agent, "KnMonTestReadyDelivery"));
+        const DWORD result = ready == nullptr ? 5 : ready(nullptr);
+        std::cout << "Agent readiness delivery result: " << result << "\n";
+        return static_cast<int>(result);
+    }
     if (argc == 3)
     {
         auto testRace = agent == nullptr ? nullptr : reinterpret_cast<LPTHREAD_START_ROUTINE>(GetProcAddress(agent, "KnMonTestStopRace"));

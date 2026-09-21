@@ -14,6 +14,39 @@ an invalid channel. Readiness received while stopping cannot restore `running`.
 Both streamed and retained CLI sessions deliver these state transitions;
 retained sessions do not acquire trace-batch output as a side effect.
 
+The Rust desktop registry also starts streaming launch/attach in `starting`.
+Registering an operation or obtaining a helper PID does not publish `running`;
+the matching helper state frame must do that. The UI treats `starting` as active
+so polling, capture-control locking and cancellation remain available. A ready
+frame received after cancellation cannot clear the pending stop request.
+
+The initialization worker retries `agent_ready` for at most one second when
+another diagnostic writer holds the pipe lock or the nonblocking message pipe
+is full. It releases the lock between attempts and stops retrying once the Agent
+leaves `running`. Ordinary hook diagnostics still make one nonblocking attempt.
+A failed readiness message counts once; unsuccessful retry attempts do not
+inflate the drop counter. The separate readiness-delivery test exercises the
+actual sender in the isolated test DLL against lock contention, a full pipe,
+permanent pressure and concurrent stop. Its exports are absent from production
+Agents.
+
+Asynchronous local capture failures remain visible in the desktop Output after
+the active session disappears. Repeated snapshots do not repeat the same error;
+changed failure details or cleanup requirements are reported again.
+This includes the `recovery_required` session state published when the backend
+operation ends in `cleanup_failed`.
+Recent audit entries precede the general status summary, with the failure reason
+first. `python -B -X utf8 tools/readiness/verify_desktop_readiness_failure.py`
+uses isolated copies of the Release desktop and a hook-free test DLL that omits
+readiness. It checks a single visible failure message, zero invented records,
+successful cleanup and target survival on both architectures. These negative
+controls are separate from production capture and resource measurements.
+
+Windows can report a successful nonblocking message-pipe write with zero bytes
+when its buffer is full. The sender checks the actual byte count, as specified
+in Microsoft's [named-pipe wait modes](https://learn.microsoft.com/en-us/windows/win32/ipc/named-pipe-type-read-and-wait-modes)
+documentation, checked on 2026-09-21.
+
 Launch and attach require readiness within `TimeoutMs` after pipe connection,
 including continuous captures. A shorter bounded capture can end before this
 deadline and fail its missing-readiness requirement. Cancellation can stop

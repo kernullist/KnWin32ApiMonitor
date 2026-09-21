@@ -8,7 +8,8 @@ python tools/readiness/technical_gate.py `
   --source-build build/source-rebuild-ID --archive build/knmon-source.zip `
   --dependencies build/dependency-evidence-ID --comparison build/comparison-ID `
   --advisory build/advisory-evidence-ID --desktop build/desktop-evidence-ID `
-  --backend-release build/backend-release-ID --native-profiles build/native-profile-ID
+  --backend-release build/backend-release-ID --native-profiles build/native-profile-ID `
+  --desktop-profiles build/desktop-corpus-ID
 ```
 
 The report lives in `build/technical-readiness-ID/report.json`. Exit code 0
@@ -78,8 +79,16 @@ and retains the native measurements under that still-unverified row. An invalid
 supplied native evidence pack fails the row. The matrix also has separate
 adversarial controls.
 
+The [coordinated desktop matrix](desktop-corpus-costs.md) extends that caller to
+the actual Release desktop with Debug native tools. `--desktop-profiles`
+recomputes all 120 trials, owned Job resource windows and hidden-window DOM
+delivery bounds. It retains `desktopStatus: passed` for consistent complete
+evidence, while `capture_profile_costs` remains `not_verified`. Invalid supplied
+evidence fails the row. Separate collector, serialization and disk attribution,
+visible presentation and Release-native costs remain outside this matrix.
+
 The [Release backend consumer](backend-release-evidence.md) checks Cargo's
-optimized test artifacts, both actual PE architectures and all 20 named backend
+optimized test artifacts, both actual PE architectures and all 21 named backend
 tests, including the real-helper success and failed-target paths. It retains
 matching Debug native binaries and does not clear the native Release gate.
 

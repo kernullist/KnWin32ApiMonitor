@@ -55,9 +55,9 @@ socket.addEventListener("message", (event) =>
   }
 });
 
-async function evaluate(expression)
+async function evaluate(expression, awaitPromise = false)
 {
-  const value = await call("Runtime.evaluate", { expression, returnByValue: true });
+  const value = await call("Runtime.evaluate", { expression, returnByValue: true, awaitPromise });
   requireValue(!value.exceptionDetails, `DOM observation failed: ${JSON.stringify(value.exceptionDetails)}`);
   return value.result.value;
 }
@@ -165,7 +165,8 @@ try
   ]);
   await call("Runtime.enable");
   await waitFor(`location.href === "http://tauri.localhost/" && document.querySelector(".statusbar")`, "bundled desktop page");
-  await waitFor('document.querySelector("#capture-detail")?.disabled === false && document.querySelector("#stack-frames")?.disabled === false && document.querySelector(\'button[title="Refresh process list"]\')?.disabled === false', "initial native controls ready", 25000);
+  await click(`[...document.querySelectorAll(".inspector-tabs button")].find(element => element.textContent === "Output")`);
+  await waitFor('document.querySelector(".output-log")?.innerText.includes("native_enum_completed: list_native_target_processes;") && document.querySelector("#capture-detail")?.disabled === false && document.querySelector("#stack-frames")?.disabled === false && document.querySelector(\'button[title="Refresh process list"]\')?.disabled === false', "initial native enumeration and controls ready", 25000);
   await observe("idle");
   phase("idle");
   await delay(3000);
@@ -267,6 +268,14 @@ catch (error)
   try
   {
     await observe("failure");
+    report.failureOwnership = await evaluate(`(async () =>
+    {
+      const [operations, sessions] = await Promise.all([
+        window.__TAURI_INTERNALS__.invoke("list_native_operations"),
+        window.__TAURI_INTERNALS__.invoke("list_native_sessions")
+      ]);
+      return { operations, sessions };
+    })()`, true);
   }
   catch
   {

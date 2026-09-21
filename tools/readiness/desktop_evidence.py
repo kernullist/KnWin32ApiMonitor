@@ -39,7 +39,13 @@ def page_endpoint(profile, job):
     file = profile / "EBWebView/DevToolsActivePort"
     if not file.exists():
         return None
-    data = file.read_text(encoding="ascii")
+    try:
+        with file.open("rb") as stream:
+            payload = stream.read(1025)
+    except (FileNotFoundError, PermissionError):
+        return None
+    require(len(payload) <= 1024, "Invalid CDP discovery file.")
+    data = payload.decode("ascii")
     require(len(data) <= 1024, "Invalid CDP discovery file.")
     lines = data.splitlines()
     require(len(lines) == 2 and lines[0].isdigit() and 0 < int(lines[0]) <= 65535 and lines[1].startswith("/devtools/browser/"),

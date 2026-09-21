@@ -11,6 +11,49 @@ vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.Mo
   { exports }, { filename: "nativeOwnershipPolling.cjs" });
 const { createNativeOwnershipPolling, mergeSessionSnapshot, retainUnchangedSnapshot, isDaemonSession, selectTraceDrainSession } = exports;
 
+test("starting operations keep polling and cancellation active until terminal", () =>
+{
+  for (const state of ["queued", "starting", "running", "cancel_requested", "stopping_agent", "draining"])
+  {
+    assert.equal(exports.isNativeOperationActive({ state }), true, state);
+  }
+  for (const state of ["completed", "cancelled", "cleanup_failed", "failed", "stopped", "stale", "recovery_required", "unknown"])
+  {
+    assert.equal(exports.isNativeOperationActive({ state }), false, state);
+  }
+});
+
+test("asynchronous local failures remain reportable after the active session disappears", () =>
+{
+  const observe = exports.createNativeSessionFailureObserver();
+  const session = { sessionId: "attach", sessionKind: "attach_capture_stream", daemonProcessId: 0,
+    sessionState: "failed", lastError: "Agent readiness timed out.", recoveryAction: "" };
+  assert.equal(observe([session])[0], session);
+  assert.equal(observe([{ ...session, elapsedMs: 999 }]).length, 0);
+  for (const sessionState of ["cleanup_failed", "recovery_required"])
+  {
+    const cleanup = { ...session, sessionState, recoveryAction: "manual_same_bitness_cleanup_required" };
+    assert.equal(observe([cleanup])[0], cleanup);
+    assert.equal(observe([cleanup]).length, 0);
+    assert.equal(observe([{ ...cleanup, lastError: "Helper stopped without cleanup proof." }]).length, 1);
+  }
+});
+
+test("session failure reporting excludes normal stops and remote history and expires absent identities", () =>
+{
+  const observe = exports.createNativeSessionFailureObserver();
+  const session = { sessionId: "launch", sessionKind: "launch_capture_stream", daemonProcessId: 0,
+    sessionState: "failed", lastError: "", recoveryAction: "" };
+  for (const sessionState of ["created", "starting", "running", "stop_requested", "stopping_agent", "draining", "stopped"])
+  {
+    assert.equal(observe([{ ...session, sessionState }]).length, 0);
+  }
+  assert.equal(observe([{ ...session, sessionKind: "daemon_attach" }, { ...session, daemonProcessId: 12 }]).length, 0);
+  assert.equal(observe([session]).length, 1);
+  assert.equal(observe([]).length, 0);
+  assert.equal(observe([session]).length, 1);
+});
+
 function deferred()
 {
   let resolve;

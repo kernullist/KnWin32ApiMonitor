@@ -74,7 +74,7 @@ import type { TraceThreadGroup, TraceTimelineBucket } from "./traceViews";
 import { computeVirtualTraceWindow } from "./virtualTrace";
 import { architectureMismatchMessage, normalizeNativeArchitecture, targetEligibilityReason } from "./targetArchitecture";
 import type { NativeArchitecture } from "./targetArchitecture";
-import { createNativeOwnershipPolling, isDaemonSession, mergeSessionSnapshot, retainUnchangedSnapshot, selectTraceDrainSession } from "./nativeOwnershipPolling";
+import { createNativeOwnershipPolling, createNativeSessionFailureObserver, isDaemonSession, isNativeOperationActive, mergeSessionSnapshot, retainUnchangedSnapshot, selectTraceDrainSession } from "./nativeOwnershipPolling";
 import type { NativeOwnershipPolling } from "./nativeOwnershipPolling";
 
 type LeftTab = "targets" | "apis" | "profiles";
@@ -503,10 +503,6 @@ function summarizeProcessTree(result: ProcessTreeResult | null) {
   };
 }
 
-function isNativeOperationActive(operation: NativeOperation): boolean {
-  return ["queued", "running", "cancel_requested", "stopping_agent", "draining"].includes(operation.state);
-}
-
 function isNativeSessionActive(session: NativeSession): boolean {
   return ["created", "starting", "running", "stop_requested", "stopping_agent", "draining"].includes(session.sessionState);
 }
@@ -623,6 +619,7 @@ function App() {
   const [traceDrainFailedSession, setTraceDrainFailedSession] = useState<string | null>(null);
   const lastSessionTargetAlive = useRef<Record<string, boolean>>({});
   const notifiedExitedSessions = useRef<Set<string>>(new Set());
+  const observeNativeSessionFailures = useRef(createNativeSessionFailureObserver());
   const traceScrollRef = useRef<HTMLDivElement | null>(null);
   const traceScrollRafRef = useRef<number | null>(null);
   const traceIngestWorker = useRef<Worker | null>(null);
@@ -1066,6 +1063,15 @@ function App() {
   useEffect(() =>
   {
     observeTargetExitTransitions(nativeSessions);
+    const failures = observeNativeSessionFailures.current(nativeSessions);
+    if (failures.length > 0)
+    {
+      appendOutput(failures.map((session) => makeAuditEvent("native_session_failed", "list_native_sessions",
+        (session.lastError || "No error detail was reported.") +
+        `; ${session.sessionKind} ${session.sessionId}: ${session.sessionState}; target=${session.targetProcessId}` +
+        (session.recoveryAction ? `; recovery=${session.recoveryAction}` : ""))));
+      setInspectorTab("output");
+    }
   }, [nativeSessions]);
 
   const compiledTraceQuery = useMemo(
@@ -3386,6 +3392,13 @@ function App() {
 
                   {inspectorTab === "output" ? (
                     <div className="output-log">
+                      {outputEvents.map((event, index) => (
+                        // Backend timestamps can collide for identical events; index keys stay unique.
+                        <div key={`${outputEvents.length - index}-${event.timestampUtc}-${event.eventType}`}>
+                          <Activity size={14} />
+                          {event.eventType}: {event.operation}; win32={event.win32ErrorCode}; {event.message}
+                        </div>
+                      ))}
                       <div><Braces size={14} /> schemaVersion={selectedEvent?.schemaVersion ?? "0.1.0"}</div>
                       <div><Filter size={14} /> backend={backendMode}; filter="{filter || "*"}"; mode={traceMode}</div>
                       <div><Filter size={14} /> api="{quickApiFilter || "*"}"; dll="{quickModuleFilter || "*"}"; parameter="{quickParameterFilter || "*"}"; filteredRows={filteredEvents.length}</div>
@@ -3394,13 +3407,6 @@ function App() {
                       <div><CircleDot size={14} /> highlighting={highlightingEnabled ? "enabled" : "disabled"}; highlightedRows={traceHighlightState.eventHighlights.length}</div>
                       <div><Database size={14} /> sessionBytes={formatBytes(sessionBytes)}; droppedEvents={droppedCount}</div>
                       {replaySource ? <div><FolderOpen size={14} /> replay={replaySource.kind}; status={replaySource.validationStatus}; path={replaySource.path}</div> : null}
-                      {outputEvents.map((event, index) => (
-                        // Backend timestamps can collide for identical events; index keys stay unique.
-                        <div key={`${outputEvents.length - index}-${event.timestampUtc}-${event.eventType}`}>
-                          <Activity size={14} />
-                          {event.eventType}: {event.operation}; win32={event.win32ErrorCode}; {event.message}
-                        </div>
-                      ))}
                     </div>
                   ) : null}
                 </>

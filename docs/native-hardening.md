@@ -35,13 +35,18 @@ existing two-second quiescence deadline retain their resources and report an
 incomplete stop. The DLL remains pinned under the existing no-unload policy.
 
 Authenticated control pipes use atomic message writes in nonblocking wait mode.
-Messages are limited to 64 KiB; a full pipe, unavailable writer lock or failed
-write increments the agent loss counter. A failed HELLO prevents hook startup.
-This deliberately drops whole messages when a controller stops reading; there
-is no asynchronous write retaining the caller's temporary JSON buffer.
+Messages are limited to 64 KiB. Ordinary diagnostics attempt one write; a full
+pipe, unavailable writer lock or failed write drops the whole message and
+increments the agent loss counter once. Initial readiness alone retries on the
+initialization worker for up to one second, releasing the lock between attempts
+and stopping when lifecycle leaves `running`. An ultimately failed readiness
+message also counts once. A failed HELLO prevents hook startup. There is no
+asynchronous write retaining the caller's temporary JSON buffer.
 [Microsoft documents the message-pipe full-buffer behavior](https://learn.microsoft.com/en-us/windows/win32/ipc/named-pipe-type-read-and-wait-modes).
 IPC tests fill an actual unread pipe, check bounded completion, reject byte
 pipes and reject empty/oversized messages.
+The separate `readiness-delivery` test covers temporary and permanent contention,
+delayed or absent pipe drainage, lifecycle stop and ordinary nonblocking delivery.
 
 Run the native matrix with:
 

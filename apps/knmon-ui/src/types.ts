@@ -22,7 +22,7 @@ export interface NativeOperation {
   operationId: string;
   operationKind: "capture_sample" | "attach_capture" | "process_tree_supervision" | "agent_cleanup" | string;
   targetProcessId: number;
-  state: "queued" | "running" | "cancel_requested" | "stopping_agent" | "draining" | "completed" | "failed" | "cancelled" | "cleanup_failed" | string;
+  state: "queued" | "starting" | "running" | "cancel_requested" | "stopping_agent" | "draining" | "completed" | "failed" | "cancelled" | "cleanup_failed" | string;
   cancelRequested: boolean;
   elapsedMs: number;
   durationMs: number;

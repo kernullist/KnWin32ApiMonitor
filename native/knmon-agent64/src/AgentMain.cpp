@@ -2900,25 +2900,34 @@ std::string MessagePrefix(const char* messageType, LONG64 sequence)
     return stream.str();
 }
 
-bool SendJson(const std::string& payload)
+bool SendJson(const std::string& payload, bool initialReadiness = false)
 {
     bool sent = false;
-
-    const bool acquired = TryAcquireSRWLockExclusive(&g_pipeLock) != FALSE;
+    const ULONGLONG deadline = initialReadiness ? GetTickCount64() + 1000 : 0;
     do
     {
-        if (!acquired || g_pipeHandle == INVALID_HANDLE_VALUE)
+        if (initialReadiness && GetTickCount64() >= deadline)
         {
             break;
         }
-
-        sent = knmon::TryWriteAgentMessage(g_pipeHandle, payload);
+        const bool acquired = TryAcquireSRWLockExclusive(&g_pipeLock) != FALSE;
+        if (acquired)
+        {
+            if (g_pipeHandle != INVALID_HANDLE_VALUE &&
+                (!initialReadiness || GetLifecycleState() == AgentLifecycleState::Running))
+            {
+                sent = knmon::TryWriteAgentMessage(g_pipeHandle, payload);
+            }
+            ReleaseSRWLockExclusive(&g_pipeLock);
+        }
+        if (sent || !initialReadiness || GetLifecycleState() != AgentLifecycleState::Running || GetTickCount64() >= deadline)
+        {
+            break;
+        }
+        // Only the initialization worker retries readiness; hook diagnostics never wait.
+        Sleep(1);
     }
-    while (false);
-    if (acquired)
-    {
-        ReleaseSRWLockExclusive(&g_pipeLock);
-    }
+    while (true);
 
     if (!sent)
     {
@@ -2948,7 +2957,7 @@ bool SendReady()
     stream << "\"captureDetail\":" << Q(knmon::CaptureDetailName(g_captureDetail)) << ",";
     stream << "\"stackFrames\":" << g_stackFrameLimit;
     stream << "}";
-    return SendJson(stream.str());
+    return SendJson(stream.str(), true);
 }
 
 void SendHookStatus(const char* moduleName, const char* apiName, bool installed, const std::string& message)
@@ -21848,6 +21857,8 @@ BOOL APIENTRY DllMain(HMODULE moduleHandle, DWORD reason, LPVOID reserved)
 }
 
 #if defined(KNMON_LIFECYCLE_TESTING)
+#include "../../tests/AgentReadyDelivery.inl"
+
 struct TestPausedEmitter
 {
     HANDLE Ready = nullptr;

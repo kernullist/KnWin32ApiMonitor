@@ -7,12 +7,12 @@ Windows 10/11 release or every API input.
 | Component | x64 Debug | x86 Debug | x64 Release | x86 Release |
 |---|---|---|---|---|
 | Native compile/link | passed | passed | prior build passed | prior build passed |
-| Native CTest | 25/25 passed | 25/25 passed | prior 23/23 passed | prior 17 passed, 6 not started |
+| Native CTest | 26/26 passed | 26/26 passed | prior 23/23 passed | prior 17 passed, 6 not started |
 | Desktop compile/link | prior test executable passed | prior test executable passed | application passed | application passed |
 | Desktop security tests | prior 3/3 passed | prior 3/3 passed | 6/6 passed | 6/6 passed |
 | Desktop attach/filter/stop/export and Job resources | native tools used | native tools used | passed with Debug native tools | passed with Debug native tools |
 | Desktop PE hardening | passed | passed | passed | passed |
-| Rust backend with real helper | prior 18/18 passed | prior 18/18 passed | 20/20 with Debug helper | 20/20 with Debug helper; Release helper remains blocked |
+| Rust backend with real helper | prior 18/18 passed | prior 18/18 passed | 21/21 with Debug helper | 21/21 with Debug helper; Release helper remains blocked |
 | All-supported sample live/replay | prior 376 events, 16 errors; five detail/stack configurations | prior 376 events, 16 errors; five detail/stack configurations | prior 376 events, 16 errors | blocked before launch |
 | Standalone native stack component | passed | passed | passed | passed |
 | Comparative six-API corpus | prior 50 runs passed | prior 50 runs passed | not run | not run |
@@ -250,3 +250,52 @@ architectures using default preview with stacks Off. Each exports 240 events,
 with zero loss, complete terminal drain, target survival after detach and normal
 owned-process cleanup. This validates startup-state integration; it is not the
 planned comparable profile-cost matrix.
+
+## Desktop readiness delivery and corpus validation
+
+The current Debug native revision passes 26/26 CTests on x64 and x86. The new
+readiness-delivery test exercises the actual sender against temporary and
+permanent lock contention, a full message pipe with delayed or absent drainage,
+and lifecycle stop. Initial readiness retries for up to one second on its worker;
+ordinary hook diagnostics remain single-attempt. Failed delivery increments the
+drop counter once. The production-export checks still reject test-only exports.
+
+Both Release backends pass 21/21 tests with the matching Debug helpers. Streaming
+registration and helper creation now retain `starting`; only the authenticated
+helper's readiness state can publish `running`. Complete frontend verification
+passes 25 named regressions, including cancellation during startup and persistent,
+deduplicated terminal failures. The 200,000-event worker check and real collector
+fixture also pass. Both Release desktops pass six security tests and PE hardening.
+
+Actual hook-free missing-readiness controls pass on both architectures. They
+produce no trace events, retain the readiness timeout in the visible Output
+panel, report successful cleanup and keep the target alive. Normal attach,
+filter, stop and export also pass with zero recorded loss. The driver waits for
+the actual initial enumeration completion audit before its idle sample; enabled
+controls alone could briefly precede the initialization effect. Retained failed
+attempts are not rewritten as passes.
+
+The [coordinated corpus](desktop-corpus-costs.md) extends this integration check
+to identical independent workloads and separately validates complete delivery,
+resource accounting and bounded DOM observation intervals. Its desktop scope
+does not establish complete capture-profile costs or native Release support.
+
+The final matrix `build/desktop-corpus-bjh1xvw0` passes 120 fresh-process runs
+across both architectures and six modes. It checks 54,000 caller invocations,
+including 45,000 observed records, with exact ordering, zero recorded loss,
+complete hook restoration and normal owned-process exits. Full raw-data
+revalidation and 566 mutation rejections pass in
+`build/desktop-corpus-controls-robz9og8`, including actual Windows sharing and
+reparse-path controls. A preceding measurement failure remains retained: one
+2233.85 ms sampling gap exceeded the unchanged 500 ms limit. Its cause remains
+unresolved; diagnostic probes and partial runs do not replace the final matrix.
+
+The final closure `build/g12y-closure-ovlxx18s` also revalidates the matching
+Release backend (`backend-release-7oe6z8ll`), actual desktop integration
+(`desktop-evidence-sjk9_qj7`) and missing-readiness controls
+(`desktop-readiness-failure-u31tdg09`). The integrated report
+`technical-readiness-gev24t6j/report.json` has three passed scopes, no failed
+scopes and fourteen unverified scopes. It verifies only the supplied desktop,
+backend and typed-ABI evidence; complete capture costs remain unverified. Fresh
+source reconstruction and the other platform, release and comparison scopes
+require separate evidence.

@@ -32,7 +32,9 @@ PRODUCERS = ("tools/readiness/source_evidence.py", "tools/readiness/technical_ga
              "tools/comparison/check_proof.py", "tools/comparison/replay_comparison.py", "tools/comparison/run_comparison.py", "tools/readiness/advisory_audit.py",
              "tools/readiness/desktop_evidence.py", "tools/readiness/desktop_processes.py", "tools/readiness/desktop_driver.mjs", "tools/readiness/desktop_check.py",
              "tools/readiness/backend_release.py", "tools/security/tauri_backport.py",
-             "tools/readiness/native_profile_costs.py", "tools/readiness/verify_native_profile_costs.py")
+             "tools/readiness/native_profile_costs.py", "tools/readiness/verify_native_profile_costs.py",
+             "tools/readiness/corpus_desktop.py", "tools/readiness/corpus_desktop_driver.mjs", "tools/readiness/corpus_desktop_check.py",
+             "tools/readiness/corpus_desktop_pack.py", "tools/readiness/verify_corpus_desktop.py")
 
 
 def outcome(rows):
@@ -77,6 +79,7 @@ def main():
     parser.add_argument("--desktop", type=Path)
     parser.add_argument("--backend-release", type=Path)
     parser.add_argument("--native-profiles", type=Path)
+    parser.add_argument("--desktop-profiles", type=Path)
     parser.add_argument("--rustsec-db", type=Path, default=ROOT / "build/deps/rustsec-advisory-db")
     parser.add_argument("--node", type=Path, default=ROOT / "build/deps/node-v24.21.0-win-x64/node.exe")
     args = parser.parse_args()
@@ -183,6 +186,19 @@ def main():
                 "nativeRuns": len(evidence["runs"]), "measurements": evidence["summary"], "command": execution,
                 "reason": "Native Debug caller costs passed; comparable collector, desktop, disk, serialization and UI costs remain required."}
 
+    def profile_costs():
+        result = native_profiles() if args.native_profiles is not None else {"status": "not_verified"}
+        if args.desktop_profiles is not None:
+            directory = args.desktop_profiles.resolve()
+            bind("desktopProfiles", directory / "evidence.json")
+            command = [sys.executable, "-B", "-X", "utf8", ROOT / "tools/readiness/corpus_desktop.py", "--check", directory]
+            execution = run(command, ROOT, output / "desktop-profiles.log", dict(os.environ), timeout=180)
+            evidence = read_json(directory / "evidence.json")
+            result.update(desktopStatus="passed", desktopScope=evidence["scope"], desktopRuns=len(evidence["runs"]),
+                          desktopMeasurements=evidence["summary"], desktopCommand=execution,
+                          reason="Paced desktop corpus passed; separate collector, disk and serialization attribution and visible presentation costs remain required.")
+        return result
+
     try:
         report["checkoutRevision"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, timeout=10).strip()
         report["trackedDirty"] = bool(subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT, timeout=30))
@@ -199,8 +215,8 @@ def main():
             checked("whole_desktop_resources", desktop)
         if args.backend_release is not None:
             checked("release_backend_runtime", backend_release)
-        if args.native_profiles is not None:
-            checked("capture_profile_costs", native_profiles)
+        if args.native_profiles is not None or args.desktop_profiles is not None:
+            checked("capture_profile_costs", profile_costs)
         if rows["source_reconstruction"]["status"] == "passed":
             verify_current_sources(retained["sourceManifest"])
         verify_bound_inputs(report["inputs"])
