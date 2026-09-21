@@ -84,13 +84,17 @@ collector, disk and serialization attribution, visible presentation costs,
 Release-native evidence and broader workloads remain necessary before general
 performance claims. The matrix does not establish a World No.1 ranking.
 
-## Validated matrix, 2026-09-21
+## Recorded matrix, 2026-09-21, source revision eb8a4f1
 
 `build/desktop-corpus-bjh1xvw0` passes all 120 runs: 54,000 caller invocations,
 including 45,000 observed records with exact ordering, zero recorded loss,
 complete hook restoration, target survival through detach and normal Job exits.
 This pack includes the Agent readiness-delivery retry, streaming startup-state
 correction and persistent desktop failure reporting changes.
+Its source snapshot was shipped as `eb8a4f1`. The later source-archive validator
+change also changes the broader source fingerprint, so this pack remains
+historical for the current-source consumer. The validator update changes neither
+the measured native/UI code nor the measurement scope.
 The following values are medians of ten run-level measurements, not pooled-call
 quantiles. DOM p95 bounds include the observer interval; they are not exact
 rendering latency. Application CPU is summed across the owned processes within

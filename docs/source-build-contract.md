@@ -78,6 +78,16 @@ outcomes remain in `build/source-rebuild-<id>/evidence.json`. A failed run retai
 rebuild; it does not claim a Rust desktop Release rebuild, another OS, or
 byte-identical PE outputs.
 
+The 2026-09-21 reconstruction of `de63483` passed all eight commands in
+`build/source-rebuild-n0vgqmck`, including the frontend validators and 26/26
+native tests on each architecture. Its clean archive is
+`build/g12z-corrected-source.zip`, SHA-256
+`7111cc0f88be06a61044f8f8a0550b7d8d33840388fb93b80d277c11cb395c9c`.
+The extracted archive validator also passed its positive controls and 39
+rejections. Its positive CTest fixture compares the required names, replacing
+an obsolete fixed count; omitted tests, duplicate names and the wrong
+architecture are rejected even when the declared count looks consistent.
+
 `python tools/source/verify_source_archive.py` exercises malformed archives,
 Windows path boundaries, skipped test rejection and owned process cleanup.
 `python tools/source/verify_source_package.py` verifies deterministic clean

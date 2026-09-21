@@ -299,3 +299,32 @@ scopes and fourteen unverified scopes. It verifies only the supplied desktop,
 backend and typed-ABI evidence; complete capture costs remain unverified. Fresh
 source reconstruction and the other platform, release and comparison scopes
 require separate evidence.
+
+## Shipped source reconstruction, 2026-09-21
+
+The clean `de63483` archive passes all eight reconstruction commands in
+`build/source-rebuild-n0vgqmck`: pinned preflight, dependency installation,
+frontend build/validation and both native Debug builds with 26/26 CTests each.
+The extracted validator passes 39 rejection controls, including actual owned
+process timeout cleanup. Its obsolete 23-test positive assertion was replaced
+with exact required names after a retained failing run. Missing required tests,
+duplicate names and an incorrect architecture cannot pass by matching a count.
+The actual source-evidence controls pass 31 rejections in
+`build/readiness-negative-_i0uahgn`; clean/dirty package provenance controls also
+pass in `build/source-package-negative-k13_mug6`.
+
+Current dependency inventory `build/dependency-evidence-0kc3_mcy` passes 339
+components, 28 rejection controls and two positive groups. Advisory evidence
+`build/advisory-evidence-bpgfje8o` reports zero known npm/Cargo vulnerabilities
+and passes its mutation controls. The retained `proc-macro-error` and `glib`
+warnings are absent from the current x64/x86 Windows dependency graphs.
+
+Both Release backends pass 21/21 in `build/backend-release-moqar7aw`, including
+its adversarial controls. Actual desktop integration and raw-evidence controls
+pass on both architectures in `build/desktop-evidence-85hv0oce`. The integrated
+report `build/technical-readiness-t47nswgx/report.json` has seven passed scopes,
+no failed scopes and ten unverified scopes. The earlier full desktop corpus is
+bound to `eb8a4f1`; the validator-only change makes its general source binding
+historical. No current desktop-profile scope or complete performance claim is
+inferred from that older pack. Native Release, other platform/privilege scopes,
+hardware CET, complete costs and distribution/competitive evidence remain open.
