@@ -12,11 +12,11 @@ attribution are outside the current stack contract.
 
 This document describes the current Phase 0/Phase 1 foundation and the controlled native-capture paths for `KN Win32 API Monitor`.
 
-The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, same-bitness running-process attach for non-protected sample targets, helper-side process-tree supervision for deterministic sample children, cancellation-safe operation ownership, durable `.knapm` chunk writing and indexed replay, `.knapm` restart/recovery ownership classification, host-side persistent daemon supervision, daemon audit/stale-registry hardening, zstd `.knapm` chunks, JSON replay catalogs, database-backed replay catalog indexing, event-level trace indexing and full-text replay search, catalog-backed replay UX, virtualized trace rendering, UI-side query/error/thread/timeline/highlight analysis, generated metadata for `30,112` defined APIs, `320` runtime-supported manual/typed hook entries, generic Tier 1/Tier 2 runtime profile gates, selected low-payload Tier 0 smoke-verified hooks, broad API exerciser launch/attach validation, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay.
+The current implementation is intentionally scoped: it has a mock File I/O capture stream, native process enumeration, a controlled launch-time early-bird APC agent load path, bounded same-bitness x64/x86 File I/O capture for the repository sample target, same-bitness running-process attach for non-protected sample targets, helper-side process-tree supervision for deterministic sample children, cancellation-safe operation ownership, durable `.knapm` chunk writing and indexed replay, `.knapm` restart/recovery ownership classification, host-side persistent daemon supervision, daemon audit/stale-registry hardening, zstd `.knapm` chunks, JSON replay catalogs, database-backed replay catalog indexing, event-level trace indexing and full-text replay search, catalog-backed replay UX, virtualized trace rendering, UI-side query/error/thread/timeline/highlight analysis, generated metadata for `30,112` defined APIs, `332` runtime-supported manual/typed hook entries, generic Tier 1/Tier 2 runtime profile gates, selected low-payload Tier 0 smoke-verified hooks, broad API exerciser launch/attach validation, explicit controlled `NtCreateFile` capture from `ntdll.dll`, deterministic hook lifecycle telemetry, same-bitness preflight diagnostics, and helper-written session replay.
 
 It does not support cross-bitness attach, protected-process bypass, stealth loading, manual mapping, Windows service mode, automatic daemon crash recovery, unbounded arbitrary-target streaming, broad arbitrary target supervision, UI/GDI payload capture such as window text, pixels, screenshots, clipboard, input, or message hooks, process enumeration payload capture, process creation payload capture, PSAPI-derived module memory/PE/file/hash/signature payload capture, raw version-resource/string-table capture, RPC endpoint/auth/network payload capture, WinHTTP request/transfer/header/body/cookie/credential payload capture, ShellExecute/process launch, PIDL/Shell namespace payload capture, arbitrary Shell file metadata, COM/WinRT activation/object/interface/vtable/marshaling/storage/clipboard/drag-drop payload capture, HSTRING/runtime-class/restricted-error-info capture, synchronization object names, file-mapping object names, object-manager namespace paths, synchronization handle-array contents, mapped memory contents, security descriptors, SID/ACL/token data, wait-chain/APC queue payload capture, memory-content capture, file-content/path/name/directory payload capture beyond selected handle-based scalar file metadata, remote process memory API capture, injection helper capture, remote-thread/APC/context/stack capture, user-folder path capture, command-line capture, or environment capture.
 
-The current runtime policy admits 320 APIs: 314 manual wrappers and six
+The current runtime policy admits 332 APIs: 326 manual wrappers and six
 compiler-bound typed wrappers. The historical 30,092-entry figure describes
 the historical generated inventory, not today's enabled or verified capture
 coverage. See `generated/runtime-support.json` for the enforced support set.
@@ -88,41 +88,44 @@ Locations:
 - `apps/knmon-ui/src-tauri`
 - `crates/knmon-tauri`
 
-Current commands:
+Current commands (registered in `apps/knmon-ui/src-tauri/src/main.rs`):
 
-1. `list_target_processes`
-2. `get_backend_status`
-3. `start_mock_capture_session`
-4. `stop_mock_capture_session`
-5. `list_native_target_processes`
-6. `launch_sample_early_bird_capture`
-7. `capture_sample_fileio_events`
-8. `capture_sample_fileio_session_events`
-9. `replay_last_sample_session`
-10. `attach_target_process_capture`
-11. `supervise_process_tree`
-12. `list_native_operations`
-13. `cancel_native_operation`
-14. `list_native_sessions`
-15. `stop_native_session`
-16. `start_streaming_attach_session`
-17. `drain_native_trace_batches`
-18. `replay_session_path`
-19. `start_daemon_if_needed`
-20. `native_daemon_status`
-21. `list_daemon_sessions`
-22. `audit_daemon_sessions`
-23. `plan_daemon_recovery`
-24. `apply_daemon_recovery`
-25. `prune_stale_daemon_sessions`
-26. `start_daemon_supervised_session`
-27. `stop_daemon_session`
-28. `catalog_native_sessions`
-29. `query_native_session_catalog`
-30. `remove_missing_native_session_catalog_entries`
-31. `build_native_session_catalog_index`
-32. `query_native_session_catalog_index`
-33. `remove_missing_native_session_catalog_index_entries`
+1. `list_native_target_processes`
+2. `launch_sample_early_bird_capture`
+3. `capture_sample_fileio_events`
+4. `capture_sample_fileio_session_events`
+5. `replay_last_sample_session`
+6. `replay_session_path`
+7. `attach_target_process_capture`
+8. `supervise_process_tree`
+9. `list_native_operations`
+10. `cancel_native_operation`
+11. `list_native_sessions`
+12. `stop_native_session`
+13. `start_streaming_attach_session`
+14. `start_launch_monitor_session`
+15. `start_daemon_if_needed`
+16. `native_daemon_status`
+17. `list_daemon_sessions`
+18. `audit_daemon_sessions`
+19. `plan_daemon_recovery`
+20. `apply_daemon_recovery`
+21. `prune_stale_daemon_sessions`
+22. `catalog_native_sessions`
+23. `query_native_session_catalog`
+24. `remove_missing_native_session_catalog_entries`
+25. `build_native_session_catalog_index`
+26. `query_native_session_catalog_index`
+27. `remove_missing_native_session_catalog_index_entries`
+28. `build_native_trace_index`
+29. `query_native_trace_index`
+30. `remove_missing_native_trace_index_entries`
+31. `start_daemon_supervised_session`
+32. `stop_daemon_session`
+33. `drain_native_trace_batches`
+34. `get_backend_status`
+35. `get_native_helper_architecture`
+36. `query_target_binary_architecture`
 
 These commands are deliberately scoped. They prove native enumeration, controlled sample-agent load, bounded sample File I/O capture, bounded same-bitness selected-target attach, helper-side process-tree supervision, cancellation-safe ownership for bounded helper operations, host-side session state visibility, bounded streaming trace batches for a selected same-bitness attach session, daemon-owned durable `.knapm` session supervision, compressed chunk validation/replay, read-only replay catalog build/query, database-backed catalog index build/query/prune, read-only daemon audit, dry-run daemon recovery planning, registry-only recovery apply, stale registry pruning, and replay by explicit session path. The daemon and catalog commands use a normal user-mode helper process and local files; the Phase 12A UI calls only these existing host-side catalog/replay commands for replay browsing, and Phase 13A adds only host-side `winsqlite3` metadata indexing over `.knapm` rows. They do not create a Windows service, injected command channel, cross-bitness broker, protected-process bypass, automatic writer recovery, orphan repair path, or target mutation during replay/catalog/index/plan/apply operations.
 
@@ -428,6 +431,64 @@ Current same-bitness x64/x86 hook coverage:
 72. `GetModuleFileNameW`
 73. `FreeLibrary`
 74. `RpcMgmtEpEltInqDone`
+75. `LoadLibraryA`
+76. `LoadLibraryExW`
+77. `LoadLibraryExA`
+78. `LdrLoadDll`
+79. `RegOpenKeyExW`
+80. `RegCreateKeyExW`
+81. `RegQueryValueExW`
+82. `RegSetValueExW`
+83. `RegDeleteValueW`
+84. `RegCloseKey`
+85. `OpenProcessToken`
+86. `LookupPrivilegeValueW`
+87. `BCryptOpenAlgorithmProvider`
+88. `BCryptCloseAlgorithmProvider`
+89. `BCryptGetProperty`
+90. `BCryptGenRandom`
+91. `BCryptDestroyKey`
+92. `CertOpenStore`
+93. `CertCloseStore`
+94. `CryptMsgOpenToDecode`
+95. `CryptMsgClose`
+96. `InternetOpenW`
+97. `InternetCloseHandle`
+98. `WinHttpOpen`
+99. `WinHttpCloseHandle`
+100. `WinHttpSetOption`
+101. `SysFreeString`
+102. `VariantClear`
+103. `SafeArrayDestroy`
+104. `FreeCredentialsHandle`
+105. `DeleteSecurityContext`
+106. `DnsFree`
+107. `SetupDiDestroyDeviceInfoList`
+108. `DestroyEnvironmentBlock`
+109. `GetAdaptersAddresses`
+110. `GetIfEntry2`
+111. `PathFileExistsW`
+112. `WTHelperProvDataFromStateData`
+113. `SymInitializeW`
+114. `SymCleanup`
+115. `RpcStringBindingComposeW`
+116. `RpcBindingFromStringBindingW`
+117. `RpcStringFreeW`
+118. `RpcBindingFree`
+119. `RpcBindingSetOption`
+120. `UuidCreate`
+121. `UuidToStringW`
+122. `UuidFromStringW`
+123. `WSAStartup`
+124. `WSACleanup`
+125. `socket`
+126. `closesocket`
+127. `connect`
+128. `getaddrinfo`
+129. `freeaddrinfo`
+130. `WSAGetLastError`
+
+The numbered list above covers the 130 always-installed hooks. The full 332-entry manual hook table additionally contains 16 Tier 1 generic single-argument hooks enabled by `KNMON_TIER1_PROFILE` (`system-safe`: `GetSystemTime`, `QueryPerformanceCounter`, `QueryPerformanceFrequency`, `GetSystemTimeAsFileTime`, `GetSystemTimePreciseAsFileTime`, `GetSystemInfo`, `GetNativeSystemInfo`, `GetCurrentProcessorNumberEx`, `GetNumaHighestNodeNumber`, `GetActiveProcessorCount`; `ui-safe`: `GetCursorPos`, `GetDpiForWindow`, `GetAwarenessFromDpiAwarenessContext`; `devices-safe`: `SetupDiClassNameFromGuidW`; `network-management-safe`: `GetIpStatistics`; `graphics-safe`: `GetStockObject`), 180 Tier 2 return-only/API-set hooks enabled by `KNMON_TIER2_PROFILE` (including `tier2-initial-return-only` zero-argument scalar wrappers such as `GetTickCount`, `GetTickCount64`, `GetCurrentMonitorTopologyId`, and the user32/uxtheme/opengl32/kernel32 return-only batches, plus the `api-set-safe` and `missing-metadata-safe` rows), and six compiler-bound typed wrappers. Profile-gated hooks install only when the matching profile token is selected or an explicit `KNMON_SELECTED_APIS` filter names them.
 
 `NtCreateFile` is captured as an explicit `ntdll.dll` event. Its `returnValue` is the NTSTATUS hex string, while `lastErrorCode` remains a mapped Win32 error code for failure display compatibility. The current controlled sample success path returns `0x00000000` and includes bounded `OBJECT_ATTRIBUTES.ObjectName` evidence.
 
@@ -601,7 +662,7 @@ Generated ID artifacts:
 1. `generated/definition-ids.json`
 2. `native/knmon-common/include/knmon/common/GeneratedApiIds.h`
 
-`Protocol.h` includes `GeneratedApiIds.h`, so the compact Tier 0 shared-memory transport API and module IDs are generated from stable assignment metadata, while the broad runtime monitor table is generated from definition and inventory metadata. The current pipeline preserves the original compact Tier 0 IDs for File I/O, loader, resolver, and smoke-verified low-payload slices, and also emits metadata for `30,112` defined APIs. Of those APIs, `30,092` have generated or manual hook definitions, with `314` manual hooks and `29,778` generated hooks across `59` agent hook chunks. Tier 1 and Tier 2 generic profile events carry inventory API identity plus scalar/pointer slots through a generic runtime path instead of expanding the compact Tier 0 transport enum for every API.
+`Protocol.h` includes `GeneratedApiIds.h`, so the compact Tier 0 shared-memory transport API and module IDs are generated from stable assignment metadata, while the broad runtime monitor table is generated from definition and inventory metadata. The current pipeline preserves the original compact Tier 0 IDs for File I/O, loader, resolver, and smoke-verified low-payload slices, and also emits metadata for `30,112` defined APIs. Of those APIs, `332` have manual hook definitions in the enforced runtime policy: `326` manual hooks plus `6` compiler-bound typed wrappers, with broad generated hooks intentionally uninstalled (`generated=0`, `chunks=0`) until the typed generator and differential evidence gate lifts the `unverified_generated_abi` block. Tier 1 and Tier 2 generic profile events carry inventory API identity plus scalar/pointer slots through a generic runtime path instead of expanding the compact Tier 0 transport enum for every API.
 
 The injected agent does not parse JSON, XML, schemas, or metadata registries. Generated IDs are compile-time constants; schema validation, Rohitab XML import, coverage reporting, enum/flag validation, decode alias validation, and length-expression validation run only in repository tooling.
 

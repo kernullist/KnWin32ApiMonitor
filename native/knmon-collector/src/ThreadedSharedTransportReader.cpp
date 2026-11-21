@@ -49,6 +49,9 @@ bool ThreadedSharedTransportReader::Start(const SharedTransportRecordCallback& c
         catch (const std::exception& error)
         {
             m_running.store(false);
+            // No thread exists, so the reader must be startable again instead
+            // of being permanently bricked by the single-start guard.
+            m_started.store(false);
             std::lock_guard<std::mutex> lock(m_mutex);
             m_metrics.Running = false;
             m_metrics.ShutdownReason = "thread_start_failed";

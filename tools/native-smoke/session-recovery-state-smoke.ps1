@@ -38,7 +38,10 @@ function Write-SessionRecord
         recordsStreamed = 7
     }
 
-    $record | ConvertTo-Json -Compress | Set-Content -LiteralPath $Path -Encoding UTF8
+    # BOM-less UTF-8: the helper JSON validator rejects a UTF-8 BOM, and Windows
+    # PowerShell 5.1 'Set-Content -Encoding UTF8' writes one.
+    $recordJson = $record | ConvertTo-Json -Compress
+    [System.IO.File]::WriteAllText(($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)), $recordJson, (New-Object System.Text.UTF8Encoding($false)))
 }
 
 $recoveryRecord = Join-Path $tmpDir "session-recovery-required.json"

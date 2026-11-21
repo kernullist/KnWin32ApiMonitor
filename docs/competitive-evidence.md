@@ -45,9 +45,11 @@ The system-logger probe returned access denied (5)
 on both architectures. No kernel ETW execution is claimed for this run.
 
 The prior footprint improvement removed the unused x64 generic-dispatch exports and the
-host-only API catalog from the injected DLL. All 320 supported wrappers remain.
-The x64 Debug DLL shrank from 83,187,200 to 2,127,360 bytes; the x86 DLL remained
-1,686,016 bytes. The `agent-footprint` CTest enforces an 8 MiB on-disk budget,
+host-only API catalog from the injected DLL. All 332 supported wrappers remain.
+The x64 Debug DLL shrank from 83,187,200 to 2,127,360 bytes and the x86 DLL remained
+1,686,016 bytes at that change; after the Phase 13R hook additions the Debug DLLs
+measure 2,328,576 bytes (x64) and 1,863,680 bytes (x86). The `agent-footprint` CTest
+enforces an 8 MiB on-disk budget,
 checks the four control exports and rejects test or disabled-dispatch exports.
 
 The same 80-run comparison then measured x64 KN Monitor target RSS at 17.12 MiB

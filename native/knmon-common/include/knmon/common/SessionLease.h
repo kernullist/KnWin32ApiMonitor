@@ -58,6 +58,16 @@ public:
         return static_cast<std::uint32_t>(m_state.load(std::memory_order_acquire) >> 32);
     }
 
+    // Admission epoch without taking a reference: the current epoch while the
+    // gate is open, 0 while closed. Matches the epoch SessionLease::Acquire
+    // reports, but blocking callers can capture it without holding the gate
+    // for the whole original call.
+    std::uint32_t AdmissionEpoch() const noexcept
+    {
+        const std::uint64_t state = m_state.load(std::memory_order_acquire);
+        return (state & Closed) == 0 ? static_cast<std::uint32_t>(state >> 32) : 0;
+    }
+
 private:
     static constexpr std::uint64_t Closed = 1ULL << 31;
     static constexpr std::uint64_t LowMask = 0xffffffffULL;

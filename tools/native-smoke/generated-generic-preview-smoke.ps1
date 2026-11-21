@@ -4,6 +4,20 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# The generated generic wrapper set is disabled by the compiler-bound-typed
+# runtime policy (unverified_generated_abi); RuntimeSupportedApiKeys contains
+# only the manual/typed hooks, so every API selection this smoke exercises is
+# rejected before launch. Skip while the policy installs zero generated
+# wrappers and keep the script as the re-enable gate for the future typed
+# generator rollout.
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$runtimeSupport = Get-Content -LiteralPath (Join-Path $repoRoot "generated\runtime-support.json") -Raw | ConvertFrom-Json
+if ($runtimeSupport.generatedGenericWrappers -eq 0)
+{
+    Write-Output "Generated generic preview smoke skipped: runtime policy installs $($runtimeSupport.generatedGenericWrappers) generated wrappers (compiler-bound-typed policy)."
+    exit 0
+}
+
 function Assert-True
 {
     param(

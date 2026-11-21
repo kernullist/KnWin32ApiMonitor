@@ -18,6 +18,91 @@ function Assert-True
 }
 
 Assert-True (Test-Path -LiteralPath $HelperPath) "Helper not found: $HelperPath"
+# Pin the helper path to an absolute provider path: the PE-header reader uses
+# .NET File APIs that resolve relative paths against the Win32 process CWD,
+# which Set-Location does not update, unlike the PowerShell location used by
+# Test-Path above.
+$HelperPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($HelperPath)
+
+function Test-User32Export
+{
+    param([string]$Name)
+
+    if (-not ("KnMonUser32ExportProbe" -as [type]))
+    {
+        Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public static class KnMonUser32ExportProbe
+{
+    [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
+    public static extern IntPtr GetProcAddress(IntPtr module, string name);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    public static extern IntPtr GetModuleHandleW(string name);
+
+    public static bool Has(string name)
+    {
+        return GetProcAddress(GetModuleHandleW("user32.dll"), name) != IntPtr.Zero;
+    }
+}
+"@
+    }
+
+    return [KnMonUser32ExportProbe]::Has($Name)
+}
+
+function Get-HelperIs64Bit
+{
+    # The helper launches a same-bitness sample, so the helper PE machine type
+    # decides which system directory the sample resolves optional DLLs from.
+    $stream = [System.IO.File]::OpenRead($HelperPath)
+    try
+    {
+        $header = New-Object byte[] 4096
+        $read = $stream.Read($header, 0, $header.Length)
+        if ($read -lt 64 -or $header[0] -ne 0x4D -or $header[1] -ne 0x5A)
+        {
+            throw "Helper PE header unreadable: $HelperPath"
+        }
+
+        $peOffset = [BitConverter]::ToInt32($header, 0x3C)
+        if ($peOffset -lt 0 -or $peOffset + 6 -gt $read -or $header[$peOffset] -ne 0x50 -or $header[$peOffset + 1] -ne 0x45)
+        {
+            throw "Helper PE header unreadable: $HelperPath"
+        }
+
+        return [BitConverter]::ToUInt16($header, $peOffset + 4) -eq 0x8664
+    }
+    finally
+    {
+        $stream.Dispose()
+    }
+}
+
+function Get-HelperNativeSystemDirectory
+{
+    # Map the helper architecture to the system directory holding its DLLs,
+    # honouring Sysnative redirection when this PowerShell host is 32-bit.
+    param([bool]$HelperIs64Bit)
+
+    if ($HelperIs64Bit)
+    {
+        if ([Environment]::Is64BitProcess)
+        {
+            return (Join-Path $env:SystemRoot "System32")
+        }
+
+        return (Join-Path $env:SystemRoot "Sysnative")
+    }
+
+    if ([Environment]::Is64BitProcess)
+    {
+        return (Join-Path $env:SystemRoot "SysWOW64")
+    }
+
+    return (Join-Path $env:SystemRoot "System32")
+}
 
 function Assert-ReturnOnlyEvent
 {
@@ -132,6 +217,13 @@ try
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "IsMouseInPointerEnabled" -Module "user32.dll" -InventoryKey "user32.dll!IsMouseInPointerEnabled" -Family "ui"
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "IsProcessDPIAware" -Module "user32.dll" -InventoryKey "user32.dll!IsProcessDPIAware" -Family "ui"
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "IsWow64Message" -Module "user32.dll" -InventoryKey "user32.dll!IsWow64Message" -Family "ui"
+    # GetCurrentMonitorTopologyId is missing from user32.dll before Windows 11
+    # 24H2; the sample resolves it dynamically, so only assert the event when
+    # the export exists on this machine.
+    if (Test-User32Export "GetCurrentMonitorTopologyId")
+    {
+        Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "GetCurrentMonitorTopologyId" -Module "user32.dll" -InventoryKey "user32.dll!GetCurrentMonitorTopologyId" -Family "ui"
+    }
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "D3DPERF_EndEvent" -Module "d3d9.dll" -InventoryKey "d3d9.dll!D3DPERF_EndEvent" -Family "graphics"
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "D3DPERF_GetStatus" -Module "d3d9.dll" -InventoryKey "d3d9.dll!D3DPERF_GetStatus" -Family "graphics"
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "D3DPERF_QueryRepeatFrame" -Module "d3d9.dll" -InventoryKey "d3d9.dll!D3DPERF_QueryRepeatFrame" -Family "graphics"
@@ -225,7 +317,14 @@ try
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "UiaClientsAreListening" -Module "uiautomationcore.dll" -InventoryKey "uiautomationcore.dll!UiaClientsAreListening" -Family "ui"
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "WscQueryAntiMalwareUri" -Module "wscapi.dll" -InventoryKey "wscapi.dll!WscQueryAntiMalwareUri" -Family "system"
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "RatingEnabledQuery" -Module "msrating.dll" -InventoryKey "msrating.dll!RatingEnabledQuery" -Family "web"
-    Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "CanSendToFaxRecipient" -Module "fxsutility.dll" -InventoryKey "fxsutility.dll!CanSendToFaxRecipient" -Family "devices"
+    # fxsutility.dll is resolved dynamically by the same-bitness sample and is
+    # optional on machines without the Fax feature; only assert the event when
+    # the copy matching the helper architecture exists.
+    $fxsutilityDirectory = Get-HelperNativeSystemDirectory -HelperIs64Bit (Get-HelperIs64Bit)
+    if (Test-Path -LiteralPath (Join-Path $fxsutilityDirectory "fxsutility.dll"))
+    {
+        Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "CanSendToFaxRecipient" -Module "fxsutility.dll" -InventoryKey "fxsutility.dll!CanSendToFaxRecipient" -Family "devices"
+    }
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "DhcpDsCleanup" -Module "dhcpsapi.dll" -InventoryKey "dhcpsapi.dll!DhcpDsCleanup" -Family "network-management"
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "DhcpDsInit" -Module "dhcpsapi.dll" -InventoryKey "dhcpsapi.dll!DhcpDsInit" -Family "network-management"
     Assert-ReturnOnlyEvent -Events $result.capturedEvents -Api "ImmDisableLegacyIME" -Module "imm32.dll" -InventoryKey "imm32.dll!ImmDisableLegacyIME" -Family "ui"

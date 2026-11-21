@@ -55,7 +55,8 @@ function Write-Manifest
     )
 
     $json = $Manifest | ConvertTo-Json -Depth 32
-    Set-Content -LiteralPath (Join-Path $SessionPath "manifest.json") -Value $json -Encoding UTF8
+    # BOM-less UTF-8: the helper JSON validator rejects a UTF-8 BOM.
+    [System.IO.File]::WriteAllText(($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath((Join-Path $SessionPath "manifest.json"))), $json, (New-Object System.Text.UTF8Encoding($false)))
 }
 
 function Set-RunningOwnership

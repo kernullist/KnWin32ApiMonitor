@@ -254,7 +254,7 @@ low-payload slices:
 2. Loader API IDs `7` through `11`.
 3. Resolver API IDs `12` through `13`.
 4. Wave 2/3/4 smoke-verified API IDs `14` through `179`, including selected registry, token query/privilege lookup, crypto lifecycle, RPC lifecycle/UUID, Winsock, WinHTTP/WinINet session, User32/GDI32, PSAPI, Version, Shell, OLE32/OLEAUT32, COMBASE WinRT, KERNEL32 memory/thread/synchronization/file-mapping/process/handle/module/file metadata, SECUR32, USERENV, DNSAPI, IPHLPAPI, SETUPAPI, SHLWAPI, WINTRUST, and DbgHelp hooks.
-5. Broad generated runtime monitoring uses generated hook metadata for the larger table instead of assigning every API a compact Tier 0 transport ID. Current generated hook coverage is `required=30092`, `manual=314`, `generated=29778`, `covered=30092`, `chunks=59`.
+5. Broad generated runtime monitoring uses generated hook metadata for the larger table instead of assigning every API a compact Tier 0 transport ID. Current generated hook coverage is `required=332`, `manual=326`, `generated=0`, `covered=332`, `chunks=0` under the `compiler-bound-typed` runtime policy; broad generic generated hooks remain blocked by `unverified_generated_abi` until the typed generator and differential evidence gate opens them.
 6. Module IDs:
    - `kernel32.dll = 1`
    - `ntdll.dll = 2`
@@ -285,7 +285,7 @@ low-payload slices:
 
 The native agent and controller use generated compile-time enum constants through `GeneratedApiIds.h`. The controller also uses `GeneratedApiMetadata.h` for API/module names, API family/category/risk labels, argument names/types/directions, decode aliases, and capture timing. Target hook fast paths still do not parse definitions or metadata. Tier 1 and Tier 2 generic events use a separate transport record flag and carry the inventory API name plus pointer/scalar slots without changing existing Tier 0 IDs.
 
-`generated/definition-decoder-tables.json` is the deterministic JSON view for tooling. It contains module rows, API rows, flattened parameter rows, decode alias rows, and source file lists without wall-clock timestamps or local machine paths. The current definition set has `30,112` APIs, `226,754` parameter metadata rows, zero parameters missing decode metadata, and generated preview-slot coverage for every target-memory-preview-eligible parameter.
+`generated/definition-decoder-tables.json` is the deterministic JSON view for tooling. It contains module rows, API rows, flattened parameter rows, decode alias rows, and source file lists without wall-clock timestamps or local machine paths. The current definition set has `30,112` APIs, `226,700` parameter metadata rows, zero parameters missing decode metadata, and generated preview-slot coverage for every target-memory-preview-eligible parameter.
 
 `generated/tier1-hook-plan.json` currently plans all `27,907` Tier 1 APIs. The plan marks `17,371` APIs as generic pointer/scalar fallback ready, `10,536` APIs as blocked by the current generic ABI slot policy, and `4,435` APIs as requiring explicit allowlist because of risk policy. The default profile installs zero Tier 1 hooks; broad coverage requires an explicit profile, module/family/risk selector, or allowlist.
 
@@ -333,7 +333,7 @@ Resolver calls are monitored through eligible-module IAT hooks in the controlled
 
 The resolver events capture bounded function-name or ordinal evidence, module handle evidence, and return/status values. This coverage intentionally means the resolver API calls themselves are visible. It does not imply returned-pointer instrumentation, inline detours, EAT patching, or automatic coverage for later calls made through resolver-returned function pointers.
 
-Wave 2 metadata adds 77 APIs across:
+Wave 2 metadata adds 79 APIs across:
 
 1. `advapi32.dll`: registry, token, privilege, and service-control APIs.
 2. `bcrypt.dll`: CNG algorithm, key, encryption/decryption, hash, and random APIs.
@@ -501,13 +501,21 @@ Phase 13Q adds three smoke-verified Wave 3 APIs in `kernel32.dll`:
 
 These records capture only file handle values, output pointer values, decoded file size, FILETIME scalar values, file attributes, volume serial, link count, file index, return/error evidence, timing, and hook lifecycle metadata. The x64 and x86 sample IAT providers were verified with `dumpbin` as `KERNEL32.dll`. They do not copy file contents, enumerate directories, resolve paths or object-manager names, inspect PE metadata, hash files, validate signatures, duplicate handles, query security descriptors, capture command lines or environments, inspect remote memory, inspect thread context/stacks, or emit arbitrary buffer previews.
 
+Phase 13R promotes twelve modern low-payload APIs that were already present in the Microsoft-source definition catalog as `hookPolicy=iat` definitions but were missing from the live manual hook table. They follow the two existing manual wrapper patterns exactly: zero-argument Tier 2 return-only wrappers and single-argument Tier 1 generic pointer/scalar wrappers, with pointer-only or scalar evidence and no target-memory reads:
+
+1. `kernel32.dll` Tier 1 `system-safe` single-argument hooks: `QueryPerformanceCounter`, `QueryPerformanceFrequency`, `GetSystemTimeAsFileTime`, `GetSystemTimePreciseAsFileTime`, `GetSystemInfo`, `GetNativeSystemInfo`, `GetCurrentProcessorNumberEx`, `GetNumaHighestNodeNumber` (pointer-only out-parameter evidence), and `GetActiveProcessorCount` (scalar `USHORT` group evidence).
+2. `user32.dll` Tier 1 `ui-safe` single-argument hooks: `GetDpiForWindow` and `GetAwarenessFromDpiAwarenessContext` (pointer-only handle/context evidence).
+3. `user32.dll` Tier 2 `tier2-initial-return-only` zero-argument hook: `GetCurrentMonitorTopologyId` (Windows 11 monitor-topology scalar; absent from `user32.dll` before Windows 11 24H2, so the repository sample resolves it dynamically through `GetProcAddress` and the agent resolver instrumentation substitutes the monitored wrapper, while the hook definition carries import ordinal 2683 for targets that import it).
+
+These records capture only argument pointer/scalar values, scalar or pointer return values, mapped error evidence, timing, and hook lifecycle metadata. The x64 and x86 providers for all twelve APIs were verified with `dumpbin` against `C:/Windows/System32` and `C:/Windows/SysWOW64` on Windows build 10.0.26200. They do not copy pointed-to structures, read target memory, capture paths, command lines, environment data, credentials, or arbitrary buffer previews.
+
 The current definition and generated hook coverage report totals:
 
 1. Microsoft-source inventory candidates: 30,182.
 2. Defined APIs: 30,112.
-3. Runtime-monitorable APIs: 30,092.
+3. Runtime-monitorable APIs: 332 (326 manual wrappers plus 6 compiler-bound typed wrappers).
 4. Definition-only APIs awaiting payload or ABI review: 20.
-5. Generated hook coverage: `required=30092`, `manual=314`, `generated=29778`, `covered=30092`, `chunks=59`.
+5. Generated hook coverage: `required=332`, `manual=326`, `generated=0`, `covered=332`, `chunks=0` (broad generated hooks disabled by the `unverified_generated_abi` policy).
 
 The current Microsoft-source inventory report totals 30,182 catalog rows:
 

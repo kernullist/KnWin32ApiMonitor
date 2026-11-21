@@ -14,6 +14,9 @@
 #ifndef SECURITY_WIN32
 #define SECURITY_WIN32
 #endif
+#ifndef ALL_PROCESSOR_GROUPS
+#define ALL_PROCESSOR_GROUPS 0xffff
+#endif
 #include <security.h>
 #include <Aclapi.h>
 #include <roapi.h>
@@ -449,6 +452,38 @@ FARPROC ResolveFaxUtilityProcedure(const char* name, WORD ordinal)
     while (false);
 
     return procedure;
+}
+
+DWORD InvokeGetCurrentMonitorTopologyId()
+{
+    // GetCurrentMonitorTopologyId ships without an import-library guarantee on
+    // supported SDKs and is absent from user32.dll before Windows 11 24H2, so
+    // resolve it dynamically instead of adding a static import that would
+    // break sample loading on older Windows. The agent's resolver monitoring
+    // substitutes the monitored wrapper for the returned pointer.
+    using GetCurrentMonitorTopologyIdProc = UINT(WINAPI*)();
+
+    DWORD result = 0;
+
+    do
+    {
+        HMODULE user32Module = GetModuleHandleW(L"user32.dll");
+        if (user32Module == nullptr)
+        {
+            break;
+        }
+
+        const GetCurrentMonitorTopologyIdProc procedure = reinterpret_cast<GetCurrentMonitorTopologyIdProc>(GetProcAddress(user32Module, "GetCurrentMonitorTopologyId"));
+        if (procedure == nullptr)
+        {
+            break;
+        }
+
+        result = procedure();
+    }
+    while (false);
+
+    return result;
 }
 
 BOOL InvokeCanSendToFaxRecipient()
@@ -3700,7 +3735,56 @@ bool RunTier1SystemProbe()
     SYSTEMTIME systemTime = {};
     GetSystemTime(&systemTime);
     std::cout << "tier1 system probe year=" << systemTime.wYear << "\n";
-    return systemTime.wYear >= 2024;
+    if (systemTime.wYear < 2024)
+    {
+        return false;
+    }
+
+    LARGE_INTEGER performanceCount = {};
+    const BOOL counterQueried = QueryPerformanceCounter(&performanceCount);
+    LARGE_INTEGER frequency = {};
+    const BOOL frequencyQueried = QueryPerformanceFrequency(&frequency);
+    FILETIME systemTimeAsFileTime = {};
+    GetSystemTimeAsFileTime(&systemTimeAsFileTime);
+    FILETIME systemTimePreciseAsFileTime = {};
+    GetSystemTimePreciseAsFileTime(&systemTimePreciseAsFileTime);
+    SYSTEM_INFO systemInfo = {};
+    GetSystemInfo(&systemInfo);
+    SYSTEM_INFO nativeSystemInfo = {};
+    GetNativeSystemInfo(&nativeSystemInfo);
+    PROCESSOR_NUMBER processorNumber = {};
+    GetCurrentProcessorNumberEx(&processorNumber);
+    ULONG highestNodeNumber = 0;
+    const BOOL numaQueried = GetNumaHighestNodeNumber(&highestNodeNumber);
+    const UINT activeProcessorCount = GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
+
+    std::cout << "tier1 system extension probe counter=" << performanceCount.QuadPart
+              << " frequency=" << frequency.QuadPart
+              << " file_time_high=" << systemTimeAsFileTime.dwHighDateTime
+              << " precise_file_time_high=" << systemTimePreciseAsFileTime.dwHighDateTime
+              << " processors=" << systemInfo.dwNumberOfProcessors
+              << " native_processors=" << nativeSystemInfo.dwNumberOfProcessors
+              << " processor_group=" << static_cast<UINT>(processorNumber.Group)
+              << " numa_queried=" << numaQueried
+              << " numa_nodes=" << highestNodeNumber + 1
+              << " active_processor_count=" << activeProcessorCount << "\n";
+
+    if (!counterQueried || !frequencyQueried || frequency.QuadPart == 0)
+    {
+        return false;
+    }
+
+    if (systemInfo.dwNumberOfProcessors == 0 || nativeSystemInfo.dwNumberOfProcessors == 0)
+    {
+        return false;
+    }
+
+    if (activeProcessorCount == 0)
+    {
+        return false;
+    }
+
+    return true;
 }
 
 bool RunTier1DevicesProbe()
@@ -3721,6 +3805,14 @@ bool RunTier1UiProbe()
     POINT point = {};
     const BOOL ok = GetCursorPos(&point);
     std::cout << "tier1 ui probe ok=" << ok << "\n";
+
+    const HWND dpiWindow = GetConsoleWindow();
+    const UINT windowDpi = GetDpiForWindow(dpiWindow);
+    const DPI_AWARENESS_CONTEXT awarenessContext = GetThreadDpiAwarenessContext();
+    const DPI_AWARENESS awareness = GetAwarenessFromDpiAwarenessContext(awarenessContext);
+    std::cout << "tier1 ui extension probe window=" << dpiWindow
+              << " window_dpi=" << windowDpi
+              << " awareness=" << static_cast<int>(awareness) << "\n";
     return true;
 }
 
@@ -3862,6 +3954,7 @@ bool RunTier2InitialReturnOnlyBatchProbe()
         const BOOL mouseInPointer = IsMouseInPointerEnabled();
         const BOOL processDpiAware = IsProcessDPIAware();
         const BOOL wow64Message = IsWow64Message();
+        const UINT monitorTopologyId = InvokeGetCurrentMonitorTopologyId();
         const INT d3dEndEvent = D3DPERF_EndEvent();
         const DWORD d3dStatus = D3DPERF_GetStatus();
         const BOOL d3dRepeatFrame = D3DPERF_QueryRepeatFrame();
@@ -3997,6 +4090,7 @@ bool RunTier2InitialReturnOnlyBatchProbe()
                   << " time_ms=" << multimediaTime
                   << " wave_in_devs=" << waveInDevices
                   << " wave_out_devs=" << waveOutDevices
+                  << " monitor_topology_id=" << monitorTopologyId
                   << " buffered_paint_init=" << HexHResult(bufferedPaintInit)
                   << " theme_props=" << themeProperties
                   << " app_themed=" << appThemed

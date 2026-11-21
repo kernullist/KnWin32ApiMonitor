@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "observedAtUtc": "2026-09-20T23:10:31.010Z",
+  "observedAtUtc": "2026-11-20T23:37:10.215Z",
   "windowsRelease": "10.0.26200",
   "configuration": "Debug",
   "apiKeys": [
@@ -12,7 +12,7 @@
     "user32.dll!enumchildwindows"
   ],
   "source": {
-    "sha256": "9e630628f71a610dde5b54fe898b097660bdb492fb625e500604d4e55e3f45f5",
+    "sha256": "ef02f4927699d16ae98ca11ccdab3bcee01faa9e18e4d1f147fa6f0e35c03ffa",
     "files": [
       {
         "path": "apps/knmon-ui/src/traceConversion.ts",
@@ -36,7 +36,7 @@
       },
       {
         "path": "generated/sdk-abi-ir.json",
-        "sha256": "85e24eeda9f6ad40a1f7b68759d47a46bbbb0b73a573104ce1a6816d82ec43c5"
+        "sha256": "1accb9b54c40c611d5ca7d442667783c0c1fd509369ee51275e514ccd13e7f97"
       },
       {
         "path": "generated/sdk-abi-sources.json",
@@ -60,7 +60,7 @@
       },
       {
         "path": "native/knmon-agent64/src/AgentMain.cpp",
-        "sha256": "19d49ec25675be742059ba3643b0cb80e454f936aad7cbf9b2bd24647e4e0e40"
+        "sha256": "f1b97d512b6c9409d9bcdf160ee2e1743e1ce33ca8302d1190ae7ec3319896ca"
       },
       {
         "path": "native/knmon-agent64/src/CaptureDetailTests.inc",
@@ -68,11 +68,11 @@
       },
       {
         "path": "native/knmon-agent64/src/GeneratedAgentHooks.inc",
-        "sha256": "0d193add5a7cfada2f35aadaa5aa6b3b357fe9181babdeb8e901efddfe386fea"
+        "sha256": "e2407b1b732d1dca59a59190d4eb3e18b0752ea01be68c170e7a1e6aff9a60f5"
       },
       {
         "path": "native/knmon-agent64/src/GeneratedSdkAbiChecks.inc",
-        "sha256": "913704d4ec262c54e117f5e5a1bf7a7529d891bea9be8ffad1550fae1b04be09"
+        "sha256": "af79b26a7ef9ba61e7aba3057a84cea605a2c66480045376dd0017b3d226f3ad"
       },
       {
         "path": "native/knmon-agent64/src/GeneratedTypedHooks.inc",
@@ -108,7 +108,7 @@
       },
       {
         "path": "native/knmon-collector/src/ThreadedSharedTransportReader.cpp",
-        "sha256": "7dd49ba0a06ac9130381a95098d72b5b10c5a14d9ab00441d0f1933193a0acc0"
+        "sha256": "48e34f9daa645e070ff970bca2c0b3b4180b080ac696c6102372f66b295d864f"
       },
       {
         "path": "native/knmon-collector/src/main.cpp",
@@ -152,7 +152,7 @@
       },
       {
         "path": "native/knmon-common/include/knmon/common/GeneratedRuntimeSupport.h",
-        "sha256": "bad1dcbf91eb371990635a935532ea40b9dc32f8bd7ae3fe54dfa44db877ae7d"
+        "sha256": "8e2fd25daf20160f6b0c5c50dd1d8e4688bded4cb58a20b23f0ca6d1317499ff"
       },
       {
         "path": "native/knmon-common/include/knmon/common/GeneratedTypedAbi.h",
@@ -200,7 +200,7 @@
       },
       {
         "path": "native/knmon-common/include/knmon/common/SessionLease.h",
-        "sha256": "e5d3a52d66e82d3e955860eba930f22cb0e75d620c1d2598159f312161548e4c"
+        "sha256": "33a46ed0d8557ba641519a7bb335387f8a8f6144778b8234809d3079504ea164"
       },
       {
         "path": "native/knmon-common/include/knmon/common/ThreadErrorState.h",
@@ -464,7 +464,7 @@
       },
       {
         "path": "native/knmon-core/src/Controller.cpp",
-        "sha256": "a8f209dec77c0dac738d8e4e71b80c546510f6fec0f747011333cd2844f4ea0d"
+        "sha256": "009e788a42450c76ceb3e73e5fd16f67e14f6cb604170315fccdcdc1260795ac"
       },
       {
         "path": "native/knmon-core/src/TypedAbiPayload.inc",
@@ -504,7 +504,7 @@
       },
       {
         "path": "native/tests/AgentModuleLifecycleTests.inc",
-        "sha256": "70775bf8f6c9350b8bbe0c17c67eae35133e038073a6485cac198fdb8e1c36e3"
+        "sha256": "382a6dea4aca8e37bd8200a525cffcb6836918733c061e89f5458ce650849f35"
       },
       {
         "path": "native/tests/BoundedJsonTest.cpp",
@@ -864,7 +864,7 @@
       },
       {
         "path": "samples/targets/fileio-sample/src/main.cpp",
-        "sha256": "e23b2365610aa1944bad77718506bd97007dd94290cc2c58488cb1fd13631856"
+        "sha256": "ba0a04a9bae2392309078918aec05e4381403a50b6858a297e09c6e7eb7c39a6"
       },
       {
         "path": "toolchain.json",
@@ -961,24 +961,24 @@
       "architecture": "x64",
       "compiler": {
         "id": "MSVC",
-        "version": "19.44.35227.0",
-        "cmake": "4.3.3"
+        "version": "19.44.35229.0",
+        "cmake": "3.30.2"
       },
       "abiDifferential": "passed",
       "liveInjectionReplay": "passed",
       "binaries": {
-        "knmon-native-helper.exe": "a234e81c456235efede49334892065454998645200a59383da527adfcc6daa95",
-        "knmon-agent64.dll": "8d7700c56ae6f387fb361c5730e1c13c640ded083647ba6871b0857638f65c86",
-        "knmon-lifecycle-test-agent.dll": "7b9e97902016c6c86ea48c8713d014e427d9a70f32663d1725152898dad8f883",
-        "knmon-abi-differential-test.exe": "61d70a841e6f159c5f5692108bf1f5a28ccc5e5d814343d7e455f014dc56a8f9",
-        "knmon-typed-abi-target.exe": "b8e04a7ab80a3f510527130d099710f98748569cc478dc19bdc33acd94278473"
+        "knmon-native-helper.exe": "85b60055112bfc182d7d90fe2e3be3098cf488c01096386aff9cc5955a3eaa3e",
+        "knmon-agent64.dll": "497e4dd92a675cc313ada3bbaa3b54b8198e6b213d7341b29af099b3dd6267e3",
+        "knmon-lifecycle-test-agent.dll": "ec9dbd39af669d93521d31b8d32c7a6e5a9d5f6242ba0f2b889278668b1be65f",
+        "knmon-abi-differential-test.exe": "7a9ece684c6a8d73e8d40122c7f85fd114f4efe2a81cfab770c62209e15649cd",
+        "knmon-typed-abi-target.exe": "307b32814b61d205193df1f402bc23498c8ef24c0152f5ef95e7b60d3455df11"
       },
       "systemDlls": {
-        "oleaut32.dll": "d640055fe14afa8681415b80d7d185f5345867b430613355d27b7356ed564285",
-        "d2d1.dll": "78deb0fc7c3195a691864ee0638912ea3ef46e72d2ad6af258b7ac815798dcb1",
-        "user32.dll": "fb15460c5a7068a9cb118cfdec0b60f2c715018c4af8f501b62825a6435421d1"
+        "oleaut32.dll": "3b1e3a9338a0d56dff16ad80423654eb6d63d16f0672666d5f7de6a90b7b1e86",
+        "d2d1.dll": "aee4ddaf33c66b32c81027e4b59d14c930d3dea35b932e02c8c160431c9923d4",
+        "user32.dll": "4f66c3c584276f7df0dbfb78332315990ef81276661c8eacd8ba93197931ff91"
       },
-      "ctestLogSha256": "0309ab4d1d364ae31db8bdec78e2e3113698885849f46367eb2e44582dbbea7c",
+      "ctestLogSha256": "e8dcce41b5e0a1e542851eab805c7010ad04d60978077e5538f3db40408ead87",
       "live": {
         "success": true,
         "apis": [
@@ -989,8 +989,8 @@
           "D2D1Vec3Length",
           "EnumChildWindows"
         ],
-        "helperSha256": "a234e81c456235efede49334892065454998645200a59383da527adfcc6daa95",
-        "targetSha256": "b8e04a7ab80a3f510527130d099710f98748569cc478dc19bdc33acd94278473",
+        "helperSha256": "85b60055112bfc182d7d90fe2e3be3098cf488c01096386aff9cc5955a3eaa3e",
+        "targetSha256": "307b32814b61d205193df1f402bc23498c8ef24c0152f5ef95e7b60d3455df11",
         "reportSha256": "87df97bfa710c1e84fed1b1e14c3d2103cf88b7ec70a4cd568e2a81a8ce2c323",
         "capturedEvents": 6
       }
@@ -999,24 +999,24 @@
       "architecture": "x86",
       "compiler": {
         "id": "MSVC",
-        "version": "19.44.35227.0",
-        "cmake": "4.3.3"
+        "version": "19.44.35229.0",
+        "cmake": "3.30.2"
       },
       "abiDifferential": "passed",
       "liveInjectionReplay": "passed",
       "binaries": {
-        "knmon-native-helper.exe": "e87a21cd2a287c0cfba6edb40f4a030165999ae084d43095004ca22e7f547851",
-        "knmon-agent32.dll": "4c401ce6638108f887fe8bbcad4b4f00a65593dd1e192cbe2bba7e2aaad3d0bd",
-        "knmon-lifecycle-test-agent.dll": "0df4839e75f311172a499dcb284003bc19bb9e826f09ec2674c9f6987777312a",
-        "knmon-abi-differential-test.exe": "340dce4df16c8d3ceaf9ba805867fbed8591480fad16e0bcb450df418af5a813",
-        "knmon-typed-abi-target.exe": "756e644bcba9778bc3e152933b4cb27baafe0f46b7395fb2d54ca56336fc11af"
+        "knmon-native-helper.exe": "d392f9695172dfb5cbe775a0de8b40dac23ae2f6362118269e53d09dbfa32f9f",
+        "knmon-agent32.dll": "7ff112dbbe2355827e309279aecbb7f4fa94be4c51581b1981ae66c83ddc7d85",
+        "knmon-lifecycle-test-agent.dll": "0089876cf1256752c7b3771d83d5c15daf02686c6f4f64c2464dd8fd3a021ff9",
+        "knmon-abi-differential-test.exe": "65d2015488ccae1696b24a9942cbc1afeaf843d2f6b32c28ccbd913fde9033bd",
+        "knmon-typed-abi-target.exe": "35fa833455a172e4d497c0f342d58fa2cb3e7e50df3c651109d3010d5a99137c"
       },
       "systemDlls": {
-        "oleaut32.dll": "cfb03900b5ee2739bfa1918519f16d65fd720326ce3004b8ec5e0221b46f5f83",
-        "d2d1.dll": "6eaffafef20b3ff8ab828b210b09898d099ceaad630040be4488f265ce74ca7c",
-        "user32.dll": "225f16bf0969e8f0869484791fd5764d879e2905de912a475ebdd63ad6763558"
+        "oleaut32.dll": "9491e87fd755280d5bf6236fd1fb1e180bdd7b859052ef94dd72606c47373fa8",
+        "d2d1.dll": "8ddb3343e154f5c58ee873c93b6c87fe9569fffc52e9ccf2af0e59fbfb14243e",
+        "user32.dll": "009912a61639dcaf593dcc99f97796df84adc5fb877461fa7d643d6afc9a0fb0"
       },
-      "ctestLogSha256": "77681fcf2143c64dfca05730a554f4a9436ba43744631104c11f6fa72d9fbda5",
+      "ctestLogSha256": "c7be01ca6d9dad9712820cac06eabf167f87d696582536803aba4e39237b2ea9",
       "live": {
         "success": true,
         "apis": [
@@ -1027,8 +1027,8 @@
           "D2D1Vec3Length",
           "EnumChildWindows"
         ],
-        "helperSha256": "e87a21cd2a287c0cfba6edb40f4a030165999ae084d43095004ca22e7f547851",
-        "targetSha256": "756e644bcba9778bc3e152933b4cb27baafe0f46b7395fb2d54ca56336fc11af",
+        "helperSha256": "d392f9695172dfb5cbe775a0de8b40dac23ae2f6362118269e53d09dbfa32f9f",
+        "targetSha256": "35fa833455a172e4d497c0f342d58fa2cb3e7e50df3c651109d3010d5a99137c",
         "reportSha256": "87df97bfa710c1e84fed1b1e14c3d2103cf88b7ec70a4cd568e2a81a8ce2c323",
         "capturedEvents": 6
       }

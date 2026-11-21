@@ -198,7 +198,8 @@ try
         startedUtc = "2026-06-10T00:00:00.000Z"
         durationMs = 30000
     }
-    $keepRecord | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $sessionsDir "daemon-hardening-keep.json") -Encoding UTF8
+    $keepRecordJson = $keepRecord | ConvertTo-Json -Depth 8
+    [System.IO.File]::WriteAllText(($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath((Join-Path $sessionsDir "daemon-hardening-keep.json"))), $keepRecordJson, (New-Object System.Text.UTF8Encoding($false)))
 
     $staleStart = & $helperPath daemon-start-session --runtime-dir $runtimeDir --pid $writerCrashSample.Id --duration-ms 1000 --timeout-ms 3000 --operation-id "daemon-hardening-stale-op" --session-id "daemon-hardening-stale" --write-knapm (Join-Path $root "stale-conflict.knapm") | ConvertFrom-Json
     Assert-Message -Result $staleStart -Expected "stale_registry_requires_prune" -Label "stale registry duplicate"

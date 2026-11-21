@@ -83,7 +83,9 @@ bool SelectionContainsToken(const std::string& selection, const std::string& tok
 
     while (start <= selection.size())
     {
-        std::size_t end = selection.find_first_of(",; ", start);
+        // Matches ValidateRuntimeApiSelection's separator set so an accepted
+        // selection cannot fail to match downstream.
+        std::size_t end = selection.find_first_of(",; \t\r\n", start);
         if (end == std::string::npos)
         {
             end = selection.size();
@@ -4819,7 +4821,10 @@ ArgumentSemantic BuildArgumentSemantic(
         semantic.HasTargetMemoryRead = true;
         semantic.TargetMemoryRead = true;
     }
-    else if (genericPointerOnly && (targetMemoryAlias || metadata == nullptr) && (semantic.ValueKind == "pointer" || semantic.ValueKind == "string" || semantic.ValueKind == "buffer" || semantic.ValueKind == "object"))
+    else if (
+        genericPointerOnly &&
+        (targetMemoryAlias || metadata == nullptr) &&
+        (semantic.ValueKind == "pointer" || semantic.ValueKind == "string" || semantic.ValueKind == "buffer" || semantic.ValueKind == "object" || semantic.ValueKind == "handle" || lowerAlias == "pointer"))
     {
         semantic.PayloadPolicy = "pointer_value_only";
         semantic.HasTargetMemoryRead = true;
@@ -7638,6 +7643,10 @@ bool ReadPipeMessage(HANDLE pipeHandle, DWORD timeoutMs, JsonDocument* payload, 
         for (;;)
         {
             DWORD bytesRead = 0;
+            // The manual-reset event stays signaled after an ERROR_MORE_DATA
+            // completion; reset it before re-issuing the read so a stale signal
+            // cannot report the next pending read as complete.
+            ResetEvent(overlapped.hEvent);
             if (!ReadFile(pipeHandle, buffer.data(), static_cast<DWORD>(buffer.size() - 1), &bytesRead, &overlapped))
             {
                 const DWORD readError = GetLastError();
@@ -8820,6 +8829,11 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
                     break;
                 }
 
+                if (observeCancellation("launch_window_reveal"))
+                {
+                    break;
+                }
+
                 if (observeOwnerExit())
                 {
                     break;
@@ -8836,6 +8850,8 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
 
                 Sleep(100);
             }
+
+            observeCancellation("launch_window_reveal");
 
             if (!launchWindowRevealCompleted && !targetExited)
             {
@@ -8920,6 +8936,10 @@ KnMonCaptureResult Controller::LaunchCapture(const KnMonLaunchRequest& request, 
             result.SessionState = result.SessionId.empty() ? result.SessionState : "draining";
             while (!targetExited && !agentShutdownReceived && GetTickCount64() < shutdownDeadline)
             {
+                // Informational: cancellation during the shutdown drain cannot
+                // interrupt the self-disable cleanup, but it must still be
+                // recorded so the result is not reported as a clean success.
+                observeCancellation("shutdown_drain");
                 DrainSharedTransport(result, transport, streamCallbacks, &streamBatchSequence);
 
                 JsonDocument payload;

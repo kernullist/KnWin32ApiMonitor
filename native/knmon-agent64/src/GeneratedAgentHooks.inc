@@ -3,8 +3,8 @@
 
 #if defined(_WIN64)
 inline constexpr std::size_t GeneratedAgentHookDefinitionCount = 0;
-inline constexpr std::size_t GeneratedAgentHookCoveredApiCount = 320;
-inline constexpr std::size_t GeneratedAgentHookRequiredApiCount = 320;
+inline constexpr std::size_t GeneratedAgentHookCoveredApiCount = 332;
+inline constexpr std::size_t GeneratedAgentHookRequiredApiCount = 332;
 void* g_generatedAgentOriginalFunctions[1] = {};
 
 using GeneratedAgentValueFunction_0 = std::uintptr_t(WINAPI*)();
@@ -462,7 +462,7 @@ inline const std::array<GeneratedAgentModuleMetadata, 399> GeneratedAgentModules
     { 399, "d3dx10_33.dll" },
 }};
 
-inline const std::array<GeneratedAgentResolverMetadata, 320> GeneratedAgentResolverMetadataTable =
+inline const std::array<GeneratedAgentResolverMetadata, 332> GeneratedAgentResolverMetadataTable =
 {{
     { 1, "kernel32.dll", "CreateFileW", "iat", "smoke_verified" },
     { 2, "kernel32.dll", "CreateFileA", "iat", "smoke_verified" },
@@ -593,10 +593,21 @@ inline const std::array<GeneratedAgentResolverMetadata, 320> GeneratedAgentResol
     { 177, "wintrust.dll", "WTHelperProvDataFromStateData", "iat", "smoke_verified" },
     { 178, "dbghelp.dll", "SymInitializeW", "iat", "smoke_verified" },
     { 179, "dbghelp.dll", "SymCleanup", "iat", "smoke_verified" },
+    { 495, "kernel32.dll", "GetActiveProcessorCount", "iat", "generated_generic" },
+    { 555, "kernel32.dll", "GetCurrentProcessorNumberEx", "iat", "generated_generic" },
+    { 621, "kernel32.dll", "GetNativeSystemInfo", "iat", "generated_generic" },
+    { 625, "kernel32.dll", "GetNumaHighestNodeNumber", "iat", "generated_generic" },
     { 1868, "ntdll.dll", "RtlGetReturnAddressHijackTarget", "iat", "generated_generic" },
+    { 3238, "kernel32.dll", "GetSystemInfo", "iat", "generated_generic" },
     { 3242, "kernel32.dll", "GetSystemTime", "iat", "generated_generic" },
+    { 3244, "kernel32.dll", "GetSystemTimeAsFileTime", "iat", "generated_generic" },
+    { 3245, "kernel32.dll", "GetSystemTimePreciseAsFileTime", "iat", "generated_generic" },
+    { 3499, "kernel32.dll", "QueryPerformanceCounter", "iat", "generated_generic" },
+    { 3500, "kernel32.dll", "QueryPerformanceFrequency", "iat", "generated_generic" },
     { 4709, "user32.dll", "EnumChildWindows", "iat", "hooked" },
+    { 4747, "user32.dll", "GetAwarenessFromDpiAwarenessContext", "iat", "generated_generic" },
     { 4769, "user32.dll", "GetCursorPos", "iat", "generated_generic" },
+    { 4780, "user32.dll", "GetDpiForWindow", "iat", "generated_generic" },
     { 5397, "gdi32.dll", "GetStockObject", "iat", "generated_generic" },
     { 7728, "setupapi.dll", "SetupDiClassNameFromGuidW", "iat", "generated_generic" },
     { 8045, "iphlpapi.dll", "GetIpStatistics", "iat", "generated_generic" },
@@ -658,6 +669,7 @@ inline const std::array<GeneratedAgentResolverMetadata, 320> GeneratedAgentResol
     { 18534, "user32.dll", "GetClipboardOwner", "iat", "generated_generic" },
     { 18535, "user32.dll", "GetClipboardSequenceNumber", "iat", "generated_generic" },
     { 18536, "user32.dll", "GetClipboardViewer", "iat", "generated_generic" },
+    { 18537, "user32.dll", "GetCurrentMonitorTopologyId", "iat", "generated_generic" },
     { 18538, "user32.dll", "GetCursor", "iat", "generated_generic" },
     { 18539, "user32.dll", "GetDialogBaseUnits", "iat", "generated_generic" },
     { 18540, "user32.dll", "GetDoubleClickTime", "iat", "generated_generic" },
@@ -802,8 +814,8 @@ void AppendGeneratedHookDefinitions(HookDefinition* output, std::size_t capacity
 }
 #else
 inline constexpr std::size_t GeneratedAgentHookDefinitionCount = 0;
-inline constexpr std::size_t GeneratedAgentHookCoveredApiCount = 320;
-inline constexpr std::size_t GeneratedAgentHookRequiredApiCount = 320;
+inline constexpr std::size_t GeneratedAgentHookCoveredApiCount = 332;
+inline constexpr std::size_t GeneratedAgentHookRequiredApiCount = 332;
 struct GeneratedAgentModuleMetadata
 {
     std::uint16_t Id = 0;
@@ -1221,7 +1233,7 @@ inline const std::array<GeneratedAgentModuleMetadata, 399> GeneratedAgentModules
     { 398, "d3dscache.dll" },
     { 399, "d3dx10_33.dll" },
 }};
-inline const std::array<GeneratedAgentResolverMetadata, 320> GeneratedAgentResolverMetadataTable =
+inline const std::array<GeneratedAgentResolverMetadata, 332> GeneratedAgentResolverMetadataTable =
 {{
     { 1, "kernel32.dll", "CreateFileW", "iat", "smoke_verified" },
     { 2, "kernel32.dll", "CreateFileA", "iat", "smoke_verified" },
@@ -1352,10 +1364,21 @@ inline const std::array<GeneratedAgentResolverMetadata, 320> GeneratedAgentResol
     { 177, "wintrust.dll", "WTHelperProvDataFromStateData", "iat", "smoke_verified" },
     { 178, "dbghelp.dll", "SymInitializeW", "iat", "smoke_verified" },
     { 179, "dbghelp.dll", "SymCleanup", "iat", "smoke_verified" },
+    { 495, "kernel32.dll", "GetActiveProcessorCount", "iat", "generated_generic" },
+    { 555, "kernel32.dll", "GetCurrentProcessorNumberEx", "iat", "generated_generic" },
+    { 621, "kernel32.dll", "GetNativeSystemInfo", "iat", "generated_generic" },
+    { 625, "kernel32.dll", "GetNumaHighestNodeNumber", "iat", "generated_generic" },
     { 1868, "ntdll.dll", "RtlGetReturnAddressHijackTarget", "iat", "generated_generic" },
+    { 3238, "kernel32.dll", "GetSystemInfo", "iat", "generated_generic" },
     { 3242, "kernel32.dll", "GetSystemTime", "iat", "generated_generic" },
+    { 3244, "kernel32.dll", "GetSystemTimeAsFileTime", "iat", "generated_generic" },
+    { 3245, "kernel32.dll", "GetSystemTimePreciseAsFileTime", "iat", "generated_generic" },
+    { 3499, "kernel32.dll", "QueryPerformanceCounter", "iat", "generated_generic" },
+    { 3500, "kernel32.dll", "QueryPerformanceFrequency", "iat", "generated_generic" },
     { 4709, "user32.dll", "EnumChildWindows", "iat", "hooked" },
+    { 4747, "user32.dll", "GetAwarenessFromDpiAwarenessContext", "iat", "generated_generic" },
     { 4769, "user32.dll", "GetCursorPos", "iat", "generated_generic" },
+    { 4780, "user32.dll", "GetDpiForWindow", "iat", "generated_generic" },
     { 5397, "gdi32.dll", "GetStockObject", "iat", "generated_generic" },
     { 7728, "setupapi.dll", "SetupDiClassNameFromGuidW", "iat", "generated_generic" },
     { 8045, "iphlpapi.dll", "GetIpStatistics", "iat", "generated_generic" },
@@ -1417,6 +1440,7 @@ inline const std::array<GeneratedAgentResolverMetadata, 320> GeneratedAgentResol
     { 18534, "user32.dll", "GetClipboardOwner", "iat", "generated_generic" },
     { 18535, "user32.dll", "GetClipboardSequenceNumber", "iat", "generated_generic" },
     { 18536, "user32.dll", "GetClipboardViewer", "iat", "generated_generic" },
+    { 18537, "user32.dll", "GetCurrentMonitorTopologyId", "iat", "generated_generic" },
     { 18538, "user32.dll", "GetCursor", "iat", "generated_generic" },
     { 18539, "user32.dll", "GetDialogBaseUnits", "iat", "generated_generic" },
     { 18540, "user32.dll", "GetDoubleClickTime", "iat", "generated_generic" },

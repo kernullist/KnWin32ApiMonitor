@@ -32,8 +32,8 @@ The current definition and hook pipeline reports:
 
 - Microsoft-source inventory candidates: `30,182`
 - Defined APIs: `30,112`
-- Compiled manual hooks available on x86/x64: `314`
-- Additional compiler-bound typed wrappers on x86/x64: `6` (total `320`)
+- Compiled manual hooks available on x86/x64: `326`
+- Additional compiler-bound typed wrappers on x86/x64: `6` (total `332`)
 - Generic generated wrappers enabled: `0` (unverified ABI contracts are blocked)
 - Differential-verified APIs: `6`, scoped to the recorded x86/x64 Debug corpus
 - Data exports included as monitor targets: `0`
@@ -296,7 +296,7 @@ npm run agent-hooks:check
 Expected current hook check:
 
 ```text
-Generated agent hook definitions. required=320 manual=314 typed=6 generated_generic=0 covered=320 chunks=0
+Generated agent hook definitions. required=332 manual=326 typed=6 generated_generic=0 covered=332 chunks=0
 ```
 
 ## Release Package

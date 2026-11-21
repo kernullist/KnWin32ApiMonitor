@@ -30,6 +30,17 @@ try
 
     $expected = @(
         @{ Api = "GetSystemTime"; Module = "kernel32.dll"; Profile = "system-safe"; Family = "system"; Arg = "lpSystemTime"; Type = "LPSYSTEMTIME"; PointerOnly = $true },
+        @{ Api = "QueryPerformanceCounter"; Module = "kernel32.dll"; Profile = "system-safe"; Family = "system"; Arg = "lpPerformanceCount"; Type = "INT64*"; PointerOnly = $true },
+        @{ Api = "QueryPerformanceFrequency"; Module = "kernel32.dll"; Profile = "system-safe"; Family = "system"; Arg = "lpFrequency"; Type = "INT64*"; PointerOnly = $true },
+        @{ Api = "GetSystemTimeAsFileTime"; Module = "kernel32.dll"; Profile = "system-safe"; Family = "system"; Arg = "lpSystemTimeAsFileTime"; Type = "FILETIME*"; PointerOnly = $true },
+        @{ Api = "GetSystemTimePreciseAsFileTime"; Module = "kernel32.dll"; Profile = "system-safe"; Family = "system"; Arg = "lpSystemTimeAsFileTime"; Type = "FILETIME*"; PointerOnly = $true },
+        @{ Api = "GetSystemInfo"; Module = "kernel32.dll"; Profile = "system-safe"; Family = "system"; Arg = "lpSystemInfo"; Type = "SYSTEM_INFO*"; PointerOnly = $true },
+        @{ Api = "GetNativeSystemInfo"; Module = "kernel32.dll"; Profile = "system-safe"; Family = "system"; Arg = "lpSystemInfo"; Type = "SYSTEM_INFO*"; PointerOnly = $true },
+        @{ Api = "GetCurrentProcessorNumberEx"; Module = "kernel32.dll"; Profile = "system-safe"; Family = "system"; Arg = "ProcNumber"; Type = "PROCESSOR_NUMBER*"; PointerOnly = $true },
+        @{ Api = "GetNumaHighestNodeNumber"; Module = "kernel32.dll"; Profile = "system-safe"; Family = "system"; Arg = "HighestNodeNumber"; Type = "UINT*"; PointerOnly = $true },
+        @{ Api = "GetActiveProcessorCount"; Module = "kernel32.dll"; Profile = "system-safe"; Family = "system"; Arg = "GroupNumber"; Type = "USHORT"; PointerOnly = $false },
+        @{ Api = "GetDpiForWindow"; Module = "user32.dll"; Profile = "ui-safe"; Family = "ui"; Arg = "hwnd"; Type = "HWND"; PointerOnly = $true },
+        @{ Api = "GetAwarenessFromDpiAwarenessContext"; Module = "user32.dll"; Profile = "ui-safe"; Family = "ui"; Arg = "value"; Type = "DPI_AWARENESS_CONTEXT"; PointerOnly = $true },
         @{ Api = "SetupDiClassNameFromGuidW"; Module = "setupapi.dll"; Profile = "devices-safe"; Family = "devices"; Arg = "ClassGuid"; Type = "GUID*"; PointerOnly = $true },
         @{ Api = "GetCursorPos"; Module = "user32.dll"; Profile = "ui-safe"; Family = "ui"; Arg = "lpPoint"; Type = "POINT*"; PointerOnly = $true },
         @{ Api = "GetIpStatistics"; Module = "iphlpapi.dll"; Profile = "network-management-safe"; Family = "network-management"; Arg = "Statistics"; Type = "MIB_IPSTATS*"; PointerOnly = $true },

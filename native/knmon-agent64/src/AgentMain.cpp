@@ -238,6 +238,18 @@ using SetupDiClassNameFromGuidWFn = BOOL(WINAPI*)(const GUID*, PWSTR, DWORD, PDW
 using GetCursorPosFn = BOOL(WINAPI*)(LPPOINT);
 using GetIpStatisticsFn = ULONG(WINAPI*)(PMIB_IPSTATS);
 using GetStockObjectFn = HGDIOBJ(WINAPI*)(int);
+using QueryPerformanceCounterFn = BOOL(WINAPI*)(PLARGE_INTEGER);
+using QueryPerformanceFrequencyFn = BOOL(WINAPI*)(PLARGE_INTEGER);
+using GetSystemTimeAsFileTimeFn = void(WINAPI*)(LPFILETIME);
+using GetSystemTimePreciseAsFileTimeFn = void(WINAPI*)(LPFILETIME);
+using GetSystemInfoFn = void(WINAPI*)(LPSYSTEM_INFO);
+using GetNativeSystemInfoFn = void(WINAPI*)(LPSYSTEM_INFO);
+using GetCurrentProcessorNumberExFn = void(WINAPI*)(PPROCESSOR_NUMBER);
+using GetNumaHighestNodeNumberFn = BOOL(WINAPI*)(PULONG);
+using GetActiveProcessorCountFn = DWORD(WINAPI*)(WORD);
+using GetDpiForWindowFn = UINT(WINAPI*)(HWND);
+using GetAwarenessFromDpiAwarenessContextFn = DPI_AWARENESS(WINAPI*)(DPI_AWARENESS_CONTEXT);
+using GetCurrentMonitorTopologyIdFn = UINT(WINAPI*)();
 using WindowsGetStringLenFn = UINT32(WINAPI*)(HSTRING);
 using WindowsGetStringRawBufferFn = PCWSTR(WINAPI*)(HSTRING, UINT32*);
 using RevertToSelfFn = BOOL(WINAPI*)();
@@ -576,6 +588,18 @@ SetupDiClassNameFromGuidWFn g_originalSetupDiClassNameFromGuidW = nullptr;
 GetCursorPosFn g_originalGetCursorPos = nullptr;
 GetIpStatisticsFn g_originalGetIpStatistics = nullptr;
 GetStockObjectFn g_originalGetStockObject = nullptr;
+QueryPerformanceCounterFn g_originalQueryPerformanceCounter = nullptr;
+QueryPerformanceFrequencyFn g_originalQueryPerformanceFrequency = nullptr;
+GetSystemTimeAsFileTimeFn g_originalGetSystemTimeAsFileTime = nullptr;
+GetSystemTimePreciseAsFileTimeFn g_originalGetSystemTimePreciseAsFileTime = nullptr;
+GetSystemInfoFn g_originalGetSystemInfo = nullptr;
+GetNativeSystemInfoFn g_originalGetNativeSystemInfo = nullptr;
+GetCurrentProcessorNumberExFn g_originalGetCurrentProcessorNumberEx = nullptr;
+GetNumaHighestNodeNumberFn g_originalGetNumaHighestNodeNumber = nullptr;
+GetActiveProcessorCountFn g_originalGetActiveProcessorCount = nullptr;
+GetDpiForWindowFn g_originalGetDpiForWindow = nullptr;
+GetAwarenessFromDpiAwarenessContextFn g_originalGetAwarenessFromDpiAwarenessContext = nullptr;
+GetCurrentMonitorTopologyIdFn g_originalGetCurrentMonitorTopologyId = nullptr;
 WindowsGetStringLenFn g_originalWindowsGetStringLen = nullptr;
 RevertToSelfFn g_originalRevertToSelf = nullptr;
 CommDlgExtendedErrorFn g_originalCommDlgExtendedError = nullptr;
@@ -1000,7 +1024,7 @@ struct HookDefinition
 
 constexpr std::size_t MaxHookRecords = 32768;
 constexpr std::size_t MaxModuleRecords = 4096;
-constexpr std::size_t ManualHookDefinitionCount = 320;
+constexpr std::size_t ManualHookDefinitionCount = 332;
 constexpr std::size_t MaxResolverNameBytes = 512;
 std::array<HookRecord, MaxHookRecords> g_hookRecords = {};
 std::size_t g_hookRecordCount = 0;
@@ -1309,16 +1333,40 @@ private:
     HMODULE m_module = nullptr;
 };
 
+// Fallback stubs that cannot reach the original export still have to publish
+// the Winsock failure code the API contract promises instead of leaving a
+// stale thread error behind.
+void SetWinsockFallbackError(int errorCode)
+{
+    do
+    {
+        WinsockErrorAccessors accessors(true);
+        if (accessors.Set == nullptr)
+        {
+            break;
+        }
+
+        accessors.Set(errorCode);
+    }
+    while (false);
+}
+
 class HookReentryGuard
 {
 public:
     explicit HookReentryGuard(bool winsock = false) :
         m_winsock(winsock), m_errors(m_winsock.Get, m_winsock.Set),
-        m_previous(g_inHook), m_previousEpoch(g_hookEpoch), m_lease(g_sessionGate), m_previousErrors(g_callErrorState),
+        m_previous(g_inHook), m_previousEpoch(g_hookEpoch),
+        m_admissionEpoch(g_sessionGate.AdmissionEpoch()),
+        m_previousErrors(g_callErrorState),
         m_previousCallId(g_currentCallId)
     {
         g_inHook = true;
-        g_hookEpoch = m_lease.Epoch();
+        // Admission captures the gate epoch without holding a lease for the
+        // whole original call: blocking hooked APIs (waits, connects) must not
+        // wedge shutdown quiescence. Emissions take a short lease inside
+        // EmitTransportRecord instead.
+        g_hookEpoch = m_admissionEpoch;
         g_callErrorState = &m_errors;
         g_currentCallId = NextCallId();
     }
@@ -1345,7 +1393,7 @@ private:
     knmon::ThreadErrorState m_errors;
     bool m_previous;
     std::uint32_t m_previousEpoch;
-    knmon::SessionLease m_lease;
+    std::uint32_t m_admissionEpoch;
     const knmon::ThreadErrorState* m_previousErrors;
     std::uint64_t m_previousCallId;
 };
@@ -1421,7 +1469,11 @@ bool HasProfileToken(const std::string& value, const char* profile)
 
     while (start <= value.size())
     {
-        std::size_t end = value.find_first_of(",; ", start);
+        // Matches ValidateRuntimeApiSelection's separator set: the controller
+        // accepts tabs and CR/LF as token separators, so the agent matcher
+        // must treat them the same way or an accepted selection matches
+        // nothing downstream.
+        std::size_t end = value.find_first_of(",; \t\r\n", start);
         if (end == std::string::npos)
         {
             end = value.size();
@@ -1722,6 +1774,48 @@ std::string NowUtc()
     return stream.str();
 }
 
+// ANSI text slots carry target-codepage (ACP) bytes, not UTF-8. Emitting bytes
+// >= 0x80 verbatim would poison the JSON event stream for UTF-8-strict hosts,
+// so transcode through the target ANSI codepage into bounded UTF-8.
+void CopyWideText(char* destination, std::uint32_t* length, std::size_t capacity, const wchar_t* source);
+
+void TranscodeAnsiBytesToUtf8(char* destination, std::uint32_t* length, std::size_t capacity, const char* ansi, std::size_t ansiBytes)
+{
+    std::uint32_t copied = 0;
+
+    do
+    {
+        if (destination == nullptr || capacity == 0)
+        {
+            break;
+        }
+
+        destination[0] = '\0';
+        if (ansi == nullptr || ansiBytes == 0)
+        {
+            break;
+        }
+
+        wchar_t wideBuffer[1024];
+        constexpr std::size_t WideBufferUnits = sizeof(wideBuffer) / sizeof(wideBuffer[0]);
+        const std::size_t clampBytes = (std::min)(ansiBytes, WideBufferUnits);
+        const int wideChars = MultiByteToWideChar(CP_ACP, 0, ansi, static_cast<int>(clampBytes), wideBuffer, static_cast<int>(WideBufferUnits));
+        if (wideChars <= 0)
+        {
+            break;
+        }
+
+        wideBuffer[(std::min)(static_cast<std::size_t>(wideChars), WideBufferUnits - 1)] = L'\0';
+        CopyWideText(destination, &copied, capacity, wideBuffer);
+    }
+    while (false);
+
+    if (length != nullptr)
+    {
+        *length = copied;
+    }
+}
+
 void CopyAsciiText(char* destination, std::uint32_t* length, std::size_t capacity, const char* source)
 {
     std::uint32_t copied = 0;
@@ -1739,13 +1833,37 @@ void CopyAsciiText(char* destination, std::uint32_t* length, std::size_t capacit
             break;
         }
 
-        while (copied + 1 < capacity && source[copied] != '\0')
+        std::size_t scan = 0;
+        bool nonAscii = false;
+        for (; scan + 1 < capacity && source[scan] != '\0'; ++scan)
         {
-            destination[copied] = source[copied];
-            ++copied;
+            if ((source[scan] & 0x80) != 0)
+            {
+                nonAscii = true;
+                break;
+            }
         }
 
-        destination[copied] = '\0';
+        if (!nonAscii)
+        {
+            copied = static_cast<std::uint32_t>(scan);
+            std::memcpy(destination, source, scan);
+            destination[scan] = '\0';
+            break;
+        }
+
+        std::size_t sourceLength = scan;
+        constexpr std::size_t MaxAnsiTranscodeBytes = 1024;
+        // Reading past the destination capacity can never add output: the
+        // transcode result is clamped to the same slot, so bound the source
+        // scan by the destination capacity as well as the transcode cap.
+        const std::size_t sourceLimit = (std::min)(MaxAnsiTranscodeBytes, capacity);
+        while (sourceLength < sourceLimit && source[sourceLength] != '\0')
+        {
+            ++sourceLength;
+        }
+
+        TranscodeAnsiBytesToUtf8(destination, &copied, capacity, source, sourceLength);
     }
     while (false);
 
@@ -1773,16 +1891,38 @@ void CopyWideText(char* destination, std::uint32_t* length, std::size_t capacity
         }
 
         const int converted = WideCharToMultiByte(CP_UTF8, 0, source, -1, destination, static_cast<int>(capacity), nullptr, nullptr);
-        if (converted <= 0)
+        if (converted > 0)
         {
-            // On ERROR_INSUFFICIENT_BUFFER the output may hold partial bytes with
-            // no terminator; re-terminate so strlen-based consumers stay in bounds.
+            copied = static_cast<std::uint32_t>(converted - 1);
+            destination[capacity - 1] = '\0';
+            break;
+        }
+
+        // On ERROR_INSUFFICIENT_BUFFER, keep a guaranteed-fit prefix instead of
+        // discarding the whole conversion: CP_UTF8 needs at most 4 bytes per
+        // UTF-16 code unit, and an explicit-length conversion emits U+FFFD for a
+        // split surrogate pair, so capacity/4 code units always fit with room
+        // for the terminator.
+        std::size_t sourceLength = 0;
+        while (sourceLength < capacity && source[sourceLength] != L'\0')
+        {
+            ++sourceLength;
+        }
+        const std::size_t clampChars = (std::min)(sourceLength, capacity / 4);
+        if (clampChars == 0)
+        {
+            break;
+        }
+
+        const int clamped = WideCharToMultiByte(CP_UTF8, 0, source, static_cast<int>(clampChars), destination, static_cast<int>(capacity - 1), nullptr, nullptr);
+        if (clamped <= 0)
+        {
             destination[0] = '\0';
             break;
         }
 
-        copied = static_cast<std::uint32_t>(converted - 1);
-        destination[capacity - 1] = '\0';
+        copied = static_cast<std::uint32_t>(clamped);
+        destination[clamped] = '\0';
     }
     while (false);
 
@@ -2293,6 +2433,7 @@ std::uint32_t CopyAnsiPointerText(char* destination, std::uint32_t* length, std:
     std::uint32_t status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded);
     std::uint32_t copied = 0;
     bool terminated = false;
+    bool nonAscii = false;
 
     do
     {
@@ -2327,11 +2468,25 @@ std::uint32_t CopyAnsiPointerText(char* destination, std::uint32_t* length, std:
                 break;
             }
 
+            if ((ch & 0x80) != 0)
+            {
+                nonAscii = true;
+            }
+
             destination[copied] = ch;
             ++copied;
         }
 
         destination[copied] = '\0';
+        if (nonAscii && copied > 0)
+        {
+            // The probed bytes are ACP text, not UTF-8; transcode in place so
+            // the event stream stays valid for UTF-8-strict hosts.
+            char ansiBackup[1024];
+            const std::size_t backupBytes = (std::min)(static_cast<std::size_t>(copied), sizeof(ansiBackup));
+            std::memcpy(ansiBackup, destination, backupBytes);
+            TranscodeAnsiBytesToUtf8(destination, &copied, capacity, ansiBackup, backupBytes);
+        }
         if (!terminated && status == static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Decoded))
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
@@ -2608,6 +2763,19 @@ std::uint32_t CopyIoStatusBlockText(char* destination, std::uint32_t* length, st
 template <typename Callback>
 void EmitTransportRecord(const LARGE_INTEGER& overheadStart, Callback&& callback) noexcept
 {
+    // Hold the session lease only for the emission window. Shutdown quiescence
+    // therefore implies no in-flight transport writes, while blocking hooked
+    // calls no longer keep the gate busy for their whole duration. Records are
+    // emitted only while the thread's admitted epoch still matches the gate;
+    // anything else is dropped with accounting so a restarted session never
+    // receives a stale call's record.
+    knmon::SessionLease emissionLease(g_sessionGate);
+    if (emissionLease.Epoch() == 0 || emissionLease.Epoch() != g_hookEpoch)
+    {
+        InterlockedIncrement64(&g_droppedEvents);
+        return;
+    }
+
     knmon::WriteTransportRecord(g_transportHeader, g_transportRecords, g_transportCapacity, &g_droppedEvents,
         [&](knmon::KnMonTransportRecord* record)
         {
@@ -3347,7 +3515,7 @@ DWORD GeneratedGenericErrorCode(
     case GeneratedGenericErrorSource::ReturnNtStatus:
         if (!NT_SUCCESS(static_cast<NTSTATUS>(static_cast<LONG>(returnValue & 0xffffffffULL))))
         {
-            errorCode = static_cast<DWORD>(returnValue & 0xffffffffULL);
+            errorCode = NtStatusToDosError(static_cast<NTSTATUS>(static_cast<LONG>(returnValue & 0xffffffffULL)));
         }
         break;
     case GeneratedGenericErrorSource::ReturnHResult:
@@ -9589,7 +9757,7 @@ std::uint32_t CopyGuidStringPointerText(char* destination, std::uint32_t* length
             break;
         }
 
-        if (cchMax <= 0 || cchMax > MaxGuidStringChars)
+        if (cchMax <= 0)
         {
             status = static_cast<std::uint32_t>(knmon::KnMonDecodeStatus::Truncated);
             break;
@@ -11497,6 +11665,18 @@ BOOL WINAPI HookedSetupDiClassNameFromGuidW(const GUID* classGuid, PWSTR classNa
 BOOL WINAPI HookedGetCursorPos(LPPOINT point);
 ULONG WINAPI HookedGetIpStatistics(PMIB_IPSTATS statistics);
 HGDIOBJ WINAPI HookedGetStockObject(int object);
+BOOL WINAPI HookedQueryPerformanceCounter(PLARGE_INTEGER performanceCount);
+BOOL WINAPI HookedQueryPerformanceFrequency(PLARGE_INTEGER frequency);
+void WINAPI HookedGetSystemTimeAsFileTime(LPFILETIME systemTimeAsFileTime);
+void WINAPI HookedGetSystemTimePreciseAsFileTime(LPFILETIME systemTimeAsFileTime);
+void WINAPI HookedGetSystemInfo(LPSYSTEM_INFO systemInfo);
+void WINAPI HookedGetNativeSystemInfo(LPSYSTEM_INFO systemInfo);
+void WINAPI HookedGetCurrentProcessorNumberEx(PPROCESSOR_NUMBER processorNumber);
+BOOL WINAPI HookedGetNumaHighestNodeNumber(PULONG highestNodeNumber);
+DWORD WINAPI HookedGetActiveProcessorCount(WORD groupNumber);
+UINT WINAPI HookedGetDpiForWindow(HWND window);
+DPI_AWARENESS WINAPI HookedGetAwarenessFromDpiAwarenessContext(DPI_AWARENESS_CONTEXT value);
+UINT WINAPI HookedGetCurrentMonitorTopologyId();
 UINT32 WINAPI HookedWindowsGetStringLen(HSTRING string);
 BOOL WINAPI HookedRevertToSelf();
 DWORD WINAPI HookedCommDlgExtendedError();
@@ -11852,6 +12032,17 @@ std::array<HookDefinition, ManualHookDefinitionCount> BuildManualHookDefinitions
         HookDefinition { "kernel32.dll", "GetFileTime", reinterpret_cast<void*>(HookedGetFileTime), reinterpret_cast<void**>(&g_originalGetFileTime), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetFileInformationByHandle", reinterpret_cast<void*>(HookedGetFileInformationByHandle), reinterpret_cast<void**>(&g_originalGetFileInformationByHandle), false, true, false, 0, 0 },
         HookDefinition { "kernel32.dll", "GetSystemTime", reinterpret_cast<void*>(HookedGetSystemTime), reinterpret_cast<void**>(&g_originalGetSystemTime), false, true, false, 0, 0, true, "system-safe" },
+        HookDefinition { "kernel32.dll", "QueryPerformanceCounter", reinterpret_cast<void*>(HookedQueryPerformanceCounter), reinterpret_cast<void**>(&g_originalQueryPerformanceCounter), false, true, false, 0, 0, true, "system-safe" },
+        HookDefinition { "kernel32.dll", "QueryPerformanceFrequency", reinterpret_cast<void*>(HookedQueryPerformanceFrequency), reinterpret_cast<void**>(&g_originalQueryPerformanceFrequency), false, true, false, 0, 0, true, "system-safe" },
+        HookDefinition { "kernel32.dll", "GetSystemTimeAsFileTime", reinterpret_cast<void*>(HookedGetSystemTimeAsFileTime), reinterpret_cast<void**>(&g_originalGetSystemTimeAsFileTime), false, true, false, 0, 0, true, "system-safe" },
+        HookDefinition { "kernel32.dll", "GetSystemTimePreciseAsFileTime", reinterpret_cast<void*>(HookedGetSystemTimePreciseAsFileTime), reinterpret_cast<void**>(&g_originalGetSystemTimePreciseAsFileTime), false, true, false, 0, 0, true, "system-safe" },
+        HookDefinition { "kernel32.dll", "GetSystemInfo", reinterpret_cast<void*>(HookedGetSystemInfo), reinterpret_cast<void**>(&g_originalGetSystemInfo), false, true, false, 0, 0, true, "system-safe" },
+        HookDefinition { "kernel32.dll", "GetNativeSystemInfo", reinterpret_cast<void*>(HookedGetNativeSystemInfo), reinterpret_cast<void**>(&g_originalGetNativeSystemInfo), false, true, false, 0, 0, true, "system-safe" },
+        HookDefinition { "kernel32.dll", "GetCurrentProcessorNumberEx", reinterpret_cast<void*>(HookedGetCurrentProcessorNumberEx), reinterpret_cast<void**>(&g_originalGetCurrentProcessorNumberEx), false, true, false, 0, 0, true, "system-safe" },
+        HookDefinition { "kernel32.dll", "GetNumaHighestNodeNumber", reinterpret_cast<void*>(HookedGetNumaHighestNodeNumber), reinterpret_cast<void**>(&g_originalGetNumaHighestNodeNumber), false, true, false, 0, 0, true, "system-safe" },
+        HookDefinition { "kernel32.dll", "GetActiveProcessorCount", reinterpret_cast<void*>(HookedGetActiveProcessorCount), reinterpret_cast<void**>(&g_originalGetActiveProcessorCount), false, true, false, 0, 0, true, "system-safe" },
+        HookDefinition { "user32.dll", "GetDpiForWindow", reinterpret_cast<void*>(HookedGetDpiForWindow), reinterpret_cast<void**>(&g_originalGetDpiForWindow), false, true, false, 0, 0, true, "ui-safe" },
+        HookDefinition { "user32.dll", "GetAwarenessFromDpiAwarenessContext", reinterpret_cast<void*>(HookedGetAwarenessFromDpiAwarenessContext), reinterpret_cast<void**>(&g_originalGetAwarenessFromDpiAwarenessContext), false, true, false, 0, 0, true, "ui-safe" },
         HookDefinition { "setupapi.dll", "SetupDiClassNameFromGuidW", reinterpret_cast<void*>(HookedSetupDiClassNameFromGuidW), reinterpret_cast<void**>(&g_originalSetupDiClassNameFromGuidW), false, true, false, 0, 0, true, "devices-safe" },
         HookDefinition { "user32.dll", "GetCursorPos", reinterpret_cast<void*>(HookedGetCursorPos), reinterpret_cast<void**>(&g_originalGetCursorPos), false, true, false, 0, 0, true, "ui-safe" },
         HookDefinition { "iphlpapi.dll", "GetIpStatistics", reinterpret_cast<void*>(HookedGetIpStatistics), reinterpret_cast<void**>(&g_originalGetIpStatistics), false, true, false, 0, 0, true, "network-management-safe" },
@@ -11913,6 +12104,7 @@ std::array<HookDefinition, ManualHookDefinitionCount> BuildManualHookDefinitions
         HookDefinition { "user32.dll", "IsMouseInPointerEnabled", reinterpret_cast<void*>(HookedIsMouseInPointerEnabled), reinterpret_cast<void**>(&g_originalIsMouseInPointerEnabled), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "user32.dll", "IsProcessDPIAware", reinterpret_cast<void*>(HookedIsProcessDPIAware), reinterpret_cast<void**>(&g_originalIsProcessDPIAware), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "user32.dll", "IsWow64Message", reinterpret_cast<void*>(HookedIsWow64Message), reinterpret_cast<void**>(&g_originalIsWow64Message), false, true, false, 0, 0, false, "", true, "tier2-initial-return-only" },
+        HookDefinition { "user32.dll", "GetCurrentMonitorTopologyId", reinterpret_cast<void*>(HookedGetCurrentMonitorTopologyId), reinterpret_cast<void**>(&g_originalGetCurrentMonitorTopologyId), false, true, false, 2683, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "d3d9.dll", "D3DPERF_EndEvent", reinterpret_cast<void*>(HookedD3DPerfEndEvent), reinterpret_cast<void**>(&g_originalD3DPerfEndEvent), false, true, false, 28, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "d3d9.dll", "D3DPERF_GetStatus", reinterpret_cast<void*>(HookedD3DPerfGetStatus), reinterpret_cast<void**>(&g_originalD3DPerfGetStatus), false, true, false, 29, 0, false, "", true, "tier2-initial-return-only" },
         HookDefinition { "d3d9.dll", "D3DPERF_QueryRepeatFrame", reinterpret_cast<void*>(HookedD3DPerfQueryRepeatFrame), reinterpret_cast<void**>(&g_originalD3DPerfQueryRepeatFrame), false, true, false, 30, 0, false, "", true, "tier2-initial-return-only" },
@@ -13244,73 +13436,137 @@ HookLifecycleCounts UninstallHooks()
     HookLifecycleCounts counts;
 
     InterlockedExchange(&g_hooksEnabled, 0);
-    for (std::size_t index = 0; index < g_hookRecordCount; ++index)
+
+    struct PendingRestore
     {
-        HookRecord& record = g_hookRecords[index];
-        if (!record.Installed || record.Restored || record.ThunkAddress == nullptr || record.OriginalFunction == nullptr)
+        std::size_t Index;
+        ULONG_PTR* ThunkAddress;
+        HMODULE OwnerModule;
+        std::uint64_t OwnerGeneration;
+        void* OriginalFunction;
+        void* ReplacementFunction;
+    };
+
+    // Snapshot the records that still need a thunk restore while holding the
+    // hook lock, then perform loader references and thunk mutation without it,
+    // matching the SweepLoadedModules convention of no loader ops under the
+    // hook lock.
+    std::vector<PendingRestore> pending;
+    {
+        HookLockGuard hookLock;
+        for (std::size_t index = 0; index < g_hookRecordCount; ++index)
         {
-            if (record.Installed)
+            HookRecord& record = g_hookRecords[index];
+            if (!record.Installed || record.Restored || record.ThunkAddress == nullptr || record.OriginalFunction == nullptr)
             {
-                ++counts.InstalledHooks;
+                if (record.Installed)
+                {
+                    ++counts.InstalledHooks;
+                }
+
+                if (record.Restored)
+                {
+                    ++counts.RestoredHooks;
+                }
+
+                if (record.Failed)
+                {
+                    ++counts.FailedHooks;
+                }
+                continue;
             }
 
-            if (record.Restored)
-            {
-                ++counts.RestoredHooks;
-            }
+            ++counts.InstalledHooks;
+            pending.push_back(PendingRestore{
+                index,
+                record.ThunkAddress,
+                record.OwnerModule,
+                record.OwnerGeneration,
+                record.OriginalFunction,
+                record.ReplacementFunction });
+        }
+    }
 
-            if (record.Failed)
-            {
-                ++counts.FailedHooks;
-            }
+    struct RestoreOutcome
+    {
+        bool Restored = false;
+        bool Failed = false;
+    };
+
+    std::vector<RestoreOutcome> outcomes(pending.size(), RestoreOutcome{});
+    for (std::size_t pendingIndex = 0; pendingIndex < pending.size(); ++pendingIndex)
+    {
+        const PendingRestore& entry = pending[pendingIndex];
+        RestoreOutcome& outcome = outcomes[pendingIndex];
+
+        ModuleReference owner(entry.ThunkAddress);
+        if (owner.Get() == nullptr || owner.Get() != entry.OwnerModule ||
+            g_moduleGenerations.Changed(entry.OwnerModule, entry.OwnerGeneration))
+        {
+            outcome.Restored = true;
             continue;
         }
-
-        ++counts.InstalledHooks;
-
-        ModuleReference owner(record.ThunkAddress);
-        if (owner.Get() == nullptr || owner.Get() != record.OwnerModule ||
-            g_moduleGenerations.Changed(record.OwnerModule, record.OwnerGeneration))
+        if (owner.Generation() == 0 || owner.Generation() != entry.OwnerGeneration)
         {
-            record.Restored = true;
-            ++counts.RestoredHooks;
-            continue;
-        }
-        if (owner.Generation() == 0 || owner.Generation() != record.OwnerGeneration)
-        {
-            record.Failed = true;
-            ++counts.FailedHooks;
+            outcome.Failed = true;
             continue;
         }
         DWORD oldProtect = 0;
-        if (!VirtualProtect(record.ThunkAddress, sizeof(void*), PAGE_READWRITE, &oldProtect))
+        if (!VirtualProtect(entry.ThunkAddress, sizeof(void*), PAGE_READWRITE, &oldProtect))
         {
-            record.Failed = true;
-            ++counts.FailedHooks;
+            outcome.Failed = true;
             continue;
         }
 
-        void* previous = InterlockedCompareExchangePointer(reinterpret_cast<void* volatile*>(record.ThunkAddress),
-            record.OriginalFunction, record.ReplacementFunction);
-        if (previous == record.ReplacementFunction || previous == record.OriginalFunction)
+        void* previous = InterlockedCompareExchangePointer(reinterpret_cast<void* volatile*>(entry.ThunkAddress),
+            entry.OriginalFunction, entry.ReplacementFunction);
+        if (previous == entry.ReplacementFunction || previous == entry.OriginalFunction)
         {
-            FlushInstructionCache(GetCurrentProcess(), record.ThunkAddress, sizeof(void*));
-            record.Restored = true;
-            ++counts.RestoredHooks;
+            FlushInstructionCache(GetCurrentProcess(), entry.ThunkAddress, sizeof(void*));
+            outcome.Restored = true;
         }
         else
         {
-            record.Failed = true;
-            ++counts.FailedHooks;
+            outcome.Failed = true;
         }
 
         DWORD ignored = 0;
-        if (!VirtualProtect(record.ThunkAddress, sizeof(void*), oldProtect, &ignored))
+        if (!VirtualProtect(entry.ThunkAddress, sizeof(void*), oldProtect, &ignored))
         {
-            record.Failed = true;
-            ++counts.FailedHooks;
+            outcome.Failed = true;
         }
+    }
 
+    {
+        HookLockGuard hookLock;
+        for (std::size_t pendingIndex = 0; pendingIndex < pending.size(); ++pendingIndex)
+        {
+            const PendingRestore& entry = pending[pendingIndex];
+            const RestoreOutcome& outcome = outcomes[pendingIndex];
+            if (entry.Index >= g_hookRecordCount)
+            {
+                continue;
+            }
+
+            HookRecord& record = g_hookRecords[entry.Index];
+            if (record.ThunkAddress != entry.ThunkAddress || record.OriginalFunction != entry.OriginalFunction ||
+                record.ReplacementFunction != entry.ReplacementFunction)
+            {
+                continue;
+            }
+
+            if (outcome.Restored)
+            {
+                record.Restored = true;
+                ++counts.RestoredHooks;
+            }
+
+            if (outcome.Failed)
+            {
+                record.Failed = true;
+                ++counts.FailedHooks;
+            }
+        }
     }
 
     counts.FailedHooks += static_cast<int>(InterlockedCompareExchange(&g_failedHooks, 0, 0));
@@ -14471,6 +14727,443 @@ HGDIOBJ WINAPI HookedGetStockObject(int object)
     return result;
 }
 
+BOOL WINAPI HookedQueryPerformanceCounter(PLARGE_INTEGER performanceCount)
+{
+    if (g_inHook || !HooksEnabled() || g_originalQueryPerformanceCounter == nullptr)
+    {
+        if (g_originalQueryPerformanceCounter == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalQueryPerformanceCounter(performanceCount);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalQueryPerformanceCounter(performanceCount);
+    });
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitGenericSingleArgumentTier1Event(
+            "kernel32.dll",
+            "QueryPerformanceCounter",
+            "system-safe",
+            "system",
+            "system/performance",
+            "kernel32.dll!QueryPerformanceCounter",
+            "lpPerformanceCount|INT64*|out|pointer",
+            static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(performanceCount)),
+            static_cast<std::uint64_t>(result),
+            GenericReturnFormat::Bool,
+            eventError,
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+BOOL WINAPI HookedQueryPerformanceFrequency(PLARGE_INTEGER frequency)
+{
+    if (g_inHook || !HooksEnabled() || g_originalQueryPerformanceFrequency == nullptr)
+    {
+        if (g_originalQueryPerformanceFrequency == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalQueryPerformanceFrequency(frequency);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalQueryPerformanceFrequency(frequency);
+    });
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitGenericSingleArgumentTier1Event(
+            "kernel32.dll",
+            "QueryPerformanceFrequency",
+            "system-safe",
+            "system",
+            "system/performance",
+            "kernel32.dll!QueryPerformanceFrequency",
+            "lpFrequency|INT64*|out|pointer",
+            static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(frequency)),
+            static_cast<std::uint64_t>(result),
+            GenericReturnFormat::Bool,
+            eventError,
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+namespace
+{
+    void InvokeVoidSingleArgumentTier1Hook(
+        void(WINAPI* original)(void*),
+        void* argument,
+        const char* moduleName,
+        const char* apiName,
+        const char* family,
+        const char* category,
+        const char* inventoryKey,
+        const char* argumentSchema)
+    {
+        HookReentryGuard guard;
+        LARGE_INTEGER start = {};
+        LARGE_INTEGER end = {};
+        QueryPerformanceCounter(&start);
+        guard.Call([&]()
+        {
+            return original(argument);
+        });
+        QueryPerformanceCounter(&end);
+
+        if (HooksEnabled())
+        {
+            EmitGenericSingleArgumentTier1Event(
+                moduleName,
+                apiName,
+                "system-safe",
+                family,
+                category,
+                inventoryKey,
+                argumentSchema,
+                static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(argument)),
+                0,
+                GenericReturnFormat::Void,
+                0,
+                start,
+                end);
+        }
+    }
+}
+
+void WINAPI HookedGetSystemTimeAsFileTime(LPFILETIME systemTimeAsFileTime)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetSystemTimeAsFileTime == nullptr)
+    {
+        if (g_originalGetSystemTimeAsFileTime != nullptr)
+        {
+            g_originalGetSystemTimeAsFileTime(systemTimeAsFileTime);
+        }
+
+        return;
+    }
+
+    InvokeVoidSingleArgumentTier1Hook(
+        reinterpret_cast<void(WINAPI*)(void*)>(g_originalGetSystemTimeAsFileTime),
+        systemTimeAsFileTime,
+        "kernel32.dll",
+        "GetSystemTimeAsFileTime",
+        "system",
+        "system/system-information",
+        "kernel32.dll!GetSystemTimeAsFileTime",
+        "lpSystemTimeAsFileTime|FILETIME*|out|pointer");
+}
+
+void WINAPI HookedGetSystemTimePreciseAsFileTime(LPFILETIME systemTimeAsFileTime)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetSystemTimePreciseAsFileTime == nullptr)
+    {
+        if (g_originalGetSystemTimePreciseAsFileTime != nullptr)
+        {
+            g_originalGetSystemTimePreciseAsFileTime(systemTimeAsFileTime);
+        }
+
+        return;
+    }
+
+    InvokeVoidSingleArgumentTier1Hook(
+        reinterpret_cast<void(WINAPI*)(void*)>(g_originalGetSystemTimePreciseAsFileTime),
+        systemTimeAsFileTime,
+        "kernel32.dll",
+        "GetSystemTimePreciseAsFileTime",
+        "system",
+        "system/system-information",
+        "kernel32.dll!GetSystemTimePreciseAsFileTime",
+        "lpSystemTimeAsFileTime|FILETIME*|out|pointer");
+}
+
+void WINAPI HookedGetSystemInfo(LPSYSTEM_INFO systemInfo)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetSystemInfo == nullptr)
+    {
+        if (g_originalGetSystemInfo != nullptr)
+        {
+            g_originalGetSystemInfo(systemInfo);
+        }
+
+        return;
+    }
+
+    InvokeVoidSingleArgumentTier1Hook(
+        reinterpret_cast<void(WINAPI*)(void*)>(g_originalGetSystemInfo),
+        systemInfo,
+        "kernel32.dll",
+        "GetSystemInfo",
+        "system",
+        "system/system-information",
+        "kernel32.dll!GetSystemInfo",
+        "lpSystemInfo|SYSTEM_INFO*|out|pointer");
+}
+
+void WINAPI HookedGetNativeSystemInfo(LPSYSTEM_INFO systemInfo)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetNativeSystemInfo == nullptr)
+    {
+        if (g_originalGetNativeSystemInfo != nullptr)
+        {
+            g_originalGetNativeSystemInfo(systemInfo);
+        }
+
+        return;
+    }
+
+    InvokeVoidSingleArgumentTier1Hook(
+        reinterpret_cast<void(WINAPI*)(void*)>(g_originalGetNativeSystemInfo),
+        systemInfo,
+        "kernel32.dll",
+        "GetNativeSystemInfo",
+        "system",
+        "system/system-information",
+        "kernel32.dll!GetNativeSystemInfo",
+        "lpSystemInfo|SYSTEM_INFO*|out|pointer");
+}
+
+void WINAPI HookedGetCurrentProcessorNumberEx(PPROCESSOR_NUMBER processorNumber)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetCurrentProcessorNumberEx == nullptr)
+    {
+        if (g_originalGetCurrentProcessorNumberEx != nullptr)
+        {
+            g_originalGetCurrentProcessorNumberEx(processorNumber);
+        }
+
+        return;
+    }
+
+    InvokeVoidSingleArgumentTier1Hook(
+        reinterpret_cast<void(WINAPI*)(void*)>(g_originalGetCurrentProcessorNumberEx),
+        processorNumber,
+        "kernel32.dll",
+        "GetCurrentProcessorNumberEx",
+        "system",
+        "system/threading",
+        "kernel32.dll!GetCurrentProcessorNumberEx",
+        "ProcNumber|PROCESSOR_NUMBER*|out|pointer");
+}
+
+BOOL WINAPI HookedGetNumaHighestNodeNumber(PULONG highestNodeNumber)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetNumaHighestNodeNumber == nullptr)
+    {
+        if (g_originalGetNumaHighestNodeNumber == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return FALSE;
+        }
+
+        return g_originalGetNumaHighestNodeNumber(highestNodeNumber);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const BOOL result = guard.Call([&]()
+    {
+        return g_originalGetNumaHighestNodeNumber(highestNodeNumber);
+    });
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result ? 0 : lastError;
+    if (HooksEnabled())
+    {
+        EmitGenericSingleArgumentTier1Event(
+            "kernel32.dll",
+            "GetNumaHighestNodeNumber",
+            "system-safe",
+            "system",
+            "system/threading",
+            "kernel32.dll!GetNumaHighestNodeNumber",
+            "HighestNodeNumber|UINT*|out|pointer",
+            static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(highestNodeNumber)),
+            static_cast<std::uint64_t>(result),
+            GenericReturnFormat::Bool,
+            eventError,
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+DWORD WINAPI HookedGetActiveProcessorCount(WORD groupNumber)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetActiveProcessorCount == nullptr)
+    {
+        if (g_originalGetActiveProcessorCount == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return 0;
+        }
+
+        return g_originalGetActiveProcessorCount(groupNumber);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const DWORD result = guard.Call([&]()
+    {
+        return g_originalGetActiveProcessorCount(groupNumber);
+    });
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    const DWORD eventError = result == 0 ? lastError : 0;
+    if (HooksEnabled())
+    {
+        EmitGenericSingleArgumentTier1Event(
+            "kernel32.dll",
+            "GetActiveProcessorCount",
+            "system-safe",
+            "system",
+            "system/threading",
+            "kernel32.dll!GetActiveProcessorCount",
+            "GroupNumber|USHORT|in|raw",
+            static_cast<std::uint64_t>(groupNumber),
+            static_cast<std::uint64_t>(result),
+            GenericReturnFormat::UInt32,
+            eventError,
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+UINT WINAPI HookedGetDpiForWindow(HWND window)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetDpiForWindow == nullptr)
+    {
+        if (g_originalGetDpiForWindow == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return 0;
+        }
+
+        return g_originalGetDpiForWindow(window);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const UINT result = guard.Call([&]()
+    {
+        return g_originalGetDpiForWindow(window);
+    });
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitGenericSingleArgumentTier1Event(
+            "user32.dll",
+            "GetDpiForWindow",
+            "ui-safe",
+            "ui",
+            "ui/hi-dpi",
+            "user32.dll!GetDpiForWindow",
+            "hwnd|HWND|in|pointer",
+            static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(window)),
+            static_cast<std::uint64_t>(result),
+            GenericReturnFormat::UInt32,
+            0,
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
+DPI_AWARENESS WINAPI HookedGetAwarenessFromDpiAwarenessContext(DPI_AWARENESS_CONTEXT value)
+{
+    if (g_inHook || !HooksEnabled() || g_originalGetAwarenessFromDpiAwarenessContext == nullptr)
+    {
+        if (g_originalGetAwarenessFromDpiAwarenessContext == nullptr)
+        {
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return DPI_AWARENESS_INVALID;
+        }
+
+        return g_originalGetAwarenessFromDpiAwarenessContext(value);
+    }
+
+    HookReentryGuard guard;
+    LARGE_INTEGER start = {};
+    LARGE_INTEGER end = {};
+    QueryPerformanceCounter(&start);
+    const DPI_AWARENESS result = guard.Call([&]()
+    {
+        return g_originalGetAwarenessFromDpiAwarenessContext(value);
+    });
+    const DWORD lastError = GetLastError();
+    QueryPerformanceCounter(&end);
+
+    if (HooksEnabled())
+    {
+        EmitGenericSingleArgumentTier1Event(
+            "user32.dll",
+            "GetAwarenessFromDpiAwarenessContext",
+            "ui-safe",
+            "ui",
+            "ui/hi-dpi",
+            "user32.dll!GetAwarenessFromDpiAwarenessContext",
+            "value|DPI_AWARENESS_CONTEXT|in|pointer",
+            static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(value)),
+            static_cast<std::uint64_t>(static_cast<std::int32_t>(result)),
+            GenericReturnFormat::UInt32,
+            0,
+            start,
+            end);
+    }
+
+    SetLastError(lastError);
+    return result;
+}
+
 UINT32 WINAPI HookedWindowsGetStringLen(HSTRING string)
 {
     if (g_inHook || !HooksEnabled() || g_originalWindowsGetStringLen == nullptr)
@@ -14599,7 +15292,9 @@ DWORD Tier2ReturnOnlyErrorCode(const Tier2ReturnOnlyMetadata& metadata, std::uin
 {
     DWORD errorCode = 0;
 
-    if (metadata.ReturnFormat == GenericReturnFormat::Pointer && returnValue == 0)
+    if (
+        returnValue == 0 &&
+        (metadata.ReturnFormat == GenericReturnFormat::Pointer || metadata.ReturnFormat == GenericReturnFormat::Bool))
     {
         errorCode = lastError;
     }
@@ -16510,6 +17205,20 @@ ULONGLONG WINAPI HookedGetTickCount64()
     return InvokeTier2ReturnOnlyHook(g_originalGetTickCount64, static_cast<ULONGLONG>(0), Metadata);
 }
 
+UINT WINAPI HookedGetCurrentMonitorTopologyId()
+{
+    static constexpr Tier2ReturnOnlyMetadata Metadata = {
+        "user32.dll",
+        "GetCurrentMonitorTopologyId",
+        "ui",
+        "ui/windows-and-messaging",
+        "medium",
+        "user32.dll!GetCurrentMonitorTopologyId",
+        GenericReturnFormat::UInt32
+    };
+
+    return InvokeTier2ReturnOnlyHook(g_originalGetCurrentMonitorTopologyId, static_cast<UINT>(0), Metadata);
+}
 LANGID WINAPI HookedGetUserDefaultLangID()
 {
     static constexpr Tier2ReturnOnlyMetadata Metadata = {
@@ -20893,6 +21602,7 @@ int WINAPI HookedWSAStartup(WORD versionRequested, LPWSADATA data)
     {
         if (g_originalWSAStartup == nullptr)
         {
+            SetWinsockFallbackError(WSASYSNOTREADY);
             return WSASYSNOTREADY;
         }
 
@@ -20923,6 +21633,7 @@ int WINAPI HookedWSACleanup()
     {
         if (g_originalWSACleanup == nullptr)
         {
+            SetWinsockFallbackError(WSANOTINITIALISED);
             return SOCKET_ERROR;
         }
 
@@ -20954,6 +21665,7 @@ SOCKET WINAPI HookedSocket(int af, int type, int protocol)
     {
         if (g_originalSocket == nullptr)
         {
+            SetWinsockFallbackError(WSANOTINITIALISED);
             return INVALID_SOCKET;
         }
 
@@ -20985,6 +21697,7 @@ int WINAPI HookedClosesocket(SOCKET socketValue)
     {
         if (g_originalClosesocket == nullptr)
         {
+            SetWinsockFallbackError(WSANOTINITIALISED);
             return SOCKET_ERROR;
         }
 
@@ -21016,6 +21729,7 @@ int WINAPI HookedConnect(SOCKET socketValue, const sockaddr* address, int addres
     {
         if (g_originalConnect == nullptr)
         {
+            SetWinsockFallbackError(WSANOTINITIALISED);
             return SOCKET_ERROR;
         }
 
@@ -21047,6 +21761,7 @@ int WINAPI HookedGetAddrInfo(PCSTR nodeName, PCSTR serviceName, const ADDRINFOA*
     {
         if (g_originalGetAddrInfo == nullptr)
         {
+            SetWinsockFallbackError(WSANOTINITIALISED);
             return EAI_FAIL;
         }
 

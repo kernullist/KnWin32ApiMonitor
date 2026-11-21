@@ -13,6 +13,7 @@ crates/third-party/*.crate binary
 
 # Generated artifacts are byte-compared by validators. Keep them LF on Windows.
 generated/definition-ids.json text eol=lf
+generated/runtime-support.json text eol=lf
 generated/ui-catalog.json text eol=lf
 generated/sdk-abi-ir.json text eol=lf
 generated/sdk-abi-sources.json text eol=lf

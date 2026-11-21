@@ -304,7 +304,12 @@ extern "C" __declspec(dllexport) DWORD WINAPI KnMonTestModules(void* context)
         ModuleTestCheck(g_moduleGenerations.UnscannedUnloads() > beforeUnscanned, 76);
         const auto* mapping = g_transportHeader;
         ShutdownAgent("module_test_paused", AgentLifecycleState::Disabled);
-        ModuleTestCheck(!g_sessionGate.Quiescent() && g_transportHeader == mapping && GetLifecycleState() == AgentLifecycleState::Stopping, 72);
+        // Emission-scoped session leases mean the paused sweep no longer blocks
+        // gate quiescence; shutdown must still refuse teardown while the sweep
+        // thread is alive, keeping the transport mapping and Stopping state.
+        ModuleTestCheck(GetLifecycleState() == AgentLifecycleState::Stopping &&
+            g_transportHeader == mapping && g_moduleSweepThread != nullptr &&
+            WaitForSingleObject(g_moduleSweepThread, 0) != WAIT_OBJECT_0, 72);
         SetEvent(resume);
         ModuleTestCheck(WaitForSingleObject(g_moduleSweepThread, 5000) == WAIT_OBJECT_0, 73);
         g_testSweepEntered.store(nullptr);

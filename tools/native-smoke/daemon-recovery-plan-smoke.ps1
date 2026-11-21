@@ -52,7 +52,8 @@ function Write-DaemonRecord
     }
 
     $recordPath = Join-Path $sessionsDir "$SessionId.json"
-    $record | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $recordPath -Encoding UTF8
+    $recordJson = $record | ConvertTo-Json -Depth 8
+    [System.IO.File]::WriteAllText(($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($recordPath)), $recordJson, (New-Object System.Text.UTF8Encoding($false)))
     return $recordPath
 }
 

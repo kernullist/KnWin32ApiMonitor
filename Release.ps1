@@ -171,26 +171,50 @@ if (!$NoUi)
 $tauriCopied = $false
 if (!$NoUi)
 {
-    $tauriReleaseDir = Join-Path $repoRoot "apps\knmon-ui\src-tauri\target\release"
-    if (Test-Path -LiteralPath $tauriReleaseDir)
+    # Cross-target Tauri builds (tauri:build --target <triple>) place outputs
+    # under target\<triple>\release instead of target\release; collect exes
+    # and bundles from both layouts.
+    $tauriTargetRoot = Join-Path $repoRoot "apps\knmon-ui\src-tauri\target"
+    $tauriReleaseDirectories = @()
+    if (Test-Path -LiteralPath $tauriTargetRoot)
     {
-        $tauriExeFiles = @(Get-ChildItem -LiteralPath $tauriReleaseDir -File -Filter "*.exe")
-        if ($tauriExeFiles.Count -gt 0)
+        $tauriReleaseDirectories = @(
+            (Join-Path $tauriTargetRoot "release")
+        ) + @(Get-ChildItem -LiteralPath $tauriTargetRoot -Directory | ForEach-Object { Join-Path $_.FullName "release" })
+    }
+
+    $tauriExeFiles = @()
+    foreach ($tauriDirectory in $tauriReleaseDirectories)
+    {
+        if (Test-Path -LiteralPath $tauriDirectory)
         {
-            $tauriDestination = $stageRoot
-            New-Item -ItemType Directory -Path $tauriDestination -Force | Out-Null
+            $tauriExeFiles += @(Get-ChildItem -LiteralPath $tauriDirectory -File -Filter "*.exe")
+        }
+    }
 
-            foreach ($file in $tauriExeFiles)
-            {
-                Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $tauriDestination $file.Name) -Force
-            }
+    if ($tauriExeFiles.Count -gt 0)
+    {
+        $tauriDestination = $stageRoot
+        New-Item -ItemType Directory -Path $tauriDestination -Force | Out-Null
 
-            $tauriCopied = $true
+        foreach ($file in $tauriExeFiles)
+        {
+            Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $tauriDestination $file.Name) -Force
         }
 
-        $bundleCopied = Copy-DirectoryIfPresent -SourceDir (Join-Path $tauriReleaseDir "bundle") -DestinationDir (Join-Path $stageRoot "bundle")
-        $tauriCopied = $tauriCopied -or $bundleCopied
+        $tauriCopied = $true
     }
+
+    $bundleCopied = $false
+    foreach ($tauriDirectory in $tauriReleaseDirectories)
+    {
+        if (Copy-DirectoryIfPresent -SourceDir (Join-Path $tauriDirectory "bundle") -DestinationDir (Join-Path $stageRoot "bundle"))
+        {
+            $bundleCopied = $true
+        }
+    }
+
+    $tauriCopied = $tauriCopied -or $bundleCopied
 }
 
 Copy-Item -LiteralPath (Join-Path $repoRoot "README.md") -Destination (Join-Path $stageRoot "README.md") -Force

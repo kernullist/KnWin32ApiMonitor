@@ -382,6 +382,105 @@
       "runtimeVerification": "not_implied_by_compiler_check"
     },
     {
+      "module": "kernel32.dll",
+      "name": "QueryPerformanceCounter",
+      "wrapper": "HookedQueryPerformanceCounter",
+      "original": "g_originalQueryPerformanceCounter",
+      "authority": "windows_sdk",
+      "sdkSymbol": "QueryPerformanceCounter",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "QueryPerformanceFrequency",
+      "wrapper": "HookedQueryPerformanceFrequency",
+      "original": "g_originalQueryPerformanceFrequency",
+      "authority": "windows_sdk",
+      "sdkSymbol": "QueryPerformanceFrequency",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetSystemTimeAsFileTime",
+      "wrapper": "HookedGetSystemTimeAsFileTime",
+      "original": "g_originalGetSystemTimeAsFileTime",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetSystemTimeAsFileTime",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetSystemTimePreciseAsFileTime",
+      "wrapper": "HookedGetSystemTimePreciseAsFileTime",
+      "original": "g_originalGetSystemTimePreciseAsFileTime",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetSystemTimePreciseAsFileTime",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetSystemInfo",
+      "wrapper": "HookedGetSystemInfo",
+      "original": "g_originalGetSystemInfo",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetSystemInfo",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetNativeSystemInfo",
+      "wrapper": "HookedGetNativeSystemInfo",
+      "original": "g_originalGetNativeSystemInfo",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetNativeSystemInfo",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetCurrentProcessorNumberEx",
+      "wrapper": "HookedGetCurrentProcessorNumberEx",
+      "original": "g_originalGetCurrentProcessorNumberEx",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetCurrentProcessorNumberEx",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetNumaHighestNodeNumber",
+      "wrapper": "HookedGetNumaHighestNodeNumber",
+      "original": "g_originalGetNumaHighestNodeNumber",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetNumaHighestNodeNumber",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "kernel32.dll",
+      "name": "GetActiveProcessorCount",
+      "wrapper": "HookedGetActiveProcessorCount",
+      "original": "g_originalGetActiveProcessorCount",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetActiveProcessorCount",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetDpiForWindow",
+      "wrapper": "HookedGetDpiForWindow",
+      "original": "g_originalGetDpiForWindow",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetDpiForWindow",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetAwarenessFromDpiAwarenessContext",
+      "wrapper": "HookedGetAwarenessFromDpiAwarenessContext",
+      "original": "g_originalGetAwarenessFromDpiAwarenessContext",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetAwarenessFromDpiAwarenessContext",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
       "module": "setupapi.dll",
       "name": "SetupDiClassNameFromGuidW",
       "wrapper": "HookedSetupDiClassNameFromGuidW",
@@ -928,6 +1027,15 @@
       "original": "g_originalIsWow64Message",
       "authority": "windows_sdk",
       "sdkSymbol": "IsWow64Message",
+      "runtimeVerification": "not_implied_by_compiler_check"
+    },
+    {
+      "module": "user32.dll",
+      "name": "GetCurrentMonitorTopologyId",
+      "wrapper": "HookedGetCurrentMonitorTopologyId",
+      "original": "g_originalGetCurrentMonitorTopologyId",
+      "authority": "windows_sdk",
+      "sdkSymbol": "GetCurrentMonitorTopologyId",
       "runtimeVerification": "not_implied_by_compiler_check"
     },
     {
